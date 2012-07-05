@@ -217,6 +217,9 @@ typedef struct insert_working_baton_t {
   /* for inserting symlinks */
   const char *target;
 
+  svn_boolean_t update_actual_props;
+  const apr_hash_t *new_actual_props;
+
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
@@ -1081,6 +1084,29 @@ insert_working_node(void *baton,
                                        piwb->children,
                                        piwb->op_depth,
                                        scratch_pool));
+
+  if (piwb->update_actual_props)
+    {
+      /* Cast away const, to allow calling property helpers */
+      apr_hash_t *base_props = (apr_hash_t *)piwb->props;
+      apr_hash_t *new_actual_props = (apr_hash_t *)piwb->new_actual_props;
+
+      if (base_props != NULL
+          && new_actual_props != NULL
+          && (apr_hash_count(base_props) == apr_hash_count(new_actual_props)))
+        {
+          apr_array_header_t *diffs;
+
+          SVN_ERR(svn_prop_diffs(&diffs, new_actual_props, base_props,
+                                 scratch_pool));
+
+          if (diffs->nelts == 0)
+            new_actual_props = NULL;
+        }
+
+      SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath, new_actual_props,
+                               wcroot->sdb, scratch_pool));
+    }
 
   if (piwb->kind == svn_kind_dir)
     {
@@ -4660,6 +4686,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
+                        svn_boolean_t set_actual_props,
+                        const apr_hash_t *new_actual_props,
                         svn_boolean_t is_move,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
@@ -4710,6 +4738,12 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                             wcroot, local_relpath, scratch_pool));
 
   iwb.checksum = checksum;
+
+  if (set_actual_props)
+    {
+      iwb.update_actual_props = set_actual_props;
+      iwb.new_actual_props = new_actual_props;
+    }
 
   iwb.work_items = work_items;
   iwb.conflict = conflict;

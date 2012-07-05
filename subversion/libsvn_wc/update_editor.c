@@ -4553,6 +4553,8 @@ close_file(void *file_baton,
                                       eb->repos_uuid,
                                       *eb->target_revision,
                                       new_checksum,
+                                      FALSE /* update_actual_props */,
+                                      NULL /* new_actual_props */,
                                       TRUE /* is_move */,
                                       NULL /* conflict */,
                                       NULL, /* no work, just modify DB */
@@ -5690,15 +5692,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   original_uuid,
                                   copyfrom_rev,
                                   new_text_base_sha1_checksum,
+                                  TRUE,
+                                  new_props,
                                   FALSE /* is_move */,
-                                  NULL /* conflict */,
-                                  NULL /* work_items */,
-                                  pool));
-
-  /* ### if below fails, then the above db change would remain :-(  */
-
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  new_props, FALSE,
                                   NULL /* conflict */,
                                   all_work_items,
                                   pool));
