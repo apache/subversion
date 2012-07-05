@@ -1456,11 +1456,12 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
-                     /* ### flip to CANCEL, then NOTIFY. precedent.  */
-                     svn_wc_notify_func2_t notify_func,
-                     void *notify_baton,
+                     svn_skel_t *conflict,
+                     svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool);
 
 

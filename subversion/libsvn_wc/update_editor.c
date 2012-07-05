@@ -1872,8 +1872,9 @@ delete_entry(const char *path,
        * by deleting the node from the moved-away subtree. */
       /* ### This should probably use a work queue. */
       SVN_ERR(svn_wc__db_op_delete(eb->db, moved_to_abspath, NULL,
-                                   NULL, NULL, /* notify below */
+                                   NULL, NULL,
                                    eb->cancel_func, eb->cancel_baton,
+                                   NULL, NULL, /* notify below */
                                    scratch_pool));
       if (kind == svn_kind_dir)
         SVN_ERR(svn_io_remove_dir2(moved_to_abspath, TRUE,
@@ -2255,8 +2256,9 @@ add_directory(const char *path,
   if (db->shadowed && db->obstruction_found)
     {
       SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath, NULL,
-                                   NULL, NULL /* notification */,
+                                   tree_conflict, NULL,
                                    eb->cancel_func, eb->cancel_baton,
+                                   NULL, NULL /* notification */,
                                    pool));
     }
 

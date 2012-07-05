@@ -6758,6 +6758,9 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
 struct op_delete_baton_t {
   int delete_depth;  /* op-depth for root of delete */
   const char *moved_to_relpath; /* NULL if delete is not part of a move */
+  svn_skel_t *conflict;
+  svn_skel_t *work_items;
+  svn_boolean_t notify;
 };
 
 /* This structure is used while rewriting move information for nodes.
@@ -7040,11 +7043,14 @@ delete_node(void *baton,
     }
 
   /* ### Put actual-only nodes into the list? */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_INSERT_DELETE_LIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                            wcroot->wc_id, local_relpath, select_depth));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  if (b->notify)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_DELETE_LIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd",
+                                wcroot->wc_id, local_relpath, select_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
@@ -7105,6 +7111,10 @@ delete_node(void *baton,
         }
     }
 
+  SVN_ERR(add_work_items(wcroot->sdb, b->work_items, scratch_pool));
+  if (b->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, b->conflict, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -7146,6 +7156,9 @@ op_delete_many_txn(void *baton,
       svn_pool_clear(iterpool);
       odb.delete_depth = relpath_depth(target_relpath);
       odb.moved_to_relpath = NULL;
+      odb.conflict = NULL;
+      odb.work_items = NULL;
+      odb.notify = TRUE;
       SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -7210,10 +7223,12 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
-                     svn_wc_notify_func2_t notify_func,
-                     void *notify_baton,
+                     svn_skel_t *conflict,
+                     svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -7252,19 +7267,35 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 
   odb.delete_depth = relpath_depth(local_relpath);
   odb.moved_to_relpath = moved_to_relpath;
+  odb.conflict = conflict;
+  odb.work_items = work_items;
+
+  if (notify_func)
+    {
+      /* Perform the deletion operation (transactionally), perform any
+         notifications necessary, and then clean out our temporary tables.  */
+      odb.notify = TRUE;
+      SVN_ERR(with_finalization(wcroot, local_relpath,
+                                op_delete_txn, &odb,
+                                do_delete_notify, NULL,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                STMT_FINALIZE_DELETE,
+                                scratch_pool));
+    }
+  else
+    {
+      /* Avoid the trigger work */
+      odb.notify = FALSE;
+      SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                                  delete_node, &odb,
+                                  scratch_pool));
+    }
 
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_infinity,
                         scratch_pool));
 
-  /* Perform the deletion operation (transactionally), perform any
-     notifications necessary, and then clean out our temporary tables.  */
-  return svn_error_trace(with_finalization(wcroot, local_relpath,
-                                           op_delete_txn, &odb,
-                                           do_delete_notify, NULL,
-                                           cancel_func, cancel_baton,
-                                           notify_func, notify_baton,
-                                           STMT_FINALIZE_DELETE,
-                                           scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 

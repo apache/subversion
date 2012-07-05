@@ -2844,8 +2844,9 @@ do_delete(svn_test__sandbox_t *b,
   SVN_ERR(check_db_rows(b, "", before));
   SVN_ERR(check_db_actual(b, actual_before));
   SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath, NULL,
-                               NULL, NULL /* notification */,
+                               NULL /* conflict */, NULL /* work_item */,
                                NULL, NULL /* cancellation */,
+                               NULL, NULL /* notification */,
                                b->pool));
   SVN_ERR(check_db_rows(b, "", after));
   SVN_ERR(check_db_actual(b, actual_after));
