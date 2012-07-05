@@ -2231,14 +2231,14 @@ add_directory(const char *path,
         }
     }
 
-  SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(eb->db,
-                                                       db->local_abspath,
-                                                       db->new_relpath,
-                                                       eb->repos_root,
-                                                       eb->repos_uuid,
-                                                       *eb->target_revision,
-                                                       db->ambient_depth,
-                                                       pool));
+  SVN_ERR(svn_wc__db_op_begin_update(eb->db, db->local_abspath,
+                                     db->new_relpath,
+                                     eb->repos_root,
+                                     eb->repos_uuid,
+                                     *eb->target_revision,
+                                     db->ambient_depth,
+                                     tree_conflict, NULL,
+                                     pool));
 
   /* Make sure there is a real directory at LOCAL_ABSPATH, unless we are just
      updating the DB or the parent was moved away. */
@@ -2262,12 +2262,7 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
-      SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, db->local_abspath,
-                                          tree_conflict, NULL,
-                                          db->pool));
-
       db->already_notified = TRUE;
-
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
     }
