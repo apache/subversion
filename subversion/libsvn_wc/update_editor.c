@@ -2232,7 +2232,8 @@ add_directory(const char *path,
         }
     }
 
-  SVN_ERR(svn_wc__db_op_begin_update(eb->db, db->local_abspath,
+  SVN_ERR(svn_wc__db_base_add_incomplete_directory(
+                                     eb->db, db->local_abspath,
                                      db->new_relpath,
                                      eb->repos_root,
                                      eb->repos_uuid,
