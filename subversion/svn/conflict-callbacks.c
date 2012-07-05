@@ -482,7 +482,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (diff_allowed)
             {
               prompt = apr_pstrcat(subpool, prompt,
-                                   _(", (df) diff-full, (e) edit"),
+                                   _(", (df) diff-full, (e) edit, (m) merge"),
                                    (char *)NULL);
 
               if (knows_something)
@@ -538,6 +538,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "\n"
                 "  (p)  postpone         - mark the conflict to be "
                                           "resolved later\n"
+                "  (m)  merge            - use internal merge tool to "
+                                          "resolve conflict\n"
                 "  (l)  launch           - launch external tool to "
                                           "resolve conflict\n"
                 "  (s)  show all         - show this list\n\n")));
@@ -656,6 +658,37 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
               if (performed_edit)
                 knows_something = TRUE;
+            }
+          else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-M") == 0)
+            {
+              if (desc->kind != svn_wc_conflict_kind_text)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; can only "
+                                                "resolve text conflicts with "
+                                                "the internal merge tool."
+                                                "\n\n")));
+                  continue;
+                }
+
+              if (desc->base_abspath && desc->their_abspath &&
+                  desc->my_abspath && desc->merged_file)
+                {
+                  svn_boolean_t remains_in_conflict;
+
+                  SVN_ERR(svn_cl__merge_file(desc->base_abspath,
+                                             desc->their_abspath,
+                                             desc->my_abspath,
+                                             desc->merged_file,
+                                             desc->local_abspath,
+                                             b->config,
+                                             &remains_in_conflict,
+                                             subpool));
+                  knows_something = !remains_in_conflict;
+                }
+              else
+                SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                            _("Invalid option.\n\n")));
             }
           else if (strcmp(answer, "l") == 0 || strcmp(answer, ":-l") == 0)
             {
