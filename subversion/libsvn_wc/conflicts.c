@@ -1903,6 +1903,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
         {
           SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath, TRUE, FALSE,
                                               FALSE, work_item, scratch_pool));
+          SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
         }
     }
 
