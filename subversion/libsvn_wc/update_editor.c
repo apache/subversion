@@ -2105,17 +2105,6 @@ add_directory(const char *path,
                                         reason, svn_wc_conflict_action_replace,
                                         db->pool, db->pool));
 
-          /* Node does not pre-exist so no original location */
-          if (eb->switch_relpath)
-            SVN_ERR(svn_wc__conflict_skel_set_op_switch(tree_conflict, NULL,
-                                                        db->pool, db->pool));
-          else
-            SVN_ERR(svn_wc__conflict_skel_set_op_update(tree_conflict, NULL,
-                                                        db->pool, db->pool));
-
-          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, db->local_abspath,
-                                              tree_conflict, NULL, db->pool));
-
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
           tree_conflict = NULL; /* No direct notification */
@@ -3284,17 +3273,6 @@ add_file(const char *path,
                                         eb->db, fb->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
                                         fb->pool, fb->pool));
-
-          /* Node does not pre-exist so no original location */
-          if (eb->switch_relpath)
-            SVN_ERR(svn_wc__conflict_skel_set_op_switch(tree_conflict, NULL,
-                                                        fb->pool, fb->pool));
-          else
-            SVN_ERR(svn_wc__conflict_skel_set_op_update(tree_conflict, NULL,
-                                                        fb->pool, fb->pool));
-
-          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, fb->local_abspath,
-                                              tree_conflict, NULL, fb->pool));
 
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
