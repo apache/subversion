@@ -484,11 +484,12 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          apr_hash_t *dav_cache,
-                         const svn_skel_t *conflict,
+                         svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
+                         const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
@@ -565,9 +566,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *changed_author,
                             const char *target,
                             apr_hash_t *dav_cache,
-                            const svn_skel_t *conflict,
+                            svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            svn_boolean_t keep_recorded_info,
+                            svn_boolean_t insert_base_deleted,
+                            const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
@@ -2817,12 +2821,6 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
                           svn_kind_t not_present_kind,
                           apr_pool_t *scratch_pool);
 
-/* Remove the WORKING_NODE row of LOCAL_ABSPATH in DB. */
-svn_error_t *
-svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
-
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.
 
    Returns SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not a BASE directory
@@ -2931,6 +2929,8 @@ svn_wc__db_op_begin_update(svn_wc__db_t *db,
                            const char *repos_uuid,
                            svn_revnum_t revision,
                            svn_depth_t depth,
+                           svn_boolean_t insert_base_deleted,
+                           svn_boolean_t delete_working,
                            svn_skel_t *conflict,
                            svn_skel_t *work_items,
                            apr_pool_t *scratch_pool);

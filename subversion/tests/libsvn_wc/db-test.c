@@ -664,7 +664,8 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum,
-            NULL, NULL, FALSE, NULL, FALSE, FALSE, NULL,
+            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, NULL,
             pool));
 
   /* Create a new symlink node. */
@@ -676,7 +677,8 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             "O-target",
-            NULL, NULL, FALSE, NULL, NULL,
+            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, NULL,
             pool));
 
   /* Replace an incomplete node with an absent file node. */
