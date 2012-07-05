@@ -521,7 +521,7 @@ svn_cl__merge(apr_getopt_t *os,
             _("Merge tracking not possible, use --ignore-ancestry or\n"
               "fix invalid mergeinfo in target with 'svn propset'"));
         }
-      else if (! opt_state->reintegrate)
+      else
         {
           err = svn_error_compose_create(merge_err, err);
           return svn_cl__may_need_force(err);
