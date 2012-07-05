@@ -43,6 +43,7 @@
 #include "private/svn_dep_compat.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
+#include "../../libsvn_wc/workqueue.h"
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
 
@@ -1295,7 +1296,11 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
 
   SVN_ERR(check_db_rows(b, "", after));
 
-  SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath, b->pool));
+  SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
+                                 FALSE, SVN_INVALID_REVNUM,
+                                 NULL, NULL, b->pool));
+  SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
+                         NULL, NULL, b->pool));
 
   SVN_ERR(check_db_rows(b, "", before));
 

@@ -1701,11 +1701,11 @@ delete_entry(const char *path,
   svn_boolean_t have_base;
   svn_boolean_t have_work;
   svn_skel_t *tree_conflict = NULL;
-  svn_skel_t *work_item = NULL;
   svn_wc__db_status_t status;
   svn_wc__db_status_t base_status;
   apr_pool_t *scratch_pool;
   svn_boolean_t deleting_target;
+  svn_boolean_t keep_as_working = FALSE;
 
   if (pb->skip_this)
     return SVN_NO_ERROR;
@@ -1785,7 +1785,10 @@ delete_entry(const char *path,
       || base_status == svn_wc__db_status_excluded
       || base_status == svn_wc__db_status_server_excluded)
     {
-      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
+                                     FALSE, SVN_INVALID_REVNUM,
+                                     NULL, NULL,
+                                     scratch_pool));
 
       if (deleting_target)
         eb->target_deleted = TRUE;
@@ -1843,8 +1846,7 @@ delete_entry(const char *path,
            * To prepare the "accept mine" resolution for the tree conflict,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath,
-                                               scratch_pool));
+          keep_as_working = TRUE;
 
           /* Fall through to remove the BASE_NODEs properly, with potentially
              keeping a not-present marker */
@@ -1892,32 +1894,20 @@ delete_entry(const char *path,
   if (! deleting_target)
     {
       /* Delete, and do not leave a not-present node.  */
-      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
-                                           eb->db, local_abspath,
-                                           SVN_INVALID_REVNUM,
-                                           svn_kind_unknown,
-                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
+                                     keep_as_working, SVN_INVALID_REVNUM,
+                                     tree_conflict, NULL,
+                                     scratch_pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
-      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
-                                           eb->db, local_abspath,
-                                           *eb->target_revision,
-                                           base_kind,
-                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
+                                     keep_as_working, *eb->target_revision,
+                                     tree_conflict, NULL,
+                                     scratch_pool));
       eb->target_deleted = TRUE;
     }
-
-  if (tree_conflict)
-  {
-    SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, local_abspath,
-                                        tree_conflict, work_item,
-                                        scratch_pool));
-  }
-  else
-    SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
-                              scratch_pool));
 
   SVN_ERR(svn_wc__wq_run(eb->db, pb->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
@@ -4756,7 +4746,8 @@ close_edit(void *edit_baton,
                  If so, we should get rid of this excluded node now. */
 
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
-                                             scratch_pool));
+                                             FALSE, SVN_INVALID_REVNUM,
+                                             NULL, NULL, scratch_pool));
             }
         }
     }
