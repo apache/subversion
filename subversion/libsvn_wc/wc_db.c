@@ -336,6 +336,26 @@ db_read_pristine_props(apr_hash_t **props,
                        apr_pool_t *scratch_pool);
 
 static svn_error_t *
+base_get_info(svn_wc__db_status_t *status,
+              svn_kind_t *kind,
+              svn_revnum_t *revision,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              svn_revnum_t *changed_rev,
+              apr_time_t *changed_date,
+              const char **changed_author,
+              svn_depth_t *depth,
+              const svn_checksum_t **checksum,
+              const char **target,
+              svn_wc__db_lock_t **lock,
+              svn_boolean_t *had_props,
+              svn_boolean_t *update_root,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
+static svn_error_t *
 read_info(svn_wc__db_status_t *status,
           svn_kind_t *kind,
           svn_revnum_t *revision,
@@ -1958,7 +1978,11 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
 /* Baton for db_base_remove */
 struct base_remove_baton
 {
-  svn_wc__db_t *db;
+  svn_wc__db_t *db; /* For checking conflicts */
+  svn_boolean_t keep_as_working;
+  svn_revnum_t not_present_revision;
+  svn_skel_t *conflict;
+  svn_skel_t *work_items;
 };
 
 /* This implements svn_wc__db_txn_callback_t */
@@ -1970,10 +1994,153 @@ db_base_remove(void *baton,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
   struct base_remove_baton *rb = baton;
-#endif
+  svn_wc__db_status_t status;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+  svn_kind_t kind;
+  svn_boolean_t keep_working;
 
+  SVN_ERR(base_get_info(&status, &kind, NULL, &repos_relpath, &repos_id,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL,
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
+
+  /* ### This function should be turned into a helper of this function,
+         as this is the only valid caller */
+  if (status == svn_wc__db_status_normal
+      && rb->keep_as_working)
+    {
+      SVN_ERR(svn_wc__db_temp_op_make_copy(rb->db,
+                                           svn_dirent_join(wcroot->abspath,
+                                                           local_relpath,
+                                                           scratch_pool),
+                                           scratch_pool));
+      keep_working = TRUE;
+    }
+  else
+    {
+      /* Check if there is already a working node */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&keep_working, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  /* Step 1: Create workqueue operations to remove files and dirs in the
+     local-wc */
+  if (!keep_working
+      && (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_incomplete))
+    {
+      svn_skel_t *work_item;
+      const char *local_abspath;
+
+      local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
+                                      scratch_pool);
+      if (kind == svn_kind_dir)
+        {
+          apr_pool_t *iterpool;
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_SELECT_BASE_PRESENT));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+          iterpool = svn_pool_create(scratch_pool);
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          while (have_row)
+            {
+              const char *node_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+              svn_kind_t node_kind = svn_sqlite__column_token(stmt, 1,
+                                                              kind_map);
+              const char *node_abspath;
+
+              svn_pool_clear(iterpool);
+
+              node_abspath = svn_dirent_join(wcroot->abspath, node_relpath,
+                                             iterpool);
+
+              if (node_kind == svn_kind_dir)
+                SVN_ERR(svn_wc__wq_build_dir_remove(&work_item,
+                                                    rb->db, wcroot->abspath,
+                                                    node_abspath, FALSE,
+                                                    iterpool, iterpool));
+              else
+                SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                     rb->db,
+                                                     /* wcroot->abspath, */
+                                                     node_abspath,
+                                                     iterpool, iterpool));
+
+              SVN_ERR(add_work_items(wcroot->sdb, work_item, iterpool));
+
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+           }
+
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          SVN_ERR(svn_wc__wq_build_dir_remove(&work_item,
+                                              rb->db, wcroot->abspath,
+                                              local_abspath, FALSE,
+                                              scratch_pool, iterpool));
+          svn_pool_destroy(iterpool);
+        }
+      else
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             rb->db, /* wcroot->abspath, */
+                                             local_abspath,
+                                             scratch_pool, scratch_pool));
+
+      SVN_ERR(add_work_items(wcroot->sdb, work_item, scratch_pool));
+    }
+
+  /* Step 2: Delete ACTUAL nodes */
+  if (! keep_working)
+    {
+      /* There won't be a record in NODE left for this node, so we want
+         to remove *all* ACTUAL nodes, including ACTUAL ONLY. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else if (! rb->keep_as_working)
+    {
+      /* Delete only the ACTUAL nodes that apply to a delete of a BASE node */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                       STMT_DELETE_ACTUAL_FOR_BASE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  /* Else: Everything has been turned into a copy, so we want to keep all
+           ACTUAL_NODE records */
+
+  /* Step 3: Delete WORKING nodes */
+  if (keep_working)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_BASE_DELETE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* Step 4: Delete the BASE node descendants */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_BASE_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Step 5: handle the BASE node itself */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -1981,64 +2148,38 @@ db_base_remove(void *baton,
 
   SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
 
-  /* If there is no working node then any actual node must be deleted,
-     unless it marks a conflict */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-  if (!have_row)
+  /* Step 6: Delete actual node if we don't keep working */
+  if (! keep_working)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_NODE));
+                                        STMT_DELETE_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (! have_row)
-        SVN_ERR(svn_sqlite__reset(stmt));
-      else
-        {
-          svn_boolean_t tree_conflicted;
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
-          apr_size_t conflict_len;
-          const void *conflict_data;
-#endif
-
-#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
-          tree_conflicted = !svn_sqlite__column_is_null(stmt, 7);
-#else
-          conflict_data = svn_sqlite__column_blob(stmt, 2, &conflict_len,
-                                                  NULL);
-
-          if (! conflict_data)
-            tree_conflicted = FALSE;
-          else
-           {
-             const svn_skel_t *conflicts;
-
-             conflicts = svn_skel__parse(conflict_data, conflict_len,
-                                         scratch_pool);
-
-             SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, NULL, NULL,
-                                                &tree_conflicted,
-                                                rb->db, wcroot->abspath,
-                                                conflicts,
-                                             scratch_pool, scratch_pool));
-           }
-#endif
-          SVN_ERR(svn_sqlite__reset(stmt));
-
-          if (! tree_conflicted)
-            {
-              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                                STMT_DELETE_ACTUAL_NODE));
-              SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                        local_relpath));
-              SVN_ERR(svn_sqlite__step_done(stmt));
-            }
-        }
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
+
+  if (SVN_IS_VALID_REVNUM(rb->not_present_revision))
+    {
+      struct insert_base_baton_t ibb;
+      blank_ibb(&ibb);
+
+      ibb.repos_id = repos_id;
+      ibb.status = svn_wc__db_status_not_present;
+      ibb.kind = kind;
+      ibb.repos_relpath = repos_relpath;
+      ibb.revision = rb->not_present_revision;
+
+      /* Depending upon KIND, any of these might get used. */
+      ibb.children = NULL;
+      ibb.depth = svn_depth_unknown;
+      ibb.checksum = NULL;
+      ibb.target = NULL;
+
+      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+    }
+
+  SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
+  if (rb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, rb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2047,18 +2188,27 @@ db_base_remove(void *baton,
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t keep_as_working,
+                       svn_revnum_t not_present_revision,
+                       svn_skel_t *conflict,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct base_remove_baton rb;
-  rb.db = db;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  rb.db = db;
+  rb.keep_as_working = keep_as_working;
+  rb.not_present_revision = not_present_revision;
+  rb.conflict = conflict;
+  rb.work_items = work_items;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_base_remove, &rb,
                               scratch_pool));
@@ -9714,6 +9864,11 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
     {
       struct base_remove_baton rb;
       rb.db = db;
+      rb.keep_as_working = FALSE;
+      rb.not_present_revision = SVN_INVALID_REVNUM;
+      rb.conflict = NULL;
+      rb.work_items = NULL;
+
       return svn_error_trace(db_base_remove(&rb, wcroot, local_relpath,
                                             scratch_pool));
     }

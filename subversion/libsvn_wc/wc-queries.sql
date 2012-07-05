@@ -153,6 +153,51 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
 
+-- STMT_SELECT_BASE_PRESENT
+SELECT local_relpath, kind FROM nodes n
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND presence in ('normal', 'incomplete')
+  AND NOT EXISTS(SELECT 1 FROM NODES w
+                 WHERE w.wc_id = ?1 AND w.local_relpath = n.local_relpath
+                   AND op_depth > 0)
+ORDER BY local_relpath DESC
+
+-- STMT_DELETE_ACTUAL_FOR_BASE_RECURSIVE
+/* The ACTUAL_NODE applies to BASE, unless there is in at least one op_depth
+   a WORKING node that could have a conflict */
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND EXISTS(SELECT 1 FROM NODES b
+             WHERE b.wc_id = ?1
+               AND b.local_relpath = actual_node.local_relpath
+               AND op_depth = 0)
+  AND NOT EXISTS(SELECT 1 FROM NODES w
+                 WHERE w.wc_id = ?1
+                   AND w.local_relpath = actual_node.local_relpath
+                   AND op_depth > 0
+                   AND presence in ('normal', 'incomplete', 'not-present'))
+
+-- STMT_DELETE_WORKING_BASE_DELETE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND presence = 'base-deleted'
+  AND op_depth > 0
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes n
+                    WHERE n.wc_id = ?1
+                      AND n.local_relpath = nodes.local_relpath
+                      AND op_depth > 0)
+
+-- STMT_DELETE_WORKING_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth > 0
+
+-- STMT_DELETE_BASE_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3

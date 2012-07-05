@@ -636,13 +636,15 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      apr_pool_t *scratch_pool);
 
 
-/* Remove a node from the BASE tree.
+/* Remove a node and all its descendants from the BASE tree. This handles
+   the deletion of a tree from the update editor and some file external
+   scenarios.
 
    The node to remove is indicated by LOCAL_ABSPATH from the local
    filesystem.
 
-   Note that no changes are made to the local filesystem; LOCAL_ABSPATH
-   is merely the key to figure out which BASE node to remove.
+   This operation *installs* workqueue operations to update the local
+   filesystem after the database operation.
 
    To maintain a consistent database this function will also remove
    any working node that marks LOCAL_ABSPATH as base-deleted.  If this
@@ -650,12 +652,24 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    actual node will be removed if the actual node does not mark a
    conflict.
 
-   Note the caller is responsible for removing base node
-   children before calling this function (this may change).
+   If KEEP_AS_WORKING is TRUE, then the base tree is copied to higher
+   layers as a copy of itself before deleting the BASE nodes.
+
+   If NOT_PRESENT_REVISION specifies a valid revision a not-present
+   node is installed in BASE node with kind NOT_PRESENT_KIND after
+   deleting.
+
+   If CONFLICT and/or WORK_ITEMS are passed they are installed as part
+   of the operation, after the work items inserted by the operation
+   itself.
 */
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t keep_as_working,
+                       svn_revnum_t not_present_revision,
+                       svn_skel_t *conflict,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 

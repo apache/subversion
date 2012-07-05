@@ -1310,8 +1310,12 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                                                  scratch_pool));
   else
     {
-      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath, scratch_pool));
-      SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
+                                     FALSE, SVN_INVALID_REVNUM,
+                                     NULL, NULL, scratch_pool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
     }
 
   return SVN_NO_ERROR;
