@@ -33,6 +33,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 /* Baton for functions in this file which implement svn_diff_output_fns_t. */
 struct file_merge_baton {
