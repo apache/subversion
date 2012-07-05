@@ -17,31 +17,51 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Where are the svn binaries you want to benchmark?
-SVN_A_NAME="1.7.x"
-SVN_A="$HOME/pat/bench/prefix/bin/svn"
-SVN_B_NAME="trunk"
-SVN_B="$HOME/pat/trunk/prefix/bin/svn"
+# debug? Just uncomment.
+DEBUG=DEBUG_
 
+# Subversion bin-dir used for maintenance of working copies
+SVN_STABLE="$HOME/pat/stable/prefix/bin/"
+
+# Where to find the svn binaries you want to benchmark, what are their labels
+# and Last Changed Revisions?
+# side A
+SVN_A_NAME="1.7.0"
+SVN_A="$HOME/pat/bench/prefix/bin"
+SVN_A_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/bench/src" | sed 's/.*://')"
+SVN_A_LABEL="$SVN_A_NAME@$SVN_A_REV"
+
+# side B
+SVN_B_NAME="trunk"
+SVN_B="$HOME/pat/trunk/prefix/bin"
+SVN_B_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/trunk/src" | sed 's/.*://')"
+SVN_B_LABEL="$SVN_B_NAME@$SVN_B_REV"
+
+echo "$SVN_A_LABEL vs. $SVN_B_LABEL"
+
+# benchmark script and parameters...
 benchmark="$PWD/benchmark.py"
 
-parent="$(date +"%Y%m%d-%H%M%S")"
-inital_workdir="$PWD"
-mkdir "$parent"
-cd "$parent"
-pwd
-
+db="$PWD/${DEBUG}benchmark.db"
 
 batch(){
   levels="$1"
   spread="$2"
   N="$3"
-  pre="${levels}x${spread}_"
-  "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N >/dev/null
-  "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N >/dev/null
+
+  # SVN_A is a fixed tag, say 1.7.0. For each call, run this once.
+  # It will be called again and again for each trunk build being tested,
+  # that's why we don't really need to run it $N times every time.
+  "$benchmark" "--db-path=$db" "--svn-bin-dir=$SVN_A" \
+      run "$SVN_A_NAME@$SVN_A_REV,${levels}x$spread" 1 >/dev/null
+
+  # SVN_B is a branch, i.e. the moving target, benchmarked at a specific
+  # point in history each time this script is called. Run this $N times.
+  "$benchmark" "--db-path=$db" "--svn-bin-dir=$SVN_B" \
+      run "$SVN_B_NAME@$SVN_B_REV,${levels}x$spread" $N >/dev/null
 }
 
-N=6
+N=3
 al=5
 as=5
 bl=100
@@ -49,15 +69,16 @@ bs=1
 cl=1
 cs=100
 
-##DEBUG
-#N=1
-#al=1
-#as=1
-#bl=2
-#bs=1
-#cl=1
-#cs=2
-##DEBUG
+if [ -n "$DEBUG" ]; then
+  echo "DEBUG"
+  N=1
+  al=1
+  as=1
+  bl=2
+  bs=1
+  cl=1
+  cs=2
+fi
 
 
 {
@@ -65,7 +86,7 @@ started="$(date)"
 echo "Started at $started"
 
 echo "
-*Disclaimer:* this tests only file://-URL access on a GNU/Linux VM.
+*Disclaimer* - This tests only file://-URL access on a GNU/Linux VM.
 This is intended to measure changes in performance of the local working
 copy layer, *only*. These results are *not* generally true for everyone."
 
@@ -73,14 +94,12 @@ batch $al $as $N
 batch $bl $bs $N
 batch $cl $cs $N
 
-"$benchmark" combine "total_$SVN_A_NAME" *x*"_$SVN_A_NAME" >/dev/null
-"$benchmark" combine "total_$SVN_B_NAME" *x*"_$SVN_B_NAME" >/dev/null
-
 echo ""
 echo "Averaged-total results across all runs:"
 echo "---------------------------------------"
 echo ""
-"$benchmark" compare "total_$SVN_A_NAME" "total_$SVN_B_NAME"
+"$benchmark" "--db-path=$db" \
+    compare "$SVN_A_NAME" "$SVN_B_NAME@$SVN_B_REV"
 
 echo ""
 echo ""
@@ -88,8 +107,9 @@ echo "Above totals split into separate <dir-levels>x<dir-spread> runs:"
 echo "----------------------------------------------------------------"
 echo ""
 
-for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_"; do
-  "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+for lvlspr in "${al}x${as}" "${bl}x${bs}" "${cl}x${cs}"; do
+  "$benchmark" "--db-path=$db" \
+      compare "$SVN_A_NAME,$lvlspr" "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
   echo ""
 done
 
@@ -99,8 +119,13 @@ echo "More detail:"
 echo "------------"
 echo ""
 
-for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_" "total_"; do
-  "$benchmark" compare -v "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+for lvlspr in "${al}x${as}" "${bl}x${bs}" "${cl}x${cs}" "" ; do
+  "$benchmark" "--db-path=$db" show "$SVN_A_NAME,$lvlspr"
+  echo --
+  "$benchmark" "--db-path=$db" show "$SVN_B_NAME,$lvlspr"
+  echo --
+  "$benchmark" "--db-path=$db" \
+      compare -v "$SVN_A_NAME,$lvlspr" "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
   echo ""
   echo ""
 done
@@ -111,7 +136,3 @@ echo "       done at $(date)"
 pwd
 } 2>&1 | tee results.txt
 
-cd "$inital_workdir"
-if [ -f "$parent/total_trunk" ]; then
-  rm -rf "$parent"
-fi
