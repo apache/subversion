@@ -239,6 +239,9 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   const char *search_pattern;     /* pattern argument for --search */
   svn_boolean_t case_insensitive_search; /* perform case-insensitive search */
+
+  svn_wc_conflict_resolver_func2_t conflict_func;
+  void *conflict_baton;
 } svn_cl__opt_state_t;
 
 
@@ -863,6 +866,7 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
 svn_error_t *
 svn_cl__resolve_conflicts(apr_array_header_t *targets,
                           svn_depth_t depth,
+                          const svn_cl__opt_state_t *opt_state,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool);
 

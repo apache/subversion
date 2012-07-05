@@ -818,6 +818,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 svn_error_t *
 svn_cl__resolve_conflicts(apr_array_header_t *targets,
                           svn_depth_t depth,
+                          const svn_cl__opt_state_t *opt_state,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool)
 {
@@ -830,13 +831,30 @@ svn_cl__resolve_conflicts(apr_array_header_t *targets,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_error_t *err = SVN_NO_ERROR;
       const char *local_abspath;
+      svn_wc_conflict_resolver_func2_t conflict_func2;
+      void *conflict_baton2;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+
+
+      /* Store old state */
+      conflict_func2 = ctx->conflict_func2;
+      conflict_baton2 = ctx->conflict_baton2;
+
+      /* Store interactive resolver */
+      ctx->conflict_func2 = opt_state->conflict_func;
+      ctx->conflict_baton2 = opt_state->conflict_baton;
+
       err = svn_client_resolve(local_abspath, depth,
                                svn_wc_conflict_choose_unspecified,
                                ctx, iterpool);
+
+      /* Restore state */
+      ctx->conflict_func2 = conflict_func2;
+      ctx->conflict_baton2 = conflict_baton2;
+
       if (err)
         {
           if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
