@@ -180,6 +180,29 @@ def next_unique_basename(prefix):
   return '_'.join((prefix, str(_next_unique_basename_count)))
 
 
+si_units = [
+    (1000 ** 5, 'P'),
+    (1000 ** 4, 'T'), 
+    (1000 ** 3, 'G'), 
+    (1000 ** 2, 'M'), 
+    (1000 ** 1, 'K'),
+    (1000 ** 0, ''),
+    ]
+def n_label(n):
+    """(stolen from hurry.filesize)"""
+    for factor, suffix in si_units:
+        if n >= factor:
+            break
+    amount = int(n/factor)
+    if isinstance(suffix, tuple):
+        singular, multiple = suffix
+        if amount == 1:
+            suffix = singular
+        else:
+            suffix = multiple
+    return str(amount) + suffix
+
+
 def split_arg_once(l_r, sep):
   if not l_r:
     return (None, None)
@@ -227,14 +250,14 @@ PATHNAME_VALID_CHARS = "-_.,@%s%s" % (string.ascii_letters, string.digits)
 def filesystem_safe_string(s):
   return ''.join(c for c in s if c in PATHNAME_VALID_CHARS)
 
-def do_div(a, b):
-  if b:
-    return float(a) / float(b)
+def do_div(ref, val):
+  if ref:
+    return float(val) / float(ref)
   else:
     return 0.0
 
-def do_diff(a, b):
-  return float(a) - float(b)
+def do_diff(ref, val):
+  return float(val) - float(ref)
 
 
 # ------------------------- database -------------------------
@@ -606,7 +629,8 @@ def perform_run(batch, run_kind,
 
   def _mod(path):
     if os.path.isdir(path):
-      return _propmod(path)
+      _propmod(path)
+      return
 
     f = open(path, 'a')
     f.write('\n%s\n' % randstr())
@@ -708,7 +732,7 @@ def perform_run(batch, run_kind,
       st(wc)
       ci(wc)
       up(wc)
-      propadd_tree(trunk, 0.5)
+      propadd_tree(trunk, 0.05)
       ci(wc)
       up(wc)
       st(wc)
@@ -868,15 +892,15 @@ def cmdline_show(db, options, *run_kind_strings):
 
     s = []
     s.append('Timings for %s' % run_kind.label)
-    s.append('    N    min     max     avg   operation  (unit is seconds)')
+    s.append('   N    min     max     avg   operation  (unit is seconds)')
 
     for command_name in q.get_sorted_command_names():
       if options.command_names and command_name not in options.command_names:
         continue
       n, tmin, tmax, tavg = timings[command_name]
 
-      s.append('%5d %7.2f %7.2f %7.2f  %s' % (
-                 n,
+      s.append('%4s %7.2f %7.2f %7.2f  %s' % (
+                 n_label(n),
                  tmin,
                  tmax,
                  tavg,
@@ -921,7 +945,7 @@ def cmdline_compare(db, options, left_str, right_str):
     left_N, left_min, left_max, left_avg = left[command_name]
     right_N, right_min, right_max, right_avg = right[command_name]
 
-    N_str = '%d/%d' % (left_N, right_N)
+    N_str = '%s/%s' % (n_label(left_N), n_label(right_N))
     avg_str = '%7.2f|%+7.3f' % (do_div(left_avg, right_avg),
                                 do_diff(left_avg, right_avg))
 
@@ -938,8 +962,8 @@ def cmdline_compare(db, options, left_str, right_str):
 
   s.extend([
     '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
-    ' factor < 1 and difference < 0 means \'%s\' is faster.'
-    % left_kind.label,
+    ' factor < 1 and seconds < 0 means \'%s\' is faster.'
+    % right_kind.label,
     ' "2/3" means: \'%s\' has 2 timings on record, the other has 3.)'
     % left_kind.label
     ])
