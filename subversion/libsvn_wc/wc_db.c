@@ -12050,111 +12050,30 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
     const char *conflict_new = svn_sqlite__column_text(stmt, 4, NULL);
     const char *conflict_wrk = svn_sqlite__column_text(stmt, 5, NULL);
     const char *conflict_prj = svn_sqlite__column_text(stmt, 6, NULL);
-    const char *tree_conflict = svn_sqlite__column_text(stmt, 7, NULL);
+    apr_size_t tree_conflict_len;
+    const char *tree_conflict_data;
     svn_skel_t *conflict_skel = NULL;
-    svn_error_t *err = NULL;
+    svn_error_t *err;
 
-    if (conflict_old || conflict_new || conflict_wrk)
-      {
-        conflict_skel = svn_wc__conflict_skel_create(result_pool);
+    tree_conflict_data = svn_sqlite__column_blob(stmt, 7, &tree_conflict_len,
+                                                 NULL);
 
-        if (conflict_old)
-          conflict_old = svn_dirent_join(wcroot->abspath, conflict_old,
-                                         scratch_pool);
-
-        if (conflict_new)
-          conflict_new = svn_dirent_join(wcroot->abspath, conflict_new,
-                                         scratch_pool);
-
-        if (conflict_wrk)
-          conflict_wrk = svn_dirent_join(wcroot->abspath, conflict_wrk,
-                                         scratch_pool);
-
-        err = svn_wc__conflict_skel_add_text_conflict(conflict_skel,
-                                                      db, local_abspath,
-                                                      conflict_wrk,
-                                                      conflict_old,
-                                                      conflict_new,
-                                                      result_pool,
-                                                      scratch_pool);
-      }
-
-    if (!err && conflict_prj)
-      {
-        if (!conflict_skel)
-          conflict_skel = svn_wc__conflict_skel_create(result_pool);
-
-        if (conflict_prj)
-          conflict_prj = svn_dirent_join(wcroot->abspath, conflict_prj,
-                                         scratch_pool);
-
-        err = svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
-                                                      db, local_abspath,
-                                                      conflict_prj,
-                                                      NULL, NULL, NULL,
-                                                  apr_hash_make(scratch_pool),
-                                                      result_pool,
-                                                      scratch_pool);
-      }
-
-    if (!err && tree_conflict)
-      {
-        const svn_wc_conflict_description2_t *tc;
-        const svn_skel_t *tc_skel;
-        if (!conflict_skel)
-          conflict_skel = svn_wc__conflict_skel_create(result_pool);
-
-        tc_skel = svn_skel__parse(tree_conflict, strlen(tree_conflict),
-                                  scratch_pool);
-        err = svn_wc__deserialize_conflict(
-                          &tc, tc_skel,
-                          svn_dirent_dirname(local_abspath, scratch_pool),
-                          scratch_pool, scratch_pool);
-
-        if (!err)
-          err = svn_wc__conflict_skel_add_tree_conflict(conflict_skel,
-                                                        db, local_abspath,
-                                                        tc->reason,
-                                                        tc->action,
-                                                        result_pool,
-                                                        scratch_pool);
-
-        if (!err)
-          switch (tc->operation)
-            {
-              case svn_wc_operation_merge:
-                err = svn_wc__conflict_skel_set_op_merge(conflict_skel,
-                                                         tc->src_left_version,
-                                                         tc->src_right_version,
-                                                         result_pool,
-                                                         scratch_pool);
-                break;
-              case svn_wc_operation_update:
-              default:
-                err = svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                                          tc->src_left_version,
-                                                          result_pool,
-                                                          scratch_pool);
-                break;
-              case svn_wc_operation_switch:
-                err = svn_wc__conflict_skel_set_op_switch(conflict_skel,
-                                                          tc->src_left_version,
-                                                          result_pool,
-                                                          scratch_pool);
-                break;
-            }
-      }
-    else if (!err && conflict_skel)
-      {
-        err = svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
-                                                  result_pool, scratch_pool);
-      }
-
-    if (err)
-      return svn_error_trace(
-                        svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    err = svn_wc__upgrade_conflict_skel_from_raw(&conflict_skel,
+                                                 db, local_abspath,
+                                                 local_relpath,
+                                                 conflict_old,
+                                                 conflict_wrk,
+                                                 conflict_new,
+                                                 conflict_prj,
+                                                 tree_conflict_data,
+                                                 tree_conflict_len,
+                                                 result_pool,
+                                                 scratch_pool);
 
     *conflict = conflict_skel;
+    
+    return svn_error_trace(
+                svn_error_compose_create(err, svn_sqlite__reset(stmt)));
   }
 #else
   {
@@ -12168,10 +12087,10 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
       *conflict = svn_skel__parse(cfl_data, cfl_len, result_pool);
     else
       *conflict = NULL;
+
+    return svn_error_trace(svn_sqlite__reset(stmt));
   }
 #endif
-
-  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
