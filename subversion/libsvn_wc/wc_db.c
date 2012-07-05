@@ -6215,8 +6215,6 @@ revert_list_read(void *baton,
                                                   scratch_pool);
           if (conflict_data)
             {
-              svn_boolean_t tree_conflicted;
-
               svn_skel_t *conflicts = svn_skel__parse(conflict_data,
                                                       conflict_len,
                                                       scratch_pool);
@@ -6226,16 +6224,6 @@ revert_list_read(void *baton,
                                                     conflicts,
                                                     b->result_pool,
                                                     scratch_pool));
-
-              SVN_ERR(svn_wc__conflict_read_info(NULL, NULL,
-                                                 NULL, NULL, &tree_conflicted,
-                                                 b->db, wcroot->abspath,
-                                                 conflicts,
-                                                 b->result_pool,
-                                                 scratch_pool));
-
-              if (tree_conflicted)
-                *(b->reverted) = TRUE;
             }
 #endif
 
