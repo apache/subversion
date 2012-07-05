@@ -18,7 +18,7 @@
 # under the License.
 
 # debug? Just uncomment.
-DEBUG=DEBUG_
+#DEBUG=DEBUG_
 
 # Subversion bin-dir used for maintenance of working copies
 SVN_STABLE="$HOME/pat/stable/prefix/bin/"
