@@ -1541,15 +1541,17 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   if (actual_node->tree_conflict_data)
     SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
 #else
-  SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(&conflict_data,
-                                                 db, wri_abspath,
-                                                 actual_node->local_relpath,
-                                                 actual_node->conflict_old,
-                                                 actual_node->conflict_working,
-                                                 actual_node->conflict_new,
-                                                 actual_node->prop_reject,
-                                                 actual_node->tree_conflict_data,
-                                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(
+                                &conflict_data,
+                                db, wri_abspath,
+                                actual_node->local_relpath,
+                                actual_node->conflict_old,
+                                actual_node->conflict_working,
+                                actual_node->conflict_new,
+                                actual_node->prop_reject,
+                                actual_node->tree_conflict_data,
+                                strlen(actual_node->tree_conflict_data),
+                                scratch_pool, scratch_pool));
 
   if (conflict_data)
     {
