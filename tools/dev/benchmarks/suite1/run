@@ -18,7 +18,10 @@
 # under the License.
 
 # debug? Just uncomment.
-#DEBUG=DEBUG_
+#SVNBENCH_DEBUG=DEBUG_
+if [ -n "$SVNBENCH_DEBUG" ]; then
+  SVNBENCH_DEBUG="DEBUG_"
+fi
 
 # Subversion bin-dir used for maintenance of working copies
 SVN_STABLE="$HOME/pat/stable/prefix/bin/"
@@ -29,31 +32,30 @@ SVN_STABLE="$HOME/pat/stable/prefix/bin/"
 SVN_A_NAME="1.7.0"
 SVN_A="$HOME/pat/bench/prefix/bin"
 SVN_A_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/bench/src" | sed 's/.*://')"
-SVN_A_LABEL="$SVN_A_NAME@$SVN_A_REV"
 
 # side B
 SVN_B_NAME="trunk"
 SVN_B="$HOME/pat/trunk/prefix/bin"
 SVN_B_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/trunk/src" | sed 's/.*://')"
-SVN_B_LABEL="$SVN_B_NAME@$SVN_B_REV"
 
-echo "$SVN_A_LABEL vs. $SVN_B_LABEL"
+echo "$SVN_A_NAME@$SVN_A_REV vs. $SVN_B_NAME@$SVN_B_REV"
 
 # benchmark script and parameters...
 benchmark="$PWD/benchmark.py"
 
-db="$PWD/${DEBUG}benchmark.db"
+db="$PWD/${SVNBENCH_DEBUG}benchmark.db"
 
 batch(){
   levels="$1"
   spread="$2"
   N="$3"
 
-  # SVN_A is a fixed tag, say 1.7.0. For each call, run this once.
+  # SVN_A is a fixed tag, currently 1.7.0. For each call, run this once.
   # It will be called again and again for each trunk build being tested,
   # that's why we don't really need to run it $N times every time.
+  N_for_A=1
   "$benchmark" "--db-path=$db" "--svn-bin-dir=$SVN_A" \
-      run "$SVN_A_NAME@$SVN_A_REV,${levels}x$spread" 1 >/dev/null
+      run "$SVN_A_NAME@$SVN_A_REV,${levels}x$spread" "$N_for_A" >/dev/null
 
   # SVN_B is a branch, i.e. the moving target, benchmarked at a specific
   # point in history each time this script is called. Run this $N times.
@@ -69,7 +71,7 @@ bs=1
 cl=1
 cs=100
 
-if [ -n "$DEBUG" ]; then
+if [ -n "$SVNBENCH_DEBUG" ]; then
   echo "DEBUG"
   N=1
   al=1
@@ -90,9 +92,13 @@ echo "
 This is intended to measure changes in performance of the local working
 copy layer, *only*. These results are *not* generally true for everyone."
 
-batch $al $as $N
-batch $bl $bs $N
-batch $cl $cs $N
+if [ -z "$SVNBENCH_SUMMARY_ONLY" ]; then
+  batch $al $as $N
+  batch $bl $bs $N
+  batch $cl $cs $N
+else
+  echo "(not running benchmarks, just printing results on record.)"
+fi
 
 echo ""
 echo "Averaged-total results across all runs:"
@@ -122,7 +128,7 @@ echo ""
 for lvlspr in "${al}x${as}" "${bl}x${bs}" "${cl}x${cs}" "" ; do
   "$benchmark" "--db-path=$db" show "$SVN_A_NAME,$lvlspr"
   echo --
-  "$benchmark" "--db-path=$db" show "$SVN_B_NAME,$lvlspr"
+  "$benchmark" "--db-path=$db" show "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
   echo --
   "$benchmark" "--db-path=$db" \
       compare -v "$SVN_A_NAME,$lvlspr" "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
