@@ -578,12 +578,16 @@ merge_chunks(apr_array_header_t **merged_chunk,
         {
           SVN_ERR(edit_chunk(merged_chunk, chunk1, editor_cmd, config,
                              result_pool, iterpool));
+          if (*merged_chunk == NULL)
+            continue;
           break;
         }
       else if (strcmp(answer, "e2") == 0)
         {
           SVN_ERR(edit_chunk(merged_chunk, chunk2, editor_cmd, config,
                              result_pool, iterpool));
+          if (*merged_chunk == NULL)
+            continue;
           break;
         }
       else if (strcmp(answer, "eb") == 0)
@@ -594,6 +598,8 @@ merge_chunks(apr_array_header_t **merged_chunk,
                                                               scratch_pool);
           SVN_ERR(edit_chunk(merged_chunk, conflict_chunk, editor_cmd, config,
                              result_pool, iterpool));
+          if (*merged_chunk == NULL)
+            continue;
           break;
         }
     }
