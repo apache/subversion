@@ -295,6 +295,8 @@ get_term_width(void)
       struct winsize ws;
 
       if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
+        if (ws.ws_col < 80)
+          return 80;
         return ws.ws_col;
     }
 #endif
@@ -310,8 +312,10 @@ get_term_width(void)
           svn_error_clear(err);
           return 80;
         }
-      else
-        return cols;
+      if (cols < 80)
+        return 80;
+      return cols;
+
     }
   else
     return 80;
