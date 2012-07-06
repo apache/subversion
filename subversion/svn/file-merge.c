@@ -317,7 +317,17 @@ get_term_width(void)
           return ws.ws_col;
         }
     }
+#elif defined WIN32
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+    {
+      if (csbi.dwSize.X < 80)
+        return 80;
+      return csbi.dwSize.X;
+    }
 #endif
+
   columns_env = getenv("COLUMNS");
   if (columns_env)
     {
