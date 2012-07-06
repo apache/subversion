@@ -66,101 +66,6 @@ struct file_merge_baton {
   apr_pool_t *scratch_pool;
 } file_merge_baton;
 
-/* A helper for reading a line of text from a range in a file.
- *
- * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
- * Reading stops either after a line-terminator was found or after MAX_LEN
- * bytes have been read. The line-terminator is not stored in *STRINGBUF.
- *
- * The line-terminator is detected automatically and stored in *EOL
- * if EOL is not NULL. If EOF is reached and FILE does not end
- * with a newline character, and EOL is not NULL, *EOL is set to NULL.
- *
- * SCRATCH_POOL is used for temporary allocations.
- */
-static svn_error_t *
-readline(apr_file_t *file,
-         svn_stringbuf_t **stringbuf,
-         const char **eol,
-         svn_boolean_t *eof,
-         apr_size_t max_len,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *str;
-  const char *eol_str;
-  apr_size_t numbytes;
-  char c;
-  apr_size_t len;
-  svn_boolean_t found_eof;
-
-  str = svn_stringbuf_create_ensure(80, result_pool);
-
-  /* Read bytes into STR up to and including, but not storing,
-   * the next EOL sequence. */
-  eol_str = NULL;
-  numbytes = 1;
-  len = 0;
-  found_eof = FALSE;
-  while (!found_eof)
-    {
-      if (len < max_len)
-        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                       &found_eof, scratch_pool));
-      len++;
-      if (numbytes != 1 || len > max_len)
-        {
-          found_eof = TRUE;
-          break;
-        }
-
-      if (c == '\n')
-        {
-          eol_str = "\n";
-        }
-      else if (c == '\r')
-        {
-          eol_str = "\r";
-
-          if (!found_eof && len < max_len)
-            {
-              apr_off_t pos;
-
-              /* Check for "\r\n" by peeking at the next byte. */
-              pos = 0;
-              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
-              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                             &found_eof, scratch_pool));
-              if (numbytes == 1 && c == '\n')
-                {
-                  eol_str = "\r\n";
-                  len++;
-                }
-              else
-                {
-                  /* Pretend we never peeked. */
-                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
-                  found_eof = FALSE;
-                  numbytes = 1;
-                }
-            }
-        }
-      else
-        svn_stringbuf_appendbyte(str, c);
-
-      if (eol_str)
-        break;
-    }
-
-  if (eol)
-    *eol = eol_str;
-  if (eof)
-    *eof = found_eof;
-  *stringbuf = str;
-
-  return SVN_NO_ERROR;
-}
-
 /* Copy LEN lines from SOURCE_FILE to the MERGED_FILE, starting at
  * line START. The CURRENT_LINE is the current line in the source file.
  * The new current line is returned in *NEW_CURRENT_LINE. */
@@ -186,8 +91,8 @@ copy_to_merged_file(svn_linenum_t *new_current_line,
     {
       svn_pool_clear(iterpool);
 
-      SVN_ERR(readline(source_file, &line, NULL, &eof, APR_SIZE_MAX,
-                       iterpool, iterpool));
+      SVN_ERR(svn_io_file_readline(source_file, &line, NULL, &eof,
+                                   APR_SIZE_MAX, iterpool, iterpool));
       if (eof)
         break;
 
@@ -203,8 +108,8 @@ copy_to_merged_file(svn_linenum_t *new_current_line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(readline(source_file, &line, &eol_str, &eof, APR_SIZE_MAX,
-                       iterpool, iterpool));
+      SVN_ERR(svn_io_file_readline(source_file, &line, &eol_str, &eof,
+                                   APR_SIZE_MAX, iterpool, iterpool));
       if (eol_str)
         svn_stringbuf_appendcstr(line, eol_str);
       SVN_ERR(svn_io_file_write_full(merged_file, line->data, line->len,
@@ -342,8 +247,8 @@ read_diff_chunk(apr_array_header_t **lines,
   while (current_line < start)
     {
       svn_pool_clear(iterpool);
-      SVN_ERR(readline(file, &line, NULL, &eof, APR_SIZE_MAX,
-                       iterpool, iterpool));
+      SVN_ERR(svn_io_file_readline(file, &line, NULL, &eof, APR_SIZE_MAX,
+                                   iterpool, iterpool));
       if (eof)
         return SVN_NO_ERROR;
       current_line++;
@@ -353,8 +258,8 @@ read_diff_chunk(apr_array_header_t **lines,
   /* Now read the lines. */
   do
     {
-      SVN_ERR(readline(file, &line, &eol_str, &eof, APR_SIZE_MAX,
-                       result_pool, scratch_pool));
+      SVN_ERR(svn_io_file_readline(file, &line, &eol_str, &eof, APR_SIZE_MAX,
+                                   result_pool, scratch_pool));
       if (eol_str)
         svn_stringbuf_appendcstr(line, eol_str);
       APR_ARRAY_PUSH(*lines, svn_stringbuf_t *) = line;
@@ -539,8 +444,8 @@ edit_chunk(apr_array_header_t **merged_chunk,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(readline(temp_file, &line, &eol_str, &eof, APR_SIZE_MAX,
-                       result_pool, iterpool));
+      SVN_ERR(svn_io_file_readline(temp_file, &line, &eol_str, &eof,
+                                   APR_SIZE_MAX, result_pool, iterpool));
       if (eol_str)
         svn_stringbuf_appendcstr(line, eol_str);
 

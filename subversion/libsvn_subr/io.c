@@ -4569,3 +4569,86 @@ svn_io_open_unique_file3(apr_file_t **file,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_io_file_readline(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char **eol,
+                     svn_boolean_t *eof,
+                     apr_size_t max_len,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *str;
+  const char *eol_str;
+  apr_size_t numbytes;
+  char c;
+  apr_size_t len;
+  svn_boolean_t found_eof;
+
+  str = svn_stringbuf_create_ensure(80, result_pool);
+
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  eol_str = NULL;
+  numbytes = 1;
+  len = 0;
+  found_eof = FALSE;
+  while (!found_eof)
+    {
+      if (len < max_len)
+        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                       &found_eof, scratch_pool));
+      len++;
+      if (numbytes != 1 || len > max_len)
+        {
+          found_eof = TRUE;
+          break;
+        }
+
+      if (c == '\n')
+        {
+          eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          eol_str = "\r";
+
+          if (!found_eof && len < max_len)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n')
+                {
+                  eol_str = "\r\n";
+                  len++;
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (eol_str)
+        break;
+    }
+
+  if (eol)
+    *eol = eol_str;
+  if (eof)
+    *eof = found_eof;
+  *stringbuf = str;
+
+  return SVN_NO_ERROR;
+}
