@@ -1204,7 +1204,7 @@ write_config(svn_fs_t *fs,
 "### In rarely read repositories, the I/O overhead may be significant as"    NL
 "### cache hit rates will most likely be low"                                NL
 "### directory deltification is disabled by default."                        NL
-"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = false"                       NL
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
@@ -1212,7 +1212,7 @@ write_config(svn_fs_t *fs,
 "### properties.  You should not activate this if rep-sharing has been"      NL
 "### disabled."                                                              NL
 "### property deltification is disabled by default."                         NL
-"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
 "### of a given node to find a suitable deltification base.  This linear"    NL
