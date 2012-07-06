@@ -70,6 +70,9 @@ struct file_merge_baton {
   /* The client configuration hash. */
   apr_hash_t *config;
 
+  /* Wether the merge should be aborted. */
+  svn_boolean_t abort_merge;
+
   /* Pool for temporary allocations. */
   apr_pool_t *scratch_pool;
 } file_merge_baton;
@@ -148,6 +151,9 @@ file_merge_output_common(void *output_baton,
 {
   struct file_merge_baton *b = output_baton;
 
+  if (b->abort_merge)
+    return SVN_NO_ERROR;
+
   SVN_ERR(copy_to_merged_file(&b->current_line_original,
                               b->merged_file,
                               b->original_file,
@@ -170,6 +176,9 @@ file_merge_output_diff_modified(void *output_baton,
                                 apr_off_t latest_length)
 {
   struct file_merge_baton *b = output_baton;
+
+  if (b->abort_merge)
+    return SVN_NO_ERROR;
 
   SVN_ERR(copy_to_merged_file(&b->current_line_modified,
                               b->merged_file,
@@ -195,6 +204,9 @@ file_merge_output_diff_latest(void *output_baton,
 {
   struct file_merge_baton *b = output_baton;
 
+  if (b->abort_merge)
+    return SVN_NO_ERROR;
+
   SVN_ERR(copy_to_merged_file(&b->current_line_latest,
                               b->merged_file,
                               b->latest_file,
@@ -218,6 +230,9 @@ file_merge_output_diff_common(void *output_baton,
                               apr_off_t latest_length)
 {
   struct file_merge_baton *b = output_baton;
+
+  if (b->abort_merge)
+    return SVN_NO_ERROR;
 
   SVN_ERR(copy_to_merged_file(&b->current_line_latest,
                               b->merged_file,
@@ -535,9 +550,11 @@ get_sep_string(apr_pool_t *result_pool)
 /* Merge chunks CHUNK1 and CHUNK2.
  * Each lines array contains elements of type svn_stringbuf_t*.
  * Return the result in *MERGED_CHUNK, or set *MERGED_CHUNK to NULL in
- * case the user chooses to postpone resolution of this chunk. */
+ * case the user chooses to postpone resolution of this chunk.
+ * If the user wants to abort the merge, set *ABORT_MERGE to TRUE. */
 static svn_error_t *
 merge_chunks(apr_array_header_t **merged_chunk,
+             svn_boolean_t *abort_merge,
              apr_array_header_t *chunk1,
              apr_array_header_t *chunk2,
              svn_linenum_t current_line1,
@@ -554,12 +571,15 @@ merge_chunks(apr_array_header_t **merged_chunk,
 
   max_chunk_lines = chunk1->nelts > chunk2->nelts ? chunk1->nelts
                                                   : chunk2->nelts;
+  *abort_merge = FALSE;
+
   /* 
    * Prepare the selection prompt.
    */
 
   prompt = svn_stringbuf_create(
-             apr_psprintf(scratch_pool, "%s|%s\n%s",
+             apr_psprintf(scratch_pool, "%s\n%s|%s\n%s",
+                          _("Conflicting section found during merge."),
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
@@ -616,10 +636,12 @@ merge_chunks(apr_array_header_t **merged_chunk,
   svn_stringbuf_appendcstr(prompt, get_sep_string(scratch_pool));
   svn_stringbuf_appendcstr(
     prompt,
-    _("Select: (1) use their version, (2) use your version, (p) postpone,\n"
+    _("Select: (1) use their version, (2) use your version,\n"
       "        (e1) edit their version and use the result,\n"
       "        (e2) edit your version and use the result,\n"
-      "        (eb) edit both versions and use the result: "));
+      "        (eb) edit both versions and use the result,\n"
+      "        (p) postpone this conflicting section leaving conflict markers,\n"
+      "        (a) abort entire merge and return to main menu: "));
 
   /* Now let's see what the user wants to do with this conflict. */
   while (TRUE)
@@ -669,6 +691,11 @@ merge_chunks(apr_array_header_t **merged_chunk,
           if (*merged_chunk)
             break;
         }
+      else if (strcmp(answer, "a") == 0)
+        {
+          *abort_merge = TRUE;
+          break;
+        }
     }
   svn_pool_destroy(iterpool);
 
@@ -678,9 +705,11 @@ merge_chunks(apr_array_header_t **merged_chunk,
 /* Perform a merge of chunks from FILE1 and FILE2, specified by START1/LEN1
  * and START2/LEN2, respectively. Append the result to MERGED_FILE.
  * The current line numbers for FILE1 and FILE2 are passed in *CURRENT_LINE1
- * and *CURRENT_LINE2, and will be updated to new values upon return. */
+ * and *CURRENT_LINE2, and will be updated to new values upon return.
+ * If the user wants to abort the merge, set *ABORT_MERGE to TRUE. */
 static svn_error_t *
 merge_file_chunks(svn_boolean_t *remains_in_conflict,
+                  svn_boolean_t *abort_merge,
                   apr_file_t *merged_file,
                   apr_file_t *file1,
                   apr_file_t *file2,
@@ -705,10 +734,13 @@ merge_file_chunks(svn_boolean_t *remains_in_conflict,
   SVN_ERR(read_diff_chunk(&chunk2, current_line2, file2, *current_line2,
                           start2, len2, scratch_pool, scratch_pool));
 
-  SVN_ERR(merge_chunks(&merged_chunk, chunk1, chunk2,
+  SVN_ERR(merge_chunks(&merged_chunk, abort_merge, chunk1, chunk2,
                        *current_line1, *current_line2,
                        editor_cmd, config,
                        scratch_pool, scratch_pool));
+
+  if (*abort_merge)
+      return SVN_NO_ERROR;
 
   /* If the user chose 'postpone' put conflict markers and left/right
    * versions into the merged file. */
@@ -753,7 +785,11 @@ file_merge_output_conflict(void *output_baton,
 {
   struct file_merge_baton *b = output_baton;
 
+  if (b->abort_merge)
+    return SVN_NO_ERROR;
+
   SVN_ERR(merge_file_chunks(&b->remains_in_conflict,
+                            &b->abort_merge,
                             b->merged_file,
                             b->modified_file,
                             b->latest_file,
@@ -825,6 +861,7 @@ svn_cl__merge_file(const char *base_path,
   fmb.remains_in_conflict = FALSE;
   fmb.editor_cmd = editor_cmd;
   fmb.config = config;
+  fmb.abort_merge = FALSE;
   fmb.scratch_pool = scratch_pool;
 
   SVN_ERR(svn_diff_output(diff, &fmb, &file_merge_diff_output_fns));
@@ -835,7 +872,13 @@ svn_cl__merge_file(const char *base_path,
   SVN_ERR(svn_io_file_close(merged_file, scratch_pool));
 
   if (remains_in_conflict)
-    *remains_in_conflict = fmb.remains_in_conflict;
+    *remains_in_conflict = (fmb.remains_in_conflict || fmb.abort_merge);
+
+  if (fmb.abort_merge)
+    {
+      SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
             apr_psprintf(scratch_pool,
