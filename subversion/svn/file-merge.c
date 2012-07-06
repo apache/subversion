@@ -379,16 +379,15 @@ static const char *
 prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
-  int line_width = LINE_DISPLAY_WIDTH;
   int width;
   apr_pool_t *iterpool;
 
   /* Trim EOL. */
-  if (buf->len > 2 &&
+  if (buf->len >= 2 &&
       buf->data[buf->len - 2] == '\r' && 
       buf->data[buf->len - 1] == '\n')
     svn_stringbuf_chop(buf, 2);
-  else if (buf->len > 1 &&
+  else if (buf->len >= 1 &&
            (buf->data[buf->len - 1] == '\n' ||
             buf->data[buf->len - 1] == '\r'))
     svn_stringbuf_chop(buf, 1);
@@ -408,7 +407,7 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
   /* Trim further in case line is still too long, or add padding in case
    * it is too short. */
   iterpool = svn_pool_create(pool);
-  while (width > line_width)
+  while (width > LINE_DISPLAY_WIDTH)
     {
       const char *last_valid;
 
@@ -428,7 +427,7 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
     }
   svn_pool_destroy(iterpool);
 
-  while (width == 0 || width < line_width)
+  while (width == 0 || width < LINE_DISPLAY_WIDTH)
     {
       svn_stringbuf_appendbyte(buf, ' ');
       width++;
@@ -556,7 +555,7 @@ edit_chunk(apr_array_header_t **merged_chunk,
 }
 
 #define SEP_STRING \
-  "-------------------------------------+-------------------------------------\n"
+  "------------------------------------+------------------------------------\n"
 
 /* Merge chunks CHUNK1 and CHUNK2.
  * Each lines array contains elements of type svn_stringbuf_t*.
@@ -585,7 +584,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
    */
 
   prompt = svn_stringbuf_create(
-             apr_psprintf(scratch_pool, "%s |%s\n%s",
+             apr_psprintf(scratch_pool, "%s|%s\n%s",
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
@@ -634,7 +633,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
       else
         line2 = prepare_line_for_display("", iterpool);
         
-      prompt_line = apr_psprintf(iterpool, "%s |%s\n", line1, line2);
+      prompt_line = apr_psprintf(iterpool, "%s|%s\n", line1, line2);
 
       svn_stringbuf_appendcstr(prompt, prompt_line);
     }
