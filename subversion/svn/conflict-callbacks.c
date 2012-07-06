@@ -241,14 +241,16 @@ launch_resolver(svn_boolean_t *performed_edit,
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                   err->message ? err->message :
-                                  _("No merge tool found.\n")));
+                                  _("No merge tool found, "
+                                    "try '(m) merge' instead.\n")));
       svn_error_clear(err);
     }
   else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                   err->message ? err->message :
-                             _("Error running merge tool.")));
+                             _("Error running merge tool, "
+                               "try '(m) merge' instead.")));
       svn_error_clear(err);
     }
   else if (err)
