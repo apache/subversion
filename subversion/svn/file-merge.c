@@ -38,6 +38,13 @@
 #include "private/svn_utf_private.h"
 #include "private/svn_dep_compat.h"
 
+#if APR_HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+
+#include <fcntl.h>
+#include <stdlib.h>
+
 /* Baton for functions in this file which implement svn_diff_output_fns_t. */
 struct file_merge_baton {
   /* The files being merged. */
@@ -274,17 +281,53 @@ read_diff_chunk(apr_array_header_t **lines,
   return SVN_NO_ERROR;
 }
 
-/* ### make this configurable? */
-#define LINE_DISPLAY_WIDTH ((80 / 2) - 2)
+/* Return the terminal width in number of columns. */
+static int
+get_term_width(void)
+{
+  char *columns_env;
+#ifdef TIOCGWINSZ	
+  int fd;
 
-/* Prepare LINE for display, pruning or extending it to LINE_DISPLAY_WIDTH
- * characters, and stripping the EOL marker, if any.
+  fd = open("/dev/tty", O_RDONLY, 0);
+  if (fd != -1)
+    {
+      struct winsize ws;
+
+      if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
+        return ws.ws_col;
+    }
+#endif
+  columns_env = getenv("COLUMNS");
+  if (columns_env)
+    {
+      svn_error_t *err;
+      int cols;
+
+      err = svn_cstring_atoi(&cols, columns_env);
+      if (err)
+        {
+          svn_error_clear(err);
+          return 80;
+        }
+      else
+        return cols;
+    }
+  else
+    return 80;
+}
+
+#define LINE_DISPLAY_WIDTH ((get_term_width() / 2) - 2)
+
+/* Prepare LINE for display, pruning or extending it to an appropriate
+ * display width, and stripping the EOL marker, if any.
  * This function assumes that the data in LINE is encoded in UTF-8. */
 static const char *
 prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
   int width;
+  int line_width = LINE_DISPLAY_WIDTH;
   apr_pool_t *iterpool;
 
   /* Trim EOL. */
@@ -312,7 +355,7 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
   /* Trim further in case line is still too long, or add padding in case
    * it is too short. */
   iterpool = svn_pool_create(pool);
-  while (width > LINE_DISPLAY_WIDTH)
+  while (width > line_width)
     {
       const char *last_valid;
 
@@ -332,13 +375,13 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
     }
   svn_pool_destroy(iterpool);
 
-  while (width == 0 || width < LINE_DISPLAY_WIDTH)
+  while (width == 0 || width < line_width)
     {
       svn_stringbuf_appendbyte(buf, ' ');
       width++;
     }
 
-  SVN_ERR_ASSERT_NO_RETURN(width == LINE_DISPLAY_WIDTH);
+  SVN_ERR_ASSERT_NO_RETURN(width == line_width);
   return buf->data;
 }
 
@@ -463,8 +506,24 @@ edit_chunk(apr_array_header_t **merged_chunk,
   return SVN_NO_ERROR;
 }
 
-#define SEP_STRING \
-  "--------------------------------------+--------------------------------------\n"
+/* Create a separator string of the appropriate length. */
+static const char *
+get_sep_string(apr_pool_t *result_pool)
+{
+  int line_width = LINE_DISPLAY_WIDTH;
+  int i;
+  svn_stringbuf_t *buf;
+
+  buf = svn_stringbuf_create_empty(result_pool);
+  for (i = 0; i < line_width; i++)
+    svn_stringbuf_appendbyte(buf, '-');
+  svn_stringbuf_appendbyte(buf, '+');
+  for (i = 0; i < line_width; i++)
+    svn_stringbuf_appendbyte(buf, '-');
+  svn_stringbuf_appendbyte(buf, '\n');
+
+  return buf->data;
+}
 
 /* Merge chunks CHUNK1 and CHUNK2.
  * Each lines array contains elements of type svn_stringbuf_t*.
@@ -504,7 +563,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
                                          _("(2) your version (at line %lu)"),
                                          current_line2),
                             scratch_pool),
-                          SEP_STRING),
+                          get_sep_string(scratch_pool)),
              scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -547,7 +606,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
       svn_stringbuf_appendcstr(prompt, prompt_line);
     }
 
-  svn_stringbuf_appendcstr(prompt, SEP_STRING);
+  svn_stringbuf_appendcstr(prompt, get_sep_string(scratch_pool));
   svn_stringbuf_appendcstr(
     prompt,
     _("Select: (1) use their version, (2) use your version, (p) postpone,\n"
