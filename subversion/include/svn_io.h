@@ -2200,6 +2200,36 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
 
+/* Read a line of text from a file, up to a specified length.
+ *
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line 
+ * from @a file. Reading stops either after a line-terminator was found
+ * or after @a max_len bytes have been read.
+ *
+ * If end-of-file is reached or @a max_len bytes have been read, and @a eof
+ * is not NULL, then set @a *eof to @c TRUE.
+ *
+ * The line-terminator is not stored in @a *stringbuf.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL. If EOF is reached and @a file does not end
+ * with a newline character, and @a eol is not NULL, @ *eol is set to NULL.
+ *
+ * @a scratch_pool is used for temporary allocations.
+ *
+ * Hint: To read all data until a line-terminator is hit, pass APR_SIZE_MAX
+ * for @a max_len.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_file_readline(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char **eol,
+                     svn_boolean_t *eof,
+                     apr_size_t max_len,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
 /** @} */
 
 #ifdef __cplusplus
