@@ -295,9 +295,11 @@ get_term_width(void)
       struct winsize ws;
 
       if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
-        if (ws.ws_col < 80)
-          return 80;
-        return ws.ws_col;
+        {
+          if (ws.ws_col < 80)
+            return 80;
+          return ws.ws_col;
+        }
     }
 #endif
   columns_env = getenv("COLUMNS");
@@ -312,10 +314,10 @@ get_term_width(void)
           svn_error_clear(err);
           return 80;
         }
+
       if (cols < 80)
         return 80;
       return cols;
-
     }
   else
     return 80;
