@@ -351,8 +351,7 @@ read_diff_chunk(apr_array_header_t **lines,
                        result_pool, scratch_pool));
       if (eol_str)
         svn_stringbuf_appendcstr(line, eol_str);
-      if (line->len > 0)
-        APR_ARRAY_PUSH(*lines, svn_stringbuf_t *) = line;
+      APR_ARRAY_PUSH(*lines, svn_stringbuf_t *) = line;
       if (eof)
         break;
       current_line++;
