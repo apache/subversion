@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_utf.h"
+#include "svn_xml.h"
 
 #include "cl.h"
 
@@ -364,17 +365,18 @@ read_diff_chunk(apr_array_header_t **lines,
 }
 
 /* ### make this configurable? */
-#define MAX_LINE_DISPLAY_LEN ((80 / 2) - 4)
+#define LINE_DISPLAY_WIDTH ((80 / 2) - 4)
 
-/* Prepare LINE for display, pruning or extending it to MAX_LINE_DISPLAY_LEN
+/* Prepare LINE for display, pruning or extending it to LINE_DISPLAY_WIDTH
  * characters, and stripping the EOL marker, if any.
  * This function assumes that the data in LINE is encoded in UTF-8. */
 static const char *
-prepare_line_for_display(const char *line, apr_pool_t *result_pool)
+prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf = svn_stringbuf_create(line, result_pool);
-  int max_len = MAX_LINE_DISPLAY_LEN;
-  apr_size_t width;
+  svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
+  int line_width = LINE_DISPLAY_WIDTH;
+  int width;
+  apr_pool_t *iterpool;
 
   /* Trim EOL. */
   if (buf->len > 2 &&
@@ -386,32 +388,48 @@ prepare_line_for_display(const char *line, apr_pool_t *result_pool)
             buf->data[buf->len - 1] == '\r'))
     svn_stringbuf_chop(buf, 1);
 
+  /* Determine the on-screen width of the line. */
+  width = svn_utf_cstring_utf8_width(buf->data);
+  if (width == -1)
+    {
+      /* Determining the width failed. Try to get rid of unprintable
+       * characters in the line buffer. */
+      buf = svn_stringbuf_create(svn_xml_fuzzy_escape(buf->data, pool), pool);
+      width = svn_utf_cstring_utf8_width(buf->data);
+      if (width == -1)
+        width = buf->len; /* fallback: buffer length */
+    }
+
   /* Trim further in case line is still too long, or add padding in case
    * it is too short. */
-  width = buf->len; /* ### assumes width == 1 for all characters */
-  if (width > max_len)
+  iterpool = svn_pool_create(pool);
+  while (width > line_width)
     {
       const char *last_valid;
 
-      svn_stringbuf_chop(buf, width - max_len);
-      width = max_len;
+      svn_pool_clear(iterpool);
+
+      svn_stringbuf_chop(buf, 1);
 
       /* Be careful not to invalidate the UTF-8 string by trimming
        * just part of a character. */
       last_valid = svn_utf__last_valid(buf->data, buf->len);
       if (last_valid < buf->data + buf->len)
         svn_stringbuf_chop(buf, (buf->data + buf->len) - last_valid);
+
+      width = svn_utf_cstring_utf8_width(buf->data);
+      if (width == -1)
+        width = buf->len; /* fallback: buffer length */
     }
-  else
+  svn_pool_destroy(iterpool);
+
+  while (width == 0 || width < line_width)
     {
-      while (width == 0 || width < max_len)
-        {
-          svn_stringbuf_appendbyte(buf, ' ');
-          width++;
-        }
+      svn_stringbuf_appendbyte(buf, ' ');
+      width++;
     }
 
-  SVN_ERR_ASSERT_NO_RETURN(width == MAX_LINE_DISPLAY_LEN);
+  SVN_ERR_ASSERT_NO_RETURN(width == LINE_DISPLAY_WIDTH);
   return buf->data;
 }
 
