@@ -275,7 +275,7 @@ read_diff_chunk(apr_array_header_t **lines,
 }
 
 /* ### make this configurable? */
-#define LINE_DISPLAY_WIDTH ((80 / 2) - 4)
+#define LINE_DISPLAY_WIDTH ((80 / 2) - 2)
 
 /* Prepare LINE for display, pruning or extending it to LINE_DISPLAY_WIDTH
  * characters, and stripping the EOL marker, if any.
@@ -464,7 +464,7 @@ edit_chunk(apr_array_header_t **merged_chunk,
 }
 
 #define SEP_STRING \
-  "------------------------------------+------------------------------------\n"
+  "--------------------------------------+--------------------------------------\n"
 
 /* Merge chunks CHUNK1 and CHUNK2.
  * Each lines array contains elements of type svn_stringbuf_t*.
