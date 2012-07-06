@@ -1407,7 +1407,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
-/* SVN_ERR-like macros for dealing with recoverable errors on mutable files
+/* Functions for dealing with recoverable errors on mutable files
  *
  * Revprops, current, and txn-current files are mutable; that is, they
  * change as part of normal fsfs operation, in constrat to revs files, or
@@ -1440,98 +1440,75 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
  *
  ** Solution
  *
- * Wrap opens and reads of such files with RETRY_RECOVERABLE and
- * closes with IGNORE_RECOVERABLE.  Call these macros within a loop of
- * RECOVERABLE_RETRY_COUNT iterations (though, realistically, the
- * second try will succeed).  Make sure you put a break statement
- * after the close, at the end of your loop.  Immediately after your
- * loop, return err if err.
- *
- * You must initialize err to SVN_NO_ERROR and filehandle to NULL, as
- * these macros do not.
+ * Try open and read of such files in try_stringbuf_from_file().  Call
+ * this function within a loop of RECOVERABLE_RETRY_COUNT iterations
+ * (though, realistically, the second try will succeed).
  */
 
+#define RECOVERABLE_RETRY_COUNT 10
+
+/* Read the file at PATH and return its content in *CONTENT. *CONTENT will
+ * not be modified unless the whole file was read successfully.
+ *
+ * ESTALE, EIO and ENOENT will not cause this function to return an error
+ * unless LAST_ATTEMPT has been set.  If MISSING is not NULL, indicate
+ * missing files (ENOENT) there.
+ *
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+try_stringbuf_from_file(svn_stringbuf_t **content,
+                        svn_boolean_t *missing,
+                        const char *path,
+                        svn_boolean_t last_attempt,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err = svn_stringbuf_from_file2(content, path, pool);
+  if (missing)
+    *missing = FALSE;
+
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          if (!last_attempt)
+            {
+              svn_error_clear(err);
+              if (missing)
+                *missing = TRUE;
+              return SVN_NO_ERROR;
+            }
+        }
 #ifdef ESTALE
-/* Do not use do-while due to the embedded 'continue'.  */
-#define RETRY_RECOVERABLE(err, filehandle, expr)                \
-  if (1) {                                                      \
-    svn_error_clear(err);                                       \
-    err = (expr);                                               \
-    if (err)                                                    \
-      {                                                         \
-        apr_status_t _e = APR_TO_OS_ERROR(err->apr_err);        \
-        if ((_e == ESTALE) || (_e == EIO) || (_e == ENOENT)) {  \
-          if (NULL != filehandle)                               \
-            (void)apr_file_close(filehandle);                   \
-          continue;                                             \
-        }                                                       \
-        return svn_error_trace(err);                           \
-      }                                                         \
-  } else
-#define IGNORE_RECOVERABLE(err, expr)                           \
-  if (1) {                                                      \
-    svn_error_clear(err);                                       \
-    err = (expr);                                               \
-    if (err)                                                    \
-      {                                                         \
-        apr_status_t _e = APR_TO_OS_ERROR(err->apr_err);        \
-        if ((_e != ESTALE) && (_e != EIO))                      \
-          return svn_error_trace(err);                         \
-      }                                                         \
-  } else
-#define RECOVERABLE_RETRY_TEST \
-  i < 10
-#define RECOVERABLE_RETRY_NEXT \
-  i++
-#else
-#define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
-#define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
-#define RECOVERABLE_RETRY_TEST
-#define RECOVERABLE_RETRY_NEXT
+      else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE
+                || APR_TO_OS_ERROR(err->apr_err) == EIO)
+        {
+          if (!last_attempt)
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+        }
+    }
 #endif
 
-/* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
- * 19 bytes for svn_revnum_t (room for 32 or 64 bit values)
- * + 2 spaces
- * + 26 bytes for each id (these are actually unbounded, so we just
- *   have to pick something; 2^64 is 13 bytes in base-36)
- * + 1 terminating null
- */
-#define CURRENT_BUF_LEN 48
+  return svn_error_trace(err);
+}
 
 /* Read the 'current' file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
 static svn_error_t *
-read_current(const char *fname, char **buf, apr_pool_t *pool)
+read_content(svn_stringbuf_t **content, const char *fname, apr_pool_t *pool)
 {
-  apr_file_t *revision_file = NULL;
-  apr_size_t len;
   int i;
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_pool_t *iterpool;
+  *content = NULL;
 
-  *buf = apr_palloc(pool, CURRENT_BUF_LEN);
-  iterpool = svn_pool_create(pool);
-  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
-    {
-      svn_pool_clear(iterpool);
+  for (i = 0; !*content && (i < RECOVERABLE_RETRY_COUNT); ++i)
+    SVN_ERR(try_stringbuf_from_file(content, NULL,
+                                    fname, i + 1 < RECOVERABLE_RETRY_COUNT,
+                                    pool));
 
-      RETRY_RECOVERABLE(err, revision_file,
-                        svn_io_file_open(&revision_file, fname,
-                                         APR_READ | APR_BUFFERED,
-                                         APR_OS_DEFAULT, iterpool));
-
-      len = CURRENT_BUF_LEN;
-      RETRY_RECOVERABLE(err, revision_file,
-                        svn_io_read_length_line(revision_file,
-                                                *buf, &len, iterpool));
-      IGNORE_RECOVERABLE(err, svn_io_file_close(revision_file, iterpool));
-
-      break;
-    }
-  svn_pool_destroy(iterpool);
-
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 /* Find the youngest revision in a repository at path FS_PATH and
@@ -1542,12 +1519,11 @@ get_youngest(svn_revnum_t *youngest_p,
              const char *fs_path,
              apr_pool_t *pool)
 {
-  char *buf;
+  svn_stringbuf_t *buf;
+  SVN_ERR(read_content(&buf, svn_dirent_join(fs_path, PATH_CURRENT, pool),
+                       pool));
 
-  SVN_ERR(read_current(svn_dirent_join(fs_path, PATH_CURRENT, pool),
-                       &buf, pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf);
+  *youngest_p = SVN_STR_TO_REV(buf->data);
 
   return SVN_NO_ERROR;
 }
@@ -3231,55 +3207,31 @@ revision_proplist(apr_hash_t **proplist_p,
 
   /* if (1); null condition for easier merging to revprop-packing */
     {
-      apr_file_t *revprop_file = NULL;
-      svn_error_t *err = SVN_NO_ERROR;
+      svn_stringbuf_t *content = NULL;
+      svn_boolean_t missing = FALSE;
       int i;
-      apr_pool_t *iterpool;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
-      proplist = apr_hash_make(pool);
-      iterpool = svn_pool_create(pool);
-      for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
+      /* Don't retry if the file is missing, i.e. the rev doesn't exist. */
+      for (i = 0; i < RECOVERABLE_RETRY_COUNT && !missing && !content; ++i)
         {
           svn_pool_clear(iterpool);
-
-          /* Clear err here rather than after finding a recoverable error so
-           * we can return that error on the last iteration of the loop. */
-          svn_error_clear(err);
-          err = svn_io_file_open(&revprop_file, path_revprops(fs, rev,
-                                                              iterpool),
-                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                 iterpool);
-          if (err)
-            {
-              if (APR_STATUS_IS_ENOENT(err->apr_err))
-                {
-                  svn_error_clear(err);
-                  return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                           _("No such revision %ld"), rev);
-                }
-#ifdef ESTALE
-              else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE
-                       || APR_TO_OS_ERROR(err->apr_err) == EIO
-                       || APR_TO_OS_ERROR(err->apr_err) == ENOENT)
-                continue;
-#endif
-              return svn_error_trace(err);
-            }
-
-          SVN_ERR(svn_hash__clear(proplist, iterpool));
-          RETRY_RECOVERABLE(err, revprop_file,
-                            svn_hash_read2(proplist,
-                                           svn_stream_from_aprfile2(
-                                                revprop_file, TRUE, iterpool),
-                                           SVN_HASH_TERMINATOR, pool));
-
-          IGNORE_RECOVERABLE(err, svn_io_file_close(revprop_file, iterpool));
-
-          break;
+          SVN_ERR(try_stringbuf_from_file(&content,
+                                          &missing,
+                                          path_revprops(fs, rev, iterpool),
+                                          i+1 < RECOVERABLE_RETRY_COUNT,
+                                          iterpool));
         }
 
-      if (err)
-        return svn_error_trace(err);
+      if (missing)
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("No such revision %ld"), rev);
+
+      proplist = apr_hash_make(pool);
+      SVN_ERR(svn_hash_read2(proplist,
+                             svn_stream_from_stringbuf(content, iterpool),
+                             SVN_HASH_TERMINATOR, pool));
+
       svn_pool_destroy(iterpool);
     }
 
@@ -5065,37 +5017,16 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   apr_file_t *txn_current_file = NULL;
   const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_pool_t *iterpool;
   apr_size_t len;
   int i;
 
-  cb->txn_id = apr_palloc(cb->pool, MAX_KEY_SIZE);
+  svn_stringbuf_t *buf;
+  SVN_ERR(read_content(&buf, txn_current_filename, pool));
 
-  iterpool = svn_pool_create(pool);
-  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
-    {
-      svn_pool_clear(iterpool);
-
-      RETRY_RECOVERABLE(err, txn_current_file,
-                        svn_io_file_open(&txn_current_file,
-                                         txn_current_filename,
-                                         APR_READ | APR_BUFFERED,
-                                         APR_OS_DEFAULT, iterpool));
-      len = MAX_KEY_SIZE;
-      RETRY_RECOVERABLE(err, txn_current_file,
-                        svn_io_read_length_line(txn_current_file,
-                                                cb->txn_id,
-                                                &len,
-                                                iterpool));
-      IGNORE_RECOVERABLE(err, svn_io_file_close(txn_current_file,
-                                                iterpool));
-
-      break;
-    }
-  SVN_ERR(err);
-
-  svn_pool_destroy(iterpool);
+  /* remove trailing newlines */
+  svn_stringbuf_strip_whitespace(buf);
+  cb->txn_id = buf->data;
+  len = buf->len;
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
@@ -6183,8 +6114,10 @@ get_next_revision_ids(const char **node_id,
 {
   char *buf;
   char *str;
+  svn_stringbuf_t *content;
 
-  SVN_ERR(read_current(svn_fs_fs__path_current(fs, pool), &buf, pool));
+  SVN_ERR(read_content(&content, svn_fs_fs__path_current(fs, pool), pool));
+  buf = content->data;
 
   str = svn_cstring_tokenize(" ", &buf);
   if (! str)
