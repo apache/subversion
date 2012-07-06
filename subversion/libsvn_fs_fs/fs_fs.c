@@ -1489,8 +1489,8 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
               return SVN_NO_ERROR;
             }
         }
-    }
 #endif
+    }
 
   return svn_error_trace(err);
 }
