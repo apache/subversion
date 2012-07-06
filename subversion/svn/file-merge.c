@@ -26,6 +26,7 @@
  * The merge tool is driven by Subversion's diff code and user input. */
 
 #include "svn_cmdline.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_io.h"
@@ -794,6 +795,7 @@ svn_cl__merge_file(const char *base_path,
   apr_file_t *modified_file;
   apr_file_t *latest_file;
   apr_file_t *merged_file;
+  const char *merged_file_name;
   struct file_merge_baton fmb;
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
@@ -805,9 +807,9 @@ svn_cl__merge_file(const char *base_path,
   SVN_ERR(svn_io_file_open(&latest_file, my_path,
                            APR_READ|APR_BUFFERED|APR_BINARY,
                            APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_io_file_open(&merged_file, merged_path,
-                           APR_WRITE|APR_TRUNCATE|APR_BUFFERED|APR_BINARY,
-                           APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_open_unique_file3(&merged_file, &merged_file_name,
+                                   NULL, svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
 
   diff_options = svn_diff_file_options_create(scratch_pool);
   SVN_ERR(svn_diff_file_diff3_2(&diff, base_path, their_path, my_path,
@@ -834,6 +836,15 @@ svn_cl__merge_file(const char *base_path,
 
   if (remains_in_conflict)
     *remains_in_conflict = fmb.remains_in_conflict;
+
+  SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
+            apr_psprintf(scratch_pool,
+                         _("Could not write merged result to '%s', "
+                         "saved instead at '%s'.\n"),
+                         svn_dirent_local_style(merged_path,
+                                                scratch_pool),
+                         svn_dirent_local_style(merged_file_name,
+                                                scratch_pool)));
 
   return SVN_NO_ERROR;
 }
