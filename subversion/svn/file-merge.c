@@ -434,7 +434,7 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
 }
 
 #define SEP_STRING \
-  "--------------------------------------+--------------------------------------\n"
+  "-------------------------------------+-------------------------------------\n"
 
 /* Merge chunks CHUNK1 and CHUNK2.
  * Each lines array contains elements of type svn_stringbuf_t*.
@@ -461,7 +461,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
    */
 
   prompt = svn_stringbuf_create(
-             apr_psprintf(scratch_pool, "%s | %s\n%s",
+             apr_psprintf(scratch_pool, "%s |%s\n%s",
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
@@ -510,7 +510,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
       else
         line2 = prepare_line_for_display("", iterpool);
         
-      prompt_line = apr_psprintf(iterpool, "%s | %s\n", line1, line2);
+      prompt_line = apr_psprintf(iterpool, "%s |%s\n", line1, line2);
 
       svn_stringbuf_appendcstr(prompt, prompt_line);
     }
