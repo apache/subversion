@@ -3905,7 +3905,8 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
          */
         if (pred_rev >= root->rev)
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   "r%ld's root node's predecessor is r%ld",
+                                   "r%ld's root node's predecessor is r%ld"
+                                   " but must be earlier revision",
                                    root->rev, pred_rev);
 
         /* Check 2: distances must be a power of 2.
@@ -3917,7 +3918,8 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
         delta = root->rev - pred_rev;
         if (delta & (delta - 1))
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   "r%ld's root node's predecessor is r%ld",
+                                   "r%ld's root node's predecessor is r%ld"
+                                   " but the delta must be a power of 2",
                                    root->rev, pred_rev);
       }
   }
