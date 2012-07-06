@@ -3127,74 +3127,107 @@ end_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
   return write_revprop_generation_file(fs, current, pool);
 }
 
-/* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
+/* Parse the serialized revprops in CONTENT and return them in *PROPERTIES.
+ * Also, put them into the revprop cache, if activated, for future use.
+ * Three more parameters are being used to update the revprop cache: FS is
+ * our file system, the revprops belong to REVISION and the global revprop
+ * GENERATION is used as well.
+ * 
+ * The returned hash will be allocated in POOL, SCRATCH_POOL is being used
+ * for temporary allocations.
+ */
 static svn_error_t *
-set_revision_proplist(svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_hash_t *proplist,
-                      apr_pool_t *pool)
+parse_revprop(apr_hash_t **properties,
+              svn_fs_t *fs,
+              svn_revnum_t revision,
+              apr_int64_t generation,
+              svn_string_t *content,
+              apr_pool_t *pool,
+              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+  svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
+  *properties = apr_hash_make(pool);
 
-  /* if (1); null condition for easier merging to revprop-packing */
+  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
+  if (has_revprop_cache(fs, pool))
     {
-      const char *final_path = path_revprops(fs, rev, pool);
-      const char *tmp_path;
-      const char *perms_reference;
-      svn_stream_t *stream;
-      svn_node_kind_t kind = svn_node_none;
+      const char *key;
+      fs_fs_data_t *ffd = fs->fsap_data;
 
-      /* test whether revprops already exist for this revision */
-      if (has_revprop_cache(fs, pool))
-        SVN_ERR(svn_io_check_path(final_path, &kind, pool));
-
-      /* ### do we have a directory sitting around already? we really shouldn't
-         ### have to get the dirname here. */
-      SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                     svn_dirent_dirname(final_path, pool),
-                                     svn_io_file_del_none, pool, pool));
-      SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-      SVN_ERR(svn_stream_close(stream));
-
-      /* We use the rev file of this revision as the perms reference,
-         because when setting revprops for the first time, the revprop
-         file won't exist and therefore can't serve as its own reference.
-         (Whereas the rev file should already exist at this point.) */
-      SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
-
-      /* Now, we may actually be replacing revprops. Make sure that all other
-         threads and processes will know about this. */
-      if (kind != svn_node_none)
-        SVN_ERR(begin_revprop_change(fs, pool));
-
-      SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
-
-      /* Indicate that the update (if relevant) has been completed. */
-      if (kind != svn_node_none)
-        SVN_ERR(end_revprop_change(fs, pool));
+      key = svn_fs_fs__combine_two_numbers(revision, generation,
+                                           scratch_pool);
+      SVN_ERR(svn_cache__set(ffd->revprop_cache, key, *properties,
+                             scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+/* Read the non-packed revprops for revision REV in FS, put them into the
+ * revprop cache if activated and return them in *PROPERTIES.  GENERATION
+ * is the current revprop generation.
+ *
+ * If the data could not be read due to an otherwise recoverable error,
+ * leave *PROPERTIES unchanged. No error will be returned in that case.
+ *
+ * Allocations will be done in POOL.
+ */
 static svn_error_t *
-revision_proplist(apr_hash_t **proplist_p,
-                  svn_fs_t *fs,
-                  svn_revnum_t rev,
-                  apr_pool_t *pool)
+read_non_packed_revprop(apr_hash_t **properties,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_int64_t generation,
+                        apr_pool_t *pool)
 {
-  apr_hash_t *proplist;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  const char *key;
+  svn_stringbuf_t *content = NULL;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t missing = FALSE;
+  int i;
 
+  for (i = 0; i < RECOVERABLE_RETRY_COUNT && !missing && !content; ++i)
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(try_stringbuf_from_file(&content,
+                                      &missing,
+                                      path_revprops(fs, rev, iterpool),
+                                      i + 1 < RECOVERABLE_RETRY_COUNT,
+                                      iterpool));
+    }
+
+  if (content)
+    SVN_ERR(parse_revprop(properties, fs, rev, generation,
+                          svn_stringbuf__morph_into_string(content),
+                          pool, iterpool));
+
+  svn_pool_clear(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ *
+ * Allocations will be done in POOL.
+ */
+static svn_error_t *
+get_revision_proplist(apr_hash_t **proplist_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_int64_t generation = 0;
+
+  /* not found, yet */
+  *proplist_p = NULL;
+
+  /* should they be available at all? */
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   /* Try cache lookup first. */
   if (has_revprop_cache(fs, pool))
     {
-      apr_int64_t generation;
       svn_boolean_t is_cached;
+      const char *key;
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
@@ -3205,41 +3238,136 @@ revision_proplist(apr_hash_t **proplist_p,
         return SVN_NO_ERROR;
     }
 
-  /* if (1); null condition for easier merging to revprop-packing */
+  /* read the revprops (no packing support, yet) */
+  SVN_ERR(read_non_packed_revprop(proplist_p, fs, rev, generation,
+                                  pool));
+
+  /* The revprops should have been there. Did we get them? */
+  if (!*proplist_p)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("Could not read revprops for revision %ld"),
+                             rev);
+
+  return SVN_NO_ERROR;
+}
+
+/* Serialize the revision property list PROPLIST of revision REV in
+ * filesystem FS to a non-packed file.  Return the name of that temporary
+ * file in *TMP_PATH and the file path that it must be moved to in
+ * *FINAL_PATH.
+ * 
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+write_non_packed_revprop(const char **final_path,
+                         const char **tmp_path,
+                         svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_hash_t *proplist,
+                         apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  *final_path = path_revprops(fs, rev, pool);
+
+  /* ### do we have a directory sitting around already? we really shouldn't
+     ### have to get the dirname here. */
+  SVN_ERR(svn_stream_open_unique(&stream, tmp_path,
+                                 svn_dirent_dirname(*final_path, pool),
+                                 svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* After writing the new revprop file(s), call this function to move the
+ * file at TMP_PATH to FINAL_PATH and give it the permissions from
+ * PERMS_REFERENCE.
+ *
+ * If indicated in BUMP_GENERATION, increase FS' revprop generation.
+ * Finally, delete all the temporary files given in FILES_TO_DELETE.
+ * The latter may be NULL.
+ * 
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+switch_to_new_revprop(svn_fs_t *fs,
+                      const char *final_path,
+                      const char *tmp_path,
+                      const char *perms_reference,
+                      apr_array_header_t *files_to_delete,
+                      svn_boolean_t bump_generation,
+                      apr_pool_t *pool)
+{
+  /* Now, we may actually be replacing revprops. Make sure that all other
+     threads and processes will know about this. */
+  if (bump_generation)
+    SVN_ERR(begin_revprop_change(fs, pool));
+
+  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+
+  /* Indicate that the update (if relevant) has been completed. */
+  if (bump_generation)
+    SVN_ERR(end_revprop_change(fs, pool));
+
+  /* Clean up temporary files, if necessary. */
+  if (files_to_delete)
     {
-      svn_stringbuf_t *content = NULL;
-      svn_boolean_t missing = FALSE;
-      int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
-
-      /* Don't retry if the file is missing, i.e. the rev doesn't exist. */
-      for (i = 0; i < RECOVERABLE_RETRY_COUNT && !missing && !content; ++i)
+      int i;
+      
+      for (i = 0; i < files_to_delete->nelts; ++i)
         {
+          const char *path = APR_ARRAY_IDX(files_to_delete, i, const char*);
+          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
           svn_pool_clear(iterpool);
-          SVN_ERR(try_stringbuf_from_file(&content,
-                                          &missing,
-                                          path_revprops(fs, rev, iterpool),
-                                          i+1 < RECOVERABLE_RETRY_COUNT,
-                                          iterpool));
         }
-
-      if (missing)
-        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                 _("No such revision %ld"), rev);
-
-      proplist = apr_hash_make(pool);
-      SVN_ERR(svn_hash_read2(proplist,
-                             svn_stream_from_stringbuf(content, iterpool),
-                             SVN_HASH_TERMINATOR, pool));
 
       svn_pool_destroy(iterpool);
     }
+  return SVN_NO_ERROR;
+}
 
-  /* Cache the result, if caching has been activated. */
+/* Set the revision property list of revision REV in filesystem FS to
+   PROPLIST.  Use POOL for temporary allocations. */
+static svn_error_t *
+set_revision_proplist(svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_hash_t *proplist,
+                      apr_pool_t *pool)
+{
+  svn_boolean_t bump_generation = FALSE;
+  const char *final_path;
+  const char *tmp_path;
+  const char *perms_reference;
+  apr_array_header_t *files_to_delete = NULL;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
+  /* Test whether revprops already exist for this revision.
+   * Only then will we need to bump the revprop generation. */
   if (has_revprop_cache(fs, pool))
-    SVN_ERR(svn_cache__set(ffd->revprop_cache, key, proplist, pool));
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(path_revprops(fs, rev, pool), &kind,
+                                pool));
+      bump_generation = kind != svn_node_none;
+    }
 
-  *proplist_p = proplist;
+  /* Serialize the new revprop data */
+  SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
+                                   fs, rev, proplist, pool));
+
+  /* We use the rev file of this revision as the perms reference,
+   * because when setting revprops for the first time, the revprop
+   * file won't exist and therefore can't serve as its own reference.
+   * (Whereas the rev file should already exist at this point.)
+   */
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+
+  /* Now, switch to the new revprop data. */
+  SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
+                                files_to_delete, bump_generation, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3250,7 +3378,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
-  SVN_ERR(revision_proplist(proplist_p, fs, rev, pool));
+  SVN_ERR(get_revision_proplist(proplist_p, fs, rev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -8141,43 +8269,31 @@ write_revnum_file(const char *fs_path,
   return SVN_NO_ERROR;
 }
 
-/* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
-   CANCEL_FUNC and CANCEL_BATON are what you think they are.
-
-   If for some reason we detect a partial packing already performed, we
-   remove the pack file and start again. */
+/* Pack the revision SHARD containing exactly MAX_FILES_PER_DIR revisions
+ * from SHARD_PATH into the PACK_FILE_DIR, using POOL for allocations.
+ * CANCEL_FUNC and CANCEL_BATON are what you think they are.
+ *
+ * If for some reason we detect a partial packing already performed, we
+ * remove the pack file and start again.
+ */
 static svn_error_t *
-pack_shard(const char *revs_dir,
-           const char *fs_path,
-           apr_int64_t shard,
-           int max_files_per_dir,
-           svn_fs_pack_notify_t notify_func,
-           void *notify_baton,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *pool)
+pack_rev_shard(const char *pack_file_dir,
+               const char *shard_path,
+               apr_int64_t shard,
+               int max_files_per_dir,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool)
 {
-  const char *pack_file_path, *manifest_file_path, *shard_path;
-  const char *pack_file_dir;
+  const char *pack_file_path, *manifest_file_path;
   svn_stream_t *pack_stream, *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
 
   /* Some useful paths. */
-  pack_file_dir = svn_dirent_join(revs_dir,
-                        apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
-                        pool);
   pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, "manifest", pool);
-  shard_path = svn_dirent_join(revs_dir,
-                               apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                               pool);
-
-  /* Notify caller we're starting to pack this shard. */
-  if (notify_func)
-    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
-                        pool));
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
@@ -8223,21 +8339,66 @@ pack_shard(const char *revs_dir,
 
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
-  SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
-  SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
-  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, pool));
+  SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
+  SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, iterpool));
+  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* In the file system at FS_PATH, pack the SHARD in REVS_DIR containing
+ * exactly MAX_FILES_PER_DIR revisions, using POOL for allocations.
+ * 
+ * CANCEL_FUNC and CANCEL_BATON are what you think they are; similarly
+ * NOTIFY_FUNC and NOTIFY_BATON.
+ *
+ * If for some reason we detect a partial packing already performed, we
+ * remove the pack file and start again.
+ */
+static svn_error_t *
+pack_shard(const char *revs_dir,
+           const char *fs_path,
+           apr_int64_t shard,
+           int max_files_per_dir,
+           svn_fs_pack_notify_t notify_func,
+           void *notify_baton,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           apr_pool_t *pool)
+{
+  const char *rev_shard_path, *rev_pack_file_dir;
+  const char *revprops_shard_path, *revprops_pack_file_dir;
+
+  /* Notify caller we're starting to pack this shard. */
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
+                        pool));
+
+  /* Some useful paths. */
+  rev_pack_file_dir = svn_dirent_join(revs_dir,
+                  apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
+                  pool);
+  rev_shard_path = svn_dirent_join(revs_dir,
+                           apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
+                           pool);
+
+  /* pack the revision content */
+  SVN_ERR(pack_rev_shard(rev_pack_file_dir, rev_shard_path,
+                         shard, max_files_per_dir,
+                         cancel_func, cancel_baton, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
    * update_min_unpacked_rev() when necessary.) */
   SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REV,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
-                            iterpool));
-  svn_pool_destroy(iterpool);
+                            pool));
 
   /* Finally, remove the existing shard directory. */
-  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton,
-                             pool));
+  SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
+                             cancel_func, cancel_baton, pool));
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
@@ -8282,7 +8443,7 @@ pack_body(void *baton,
   apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
-  const char *data_path;
+  const char *rev_data_path;
   svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
@@ -8311,7 +8472,7 @@ pack_body(void *baton,
   if (min_unpacked_rev == (completed_shards * max_files_per_dir))
     return SVN_NO_ERROR;
 
-  data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
+  rev_data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
@@ -8321,7 +8482,8 @@ pack_body(void *baton,
       if (pb->cancel_func)
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(pack_shard(data_path, pb->fs->path, i, max_files_per_dir,
+      SVN_ERR(pack_shard(rev_data_path,
+                         pb->fs->path, i, max_files_per_dir,
                          pb->notify_func, pb->notify_baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }
