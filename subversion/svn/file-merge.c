@@ -413,8 +413,10 @@ edit_chunk(apr_array_header_t **merged_chunk,
                                      config, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
     {
+      svn_error_t *root_err = svn_error_root_cause(err);
+
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                  err->message ? err->message :
+                                  root_err->message ? root_err->message :
                                   _("No editor found.")));
       svn_error_clear(err);
       *merged_chunk = NULL;
@@ -423,8 +425,10 @@ edit_chunk(apr_array_header_t **merged_chunk,
     }
   else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
     {
+      svn_error_t *root_err = svn_error_root_cause(err);
+
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                  err->message ? err->message :
+                                  root_err->message ? root_err->message :
                                   _("Error running editor.")));
       svn_error_clear(err);
       *merged_chunk = NULL;
