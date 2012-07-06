@@ -56,6 +56,12 @@ struct file_merge_baton {
   /* Whether the merged file remains in conflict after the merge. */
   svn_boolean_t remains_in_conflict;
 
+  /* External editor command for editing chunks. */
+  const char *editor_cmd;
+
+  /* The client configuration hash. */
+  apr_hash_t *config;
+
   /* Pool for temporary allocations. */
   apr_pool_t *scratch_pool;
 } file_merge_baton;
@@ -432,6 +438,123 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
   return buf->data;
 }
 
+/* Merge CHUNK1 and CHUNK2 into a new chunk with conflict markers. */
+static apr_array_header_t *
+merge_chunks_with_conflict_markers(apr_array_header_t *chunk1,
+                                   apr_array_header_t *chunk2,
+                                   apr_pool_t *result_pool)
+{
+  apr_array_header_t *merged_chunk;
+  int i;
+
+  merged_chunk = apr_array_make(result_pool, 0, sizeof(svn_stringbuf_t *));
+  /* ### would be nice to show filenames next to conflict markers */
+  APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
+    svn_stringbuf_create("<<<<<<<\n", result_pool);
+  for (i = 0; i < chunk1->nelts; i++)
+    {
+      APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
+        APR_ARRAY_IDX(chunk1, i, svn_stringbuf_t*);
+    }
+  APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
+    svn_stringbuf_create("=======\n", result_pool);
+  for (i = 0; i < chunk2->nelts; i++)
+    {
+      APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
+        APR_ARRAY_IDX(chunk2, i, svn_stringbuf_t*);
+    }
+  APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
+    svn_stringbuf_create(">>>>>>>\n", result_pool);
+
+  return merged_chunk;
+}
+
+/* Edit CHUNK and return the result in *MERGED_CHUNK allocated in POOL. */
+static svn_error_t *
+edit_chunk(apr_array_header_t **merged_chunk,
+           apr_array_header_t *chunk,
+           const char *editor_cmd,
+           apr_hash_t *config,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
+{
+  apr_file_t *temp_file;
+  const char *temp_file_name;
+  int i;
+  apr_off_t pos;
+  svn_boolean_t eof;
+  svn_error_t *err;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_io_open_unique_file3(&temp_file, &temp_file_name, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < chunk->nelts; i++)
+    {
+      svn_stringbuf_t *line = APR_ARRAY_IDX(chunk, i, svn_stringbuf_t *);
+      apr_size_t bytes_written;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_io_file_write_full(temp_file, line->data, line->len,
+                                     &bytes_written, iterpool));
+      if (line->len != bytes_written)
+        return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
+                                _("Could not write data to temporary file"));
+    }
+  SVN_ERR(svn_io_file_flush_to_disk(temp_file, scratch_pool));
+
+  err = svn_cl__edit_file_externally(temp_file_name, editor_cmd,
+                                     config, scratch_pool);
+  if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
+                                  err->message ? err->message :
+                                  _("No editor found.")));
+      svn_error_clear(err);
+      *merged_chunk = NULL;
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+  else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
+                                  err->message ? err->message :
+                                  _("Error running editor.")));
+      svn_error_clear(err);
+      *merged_chunk = NULL;
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  *merged_chunk = apr_array_make(result_pool, 1, sizeof(svn_stringbuf_t *));
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &pos, scratch_pool));
+  do
+    {
+      svn_stringbuf_t *line;
+      const char *eol_str;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(readline(temp_file, &line, &eol_str, &eof, APR_SIZE_MAX,
+                       result_pool, iterpool));
+      if (eol_str)
+        svn_stringbuf_appendcstr(line, eol_str);
+
+      APR_ARRAY_PUSH(*merged_chunk, svn_stringbuf_t *) = line;
+    }
+  while (!eof);
+  svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_io_file_close(temp_file, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 #define SEP_STRING \
   "-------------------------------------+-------------------------------------\n"
 
@@ -445,6 +568,8 @@ merge_chunks(apr_array_header_t **merged_chunk,
              apr_array_header_t *chunk2,
              svn_linenum_t current_line1,
              svn_linenum_t current_line2,
+             const char *editor_cmd,
+             apr_hash_t *config,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
@@ -513,22 +638,23 @@ merge_chunks(apr_array_header_t **merged_chunk,
 
       svn_stringbuf_appendcstr(prompt, prompt_line);
     }
-  svn_pool_destroy(iterpool);
 
   svn_stringbuf_appendcstr(prompt, SEP_STRING);
   svn_stringbuf_appendcstr(
     prompt,
-    _("Select: (1) their version, (2) your version, (p) postpone: "));
-
-  /* ### TODO: Offer the option of editing either or both file chunks
-   * into a merged chunk. */
+    _("Select: (1) use their version, (2) use your version, (p) postpone,\n"
+      "        (e1) edit their version and use the result,\n"
+      "        (e2) edit your version and use the result,\n"
+      "        (eb) edit both versions and use the result: "));
 
   /* Now let's see what the user wants to do with this conflict. */
   while (TRUE)
     {
       const char *answer;
 
-      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt->data, NULL, scratch_pool));
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt->data, NULL, iterpool));
       if (strcmp(answer, "1") == 0)
         {
           *merged_chunk = chunk1;
@@ -544,7 +670,30 @@ merge_chunks(apr_array_header_t **merged_chunk,
           *merged_chunk = NULL;
           break;
         }
+      else if (strcmp(answer, "e1") == 0)
+        {
+          SVN_ERR(edit_chunk(merged_chunk, chunk1, editor_cmd, config,
+                             result_pool, iterpool));
+          break;
+        }
+      else if (strcmp(answer, "e2") == 0)
+        {
+          SVN_ERR(edit_chunk(merged_chunk, chunk2, editor_cmd, config,
+                             result_pool, iterpool));
+          break;
+        }
+      else if (strcmp(answer, "eb") == 0)
+        {
+          apr_array_header_t *conflict_chunk;
+
+          conflict_chunk = merge_chunks_with_conflict_markers(chunk1, chunk2,
+                                                              scratch_pool);
+          SVN_ERR(edit_chunk(merged_chunk, conflict_chunk, editor_cmd, config,
+                             result_pool, iterpool));
+          break;
+        }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -564,6 +713,8 @@ merge_file_chunks(svn_boolean_t *remains_in_conflict,
                   apr_off_t len2,
                   svn_linenum_t *current_line1,
                   svn_linenum_t *current_line2,
+                  const char *editor_cmd,
+                  apr_hash_t *config,
                   apr_pool_t *scratch_pool)
 {
   apr_array_header_t *chunk1;
@@ -579,6 +730,7 @@ merge_file_chunks(svn_boolean_t *remains_in_conflict,
 
   SVN_ERR(merge_chunks(&merged_chunk, chunk1, chunk2,
                        *current_line1, *current_line2,
+                       editor_cmd, config,
                        scratch_pool, scratch_pool));
 
   /* If the user chose 'postpone' put conflict markers and left/right
@@ -586,26 +738,8 @@ merge_file_chunks(svn_boolean_t *remains_in_conflict,
   if (merged_chunk == NULL)
     {
       *remains_in_conflict = TRUE;
-        
-      merged_chunk = apr_array_make(scratch_pool, 0,
-                                    sizeof(svn_stringbuf_t *));
-      /* ### would be nice to show filenames next to conflict markers */
-      APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
-        svn_stringbuf_create("<<<<<<<\n", scratch_pool);
-      for (i = 0; i < chunk1->nelts; i++)
-        {
-          APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
-            APR_ARRAY_IDX(chunk1, i, svn_stringbuf_t*);
-        }
-      APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
-        svn_stringbuf_create("=======\n", scratch_pool);
-      for (i = 0; i < chunk2->nelts; i++)
-        {
-          APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
-            APR_ARRAY_IDX(chunk2, i, svn_stringbuf_t*);
-        }
-      APR_ARRAY_PUSH(merged_chunk, svn_stringbuf_t *) =
-        svn_stringbuf_create(">>>>>>>\n", scratch_pool);
+      merged_chunk = merge_chunks_with_conflict_markers(chunk1, chunk2,
+                                                        scratch_pool);
     }
 
   iterpool = svn_pool_create(scratch_pool);
@@ -652,6 +786,8 @@ file_merge_output_conflict(void *output_baton,
                             latest_length,
                             &b->current_line_modified,
                             &b->current_line_latest,
+                            b->editor_cmd,
+                            b->config,
                             b->scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -671,6 +807,7 @@ svn_cl__merge_file(const char *base_path,
                    const char *my_path,
                    const char *merged_path,
                    const char *wc_path,
+                   const char *editor_cmd,
                    apr_hash_t *config,
                    svn_boolean_t *remains_in_conflict,
                    apr_pool_t *scratch_pool)
@@ -708,6 +845,8 @@ svn_cl__merge_file(const char *base_path,
   fmb.current_line_latest = 0;
   fmb.merged_file = merged_file;
   fmb.remains_in_conflict = FALSE;
+  fmb.editor_cmd = editor_cmd;
+  fmb.config = config;
   fmb.scratch_pool = scratch_pool;
 
   SVN_ERR(svn_diff_output(diff, &fmb, &file_merge_diff_output_fns));
