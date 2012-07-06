@@ -1733,6 +1733,41 @@ open_pack_or_rev_file(apr_file_t **file,
   return svn_error_trace(err);
 }
 
+/* Reads a line from STREAM and converts it to a 64 bit integer to be
+ * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave
+ * *RESULT unchanged.  If HIT_EOF is NULL, EOF causes an "corrupt FS"
+ * error return.
+ * SCRATCH_POOL is used for temporary allocations.
+ */
+static svn_error_t *
+read_number_from_stream(apr_int64_t *result,
+                        svn_boolean_t *hit_eof,
+                        svn_stream_t *stream,
+                        apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *sb;
+  svn_boolean_t eof;
+  svn_error_t *err;
+
+  SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, scratch_pool));
+  if (hit_eof)
+    *hit_eof = eof;
+  else
+    if (eof)
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, _("Unexpected EOF"));
+
+  if (!eof)
+    {
+      err = svn_cstring_atoi64(result, sb->data);
+      if (err)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                                 _("Number '%s' invalid or too large"),
+                                 sb->data);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
    Use POOL for temporary allocations. */
 static svn_error_t *
@@ -1775,21 +1810,14 @@ get_packed_offset(apr_off_t *rev_offset,
   manifest = apr_array_make(pool, ffd->max_files_per_dir, sizeof(apr_off_t));
   while (1)
     {
-      svn_stringbuf_t *sb;
       svn_boolean_t eof;
       apr_int64_t val;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
+      SVN_ERR(read_number_from_stream(&val, &eof, manifest_stream, iterpool));
       if (eof)
         break;
 
-      err = svn_cstring_atoi64(&val, sb->data);
-      if (err)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                                 _("Manifest offset '%s' too large"),
-                                 sb->data);
       APR_ARRAY_PUSH(manifest, apr_off_t) = (apr_off_t)val;
     }
   svn_pool_destroy(iterpool);
