@@ -683,6 +683,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                              desc->my_abspath,
                                              desc->merged_file,
                                              desc->local_abspath,
+                                             b->editor_cmd,
                                              b->config,
                                              &remains_in_conflict,
                                              subpool));
