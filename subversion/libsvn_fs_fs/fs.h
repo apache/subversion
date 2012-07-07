@@ -63,6 +63,10 @@ extern "C" {
                                                     has not been packed. */
 #define PATH_REVPROP_GENERATION "revprop-generation"
                                                  /* Current revprop generation*/
+#define PATH_MANIFEST         "manifest"         /* Manifest file name */
+#define PATH_PACKED           "pack"             /* Packed revision data file */
+#define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
+                                                    shards */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
