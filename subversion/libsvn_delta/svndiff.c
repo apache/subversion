@@ -483,6 +483,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
           svn_stringbuf_ensure(out, len);
           memcpy(out->data, in, len);
           out->data[len] = 0;
+          out->len = len;
         }
 
       return SVN_NO_ERROR;
