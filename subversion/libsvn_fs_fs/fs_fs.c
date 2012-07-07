@@ -5146,11 +5146,9 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename = path_txn_current(cb->fs, pool);
-  apr_file_t *txn_current_file = NULL;
   const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
   apr_size_t len;
-  int i;
 
   svn_stringbuf_t *buf;
   SVN_ERR(read_content(&buf, txn_current_filename, pool));
@@ -8373,7 +8371,6 @@ pack_shard(const char *revs_dir,
            apr_pool_t *pool)
 {
   const char *rev_shard_path, *rev_pack_file_dir;
-  const char *revprops_shard_path, *revprops_pack_file_dir;
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)

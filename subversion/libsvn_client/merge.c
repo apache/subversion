@@ -1376,8 +1376,8 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
      definition, 'svn merge' shouldn't touch any pristine data  */
   if (props->nelts)
     {
-      svn_wc_conflict_version_t *left;
-      svn_wc_conflict_version_t *right;
+      const svn_wc_conflict_version_t *left;
+      const svn_wc_conflict_version_t *right;
       svn_client_ctx_t *ctx = merge_b->ctx;
 
       SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
