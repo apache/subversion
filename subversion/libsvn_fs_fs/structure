@@ -292,6 +292,10 @@ Pack file format
 Writing to packed revprops
 
   The old pack file is being read and the new revprops serialized.
+  If they fit into the same pack file, a temp file with the new
+  content gets written and moved into place just like an non-packed
+  revprop file would. No name change or manifest update required.
+
   If they don't fit into the same pack file,  i.e. exceed the pack
   size limit,  the pack will be split into 2 or 3 new packs just
   before and / or after the modified revision.
@@ -300,7 +304,7 @@ Writing to packed revprops
   To minimize fragmentation, the initial packing process will only
   use about 90% of the limit, i.e. leave some room for growth.
 
-  When a pack file gets written, its counter is being increased
+  When a pack file gets split, its counter is being increased
   creating a new file and leaving the old content in place and
   available for concurrent readers.  Only after the new manifest
   file got moved into place, will the old pack files be deleted. 
