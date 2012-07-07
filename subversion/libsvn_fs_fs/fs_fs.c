@@ -192,13 +192,12 @@ is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 static svn_boolean_t
 is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 {
-#if 0
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  return (rev < ffd->min_unpacked_revprop);
-#else
-  return FALSE;
-#endif
+  /* rev 0 will not be packed */
+  return (rev < ffd->min_unpacked_rev)
+      && (rev != 0)
+      && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
 }
 
 static const char *
@@ -318,6 +317,18 @@ path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   assert(ffd->max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
+                                           rev / ffd->max_files_per_dir),
+                              NULL);
+}
+
+static const char *
+path_revprops_pack_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
+                              apr_psprintf(pool, "%ld.pack",
                                            rev / ffd->max_files_per_dir),
                               NULL);
 }
@@ -1138,6 +1149,28 @@ read_config(fs_fs_data_t *ffd,
       ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
     }
 
+  /* Initialize revprop packing settings in ffd. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+    {
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
+                                  CONFIG_SECTION_PACKED_REVPROPS,
+                                  CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
+                                  FALSE));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
+                                   CONFIG_SECTION_PACKED_REVPROPS,
+                                   CONFIG_OPTION_REVPROP_PACK_SIZE,
+                                   ffd->compress_packed_revprops
+                                       ? 0x100
+                                       : 0x40));
+
+      ffd->revprop_pack_size *= 1024;
+    }
+  else
+    {
+      ffd->revprop_pack_size = 0x10000;
+      ffd->compress_packed_revprops = FALSE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1247,6 +1280,31 @@ write_config(svn_fs_t *fs,
 "### exclusive use of skip-deltas (as in pre-1.8)."                          NL
 "### For 1.8, the default value is 16; earlier versions use 1."              NL
 "# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
+""                                                                           NL
+"[" CONFIG_SECTION_PACKED_REVPROPS "]"                                       NL
+"### This parameter controls the size (in kBytes) of packed revprop files."  NL
+"### Revprops of consecutive revisions will be concatenated into a single"   NL
+"### file up to but not exceeding the threshold given here.  However, each"  NL
+"### pack file may be much smaller and revprops of a single revision may be" NL
+"### much larger than the limit set here.  The threshold will be applied"    NL
+"### before optional compression takes place."                               NL
+"### Large values will reduce disk space usage at the expense of increased"  NL
+"### latency and CPU usage reading and changing individual revprops.  They"  NL
+"### become an advantage when revprop caching has been enabled because a"    NL
+"### lot of data can be read in one go.  Values smaller than 4 kByte will"   NL
+"### not improve latency any further and quickly render revprop packing"     NL
+"### ineffective."                                                           NL
+"### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
+"### pack files and 256 kBytes when compression has been enabled."           NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
+"###"                                                                        NL
+"### To save disk space, packed revprop files may be compressed.  Standard"  NL
+"### revprops tend to allow for very effective compression.  Reading and"    NL
+"### even more so writing, become significantly more CPU intensive.  With"   NL
+"### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
+"### unless you often modify revprops after packing."                        NL
+"### Compressing packed revprops is disabled by default."                    NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -7066,7 +7124,7 @@ commit_body(void *baton, apr_pool_t *pool)
      fails because the shard already existed for some reason. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      /* if (1); null condition for easier merging to revprop-packing */
+      /* Create the revs shard. */
         {
           const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
           svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
