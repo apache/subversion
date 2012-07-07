@@ -253,7 +253,8 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
   assert(is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool, "%ld.pack",
+                              apr_psprintf(pool,
+                                           "%ld" PATH_EXT_PACKED_SHARD,
                                            rev / ffd->max_files_per_dir),
                               kind, NULL);
 }
@@ -303,7 +304,7 @@ svn_fs_fs__path_rev_absolute(const char **path,
     }
   else
     {
-      *path = path_rev_packed(fs, rev, "pack", pool);
+      *path = path_rev_packed(fs, rev, PATH_PACKED, pool);
     }
 
   return SVN_NO_ERROR;
@@ -1779,7 +1780,8 @@ get_packed_offset(apr_off_t *rev_offset,
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
-                                   path_rev_packed(fs, rev, "manifest", pool),
+                                   path_rev_packed(fs, rev, PATH_MANIFEST,
+                                                   pool),
                                    pool, pool));
 
   /* While we're here, let's just read the entire manifest file into an array,
@@ -8294,8 +8296,8 @@ pack_rev_shard(const char *pack_file_dir,
   apr_pool_t *iterpool;
 
   /* Some useful paths. */
-  pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
-  manifest_file_path = svn_dirent_join(pack_file_dir, "manifest", pool);
+  pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
+  manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
@@ -8380,7 +8382,9 @@ pack_shard(const char *revs_dir,
 
   /* Some useful paths. */
   rev_pack_file_dir = svn_dirent_join(revs_dir,
-                  apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
+                  apr_psprintf(pool,
+                               "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
+                               shard),
                   pool);
   rev_shard_path = svn_dirent_join(revs_dir,
                            apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
@@ -8845,7 +8849,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   /* Copy the packed shard. */
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
-  packed_shard = apr_psprintf(scratch_pool, "%ld.pack",
+  packed_shard = apr_psprintf(scratch_pool, "%ld" PATH_EXT_PACKED_SHARD,
                               rev / max_files_per_dir);
   src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
                                             scratch_pool);
