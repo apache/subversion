@@ -32,6 +32,7 @@
 #include <zlib.h>
 
 #include "private/svn_error_private.h"
+#include "private/svn_delta_private.h"
 
 /* The zlib compressBound function was not exported until 1.2.0. */
 #if ZLIB_VERNUM >= 0x1200
@@ -1006,7 +1007,7 @@ svn__compress(svn_string_t *in,
               svn_stringbuf_t *out,
               int compression_level)
 {
-  return zlib_encode((const unsigned char*)in->data, in->len, out,
+  return zlib_encode(in->data, in->len, out,
                      compression_level);
 }
 
