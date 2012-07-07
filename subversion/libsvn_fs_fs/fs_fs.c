@@ -1089,15 +1089,17 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
+/* Read the configuration information of the file system at FS_PATH
+ * and set the respective values in FFD.  Use POOL for allocations.
+ */
 static svn_error_t *
-read_config(svn_fs_t *fs,
+read_config(fs_fs_data_t *ffd,
+            const char *fs_path,
             apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-
   SVN_ERR(svn_config_read2(&ffd->config,
-                           svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                           FALSE, FALSE, fs->pool));
+                           svn_dirent_join(fs_path, PATH_CONFIG, pool),
+                           FALSE, FALSE, pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -1107,7 +1109,7 @@ read_config(svn_fs_t *fs,
   else
     ffd->rep_sharing_allowed = FALSE;
 
-  /* Initialize ffd->deltify_directories. */
+  /* Initialize deltification settings in ffd. */
   if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
     {
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
@@ -1316,7 +1318,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     SVN_ERR(update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
-  SVN_ERR(read_config(fs, pool));
+  SVN_ERR(read_config(ffd, fs->path, pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -7342,7 +7344,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(write_config(fs, pool));
 
-  SVN_ERR(read_config(fs, pool));
+  SVN_ERR(read_config(ffd, fs->path, pool));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
