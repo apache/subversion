@@ -1992,8 +1992,6 @@ class SvnClientTest < Test::Unit::TestCase
                      [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
-                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_STARTING],
-                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_DONE],
                    ],
                    notify_info)
 
@@ -2004,8 +2002,6 @@ class SvnClientTest < Test::Unit::TestCase
                      [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
-                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_STARTING],
-                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_DONE],
                    ],
                    notify_info)
     end
