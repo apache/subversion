@@ -101,6 +101,25 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                              struct svn_delta__extra_baton *exb,
                              apr_pool_t *pool);
 
+/**
+ * Get the data from IN, compress it according to the specified
+ * COMPRESSION_LEVEL and write the result to OUT.
+ * SVN_DELTA_COMPRESSION_LEVEL_NONE is valid for COMPRESSION_LEVEL.
+ */
+svn_error_t *
+svn__compress(svn_string_t *in,
+              svn_stringbuf_t *out,
+              int compression_level);
+
+/**
+ * Get the compressed data from IN, decompress it and write the result to
+ * OUT.  Return an error if the decompressed size is larger than LIMIT.
+ */
+svn_error_t *
+svn__decompress(svn_string_t *in,
+                svn_stringbuf_t *out,
+                apr_size_t limit);
+
 
 #ifdef __cplusplus
 }
