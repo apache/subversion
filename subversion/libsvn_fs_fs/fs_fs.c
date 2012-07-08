@@ -329,7 +329,7 @@ path_revprops_pack_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
   assert(ffd->max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                              apr_psprintf(pool, "%ld.pack",
+                              apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
                                            rev / ffd->max_files_per_dir),
                               NULL);
 }
@@ -3416,7 +3416,7 @@ get_revprop_packname(svn_fs_t *fs,
 
   /* read content of the the manifest file */
   revprops->folder = path_revprops_pack_shard(fs, revprops->revision, pool);
-  manifest_file_path = svn_dirent_join(revprops->folder, "manifest", pool);
+  manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
 
   SVN_ERR(read_content(&content, manifest_file_path, pool));
 
@@ -4058,7 +4058,7 @@ write_packed_revprop(const char **final_path,
         }
 
       /* write the new manifest */
-      *final_path = svn_dirent_join(revprops->folder, "manifest", pool);
+      *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
       SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
                                      svn_io_file_del_none, pool, pool));
 
