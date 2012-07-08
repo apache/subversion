@@ -1398,6 +1398,85 @@ create_file_ignore_eexist(const char *file,
   return svn_error_trace(err);
 }
 
+/* forward declarations */
+
+static svn_error_t *
+pack_revprops_shard(const char *pack_file_dir,
+                    const char *shard_path,
+                    apr_int64_t shard,
+                    int max_files_per_dir,
+                    apr_off_t max_pack_size,
+                    int compression_level,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool);
+
+static svn_error_t *
+delete_revprops_shard(const char *shard_path,
+                      apr_int64_t shard,
+                      int max_files_per_dir,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *scratch_pool);
+
+/* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+upgrade_pack_revprops(svn_fs_t *fs,
+                      apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *revprops_shard_path;
+  const char *revprops_pack_file_dir;
+  apr_int64_t shard;
+  apr_int64_t first_unpacked_shard
+    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
+                                              scratch_pool);
+  int compression_level = ffd->compress_packed_revprops
+                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
+                           : SVN_DELTA_COMPRESSION_LEVEL_NONE;
+
+  /* first, pack all revprops shards to match the packed revision shards */
+  for (shard = 0; shard < first_unpacked_shard; ++shard)
+    {
+      revprops_pack_file_dir = svn_dirent_join(revsprops_dir,
+                   apr_psprintf(iterpool,
+                                "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
+                                shard),
+                   iterpool);
+      revprops_shard_path = svn_dirent_join(revsprops_dir,
+                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
+                       iterpool);
+
+      SVN_ERR(pack_revprops_shard(revprops_pack_file_dir, revprops_shard_path,
+                                  shard, ffd->max_files_per_dir,
+                                  (int)(0.9 * ffd->revprop_pack_size),
+                                  compression_level,
+                                  NULL, NULL, iterpool));
+      svn_pool_clear(iterpool);
+    }
+
+  /* delete the non-packed revprops shards afterwards */
+  for (shard = 0; shard < first_unpacked_shard; ++shard)
+    {
+      revprops_shard_path = svn_dirent_join(revsprops_dir,
+                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
+                       iterpool);
+      SVN_ERR(delete_revprops_shard(revprops_shard_path,
+                                    shard, ffd->max_files_per_dir,
+                                    NULL, NULL, iterpool));
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
 {
@@ -1455,6 +1534,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+
+  /* If the file system supports revision packing but not revprop packing,
+     pack the revprops up to the point that revision data has been packed. */
+  if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
+      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+    SVN_ERR(upgrade_pack_revprops(fs, pool));
 
   /* Bump the format file. */
   return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
