@@ -3466,7 +3466,7 @@ parse_packed_revprops(svn_fs_t *fs,
 {
   svn_stream_t *stream;
   apr_int64_t first_rev, count, i;
-  apr_size_t offset;
+  apr_off_t offset;
   const char *header_end;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
@@ -3539,8 +3539,8 @@ parse_packed_revprops(svn_fs_t *fs,
         }
 
       /* fill REVPROPS data structures */
-      APR_ARRAY_PUSH(revprops->sizes, apr_size_t) = serialized.len;
-      APR_ARRAY_PUSH(revprops->offsets, apr_size_t) = offset;
+      APR_ARRAY_PUSH(revprops->sizes, apr_off_t) = serialized.len;
+      APR_ARRAY_PUSH(revprops->offsets, apr_off_t) = offset;
       revprops->total_size += serialized.len;
 
       offset += serialized.len;
@@ -3788,8 +3788,8 @@ serialize_revprops_header(svn_stream_t *stream,
   /* the sizes array */
   for (i = start; i < end; ++i)
     {
-      apr_size_t size = APR_ARRAY_IDX(sizes, i, apr_size_t);
-      SVN_ERR(svn_stream_printf(stream, iterpool, "%" APR_SIZE_T_FMT "\n",
+      apr_off_t size = APR_ARRAY_IDX(sizes, i, apr_off_t);
+      SVN_ERR(svn_stream_printf(stream, iterpool, "%" APR_OFF_T_FMT "\n",
                                 size));
     }
 
@@ -3817,7 +3817,7 @@ repack_revprops(svn_fs_t *fs,
                 int end,
                 int changed_index,
                 svn_stringbuf_t *new_serialized,
-                apr_size_t new_total_size,
+                apr_off_t new_total_size,
                 svn_stream_t *file_stream,
                 apr_pool_t *pool)
 {
@@ -3827,7 +3827,7 @@ repack_revprops(svn_fs_t *fs,
 
   /* create data empty buffers and the stream object */
   svn_stringbuf_t *uncompressed
-    = svn_stringbuf_create_ensure(new_total_size, pool);
+    = svn_stringbuf_create_ensure((apr_size_t)new_total_size, pool);
   svn_stringbuf_t *compressed
     = svn_stringbuf_create_empty(pool);
   stream = svn_stream_from_stringbuf(uncompressed, pool);
@@ -3846,8 +3846,10 @@ repack_revprops(svn_fs_t *fs,
       }
     else
       {
-        apr_size_t size = APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
-        apr_size_t offset = APR_ARRAY_IDX(revprops->offsets, i, apr_size_t);
+        apr_size_t size 
+            = (apr_size_t)APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
+        apr_size_t offset 
+            = (apr_size_t)APR_ARRAY_IDX(revprops->offsets, i, apr_off_t);
 
         SVN_ERR(svn_stream_write(stream,
                                  revprops->packed_revprops->data + offset,
@@ -3947,8 +3949,8 @@ write_packed_revprop(const char **final_path,
   apr_int64_t generation = 0;
   svn_stream_t *stream;
   svn_stringbuf_t *serialized;
-  apr_size_t new_size;
-  apr_size_t new_total_size;
+  apr_off_t new_size;
+  apr_off_t new_total_size;
   int changed_index;
 
   /* read the current revprop generation. This value will not change
@@ -3972,7 +3974,7 @@ write_packed_revprop(const char **final_path,
                  + serialized->len
                  + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
 
-  APR_ARRAY_IDX(revprops->sizes, changed_index, apr_size_t) = serialized->len;
+  APR_ARRAY_IDX(revprops->sizes, changed_index, apr_off_t) = serialized->len;
 
   /* can we put the new data into the same pack as the before? */
   if (   new_total_size < ffd->revprop_pack_size
@@ -3992,16 +3994,16 @@ write_packed_revprop(const char **final_path,
   else
     {
       /* calculate the pack size left and right of the changed revision */
-      apr_size_t left_size = changed_index * SVN_INT64_BUFFER_SIZE;
-      apr_size_t right_size = (revprops->sizes->nelts - changed_index - 1)
-                            * SVN_INT64_BUFFER_SIZE;
+      apr_off_t left_size = changed_index * SVN_INT64_BUFFER_SIZE;
+      apr_off_t right_size = (revprops->sizes->nelts - changed_index - 1)
+                           * SVN_INT64_BUFFER_SIZE;
       int right_count, left_count, i;
 
       for (i = 0; i < revprops->sizes->nelts; ++i)
         if (i < changed_index)
-          left_size += APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+          left_size += APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
         else if (i > changed_index)
-          right_size += APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+          right_size += APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
 
       /* determine which of the 3 different split options to use */
       if (new_size + left_size < ffd->revprop_pack_size)
