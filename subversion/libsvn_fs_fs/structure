@@ -280,7 +280,7 @@ Pack file format
   <length> is being encoded using the variable-length svndiff integer
   format.
 
-  container := header (revprops)+
+  container := header '\n' (revprops)+
   header    := start_rev '\n' rev_count '\n' (size '\n')+
 
   All numbers in the header are given as ASCII decimals.  rev_count
