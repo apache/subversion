@@ -3680,6 +3680,316 @@ switch_to_new_revprop(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Write a pack file header to STREAM that starts at revision START_REVISION
+ * and contains the indexes [START,END) of SIZES.
+ */
+static svn_error_t *
+serialize_revprops_header(svn_stream_t *stream,
+                          svn_revnum_t start_revision,
+                          apr_array_header_t *sizes,
+                          int start,
+                          int end,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  SVN_ERR_ASSERT(start < end);
+
+  /* start revision and entry count */
+  SVN_ERR(svn_stream_printf(stream, pool, "%ld\n", start_revision));
+  SVN_ERR(svn_stream_printf(stream, pool, "%d\n", end - start));
+
+  /* the sizes array */
+  for (i = start; i < end; ++i)
+    {
+      apr_size_t size = APR_ARRAY_IDX(sizes, i, apr_size_t);
+      SVN_ERR(svn_stream_printf(stream, iterpool, "%" APR_SIZE_T_FMT "\n",
+                                size));
+    }
+
+  /* the double newline char indicates the end of the header */
+  SVN_ERR(svn_stream_printf(stream, iterpool, "\n"));
+
+  svn_pool_clear(iterpool);
+  return SVN_NO_ERROR;
+}
+
+/* Writes the a pack file to FILE_STREAM.  It copies the serialized data
+ * from REVPROPS for the indexes [START,END) except for index CHANGED_INDEX.
+ * 
+ * The data for the latter is taken from NEW_SERIALIZED.  Note, that
+ * CHANGED_INDEX may be outside the [START,END) range, i.e. no new data is
+ * taken in that case but only a subset of the old data will be copied.
+ *
+ * NEW_TOTAL_SIZE is a hint for pre-allocating buffers of appropriate size.
+ * POOL is used for temporary allocations.
+ */
+static svn_error_t *
+repack_revprops(svn_fs_t *fs,
+                packed_revprops_t *revprops,
+                int start,
+                int end,
+                int changed_index,
+                svn_stringbuf_t *new_serialized,
+                apr_size_t new_total_size,
+                svn_stream_t *file_stream,
+                apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_stream_t *stream;
+  int i;
+
+  /* create data empty buffers and the stream object */
+  svn_stringbuf_t *uncompressed
+    = svn_stringbuf_create_ensure(new_total_size, pool);
+  svn_stringbuf_t *compressed
+    = svn_stringbuf_create_empty(pool);
+  stream = svn_stream_from_stringbuf(uncompressed, pool);
+
+  /* write the header*/
+  SVN_ERR(serialize_revprops_header(stream, revprops->start_revision + start,
+                                    revprops->sizes, start, end, pool));
+
+  /* append the serialized revprops */
+  for (i = start; i < end; ++i)
+    if (i == changed_index)
+      {
+        SVN_ERR(svn_stream_write(stream,
+                                 new_serialized->data,
+                                 &new_serialized->len));
+      }
+    else
+      {
+        apr_size_t size = APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+        apr_size_t offset = APR_ARRAY_IDX(revprops->offsets, i, apr_size_t);
+
+        SVN_ERR(svn_stream_write(stream,
+                                 revprops->packed_revprops->data + offset,
+                                 &size));
+      }
+
+  /* flush the stream buffer (if any) to our underlying data buffer */
+  SVN_ERR(svn_stream_close(stream));
+
+  /* compress / store the data */
+  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
+                        compressed,
+                        ffd->compress_packed_revprops
+                          ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
+                          : SVN_DELTA_COMPRESSION_LEVEL_NONE));
+
+  /* finally, write the content to the target stream and close it */
+  SVN_ERR(svn_stream_write(file_stream, compressed->data, &compressed->len));
+  SVN_ERR(svn_stream_close(file_stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Allocate a new pack file name for the revisions at index [START,END)
+ * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
+ * auto-create that array if necessary.  Return an open file stream to
+ * the new file in *STREAM allocated in POOL.
+ */
+static svn_error_t *
+repack_stream_open(svn_stream_t **stream,
+                   svn_fs_t *fs,
+                   packed_revprops_t *revprops,
+                   int start,
+                   int end,
+                   apr_array_header_t **files_to_delete,
+                   apr_pool_t *pool)
+{
+  apr_int64_t tag;
+  const char *tag_string;
+  svn_string_t *new_filename;
+  int i;
+  apr_file_t *file;
+
+  /* get the old (= current) file name and enlist it for later deletion */
+  const char *old_filename
+    = APR_ARRAY_IDX(revprops->manifest, start, const char*);
+
+  if (*files_to_delete == NULL)
+    *files_to_delete = apr_array_make(pool, 3, sizeof(const char*));
+
+  APR_ARRAY_PUSH(*files_to_delete, const char*)
+    = svn_dirent_join(revprops->folder, old_filename, pool);
+
+  /* increase the tag part, i.e. the counter after the dot */
+  tag_string = strchr(old_filename, '.');
+  if (tag_string == NULL)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Packed file '%s' misses a tag"),
+                             old_filename);
+    
+  SVN_ERR(svn_cstring_atoi64(&tag, tag_string + 1));
+  new_filename = svn_string_createf(pool, "%ld.%" APR_INT64_T_FMT,
+                                    revprops->start_revision + start,
+                                    ++tag);
+
+  /* update the manifest to point to the new file */
+  for (i = start; i < end; ++i)
+    APR_ARRAY_IDX(revprops->manifest, i, const char*) = new_filename->data;
+
+  /* create a file stream for the new file */
+  SVN_ERR(svn_io_file_open(&file, svn_dirent_join(revprops->folder,
+                                                  new_filename->data,
+                                                  pool),
+                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+  *stream = svn_stream_from_aprfile2(file, FALSE, pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* For revision REV in filesystem FS, set the revision properties to
+ * PROPLIST.  Return a new file in *TMP_PATH that the caller shall move
+ * to *FINAL_PATH to make the change visible.  Files to be deleted will
+ * be listed in *FILES_TO_DELETE which may remain unchanged / unallocated.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+write_packed_revprop(const char **final_path,
+                     const char **tmp_path,
+                     apr_array_header_t **files_to_delete,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_hash_t *proplist,
+                     apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  packed_revprops_t *revprops;
+  apr_int64_t generation = 0;
+  svn_stream_t *stream;
+  svn_stringbuf_t *serialized;
+  apr_size_t new_size;
+  apr_size_t new_total_size;
+  int changed_index;
+
+  /* read the current revprop generation. This value will not change
+   * while we hold the global write lock to this FS. */
+  if (has_revprop_cache(fs, pool))
+    SVN_ERR(read_revprop_generation(&generation, fs, pool));
+
+  /* read contents of the current pack file */
+  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+
+  /* serialize the new revprops */
+  serialized = svn_stringbuf_create_empty(pool);
+  stream = svn_stream_from_stringbuf(serialized, pool);
+  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* calculate the size of the new data */
+  changed_index = (int)(rev - revprops->start_revision);
+  new_size = serialized->len + 3 * SVN_INT64_BUFFER_SIZE;
+  new_total_size = revprops->total_size - revprops->serialized_size
+                 + serialized->len
+                 + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
+
+  APR_ARRAY_IDX(revprops->sizes, changed_index, apr_size_t) = serialized->len;
+
+  /* can we put the new data into the same pack as the before? */
+  if (   new_total_size < ffd->revprop_pack_size
+      || revprops->sizes->nelts == 1)
+    {
+      /* simply replace the old pack file with new content as we do it
+       * in the non-packed case */
+
+      *final_path = svn_dirent_join(revprops->folder, revprops->filename,
+                                    pool);
+      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
+                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(repack_revprops(fs, revprops, 0, revprops->sizes->nelts,
+                              changed_index, serialized, new_total_size,
+                              stream, pool));
+    }
+  else
+    {
+      /* calculate the pack size left and right of the changed revision */
+      apr_size_t left_size = changed_index * SVN_INT64_BUFFER_SIZE;
+      apr_size_t right_size = (revprops->sizes->nelts - changed_index - 1)
+                            * SVN_INT64_BUFFER_SIZE;
+      int right_count, left_count, i;
+
+      for (i = 0; i < revprops->sizes->nelts; ++i)
+        if (i < changed_index)
+          left_size += APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+        else if (i > changed_index)
+          right_size += APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+
+      /* determine which of the 3 different split options to use */
+      if (new_size + left_size < ffd->revprop_pack_size)
+        {
+          /* split right after the change */
+          left_count = changed_index + 1;
+          right_count = revprops->sizes->nelts - changed_index - 1;
+        }
+      else if (new_size + right_size < ffd->revprop_pack_size)
+        {
+          /* split right before the change */
+          left_count = changed_index;
+          right_count = revprops->sizes->nelts - changed_index;
+        }
+      else
+        {
+          /* split before and after the change */
+          left_count = changed_index;
+          right_count = revprops->sizes->nelts - changed_index - 1;
+        }
+
+      /* write the new, split files */
+      if (left_count)
+        {
+          SVN_ERR(repack_stream_open(&stream, fs, revprops, 0,
+                                     left_count, files_to_delete, pool));
+          SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
+                                  changed_index, serialized, new_total_size,
+                                  stream, pool));
+        }
+
+      if (left_count + right_count < revprops->sizes->nelts)
+        {
+          SVN_ERR(repack_stream_open(&stream, fs, revprops, changed_index,
+                                     changed_index + 1, files_to_delete,
+                                     pool));
+          SVN_ERR(repack_revprops(fs, revprops, changed_index,
+                                  changed_index + 1,
+                                  changed_index, serialized, new_total_size,
+                                  stream, pool));
+        }
+
+      if (right_count)
+        {
+          SVN_ERR(repack_stream_open(&stream, fs, revprops,
+                                     revprops->sizes->nelts - right_count,
+                                     revprops->sizes->nelts,
+                                     files_to_delete, pool));
+          SVN_ERR(repack_revprops(fs, revprops,
+                                  revprops->sizes->nelts - right_count,
+                                  revprops->sizes->nelts, changed_index,
+                                  serialized, new_total_size, stream,
+                                  pool));
+        }
+
+      /* write the new manifest */
+      *final_path = svn_dirent_join(revprops->folder, "manifest", pool);
+      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
+                                     svn_io_file_del_none, pool, pool));
+
+      for (i = 0; i < revprops->manifest->nelts; ++i)
+        {
+          const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
+                                               const char*);
+          SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
+        }
+
+      SVN_ERR(svn_stream_close(stream));
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
 static svn_error_t *
@@ -3688,6 +3998,7 @@ set_revision_proplist(svn_fs_t *fs,
                       apr_hash_t *proplist,
                       apr_pool_t *pool)
 {
+  svn_boolean_t is_packed;
   svn_boolean_t bump_generation = FALSE;
   const char *final_path;
   const char *tmp_path;
@@ -3696,19 +4007,33 @@ set_revision_proplist(svn_fs_t *fs,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
+  /* this info will not change while we hold the global FS write lock */
+  is_packed = is_packed_revprop(fs, rev);
+  
   /* Test whether revprops already exist for this revision.
    * Only then will we need to bump the revprop generation. */
   if (has_revprop_cache(fs, pool))
     {
-      svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(path_revprops(fs, rev, pool), &kind,
-                                pool));
-      bump_generation = kind != svn_node_none;
+      if (is_packed)
+        {
+          bump_generation = TRUE;
+        }
+      else
+        {
+          svn_node_kind_t kind;
+          SVN_ERR(svn_io_check_path(path_revprops(fs, rev, pool), &kind,
+                                    pool));
+          bump_generation = kind != svn_node_none;
+        }
     }
 
   /* Serialize the new revprop data */
-  SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
-                                   fs, rev, proplist, pool));
+  if (is_packed)
+    SVN_ERR(write_packed_revprop(&final_path, &tmp_path, &files_to_delete,
+                                 fs, rev, proplist, pool));
+  else
+    SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
+                                     fs, rev, proplist, pool));
 
   /* We use the rev file of this revision as the perms reference,
    * because when setting revprops for the first time, the revprop
