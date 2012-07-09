@@ -8560,19 +8560,21 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t missing = TRUE;
       if (!packed_revprop_available(&missing, fs, max_rev, pool))
-        if (missing)
-          {
-            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                    _("Revision %ld has a revs file but no "
-                                      "revprops file"),
-                                    max_rev);
-          }
-        else
-          {
-            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                    _("Revision %ld has a revs file but the "
-                                      "revprops file is inaccessible"),
-                                    max_rev);
+	{
+          if (missing)
+            {
+              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                      _("Revision %ld has a revs file but no "
+                                        "revprops file"),
+                                      max_rev);
+            }
+          else
+            {
+              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                      _("Revision %ld has a revs file but the "
+                                        "revprops file is inaccessible"),
+                                      max_rev);
+            }
           }
     }
   else if (youngest_revprops_kind != svn_node_file)
