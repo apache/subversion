@@ -9555,50 +9555,51 @@ pack_body(void *baton,
 {
   struct pack_baton *pb = baton;
   fs_fs_data_t ffd;
-  int format, max_files_per_dir;
   apr_int64_t completed_shards;
   apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
   const char *rev_data_path;
   const char *revprops_data_path = NULL;
-  svn_revnum_t min_unpacked_rev;
 
   /* read repository settings */
-  SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
-                      pool));
-  SVN_ERR(check_format(format));
+  memset(&ffd, 0, sizeof(ffd));
+  SVN_ERR(read_format(&ffd.format, &ffd.max_files_per_dir,
+                      path_format(pb->fs, pool), pool));
+  SVN_ERR(check_format(ffd.format));
   SVN_ERR(read_config(&ffd, pb->fs->path, pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
      Return a friendly error to that effect. */
-  if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
+  if (ffd.format < SVN_FS_FS__MIN_PACKED_FORMAT)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
       _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
-      format);
+      ffd.format);
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
-  if (!max_files_per_dir)
+  if (!ffd.max_files_per_dir)
     return SVN_NO_ERROR;
 
-  SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
+  SVN_ERR(read_min_unpacked_rev(&ffd.min_unpacked_rev,
                                 path_min_unpacked_rev(pb->fs, pool),
                                 pool));
 
   SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
-  completed_shards = (youngest + 1) / max_files_per_dir;
+  completed_shards = (youngest + 1) / ffd.max_files_per_dir;
 
   /* See if we've already completed all possible shards thus far. */
-  if (min_unpacked_rev == (completed_shards * max_files_per_dir))
+  if (ffd.min_unpacked_rev == (completed_shards * ffd.max_files_per_dir))
     return SVN_NO_ERROR;
 
   rev_data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
-  if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+  if (ffd.format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     revprops_data_path = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
                                          pool);
 
   iterpool = svn_pool_create(pool);
-  for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
+  for (i = ffd.min_unpacked_rev / ffd.max_files_per_dir;
+       i < completed_shards;
+       i++)
     {
       svn_pool_clear(iterpool);
 
@@ -9606,7 +9607,7 @@ pack_body(void *baton,
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
       SVN_ERR(pack_shard(rev_data_path, revprops_data_path,
-                         pb->fs->path, i, max_files_per_dir,
+                         pb->fs->path, i, ffd.max_files_per_dir,
                          ffd.revprop_pack_size,
                          ffd.compress_packed_revprops
                            ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
