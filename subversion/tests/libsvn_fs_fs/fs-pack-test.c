@@ -251,7 +251,6 @@ static svn_string_t *
 huge_log(svn_revnum_t rev, apr_pool_t *pool)
 {
   svn_stringbuf_t *temp = svn_stringbuf_create_ensure(100000, pool);
-  svn_string_t *result;
   int i;
 
   svn_stringbuf_appendcstr(temp, "A ");
