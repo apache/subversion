@@ -4686,7 +4686,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
-                        svn_boolean_t set_actual_props,
+                        svn_boolean_t update_actual_props,
                         const apr_hash_t *new_actual_props,
                         svn_boolean_t is_move,
                         const svn_skel_t *conflict,
@@ -4739,9 +4739,9 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
 
   iwb.checksum = checksum;
 
-  if (set_actual_props)
+  if (update_actual_props)
     {
-      iwb.update_actual_props = set_actual_props;
+      iwb.update_actual_props = update_actual_props;
       iwb.new_actual_props = new_actual_props;
     }
 
