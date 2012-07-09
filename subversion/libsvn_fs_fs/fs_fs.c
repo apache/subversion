@@ -5918,7 +5918,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   apr_size_t len;
 
   svn_stringbuf_t *buf;
-  SVN_ERR(read_content(&buf, txn_current_filename, pool));
+  SVN_ERR(read_content(&buf, txn_current_filename, cb->pool));
 
   /* remove trailing newlines */
   svn_stringbuf_strip_whitespace(buf);
