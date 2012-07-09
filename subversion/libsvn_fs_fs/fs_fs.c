@@ -1616,6 +1616,8 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
 
   if (err)
     {
+      *content = NULL;
+
       if (APR_STATUS_IS_ENOENT(err->apr_err))
         {
           if (!last_attempt)
@@ -1623,7 +1625,6 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
               svn_error_clear(err);
               if (missing)
                 *missing = TRUE;
-              *content = NULL;
               return SVN_NO_ERROR;
             }
         }
@@ -1634,7 +1635,6 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
           if (!last_attempt)
             {
               svn_error_clear(err);
-              *content = NULL;
               return SVN_NO_ERROR;
             }
         }
