@@ -1657,6 +1657,11 @@ read_content(svn_stringbuf_t **content, const char *fname, apr_pool_t *pool)
                                     fname, i + 1 < RECOVERABLE_RETRY_COUNT,
                                     pool));
 
+  if (!*content)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Can't read '%s'"),
+                             svn_dirent_local_style(fname, pool));
+
   return SVN_NO_ERROR;
 }
 
