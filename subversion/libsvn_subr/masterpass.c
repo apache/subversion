@@ -285,13 +285,9 @@ svn_auth_master_passphrase_get(const char **passphrase,
   const svn_string_t *check_text;
   const char *config_dir = svn_auth_get_parameter(auth_baton,
                                                   SVN_AUTH_PARAM_CONFIG_DIR);
-#ifdef SVN_AUTH_TEMP_USE_FAUX_PASSPHRASE
-  const char *default_passphrase = SVN_AUTH_TEMP_MASTER_PASSPHRASE;
-#else
   const char *default_passphrase =
     svn_auth_get_parameter(auth_baton,
                            SVN_AUTH_PARAM_DEFAULT_MASTER_PASSPHRASE);
-#endif
 
   /* Read the existing passphrase storage record so we can validate
      any master passphrase we have or fetch. If there's no check text,

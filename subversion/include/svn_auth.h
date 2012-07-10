@@ -367,12 +367,6 @@ typedef struct svn_auth_cred_master_passphrase_t
   svn_boolean_t may_save;
 } svn_auth_cred_master_passphrase_t;
 
-/* Temporary support for a hard-coded master passphrase.  (Truth told,
-   cmpilato just doesn't feel like implementing prompting providers
-   and stuff just yet.)  */
-#define SVN_AUTH_TEMP_USE_FAUX_PASSPHRASE 1
-#define SVN_AUTH_TEMP_MASTER_PASSPHRASE "mypass"
-
 /* Set *PASSPHRASE to the master passphrase for authentication
    credentials stored in the runtime configuration associated with
    AUTH_BATON, allocated from RESULT_POOL.  Use SCRATCH_POOL for

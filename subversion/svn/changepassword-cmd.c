@@ -53,11 +53,7 @@ svn_cl__changepassword(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
       if (args->nelts > 1)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-#ifdef SVN_AUTH_TEMP_USE_FAUX_PASSPHRASE
-      new_password = SVN_AUTH_TEMP_MASTER_PASSPHRASE;
-#else
       new_password = APR_ARRAY_IDX(args, 0, const char *);
-#endif
     }
   else
     {
