@@ -4020,7 +4020,7 @@ write_packed_revprop(const char **final_path,
           {
             right_size += APR_ARRAY_IDX(revprops->sizes, right, apr_off_t)
                         + SVN_INT64_BUFFER_SIZE;
-            ++right;
+            --right;
           }
 
        /* since the items need much less than SVN_INT64_BUFFER_SIZE
