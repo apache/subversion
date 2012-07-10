@@ -4011,11 +4011,17 @@ write_packed_revprop(const char **final_path,
       while (left <= right)
         if (  left_size + APR_ARRAY_IDX(revprops->sizes, left, apr_off_t)
             < right_size + APR_ARRAY_IDX(revprops->sizes, right, apr_off_t))
-          left_size += APR_ARRAY_IDX(revprops->sizes, left++, apr_off_t)
-                    + SVN_INT64_BUFFER_SIZE;
-        else
-          right_size += APR_ARRAY_IDX(revprops->sizes, right--, apr_off_t);
+          {
+            left_size += APR_ARRAY_IDX(revprops->sizes, left, apr_off_t)
                       + SVN_INT64_BUFFER_SIZE;
+            ++left;
+          }
+        else
+          {
+            right_size += APR_ARRAY_IDX(revprops->sizes, right, apr_off_t)
+                        + SVN_INT64_BUFFER_SIZE;
+            ++right;
+          }
 
        /* since the items need much less than SVN_INT64_BUFFER_SIZE
         * bytes to represent their length, the split may not be optimal */
