@@ -3956,7 +3956,6 @@ write_packed_revprop(const char **final_path,
   apr_int64_t generation = 0;
   svn_stream_t *stream;
   svn_stringbuf_t *serialized;
-  apr_off_t new_size;
   apr_off_t new_total_size;
   int changed_index;
 
@@ -3976,7 +3975,6 @@ write_packed_revprop(const char **final_path,
 
   /* calculate the size of the new data */
   changed_index = (int)(rev - revprops->start_revision);
-  new_size = serialized->len + 3 * SVN_INT64_BUFFER_SIZE;
   new_total_size = revprops->total_size - revprops->serialized_size
                  + serialized->len
                  + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
@@ -4000,36 +3998,37 @@ write_packed_revprop(const char **final_path,
     }
   else
     {
-      /* calculate the pack size left and right of the changed revision */
-      apr_off_t left_size = changed_index * SVN_INT64_BUFFER_SIZE;
-      apr_off_t right_size = (revprops->sizes->nelts - changed_index - 1)
-                           * SVN_INT64_BUFFER_SIZE;
+      /* split the pack file into two of roughly equal size */
       int right_count, left_count, i;
+          
+      int left = 0;
+      int right = revprops->sizes->nelts - 1;
+      apr_off_t left_size = 2 * SVN_INT64_BUFFER_SIZE;
+      apr_off_t right_size = 2 * SVN_INT64_BUFFER_SIZE;
 
-      for (i = 0; i < revprops->sizes->nelts; ++i)
-        if (i < changed_index)
-          left_size += APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
-        else if (i > changed_index)
-          right_size += APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
+      /* let left and right side grow such that their size difference
+       * is minimal after each step. */
+      while (left <= right)
+        if (  left_size + APR_ARRAY_IDX(revprops->sizes, left, apr_off_t)
+            < right_size + APR_ARRAY_IDX(revprops->sizes, right, apr_off_t))
+          left_size += APR_ARRAY_IDX(revprops->sizes, left++, apr_off_t)
+                    + SVN_INT64_BUFFER_SIZE;
+        else
+          right_size += APR_ARRAY_IDX(revprops->sizes, right--, apr_off_t);
+                      + SVN_INT64_BUFFER_SIZE;
 
-      /* determine which of the 3 different split options to use */
-      if (new_size + left_size < ffd->revprop_pack_size)
+       /* since the items need much less than SVN_INT64_BUFFER_SIZE
+        * bytes to represent their length, the split may not be optimal */
+      left_count = left;
+      right_count = revprops->sizes->nelts - left;
+
+      /* if new_size is large, one side may exceed the pack size limit.
+       * In that case, split before and after the modified revprop.*/
+      if (   left_size > ffd->revprop_pack_size
+          || right_size > ffd->revprop_pack_size)
         {
-          /* split right after the change */
-          left_count = changed_index + 1;
-          right_count = revprops->sizes->nelts - changed_index - 1;
-        }
-      else if (new_size + right_size < ffd->revprop_pack_size)
-        {
-          /* split right before the change */
           left_count = changed_index;
-          right_count = revprops->sizes->nelts - changed_index;
-        }
-      else
-        {
-          /* split before and after the change */
-          left_count = changed_index;
-          right_count = revprops->sizes->nelts - changed_index - 1;
+          right_count = revprops->sizes->nelts - left_count - 1;
         }
 
       /* write the new, split files */
