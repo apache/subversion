@@ -9563,7 +9563,7 @@ pack_body(void *baton,
           apr_pool_t *pool)
 {
   struct pack_baton *pb = baton;
-  fs_fs_data_t ffd;
+  fs_fs_data_t ffd = {0};
   apr_int64_t completed_shards;
   apr_int64_t i;
   svn_revnum_t youngest;
@@ -9572,7 +9572,6 @@ pack_body(void *baton,
   const char *revprops_data_path = NULL;
 
   /* read repository settings */
-  memset(&ffd, 0, sizeof(ffd));
   SVN_ERR(read_format(&ffd.format, &ffd.max_files_per_dir,
                       path_format(pb->fs, pool), pool));
   SVN_ERR(check_format(ffd.format));
