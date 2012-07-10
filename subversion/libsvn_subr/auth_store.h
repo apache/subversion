@@ -33,14 +33,127 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* Opaque encrypted authentication credential store object. */
+/* Authentication credential store object. */
 typedef struct svn_auth__store_t svn_auth__store_t;
 
+/* Callback type: Open (creating if necessary and if CREATE is TRUE)
+   an authentication store. */
+typedef svn_error_t *(*svn_auth__store_cb_open_t)(
+  void *baton,
+  svn_boolean_t create,
+  apr_pool_t *scratch_pool);
 
-/* Open (creating if necessary and if CREATE is set) an encrypted
-   authentication credential store at AUTH_STORE_PATH, and set
-   *AUTH_STORE_P to the object which describes it.
+/* Callback type: Close an authentication store. */
+typedef svn_error_t *(*svn_auth__store_cb_close_t)(
+  void *baton,
+  apr_pool_t *scratch_pool);
+
+/* Callback type: Delete an authentication store. */
+typedef svn_error_t *(*svn_auth__store_cb_delete_t)(
+  void *baton,
+  apr_pool_t *scratch_pool);
+
+/* Callback type: Set CREDS to the set of credentials of kind
+   CRED_KIND and identified by REALMSTRING from an authentication
+   store. */
+typedef svn_error_t *(*svn_auth__store_cb_fetch_t)(
+  const void **creds, 
+  void *baton,
+  const char *cred_kind,
+  const char *realmstring,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Callback type: Store CREDS as the set of credentials of kind
+   CRED_KIND and identified by REALMSTRING in an authentication store,
+   setting *STORED to TRUE iff the storage occurs successfully. */
+typedef svn_error_t *(*svn_auth__store_cb_store_t)(
+  svn_boolean_t *stored, 
+  void *baton,
+  const char *cred_kind,
+  const char *realmstring,
+  const void *creds,
+  apr_pool_t *scratch_pool);
+
+
+/* Create a generic authentication store object. */
+svn_error_t *
+svn_auth__store_create(svn_auth__store_t **auth_store,
+                       apr_pool_t *result_pool);
+
+/* Set the private context baton for AUTH_STORE to PRIV_BATON. */
+svn_error_t *
+svn_auth__store_set_baton(svn_auth__store_t *auth_store,
+                          void *priv_baton);
+
+/* Set the `open' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_open(svn_auth__store_t *auth_store,
+                         svn_auth__store_cb_open_t func);
+
+/* Set the `close' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_close(svn_auth__store_t *auth_store,
+                          svn_auth__store_cb_close_t func);
+
+/* Set the `delete' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_delete(svn_auth__store_t *auth_store,
+                           svn_auth__store_cb_delete_t func);
+
+/* Set the `fetch' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_fetch(svn_auth__store_t *auth_store,
+                          svn_auth__store_cb_fetch_t func);
+
+/* Set the `store' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_store(svn_auth__store_t *auth_store,
+                          svn_auth__store_cb_store_t func);
+
+
+/* Open (creating if necessary and if CREATE is set) the
+   authentication credential store identified by AUTH_STORE. */
+svn_error_t *
+svn_auth__store_open(svn_auth__store_t *auth_store,
+                     svn_boolean_t create,
+                     apr_pool_t *scratch_pool);
+                     
+/* Close the auth store represented by AUTH_STORE. */
+svn_error_t *
+svn_auth__store_close(svn_auth__store_t *auth_store,
+                      apr_pool_t *scratch_pool);
+
+
+/* Delete the on-disk auth store represented by AUTH_STORE. */
+svn_error_t *
+svn_auth__store_delete(svn_auth__store_t *auth_store,
+                       apr_pool_t *scratch_pool);
+
+/* Set *CREDS to the credentials of kind CRED_KIND and identified by
+   REALMSTRING found in AUTH_STORE. */
+svn_error_t *
+svn_auth__store_fetch_creds(const void **creds,
+                            svn_auth__store_t *auth_store,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* Store CREDS as the credentials of kind CRED_KIND identified by
+   REALMSTRING in AUTH_STORE, setting *STORED to TRUE iff the storage
+   occurs successfully. */
+svn_error_t *
+svn_auth__store_store_creds(svn_boolean_t *stored,
+                            svn_auth__store_t *auth_store,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            const void *creds,
+                            apr_pool_t *scratch_pool);
+
+
+/* Set *AUTH_STORE_P to an object which describes the encrypted
+   authentication credential store located at AUTH_STORE_PATH.
 
    CRYPTO_CTX is the cryptographic context which the store will use
    for related functionality.
@@ -51,27 +164,28 @@ typedef struct svn_auth__store_t svn_auth__store_t;
    it is validated against the passphrase self-checking information in
    the store itself.  SVN_ERR_AUTHN_FAILED will be returned if SECRET
    does not validate against an existing store's checktext.
+
+   ### TODO:  This is expected to be experimental code! ###
 */
 svn_error_t *
-svn_auth__store_open(svn_auth__store_t **auth_store_p,
-                     const char *auth_store_path,
-                     svn_crypto__ctx_t *crypto_ctx,
-                     const svn_string_t *secret,
-                     svn_boolean_t create,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
+svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
+                             const char *auth_store_path,
+                             svn_crypto__ctx_t *crypto_ctx,
+                             const svn_string_t *secret,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
-
-/* Close the auth store represented by AUTH_STORE. */
+/* Set *AUTH_STORE_P to an object which describes the
+   runtime-config-based authentication credential store located at
+   AUTH_STORE_PATH.  CFG is the configuration object with which the
+   store is associated.
+*/
 svn_error_t *
-svn_auth__store_close(svn_auth__store_t *auth_store,
-                      apr_pool_t *scratch_pool);
+svn_auth__config_store_get(svn_auth__store_t **auth_store_p,
+                           const svn_config_t *cfg,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
-
-/* Close the on-disk auth store represented by AUTH_STORE. */
-svn_error_t *
-svn_auth__store_delete(const char *auth_store_path,
-                       apr_pool_t *scratch_pool);
 
 
 /* Set *CREDS_P to the "username" credentials from AUTH_STORE which

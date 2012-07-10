@@ -78,9 +78,9 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
 }
 
 
-/* Create an auth store within CONFIG_DIR, deleting any previous auth
-   store at that location, and using CRYPTO_CTX and the master
-   passphrase SECRET.  Set *AUTH_STORE_P to the resulting store
+/* Create and open an auth store within CONFIG_DIR, deleting any
+   previous auth store at that location, and using CRYPTO_CTX and the
+   master passphrase SECRET.  Set *AUTH_STORE_P to the resulting store
    object.  */
 static svn_error_t *
 create_ephemeral_auth_store(svn_auth__store_t **auth_store_p,
@@ -94,8 +94,9 @@ create_ephemeral_auth_store(svn_auth__store_t **auth_store_p,
                                      svn_io_file_del_on_pool_cleanup,
                                      pool, pool));
   SVN_ERR(svn_io_remove_file2(*auth_store_path, TRUE, pool));
-  SVN_ERR(svn_auth__store_open(auth_store_p, *auth_store_path, crypto_ctx,
-                               secret, TRUE, pool, pool));
+  SVN_ERR(svn_auth__pathetic_store_get(auth_store_p, *auth_store_path,
+                                       crypto_ctx, secret, pool, pool));
+  SVN_ERR(svn_auth__store_open(*auth_store_p, TRUE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -217,13 +218,15 @@ test_auth_store_basic(apr_pool_t *pool)
 
   /* Close and reopen the auth store. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
-  SVN_ERR(svn_auth__store_open(&auth_store, auth_store_path, ctx,
-                               secret, FALSE, pool, pool));
+  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
+                                       secret, pool, pool));
+  SVN_ERR(svn_auth__store_open(auth_store, FALSE, pool));
 
   /* Close and reopen the auth store with a bogus secret. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
-  err = svn_auth__store_open(&auth_store, auth_store_path, ctx,
-                             bad_secret, FALSE, pool, pool);
+  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
+                                       bad_secret, pool, pool));
+  err = svn_auth__store_open(auth_store, FALSE, pool);
   if (! err)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Successfully opened auth store with the wrong "
@@ -276,24 +279,37 @@ test_auth_store_get_set(apr_pool_t *pool)
   /* Store some simple and username creds. */
   for (i = 0; i < (sizeof(usernames) / sizeof(const char *)); i++)
     {
+      svn_boolean_t stored;
+
       svn_pool_clear(iterpool);
 
       realmstring = usernames[i]; /* not schema-jiving */
       username_creds = apr_pcalloc(iterpool, sizeof(*username_creds));
       username_creds->username = usernames[i];
-      SVN_ERR(svn_auth__store_set_username_creds(auth_store, realmstring,
-                                                 username_creds, iterpool));
+      SVN_ERR(svn_auth__store_store_creds(&stored, auth_store,
+                                          SVN_AUTH_CRED_USERNAME, realmstring,
+                                          username_creds, iterpool));
+      if (! stored)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Error storing username credentials");
+
     }
   for (i = 0; i < (sizeof(usernames) / sizeof(const char *)); i++)
     {
+      svn_boolean_t stored;
+
       svn_pool_clear(iterpool);
 
       realmstring = usernames[i]; /* not schema-jiving */
       simple_creds = apr_pcalloc(iterpool, sizeof(*simple_creds));
       simple_creds->username = usernames[i];
       simple_creds->password = passwords[i];
-      SVN_ERR(svn_auth__store_set_simple_creds(auth_store, realmstring,
-                                               simple_creds, iterpool));
+      SVN_ERR(svn_auth__store_store_creds(&stored, auth_store,
+                                          SVN_AUTH_CRED_SIMPLE, realmstring,
+                                          simple_creds, iterpool));
+      if (! stored)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Error storing simple credentials");
     }
 
   svn_pool_destroy(iterpool);
