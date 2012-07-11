@@ -310,7 +310,6 @@ def update_binary_file_2(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(4128)
 def update_binary_file_3(sbox):
   "update locally modified file to equal versions"
@@ -367,7 +366,7 @@ def update_binary_file_3(sbox):
 
   # Create expected output tree for an update to rev 2.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/theta' : Item(status='  '),
+    'A/theta' : Item(status='G '),
     })
 
   # Create expected disk tree for the update
@@ -3915,8 +3914,12 @@ def update_accept_conflicts(sbox):
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(None,
                                      ["Updating '%s':\n" % (mu_path_backup),
-                                      'G    %s\n' % (mu_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'C    %s\n' % (mu_path_backup,),
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (mu_path_backup)],
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3925,8 +3928,12 @@ def update_accept_conflicts(sbox):
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(None,
                                      ["Updating '%s':\n" % (alpha_path_backup),
-                                      'G    %s\n' % (alpha_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'C    %s\n' % (alpha_path_backup,),
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (alpha_path_backup)],
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3935,8 +3942,12 @@ def update_accept_conflicts(sbox):
   # Accept their file.
   svntest.actions.run_and_verify_svn(None,
                                      ["Updating '%s':\n" % (beta_path_backup),
-                                      'G    %s\n' % (beta_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'C    %s\n' % (beta_path_backup,),
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (beta_path_backup)],
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3947,8 +3958,12 @@ def update_accept_conflicts(sbox):
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(None,
                                       ["Updating '%s':\n" % (pi_path_backup),
-                                       'G    %s\n' % (pi_path_backup,),
-                                       'Updated to revision 2.\n'],
+                                       'C    %s\n' % (pi_path_backup,),
+                                       'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (pi_path_backup)],
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       pi_path_backup)
@@ -4096,14 +4111,27 @@ interactive-conflicts = true
                                         wc_dir, '--config-dir', config_dir)
 
   # Now update -r1 again.  Hopefully we don't get a checksum error!
-  expected_output = svntest.wc.State(wc_dir, {})
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(verb="Skipped"),
+  })
 
-  # note: it's possible that the correct disk here should be the
-  # merged file?
-  expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
-                                        "Local mods to r1 text.\n"))
+  # The interactive callback aborts, so the file remains in conflict.
+  expected_disk.tweak('iota', contents="This is the file 'iota'.\n"
+                                        "<<<<<<< .mine\n"
+                                        "Local mods to r1 text.\n"
+                                        "=======\n"
+                                        "Appended text in r2.\n"
+                                        ">>>>>>> .r2\n"),
+  expected_disk.add({
+    'iota.r1'   : Item(contents="This is the file 'iota'.\n"),
+    'iota.r2'   : Item(contents="This is the file 'iota'.\n"
+                                 "Appended text in r2.\n"),
+    'iota.mine' : Item(contents="This is the file 'iota'.\n"
+                                "Local mods to r1 text.\n"),
+  })
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='M ')
+  expected_status.tweak('iota', status='C ', wc_rev=2)
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -4421,7 +4449,7 @@ def tree_conflicts_on_update_1_2(sbox):
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
+        + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
@@ -4439,7 +4467,7 @@ def tree_conflicts_on_update_1_2(sbox):
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
+        + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
@@ -4504,37 +4532,37 @@ def tree_conflicts_on_update_2_1(sbox):
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
+        + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
+        + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
+        + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
+        + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
+        + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
+        + ' Source right: .none.*(/DDD/D1@3)?$',
     },
   }
 
@@ -4612,37 +4640,37 @@ def tree_conflicts_on_update_2_2(sbox):
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
+        + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
+        + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
+        + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
+        + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
+        + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
+        + ' Source right: .none.*(/DDD/D1@3)?$',
     },
   }
 
@@ -4774,37 +4802,37 @@ def tree_conflicts_on_update_3(sbox):
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
+        + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
+        + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
+        + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
+        + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
+        + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
+        + ' Source right: .none.*(/DDD/D1@3)?$',
     },
   }
 

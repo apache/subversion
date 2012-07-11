@@ -306,9 +306,9 @@ struct decode_baton {
 static APR_INLINE void
 decode_group(const unsigned char *in, char *out)
 {
-  out[0] = (in[0] << 2) | (in[1] >> 4);
-  out[1] = ((in[1] & 0xf) << 4) | (in[2] >> 2);
-  out[2] = ((in[2] & 0x3) << 6) | in[3];
+  out[0] = (char)((in[0] << 2) | (in[1] >> 4));
+  out[1] = (char)(((in[1] & 0xf) << 4) | (in[2] >> 2));
+  out[2] = (char)(((in[2] & 0x3) << 6) | in[3]);
 }
 
 /* Lookup table for base64 characters; reverse_base64[ch] gives a

@@ -69,6 +69,7 @@ static const int schema_statements[] =
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
   STMT_CREATE_CHANGELIST_LIST,
+  STMT_CREATE_CHANGELIST_TRIGGER,
   STMT_CREATE_TARGET_PROP_CACHE,
   STMT_CREATE_REVERT_LIST,
   STMT_CREATE_DELETE_LIST,
@@ -87,9 +88,6 @@ static const int slow_statements[] =
   /* Is there a record? ### Can we somehow check for LIMIT 1? */
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
-
-  /* Need index? */
-  STMT_SELECT_PRISTINE_BY_MD5, /* Only used by deprecated api */
 
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,

@@ -29,7 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>]
-            [--config-file=<file>]
+            [--config-file=<file>] [--ssl-cert=<file>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -124,7 +124,7 @@ class TestHarness:
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
-               milestone_filter=None, set_log_level=None):
+               milestone_filter=None, set_log_level=None, ssl_cert=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -175,6 +175,7 @@ class TestHarness:
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
+    self.ssl_cert = ssl_cert
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -467,6 +468,8 @@ class TestHarness:
       svntest.main.options.fsfs_packing = self.fsfs_packing
     if self.mode_filter is not None:
       svntest.main.options.mode_filter = self.mode_filter
+    if self.ssl_cert is not None:
+      svntest.main.options.ssl_cert = self.ssl_cert
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -623,7 +626,7 @@ def main():
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
-                            'mode-filter=', 'set-log-level='])
+                            'mode-filter=', 'set-log-level=', 'ssl-cert='])
   except getopt.GetoptError:
     args = []
 
@@ -634,9 +637,9 @@ def main():
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
     config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level = \
+    set_log_level, ssl_cert = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None
+            None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -670,6 +673,8 @@ def main():
       mode_filter = val
     elif opt in ['--set-log-level']:
       set_log_level = val
+    elif opt in ['--ssl-cert']:
+      ssl_cert = val
     else:
       raise getopt.GetoptError
 
@@ -685,7 +690,7 @@ def main():
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing, list_tests,
                    mode_filter=mode_filter, milestone_filter=milestone_filter,
-                   set_log_level=set_log_level)
+                   set_log_level=set_log_level, ssl_cert=ssl_cert)
 
   failed = th.run(args[2:])
   if failed:

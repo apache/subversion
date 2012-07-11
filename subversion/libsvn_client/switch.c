@@ -199,7 +199,7 @@ switch_internal(svn_revnum_t *result_rev,
       svn_client__pathrev_t *target_base_loc, *yca;
 
       SVN_ERR(svn_client__wc_node_get_base(&target_base_loc, local_abspath,
-                                           ctx, pool, pool));
+                                           ctx->wc_ctx, pool, pool));
 
       if (!target_base_loc)
         yca = NULL; /* Not versioned */
@@ -217,7 +217,6 @@ switch_internal(svn_revnum_t *result_rev,
                                  switch_url,
                                  svn_dirent_dirname(local_abspath, pool));
     }
-
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 

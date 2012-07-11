@@ -496,7 +496,7 @@ svn_txdelta(svn_txdelta_stream_t **stream,
             svn_stream_t *target,
             apr_pool_t *pool)
 {
-  return svn_txdelta2(stream, source, target, TRUE, pool);
+  svn_txdelta2(stream, source, target, TRUE, pool);
 }
 
 

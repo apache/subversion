@@ -51,20 +51,6 @@
 #include "private/svn_delta_private.h"
 
 
-/* ### This file maps URL schemes to particular RA libraries.
-   ### Currently, the only pair of RA libraries which support the same
-   ### protocols are neon and serf.  svn_ra_open3 makes the assumption
-   ### that this is the case; that their 'schemes' fields are both
-   ### dav_schemes; and that "neon" is listed first.
-
-   ### Users can choose which dav library to use with the http-library
-   ### preference in .subversion/servers; however, it is ignored by
-   ### any code which uses the pre-1.2 API svn_ra_get_ra_library
-   ### instead of svn_ra_open. */
-
-#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
-#define CHOOSABLE_DAV_MODULE
-#endif
 
 
 /* These are the URI schemes that the respective libraries *may* support.
@@ -85,15 +71,6 @@ static const struct ra_lib_defn {
   svn_ra__init_func_t initfunc;
   svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
-  {
-    "neon",
-    dav_schemes,
-#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
-    svn_ra_neon__init,
-    svn_ra_dav_init
-#endif
-  },
-
   {
     "svn",
     svn_schemes,
@@ -414,8 +391,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             DEFAULT_HTTP_LIBRARY);
 
-          if (strcmp(http_library, "neon") != 0 &&
-              strcmp(http_library, "serf") != 0)
+          if (strcmp(http_library, "serf") != 0)
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
@@ -1282,8 +1258,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                          end_revision,
                                          revision_deleted,
                                          pool);
-  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE     /* serf */
-              || err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)) /* neon */
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     {
       svn_error_clear(err);
 

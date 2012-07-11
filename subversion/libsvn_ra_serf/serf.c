@@ -270,6 +270,11 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
 
+  if (session->timeout < 0) /* Always true for DEFAULT_HTTP_TIMEOUT */
+    session->timeout = apr_time_from_sec(600); /* 10 min */
+
+  SVN_ERR_ASSERT(session->timeout > 0);
+
   /* Convert the proxy port value, if any. */
   if (port_str)
     {
@@ -392,33 +397,27 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
+  serf_sess->http10 = TRUE;  /* until we confirm HTTP/1.1  */
+  serf_sess->http10 = FALSE; /* ### don't change behavior yet  */
+
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
-
-
-  serf_sess->conns = apr_palloc(serf_sess->pool, sizeof(*serf_sess->conns) * 4);
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
-  serf_sess->conns[0]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
-  serf_sess->conns[0]->http10 = FALSE; /* ### don't change behavior yet  */
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
-
-  serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
-  serf_sess->conns[0]->using_compression = serf_sess->using_compression;
-  serf_sess->conns[0]->hostname = url.hostname;
 
   /* create the user agent string */
   if (callbacks->get_client_string)
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    serf_sess->conns[0]->useragent = apr_pstrcat(pool, USER_AGENT, "/",
-                                                 client_string, (char *)NULL);
+    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+                                       client_string, (char *)NULL);
   else
-    serf_sess->conns[0]->useragent = USER_AGENT;
+    serf_sess->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
   status =

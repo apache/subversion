@@ -233,7 +233,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
           find2 = strchr(hextab, inbuf[2]);
           if (find1 != NULL && find2 != NULL)
             {
-              c = ((find1 - hextab) << 4) | (find2 - hextab);
+              c = (char)(((find1 - hextab) << 4) | (find2 - hextab));
               svn_stringbuf_appendbyte(str, c);
             }
           *inbuflen = 0;

@@ -50,7 +50,8 @@ from svntest.actions import inject_conflict_into_expected_state
 
 def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
                           elides=False, two_url=False, target=None,
-                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0):
+                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0,
+                          resolved=[]):
   """Generate an (inefficient) regex representing the expected merge
   output and mergeinfo notifications from REV_RANGES and ADDITIONAL_LINES.
 
@@ -72,7 +73,10 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
   notifications; if None, it is not checked.
 
   TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
-  each kind of conflict to expect."""
+  each kind of conflict to expect.
+
+  RESOLVED contains a list of target paths of which conflicts are resolved
+  during merging"""
 
   if rev_ranges is None:
     lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
@@ -110,6 +114,9 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
     if sys.platform == 'win32' and additional_lines != None:
       additional_lines = additional_lines.replace("\\", "\\\\")
     lines.append(str(additional_lines))
+
+  for rslv in resolved:
+    lines.append("Resolved conflicted state of '%s'" % re.escape(rslv))
 
   if text_conflicts or prop_conflicts or tree_conflicts:
     lines.append("Summary of conflicts:\n")
@@ -12532,7 +12539,8 @@ def svn_copy(s_rev, path1, path2):
                                      '-r', s_rev, path1, path2)
 
 def svn_merge(rev_range, source, target, lines=None, elides=[],
-              text_conflicts=0, prop_conflicts=0, tree_conflicts=0, args=[]):
+              text_conflicts=0, prop_conflicts=0, tree_conflicts=0, args=[],
+              resolved=[]):
   """Merge a single change from path SOURCE to path TARGET and verify the
   output and that there is no error.  (The changes made are not verified.)
 
@@ -12547,7 +12555,10 @@ def svn_merge(rev_range, source, target, lines=None, elides=[],
   TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
   each kind of conflict to expect.
 
-  ARGS are additional arguments passed to svn merge."""
+  ARGS are additional arguments passed to svn merge.
+
+  RESOLVED contains a list of targets of which conflicts are resolved
+  during merging"""
 
   source = local_path(source)
   target = local_path(target)
@@ -12568,7 +12579,8 @@ def svn_merge(rev_range, source, target, lines=None, elides=[],
                                   elides=elides,
                                   text_conflicts=text_conflicts,
                                   prop_conflicts=prop_conflicts,
-                                  tree_conflicts=tree_conflicts)
+                                  tree_conflicts=tree_conflicts,
+                                  resolved=resolved)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', rev_arg, source, target, *args)
 
@@ -13110,7 +13122,10 @@ def merge_two_edits_to_same_prop(sbox):
   # Merge the first change, then the second, to source.
   svn_merge(rev3, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
+      ], prop_conflicts=1,
+      args=['--allow-mixed-revisions',
+            '--accept=theirs-conflict'],
+      resolved=[mu_path])
   svn_merge(rev4, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
@@ -15216,7 +15231,7 @@ def merge_automatic_conflict_resolution(sbox):
                                      'revert', '--recursive', wc_dir)
 
   # Test --accept mine-conflict and mine-full
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_disk.tweak('D/H/psi', contents="BASE.\n")
   expected_status.tweak('D/H/psi', status='  ')
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
@@ -15251,7 +15266,7 @@ def merge_automatic_conflict_resolution(sbox):
                                      'revert', '--recursive', wc_dir)
 
   # Test --accept theirs-conflict and theirs-full
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_disk.tweak('D/H/psi', contents="New content")
   expected_status.tweak('D/H/psi', status='M ')
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
@@ -15285,7 +15300,7 @@ def merge_automatic_conflict_resolution(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   # Test --accept base
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_elision_output = wc.State(A_COPY_path, {
     })
   expected_disk.tweak('D/H/psi', contents="This is the file 'psi'.\n")

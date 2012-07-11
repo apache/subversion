@@ -305,20 +305,6 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-
-/* Return a hash @a *tree_conflicts of all the children of @a
- * local_abspath that are in tree conflicts.  The hash maps local
- * abspaths to pointers to svn_wc_conflict_description2_t, all
- * allocated in result pool.
- */
-svn_error_t *
-svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
@@ -742,27 +728,6 @@ svn_wc__node_get_lock_info(const char **lock_token,
                            apr_pool_t *scratch_pool);
 
 /**
- * A hack to remove the last entry from libsvn_client.  This simply fetches an
- * some values from WC-NG, and puts the needed bits into the output parameters,
- * allocated in @a result_pool.
- *
- * All output arguments can be NULL to indicate that the
- * caller is not interested in the specific result.
- *
- * @a local_abspath and @a wc_ctx are what you think they are.
- */
-svn_error_t *
-svn_wc__node_get_conflict_info(const char **conflict_old,
-                               const char **conflict_new,
-                               const char **conflict_wrk,
-                               const char **prejfile,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-
-/**
  * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
  * is true, determine if @a local_abspath has an anchor that should be locked
  * instead; otherwise, @a local_abspath must be a versioned directory.
@@ -1096,15 +1061,15 @@ svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
                               const svn_checksum_t *md5_checksum,
                               apr_pool_t *scratch_pool);
 
-/* Like svn_wc_get_pristine_contents2(), but keyed on the
-   SHA1_CHECKSUM rather than on the local absolute path of the working
-   file.  WRI_ABSPATH is any versioned path of the working copy in
-   whose pristine database we'll be looking for these contents.  */
+/* Like svn_wc_get_pristine_contents2(), but keyed on the CHECKSUM
+   rather than on the local absolute path of the working file.
+   WRI_ABSPATH is any versioned path of the working copy in whose
+   pristine database we'll be looking for these contents.  */
 svn_error_t *
 svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           svn_wc_context_t *wc_ctx,
                                           const char *wri_abspath,
-                                          const svn_checksum_t *sha1_checksum,
+                                          const svn_checksum_t *checksum,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 

@@ -170,10 +170,10 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
 
 svn_error_t *
 svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
-                               const char *wc_abspath,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+                             const char *wc_abspath,
+                             svn_wc_context_t *wc_ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   const char *relpath;
 
@@ -183,7 +183,7 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                 &relpath,
                                 &(*base_p)->repos_root_url,
                                 &(*base_p)->repos_uuid,
-                                ctx->wc_ctx, wc_abspath,
+                                wc_ctx, wc_abspath,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
     {

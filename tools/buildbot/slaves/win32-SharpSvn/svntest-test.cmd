@@ -51,10 +51,10 @@ IF "%1" == "-r" (
     SET SVN=1
     SHIFT
 ) ELSE IF "%1" == "serf" (
-    SET SERF=1
+    SET DAV=1
     SHIFT
-) ELSE IF "%1" == "neon" (
-    SET NEON=1
+) ELSE IF "%1" == "dav" (
+    SET DAV=1
     SHIFT
 ) ELSE (
     SET ARGS=!ARGS! -t %1
@@ -63,6 +63,7 @@ IF "%1" == "-r" (
 
 IF NOT "%1" == "" GOTO next
 
+taskkill /im svnserve.exe httpd.exe /f 2> nul:
 
 IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
 xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
@@ -76,22 +77,13 @@ IF "%LOCAL%+%FSFS%" == "1+1" (
 )
 
 IF "%SVN%+%FSFS%" == "1+1" (
-  taskkill /im svnserve.exe /f 2> nul:
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
   win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )
 
-IF "%SERF%+%FSFS%" == "1+1" (
-  taskkill /im httpd.exe /f 2> nul:
-  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  IF ERRORLEVEL 1 EXIT /B 1
-)
-
-IF "%NEON%+%FSFS%" == "1+1" (
-  taskkill /im httpd.exe /f 2> nul:
-  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+IF "%DAV%+%FSFS%" == "1+1" (
+  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )

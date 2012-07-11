@@ -35,6 +35,8 @@ import optparse
 import xml
 import urllib
 import logging
+import hashlib
+from urlparse import urlparse
 
 try:
   # Python >=3.0
@@ -369,7 +371,7 @@ def _quote_arg(arg):
     # Quoting suitable for most Unix shells.
     return "'" + arg.replace("'", "'\\''") + "'"
 
-def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
+def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
   STDOUT, and STDERR.  BUFSIZE is passed to subprocess.Popen's
   argument of the same name.
@@ -442,7 +444,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
   BUFSIZE dictates the pipe buffer size used in communication with the
@@ -475,7 +477,7 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -532,7 +534,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
          [line for line in stdout_lines if not line.startswith("DBG:")], \
          stderr_lines
 
-def create_config_dir(cfgdir, config_contents=None, server_contents=None):
+def create_config_dir(cfgdir, config_contents=None, server_contents=None,
+                      ssl_cert=None, ssl_url=None):
   "Create config directories and files"
 
   # config file names
@@ -569,6 +572,56 @@ store-passwords=yes
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
+
+  if (ssl_cert and ssl_url):
+    trust_ssl_cert(cfgdir, ssl_cert, ssl_url)
+  elif cfgdir != default_config_dir:
+    copy_trust(cfgdir, default_config_dir)
+
+
+def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
+  """Setup config dir to trust the given ssl_cert for the given ssl_url
+  """
+
+  cert_rep = ''
+  fp = open(ssl_cert, 'r')
+  for line in fp.readlines()[1:-1]:
+    cert_rep = cert_rep + line.strip()
+
+  parsed_url = urlparse(ssl_url)
+  netloc_url = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
+  ssl_dir = os.path.join(cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(ssl_dir):
+    os.makedirs(ssl_dir)
+  md5_name = hashlib.md5(netloc_url).hexdigest()
+  md5_file = os.path.join(ssl_dir, md5_name)
+  md5_file_contents = """K 10
+ascii_cert
+V %d
+%s
+K 8
+failures
+V 1
+8
+K 15
+svn:realmstring
+V %d
+%s
+END
+""" % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
+
+  file_write(md5_file, md5_file_contents)
+
+def copy_trust(dst_cfgdir, src_cfgdir):
+  """Copy svn.ssl.server files from one config dir to another.
+  """
+
+  src_ssl_dir = os.path.join(src_cfgdir, 'auth', 'svn.ssl.server')
+  dst_ssl_dir = os.path.join(dst_cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(dst_ssl_dir):
+    os.makedirs(dst_ssl_dir)
+  for f in os.listdir(src_ssl_dir):
+    shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_config_dir(args):
   if '--config-dir' in args:
@@ -676,7 +729,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
-                     options.http_library, want_error and 1 or 0)
+                     want_error and 1 or 0, default_config_dir)
 
 def run_wc_lock_tester(recursive, path):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
@@ -1215,6 +1268,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--mode-filter=' + options.mode_filter)
     if options.milestone_filter:
       args.append('--milestone-filter=' + options.milestone_filter)
+    if options.ssl_cert:
+      args.append('--ssl-cert=' + options.ssl_cert)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1561,6 +1616,8 @@ def _create_parser():
                          'useful during test development!')
   parser.add_option('--srcdir', action='store', dest='srcdir',
                     help='Source directory.')
+  parser.add_option('--ssl-cert', action='store',
+                    help='Path to SSL server certificate.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1861,7 +1918,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   if not options.is_child_process:
     # Build out the default configuration directory
-    create_config_dir(default_config_dir)
+    create_config_dir(default_config_dir,
+                      ssl_cert=options.ssl_cert,
+                      ssl_url=options.test_area_url)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

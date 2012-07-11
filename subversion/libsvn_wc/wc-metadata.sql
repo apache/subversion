@@ -107,7 +107,8 @@ CREATE TABLE PRISTINE (
   md5_checksum  TEXT NOT NULL
   );
 
-
+CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+  
 /* ------------------------------------------------------------------------- */
 
 /* The ACTUAL_NODE table describes text changes and property changes
@@ -778,9 +779,30 @@ PRAGMA user_version = 29;
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
 
+CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+
 /* Just to be sure clear out file external skels from pre 1.7.0 development
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
+
+PRAGMA user_version = 30;
+
+-- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
+SELECT wc_id, local_relpath,
+  conflict_old, conflict_working, conflict_new, prop_reject, tree_conflict_data
+FROM actual_node
+WHERE conflict_old IS NOT NULL
+   OR conflict_working IS NOT NULL
+   OR conflict_new IS NOT NULL
+   OR prop_reject IS NOT NULL
+   OR tree_conflict_data IS NOT NULL
+ORDER by wc_id, local_relpath
+
+-- STMT_UPGRADE_30_SET_CONFLICT
+UPDATE actual_node SET conflict_data = ?3, conflict_old = NULL,
+  conflict_working = NULL, conflict_new = NULL, prop_reject = NULL,
+  tree_conflict_data = NULL
+WHERE wc_id = ?1 and local_relpath = ?2
 
 /* ------------------------------------------------------------------------- */
 

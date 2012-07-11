@@ -46,6 +46,7 @@ from svntest.main import server_has_mergeinfo
 from merge_tests import local_path
 from merge_tests import expected_merge_output
 from merge_tests import svn_merge
+from merge_tests import set_up_branch
 
 #----------------------------------------------------------------------
 
@@ -127,7 +128,17 @@ from merge_tests import svn_merge
 #
 #   Subtree mergeinfo
 #
-#     ...
+#     subtree to, fro
+#     A (--o-o-o-o---------x
+#       ( \         \     /
+#       (  \         \   /
+#     B (   o--o------s--
+#
+#     merge to, reverse cherry subtree to, merge to
+#     A (--o-o-o-o------------------
+#       ( \         \        \     \
+#       (  \         \        \     \
+#     B (   o--o------x-------rcs----x
 #
 #   Sparse WC
 #
@@ -142,9 +153,11 @@ from merge_tests import svn_merge
 #
 #   o   - an original change
 #   ?   - an original change or no-op (test both)
-#   x   - a merge
+#   x   - a branch root merge
 #   c   - a cherry-pick merge
 #   [o] - source range of a cherry-pick merge
+#   s   - a subtree merge
+#   r   - reverse merge
 
 
 ########################################################################
@@ -737,6 +750,242 @@ def cherry3_fwd(sbox):
                   expect_mi=[7, 8, 9],
                   expect_3ways=[three_way_merge('A8', 'A9')])
 
+#----------------------------------------------------------------------
+# Symmetric merges ignore subtree mergeinfo during reintegrate.
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+def subtree_to_and_fro(sbox):
+  "reintegrate considers source subtree mergeinfo"
+
+#     A (--o-o-o-o---------x
+#       ( \         \     /
+#       (  \         \   /
+#     B (   o--o------s--
+
+  # Some paths we'll care about.
+  A_COPY_gamma_path = sbox.ospath('A_COPY/D/gamma')
+  psi_path = sbox.ospath('A/D/H/psi')
+  A_COPY_D_path = sbox.ospath('A_COPY/D')
+  A_path = sbox.ospath('A')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup a simple 'trunk & branch': Copy ^/A to ^/A_COPY in r2 and then
+  # make a few edits under A in r3-6:
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # r7 - Edit a file on the branch.
+  svntest.main.file_write(A_COPY_gamma_path, "Branch edit to 'gamma'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Edit a file on our branch')
+
+  # r8 - Do a subtree sync merge from ^/A/D to A_COPY/D.
+  # Note that among other things this changes A_COPY/D/H/psi.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--symmetric',
+                                     sbox.repo_url + '/A/D', A_COPY_D_path)
+
+  # r9 - Make an edit to A/D/H/psi.
+  svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Edit a file on our trunk')
+
+  # Now reintegrate ^/A_COPY back to A.  To the symmetric merge code the
+  # subtree merge to A_COPY/D just looks like any other branch edit, it is
+  # not considered a merge.  So the changes which exist on A/D and were
+  # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
+  #
+  #   C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
+  #     working_copies\merge_symmetric_tests-18>svn merge ^^/A_COPY A
+  #     --symmetric
+  #   DBG: merge.c:11461: base on source: file:///C:/SVN/src-trunk/Debug/
+  #     subversion/tests/cmdline/svn-test-work/repositories/
+  #     merge_symmetric_tests-18/A@1
+  #   DBG: merge.c:11462: base on target: file:///C:/SVN/src-trunk/Debug/
+  #     subversion/tests/cmdline/svn-test-work/repositories/
+  #     merge_symmetric_tests-18/A@1
+  #   DBG: merge.c:11567: yca   file:///C:/SVN/src-trunk/Debug/subversion/
+  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/A@1
+  #   DBG: merge.c:11568: base  file:///C:/SVN/src-trunk/Debug/subversion/
+  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/A@1
+  #   DBG: merge.c:11571: right file:///C:/SVN/src-trunk/Debug/subversion/
+  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/
+  #     A_COPY@8
+  #   Conflict discovered in file 'A\D\H\psi'.
+  #   Select: (p) postpone, (df) diff-full, (e) edit,
+  #           (mc) mine-conflict, (tc) theirs-conflict,
+  #           (s) show all options: p
+  #   --- Merging r2 through r8 into 'A':
+  #   C    A\D\H\psi
+  #   U    A\D\gamma
+  #   --- Recording mergeinfo for merge of r2 through r8 into 'A':
+  #    U   A
+  #   Summary of conflicts:
+  #     Text conflicts: 1
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, [], svntest.verify.AnyOutput,
+    'merge', '--symmetric', sbox.repo_url + '/A_COPY', A_path)
+
+  # The 'old' merge produced a warning that reintegrate could not be used.
+  # Not claiming this is perfect, but it's better(?) than a conflict:
+  svntest.verify.verify_outputs("Symmetric Reintegrate failed, but not "
+                                "in the way expected",
+                                err, None,
+                                "(svn: E195016: Reintegrate can only be used if "
+                                "revisions 2 through 8 were previously "
+                                "merged from .*/A to the reintegrate source, "
+                                "but this is not the case:\n)"
+                                "|(  A_COPY\n)"
+                                "|(    Missing ranges: /A:5\n)"
+                                "|(\n)"
+                                "|(.*apr_err.*)", # In case of debug build
+                                None,
+                                True) # Match *all* lines of stdout  
+
+#----------------------------------------------------------------------
+# Symmetric merges ignore subtree mergeinfo gaps older than the last rev
+# synced to the target root.
+@SkipUnless(server_has_mergeinfo)
+def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
+  "sync merge considers target subtree mergeinfo"
+
+  #   A (--o-o-o-o------------------
+  #     ( \         \        \     \
+  #     (  \         \        \     \
+  #   B (   o--o------x-------rc-----x
+
+  # Some paths we'll care about.
+  A_COPY_path = sbox.ospath('A_COPY')
+  A_COPY_B_path = sbox.ospath('A_COPY/B')
+  A_COPY_beta_path = sbox.ospath('A_COPY/B/E/beta')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup a simple 'trunk & branch': Copy ^/A to ^/A_COPY in r2 and then
+  # make a few edits under A in r3-6:
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # Sync merge ^/A to A_COPY, then reverse merge r5 from ^/A/B to A_COPY/B.
+  # This results in mergeinfo on the target which makes it appear that the
+  # branch is synced up to r6, but the subtree mergeinfo on A_COPY/B reveals
+  # that r5 has not been merged to that subtree:
+  #
+  #   Properties on 'A_COPY':
+  #     svn:mergeinfo
+  #       /A:2-6
+  #   Properties on 'A_COPY\B':
+  #     svn:mergeinfo
+  #       /A/B:2-4,6
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--symmetric',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c-5',
+                                     sbox.repo_url + '/A/B',
+                                     A_COPY_B_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, '-m',
+                                     'sync merge and reverse subtree merge')
+
+  # Try a symmetric sync merge from ^/A to A_COPY.  Revision 5 should be
+  # merged to A_COPY/B as its subtree mergeinfo reveals that rev is missing,
+  # like so:
+  # 
+  #   >svn merge ^/A A_COPY
+  #   --- Merging r5 into 'A_COPY\B':
+  #   U    A_COPY\B\E\beta
+  #   --- Recording mergeinfo for merge of r5 through r7 into 'A_COPY':
+  #    U   A_COPY
+  #   --- Recording mergeinfo for merge of r5 through r7 into 'A_COPY\B':
+  #    U   A_COPY\B
+  #   --- Eliding mergeinfo from 'A_COPY\B':
+  #    U   A_COPY\B
+  #
+  # But the --symmetric merge ignores the subtree mergeinfo and considers
+  # only the mergeinfo on the target itself (and thus is a no-op but for
+  # the mergeinfo change on the root of the merge target):
+  #
+  #   >svn merge ^/A A_COPY --symmetric
+  #   --- Recording mergeinfo for merge of r7 into 'A_COPY':
+  #    U   A_COPY
+  #
+  #   >svn diff
+  #   Index: A_COPY
+  #   ===================================================================
+  #   --- A_COPY      (revision 7)
+  #   +++ A_COPY      (working copy)
+  #
+  #   Property changes on: A_COPY
+  #   ___________________________________________________________________
+  #   Modified: svn:mergeinfo
+  #      Merged /A:r7
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY_path, {
+    'B/E/beta'   : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_path, {
+    ''  : Item(status=' U'),
+    'B' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_path, {
+    'B' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''           : Item(status=' M'),
+    'B'          : Item(status=' M'),
+    'mu'         : Item(status='  '),
+    'B/E'        : Item(status='  '),
+    'B/E/alpha'  : Item(status='  '),
+    'B/E/beta'   : Item(status='M '),
+    'B/lambda'   : Item(status='  '),
+    'B/F'        : Item(status='  '),
+    'C'          : Item(status='  '),
+    'D'          : Item(status='  '),
+    'D/G'        : Item(status='  '),
+    'D/G/pi'     : Item(status='  '),
+    'D/G/rho'    : Item(status='  '),
+    'D/G/tau'    : Item(status='  '),
+    'D/gamma'    : Item(status='  '),
+    'D/H'        : Item(status='  '),
+    'D/H/chi'    : Item(status='  '),
+    'D/H/psi'    : Item(status='  '),
+    'D/H/omega'  : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev='7')
+  expected_disk = wc.State('', {
+    ''           : Item(props={SVN_PROP_MERGEINFO : '/A:2-7'}),
+    'B'          : Item(),
+    'mu'         : Item("This is the file 'mu'.\n"),
+    'B/E'        : Item(),
+    'B/E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'   : Item("New content"),
+    'B/lambda'   : Item("This is the file 'lambda'.\n"),
+    'B/F'        : Item(),
+    'C'          : Item(),
+    'D'          : Item(),
+    'D/G'        : Item(),
+    'D/G/pi'     : Item("This is the file 'pi'.\n"),
+    'D/G/rho'    : Item("New content"),
+    'D/G/tau'    : Item("This is the file 'tau'.\n"),
+    'D/gamma'    : Item("This is the file 'gamma'.\n"),
+    'D/H'        : Item(),
+    'D/H/chi'    : Item("This is the file 'chi'.\n"),
+    'D/H/psi'    : Item("New content"),
+    'D/H/omega'  : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0, '--symmetric', A_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -760,6 +1009,8 @@ test_list = [ None,
               cherry1_fwd,
               cherry2_fwd,
               cherry3_fwd,
+              subtree_to_and_fro,
+              merge_to_reverse_cherry_subtree_to_merge_to,
              ]
 
 if __name__ == '__main__':

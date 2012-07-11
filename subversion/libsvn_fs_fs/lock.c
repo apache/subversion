@@ -655,7 +655,11 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  struct walk_locks_baton wlb = { get_locks_func, get_locks_baton, fs };
+  struct walk_locks_baton wlb;
+
+  wlb.get_locks_func = get_locks_func;
+  wlb.get_locks_baton = get_locks_baton;
+  wlb.fs = fs;
   SVN_ERR(walk_digest_files(fs->path, digest_path, locks_walker, &wlb,
                             have_write_lock, pool));
   return SVN_NO_ERROR;

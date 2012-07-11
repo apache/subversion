@@ -691,8 +691,8 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
 
       /* Read conflicts, to allow deleting the markers after updating the DB */
       if (!keep_local && conflicted)
-        SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                          scratch_pool, iterpool));
+        SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                       scratch_pool, iterpool));
 
     }
 
@@ -836,12 +836,13 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
 
   /* Read conflicts, to allow deleting the markers after updating the DB */
   if (!keep_local && conflicted)
-    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                      scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
-                               notify_func, notify_baton,
+                               NULL, NULL,
                                cancel_func, cancel_baton,
+                               notify_func, notify_baton,
                                pool));
 
   if (!keep_local && conflicted && conflicts != NULL)
@@ -1609,10 +1610,7 @@ revert_restore(svn_wc__db_t *db,
   svn_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t notify_required;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_working;
-  const char *prop_reject;
+  const apr_array_header_t *conflict_files;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
   apr_finfo_t finfo;
@@ -1626,8 +1624,7 @@ revert_restore(svn_wc__db_t *db,
     SVN_ERR(cancel_func(cancel_baton));
 
   SVN_ERR(svn_wc__db_revert_list_read(&notify_required,
-                                      &conflict_old, &conflict_new,
-                                      &conflict_working, &prop_reject,
+                                      &conflict_files,
                                       &copied_here, &reverted_kind,
                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
@@ -1894,14 +1891,17 @@ revert_restore(svn_wc__db_t *db,
       notify_required = TRUE;
     }
 
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_old,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_new,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_working,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, prop_reject,
-                               local_abspath, scratch_pool));
+  if (conflict_files)
+    {
+      int i;
+      for (i = 0; i < conflict_files->nelts; i++)
+        {
+          SVN_ERR(remove_conflict_file(&notify_required,
+                                       APR_ARRAY_IDX(conflict_files, i,
+                                                     const char *),
+                                       local_abspath, scratch_pool));
+        }
+    }
 
   if (notify_func && notify_required)
     notify_func(notify_baton,
@@ -2265,7 +2265,7 @@ typedef struct get_pristine_lazyopen_baton_t
 {
   svn_wc_context_t *wc_ctx;
   const char *wri_abspath;
-  const svn_checksum_t *sha1_checksum;
+  const svn_checksum_t *checksum;
 
 } get_pristine_lazyopen_baton_t;
 
@@ -2278,9 +2278,19 @@ get_pristine_lazyopen_func(svn_stream_t **stream,
                            apr_pool_t *scratch_pool)
 {
   get_pristine_lazyopen_baton_t *b = baton;
+  const svn_checksum_t *sha1_checksum;
+
+  /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
+     we'll use it to lookup the SHA1. */
+  if (b->checksum->kind == svn_checksum_sha1)
+    sha1_checksum = b->checksum;
+  else
+    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, b->wc_ctx->db,
+                                         b->wri_abspath, b->checksum,
+                                         scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pristine_read(stream, NULL, b->wc_ctx->db,
-                                   b->wri_abspath, b->sha1_checksum,
+                                   b->wri_abspath, sha1_checksum,
                                    result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -2289,7 +2299,7 @@ svn_error_t *
 svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           svn_wc_context_t *wc_ctx,
                                           const char *wri_abspath,
-                                          const svn_checksum_t *sha1_checksum,
+                                          const svn_checksum_t *checksum,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
@@ -2298,7 +2308,7 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
   *contents = NULL;
 
   SVN_ERR(svn_wc__db_pristine_check(&present, wc_ctx->db, wri_abspath,
-                                    sha1_checksum, scratch_pool));
+                                    checksum, scratch_pool));
 
   if (present)
     {
@@ -2307,7 +2317,7 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
       gpl_baton = apr_pcalloc(result_pool, sizeof(*gpl_baton));
       gpl_baton->wc_ctx = wc_ctx;
       gpl_baton->wri_abspath = wri_abspath;
-      gpl_baton->sha1_checksum = sha1_checksum;
+      gpl_baton->checksum = checksum;
       
       *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
                                              gpl_baton, result_pool);
@@ -2696,8 +2706,12 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct get_cl_fn_baton gnb = { wc_ctx->db, NULL,
-                                 callback_func, callback_baton };
+  struct get_cl_fn_baton gnb;
+
+  gnb.db = wc_ctx->db;
+  gnb.clhash = NULL;
+  gnb.callback_func = callback_func;
+  gnb.callback_baton = callback_baton;
 
   if (changelist_filter)
     SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelist_filter,

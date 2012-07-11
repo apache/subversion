@@ -5694,6 +5694,54 @@ def copy_to_unversioned_parent(sbox):
                                      sbox.ospath('A/B'),
                                      sbox.ospath('Unversioned/B2'))
 
+def copy_text_conflict(sbox):
+  "copy with a text conflict should not copy markers"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = sbox.ospath('A/mu')
+  svntest.main.file_append(mu_path, 'appended mu text')
+
+  sbox.simple_commit()
+  svntest.main.file_append(mu_path, 'appended mu text')
+
+  sbox.simple_update(revision='1')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     sbox.ospath('A'),
+                                     sbox.ospath('A_copied'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='C ')
+  expected_status.add({
+    # The markers in A
+    'A/mu.mine'         : Item(status='? '),
+    'A/mu.r1'           : Item(status='? '),
+    'A/mu.r2'           : Item(status='? '),
+    # And what is copied (without markers)
+    'A_copied'          : Item(status='A ', copied='+', wc_rev='-'),
+    'A_copied/C'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B/lambda' : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B/E'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B/E/alpha': Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B/E/beta' : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/B/F'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/G'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/G/tau'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/G/rho'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/G/pi'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/H'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/H/omega': Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/H/psi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/H/chi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/D/gamma'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_copied/mu'       : Item(status='M ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -5809,6 +5857,7 @@ test_list = [ None,
               wc_wc_copy_incomplete,
               three_nested_moves,
               copy_to_unversioned_parent,
+              copy_text_conflict,
              ]
 
 if __name__ == '__main__':

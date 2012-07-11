@@ -71,22 +71,11 @@ typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
 
-  /* The server is not Apache/mod_dav_svn (directly) and only supports
-     HTTP/1.0. Thus, we cannot send chunked requests.  */
-  svn_boolean_t http10;
-
   /* Bucket allocator for this connection. */
   serf_bucket_alloc_t *bkt_alloc;
 
-  /* Host name */
-  const char *hostname;
-
-  /* Are we using ssl */
-  svn_boolean_t using_ssl;
-  int server_cert_failures; /* Collected cert failures in chain */
-
-  /* Should we ask for compressed responses? */
-  svn_boolean_t using_compression;
+  /* Collected cert failures in chain.  */
+  int server_cert_failures;
 
   /* What was the last HTTP status code we got on this connection? */
   int last_status_code;
@@ -98,10 +87,10 @@ typedef struct svn_ra_serf__connection_t {
 
   svn_ra_serf__session_t *session;
 
-  /* user agent string */
-  const char *useragent;
-
 } svn_ra_serf__connection_t;
+
+/** Max. number of connctions we'll open to the server. */
+#define MAX_NR_OF_CONNS 4
 
 /*
  * The master serf RA session.
@@ -121,8 +110,11 @@ struct svn_ra_serf__session_t {
   /* Should we ask for compressed responses? */
   svn_boolean_t using_compression;
 
+  /* The user agent string */
+  const char *useragent;
+
   /* The current connection */
-  svn_ra_serf__connection_t **conns;
+  svn_ra_serf__connection_t *conns[MAX_NR_OF_CONNS];
   int num_conns;
   int cur_conn;
 
@@ -133,6 +125,10 @@ struct svn_ra_serf__session_t {
   /* The actual discovered root; may be NULL until we know it. */
   apr_uri_t repos_root;
   const char *repos_root_str;
+
+  /* The server is not Apache/mod_dav_svn (directly) and only supports
+     HTTP/1.0. Thus, we cannot send chunked requests.  */
+  svn_boolean_t http10;
 
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
@@ -186,7 +182,7 @@ struct svn_ra_serf__session_t {
   const char *uuid;
 
   /* Connection timeout value */
-  long timeout;
+  apr_short_interval_time_t timeout;
 
   /* HTTPv1 flags */
   svn_tristate_t supports_deadprop_count;
@@ -283,6 +279,13 @@ static const svn_ra_serf__dav_props_t all_props[] =
 static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
+  { NULL }
+};
+
+static const svn_ra_serf__dav_props_t type_and_checksum_props[] =
+{
+  { "DAV:", "resourcetype" },
+  { SVN_DAV_PROP_NS_DAV, "sha1-checksum" },
   { NULL }
 };
 
@@ -659,13 +662,18 @@ typedef svn_error_t *
                              apr_pool_t *scratch_pool);
 
 
-/* ### TBD  */
+/* Called for all states that are not using the builtin cdata collection.
+   This callback is (only) appropriate for unbounded-size cdata content.
+
+   CURRENT_STATE may be used to decide what to do with the data.
+
+   Temporary allocations may be made in SCRATCH_POOL.  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_t)(svn_ra_serf__xml_estate_t *xes,
                             void *baton,
                             int current_state,
                             const char *data,
-                            apr_size_t *len,
+                            apr_size_t len,
                             apr_pool_t *scratch_pool);
 
 
@@ -708,7 +716,22 @@ typedef struct svn_ra_serf__xml_transition_t {
 } svn_ra_serf__xml_transition_t;
 
 
-/* ### docco  */
+/* Construct an XML parsing context, based on the TTABLE transition table.
+   As content is parsed, the CLOSED_CB callback will be invoked according
+   to the definition in the table.
+
+   If OPENED_CB is not NULL, then it will be invoked for *every* tag-open
+   event. The callback will need to use the ENTERED_STATE and TAG parameters
+   to decide what it would like to do.
+
+   If CDATA_CB is not NULL, then it will be called for all cdata that is
+   not be automatically collected (based on the transition table record's
+   COLLECT_CDATA flag). It will be called in every state, so the callback
+   must examine the CURRENT_STATE parameter to decide what to do.
+
+   The same BATON value will be passed to all three callbacks.
+
+   The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
@@ -718,6 +741,10 @@ svn_ra_serf__xml_context_create(
   void *baton,
   apr_pool_t *result_pool);
 
+/* Destroy all subpools for this structure. */
+void
+svn_ra_serf__xml_context_destroy(
+  svn_ra_serf__xml_context_t *xmlctx);
 
 /* Construct a handler with the response function/baton set up to parse
    a response body using the given XML context. The handler and its
@@ -729,8 +756,8 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
                                   apr_pool_t *result_pool);
 
 
-/* Allocated within XES->STATE_POOL. Changes are not allowd. Make a deep
-   copy, as appropriate.
+/* Allocated within XES->STATE_POOL. Changes are not allowd (callers
+   should make a deep copy if they need to make changes).
 
    The resulting hash maps char* names to char* values.  */
 apr_hash_t *
@@ -757,7 +784,10 @@ svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
 
 
 /* Returns XES->STATE_POOL for allocating structures that should live
-   as long as the state identified by XES.  */
+   as long as the state identified by XES.
+
+   Note: a state pool is created upon demand, so only use this function
+   when memory is required for a given state.  */
 apr_pool_t *
 svn_ra_serf__xml_state_pool(svn_ra_serf__xml_estate_t *xes);
 
@@ -894,12 +924,6 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       void *baton,
                                       apr_pool_t *pool);
 
-/* Return the value of the RESPONSE's Location header if any, or NULL
- * otherwise.  All allocations will be made in POOL.
- */
-const char *
-svn_ra_serf__response_get_location(serf_bucket_t *response,
-                                   apr_pool_t *pool);
 
 /** XML helper functions. **/
 
@@ -1007,16 +1031,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
 
 /** PROPFIND-related functions **/
 
-/* Opaque structure representing PROPFINDs. */
-typedef struct svn_ra_serf__propfind_context_t svn_ra_serf__propfind_context_t;
-
-/*
- * Returns a flag representing whether the PROPFIND @a ctx is completed.
- */
-svn_boolean_t
-svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
-
-
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
@@ -1026,7 +1040,7 @@ svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
-svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
+svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            apr_hash_t *prop_vals,
                            svn_ra_serf__session_t *sess,
                            svn_ra_serf__connection_t *conn,
@@ -1038,13 +1052,12 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            apr_pool_t *pool);
 
 /*
- * This helper function will block until the PROP_CTX indicates that is done
- * or another error is returned.
+ * This helper function will block until PROPFIND_HANDLER indicates that is
+ * done or another error is returned.
  */
 svn_error_t *
-svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
-                            svn_ra_serf__session_t *sess,
-                            apr_pool_t *pool);
+svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
+                            apr_pool_t *scratch_pool);
 
 /* This is a blocking version of deliver_props.
 

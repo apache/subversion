@@ -1116,12 +1116,14 @@ wrapped_func(sqlite3_context *context,
              sqlite3_value *values[])
 {
   struct function_wrapper_baton_t *fwb = sqlite3_user_data(context);
-  svn_sqlite__context_t sctx = { context };
+  svn_sqlite__context_t sctx;
   svn_sqlite__value_t **local_vals =
                             apr_palloc(fwb->scratch_pool,
                                        sizeof(svn_sqlite__value_t *) * argc);
   svn_error_t *err;
   int i;
+
+  sctx.context = context;
 
   for (i = 0; i < argc; i++)
     {

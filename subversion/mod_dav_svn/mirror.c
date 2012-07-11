@@ -54,6 +54,16 @@ static void proxy_request_fixup(request_rec *r,
                                                            (char *)NULL),
                                                r->pool);
     r->handler = "proxy-server";
+
+    /* ### FIXME: Seems we could avoid adding some or all of these
+           filters altogether when the root_dir (that is, the slave's
+           location, relative to the server root) and path portion of
+           the master_uri (the master's location, relative to the
+           server root) are identical, rather than adding them here
+           and then trying to remove them later.  (See the filter
+           removal logic in dav_svn__location_in_filter() and
+           dav_svn__location_body_filter().  -- cmpilato */
+
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
     ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);

@@ -700,9 +700,11 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 static APR_INLINE unsigned char
 is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
 {
-  unsigned char flags = cache->group_initialized
-                          [group_index / (8 * GROUP_INIT_GRANULARITY)];
-  unsigned char bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  unsigned char flags
+    = cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)];
+  unsigned char bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
+
   return flags & bit_mask;
 }
 
@@ -726,7 +728,8 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
         cache->directory[i][j].offset = NO_OFFSET;
 
   /* set the "initialized" bit for these groups */
-  bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
   cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)]
     |= bit_mask;
 }
@@ -1075,11 +1078,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    * Note, that this limit could only be exceeded in a very
    * theoretical setup with about 1EB of cache.
    */
-  group_count = directory_size / sizeof(entry_group_t);
-  if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
-    {
-      group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
-    }
+  group_count = directory_size / sizeof(entry_group_t)
+                    >= (APR_UINT32_MAX / GROUP_SIZE)
+              ? (APR_UINT32_MAX / GROUP_SIZE) - 1
+              : (apr_uint32_t)(directory_size / sizeof(entry_group_t));
 
   group_init_size = 1 + group_count / (8 * GROUP_INIT_GRANULARITY);
   for (seg = 0; seg < segment_count; ++seg)

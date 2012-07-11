@@ -592,14 +592,14 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 void
 svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool);
 
-/** Set @a *different_p to non-zero if @a file1 and @a file2 have different
- * sizes, else set to zero.  Both @a file1 and @a file2 are utf8-encoded.
+/** Set @a *different_p to TRUE if @a file1 and @a file2 have different
+ * sizes, else set to FALSE.  Both @a file1 and @a file2 are utf8-encoded.
  *
  * Setting @a *different_p to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
  * definitely different.  That is, if the size of one or both files
  * cannot be determined, then the sizes are not known to be different,
- * so @a *different_p is set to 0.
+ * so @a *different_p is set to FALSE.
  */
 svn_error_t *
 svn_io_filesizes_different_p(svn_boolean_t *different_p,
@@ -607,6 +607,25 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
                              const char *file2,
                              apr_pool_t *pool);
 
+/** Set @a *different_p12 to non-zero if @a file1 and @a file2 have different
+ * sizes, else set to zero.  Do the similar for @a *different_p23 with
+ * @a file2 and @a file3, and @a *different_p13 for @a file1 and @a file3.
+ * All three of @a file1, @a file2 and @a file3 are utf8-encoded.
+ *
+ * Setting @a *different_p12 to zero does not mean the files definitely
+ * have the same size, it merely means that the sizes are not
+ * definitely different.  That is, if the size of one or both files
+ * cannot be determined, then the sizes are not known to be different,
+ * so @a *different_p12 is set to 0.
+ */
+svn_error_t *
+svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
+                                   svn_boolean_t *different_p23,
+                                   svn_boolean_t *different_p13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool);
 
 /** Return in @a *checksum the checksum of type @a kind of @a file
  * Use @a pool for temporary allocations and to allocate @a *checksum.
@@ -641,6 +660,20 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              const char *file1,
                              const char *file2,
                              apr_pool_t *pool);
+
+/** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
+ * contents, else set it to FALSE.  Do the similar for @a *same23 
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
+ * file3.  Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_io_files_contents_three_same_p(svn_boolean_t *same12,
+                                   svn_boolean_t *same23,
+                                   svn_boolean_t *same13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool);
 
 /** Create file at utf8-encoded @a file with contents @a contents.
  * @a file must not already exist.
@@ -2166,6 +2199,36 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
+
+/* Read a line of text from a file, up to a specified length.
+ *
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line 
+ * from @a file. Reading stops either after a line-terminator was found
+ * or after @a max_len bytes have been read.
+ *
+ * If end-of-file is reached or @a max_len bytes have been read, and @a eof
+ * is not NULL, then set @a *eof to @c TRUE.
+ *
+ * The line-terminator is not stored in @a *stringbuf.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL. If EOF is reached and @a file does not end
+ * with a newline character, and @a eol is not NULL, @ *eol is set to NULL.
+ *
+ * @a scratch_pool is used for temporary allocations.
+ *
+ * Hint: To read all data until a line-terminator is hit, pass APR_SIZE_MAX
+ * for @a max_len.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_file_readline(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char **eol,
+                     svn_boolean_t *eof,
+                     apr_size_t max_len,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /** @} */
 

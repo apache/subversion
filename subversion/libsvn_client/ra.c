@@ -245,7 +245,7 @@ invalidate_wc_props(void *baton,
 static svn_error_t *
 get_wc_contents(void *baton,
                 svn_stream_t **contents,
-                const svn_checksum_t *sha1_checksum,
+                const svn_checksum_t *checksum,
                 apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
@@ -260,7 +260,7 @@ get_wc_contents(void *baton,
              svn_wc__get_pristine_contents_by_checksum(contents,
                                                        cb->ctx->wc_ctx,
                                                        cb->base_dir_abspath,
-                                                       sha1_checksum,
+                                                       checksum,
                                                        pool, pool));
 }
 
@@ -297,7 +297,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {
-  svn_ra_callbacks2_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
+  svn_ra_callbacks2_t *cbtable;
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
@@ -305,6 +305,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   SVN_ERR_ASSERT(base_dir_abspath == NULL
                         || svn_dirent_is_absolute(base_dir_abspath));
 
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;

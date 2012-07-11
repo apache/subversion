@@ -382,7 +382,7 @@ opt_revision_to_string(const char **str,
       *str = apr_pstrmemdup(pool, "HEAD", 4);
       break;
     case svn_opt_revision_number:
-      *str = apr_itoa(pool, rev->value.number);
+      *str = apr_ltoa(pool, rev->value.number);
       break;
     default:
       return svn_error_createf

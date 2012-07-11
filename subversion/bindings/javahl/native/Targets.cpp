@@ -86,7 +86,7 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
             m_error_occured = err;
             break;
         }
-      APR_ARRAY_PUSH(apr_targets, const char *) = *it;
+      APR_ARRAY_PUSH(apr_targets, const char *) = target;
     }
 
   return apr_targets;

@@ -772,6 +772,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 50,
              "The filesystem editor completion process was not followed")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE,
+             SVN_ERR_FS_CATEGORY_START + 51,
+             "A packed revprop could not be read")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -915,7 +920,7 @@ SVN_ERROR_START
              "Invalid configuration value")
 
   /** @deprecated To improve consistency between ra layers, this error code
-      is replaced in ra_{neon|serf} by SVN_ERR_FS_NOT_FOUND.
+      is replaced in ra_serf by SVN_ERR_FS_NOT_FOUND.
       Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
              SVN_ERR_RA_DAV_CATEGORY_START + 7,
@@ -1399,6 +1404,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SQLITE_CONSTRAINT,
              SVN_ERR_MISC_CATEGORY_START + 35,
              "Constraint error in SQLite db")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS,
+             SVN_ERR_MISC_CATEGORY_START + 36,
+             "too many memcached servers configured")
 
   /* command-line client errors */
 

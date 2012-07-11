@@ -3730,8 +3730,32 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * If the server doesn't support retrieval of mergeinfo, return an
  * #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
+                          const char *target_path_or_url,
+                          const svn_opt_revision_t *target_peg_revision,
+                          const char *source_path_or_url,
+                          const svn_opt_revision_t *source_peg_revision,
+                          const svn_opt_revision_t *source_start_revision,
+                          const svn_opt_revision_t *source_end_revision,
+                          svn_log_entry_receiver_t receiver,
+                          void *receiver_baton,
+                          svn_boolean_t discover_changed_paths,
+                          svn_depth_t depth,
+                          const apr_array_header_t *revprops,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_mergeinfo_log2(), but with @a source_start_revision
+ * and @a source_end_revision always of kind @c svn_opt_revision_unspecified;
+ *
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                          const char *target_path_or_url,
