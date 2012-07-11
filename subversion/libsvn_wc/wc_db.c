@@ -6264,7 +6264,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
 struct revert_list_read_baton {
   svn_boolean_t *reverted;
-  apr_array_header_t *marker_paths;
+  const apr_array_header_t *marker_paths;
   svn_boolean_t *copied_here;
   svn_kind_t *kind;
   apr_pool_t *result_pool;
