@@ -1056,14 +1056,6 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
     return svn_dirent_canonicalize(path, pool);
 }
 
-svn_boolean_t
-svn_path_is_canonical(const char *path, apr_pool_t *pool)
-{
-  return svn_uri_is_canonical(path, pool) ||
-      svn_dirent_is_canonical(path, pool) ||
-      svn_relpath_is_canonical(path);
-}
-
 
 /*** From mergeinfo.c ***/
 
