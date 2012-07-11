@@ -286,9 +286,9 @@ test_auth_store_get_set(apr_pool_t *pool)
       realmstring = usernames[i]; /* not schema-jiving */
       username_creds = apr_pcalloc(iterpool, sizeof(*username_creds));
       username_creds->username = usernames[i];
-      SVN_ERR(svn_auth__store_store_creds(&stored, auth_store,
-                                          SVN_AUTH_CRED_USERNAME, realmstring,
-                                          username_creds, iterpool));
+      SVN_ERR(svn_auth__store_set_username_creds(&stored, auth_store,
+                                                 realmstring, username_creds,
+                                                 iterpool));
       if (! stored)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Error storing username credentials");
@@ -304,9 +304,9 @@ test_auth_store_get_set(apr_pool_t *pool)
       simple_creds = apr_pcalloc(iterpool, sizeof(*simple_creds));
       simple_creds->username = usernames[i];
       simple_creds->password = passwords[i];
-      SVN_ERR(svn_auth__store_store_creds(&stored, auth_store,
-                                          SVN_AUTH_CRED_SIMPLE, realmstring,
-                                          simple_creds, iterpool));
+      SVN_ERR(svn_auth__store_set_simple_creds(&stored, auth_store,
+                                               realmstring, simple_creds,
+                                               iterpool));
       if (! stored)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Error storing simple credentials");

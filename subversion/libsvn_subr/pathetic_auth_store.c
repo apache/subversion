@@ -421,91 +421,36 @@ pathetic_store_delete(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Implements pathetic_store_fetch_t. */
+/* Implements pathetic_store_get_cred_hash_t. */
 static svn_error_t *
-pathetic_store_fetch(const void **creds_p, 
-                     void *baton,
-                     const char *cred_kind,
-                     const char *realmstring,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+pathetic_store_get_cred_hash(apr_hash_t **cred_hash, 
+                             void *baton,
+                             const char *cred_kind,
+                             const char *realmstring,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   pathetic_auth_store_baton_t *auth_store = baton;
-  apr_hash_t *cred_hash;
-  const svn_string_t *prop;
 
-  SVN_ERR(get_cred_hash(&cred_hash, auth_store, cred_kind,
+  SVN_ERR(get_cred_hash(cred_hash, auth_store, cred_kind,
                         realmstring, result_pool, scratch_pool));
-  
-  if (strcmp(cred_kind, SVN_AUTH_CRED_USERNAME) == 0)
-    {
-      svn_auth_cred_username_t *creds =
-        apr_pcalloc(result_pool, sizeof(*creds));
-      prop = apr_hash_get(cred_hash, "username", APR_HASH_KEY_STRING);
-      if (prop)
-        creds->username = prop->data;
-      *creds_p = (const void *)creds;
-    }
-  else if (strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0)
-    {
-      svn_auth_cred_simple_t *creds =
-        apr_pcalloc(result_pool, sizeof(*creds));
-      prop = apr_hash_get(cred_hash, "username", APR_HASH_KEY_STRING);
-      if (prop)
-        creds->username = prop->data;
-      prop = apr_hash_get(cred_hash, "password", APR_HASH_KEY_STRING);
-      if (prop)
-        creds->username = prop->data;
-      *creds_p = (const void *)creds;
-    }
-  else
-    {
-      *creds_p = NULL;
-    }
-
   return SVN_NO_ERROR;
 }
 
-/* Implements pathetic_store_store_t. */
+/* Implements pathetic_store_set_cred_hash_t. */
 static svn_error_t *
-pathetic_store_store(svn_boolean_t *stored,
-                     void *baton,
-                     const char *cred_kind,
-                     const char *realmstring,
-                     const void *generic_creds,
-                     apr_pool_t *scratch_pool)
+pathetic_store_set_cred_hash(svn_boolean_t *stored,
+                             void *baton,
+                             const char *cred_kind,
+                             const char *realmstring,
+                             apr_hash_t *cred_hash,
+                             apr_pool_t *scratch_pool)
 {
   pathetic_auth_store_baton_t *auth_store = baton;
-  apr_hash_t *cred_hash = NULL;
 
-  *stored = FALSE;
-
-  if (strcmp(cred_kind, SVN_AUTH_CRED_USERNAME) == 0)
-    {
-      const svn_auth_cred_username_t *creds = generic_creds;
-      cred_hash = apr_hash_make(scratch_pool);
-      if (creds->username)
-        apr_hash_set(cred_hash, "username", APR_HASH_KEY_STRING,
-                     svn_string_create(creds->username, scratch_pool));
-    }
-  else if (strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0)
-    {
-      const svn_auth_cred_simple_t *creds = generic_creds;
-      cred_hash = apr_hash_make(scratch_pool);
-      if (creds->username)
-        apr_hash_set(cred_hash, "username", APR_HASH_KEY_STRING,
-                     svn_string_create(creds->username, scratch_pool));
-      if (creds->password)
-        apr_hash_set(cred_hash, "password", APR_HASH_KEY_STRING,
-                     svn_string_create(creds->password, scratch_pool));
-    }
-
-  if (cred_hash)
-    {
-      SVN_ERR(set_cred_hash(auth_store, cred_kind, realmstring,
-                            cred_hash, scratch_pool));
-      *stored = TRUE;
-    }
+  SVN_ERR(set_cred_hash(auth_store, cred_kind, realmstring,
+                        cred_hash, scratch_pool));
+  *stored = TRUE;
     
   return SVN_NO_ERROR;
 }
@@ -539,8 +484,10 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
   SVN_ERR(svn_auth__store_set_baton(auth_store, pathetic_store));
   SVN_ERR(svn_auth__store_set_open(auth_store, pathetic_store_open));
   SVN_ERR(svn_auth__store_set_delete(auth_store, pathetic_store_delete));
-  SVN_ERR(svn_auth__store_set_fetch(auth_store, pathetic_store_fetch));
-  SVN_ERR(svn_auth__store_set_store(auth_store, pathetic_store_store));
+  SVN_ERR(svn_auth__store_set_get_cred_hash(auth_store,
+                                            pathetic_store_get_cred_hash));
+  SVN_ERR(svn_auth__store_set_set_cred_hash(auth_store,
+                                            pathetic_store_set_cred_hash));
 
   *auth_store_p = auth_store;
 

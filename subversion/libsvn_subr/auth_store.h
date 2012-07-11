@@ -53,26 +53,27 @@ typedef svn_error_t *(*svn_auth__store_cb_delete_t)(
   void *baton,
   apr_pool_t *scratch_pool);
 
-/* Callback type: Set CREDS to the set of credentials of kind
-   CRED_KIND and identified by REALMSTRING from an authentication
-   store. */
-typedef svn_error_t *(*svn_auth__store_cb_fetch_t)(
-  const void **creds, 
+/* Callback type: Set *CRED_HASH to a hash of authentication
+   credential bits for the credentials of kind CRED_KIND and
+   identified by REALMSTRING found in AUTH_STORE. */
+typedef svn_error_t *(*svn_auth__store_cb_get_cred_hash_t)(
+  apr_hash_t **cred_hash, 
   void *baton,
   const char *cred_kind,
   const char *realmstring,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
-/* Callback type: Store CREDS as the set of credentials of kind
-   CRED_KIND and identified by REALMSTRING in an authentication store,
-   setting *STORED to TRUE iff the storage occurs successfully. */
-typedef svn_error_t *(*svn_auth__store_cb_store_t)(
+/* Callback type: Store in AUTH_STORE a hash of authentication
+   credential bits (CRED_HASH) for the credentials of kind CRED_KIND
+   and identified by REALMSTRING, setting *STORED to TRUE iff the
+   storage occurs successfully. */
+typedef svn_error_t *(*svn_auth__store_cb_set_cred_hash_t)(
   svn_boolean_t *stored, 
   void *baton,
   const char *cred_kind,
   const char *realmstring,
-  const void *creds,
+  apr_hash_t *cred_hash,
   apr_pool_t *scratch_pool);
 
 
@@ -101,15 +102,15 @@ svn_error_t *
 svn_auth__store_set_delete(svn_auth__store_t *auth_store,
                            svn_auth__store_cb_delete_t func);
 
-/* Set the `fetch' callback function for AUTH_STORE to FUNC. */
+/* Set the `get_cred_hash' callback function for AUTH_STORE to FUNC. */
 svn_error_t *
-svn_auth__store_set_fetch(svn_auth__store_t *auth_store,
-                          svn_auth__store_cb_fetch_t func);
+svn_auth__store_set_get_cred_hash(svn_auth__store_t *auth_store,
+                                  svn_auth__store_cb_get_cred_hash_t func);
 
-/* Set the `store' callback function for AUTH_STORE to FUNC. */
+/* Set the `set_cred_hash' callback function for AUTH_STORE to FUNC. */
 svn_error_t *
-svn_auth__store_set_store(svn_auth__store_t *auth_store,
-                          svn_auth__store_cb_store_t func);
+svn_auth__store_set_set_cred_hash(svn_auth__store_t *auth_store,
+                                  svn_auth__store_cb_set_cred_hash_t func);
 
 
 /* Open (creating if necessary and if CREATE is set) the
@@ -130,26 +131,28 @@ svn_error_t *
 svn_auth__store_delete(svn_auth__store_t *auth_store,
                        apr_pool_t *scratch_pool);
 
-/* Set *CREDS to the credentials of kind CRED_KIND and identified by
-   REALMSTRING found in AUTH_STORE. */
+/* Set *CRED_HASH to a hash of authentication credential bits for the
+   credentials of kind CRED_KIND and identified by REALMSTRING found
+   in AUTH_STORE. */
 svn_error_t *
-svn_auth__store_fetch_creds(const void **creds,
-                            svn_auth__store_t *auth_store,
-                            const char *cred_kind,
-                            const char *realmstring,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_auth__store_get_cred_hash(apr_hash_t **cred_hash,
+                              svn_auth__store_t *auth_store,
+                              const char *cred_kind,
+                              const char *realmstring,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
-/* Store CREDS as the credentials of kind CRED_KIND identified by
-   REALMSTRING in AUTH_STORE, setting *STORED to TRUE iff the storage
-   occurs successfully. */
+/* Store in AUTH_STORE a hash of authentication credential bits
+   (CRED_HASH) for the credentials of kind CRED_KIND and identified by
+   REALMSTRING, setting *STORED to TRUE iff the storage occurs
+   successfully. */
 svn_error_t *
-svn_auth__store_store_creds(svn_boolean_t *stored,
-                            svn_auth__store_t *auth_store,
-                            const char *cred_kind,
-                            const char *realmstring,
-                            const void *creds,
-                            apr_pool_t *scratch_pool);
+svn_auth__store_set_cred_hash(svn_boolean_t *stored,
+                              svn_auth__store_t *auth_store,
+                              const char *cred_kind,
+                              const char *realmstring,
+                              apr_hash_t *cred_hash,
+                              apr_pool_t *scratch_pool);
 
 
 /* Set *AUTH_STORE_P to an object which describes the encrypted
@@ -202,12 +205,13 @@ svn_auth__store_get_username_creds(svn_auth_cred_username_t **creds_p,
 
 
 /* Store CREDS as "username" credentials in AUTH_STORE, associated
-   with REALMSTRING.
+   with REALMSTRING, setting *STORED iff the storage was successful.
 
    NOTE: Only the 'username' member of CREDS will be stored.
 */
 svn_error_t *
-svn_auth__store_set_username_creds(svn_auth__store_t *auth_store,
+svn_auth__store_set_username_creds(svn_boolean_t *stored,
+                                   svn_auth__store_t *auth_store,
                                    const char *realmstring,
                                    svn_auth_cred_username_t *creds,
                                    apr_pool_t *scratch_pool);
@@ -228,13 +232,14 @@ svn_auth__store_get_simple_creds(svn_auth_cred_simple_t **creds_p,
 
 
 /* Store CREDS as "simple" credentials in AUTH_STORE, associated with
-   REALMSTRING.
+   REALMSTRING, setting *STORED iff the storage was successful.
 
    NOTE: Only the 'username' and 'password' members of CREDS will be
    stored.
 */
 svn_error_t *
-svn_auth__store_set_simple_creds(svn_auth__store_t *auth_store,
+svn_auth__store_set_simple_creds(svn_boolean_t *stored,
+                                 svn_auth__store_t *auth_store,
                                  const char *realmstring,
                                  svn_auth_cred_simple_t *creds,
                                  apr_pool_t *scratch_pool);
