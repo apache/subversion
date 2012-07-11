@@ -4877,6 +4877,14 @@ test_follow_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(check_moved_to(moved_tos, 3, 5, "A3/B/C/D/E"));
   SVN_TEST_ASSERT(moved_tos->nelts == 4);
 
+  SVN_ERR(wc_delete(&b, "A3/B/C/D/E"));
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A1/B/C/D/E"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "A3/B/C/D/E"));
+  SVN_ERR(check_moved_to(moved_tos, 1, 2, "A2/B/C/D/E"));
+  SVN_ERR(check_moved_to(moved_tos, 2, 4, "A1/B/C/D/E"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 3);
+
   return SVN_NO_ERROR;
 }
 
