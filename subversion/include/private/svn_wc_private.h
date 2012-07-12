@@ -957,9 +957,9 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 /**
  * Cache the inherited properties @a inherited_props (a depth-first ordered
  * array of #svn_prop_inherited_item_t * structures) for the BASE node at
- * @a local_abspath.  If there is no base node at @a local_abspath, then do
- * nothing.  If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * @a local_abspath.  @a inherited_props may be empty.  If there is no base
+ * node at @a local_abspath, then do nothing.  If @a local_abspath is not in
+ * the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
  *
  * Use @a scratch_pool for temporary allocations.
  */
@@ -968,16 +968,6 @@ svn_wc__cache_iprops(apr_array_header_t *inherited_props,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
-
-/**
- * Delete all cached inherited properties for the BASE node at LOCAL_ABSPATH.
- *
- * Use @a scratch_pool for temporary allocations.
- */
-svn_error_t *
-svn_wc__delete_iprops(svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
 
 /**
  * Set @a *iprops_paths to a hash mapping const char * absolute working

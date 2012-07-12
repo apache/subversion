@@ -2900,7 +2900,6 @@ svn_wc__cache_iprops(apr_array_header_t *inherited_props,
 {
   if (inherited_props)
     {
-      int i;
       const char *repos_root_url;
       svn_revnum_t revision;
       svn_error_t *err = svn_wc__node_get_base(&revision, NULL,
@@ -2931,55 +2930,21 @@ svn_wc__cache_iprops(apr_array_header_t *inherited_props,
       /* If there is no base node at LOCAL_ABSPATH there is nothing to do. */
       if (SVN_IS_VALID_REVNUM(revision))
         {
-          /* Remove stale cached iprops. */
-          SVN_ERR(svn_wc__db_remove_cached_iprops(wc_ctx->db, local_abspath,
-                                                  scratch_pool));
-
           if (inherited_props->nelts)
             {
-              for (i = 0; i < inherited_props->nelts; i++)
-                {
-                  svn_prop_inherited_item_t *iprop =
-                    APR_ARRAY_IDX(inherited_props, i,
-                                  svn_prop_inherited_item_t *);
-
-                  /* Only cache properties inherited from the repository. */
-                  if (svn_path_is_url(iprop->path_or_url))
-                    {
-                      const char *repos_parent_relpath =
-                        svn_uri_skip_ancestor(repos_root_url,
-                                              iprop->path_or_url,
-                                              scratch_pool);
-                      SVN_ERR(svn_wc__db_cache_iprops(repos_parent_relpath,
-                                                      iprop->prop_hash,
-                                                      revision, wc_ctx->db,
-                                                      local_abspath,
-                                                      scratch_pool));
-                    }
-                }
+              SVN_ERR(svn_wc__db_cache_iprops(inherited_props, wc_ctx->db,
+                                              local_abspath, scratch_pool));
             }
           else
             {
-              /* Cache no inheritable props. */
-              SVN_ERR(svn_wc__db_cache_iprops("",
-                                              apr_hash_make(scratch_pool),
-                                              revision,
-                                              wc_ctx->db, local_abspath,
-                                              scratch_pool));
+              SVN_ERR(svn_wc__db_cache_iprops(
+                apr_array_make(scratch_pool, 0,
+                               sizeof(svn_prop_inherited_item_t *)),
+                wc_ctx->db, local_abspath, scratch_pool));
             }
         }
     }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__delete_iprops(svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_remove_cached_iprops(wc_ctx->db, local_abspath,
-                                          scratch_pool));
   return SVN_NO_ERROR;
 }
 

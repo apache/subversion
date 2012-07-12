@@ -191,6 +191,14 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
                          apr_pool_t *result_pool);
 
+/* Parse a `IPROPS' SKEL into a depth-first ordered array of
+   svn_prop_inherited_item_t * structures *IPROPS. Use RESULT_POOL
+   for all allocations.  */
+svn_error_t *
+svn_skel__parse_iprops(apr_array_header_t **iprops,
+                       const svn_skel_t *skel,
+                       apr_pool_t *result_pool);
+
 /* Parse a `PROPLIST' SKEL looking for PROPNAME.  If PROPNAME is found
    then return its value in *PROVAL, allocated in RESULT_POOL. */
 svn_error_t *
@@ -206,6 +214,14 @@ svn_error_t *
 svn_skel__unparse_proplist(svn_skel_t **skel_p,
                            apr_hash_t *proplist,
                            apr_pool_t *pool);
+
+/* Unparse INHERITED_PROPS, a depth-first ordered array of
+   svn_prop_inherited_item_t * structures, into a `IPROPS' skel *SKEL_P.
+   Use RESULT_POOL for all allocations. */
+svn_error_t *
+svn_skel__unparse_iproplist(svn_skel_t **skel_p,
+                            apr_array_header_t *inherited_props,
+                            apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }
