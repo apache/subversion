@@ -2107,27 +2107,16 @@ svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
 
 /* Cache inherited properites for a node in the BASE tree.
 
-   Cache the inherited properties PROPS (a hash table mapping char *
-   property names onto svn_string_t * property values) inherited from
-   REPOS_PARENT_RELPATH at REVISION, for the BASE node at LOCAL_ABSPATH.
+   Cache the inherited properties INHERITED_PROPS (a depth-first ordered
+   array of svn_prop_inherited_item_t * structures) for the BASE node at
+   LOCAL_ABSPATH.
 
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
-svn_wc__db_cache_iprops(const char *repos_parent_relpath,
-                        apr_hash_t *props,
-                        svn_revnum_t revision,
+svn_wc__db_cache_iprops(apr_array_header_t *inherited_props,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool);
-
-/* Delete a BASE node's inherited properites.
-
-   Remove any inherited property caches for the BASE node at
-   LOCAL_ABSPATH.  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_wc__db_remove_cached_iprops(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
 
 /** Obtain a mapping of const char * local_abspaths to const svn_string_t*
  * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH

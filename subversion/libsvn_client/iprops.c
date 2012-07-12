@@ -121,12 +121,7 @@ svn_client__update_inheritable_props(const char *local_abspath,
           SVN_ERR(need_to_cache_iprops(&needs_cached_iprops, child_abspath,
                                        ctx, iterpool));
 
-          if (! needs_cached_iprops)
-            {
-              SVN_ERR(svn_wc__delete_iprops(ctx->wc_ctx, child_abspath,
-                                            iterpool));
-            }
-          else
+          if (needs_cached_iprops)
             {
               const char *url;
               apr_array_header_t *inherited_props;

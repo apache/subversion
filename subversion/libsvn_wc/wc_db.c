@@ -1448,7 +1448,6 @@ create_db(svn_sqlite__db_t **sdb,
   idb.root_node_repos_relpath = root_node_repos_relpath;
   idb.root_node_revision = root_node_revision;
   idb.root_node_depth = root_node_depth;
-  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_INHERITABLE_PROPS));
 
   SVN_ERR(svn_sqlite__with_lock(*sdb, init_db, &idb, scratch_pool));
 
@@ -1952,12 +1951,6 @@ db_base_remove(void *baton,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-
-  /* Remove any cached inherited properties for LOCAL_RELPATH. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_IPROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_BASE_NODE));
@@ -6129,13 +6122,6 @@ remove_node_txn(void *baton,
                           wcroot, local_relpath,
                           scratch_pool, scratch_pool));
 
-  /* Remove all cached inherited properties for LOCAL_RELPATH. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_IPROPS_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
 
@@ -8598,8 +8584,8 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_IPROPS));
       SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isdr", wcroot->wc_id, local_relpath,
-                                op_depth, revision));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                                0));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (!have_row)
@@ -8609,27 +8595,9 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
         }
       else
         {
-          *iprops = apr_array_make(result_pool, 1,
-                                   sizeof(svn_prop_inherited_item_t *));
-          while (have_row)
-            {
-              const char *repos_parent_relpath;
-              apr_hash_t *inherited_props;
-              svn_prop_inherited_item_t *new_iprop =
-                apr_palloc(result_pool, sizeof(*new_iprop));
-
-              repos_parent_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-              SVN_ERR(svn_sqlite__column_properties(&inherited_props, stmt, 1,
-                                                    result_pool,
-                                                    scratch_pool));
-              new_iprop->path_or_url = svn_path_url_add_component2(
-                 repos_root_url, repos_parent_relpath, result_pool);
-              new_iprop->prop_hash = inherited_props;
-              APR_ARRAY_PUSH(*iprops, svn_prop_inherited_item_t *) =
-                new_iprop;
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-            }
-        }
+          SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0, result_pool,
+                                            scratch_pool));
+         }
 
       SVN_ERR(svn_sqlite__reset(stmt));
     }
@@ -8739,9 +8707,7 @@ svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
 }
 
 svn_error_t *
-svn_wc__db_cache_iprops(const char *repos_parent_relpath,
-                        apr_hash_t *props,
-                        svn_revnum_t revision,
+svn_wc__db_cache_iprops(apr_array_header_t *inherited_props,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
@@ -8757,28 +8723,13 @@ svn_wc__db_cache_iprops(const char *repos_parent_relpath,
                                                 scratch_pool, scratch_pool));
   SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_IPROP));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isdsr", wcroot->wc_id, local_relpath,
-                            op_depth, repos_parent_relpath, revision));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 6, props, scratch_pool));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd",
+                            wcroot->wc_id,
+                            local_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__bind_iprops(stmt, 4, inherited_props, scratch_pool));
+
   return svn_error_trace(svn_sqlite__step_done(stmt));
-}
-
-svn_error_t *
-svn_wc__db_remove_cached_iprops(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  svn_sqlite__stmt_t *stmt;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DELETE_IPROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  return svn_error_trace(svn_sqlite__step_done(stmt));  
 }
 
 svn_error_t *
