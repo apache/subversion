@@ -600,10 +600,11 @@ close_file(void *file_baton,
       eb->new_pristine_abspath = NULL;
     }
 
-  /* ### TODO: Merge the changes */
+  /* Merge the changes */
 
   {
     svn_skel_t *all_work_items = NULL;
+    svn_skel_t *conflict_skel = NULL;
     svn_skel_t *work_item;
     apr_hash_t *base_props = NULL;
     apr_hash_t *actual_props = NULL;
@@ -675,26 +676,20 @@ close_file(void *file_baton,
 
       if (regular_prop_changes->nelts > 0)
         {
-          SVN_ERR(svn_wc__merge_props(&work_item, &prop_state,
+          SVN_ERR(svn_wc__merge_props(&conflict_skel,
+                                      &prop_state,
                                       &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
                                       svn_kind_file,
-                                      NULL, NULL,
                                       NULL /* server_baseprops*/,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
                                       TRUE /* base_merge */,
                                       FALSE /* dry_run */,
-                                      eb->conflict_func,
-                                      eb->conflict_baton,
                                       eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
-
-          if (work_item)
-            all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                              pool);
         }
       else
         {
@@ -740,6 +735,7 @@ close_file(void *file_baton,
                 enum svn_wc_merge_outcome_t merge_outcome;
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
+                                                   &conflict_skel,
                                                    &merge_outcome,
                                                    eb->db,
                                                    eb->local_abspath,
@@ -752,8 +748,6 @@ close_file(void *file_baton,
                                                    *eb->target_revision,
                                                    eb->propchanges,
                                                    eb->diff3cmd,
-                                                   eb->conflict_func,
-                                                   eb->conflict_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));
@@ -784,6 +778,29 @@ close_file(void *file_baton,
         /* ### Retranslate on magic property changes, etc. */
       }
 
+    if (conflict_skel)
+      {
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                            conflict_skel,
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    eb->original_revision,
+                                    svn_node_file,
+                                    pool),
+                            pool, pool));
+
+
+        SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                eb->db, eb->local_abspath,
+                                                conflict_skel,
+                                                pool, pool));
+
+        all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                          pool);
+      }
+
     SVN_ERR(svn_wc__db_external_add_file(
                         eb->db,
                         eb->local_abspath,
@@ -804,6 +821,7 @@ close_file(void *file_baton,
                         eb->recorded_revision,
                         TRUE, new_actual_props,
                         FALSE /* keep_recorded_info */,
+                        conflict_skel,
                         all_work_items,
                         pool));
 
@@ -1292,8 +1310,12 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                                                  scratch_pool));
   else
     {
-      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath, scratch_pool));
-      SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
+                                     FALSE, SVN_INVALID_REVNUM,
+                                     NULL, NULL, scratch_pool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
     }
 
   return SVN_NO_ERROR;

@@ -24,6 +24,7 @@
 #define APR_WANT_STRFUNC
 #define APR_WANT_STDIO
 #include <apr_want.h>
+#include <apr_fnmatch.h>
 
 #include "svn_client.h"
 #include "svn_compat.h"
@@ -69,6 +70,11 @@ struct log_receiver_baton
 
   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
+
+  /* Log message search pattern. Log entries will only be shown if the author,
+   * the log message, or a changed path matches this pattern. */
+  const char *search_pattern;
+  svn_boolean_t case_insensitive_search;
 
   /* Pool for persistent allocations. */
   apr_pool_t *pool;
@@ -117,7 +123,7 @@ display_diff(const svn_log_entry_t *log_entry,
   end_revision.kind = svn_opt_revision_number;
   end_revision.value.number = log_entry->revision;
 
-  SVN_ERR(svn_stream_puts(outstream, _("\n")));
+  SVN_ERR(svn_stream_puts(outstream, "\n"));
   SVN_ERR(svn_client_diff_peg6(diff_options,
                                target_path_or_url,
                                target_peg_revision,
@@ -138,6 +144,63 @@ display_diff(const svn_log_entry_t *log_entry,
                                ctx, pool));
   SVN_ERR(svn_stream_puts(outstream, _("\n")));
   return SVN_NO_ERROR;
+}
+
+
+/* Return TRUE if SEARCH_PATTERN matches the AUTHOR, DATE, LOG_MESSAGE,
+ * or a path in the set of keys of the CHANGED_PATHS hash. Else, return FALSE.
+ * Any of AUTHOR, DATE, LOG_MESSAGE, and CHANGED_PATHS may be NULL. */
+static svn_boolean_t
+match_search_pattern(const char *search_pattern,
+                     const char *author,
+                     const char *date,
+                     const char *log_message,
+                     apr_hash_t *changed_paths,
+                     svn_boolean_t case_insensitive_search,
+                     apr_pool_t *pool)
+{
+  /* Match any substring containing the pattern, like UNIX 'grep' does. */
+  const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
+  int flags = (case_insensitive_search ? APR_FNM_CASE_BLIND : 0);
+
+  /* Does the author match the search pattern? */
+  if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
+    return TRUE;
+
+  /* Does the date the search pattern? */
+  if (date && apr_fnmatch(pattern, date, flags) == APR_SUCCESS)
+    return TRUE;
+
+  /* Does the log message the search pattern? */
+  if (log_message && apr_fnmatch(pattern, log_message, flags) == APR_SUCCESS)
+    return TRUE;
+
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+
+      /* Does a changed path match the search pattern? */
+      for (hi = apr_hash_first(pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path = svn__apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item;
+
+          if (apr_fnmatch(pattern, path, flags) == APR_SUCCESS)
+            return TRUE;
+
+          /* Match copy-from paths, too. */
+          log_item = svn__apr_hash_index_val(hi);
+          if (log_item->copyfrom_path
+              && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev)
+              && apr_fnmatch(pattern,
+                             log_item->copyfrom_path, flags) == APR_SUCCESS)
+            return TRUE;
+        }
+    }
+
+  return FALSE;
 }
 
 
@@ -256,6 +319,17 @@ log_entry_receiver(void *baton,
 
   if (! lb->omit_log_message && message == NULL)
     message = "";
+
+  if (lb->search_pattern &&
+      ! match_search_pattern(lb->search_pattern, author, date, message,
+                             log_entry->changed_paths2,
+                             lb->case_insensitive_search, pool))
+    {
+      if (log_entry->has_children)
+        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_cmdline_printf(pool,
                              SEP_STRING "r%ld | %s | %s",
@@ -418,13 +492,6 @@ log_entry_receiver_xml(void *baton,
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
-  if (author)
-    author = svn_xml_fuzzy_escape(author, pool);
-  if (date)
-    date = svn_xml_fuzzy_escape(date, pool);
-  if (message)
-    message = svn_xml_fuzzy_escape(message, pool);
-
   if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
 
@@ -436,6 +503,25 @@ log_entry_receiver_xml(void *baton,
 
       return SVN_NO_ERROR;
     }
+
+  /* Match search pattern before XML-escaping. */
+  if (lb->search_pattern &&
+      ! match_search_pattern(lb->search_pattern, author, date, message,
+                             log_entry->changed_paths2,
+                             lb->case_insensitive_search, pool))
+    {
+      if (log_entry->has_children)
+        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+
+      return SVN_NO_ERROR;
+    }
+
+  if (author)
+    author = svn_xml_fuzzy_escape(author, pool);
+  if (date)
+    date = svn_xml_fuzzy_escape(date, pool);
+  if (message)
+    message = svn_xml_fuzzy_escape(message, pool);
 
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
@@ -654,6 +740,8 @@ svn_cl__log(apr_getopt_t *os,
                                                    : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  lb.search_pattern = opt_state->search_pattern;
+  lb.case_insensitive_search = opt_state->case_insensitive_search;
   lb.pool = pool;
 
   if (opt_state->xml)

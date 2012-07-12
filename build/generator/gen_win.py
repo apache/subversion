@@ -388,6 +388,16 @@ class WinGeneratorBase(GeneratorBase):
                                              or isinstance(x, gen_base.TargetSWIGLib)
                                              or isinstance(x, gen_base.TargetSWIGProject))]
 
+    # Drop the Java targets if we don't have a JDK
+    if not self.jdk_path:
+      install_targets = [x for x in install_targets
+                                     if not (isinstance(x, gen_base.TargetJava)
+                                             or isinstance(x, gen_base.TargetJavaHeaders)
+                                             or isinstance(x, gen_base.TargetSWIGProject)
+                                             or x.name == '__JAVAHL__'
+                                             or x.name == '__JAVAHL_TESTS__'
+                                             or x.name == 'libsvnjavahl')]
+
     dll_targets = []
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib):

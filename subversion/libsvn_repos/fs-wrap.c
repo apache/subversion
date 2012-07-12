@@ -660,8 +660,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
      the change itself. */
   /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendants, pool));
+    SVN_ERR(svn_fs_get_mergeinfo2(mergeinfo, root, readable_paths, inherit,
+                                  include_descendants, TRUE, pool, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 

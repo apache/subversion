@@ -90,23 +90,24 @@ copyfrom_info_receiver(svn_location_segment_t *segment,
 }
 
 svn_error_t *
-svn_client__get_copy_source(const char *path_or_url,
+svn_client__get_copy_source(const char **original_repos_relpath,
+                            svn_revnum_t *original_revision,
+                            const char *path_or_url,
                             const svn_opt_revision_t *revision,
-                            const char **copyfrom_path,
-                            svn_revnum_t *copyfrom_rev,
                             svn_client_ctx_t *ctx,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { 0 };
-  apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *at_loc;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
   copyfrom_info.rev = SVN_INVALID_REVNUM;
-  copyfrom_info.pool = pool;
+  copyfrom_info.pool = result_pool;
 
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
                                             path_or_url, NULL,
@@ -119,7 +120,7 @@ svn_client__get_copy_source(const char *path_or_url,
   err = svn_ra_get_location_segments(ra_session, "", at_loc->rev, at_loc->rev,
                                      SVN_INVALID_REVNUM,
                                      copyfrom_info_receiver, &copyfrom_info,
-                                     pool);
+                                     scratch_pool);
 
   svn_pool_destroy(sesspool);
 
@@ -133,14 +134,14 @@ svn_client__get_copy_source(const char *path_or_url,
             svn_error_clear(err);
             err = SVN_NO_ERROR;
 
-            *copyfrom_path = NULL;
-            *copyfrom_rev = SVN_INVALID_REVNUM;
+            *original_repos_relpath = NULL;
+            *original_revision = SVN_INVALID_REVNUM;
         }
       return svn_error_trace(err);
     }
 
-  *copyfrom_path = copyfrom_info.path;
-  *copyfrom_rev = copyfrom_info.rev;
+  *original_repos_relpath = copyfrom_info.path;
+  *original_revision = copyfrom_info.rev;
   return SVN_NO_ERROR;
 }
 

@@ -435,6 +435,25 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
+/* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
+   as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
+   apply REPOS_RELPATH, REPOS_ROOT_URL and REPOS_UUID.
+   Perform all temporary allocations in SCRATCH_POOL.
+   */
+svn_error_t *
+svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         const char *repos_relpath,
+                                         const char *repos_root_url,
+                                         const char *repos_uuid,
+                                         svn_revnum_t revision,
+                                         svn_depth_t depth,
+                                         svn_boolean_t insert_base_deleted,
+                                         svn_boolean_t delete_working,
+                                         svn_skel_t *conflict,
+                                         svn_skel_t *work_items,
+                                         apr_pool_t *scratch_pool);
+
 
 /* Add or replace a file in the BASE tree.
 
@@ -484,11 +503,12 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          apr_hash_t *dav_cache,
-                         const svn_skel_t *conflict,
+                         svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
+                         const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
@@ -565,9 +585,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *changed_author,
                             const char *target,
                             apr_hash_t *dav_cache,
-                            const svn_skel_t *conflict,
+                            svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            svn_boolean_t keep_recorded_info,
+                            svn_boolean_t insert_base_deleted,
+                            const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
@@ -636,13 +659,15 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      apr_pool_t *scratch_pool);
 
 
-/* Remove a node from the BASE tree.
+/* Remove a node and all its descendants from the BASE tree. This handles
+   the deletion of a tree from the update editor and some file external
+   scenarios.
 
    The node to remove is indicated by LOCAL_ABSPATH from the local
    filesystem.
 
-   Note that no changes are made to the local filesystem; LOCAL_ABSPATH
-   is merely the key to figure out which BASE node to remove.
+   This operation *installs* workqueue operations to update the local
+   filesystem after the database operation.
 
    To maintain a consistent database this function will also remove
    any working node that marks LOCAL_ABSPATH as base-deleted.  If this
@@ -650,12 +675,24 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    actual node will be removed if the actual node does not mark a
    conflict.
 
-   Note the caller is responsible for removing base node
-   children before calling this function (this may change).
+   If KEEP_AS_WORKING is TRUE, then the base tree is copied to higher
+   layers as a copy of itself before deleting the BASE nodes.
+
+   If NOT_PRESENT_REVISION specifies a valid revision a not-present
+   node is installed in BASE node with kind NOT_PRESENT_KIND after
+   deleting.
+
+   If CONFLICT and/or WORK_ITEMS are passed they are installed as part
+   of the operation, after the work items inserted by the operation
+   itself.
 */
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t keep_as_working,
+                       svn_revnum_t not_present_revision,
+                       svn_skel_t *conflict,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 
@@ -1017,6 +1054,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              apr_hash_t *new_actual_props,
 
                              svn_boolean_t keep_recorded_info,
+                             const svn_skel_t *conflict,
                              const svn_skel_t *work_items,
                              apr_pool_t *scratch_pool);
 
@@ -1293,6 +1331,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
+                        svn_boolean_t update_actual_props,
+                        const apr_hash_t *new_actual_props,
                         svn_boolean_t is_move,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
@@ -1441,11 +1481,12 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
-                     /* ### flip to CANCEL, then NOTIFY. precedent.  */
-                     svn_wc_notify_func2_t notify_func,
-                     void *notify_baton,
+                     svn_skel_t *conflict,
+                     svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool);
 
 
@@ -1499,12 +1540,21 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
+/* Record CONFLICT on LOCAL_ABSPATH, potentially replacing other conflicts
+   recorded on LOCAL_ABSPATH.
 
-/* ### caller maintains ACTUAL. we're just recording state. */
-/* ### we probably need to record details of the conflict. how? */
+   Users should in most cases pass CONFLICT to another WC_DB call instead of
+   calling svn_wc__db_op_mark_conflict() directly outside a transaction, to
+   allow recording atomically with the operation involved.
+
+   Any work items that are necessary as part of marking this node conflicted
+   can be passed in WORK_ITEMS.
+ */
 svn_error_t *
 svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const svn_skel_t *conflict,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -1543,9 +1593,8 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Query the revert list for LOCAL_ABSPATH and set *REVERTED if the
- * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
- * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
- * files, or NULL if the names are not stored.
+ * path was reverted.  Set *MARKER_FILES to a const char *list of
+ * marker files if any were recorded on LOCAL_ABSPATH.
  *
  * Set *COPIED_HERE if the reverted node was copied here and is the
  * operation root of the copy.
@@ -1555,10 +1604,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__db_revert_list_read(svn_boolean_t *reverted,
-                            const char **conflict_old,
-                            const char **conflict_new,
-                            const char **conflict_working,
-                            const char **prop_reject,
+                            const apr_array_header_t **marker_files,
                             svn_boolean_t *copied_here,
                             svn_kind_t *kind,
                             svn_wc__db_t *db,
@@ -1605,50 +1651,6 @@ svn_error_t *
 svn_wc__db_revert_list_done(svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool);
-
-
-/* Return a hash @a *tree_conflicts of all the children of @a
- * local_abspath that are in tree conflicts.  The hash maps local
- * basenames to pointers to svn_wc_conflict_description2_t, all
- * allocated in result pool.
- */
-/* ### this is not an OPERATION. remove the _op_.  */
-svn_error_t *
-svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
-                                      svn_wc__db_t *db,
-                                      const char *local_abspath,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
-
-/* Get any tree conflict associated with LOCAL_ABSPATH in DB, and put it
-   in *TREE_CONFLICT, allocated in RESULT_POOL.
-
-   Use SCRATCH_POOL for any temporary allocations.
-*/
-/* ### this is not an OPERATION. remove the _op_.  */
-svn_error_t *
-svn_wc__db_op_read_tree_conflict(
-                     const svn_wc_conflict_description2_t **tree_conflict,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
-
-/* Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
-   NULL to remove a tree conflict.
-
-   Use SCRATCH_POOL for any temporary allocations.
-*/
-/* ### can this also record text/prop conflicts? drop "tree"? */
-/* ### dunno if it can, but it definitely should be able to. */
-/* ### gjs: also ref: db_op_mark_conflict()  */
-svn_error_t *
-svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const svn_wc_conflict_description2_t *tree_conflict,
-                                apr_pool_t *scratch_pool);
-
 
 /* ### status */
 
@@ -2186,9 +2188,9 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
-/* Read into *MARKER_FILES the basenames of the immediate children of
-   LOCAL_ABSPATH in DB that are unversioned marker files for text or
-   property conflicts.  The files may have been deleted by the user.
+/* Read into *MARKER_FILES the absolute paths of the marker files
+   of conflicts stored on LOCAL_ABSPATH and its immediate children in DB.
+   The on-disk files may have been deleted by the user.
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */
@@ -2199,22 +2201,20 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
-   for all conflicts that have LOCAL_ABSPATH as victim.
+/* Read the conflict information recorded on LOCAL_ABSPATH in *CONFLICT,
+   an editable conflict skel.
 
-   Victim must be versioned or be part of a tree conflict.
+   If the node exists, but does not have a conflict set *CONFLICT to NULL,
+   otherwise return a SVN_ERR_WC_PATH_NOT_FOUND error.
 
    Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
-/* ### Currently there can be just one property conflict recorded
-       per victim */
-/*  ### This function will probably be removed. */
 svn_error_t *
-svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_read_conflict(svn_skel_t **conflict,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 /* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
@@ -2888,12 +2888,6 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
                           svn_kind_t not_present_kind,
                           apr_pool_t *scratch_pool);
 
-/* Remove the WORKING_NODE row of LOCAL_ABSPATH in DB. */
-svn_error_t *
-svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
-
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.
 
    Returns SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not a BASE directory
@@ -2988,40 +2982,6 @@ svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
-
-
-/* Set the conflict marker information on LOCAL_ABSPATH to the specified
-   values */
-svn_error_t *
-svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *old_abspath,
-                                                  const char *new_abspath,
-                                                  const char *wrk_abspath,
-                                                  apr_pool_t *scratch_pool);
-
-/* Set the conflict marker information on LOCAL_ABSPATH to the specified
-   values */
-svn_error_t *
-svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
-                                                     const char *local_abspath,
-                                                     const char *prej_abspath,
-                                                     apr_pool_t *scratch_pool);
-
-/* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
-   as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
-   apply REPOS_RELPATH, REPOS_ROOT_URL and REPOS_UUID.
-   Perform all temporary allocations in SCRATCH_POOL.
-   */
-svn_error_t *
-svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             const char *repos_relpath,
-                                             const char *repos_root_url,
-                                             const char *repos_uuid,
-                                             svn_revnum_t revision,
-                                             svn_depth_t depth,
-                                             apr_pool_t *scratch_pool);
 
 /* Close the wc root LOCAL_ABSPATH and remove any per-directory
    handles associated with it. */
