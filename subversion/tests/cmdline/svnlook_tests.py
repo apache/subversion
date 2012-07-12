@@ -643,7 +643,7 @@ svnlook_bin=%s
 fp = open(os.path.join(sys.argv[1], 'hooks.log'), 'wb')
 def output_command(fp, cmd, opt):
   command = [svnlook_bin, cmd, '-t', sys.argv[2], sys.argv[1]] + opt
-  process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+  process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, bufsize=-1)
   (output, errors) = process.communicate()
   status = process.returncode
   fp.write(output)

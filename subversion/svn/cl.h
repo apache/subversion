@@ -238,6 +238,11 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   svn_boolean_t show_inherited_props; /* get inherited properties */
+  const char *search_pattern;     /* pattern argument for --search */
+  svn_boolean_t case_insensitive_search; /* perform case-insensitive search */
+
+  svn_wc_conflict_resolver_func2_t conflict_func;
+  void *conflict_baton;
 } svn_cl__opt_state_t;
 
 
@@ -575,6 +580,18 @@ svn_cl__merge_file_externally(const char *base_path,
                               svn_boolean_t *remains_in_conflict,
                               apr_pool_t *pool);
 
+/* Like svn_cl__merge_file_externally, but using a built-in merge tool
+ * with help from an external editor specified by EDITOR_CMD. */
+svn_error_t *
+svn_cl__merge_file(const char *base_path,
+                   const char *their_path,
+                   const char *my_path,
+                   const char *merged_path,
+                   const char *wc_path,
+                   const char *editor_cmd,
+                   apr_hash_t *config,
+                   svn_boolean_t *remains_in_conflict,
+                   apr_pool_t *scratch_pool);
 
 
 /*** Notification functions to display results on the terminal. */
@@ -604,6 +621,14 @@ svn_cl__notifier_mark_export(void *baton);
  */
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
+
+/* Return TRUE if any conflicts were detected during notification. */
+svn_boolean_t
+svn_cl__notifier_check_conflicts(void *baton);
+
+/* Return a sorted array of conflicted paths detected during notification. */
+apr_array_header_t *
+svn_cl__notifier_get_conflicted_paths(void *baton, apr_pool_t *result_pool);
 
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
@@ -851,6 +876,15 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
                                         const svn_opt_revision_t *revision2,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
+
+/* Run the conflict resolver for all targets in the TARGETS list with
+ * the specified DEPTH. */
+svn_error_t *
+svn_cl__resolve_conflicts(apr_array_header_t *targets,
+                          svn_depth_t depth,
+                          const svn_cl__opt_state_t *opt_state,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

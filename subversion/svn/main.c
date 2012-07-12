@@ -131,6 +131,8 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_symmetric,
   opt_show_inherited_props,
+  opt_search,
+  opt_isearch,
 } svn_cl__longopt_t;
 
 
@@ -378,6 +380,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("Symmetric merge")},
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve target's inherited properties")},
+  {"search", opt_search, 1,
+                       N_("use ARG as search pattern (glob syntax)")},
+  {"isearch", opt_isearch, 1,
+                       N_("like --search, but case-insensitive")}, 
 
   /* Long-opt Aliases
    *
@@ -681,7 +687,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The --depth option is only valid in combination with the --diff option\n"
      "  and limits the scope of the displayed diff to the specified depth.\n"
-
+     "\n"
+     "  If the --search option is used, log messages are displayed only if the\n"
+     "  provided search pattern matches the author, date, log message text,\n"
+     "  or, if the --verbose option is also provided, a changed path.\n"
+     "  The search pattern may include glob syntax wildcards:\n"
+     "      ?      matches any single character\n"
+     "      *      matches a sequence of arbitrary characters\n"
+     "      [...]  matches any of the characters listed inside the brackets\n"
+     "  If --limit is used in combination with --search, --limit restricts the\n"
+     "  number of log messages searched, rather than restricting the output\n"
+     "  to a particular number of matching log messages.\n"
      "\n"
      "  Examples:\n"
      "\n"
@@ -710,7 +726,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x', opt_search,
+     opt_isearch},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -2160,6 +2177,13 @@ main(int argc, const char *argv[])
       case opt_properties_only:
         opt_state.diff.properties_only = TRUE;
         break;
+      case opt_search:
+        opt_state.search_pattern = opt_arg;
+        break;
+      case opt_isearch:
+        opt_state.search_pattern = opt_arg;
+        opt_state.case_insensitive_search = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -2694,6 +2718,13 @@ main(int argc, const char *argv[])
                                                  we can change this. */
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
+  /* The new svn behavior is to postpone everything until after the operation
+     completed */
+  ctx->conflict_func = NULL;
+  ctx->conflict_baton = NULL;
+  ctx->conflict_func2 = NULL;
+  ctx->conflict_baton2 = NULL;
+
   if ((opt_state.accept_which == svn_cl__accept_unspecified
        && (!interactive_conflicts || opt_state.non_interactive))
       || opt_state.accept_which == svn_cl__accept_postpone)
@@ -2701,10 +2732,8 @@ main(int argc, const char *argv[])
       /* If no --accept option at all and we're non-interactive, we're
          leaving the conflicts behind, so don't need the callback.  Same if
          the user said to postpone. */
-      ctx->conflict_func = NULL;
-      ctx->conflict_baton = NULL;
-      ctx->conflict_func2 = NULL;
-      ctx->conflict_baton2 = NULL;
+      opt_state.conflict_func = NULL;
+      opt_state.conflict_baton = NULL;
     }
   else
     {
@@ -2730,16 +2759,14 @@ main(int argc, const char *argv[])
                pool, "svn: ");
         }
 
-      ctx->conflict_func = NULL;
-      ctx->conflict_baton = NULL;
-      ctx->conflict_func2 = svn_cl__conflict_handler;
+      opt_state.conflict_func = svn_cl__conflict_handler;
       SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
                                               opt_state.accept_which,
                                               ctx->config,
                                               opt_state.editor_cmd,
                                               pb,
                                               pool));
-      ctx->conflict_baton2 = conflict_baton2;
+      opt_state.conflict_baton = conflict_baton2;
     }
 
   /* And now we finally run the subcommand. */

@@ -43,6 +43,7 @@
 #include "private/svn_dep_compat.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
+#include "../../libsvn_wc/workqueue.h"
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
 
@@ -1295,7 +1296,11 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
 
   SVN_ERR(check_db_rows(b, "", after));
 
-  SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath, b->pool));
+  SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
+                                 FALSE, SVN_INVALID_REVNUM,
+                                 NULL, NULL, b->pool));
+  SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
+                         NULL, NULL, b->pool));
 
   SVN_ERR(check_db_rows(b, "", before));
 
@@ -2839,8 +2844,9 @@ do_delete(svn_test__sandbox_t *b,
   SVN_ERR(check_db_rows(b, "", before));
   SVN_ERR(check_db_actual(b, actual_before));
   SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath, NULL,
-                               NULL, NULL /* notification */,
+                               NULL /* conflict */, NULL /* work_item */,
                                NULL, NULL /* cancellation */,
+                               NULL, NULL /* notification */,
                                b->pool));
   SVN_ERR(check_db_rows(b, "", after));
   SVN_ERR(check_db_actual(b, actual_after));
@@ -4870,6 +4876,14 @@ test_follow_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(check_moved_to(moved_tos, 2, 4, "A1/B/C/D/E"));
   SVN_ERR(check_moved_to(moved_tos, 3, 5, "A3/B/C/D/E"));
   SVN_TEST_ASSERT(moved_tos->nelts == 4);
+
+  SVN_ERR(wc_delete(&b, "A3/B/C/D/E"));
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A1/B/C/D/E"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "A3/B/C/D/E"));
+  SVN_ERR(check_moved_to(moved_tos, 1, 2, "A2/B/C/D/E"));
+  SVN_ERR(check_moved_to(moved_tos, 2, 4, "A1/B/C/D/E"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 3);
 
   return SVN_NO_ERROR;
 }

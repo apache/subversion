@@ -40,6 +40,9 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
+    <shard>.pack/     Pack directory, if the repo has been packed (see below)
+      <rev>.<count>   Pack file, if the repository has been packed (see below)
+      manifest        Pack manifest file, if a pack file exists (see below)
     revprops.db       SQLite database of the packed revision properties
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
@@ -134,6 +137,7 @@ The formats are:
   Format 3, understood by Subversion 1.5+
   Format 4, understood by Subversion 1.6+
   Format 5, understood by Subversion 1.7-dev, never released
+  Format 6, understood by Subversion 1.8
 
 The differences between the formats are:
 
@@ -172,6 +176,12 @@ Mergeinfo metadata:
 Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
   Format 4+:  Contains the node's kind.
+
+Shard packing:
+  Format 4:   Applied to revision data only.
+  Format 5:   Revprops would be packed independently of revision data.
+  Format 6+:  Applied equally to revision data and revprop data
+    (i.e. same min packed revision)
 
 # Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 
@@ -230,6 +240,79 @@ This was supported by 1.7-dev builds but never included in a blessed release.
 
 See r1143829 of this file:
 http://svn.apache.org/viewvc/subversion/trunk/subversion/libsvn_fs_fs/structure?view=markup&pathrev=1143829
+
+
+Packing revision properties (format 6+)
+---------------------------
+
+Similarly to the revision data, packing will concatenate multiple
+revprops into a single file.  Since they are mutable data, we put an
+upper limit to the size of these files:  We will concatenate the data
+up to the limit and then use a new file for the following revisions.
+
+The limit can be set and changed at will in the configuration file. 
+It is 64kB by default.  Because a pack file must contain at least one
+complete property list, files containing just one revision may exceed
+that limit.
+
+Furthermore, pack files can be compressed which saves about 75% of
+disk space.  A configuration file flag enables the compression; it is
+off by default and may be switched on and off at will.  The pack size
+limit is always applied to the uncompressed data.  For this reason,
+the default is 256kB while compression has been enabled.
+
+Files are named after their start revision as "<rev>.<counter>" where
+counter will be increased whenever we rewrite a pack file due to a
+revprop change.  The manifest file contains the list of pack file
+names, one line for each revision.
+
+Many tools track repository global data in revision properties at 
+revision 0.  To minimize I/O overhead for those applications,  we
+will never pack that revision, i.e. its data is always being kept
+in revprops/0/0.
+
+Pack file format
+
+  Top level: <length><packed container>
+
+  We always apply data compression to the pack file - using the
+  SVN_DELTA_COMPRESSION_LEVEL_NONE level if compression is disabled.
+  <length> is being encoded using the variable-length svndiff integer
+  format.
+
+  container := header '\n' (revprops)+
+  header    := start_rev '\n' rev_count '\n' (size '\n')+
+
+  All numbers in the header are given as ASCII decimals.  rev_count
+  is the number of revisions packed into this container.  There must
+  be exactly as many "size" and serialized "revprops".  The "size"
+  values in the list are the length in bytes of the serialized
+  revprops of the respective revision.
+
+Writing to packed revprops
+
+  The old pack file is being read and the new revprops serialized.
+  If they fit into the same pack file, a temp file with the new
+  content gets written and moved into place just like an non-packed
+  revprop file would. No name change or manifest update required.
+
+  If they don't fit into the same pack file,  i.e. exceed the pack
+  size limit,  the pack will be split into 2 or 3 new packs just
+  before and / or after the modified revision.
+
+  In the current implementation, they will never be merged again.
+  To minimize fragmentation, the initial packing process will only
+  use about 90% of the limit, i.e. leave some room for growth.
+
+  When a pack file gets split, its counter is being increased
+  creating a new file and leaving the old content in place and
+  available for concurrent readers.  Only after the new manifest
+  file got moved into place, will the old pack files be deleted. 
+
+  Write access to revprops is being serialized by the global
+  filesystem write lock.  We only need to build a few retries into
+  the reader code to gracefully handle manifest changes and pack
+  file deletions.
 
 
 Node-revision IDs

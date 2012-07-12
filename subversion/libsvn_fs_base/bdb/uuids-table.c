@@ -116,7 +116,7 @@ svn_error_t *svn_fs_bdb__get_uuid(svn_fs_t *fs,
   value.flags |= DB_DBT_USERMEM;
 
   svn_fs_base__trail_debug(trail, "uuids", "get");
-  SVN_ERR(BDB_WRAP(fs, _("get repository uuid"),
+  SVN_ERR(BDB_WRAP(fs, N_("get repository uuid"),
                    uuids->get(uuids, trail->db_txn, &key, &value, 0)));
 
   *uuid = apr_pstrmemdup(pool, value.data, value.size);
@@ -144,6 +144,6 @@ svn_error_t *svn_fs_bdb__set_uuid(svn_fs_t *fs,
   value.data = apr_pstrmemdup(pool, uuid, value.size + 1);
 
   svn_fs_base__trail_debug(trail, "uuids", "put");
-  return BDB_WRAP(fs, _("set repository uuid"),
+  return BDB_WRAP(fs, N_("set repository uuid"),
                   uuids->put(uuids, trail->db_txn, &key, &value, 0));
 }

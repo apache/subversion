@@ -106,8 +106,8 @@ svn_path_local_style(const char *path, apr_pool_t *pool);
  * for the base.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_join(), svn_uri_join(),
- * svn_relpath_join() or svn_fspath__join().
+ * New code should use svn_dirent_join(), svn_relpath_join() or
+ * svn_fspath__join().
  */
 SVN_DEPRECATED
 char *
