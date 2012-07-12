@@ -626,6 +626,8 @@ merge_file_trivial(svn_skel_t **work_items,
                    const char *detranslated_target_abspath,
                    svn_boolean_t dry_run,
                    svn_wc__db_t *db,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
@@ -670,6 +672,40 @@ merge_file_trivial(svn_skel_t **work_items,
           *merge_outcome = svn_wc_merge_merged;
           if (!dry_run)
             {
+              const char *wcroot_abspath;
+              svn_boolean_t delete_src;
+              /* The right_abspath might be outside our working copy. In that
+                 case we should copy the file to a safe location before
+                 installing to avoid breaking the workqueue */
+
+              SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath,
+                                            db, target_abspath,
+                                            scratch_pool, scratch_pool));
+
+              if (!svn_dirent_is_child(wcroot_abspath, right_abspath, NULL))
+                {
+                  svn_stream_t *tmp_src;
+                  svn_stream_t *tmp_dst;
+
+                  SVN_ERR(svn_stream_open_readonly(&tmp_src, right_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+
+                  SVN_ERR(svn_wc__open_writable_base(&tmp_dst, &right_abspath,
+                                                     NULL, NULL,
+                                                     db, target_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+                  SVN_ERR(svn_stream_copy3(tmp_src, tmp_dst,
+                                           cancel_func, cancel_baton,
+                                           scratch_pool));
+
+                  /* no need to strdup right_abspath, as the wq_build_()
+                     call already does that for us */
+                  delete_src = TRUE;
+                }
+
               SVN_ERR(svn_wc__wq_build_file_install(
                         &work_item, db, target_abspath, right_abspath,
                         FALSE /* use_commit_times */,
@@ -677,6 +713,15 @@ merge_file_trivial(svn_skel_t **work_items,
                         result_pool, scratch_pool));
               *work_items = svn_wc__wq_merge(*work_items, work_item,
                                              result_pool);
+
+              if (delete_src)
+                {
+                  SVN_ERR(svn_wc__wq_build_file_remove(
+                                    &work_item, db, right_abspath,
+                                    result_pool, scratch_pool));
+                  *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                                 result_pool);
+                }
             }
         }
 
@@ -1019,7 +1064,8 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   SVN_ERR(merge_file_trivial(work_items, merge_outcome,
                              left_abspath, right_abspath,
                              target_abspath, detranslated_target_abspath,
-                             dry_run, db, result_pool, scratch_pool));
+                             dry_run, db, cancel_func, cancel_baton,
+                             result_pool, scratch_pool));
   if (*merge_outcome == svn_wc_merge_no_merge)
     {
       if (is_binary)
