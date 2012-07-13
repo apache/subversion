@@ -185,7 +185,7 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
 */
 svn_error_t *
 svn_auth__config_store_get(svn_auth__store_t **auth_store_p,
-                           const svn_config_t *cfg,
+                           const char *config_dir,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
