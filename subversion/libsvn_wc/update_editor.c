@@ -3827,7 +3827,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
   /* If we created a temporary left merge file, get rid of it. */
   if (delete_left)
     {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, merge_left,
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, wri_abspath,
+                                           merge_left,
                                            result_pool, scratch_pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
@@ -4407,7 +4408,7 @@ close_file(void *file_baton,
           && strcmp(install_from, working_abspath) != 0)
         {
           SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                               install_from,
+                                               working_abspath, install_from,
                                                scratch_pool, scratch_pool));
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
@@ -5672,8 +5673,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
        it is a temporary file, which needs to be removed.  */
     if (source_abspath != NULL)
       {
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, source_abspath,
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, local_abspath,
+                                             source_abspath,
                                              pool, pool));
         all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
       }

@@ -531,7 +531,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, scratch_pool));
 
       /* And create a wq item to remove the file later */
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, tmp_left,
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, wcroot_abspath,
+                                           tmp_left,
                                            result_pool, scratch_pool));
 
       last_items = svn_wc__wq_merge(last_items, work_item, result_pool);
@@ -547,7 +548,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, scratch_pool));
 
       /* And create a wq item to remove the file later */
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, tmp_right,
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, wcroot_abspath,
+                                           tmp_right,
                                            result_pool, scratch_pool));
 
       last_items = svn_wc__wq_merge(last_items, work_item, result_pool);
@@ -597,7 +599,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   /* And maybe delete some tempfiles */
-  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db,
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, wcroot_abspath,
                                        detranslated_target_copy,
                                        result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
@@ -677,7 +679,9 @@ merge_file_trivial(svn_skel_t **work_items,
 
               /* The right_abspath might be outside our working copy. In that
                  case we should copy the file to a safe location before
-                 installing to avoid breaking the workqueue */
+                 installing to avoid breaking the workqueue.
+
+                 This matches the behavior in preserve_pre_merge_files */
 
               SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath,
                                             db, target_abspath,
@@ -718,7 +722,8 @@ merge_file_trivial(svn_skel_t **work_items,
               if (delete_src)
                 {
                   SVN_ERR(svn_wc__wq_build_file_remove(
-                                    &work_item, db, right_abspath,
+                                    &work_item, db, wcroot_abspath,
+                                    right_abspath,
                                     result_pool, scratch_pool));
                   *work_items = svn_wc__wq_merge(*work_items, work_item,
                                                  result_pool);
@@ -888,8 +893,8 @@ merge_text_file(svn_skel_t **work_items,
 
 done:
   /* Remove the tempfile after use */
-  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                       mt->db, result_target,
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, mt->local_abspath,
+                                       result_target,
                                        result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);

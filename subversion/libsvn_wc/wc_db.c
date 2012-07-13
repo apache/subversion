@@ -2172,7 +2172,7 @@ db_base_remove(void *baton,
               else
                 SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                                      rb->db,
-                                                     /* wcroot->abspath, */
+                                                     wcroot->abspath,
                                                      node_abspath,
                                                      iterpool, iterpool));
 
@@ -2191,7 +2191,7 @@ db_base_remove(void *baton,
         }
       else
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             rb->db, /* wcroot->abspath, */
+                                             rb->db, wcroot->abspath,
                                              local_abspath,
                                              scratch_pool, scratch_pool));
 

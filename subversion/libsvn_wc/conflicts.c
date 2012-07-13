@@ -1607,7 +1607,7 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
     if (remove_source)
       {
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, install_from,
+                                             db, local_abspath, install_from,
                                              result_pool, scratch_pool));
         *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
       }
@@ -2224,6 +2224,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_old,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2237,6 +2238,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_new,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2250,6 +2252,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_working,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2280,6 +2283,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    prop_reject_file,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
