@@ -837,9 +837,7 @@ merge_text_file(svn_skel_t **work_items,
                     result_pool, scratch_pool));
           *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
-          /* Track the three conflict files in the metadata.
-           * ### TODO WC-NG: Do this outside the work queue: see
-           * svn_wc__wq_tmp_build_set_text_conflict_markers()'s doc string. */
+          /* Track the conflict marker files in the metadata. */
 
           if (!*conflict_skel)
             *conflict_skel = svn_wc__conflict_skel_create(result_pool);
