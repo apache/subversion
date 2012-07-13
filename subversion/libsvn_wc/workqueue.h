@@ -114,10 +114,12 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
 
 
 /* Set *WORK_ITEM to a new work item that will remove a single
-   file.  */
+   file LOCAL_ABSPATH from the working copy identified by the pair DB,
+   WRI_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
+                             const char *wri_abspath,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
