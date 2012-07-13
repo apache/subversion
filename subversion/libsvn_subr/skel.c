@@ -532,6 +532,33 @@ svn_skel__make_empty_list(apr_pool_t *pool)
   return skel;
 }
 
+svn_skel_t *svn_skel__dup(const svn_skel_t *src_skel, svn_boolean_t dup_data,
+                          apr_pool_t *result_pool)
+{
+  svn_skel_t *skel = apr_pmemdup(result_pool, src_skel, sizeof(svn_skel_t));
+
+  if (dup_data && skel->data)
+    {
+      if (skel->is_atom)
+        skel->data = apr_pmemdup(result_pool, skel->data, skel->len);
+      else
+        {
+          /* When creating a skel this would be NULL, 0 for a list.
+             When parsing a string to a skel this might point to real data
+             delimiting the sublist. We don't copy that from here. */
+          skel->data = NULL;
+          skel->len = 0;
+        }
+    }
+
+  if (skel->children)
+    skel->children = svn_skel__dup(skel->children, dup_data, result_pool);
+
+  if (skel->next)
+    skel->next = svn_skel__dup(skel->next, dup_data, result_pool);
+
+  return skel;
+}
 
 void
 svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
