@@ -1509,6 +1509,8 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete_many(svn_wc__db_t *db,
                           apr_array_header_t *targets,
+                          svn_boolean_t delete_dir_externals,
+                          const svn_skel_t *conflict,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
