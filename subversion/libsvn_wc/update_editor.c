@@ -1247,6 +1247,7 @@ typedef struct modcheck_baton_t {
   svn_boolean_t found_mod;  /* whether a modification has been found */
   svn_boolean_t found_not_delete;  /* Found a not-delete modification */
   svn_boolean_t is_copy; /* check for post-copy modifications only */
+  const char *modcheck_root_abspath;
 } modcheck_baton_t;
 
 /* An implementation of svn_wc_status_func4_t. */
@@ -1276,10 +1277,19 @@ modcheck_callback(void *baton,
       case svn_wc_status_obstructed:
         if (status->prop_status != svn_wc_status_modified)
           break;
-        /* Fall through in the found modification case */
+
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
 
       case svn_wc_status_added:
-        if (!mb->is_copy)
+        /* Ignore the copy status if we expect a copy, but don't ignore
+           other changes */
+        if (!mb->is_copy
+            || status->text_status == svn_wc_status_modified
+            || status->prop_status == svn_wc_status_modified
+            || strcmp(mb->modcheck_root_abspath, local_abspath) != 0)
           {
             mb->found_mod = TRUE;
             mb->found_not_delete = TRUE;
@@ -1323,6 +1333,7 @@ node_has_local_mods(svn_boolean_t *modified,
 
   modcheck_baton.db = db;
   modcheck_baton.is_copy = is_copy;
+  modcheck_baton.modcheck_root_abspath = local_abspath;
 
   /* Walk the WC tree for status with depth infinity, looking for any local
    * modifications. If it's a "sparse" directory, that's OK: there can be
