@@ -88,6 +88,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1361007, r1361019
+   Don't record references to files in the system temp directory from
+   workqueue operations from the merge code.
+   Justification:
+     Removes cases where a ^C can break your workqueue, because the
+     diff code removes the files referenced from the workqueue in its
+     pool cleanup.
+   Branch: ^/subversion/branches/1.7.x-r1361007
+   Notes:
+     Requires a branch because the merge code has been reworked for 1.8.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
