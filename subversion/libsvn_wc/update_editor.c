@@ -1436,15 +1436,11 @@ check_tree_conflict(svn_skel_t **pconflict,
              * away. We allow this only if the node wasn't modified post-move.
              * If the only post-move changes within a subtree are deletions,
              * allow the update to delete the entire subtree. */
-            if (working_kind == svn_kind_dir)
-              SVN_ERR(node_has_local_mods(&modified, &all_edits_are_deletes,
-                                          TRUE, eb->db, moved_to_abspath,
-                                          eb->cancel_func, eb->cancel_baton,
-                                          scratch_pool));
-            else
-              SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
-                                                       moved_to_abspath,
-                                                       FALSE, scratch_pool));
+            SVN_ERR(node_has_local_mods(&modified, &all_edits_are_deletes,
+                                        TRUE, eb->db, moved_to_abspath,
+                                        eb->cancel_func, eb->cancel_baton,
+                                        scratch_pool));
+
             if (modified && !all_edits_are_deletes)
               reason = svn_wc_conflict_reason_moved_away_and_edited;
           }
