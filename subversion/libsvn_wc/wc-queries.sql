@@ -968,6 +968,24 @@ SELECT presence, kind, def_local_relpath, repos_id,
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
+-- STMT_DELETE_FILE_EXTERNALS
+DELETE FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND file_external IS NOT NULL
+
+-- STMT_DELETE_FILE_EXTERNAL_REGISTATIONS
+DELETE FROM externals
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND kind != 'dir'
+
+-- STMT_DELETE_EXTERNAL_REGISTATIONS
+DELETE FROM externals
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+
 /* Select all committable externals, i.e. only unpegged ones on the same
  * repository as the target path ?2, that are defined by WC ?1 to
  * live below the target path. It does not matter which ancestor has the
