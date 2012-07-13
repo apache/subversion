@@ -1380,7 +1380,6 @@ check_tree_conflict(svn_skel_t **pconflict,
                     apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_reason_t reason = SVN_WC_CONFLICT_REASON_NONE;
-  svn_boolean_t locally_replaced = FALSE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
 
@@ -1393,21 +1392,7 @@ check_tree_conflict(svn_skel_t **pconflict,
       case svn_wc__db_status_added:
       case svn_wc__db_status_moved_here:
       case svn_wc__db_status_copied:
-        /* Is it a replace? */
-        if (exists_in_repos)
-          {
-            svn_wc__db_status_t base_status;
-            SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL,
-                                             eb->db, local_abspath,
-                                             scratch_pool, scratch_pool));
-            if (base_status != svn_wc__db_status_not_present)
-              locally_replaced = TRUE;
-          }
-
-        if (!locally_replaced)
+        if (!exists_in_repos)
           {
             /* The node is locally added, and it did not exist before.  This
              * is an 'update', so the local add can only conflict with an
@@ -1478,6 +1463,10 @@ check_tree_conflict(svn_skel_t **pconflict,
            * tree-conflict. (It's possibly a text- or prop-conflict,
            * but we don't handle those here.) */
           return SVN_NO_ERROR;
+
+        /* Replace is handled as delete and then specifically in
+           add_directory() and add_file(), so we only expect deletes here */
+        SVN_ERR_ASSERT(action == svn_wc_conflict_action_delete);
 
         /* Check if the update wants to delete or replace a locally
          * modified node. */
