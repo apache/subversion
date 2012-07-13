@@ -673,7 +673,8 @@ merge_file_trivial(svn_skel_t **work_items,
           if (!dry_run)
             {
               const char *wcroot_abspath;
-              svn_boolean_t delete_src;
+              svn_boolean_t delete_src = FALSE;
+
               /* The right_abspath might be outside our working copy. In that
                  case we should copy the file to a safe location before
                  installing to avoid breaking the workqueue */
