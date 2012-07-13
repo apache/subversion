@@ -19,165 +19,192 @@
 
 ---SCRIPT CREATE_SCHEMA
 
-DROP TABLE IF EXISTS dirindex;
-DROP TABLE IF EXISTS strindex;
-DROP TABLE IF EXISTS revision;
+DROP TABLE IF EXISTS noderev;
+DROP TABLE IF EXISTS branch;
+DROP TABLE IF EXISTS txn;
 
--- Revision record
 
-CREATE TABLE revision (
-  version integer NOT NULL PRIMARY KEY,
-  created timestamp NOT NULL,
-  author  varchar NULL,
-  log     varchar NULL
+-- Transactions
+CREATE TABLE txn (
+  -- transaction number
+  id        integer NOT NULL PRIMARY KEY,
+
+  -- the version of the tree associated with this transaction;
+  -- initially the same as id, but may refer to the originator
+  -- transaction when tracking revprop changes and/or modified trees
+  -- (q.v., obliterate)
+  txnid     integer NOT NULL REFERENCES txn(id),
+
+  -- the revision that this transaction represents; as long as this is
+  -- null, the transaction has not yet been committed.
+  revision  integer NULL,
+
+  -- creation date, independent of the svn:date property
+  created   timestamp NOT NULL,
+
+  -- transaction author, independent of the svn:author property; may
+  -- be null if the repository allows anonymous modifications
+  author    varchar NULL
+
+  -- other attributes:
+     -- revision properties
 );
 
--- Path lookup table
+CREATE INDEX txn_revision_idx ON txn(revision);
 
-CREATE TABLE strindex (
-  strid   integer NOT NULL PRIMARY KEY,
-  content varchar NOT NULL UNIQUE
+
+-- Branches -- unique forks in the nodes' history
+CREATE TABLE branch (
+  -- branch identifier
+  id        integer NOT NULL PRIMARY KEY,
+
+  -- the node to which this branch belongs; refers to the initial
+  -- branch of the node
+  nodeid    integer NOT NULL REFERENCES branch(id),
+
+  -- the source branch from which this branch was forked
+  origin    integer NULL REFERENCES branch(id),
+
+  -- the transaction in which the branch was created
+  txnid     integer NOT NULL REFERENCES txn(id)
+
+  -- sanity check: ye can't be yer own daddy
+  CONSTRAINT genetic_diversity CHECK (id <> origin)
 );
 
--- Versioned directory tree
-
-CREATE TABLE dirindex (
-  -- unique id of this node revision, used for
-  -- predecessor/successor links
-  rowid   integer NOT NULL PRIMARY KEY,
-
-  -- link to this node's immediate predecessor
-  origin  integer NULL REFERENCES dirindex(rowid),
-
-  -- absolute (repository) path
-  pathid  integer NOT NULL REFERENCES strindex(strid),
-
-  -- revision number
-  version integer NOT NULL REFERENCES revision(version),
-
-  -- node kind (D = dir, F = file, etc.)
-  kind    character(1) NOT NULL,
-
-  -- the operation that produced this entry:
-  -- A = add, R = replace, M = modify, D = delete, N = rename
-  opcode  character(1) NOT NULL,
-
-  -- the index entry is the result of an implicit subtree operation
-  subtree boolean NOT NULL
-);
-CREATE UNIQUE INDEX dirindex_versioned_tree ON dirindex(pathid, version DESC);
-CREATE INDEX dirindex_successor_list ON dirindex(origin);
-CREATE INDEX dirindex_operation ON dirindex(opcode);
-
--- Repository root
-
-INSERT INTO revision (version, created, author, log)
-  VALUES (0, 'EPOCH', NULL, NULL);
-INSERT INTO strindex (strid, content) VALUES (0, '/');
-INSERT INTO dirindex (rowid, origin, pathid, version, kind, opcode, subtree)
-  VALUES (0, NULL, 0, 0, 'D', 'A', 0);
+CREATE INDEX branch_node_idx ON branch(nodeid);
+CREATE INDEX branch_successor_idx ON branch(origin);
 
 
----STATEMENT INSERT_REVISION_RECORD
+-- Node revisions -- DAG of versioned node changes
+CREATE TABLE noderev (
+  -- node revision identifier
+  id        integer NOT NULL PRIMARY KEY,
 
-INSERT INTO revision (version, created, author, log)
-  VALUES (?, ?, ?, ?);
+  -- the node identifier; a new node will get the ID of its initial
+  -- branch
+  nodeid    integer NOT NULL REFERENCES branch(id),
 
----STATEMENT GET_REVENT_BY_VERSION
+  -- the node kind; immutable within the node
+  -- D = directory, F = file, L = link
+  kind      character(1) NOT NULL,
 
-SELECT * FROM revision WHERE version = ?;
+  -- this node revision's immediate predecessor
+  origin    integer NULL REFERENCES noderev(id),
 
----STATEMENT INSERT_STRINDEX_RECORD
+  -- the parent (directory) of this node revision -- tree graph
+  parent    integer NULL REFERENCES branch(id),
 
-INSERT INTO strindex (content) VALUES (?);
+  -- the branch that this node revision belongs to -- history graph
+  branch    integer NOT NULL REFERENCES branch(id),
 
----STATEMENT GET_STRENT_BY_STRID
+  -- the indexable, NFC-normalized name of this noderev within its parent
+  name      varchar NOT NULL,
 
-SELECT * FROM strindex WHERE strid = ?;
+  -- the original, denormalized, non-indexable name; null if it's ths
+  -- same as the name
+  dename    varchar NULL,
 
----STATEMENT GET_STRENT_BY_CONTENT
+  -- the transaction in which the node was changed
+  txnid     integer NOT NULL REFERENCES txn(id),
 
-SELECT * FROM strindex WHERE content = ?;
+  -- the change that produced this node revision
+  -- A = added, D = deleted, M = modified, N = renamed, R = replaced
+  -- B = branched (requires kind=D + added + origin <> null)
+  -- L = lazy branch, indicates that child lookup should be performed
+  --     on the origin (same constraints as for opcode=B)
+  opcode    character(1) NOT NULL,
 
----STATEMENT INSERT_DIRINDEX_RECORD
+  -- sanity check: only directories can be lazy
+  CONSTRAINT minimal_workload CHECK (
+    ((opcode = 'B' OR opcode = 'L') AND kind = 'D' AND origin IS NOT NULL)
+    OR opcode <> 'B' AND opcode <> 'L'),
 
-INSERT INTO dirindex (origin, pathid, version, kind, opcode, subtree)
-  VALUES (?, ?, ?, ?, ?, ?);
+  -- sanity check: ye can't be yer own daddy
+  CONSTRAINT genetic_diversity CHECK (id <> origin),
 
----STATEMENT GET_DIRENT_BY_ROWID
+  -- sanity check: ye can't be yer own stepdaddy, either
+  CONSTRAINT escher_avoidance CHECK (parent <> branch)
 
-SELECT dirindex.*, strindex.content FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE dirindex.rowid = ?;
-
----STATEMENT GET_DIRENT_BY_ABSPATH_AND_VERSION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE abspath = ? AND dirindex.version = ?;
-
----STATEMENT LOOKUP_ABSPATH_AT_REVISION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE abspath = ? AND dirindex.version <= ?
-ORDER BY abspath ASC, dirindex.version DESC
-LIMIT 1;
-
----STATEMENT LIST_SUBTREE_AT_REVISION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-  JOIN (SELECT pathid, MAX(version) AS maxver FROM dirindex
-        WHERE version <= ? GROUP BY pathid)
-    AS filtered
-    ON dirindex.pathid == filtered.pathid
-        AND dirindex.version == filtered.maxver
-WHERE abspath LIKE ? ESCAPE '#'
-      AND dirindex.opcode <> 'D'
-ORDER BY abspath ASC;
-
----STATEMENT LIST_DIRENT_SUCCESSORS
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE dirindex.origin = ?
-ORDER BY abspath ASC, dirindex.version ASC;
-
-
--- Temporary transaction
-
----SCRIPT CREATE_TRANSACTION_CONTEXT
-
-CREATE TEMPORARY TABLE txncontext (
-  origin  integer NULL,
-  abspath varchar NOT NULL UNIQUE,
-  kind    character(1) NOT NULL,
-  opcode  character(1) NOT NULL,
-  subtree boolean NOT NULL
+  -- other attributes:
+     -- versioned properties
+     -- contents reference
 );
 
----SCRIPT REMOVE_TRANSACTION_CONTEXT
+CREATE UNIQUE INDEX noderev_tree_idx ON noderev(parent, name, txnid);
+CREATE INDEX nodefev_node_idx ON noderev(nodeid);
+CREATE INDEX noderev_successor_idx ON noderev(origin);
 
-DROP TABLE IF EXISTS temp.txncontext;
 
----STATEMENT INSERT_TRANSACTION_RECORD
+-- Root directory
 
-INSERT INTO temp.txncontext (origin, abspath, kind, opcode, subtree)
-  VALUES (?, ?, ?, ?, ?);
+INSERT INTO txn (id, txnid, revision, created) VALUES (0, 0, 0, 'EPOCH');
+INSERT INTO branch (id, nodeid, txnid) VALUES (0, 0, 0);
+INSERT INTO noderev (id, nodeid, kind, branch, name, txnid, opcode)
+  VALUES (0, 0, 'D', 0, '', 0, 'A');
 
----STATEMENT GET_TRANSACTION_RECORD
 
-SELECT * FROM temp.txncontext WHERE abspath = ?;
-
----STATEMENT REMOVE_TRANSACTION_RECORD
-
-DELETE FROM temp.txncontext WHERE abspath = ?;
-
----STATEMENT REMOVE_TRANSACTION_SUBTREE
-
-DELETE FROM temp.txncontext WHERE abspath LIKE ? ESCAPE '#';
-
----STATEMENT LIST_TRANSACTION_RECORDS
-
-SELECT * FROM temp.txncontext ORDER BY abspath ASC;
+--#  ---STATEMENT INSERT_TXN
+--#  INSERT INTO txn (revnum, created, author)
+--#    VALUES (:revnum, :created, :author);
+--#  
+--#  ---STATEMENT GET_TXN
+--#  SELECT * FROM txn WHERE id = :id;
+--#  
+--#  ---STATEMENT FIND_TXN_BY_REVNUM
+--#  SELECT * FROM txn WHERE revnum = :revnum;
+--#  
+--#  ---STATEMENT FIND_NEWEST_REVISION_TXN
+--#  SELECT * FROM txn WHERE revnum IS NOT NULL ORDER BY revnum DESC LIMIT 1;
+--#  
+--#  ---STATEMENT SET_TXN_REVNUM
+--#  UPDATE txn SET revnum = :revnum WHERE id = :id;
+--#  
+--#  ---STATEMENT INSERT_NODE
+--#  INSERT INTO node (kind, txnid) VALUES (:kind, :txnid);
+--#  
+--#  ---STATEMENT GET_NODE
+--#  SELECT * FROM node WHERE id = :id;
+--#  
+--#  ---STATEMENT INSERT_BRANCH
+--#  INSERT INTO branch (origin, node, txnid)
+--#    VALUES (:origin, :node, :txnid);
+--#  
+--#  ---STATEMENT GET_BRANCH
+--#  SELECT * FROM branch WHERE id = :id;
+--#  
+--#  ---STATEMENT INSERT_NODEREV
+--#  INSERT INTO noderev (origin, parent, branch,
+--#                       iname, oname, txnid, change)
+--#    VALUES (:origin, :parent, :branch,
+--#            :iname, :oname, :txnid, :change);
+--#  
+--#  ---STATEMENT FIND_NODEREV_BY_NAME_FOR_TXN
+--#  SELECT
+--#    noderev.*,
+--#    node.id AS node,
+--#    node.kind AS kind
+--#  FROM
+--#    noderev JOIN branch ON noderev.branch = branch.id
+--#    JOIN node ON branch.node = node.id
+--#  WHERE
+--#    parent = :parent AND iname = ":iname"
+--#    AND noderev.txnid <= :txnid
+--#  ORDER BY txnid DESC
+--#  LIMIT 1;
+--#  
+--#  ---STATEMENT LIST_DIRECTORY_FOR_TXN
+--#  SELECT
+--#    noderev.*,
+--#    node.id AS node,
+--#    node.kind AS kind,
+--#  FROM
+--#    noderev JOIN branch ON noderev.branch = branch.id
+--#    JOIN node ON branch.node = node.id
+--#    JOIN (SELECT iname, MAX(txnid) AS maxtxn FROM noderev
+--#          WHERE txnid <= :txnid) AS filter
+--#      ON noderev.iname = filter.iname AND txnid = filter.maxtxn
+--#  WHERE
+--#    noderev.parent = :parent
+--#    AND noderev.change <> 'D'
+--#  ORDER BY iname ASC;
