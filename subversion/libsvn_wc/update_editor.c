@@ -3806,7 +3806,6 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
   /* Merge the changes from the old textbase to the new
      textbase into the file we're updating.
      Remember that this function wants full paths! */
-  /* ### TODO: Pass version info here. */
   SVN_ERR(svn_wc__internal_merge(&work_item,
                                  conflict_skel,
                                  merge_outcome,
