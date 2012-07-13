@@ -6842,6 +6842,7 @@ struct op_delete_baton_t {
   const char *moved_to_relpath; /* NULL if delete is not part of a move */
   svn_skel_t *conflict;
   svn_skel_t *work_items;
+  svn_boolean_t delete_dir_externals;
   svn_boolean_t notify;
 };
 
@@ -7193,6 +7194,18 @@ delete_node(void *baton,
         }
     }
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_FILE_EXTERNALS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    b->delete_dir_externals
+                                    ? STMT_DELETE_EXTERNAL_REGISTATIONS
+                                    : STMT_DELETE_FILE_EXTERNAL_REGISTATIONS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
   SVN_ERR(add_work_items(wcroot->sdb, b->work_items, scratch_pool));
   if (b->conflict)
     SVN_ERR(mark_conflict(wcroot, local_relpath, b->conflict, scratch_pool));
@@ -7242,9 +7255,9 @@ op_delete_many_txn(void *baton,
       odb.moved_to_relpath = NULL;
       odb.conflict = NULL;
       odb.work_items = NULL;
+      odb.delete_dir_externals = odmb->delete_dir_externals;
       odb.notify = TRUE;
       SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
-      /* ### TODO: Delete external registrations below target_relpath */
     }
   svn_pool_destroy(iterpool);
 
@@ -7310,6 +7323,7 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
+                     svn_boolean_t delete_dir_externals,
                      svn_skel_t *conflict,
                      svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
@@ -7358,6 +7372,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
   odb.moved_to_relpath = moved_to_relpath;
   odb.conflict = conflict;
   odb.work_items = work_items;
+  odb.delete_dir_externals = delete_dir_externals;
 
   if (notify_func)
     {

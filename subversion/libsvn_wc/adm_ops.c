@@ -875,6 +875,7 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
         }
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
+                               !keep_local /* delete_dir_externals */,
                                NULL, work_items,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,

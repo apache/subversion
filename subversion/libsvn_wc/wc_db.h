@@ -1466,6 +1466,10 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below LOCAL_ABSPATH.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
+ *
  * If MOVED_TO_ABSPATH is not NULL, mark the deletion of LOCAL_ABSPATH
  * as the delete-half of a move from LOCAL_ABSPATH to MOVED_TO_ABSPATH.
  *
@@ -1481,6 +1485,7 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
+                     svn_boolean_t delete_dir_externals,
                      svn_skel_t *conflict,
                      svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
@@ -1497,6 +1502,10 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
  * only one sqlite transaction is used for all targets.
  * It currently lacks support for moves (though this could be changed,
  * at which point svn_wc__db_op_delete() becomes redundant).
+ *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below the targets.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
  *
  * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
  * for each node deleted. While this processing occurs, if CANCEL_FUNC is

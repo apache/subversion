@@ -1872,7 +1872,7 @@ delete_entry(const char *path,
        * by deleting the node from the moved-away subtree. */
       /* ### This should probably use a work queue. */
       SVN_ERR(svn_wc__db_op_delete(eb->db, moved_to_abspath, NULL,
-                                   NULL, NULL,
+                                   FALSE, NULL, NULL,
                                    eb->cancel_func, eb->cancel_baton,
                                    NULL, NULL, /* notify below */
                                    scratch_pool));
