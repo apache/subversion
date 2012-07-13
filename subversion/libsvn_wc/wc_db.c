@@ -7215,6 +7215,8 @@ op_delete_txn(void *baton,
 
 struct op_delete_many_baton_t {
   apr_array_header_t *rel_targets;
+  svn_boolean_t delete_dir_externals;
+  const svn_skel_t *work_items;
 } op_delete_many_baton_t;
 
 static svn_error_t *
@@ -7242,8 +7244,11 @@ op_delete_many_txn(void *baton,
       odb.work_items = NULL;
       odb.notify = TRUE;
       SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
+      /* ### TODO: Delete external registrations below target_relpath */
     }
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(add_work_items(wcroot->sdb, odmb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -7386,6 +7391,8 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete_many(svn_wc__db_t *db,
                           apr_array_header_t *targets,
+                          svn_boolean_t delete_dir_externals,
+                          const svn_skel_t *work_items,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -7400,6 +7407,8 @@ svn_wc__db_op_delete_many(svn_wc__db_t *db,
 
   odmb.rel_targets = apr_array_make(scratch_pool, targets->nelts,
                                     sizeof(const char *));
+  odmb.work_items = work_items;
+  odmb.delete_dir_externals = delete_dir_externals;
   iterpool = svn_pool_create(scratch_pool);
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db,

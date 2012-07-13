@@ -52,6 +52,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "props.h"
 #include "translate.h"
 #include "workqueue.h"
@@ -598,6 +599,72 @@ erase_unversioned_from_wc(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_wc__delete and svn_wc__delete_many */
+static svn_error_t *
+create_delete_wq_items(svn_skel_t **work_items,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       svn_kind_t kind,
+                       svn_boolean_t conflicted,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  *work_items = NULL;
+
+  /* Schedule the on-disk delete */
+  if (kind == svn_kind_dir)
+    SVN_ERR(svn_wc__wq_build_dir_remove(work_items, db, local_abspath,
+                                        local_abspath,
+                                        TRUE /* recursive */,
+                                        result_pool, scratch_pool));
+  else
+    SVN_ERR(svn_wc__wq_build_file_remove(work_items, db, local_abspath,
+                                         local_abspath,
+                                         result_pool, scratch_pool));
+
+  /* Read conflicts, to allow deleting the markers after updating the DB */
+  if (conflicted)
+    {
+      svn_skel_t *conflict;
+      const apr_array_header_t *markers;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_read_markers(&markers, db, local_abspath,
+                                            conflict,
+                                            scratch_pool, scratch_pool));
+
+      /* Maximum number of markers is 4, so no iterpool */
+      for (i = 0; markers && i < markers->nelts; i++)
+        {
+          const char *marker_abspath;
+          svn_node_kind_t marker_kind;
+
+          marker_abspath = APR_ARRAY_IDX(markers, i, const char *);
+          SVN_ERR(svn_io_check_path(marker_abspath, &marker_kind,
+                                    scratch_pool));
+
+          if (marker_kind == svn_node_file)
+            {
+              svn_skel_t *work_item;
+
+              SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
+                                                   marker_abspath,
+                                                   scratch_pool,
+                                                   result_pool));
+
+              *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                             result_pool);
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                     const apr_array_header_t *targets,
@@ -613,7 +680,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_kind_t kind;
-  const apr_array_header_t *conflicts = NULL;
+  svn_skel_t *work_items = NULL;
   apr_array_header_t *versioned_targets;
   const char *local_abspath;
   int i;
@@ -689,74 +756,39 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                                          iterpool),
                                   iterpool));
 
-      /* Read conflicts, to allow deleting the markers after updating the DB */
-      if (!keep_local && conflicted)
-        SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                       scratch_pool, iterpool));
+      /* Prepare the on-disk delete */
+      if (!keep_local)
+        {
+          svn_skel_t *work_item;
 
+          SVN_ERR(create_delete_wq_items(&work_item, db, local_abspath, kind,
+                                         conflicted,
+                                         scratch_pool, iterpool));
+
+          work_items = svn_wc__wq_merge(work_items, work_item,
+                                        scratch_pool);
+        }
     }
 
   if (versioned_targets->nelts == 0)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__db_op_delete_many(db, versioned_targets,
+                                    !keep_local /* delete_dir_externals */,
+                                    work_items,
                                     cancel_func, cancel_baton,
-                                    notify_func, notify_baton, scratch_pool));
+                                    notify_func, notify_baton,
+                                    iterpool));
 
-  if (!keep_local && conflicts != NULL)
+  if (work_items != NULL)
     {
-      svn_pool_clear(iterpool);
+      /* Our only caller locked the wc, so for now assume it only passed
+         nodes from a single wc (asserted in svn_wc__db_op_delete_many) */
+      local_abspath = APR_ARRAY_IDX(versioned_targets, 0, const char *);
 
-      /* Do we have conflict markers that should be removed? */
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description2_t *desc;
-
-          desc = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description2_t*);
-
-          if (desc->kind == svn_wc_conflict_kind_text)
-            {
-              if (desc->base_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->base_abspath, TRUE,
-                                              iterpool));
-                }
-              if (desc->their_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
-                                              iterpool));
-                }
-              if (desc->my_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->my_abspath, TRUE,
-                                              iterpool));
-                }
-            }
-          else if (desc->kind == svn_wc_conflict_kind_property
-                   && desc->their_abspath != NULL)
-            {
-              SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
-                                          iterpool));
-            }
-        }
+      SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                             iterpool));
     }
-
-  /* By the time we get here, the db knows that all targets are now
-   * unversioned. */
-  if (!keep_local)
-    {
-      for (i = 0; i < versioned_targets->nelts; i++)
-        {
-          svn_pool_clear(iterpool);
-
-          local_abspath = APR_ARRAY_IDX(versioned_targets, i, const char *);
-          SVN_ERR(erase_unversioned_from_wc(local_abspath, TRUE,
-                                            cancel_func, cancel_baton,
-                                            iterpool));
-        }
-    }
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -780,7 +812,7 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
   svn_wc__db_status_t status;
   svn_kind_t kind;
   svn_boolean_t conflicted;
-  const apr_array_header_t *conflicts;
+  svn_skel_t *work_items = NULL;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -834,64 +866,23 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath, pool),
                               pool));
 
-  /* Read conflicts, to allow deleting the markers after updating the DB */
-  if (!keep_local && conflicted)
-    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                   scratch_pool, scratch_pool));
+  /* Prepare the on-disk delete */
+      if (!keep_local)
+        {
+          SVN_ERR(create_delete_wq_items(&work_items, db, local_abspath, kind,
+                                         conflicted,
+                                         scratch_pool, scratch_pool));
+        }
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
-                               NULL, NULL,
+                               NULL, work_items,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                pool));
 
-  if (!keep_local && conflicted && conflicts != NULL)
-    {
-      int i;
-
-      /* Do we have conflict markers that should be removed? */
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description2_t *desc;
-
-          desc = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description2_t*);
-
-          if (desc->kind == svn_wc_conflict_kind_text)
-            {
-              if (desc->base_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->base_abspath, TRUE,
-                                              scratch_pool));
-                }
-              if (desc->their_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
-                                              scratch_pool));
-                }
-              if (desc->my_abspath != NULL)
-                {
-                  SVN_ERR(svn_io_remove_file2(desc->my_abspath, TRUE,
-                                              scratch_pool));
-                }
-            }
-          else if (desc->kind == svn_wc_conflict_kind_property
-                   && desc->their_abspath != NULL)
-            {
-              SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
-                                          scratch_pool));
-            }
-        }
-    }
-
-  /* By the time we get here, the db knows that everything that is still at
-     LOCAL_ABSPATH is unversioned. */
-  if (!keep_local)
-    {
-        SVN_ERR(erase_unversioned_from_wc(local_abspath, TRUE,
-                                          cancel_func, cancel_baton,
-                                          pool));
-    }
+  if (work_items)
+    SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
