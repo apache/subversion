@@ -1524,6 +1524,21 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
+  if (lock_anchor && kind == svn_wc__db_kind_dir)
+    {
+      svn_boolean_t is_wcroot;
+
+      SVN_ERR_ASSERT(lock_root_abspath != NULL);
+
+      /* Perform a cheap check to avoid looking for a parent working copy,
+         which might be very expensive in some specific scenarios */
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
+                                   scratch_pool));
+
+      if (is_wcroot)
+        lock_anchor = FALSE;
+    }
+
   if (lock_anchor)
     {
       const char *parent_abspath;
