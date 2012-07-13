@@ -1584,6 +1584,8 @@ typedef enum svn_wc_conflict_reason_t
   /** Object is moved away. @since New in 1.8. */
   svn_wc_conflict_reason_moved_away,
   /** Object is moved away and was edited post-move. @since New in 1.8. */
+  /* ### Do we really need this. The edit state is on a different node,
+         which might just change while the tree conflict exists? */
   svn_wc_conflict_reason_moved_away_and_edited,
   /** Object is moved here. @since New in 1.8. */
   svn_wc_conflict_reason_moved_here

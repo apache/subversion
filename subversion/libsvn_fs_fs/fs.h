@@ -63,6 +63,10 @@ extern "C" {
                                                     has not been packed. */
 #define PATH_REVPROP_GENERATION "revprop-generation"
                                                  /* Current revprop generation*/
+#define PATH_MANIFEST         "manifest"         /* Manifest file name */
+#define PATH_PACKED           "pack"             /* Packed revision data file */
+#define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
+                                                    shards */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -90,11 +94,14 @@ extern "C" {
 #define CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION "enable-props-deltification"
 #define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
 #define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
+#define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
+#define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
+#define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   4
+#define SVN_FS_FS__FORMAT_NUMBER   6
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -134,8 +141,8 @@ extern "C" {
    revprops.db . */
 #define SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT 5
 
-/* The minimum format number that supports packed revprop shards. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT
+/* The minimum format number that supports packed revprops. */
+#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
@@ -294,13 +301,21 @@ typedef struct fs_fs_data_t
   /* Thread-safe boolean */
   svn_atomic_t rep_cache_db_opened;
 
-  /* The oldest revision not in a pack file. */
+  /* The oldest revision not in a pack file.  It also applies to revprops
+   * if revprop packing has been enabled by the FSFS format version. */
   svn_revnum_t min_unpacked_rev;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
   svn_boolean_t rep_sharing_allowed;
 
+  /* File size limit in bytes up to which multiple revprops shall be packed
+   * into a single file. */
+  apr_int64_t revprop_pack_size;
+
+  /* Whether packed revprop files shall be compressed. */
+  svn_boolean_t compress_packed_revprops;
+  
   /* Whether directory nodes shall be deltified just like file nodes. */
   svn_boolean_t deltify_directories;
 

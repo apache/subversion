@@ -2095,9 +2095,9 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
       mergeinfo = NULL;
     }
 
-  SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision,
-                                      &copyfrom_path, &copyfrom_rev,
-                                      ctx, pool));
+  SVN_ERR(svn_client__get_copy_source(&copyfrom_path, &copyfrom_rev,
+                                      path_or_url, peg_revision, ctx,
+                                      pool, pool));
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =

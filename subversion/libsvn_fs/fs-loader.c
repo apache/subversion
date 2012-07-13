@@ -594,8 +594,8 @@ svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
                         svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_hotcopy(src_path, dest_path, clean_logs,
-                                        pool));
+  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean_logs,
+                                         FALSE, NULL, NULL, pool));
 }
 
 svn_error_t *

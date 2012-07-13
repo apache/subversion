@@ -91,7 +91,7 @@ locate_key(apr_size_t *length,
   DBT result;
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, _("creating cursor for reading a string"),
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         cursor, 0)));
 
@@ -121,7 +121,7 @@ locate_key(apr_size_t *length,
       if (db_err != SVN_BDB_DB_BUFFER_SMALL)
         {
           svn_bdb_dbc_close(*cursor);
-          return BDB_WRAP(fs, "moving cursor", db_err);
+          return BDB_WRAP(fs, N_("moving cursor"), db_err);
         }
 
       /* We got an SVN_BDB_DB_BUFFER_SMALL (typical since we have a
@@ -133,7 +133,7 @@ locate_key(apr_size_t *length,
       if (db_err)
         {
           svn_bdb_dbc_close(*cursor);
-          return BDB_WRAP(fs, "rerunning cursor move", db_err);
+          return BDB_WRAP(fs, N_("rerunning cursor move"), db_err);
         }
     }
 
@@ -225,7 +225,7 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
           return SVN_NO_ERROR;
         }
       if (db_err)
-        return BDB_WRAP(fs, "reading string", db_err);
+        return BDB_WRAP(fs, N_("reading string"), db_err);
     }
 
   /* The current record contains OFFSET. Fetch the contents now. Note that
@@ -244,14 +244,14 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
       if (db_err)
         {
           svn_bdb_dbc_close(cursor);
-          return BDB_WRAP(fs, "reading string", db_err);
+          return BDB_WRAP(fs, N_("reading string"), db_err);
         }
 
       bytes_read += result.size;
       if (bytes_read == *len)
         {
           /* Done with the cursor. */
-          SVN_ERR(BDB_WRAP(fs, "closing string-reading cursor",
+          SVN_ERR(BDB_WRAP(fs, N_("closing string-reading cursor"),
                            svn_bdb_dbc_close(cursor)));
           break;
         }
@@ -262,7 +262,7 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
       if (db_err == DB_NOTFOUND)
         break;
       if (db_err)
-        return BDB_WRAP(fs, "reading string", db_err);
+        return BDB_WRAP(fs, N_("reading string"), db_err);
 
       /* We'll be reading from the beginning of the next record */
       offset = 0;
@@ -297,7 +297,7 @@ get_key_and_bump(svn_fs_t *fs,
      write the new value -- that would append, not overwrite.  */
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         &cursor, 0)));
 
@@ -310,7 +310,7 @@ get_key_and_bump(svn_fs_t *fs,
   if (db_err)
     {
       svn_bdb_dbc_close(cursor);
-      return BDB_WRAP(fs, "getting next-key value", db_err);
+      return BDB_WRAP(fs, N_("getting next-key value"), db_err);
     }
 
   svn_fs_base__track_dbt(&result, pool);
@@ -328,10 +328,10 @@ get_key_and_bump(svn_fs_t *fs,
     {
       svn_bdb_dbc_close(cursor); /* ignore the error, the original is
                                     more important. */
-      return BDB_WRAP(fs, "bumping next string key", db_err);
+      return BDB_WRAP(fs, N_("bumping next string key"), db_err);
     }
 
-  return BDB_WRAP(fs, "closing string-reading cursor",
+  return BDB_WRAP(fs, N_("closing string-reading cursor"),
                   svn_bdb_dbc_close(cursor));
 }
 
@@ -355,7 +355,7 @@ svn_fs_bdb__string_append(svn_fs_t *fs,
 
   /* Store a new record into the database. */
   svn_fs_base__trail_debug(trail, "strings", "put");
-  return BDB_WRAP(fs, "appending string",
+  return BDB_WRAP(fs, N_("appending string"),
                   bfd->strings->put
                   (bfd->strings, trail->db_txn,
                    svn_fs_base__str_to_dbt(&query, *key),
@@ -387,7 +387,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, "clearing string", db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("clearing string"), db_err));
 
   /* Shove empty data back in for this key. */
   svn_fs_base__clear_dbt(&result);
@@ -396,7 +396,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
   result.flags |= DB_DBT_USERMEM;
 
   svn_fs_base__trail_debug(trail, "strings", "put");
-  return BDB_WRAP(fs, "storing empty contents",
+  return BDB_WRAP(fs, N_("storing empty contents"),
                   bfd->strings->put(bfd->strings, trail->db_txn,
                                     &query, &result, 0));
 }
@@ -433,7 +433,7 @@ svn_fs_bdb__string_size(svn_filesize_t *size,
           return SVN_NO_ERROR;
         }
       if (db_err)
-        return BDB_WRAP(fs, "fetching string length", db_err);
+        return BDB_WRAP(fs, N_("fetching string length"), db_err);
 
       total += length;
     }
@@ -463,7 +463,7 @@ svn_fs_bdb__string_delete(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  return BDB_WRAP(fs, "deleting string", db_err);
+  return BDB_WRAP(fs, N_("deleting string"), db_err);
 }
 
 
@@ -488,7 +488,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
   SVN_ERR(get_key_and_bump(fs, new_key, trail, pool));
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         &cursor, 0)));
 
@@ -502,7 +502,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
   if (db_err)
     {
       svn_bdb_dbc_close(cursor);
-      return BDB_WRAP(fs, "getting next-key value", db_err);
+      return BDB_WRAP(fs, N_("getting next-key value"), db_err);
     }
 
   while (1)
@@ -521,7 +521,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
       if (db_err)
         {
           svn_bdb_dbc_close(cursor);
-          return BDB_WRAP(fs, "writing copied data", db_err);
+          return BDB_WRAP(fs, N_("writing copied data"), db_err);
         }
 
       /* Read the next chunk. Terminate loop if we're done. */
@@ -532,10 +532,10 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
       if (db_err)
         {
           svn_bdb_dbc_close(cursor);
-          return BDB_WRAP(fs, "fetching string data for a copy", db_err);
+          return BDB_WRAP(fs, N_("fetching string data for a copy"), db_err);
         }
     }
 
-  return BDB_WRAP(fs, "closing string-reading cursor",
+  return BDB_WRAP(fs, N_("closing string-reading cursor"),
                   svn_bdb_dbc_close(cursor));
 }

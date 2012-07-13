@@ -552,62 +552,62 @@ open_databases(svn_fs_t *fs,
 
   /* Create the databases in the environment.  */
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'nodes' table"
-                        : "opening 'nodes' table"),
+                        ? N_("creating 'nodes' table")
+                        : N_("opening 'nodes' table")),
                    svn_fs_bdb__open_nodes_table(&bfd->nodes,
                                                 bfd->bdb->env,
                                                 create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'revisions' table"
-                        : "opening 'revisions' table"),
+                        ? N_("creating 'revisions' table")
+                        : N_("opening 'revisions' table")),
                    svn_fs_bdb__open_revisions_table(&bfd->revisions,
                                                     bfd->bdb->env,
                                                     create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'transactions' table"
-                        : "opening 'transactions' table"),
+                        ? N_("creating 'transactions' table")
+                        : N_("opening 'transactions' table")),
                    svn_fs_bdb__open_transactions_table(&bfd->transactions,
                                                        bfd->bdb->env,
                                                        create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'copies' table"
-                        : "opening 'copies' table"),
+                        ? N_("creating 'copies' table")
+                        : N_("opening 'copies' table")),
                    svn_fs_bdb__open_copies_table(&bfd->copies,
                                                  bfd->bdb->env,
                                                  create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'changes' table"
-                        : "opening 'changes' table"),
+                        ? N_("creating 'changes' table")
+                        : N_("opening 'changes' table")),
                    svn_fs_bdb__open_changes_table(&bfd->changes,
                                                   bfd->bdb->env,
                                                   create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'representations' table"
-                        : "opening 'representations' table"),
+                        ? N_("creating 'representations' table")
+                        : N_("opening 'representations' table")),
                    svn_fs_bdb__open_reps_table(&bfd->representations,
                                                bfd->bdb->env,
                                                create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'strings' table"
-                        : "opening 'strings' table"),
+                        ? N_("creating 'strings' table")
+                        : N_("opening 'strings' table")),
                    svn_fs_bdb__open_strings_table(&bfd->strings,
                                                   bfd->bdb->env,
                                                   create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'uuids' table"
-                        : "opening 'uuids' table"),
+                        ? N_("creating 'uuids' table")
+                        : N_("opening 'uuids' table")),
                    svn_fs_bdb__open_uuids_table(&bfd->uuids,
                                                 bfd->bdb->env,
                                                 create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'locks' table"
-                        : "opening 'locks' table"),
+                        ? N_("creating 'locks' table")
+                        : N_("opening 'locks' table")),
                    svn_fs_bdb__open_locks_table(&bfd->locks,
                                                 bfd->bdb->env,
                                                 create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'lock-tokens' table"
-                        : "opening 'lock-tokens' table"),
+                        ? N_("creating 'lock-tokens' table")
+                        : N_("opening 'lock-tokens' table")),
                    svn_fs_bdb__open_lock_tokens_table(&bfd->lock_tokens,
                                                       bfd->bdb->env,
                                                       create)));
@@ -615,8 +615,8 @@ open_databases(svn_fs_t *fs,
   if (format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
-                            ? "creating 'node-origins' table"
-                            : "opening 'node-origins' table"),
+                            ? N_("creating 'node-origins' table")
+                            : N_("opening 'node-origins' table")),
                        svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
                                                            bfd->bdb->env,
                                                            create)));
@@ -625,8 +625,8 @@ open_databases(svn_fs_t *fs,
   if (format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
-                            ? "creating 'miscellaneous' table"
-                            : "opening 'miscellaneous' table"),
+                            ? N_("creating 'miscellaneous' table")
+                            : N_("opening 'miscellaneous' table")),
                        svn_fs_bdb__open_miscellaneous_table(&bfd->miscellaneous,
                                                             bfd->bdb->env,
                                                             create)));
@@ -635,8 +635,8 @@ open_databases(svn_fs_t *fs,
   if (format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
-                            ? "creating 'checksum-reps' table"
-                            : "opening 'checksum-reps' table"),
+                            ? N_("creating 'checksum-reps' table")
+                            : N_("opening 'checksum-reps' table")),
                        svn_fs_bdb__open_checksum_reps_table(&bfd->checksum_reps,
                                                             bfd->bdb->env,
                                                             create)));

@@ -169,10 +169,7 @@ switch_dir_external(const char *local_abspath,
                                                   FALSE, FALSE, FALSE, TRUE,
                                                   FALSE, TRUE,
                                                   timestamp_sleep,
-                                                  ctx,
-                                                  ctx->conflict_func2,
-                                                  ctx->conflict_baton2,
-                                                  subpool));
+                                                  ctx, subpool));
               svn_pool_destroy(subpool);
               goto cleanup;
             }

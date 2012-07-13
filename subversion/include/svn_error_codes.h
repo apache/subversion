@@ -777,6 +777,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 50,
              "The filesystem editor completion process was not followed")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE,
+             SVN_ERR_FS_CATEGORY_START + 51,
+             "A packed revprop could not be read")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

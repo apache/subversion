@@ -1963,6 +1963,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong date with getTimeMillis()",
                      lm[0].getDate(),
                      new java.util.Date(lm[0].getTimeMillis()));
+
+        // Ensure that targets get canonicalized
+        String non_canonical = thisTest.getUrl().toString() + "/";
+        LogMessage lm2[] = client.logMessages(non_canonical, null,
+                                              null, false, true);
     }
 
     /**
@@ -3034,10 +3039,12 @@ public class BasicTests extends SVNTests
                 conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
         assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
 
-        assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
-        assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl());
-        assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
-
+        if (conflict.getSrcRightVersion() != null)
+        {
+            assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
+            assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl());
+            assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+        }
     }
 
     /**

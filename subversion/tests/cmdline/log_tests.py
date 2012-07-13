@@ -2280,6 +2280,55 @@ def log_diff_moved(sbox):
   compare_diff_output(r2diff, log_chain[1]['diff_lines'])
   compare_diff_output(r1diff, log_chain[2]['diff_lines'])
 
+
+#----------------------------------------------------------------------
+def log_search(sbox):
+  "'svn log --search'"
+
+  guarantee_repos_and_wc(sbox)
+
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--search',
+                             'for revision [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+  # case-insensitive search
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--isearch',
+                             'FOR REVISION [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_sensitive_log_with_search(sbox):
+  "test 'svn log -g --search'"
+
+  merge_history_repos(sbox)
+
+  TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
+
+  # Run log -g on a non-copying revision that adds mergeinfo,
+  # and perform a search that only matches the merged revision
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r6',
+                                                              '--search',
+                                                              'upsilon',
+                                                              TRUNK_path)
+
+  # Parse and check output. The only revision should be r4 (the merge rev).
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    4 : [6],
+  }
+  check_merge_results(log_chain, expected_merges)
+
+
 ########################################################################
 # Run the tests
 
@@ -2323,6 +2372,8 @@ test_list = [ None,
               log_diff,
               log_xml_old,
               log_diff_moved,
+              log_search,
+              merge_sensitive_log_with_search,
              ]
 
 if __name__ == '__main__':
