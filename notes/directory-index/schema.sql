@@ -33,18 +33,25 @@ CREATE TABLE txn (
   -- initially the same as id, but may refer to the originator
   -- transaction when tracking revprop changes and/or modified trees
   -- (q.v., obliterate)
-  txnid     integer NOT NULL REFERENCES txn(id),
+  txnid     integer NULL REFERENCES txn(id),
 
-  -- the revision that this transaction represents; as long as this is
-  -- null, the transaction has not yet been committed.
+  -- the revision that this transaction represents; for uncommitted
+  -- transactions, the revision in which it was created
   revision  integer NULL,
+
+  -- transaction state
+  -- T = transient (uncommitted), P = permanent (committed), D = dead
+  state     character(1) NOT NULL DEFAULT 'T',
 
   -- creation date, independent of the svn:date property
   created   timestamp NOT NULL,
 
   -- transaction author, independent of the svn:author property; may
   -- be null if the repository allows anonymous modifications
-  author    varchar NULL
+  author    varchar NULL,
+
+  -- sanity check: enumerated value validation
+  CONSTRAINT enumeration_validation CHECK (state IN ('T', 'P', 'D'))
 
   -- other attributes:
      -- revision properties
@@ -60,20 +67,28 @@ CREATE TABLE branch (
 
   -- the node to which this branch belongs; refers to the initial
   -- branch of the node
-  nodeid    integer NOT NULL REFERENCES branch(id),
+  nodeid    integer NULL REFERENCES branch(id),
 
   -- the source branch from which this branch was forked
   origin    integer NULL REFERENCES branch(id),
 
   -- the transaction in which the branch was created
-  txnid     integer NOT NULL REFERENCES txn(id)
+  txnid     integer NOT NULL REFERENCES txn(id),
+
+  -- mark branches in uncommitted transactions so that they can be
+  -- ignored by branch traversals
+  -- T = transient (uncommitted), P = permanent (committed)
+  state     character(1) NOT NULL DEFAULT 'T',
+
+  -- sanity check: enumerated value validation
+  CONSTRAINT enumeration_validation CHECK (state IN ('T', 'P')),
 
   -- sanity check: ye can't be yer own daddy
   CONSTRAINT genetic_diversity CHECK (id <> origin)
 );
 
+CREATE INDEX branch_txn_idx ON branch(txnid);
 CREATE INDEX branch_node_idx ON branch(nodeid);
-CREATE INDEX branch_successor_idx ON branch(origin);
 
 
 -- Node revisions -- DAG of versioned node changes
@@ -86,7 +101,7 @@ CREATE TABLE noderev (
   nodeid    integer NOT NULL REFERENCES branch(id),
 
   -- the node kind; immutable within the node
-  -- D = directory, F = file, L = link
+  -- D = directory, F = file, etc.
   kind      character(1) NOT NULL,
 
   -- this node revision's immediate predecessor
@@ -110,15 +125,27 @@ CREATE TABLE noderev (
 
   -- the change that produced this node revision
   -- A = added, D = deleted, M = modified, N = renamed, R = replaced
-  -- B = branched (requires kind=D + added + origin <> null)
+  -- B = branched (added + origin <> null)
   -- L = lazy branch, indicates that child lookup should be performed
-  --     on the origin (same constraints as for opcode=B)
+  --     on the origin (requires kind=D + added + origin <> null)
   opcode    character(1) NOT NULL,
 
+  -- mark noderevs of uncommitted transactions so that they can be
+  -- ignored by tree traversals
+  -- T = transient (uncommitted), P = permanent (committed)
+  state     character(1) NOT NULL DEFAULT 'T',
+
+  -- sanity check: enumerated value validation
+  CONSTRAINT enumeration_validation CHECK (
+    kind IN ('D', 'F')
+    AND state IN ('T', 'P')
+    AND opcode IN ('A', 'D', 'M', 'N', 'R', 'B', 'L')),
+
   -- sanity check: only directories can be lazy
-  CONSTRAINT minimal_workload CHECK (
-    ((opcode = 'B' OR opcode = 'L') AND kind = 'D' AND origin IS NOT NULL)
-    OR opcode <> 'B' AND opcode <> 'L'),
+  CONSTRAINT lazy_copies_make_more_work CHECK (
+    opcode <> 'B' AND opcode <> 'L'
+    OR (opcode = 'B' AND origin IS NOT NULL)
+    OR (opcode = 'L' AND kind = 'D' AND origin IS NOT NULL)),
 
   -- sanity check: ye can't be yer own daddy
   CONSTRAINT genetic_diversity CHECK (id <> origin),
@@ -132,79 +159,110 @@ CREATE TABLE noderev (
 );
 
 CREATE UNIQUE INDEX noderev_tree_idx ON noderev(parent, name, txnid);
+CREATE INDEX noderev_txn_idx ON noderev(txnid);
 CREATE INDEX nodefev_node_idx ON noderev(nodeid);
 CREATE INDEX noderev_successor_idx ON noderev(origin);
 
 
 -- Root directory
 
-INSERT INTO txn (id, txnid, revision, created) VALUES (0, 0, 0, 'EPOCH');
-INSERT INTO branch (id, nodeid, txnid) VALUES (0, 0, 0);
-INSERT INTO noderev (id, nodeid, kind, branch, name, txnid, opcode)
-  VALUES (0, 0, 'D', 0, '', 0, 'A');
+INSERT INTO txn (id, txnid, revision, state, created) VALUES (0, 0, 0, 'P', 'EPOCH');
+INSERT INTO branch (id, nodeid, txnid, state) VALUES (0, 0, 0, 'P');
+INSERT INTO noderev (id, nodeid, kind, branch, name, txnid, opcode, state)
+  VALUES (0, 0, 'D', 0, '', 0, 'A', 'P');
 
 
---#  ---STATEMENT INSERT_TXN
---#  INSERT INTO txn (revnum, created, author)
---#    VALUES (:revnum, :created, :author);
---#  
---#  ---STATEMENT GET_TXN
---#  SELECT * FROM txn WHERE id = :id;
---#  
---#  ---STATEMENT FIND_TXN_BY_REVNUM
---#  SELECT * FROM txn WHERE revnum = :revnum;
---#  
---#  ---STATEMENT FIND_NEWEST_REVISION_TXN
---#  SELECT * FROM txn WHERE revnum IS NOT NULL ORDER BY revnum DESC LIMIT 1;
---#  
---#  ---STATEMENT SET_TXN_REVNUM
---#  UPDATE txn SET revnum = :revnum WHERE id = :id;
---#  
---#  ---STATEMENT INSERT_NODE
---#  INSERT INTO node (kind, txnid) VALUES (:kind, :txnid);
---#  
---#  ---STATEMENT GET_NODE
---#  SELECT * FROM node WHERE id = :id;
---#  
---#  ---STATEMENT INSERT_BRANCH
---#  INSERT INTO branch (origin, node, txnid)
---#    VALUES (:origin, :node, :txnid);
---#  
---#  ---STATEMENT GET_BRANCH
---#  SELECT * FROM branch WHERE id = :id;
---#  
---#  ---STATEMENT INSERT_NODEREV
---#  INSERT INTO noderev (origin, parent, branch,
---#                       iname, oname, txnid, change)
---#    VALUES (:origin, :parent, :branch,
---#            :iname, :oname, :txnid, :change);
---#  
---#  ---STATEMENT FIND_NODEREV_BY_NAME_FOR_TXN
---#  SELECT
---#    noderev.*,
---#    node.id AS node,
---#    node.kind AS kind
---#  FROM
---#    noderev JOIN branch ON noderev.branch = branch.id
---#    JOIN node ON branch.node = node.id
---#  WHERE
---#    parent = :parent AND iname = ":iname"
---#    AND noderev.txnid <= :txnid
---#  ORDER BY txnid DESC
---#  LIMIT 1;
---#  
---#  ---STATEMENT LIST_DIRECTORY_FOR_TXN
---#  SELECT
---#    noderev.*,
---#    node.id AS node,
---#    node.kind AS kind,
---#  FROM
---#    noderev JOIN branch ON noderev.branch = branch.id
---#    JOIN node ON branch.node = node.id
---#    JOIN (SELECT iname, MAX(txnid) AS maxtxn FROM noderev
---#          WHERE txnid <= :txnid) AS filter
---#      ON noderev.iname = filter.iname AND txnid = filter.maxtxn
---#  WHERE
---#    noderev.parent = :parent
---#    AND noderev.change <> 'D'
---#  ORDER BY iname ASC;
+---STATEMENT TXN_INSERT
+INSERT INTO txn (txnid, revision, created, author)
+  VALUES (:txnid, :revision, :created, :author);
+
+---STATEMENT TXN_UPDATE_INITIAL_TXNID
+UPDATE txn SET txnid = :id WHERE id = :id;
+
+---STATEMENT TXN_GET
+SELECT * FROM txn WHERE id = :id;
+
+---STATEMENT TXN_FIND_NEWEST
+SELECT * FROM txn WHERE state = 'P' ORDER BY id DESC LIMIT 1;
+
+---STATEMENT TXN_FIND_BY_REVISION
+SELECT * FROM txn WHERE revision = :revision AND state = 'P'
+ORDER BY id DESC LIMIT 1;
+
+---STATEMENT TXN_FIND_BY_REVISION_AND_TIMESTAMP
+SELECT * FROM txn
+WHERE revision = :revision AND created <= :created AND state = 'P'
+ORDER BY id DESC LIMIT 1;
+
+---STATEMENT TXN_COMMIT
+UPDATE txn SET
+  revision = :revision,
+  created = :created
+  state = 'P',
+WHERE id = :id;
+
+---STATEMENT TXN_ABORT
+UPDATE txn SET state = 'D' WHERE id = :id;
+
+---STATEMENT TXN_CLEANUP
+DELETE FROM txn WHERE id = :txnid;
+
+---STATEMENT BRANCH_INSERT
+INSERT INTO branch (nodeid, origin, txnid)
+  VALUES (:nodeid, :origin, :txnid);
+
+---STATEMENT BRANCH_UPDATE_INITIAL_NODEID
+UPDATE branch SET nodeid = :id WHERE id = :id;
+
+---STATEMENT BRANCH_UPDATE_TXNID
+UPDATE branch SET txnid = :new_txnid WHERE txnid = :old_txnid;
+
+---STATEMENT BRANCH_GET
+SELECT * FROM branch WHERE id = :id;
+
+---STATEMENT BRANCH_COMMIT
+UPDATE branch SET state = 'P' WHERE txnid = :txnid;
+
+---STATEMENT BRANCH_CLEANUP
+DELETE FROM branch WHERE txnid = :txnid;
+
+---STATEMENT NODEREV_INSERT
+INSERT INTO noderev (nodeid, kind, origin, parent, branch,
+                     name, dename, txnid, opcode)
+  VALUES (:nodeid, :kind, :origin, :parent, :branch,
+          :name, :dename, :txnid, :opcode);
+
+---STATEMENT NODEREV_UPDATE_TXNID
+UPDATE noderev SET txnid = :new_txnid WHERE txnid = :old_txnid;
+
+---STATEMENT NODEREV_DELAZIFY
+UPDATE noderev SET opcode = 'B' WHERE id = :id;
+
+---STATEMENT NODEREV_GET
+SELECT * FROM noderev WHERE id = :id;
+
+---STATEMENT NODEREV_COMMIT
+UPDATE noderev SET state = 'P' WHERE txnid = :txnid;
+
+---STATEMENT NODEREV_CLEANUP
+DELETE FROM noderev WHERE txnid = :txnid;
+
+---STATEMENT NODEREV_FIND_BY_NAME
+SELECT * FROM noderev
+WHERE parent = :parent AND name = :name
+      AND txnid <= :txnid AND state = 'P'
+ORDER BY txnid DESC LIMIT 1;
+
+---STATEMENT NODEREV_FIND_TRANSIENT_BY_NAME
+SELECT * FROM noderev
+WHERE parent = :parent AND name = :name
+      AND txnid <= :txnid AND state = 'T'
+ORDER BY txnid DESC LIMIT 1;
+
+---STATEMENT NODEREV_LIST_DIRECTORY
+SELECT * FROM noderev
+  JOIN (SELECT name, MAX(txnid) AS txnid FROM noderev
+        WHERE txnid <= :txnid AND state = 'P') AS filter
+    ON noderev.name = filter.name AND noderev.txnid = filter.txnid
+WHERE parent = :parent AND opcode <> 'D'
+ORDER BY name ASC;
