@@ -63,7 +63,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  err = svn_wc__external_remove(wc_ctx, wri_abspath, local_abspath,
+  err = svn_wc__external_remove(wc_ctx, wri_abspath, local_abspath, FALSE,
                                 cancel_func, cancel_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -512,19 +512,18 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
 
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR; /* It's neither... Nothing to remove */
-
-  SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ctx->wc_ctx,
-                         local_abspath, scratch_pool));
-
-  if (! lock_existed)
+  if (kind != svn_node_none)
     {
-      SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath,
-                                         ctx->wc_ctx, local_abspath,
-                                         FALSE,
-                                         scratch_pool,
-                                         scratch_pool));
+      SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ctx->wc_ctx,
+                             local_abspath, scratch_pool));
+
+      if (! lock_existed)
+        {
+          SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath,
+                                             ctx->wc_ctx, local_abspath,
+                                             FALSE,
+                                             scratch_pool, scratch_pool));
+        }
     }
 
   /* We don't use relegate_dir_external() here, because we know that
@@ -532,7 +531,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
      going to need this directory, and therefore it's better to
      leave stuff where the user expects it. */
   err = svn_wc__external_remove(ctx->wc_ctx, defining_abspath,
-                                local_abspath,
+                                local_abspath, (kind == svn_node_none),
                                 ctx->cancel_func, ctx->cancel_baton,
                                 scratch_pool);
 

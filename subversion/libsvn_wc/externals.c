@@ -1288,6 +1288,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1302,6 +1303,9 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
                                      NULL, scratch_pool));
+
+  if (declaration_only)
+    return SVN_NO_ERROR;
 
   if (kind == svn_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
