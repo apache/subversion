@@ -110,6 +110,15 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
     const char *libname;
     const char *funcname;
     apr_status_t status;
+    apr_size_t i;
+
+    /* Demand a simple alphanumeric name so that the generated DSO
+       name is sensible. */
+    for (i = 0; i < strlen(name); ++i)
+      if (!svn_ctype_isalnum(name[i]))
+        return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                                 _("Invalid name for FS type '%s'"),
+                                 name);
 
     libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.0",
                            name, SVN_VER_MAJOR);
