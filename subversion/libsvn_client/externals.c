@@ -790,6 +790,7 @@ handle_externals_change(svn_client_ctx_t *ctx,
       const char *old_defining_abspath;
       svn_wc_external_item2_t *new_item;
       const char *target_abspath;
+      svn_boolean_t under_root;
 
       new_item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
 
@@ -798,8 +799,20 @@ handle_externals_change(svn_client_ctx_t *ctx,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      target_abspath = svn_dirent_join(local_abspath, new_item->target_dir,
-                                       iterpool);
+      SVN_ERR(svn_dirent_is_under_root(&under_root, &target_abspath,
+                                       local_abspath, new_item->target_dir,
+                                       iterpool));
+
+      if (! under_root)
+        {
+          return svn_error_createf(
+                    SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                    _("Path '%s' is not in the working copy"),
+                    svn_dirent_local_style(
+                        svn_dirent_join(local_abspath, new_item->target_dir,
+                                        iterpool),
+                        iterpool));
+        }
 
       old_defining_abspath = apr_hash_get(old_externals, target_abspath,
                                           APR_HASH_KEY_STRING);
@@ -983,13 +996,26 @@ svn_client__export_externals(apr_hash_t *externals,
         {
           const char *item_abspath;
           const char *new_url;
+          svn_boolean_t under_root;
           svn_wc_external_item2_t *item = APR_ARRAY_IDX(items, i,
                                                 svn_wc_external_item2_t *);
 
           svn_pool_clear(sub_iterpool);
 
-          item_abspath = svn_dirent_join(local_abspath, item->target_dir,
-                                         sub_iterpool);
+          SVN_ERR(svn_dirent_is_under_root(&under_root, &item_abspath,
+                                           local_abspath, item->target_dir,
+                                           sub_iterpool));
+
+          if (! under_root)
+            {
+              return svn_error_createf(
+                        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                        _("Path '%s' is not in the working copy"),
+                        svn_dirent_local_style(
+                            svn_dirent_join(local_abspath, item->target_dir,
+                                            sub_iterpool),
+                            sub_iterpool));
+            }
 
           SVN_ERR(svn_wc__resolve_relative_external_url(&new_url, item,
                                                         repos_root_url,
