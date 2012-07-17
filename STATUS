@@ -22,14 +22,6 @@ Candidate changes:
    Votes:
      +1: danielsh, gstein
 
- * r1337441
-   Fix XML namespace expansion in ra_serf
-   Justification:
-     Avoids segfaults caused by a malicious server sending unknown prefixes
-     to ra_serf. (and corrects the semantics for a bonus win)
-   Votes:
-     +1: gstein, rhuijben
-
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
@@ -65,18 +57,6 @@ Candidate changes:
    Votes:
      +0: stsp (pending a proper conflict-free backport)
 
- * r1352068
-   Do not use non-constant initializers in struct variables, since this
-   violates C'89 and C'90.
-   Justification:
-     Fixes compatibility with SunPRO compiler.
-   Branch: 1.7.x-r1352068 (just omits the changes where they are not
-     applicable in 1.7.x, in three source files)
-   Notes:
-     r1352080 is an optional white-space follow-up.
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1354876, r1354907, r1355340
    Allow non-existing but valid canonical absolute paths to pass through
    svn_dirent_get_absolute().
@@ -86,7 +66,7 @@ Candidate changes:
      r1354907 undoes r1354876, and r1355340 fixes a return problem, so
      it is easiest to review them as a single patch.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r1361007, r1361019
    Don't record references to files in the system temp directory from
@@ -99,7 +79,7 @@ Candidate changes:
    Notes:
      Requires a branch because the merge code has been reworked for 1.8.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r1361341
    Avoid checking for working copies above the current working copy from
@@ -112,7 +92,7 @@ Candidate changes:
      Requires a backport branch because we renamed svn_wc__db_kind_dir to
      svn_kind_dir for 1.8.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r1362508
    Avoid errors when users run 'svnlook changed', 'svnlook
@@ -129,3 +109,24 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1337441
+   Fix XML namespace expansion in ra_serf
+   Justification:
+     Avoids segfaults caused by a malicious server sending unknown prefixes
+     to ra_serf. (and corrects the semantics for a bonus win)
+   Votes:
+     +1: gstein, rhuijben, cmpilato
+
+ * r1352068
+   Do not use non-constant initializers in struct variables, since this
+   violates C'89 and C'90.
+   Justification:
+     Fixes compatibility with SunPRO compiler.
+   Branch: 1.7.x-r1352068 (just omits the changes where they are not
+     applicable in 1.7.x, in three source files)
+   Notes:
+     r1352080 is an optional white-space follow-up.
+   Votes:
+     +1: julianfoad, rhuijben, cmpilato
+
