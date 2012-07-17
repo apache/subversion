@@ -1091,35 +1091,3 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-
-/* Implements the `svn_wc_externals_update_t' interface. */
-svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_value,
-                                   const svn_string_t *new_value,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_client__external_func_baton_t *efb = baton;
-
-  local_abspath = apr_pstrdup(efb->result_pool, local_abspath);
-
-  if (efb->externals_old != NULL && old_value != NULL)
-    apr_hash_set(efb->externals_old, local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(efb->result_pool,
-                              old_value->data, old_value->len));
-
-  if (efb->externals_new != NULL && new_value != NULL)
-    apr_hash_set(efb->externals_new, local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(efb->result_pool,
-                              new_value->data, new_value->len));
-
-  if (efb->ambient_depths != NULL)
-    apr_hash_set(efb->ambient_depths, local_abspath, APR_HASH_KEY_STRING,
-                 svn_depth_to_word(depth));
-
-  return SVN_NO_ERROR;
-}
-
-
