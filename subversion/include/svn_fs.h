@@ -2405,7 +2405,8 @@ svn_fs_get_locks(svn_fs_t *fs,
 
 /**
  * Append a textual list of all available FS modules to the stringbuf
- * @a output.
+ * @a output.  Third-party modules are only included if repository
+ * access has caused them to be loaded.
  *
  * @since New in 1.2.
  */
