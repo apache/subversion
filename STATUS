@@ -110,14 +110,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1337441
-   Fix XML namespace expansion in ra_serf
-   Justification:
-     Avoids segfaults caused by a malicious server sending unknown prefixes
-     to ra_serf. (and corrects the semantics for a bonus win)
-   Votes:
-     +1: gstein, rhuijben, cmpilato
-
  * r1352068
    Do not use non-constant initializers in struct variables, since this
    violates C'89 and C'90.
