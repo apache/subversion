@@ -33,6 +33,23 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+
+/* Callback type used by an auth store's iterate_creds() function to
+   iterate over stored credentials.  Implementations may return
+   SVN_ERR_CEASE_INVOCATION to halt iteration of credentials without
+   causing an error return from the iterate_creds() function.  */
+typedef svn_error_t *(*svn_auth__store_iterate_creds_func_t)(
+  void *iterate_creds_baton,
+  const char *cred_kind,
+  const char *realmstring,
+  apr_hash_t *cred_hash,
+  apr_pool_t *scratch_pool);
+
+
+
+/*** Authentication credential store objects. ***/
+
 /* Authentication credential store object. */
 typedef struct svn_auth__store_t svn_auth__store_t;
 
@@ -67,7 +84,8 @@ typedef svn_error_t *(*svn_auth__store_cb_get_cred_hash_t)(
 /* Callback type: Store in AUTH_STORE a hash of authentication
    credential bits (CRED_HASH) for the credentials of kind CRED_KIND
    and identified by REALMSTRING, setting *STORED to TRUE iff the
-   storage occurs successfully. */
+   storage occurs successfully.  CRED_HASH may be NULL to indicate a
+   desire to remove the relevant credentials from the store. */
 typedef svn_error_t *(*svn_auth__store_cb_set_cred_hash_t)(
   svn_boolean_t *stored, 
   void *baton,
@@ -76,6 +94,16 @@ typedef svn_error_t *(*svn_auth__store_cb_set_cred_hash_t)(
   apr_hash_t *cred_hash,
   apr_pool_t *scratch_pool);
 
+/* Callback type: Call ITERATE_CREDS_FUNC with ITERATE_CREDS_BATON for
+   each set of credentials stored in the auth store. */
+typedef svn_error_t *(*svn_auth__store_cb_iterate_creds_t)(
+  void *baton,
+  svn_auth__store_iterate_creds_func_t iterate_creds_func,
+  void *iterate_creds_baton,
+  apr_pool_t *scratch_pool);
+
+
+/*** Auth Store Factory Stuff and Functionality. ***/
 
 /* Create a generic authentication store object. */
 svn_error_t *
@@ -112,6 +140,11 @@ svn_error_t *
 svn_auth__store_set_set_cred_hash(svn_auth__store_t *auth_store,
                                   svn_auth__store_cb_set_cred_hash_t func);
 
+/* Set the `iterate_creds' callback function for AUTH_STORE to FUNC. */
+svn_error_t *
+svn_auth__store_set_iterate_creds(svn_auth__store_t *auth_store,
+                                  svn_auth__store_cb_iterate_creds_t func);
+
 
 /* Open (creating if necessary and if CREATE is set) the
    authentication credential store identified by AUTH_STORE. */
@@ -145,7 +178,8 @@ svn_auth__store_get_cred_hash(apr_hash_t **cred_hash,
 /* Store in AUTH_STORE a hash of authentication credential bits
    (CRED_HASH) for the credentials of kind CRED_KIND and identified by
    REALMSTRING, setting *STORED to TRUE iff the storage occurs
-   successfully. */
+   successfully.  CRED_HASH may be NULL to indicate a desire to remove
+   the relevant credentials from the store.*/
 svn_error_t *
 svn_auth__store_set_cred_hash(svn_boolean_t *stored,
                               svn_auth__store_t *auth_store,
@@ -153,6 +187,15 @@ svn_auth__store_set_cred_hash(svn_boolean_t *stored,
                               const char *realmstring,
                               apr_hash_t *cred_hash,
                               apr_pool_t *scratch_pool);
+
+/* Iterate over the credentials stored in AUTH_STORE, calling
+   ITERATE_CREDS_FUNC with ITERATE_CREDS_BATON for each set. */
+svn_error_t *
+svn_auth__store_iterate_creds(svn_auth__store_t *auth_store,
+                              svn_auth__store_iterate_creds_func_t iterate_creds_func,
+                              void *iterate_creds_baton,
+                              apr_pool_t *scratch_pool);
+
 
 
 /* Set *AUTH_STORE_P to an object which describes the encrypted

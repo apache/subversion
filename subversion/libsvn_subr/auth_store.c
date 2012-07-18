@@ -32,7 +32,7 @@ struct svn_auth__store_t
   svn_auth__store_cb_delete_t delete_func;
   svn_auth__store_cb_get_cred_hash_t get_cred_hash_func;
   svn_auth__store_cb_set_cred_hash_t set_cred_hash_func;
-
+  svn_auth__store_cb_iterate_creds_t iterate_creds_func;
 };
 
 
@@ -97,6 +97,16 @@ svn_auth__store_set_set_cred_hash(svn_auth__store_t *auth_store,
   auth_store->set_cred_hash_func = func;
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_auth__store_set_iterate_creds(svn_auth__store_t *auth_store,
+                                  svn_auth__store_cb_iterate_creds_t func)
+{
+  auth_store->iterate_creds_func = func;
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t *
@@ -175,6 +185,31 @@ svn_auth__store_set_cred_hash(svn_boolean_t *stored,
     SVN_ERR(auth_store->set_cred_hash_func(stored, auth_store->store_baton,
                                            cred_kind, realmstring, cred_hash,
                                            scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_auth__store_iterate_creds(svn_auth__store_t *auth_store,
+                              svn_auth__store_iterate_creds_func_t iterate_creds_func,
+                              void *iterate_creds_baton,
+                              apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(auth_store->is_open);
+  if (auth_store->iterate_creds_func)
+    {
+      svn_error_t *err;
+      err = auth_store->iterate_creds_func(auth_store->store_baton,
+                                           iterate_creds_func,
+                                           iterate_creds_baton,
+                                           scratch_pool);
+      if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
+    }
   return SVN_NO_ERROR;
 }
 
