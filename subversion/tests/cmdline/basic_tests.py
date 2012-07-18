@@ -2983,53 +2983,6 @@ def delete_conflicts_one_of_many(sbox):
   verify_file_deleted("failed to remove conflict file",
                       sbox.ospath('A/D/G/rho.mine'))
 
-@XFail()
-@Issue(4193)
-@SkipUnless(svntest.main.is_posix_os)
-def status_through_unversioned_symlink(sbox):
-  """file status through unversioned symlink"""
-
-  sbox.build(read_only = True)
-  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  os.symlink('A', sbox.ospath('Z'))
-  svntest.actions.run_and_verify_status(sbox.ospath('Z/mu'), state)
-
-@XFail()
-@Issue(4193)
-@SkipUnless(svntest.main.is_posix_os)
-def status_through_versioned_symlink(sbox):
-  """file status through versioned symlink"""
-
-  sbox.build()
-  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  os.symlink('A', sbox.ospath('Z'))
-  sbox.simple_add('Z')
-  state.add({'Z': Item(status='A ')})
-  svntest.actions.run_and_verify_status(sbox.ospath('Z/mu'), state)
-
-@XFail()
-@Issue(4193)
-@SkipUnless(svntest.main.is_posix_os)
-def add_through_unversioned_symlink(sbox):
-  """add file through unversioned symlink"""
-
-  sbox.build()
-  os.symlink('A', sbox.ospath('Z'))
-  sbox.simple_append('A/kappa', 'xyz', True)
-  sbox.simple_add('Z/kappa')
-
-@XFail()
-@Issue(4193)
-@SkipUnless(svntest.main.is_posix_os)
-def add_through_versioned_symlink(sbox):
-  """add file through versioned symlink"""
-
-  sbox.build()
-  os.symlink('A', sbox.ospath('Z'))
-  sbox.simple_add('Z')
-  sbox.simple_append('A/kappa', 'xyz', True)
-  sbox.simple_add('Z/kappa')
-
 
 ########################################################################
 # Run the tests
@@ -3098,10 +3051,6 @@ test_list = [ None,
               quiet_commits,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
-              status_through_unversioned_symlink,
-              status_through_versioned_symlink,
-              add_through_unversioned_symlink,
-              add_through_versioned_symlink,
              ]
 
 if __name__ == '__main__':
