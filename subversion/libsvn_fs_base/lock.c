@@ -460,9 +460,9 @@ svn_fs_base__get_locks(svn_fs_t *fs,
 
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.depth = depth;
-  SVN_ERR(svn_io_open_uniquely_named(&(args.spool_file), NULL, NULL, NULL,
-                                     NULL, svn_io_file_del_on_close,
-                                     pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&(args.spool_file), NULL, NULL,
+                                   svn_io_file_del_on_close,
+                                   pool, iterpool));
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool));
 
   /* Rewind the spool file, then re-read it, calling GET_LOCKS_FUNC(). */
