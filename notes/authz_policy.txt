@@ -120,7 +120,7 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
    modified in that revision.  It is precisely because Subversion
    tries not to reveal unreadable paths to users that revprop access
    is limited as described above.  So as long as the user has the
-   requisite read access to the changed-paths, it's okay if he or see
+   requisite read access to the changed-paths, it's okay if he or she
    lacks write access to one or more of those paths when attempting to
    set or change revprops -- the information Subversion is trying to
    protect through its revprop access control is considered safe to
