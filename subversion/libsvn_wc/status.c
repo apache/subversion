@@ -1354,7 +1354,19 @@ get_dir_status(const struct walk_status_baton *wb,
   /* Handle "this-dir" first. */
   if (! skip_this_dir)
     {
-#ifdef HAVE_SYMLINK
+      /* This code is not conditional on HAVE_SYMLINK as some systems that do
+         not allow creating symlinks (!HAVE_SYMLINK) can still encounter
+         symlinks (or in case of Windows also 'Junctions') created by other
+         methods.
+
+         Without this block a working copy in the root of a junction is
+         reported as an obstruction, because the junction itself is reported as
+         special.
+
+         Systems that have no symlink support at all, would always see
+         dirent->special as FALSE, so even there enabling this code shouldn't
+         produce problems.
+       */
       if (dirent->special)
         {
           svn_io_dirent2_t *this_dirent = svn_io_dirent2_dup(dirent, iterpool);
@@ -1375,7 +1387,6 @@ get_dir_status(const struct walk_status_baton *wb,
                                         iterpool));
         }
      else
-#endif
         SVN_ERR(send_status_structure(wb, local_abspath,
                                       parent_repos_root_url,
                                       parent_repos_relpath,
