@@ -78,6 +78,18 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
 }
 
 
+/* Implements `svn_auth__master_passphrase_fetch_t' */
+static svn_error_t *
+fetch_secret(const svn_string_t **secret,
+             void *baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  *secret = svn_string_dup(baton, result_pool);
+  return SVN_NO_ERROR;
+}
+
+
 /* Create and open an auth store within CONFIG_DIR, deleting any
    previous auth store at that location, and using CRYPTO_CTX and the
    master passphrase SECRET.  Set *AUTH_STORE_P to the resulting store
@@ -95,7 +107,8 @@ create_ephemeral_auth_store(svn_auth__store_t **auth_store_p,
                                      pool, pool));
   SVN_ERR(svn_io_remove_file2(*auth_store_path, TRUE, pool));
   SVN_ERR(svn_auth__pathetic_store_get(auth_store_p, *auth_store_path,
-                                       crypto_ctx, secret, pool, pool));
+                                       crypto_ctx, fetch_secret, 
+                                       (void *)secret, pool, pool));
   SVN_ERR(svn_auth__store_open(*auth_store_p, TRUE, pool));
   return SVN_NO_ERROR;
 }
@@ -219,13 +232,15 @@ test_auth_store_basic(apr_pool_t *pool)
   /* Close and reopen the auth store. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
   SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
-                                       secret, pool, pool));
+                                       fetch_secret, (void *)secret,
+                                       pool, pool));
   SVN_ERR(svn_auth__store_open(auth_store, FALSE, pool));
 
   /* Close and reopen the auth store with a bogus secret. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
   SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
-                                       bad_secret, pool, pool));
+                                       fetch_secret, (void *)bad_secret,
+                                       pool, pool));
   err = svn_auth__store_open(auth_store, FALSE, pool);
   if (! err)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,

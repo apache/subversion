@@ -463,17 +463,23 @@ svn_error_t *
 svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
                              const char *auth_store_path,
                              svn_crypto__ctx_t *crypto_ctx,
-                             const svn_string_t *secret,
+                             svn_auth__master_passphrase_fetch_t secret_func,
+                             void *secret_baton,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+  const svn_string_t *secret;
   svn_auth__store_t *auth_store;
   pathetic_auth_store_baton_t *pathetic_store;
+
+  SVN_ERR_ASSERT(secret_func);
 
   if (! svn_crypto__is_available())
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Encrypted auth store feature not available"));
 
+  SVN_ERR(secret_func(&secret, secret_baton, result_pool, scratch_pool));
+    
   pathetic_store = apr_pcalloc(result_pool, sizeof(*pathetic_store));
   pathetic_store->pool = result_pool;
   pathetic_store->path = apr_pstrdup(result_pool, auth_store_path);
