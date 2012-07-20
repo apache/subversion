@@ -63,6 +63,11 @@ typedef struct pathetic_auth_store_baton_t
   /* Cryptographic context. */
   svn_crypto__ctx_t *crypto_ctx;
 
+  /* Callback/baton for fetching the master passphrase (aka crypto
+     secret). */
+  svn_auth__master_passphrase_fetch_t secret_func;
+  void *secret_baton;
+
   /* Crypto secret (may be NULL if not yet provided). */
   const svn_string_t *secret;
 
@@ -351,6 +356,11 @@ pathetic_store_open(void *baton,
   svn_skel_t *cipher_skel, *iv_skel, *salt_skel, *check_skel;
   svn_boolean_t valid_secret;
 
+  SVN_ERR(auth_store->secret_func(&(auth_store->secret),
+                                  auth_store->secret_baton,
+                                  auth_store->pool,
+                                  scratch_pool));
+
   err = read_auth_store(auth_store, scratch_pool);
   if (err)
     {
@@ -468,7 +478,6 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  const svn_string_t *secret;
   svn_auth__store_t *auth_store;
   pathetic_auth_store_baton_t *pathetic_store;
 
@@ -478,13 +487,12 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Encrypted auth store feature not available"));
 
-  SVN_ERR(secret_func(&secret, secret_baton, result_pool, scratch_pool));
-    
   pathetic_store = apr_pcalloc(result_pool, sizeof(*pathetic_store));
   pathetic_store->pool = result_pool;
   pathetic_store->path = apr_pstrdup(result_pool, auth_store_path);
   pathetic_store->crypto_ctx = crypto_ctx;
-  pathetic_store->secret = svn_string_dup(secret, result_pool);
+  pathetic_store->secret_func = secret_func;
+  pathetic_store->secret_baton = secret_baton;
 
   SVN_ERR(svn_auth__store_create(&auth_store, result_pool));
   SVN_ERR(svn_auth__store_set_baton(auth_store, pathetic_store));
