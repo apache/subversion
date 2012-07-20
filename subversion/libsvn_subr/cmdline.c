@@ -52,6 +52,9 @@
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
+#include "config_impl.h"
+#include "crypto.h"
+#include "auth_store.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
@@ -443,19 +446,95 @@ ssl_trust_unknown_server_cert
   return SVN_NO_ERROR;
 }
 
+
+/* Implements `svn_auth__master_passphrase_fetch_t' */
 static svn_error_t *
-get_old_auth_providers(apr_array_header_t **providers_p,
-                       svn_boolean_t non_interactive,
-                       const char *config_dir,
-                       svn_boolean_t trust_server_cert,
-                       svn_config_t *cfg,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *pool)
+fetch_nonsecret_secret(const svn_string_t **secret,
+                       void *baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *providers;
+  *secret = svn_string_create("2secretive4u", result_pool);
+  return SVN_NO_ERROR;
+}
+
+
+/* APR pool cleanup handler which closes an auth_store. */
+static apr_status_t
+cleanup_auth_store_close(void *arg)
+{
+  svn_auth__store_t *auth_store = arg;
+  svn_auth__store_close(auth_store, NULL); /* ### FIXME: NULL pool? Uncool. */
+  return 0;
+}
+
+
+/* Instantiate and open an auth store. */
+static svn_error_t *
+open_auth_store(svn_auth__store_t **auth_store_p,
+                const char *config_dir,
+                svn_boolean_t use_master_password,
+                apr_pool_t *pool)
+{
+  svn_auth__store_t *auth_store;
+
+  if (use_master_password)
+    {
+      svn_crypto__ctx_t *crypto_ctx;
+      const char *auth_config_path;
+
+      SVN_ERR(svn_config_get_user_config_path(&auth_config_path, config_dir,
+                                              SVN_CONFIG__AUTH_SUBDIR, pool));
+      SVN_ERR(svn_crypto__context_create(&crypto_ctx, pool));
+      SVN_ERR(svn_auth__pathetic_store_get(&auth_store,
+                                           svn_path_join(auth_config_path,
+                                                         "pathetic.db",
+                                                         pool),
+                                           crypto_ctx,
+                                           fetch_nonsecret_secret,
+                                           NULL, pool, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_auth__config_store_get(&auth_store, config_dir, pool, pool));
+    }
+
+  apr_pool_cleanup_register(pool, auth_store, cleanup_auth_store_close,
+                            apr_pool_cleanup_null);
+  
+  SVN_ERR(svn_auth__store_open(auth_store, TRUE, pool));
+  *auth_store_p = auth_store;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  svn_boolean_t store_password_val = TRUE;
+  svn_boolean_t store_auth_creds_val = TRUE;
+  svn_boolean_t use_master_password = FALSE;
   svn_auth_provider_object_t *provider;
+  svn_auth__store_t *auth_store;
   svn_cmdline_prompt_baton2_t *pb = NULL;
+
+  /* The whole list of registered providers */
+  apr_array_header_t *providers;
+
+  SVN_ERR(svn_config_get_bool(cfg, &use_master_password,
+                              SVN_CONFIG_SECTION_AUTH,
+                              SVN_CONFIG_OPTION_USE_MASTER_PASSWORD,
+                              FALSE));
 
   /* Populate the registered providers with the platform-specific providers */
   SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
@@ -554,47 +633,6 @@ get_old_auth_providers(apr_array_header_t **providers_p,
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
-  *providers_p = providers;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
-{
-  svn_boolean_t store_password_val = TRUE;
-  svn_boolean_t store_auth_creds_val = TRUE;
-  svn_boolean_t use_master_password;
-
-  /* The whole list of registered providers */
-  apr_array_header_t *providers;
-
-  SVN_ERR(svn_config_get_bool(cfg, &use_master_password,
-                              SVN_CONFIG_SECTION_AUTH,
-                              SVN_CONFIG_OPTION_USE_MASTER_PASSWORD,
-                              FALSE));
-
-  if (use_master_password)
-    {
-      providers = apr_array_make(pool, 1,
-                                 sizeof(svn_auth_provider_object_t *));
-    }
-  else
-    {
-      SVN_ERR(get_old_auth_providers(&providers, non_interactive,
-                                     config_dir, trust_server_cert, cfg,
-                                     cancel_func, cancel_baton, pool));
-    }
-
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open(ab, providers, pool);
 
@@ -606,6 +644,10 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   if (auth_password)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                            auth_password);
+
+  /* Open the appropriate auth store, and cache it in the auth baton. */
+  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password, pool));
+  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);
 
   /* Same with the --non-interactive option. */
   if (non_interactive)
