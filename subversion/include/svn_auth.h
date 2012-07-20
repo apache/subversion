@@ -688,6 +688,13 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * ~/.subversion. */
 #define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
 
+/** @brief A pointer to the svn_auth__store_t object used to get/set
+ * cached authentication credentials.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_AUTH_PARAM_AUTH_STORE SVN_AUTH_PARAM_PREFIX "auth-store"
+
 /** Get an initial set of credentials.
  *
  * Ask @a auth_baton to set @a *credentials to a set of credentials

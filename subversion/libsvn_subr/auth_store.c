@@ -323,3 +323,30 @@ svn_auth__store_set_simple_creds(svn_boolean_t *stored,
                                         cred_hash, scratch_pool));
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_auth__get_store_from_parameters(svn_auth__store_t **auth_store,
+                                    apr_hash_t *parameters,
+                                    apr_pool_t *pool)
+{
+  *auth_store = apr_hash_get(parameters,
+                             SVN_AUTH_PARAM_AUTH_STORE,
+                             APR_HASH_KEY_STRING);
+  if (! *auth_store)
+    {
+      const char *config_dir = apr_hash_get(parameters,
+                                            SVN_AUTH_PARAM_CONFIG_DIR,
+                                            APR_HASH_KEY_STRING);
+      SVN_ERR(svn_auth__config_store_get(auth_store, config_dir,
+                                         apr_hash_pool_get(parameters),
+                                         pool));
+      SVN_ERR(svn_auth__store_open(*auth_store, FALSE, pool));
+      apr_hash_set(parameters,
+                   SVN_AUTH_PARAM_AUTH_STORE,
+                   APR_HASH_KEY_STRING,
+                   auth_store);
+    }
+  
+  return SVN_NO_ERROR;
+}

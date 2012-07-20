@@ -33,6 +33,7 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_user.h"
+#include "auth_store.h"
 
 #include "private/svn_auth_private.h"
 
@@ -138,9 +139,6 @@ svn_auth__simple_creds_cache_get(void **credentials,
                                  const char *passtype,
                                  apr_pool_t *pool)
 {
-  const char *config_dir = apr_hash_get(parameters,
-                                        SVN_AUTH_PARAM_CONFIG_DIR,
-                                        APR_HASH_KEY_STRING);
   svn_config_t *cfg = apr_hash_get(parameters,
                                    SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                    APR_HASH_KEY_STRING);
@@ -165,14 +163,18 @@ svn_auth__simple_creds_cache_get(void **credentials,
   apr_hash_t *creds_hash = NULL;
   svn_error_t *err;
   svn_string_t *str;
-
-  /* Try to load credentials from a file on disk, based on the
+  svn_auth__store_t *auth_store;
+ 
+  /* Try to load credentials from the store, based on the
      realmstring.  Don't throw an error, though: if something went
-     wrong reading the file, no big deal.  What really matters is that
+     wrong reading the store, no big deal.  What really matters is that
      we failed to get the creds, so allow the auth system to try the
      next provider. */
-  err = svn_config_read_auth_data(&creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                  realmstring, config_dir, pool);
+  err = svn_auth__get_store_from_parameters(&auth_store, parameters, pool);
+  if (! err)
+    err = svn_auth__store_get_cred_hash(&creds_hash, auth_store,
+                                        SVN_AUTH_CRED_SIMPLE,
+                                        realmstring, pool, pool);
   if (err)
     {
       svn_error_clear(err);
@@ -313,6 +315,7 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *err;
+  svn_auth__store_t *auth_store;
   svn_boolean_t dont_store_passwords =
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
@@ -473,8 +476,15 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
     }
 
   /* Save credentials to disk. */
-  err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                   realmstring, config_dir, pool);
+  err = svn_auth__get_store_from_parameters(&auth_store, parameters, pool);
+  if (! err)
+    {
+      svn_boolean_t stored;
+
+      err = svn_auth__store_set_cred_hash(&stored, auth_store,
+                                          SVN_AUTH_CRED_SIMPLE,
+                                          realmstring, creds_hash, pool);
+    }
   svn_error_clear(err);
 
   return SVN_NO_ERROR;
@@ -592,15 +602,17 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
       /* No default username?  Try the auth cache. */
       if (! default_username)
         {
-          const char *config_dir = apr_hash_get(parameters,
-                                                SVN_AUTH_PARAM_CONFIG_DIR,
-                                                APR_HASH_KEY_STRING);
           apr_hash_t *creds_hash = NULL;
           svn_string_t *str;
           svn_error_t *err;
+          svn_auth__store_t *auth_store;
 
-          err = svn_config_read_auth_data(&creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                          realmstring, config_dir, pool);
+          err = svn_auth__get_store_from_parameters(&auth_store, parameters,
+                                                    pool);
+          if (! err)
+            err = svn_auth__store_get_cred_hash(&creds_hash, auth_store,
+                                                SVN_AUTH_CRED_SIMPLE,
+                                                realmstring, pool, pool);
           svn_error_clear(err);
           if (! err && creds_hash)
             {

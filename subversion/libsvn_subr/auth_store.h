@@ -250,6 +250,9 @@ svn_auth__config_store_get(svn_auth__store_t **auth_store_p,
 
 
 
+
+/*** Store Functionality ***/
+
 /* Set *CREDS_P to the "username" credentials from AUTH_STORE which
    match REALMSTRING, if any.
 
@@ -302,6 +305,18 @@ svn_auth__store_set_simple_creds(svn_boolean_t *stored,
                                  const char *realmstring,
                                  svn_auth_cred_simple_t *creds,
                                  apr_pool_t *scratch_pool);
+
+
+
+/*** Convenience/compatibility functions ***/
+
+/* Set *AUTH_STORE to the authentication store object found in
+   PARAMETERS, if any; otherwise, open a config-based store, cache it
+   in PARAMETERS, and return it. */
+svn_error_t *
+svn_auth__get_store_from_parameters(svn_auth__store_t **auth_store,
+                                    apr_hash_t *parameters,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

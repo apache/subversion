@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_string.h"
+#include "auth_store.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -58,19 +59,18 @@ ssl_server_trust_file_first_credentials(void **credentials,
                  SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                  APR_HASH_KEY_STRING);
   apr_hash_t *creds_hash = NULL;
-  const char *config_dir;
+  svn_auth__store_t *auth_store;
   svn_error_t *error = SVN_NO_ERROR;
 
   *credentials = NULL;
   *iter_baton = NULL;
 
   /* Check if this is a permanently accepted certificate */
-  config_dir = apr_hash_get(parameters,
-                            SVN_AUTH_PARAM_CONFIG_DIR,
-                            APR_HASH_KEY_STRING);
-  error =
-    svn_config_read_auth_data(&creds_hash, SVN_AUTH_CRED_SSL_SERVER_TRUST,
-                              realmstring, config_dir, pool);
+  error = svn_auth__get_store_from_parameters(&auth_store, parameters, pool);
+  if (! error)
+    error = svn_auth__store_get_cred_hash(&creds_hash, auth_store,
+                                          SVN_AUTH_CRED_SSL_SERVER_TRUST,
+                                          realmstring, pool, pool);
   svn_error_clear(error);
   if (! error && creds_hash)
     {
@@ -126,14 +126,10 @@ ssl_server_trust_file_save_credentials(svn_boolean_t *saved,
   svn_auth_cred_ssl_server_trust_t *creds = credentials;
   const svn_auth_ssl_server_cert_info_t *cert_info;
   apr_hash_t *creds_hash = NULL;
-  const char *config_dir;
+  svn_auth__store_t *auth_store;
 
   if (! creds->may_save)
     return SVN_NO_ERROR;
-
-  config_dir = apr_hash_get(parameters,
-                            SVN_AUTH_PARAM_CONFIG_DIR,
-                            APR_HASH_KEY_STRING);
 
   cert_info = apr_hash_get(parameters,
                            SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
@@ -146,12 +142,10 @@ ssl_server_trust_file_save_credentials(svn_boolean_t *saved,
                svn_string_createf(pool, "%lu", (unsigned long)
                                   creds->accepted_failures));
 
-  SVN_ERR(svn_config_write_auth_data(creds_hash,
-                                     SVN_AUTH_CRED_SSL_SERVER_TRUST,
-                                     realmstring,
-                                     config_dir,
-                                     pool));
-  *saved = TRUE;
+  SVN_ERR(svn_auth__get_store_from_parameters(&auth_store, parameters, pool));
+  SVN_ERR(svn_auth__store_set_cred_hash(saved, auth_store,
+                                        SVN_AUTH_CRED_SSL_SERVER_TRUST,
+                                        realmstring, creds_hash, pool));
   return SVN_NO_ERROR;
 }
 

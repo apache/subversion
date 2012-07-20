@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_string.h"
+#include "auth_store.h"
 
 #include "private/svn_auth_private.h"
 
@@ -130,14 +131,14 @@ svn_auth__ssl_client_cert_pw_cache_get(void **credentials_p,
     {
       svn_error_t *err;
       apr_hash_t *creds_hash = NULL;
-      const char *config_dir = apr_hash_get(parameters,
-                                            SVN_AUTH_PARAM_CONFIG_DIR,
-                                            APR_HASH_KEY_STRING);
+      svn_auth__store_t *auth_store;
 
       /* Try to load passphrase from the auth/ cache. */
-      err = svn_config_read_auth_data(&creds_hash,
-                                      SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                      realmstring, config_dir, pool);
+      err = svn_auth__get_store_from_parameters(&auth_store, parameters, pool);
+      if (! err)
+        err = svn_auth__store_get_cred_hash(&creds_hash, auth_store,
+                                            SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                            realmstring, pool, pool);
       svn_error_clear(err);
       if (! err && creds_hash)
         {
@@ -176,7 +177,6 @@ svn_auth__ssl_client_cert_pw_cache_set(svn_boolean_t *saved,
 {
   svn_auth_cred_ssl_client_cert_pw_t *creds = credentials;
   apr_hash_t *creds_hash = NULL;
-  const char *config_dir;
   svn_error_t *err;
   svn_boolean_t dont_store_passphrase =
     apr_hash_get(parameters,
@@ -195,9 +195,6 @@ svn_auth__ssl_client_cert_pw_cache_set(svn_boolean_t *saved,
   if (no_auth_cache)
     return SVN_NO_ERROR;
 
-  config_dir = apr_hash_get(parameters,
-                            SVN_AUTH_PARAM_CONFIG_DIR,
-                            APR_HASH_KEY_STRING);
   creds_hash = apr_hash_make(pool);
 
   /* Don't store passphrase in any form if the user has told
@@ -311,6 +308,8 @@ svn_auth__ssl_client_cert_pw_cache_set(svn_boolean_t *saved,
 
       if (may_save_passphrase)
         {
+          svn_auth__store_t *auth_store;
+
           SVN_ERR(passphrase_set(saved, creds_hash, realmstring,
                                  NULL, creds->password, parameters,
                                  non_interactive, pool));
@@ -323,11 +322,15 @@ svn_auth__ssl_client_cert_pw_cache_set(svn_boolean_t *saved,
             }
 
           /* Save credentials to disk. */
-          err = svn_config_write_auth_data(creds_hash,
-                                           SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                           realmstring, config_dir, pool);
+          err = svn_auth__get_store_from_parameters(&auth_store, parameters,
+                                                    pool);
+          if (! err)
+            {
+              err = svn_auth__store_set_cred_hash(
+                        saved, auth_store, SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                        realmstring, creds_hash, pool);
+            }
           svn_error_clear(err);
-          *saved = ! err;
         }
     }
 
