@@ -4973,9 +4973,8 @@ msgid "Creating pre-revprop-change hook"
 msgstr "Erzeuge Aktion »pre-revprop-change«"
 
 #: ../libsvn_repos/repos.c:618
-#, fuzzy
 msgid "Creating pre-obliterate hook"
-msgstr "Erzeuge Aktion »pre-commit«"
+msgstr "Erzeuge Aktion »pre-obliterate«"
 
 #: ../libsvn_repos/repos.c:846
 msgid "Creating post-commit hook"
@@ -4986,9 +4985,8 @@ msgid "Creating post-revprop-change hook"
 msgstr "Erzeuge Aktion »post-revprop-change«"
 
 #: ../libsvn_repos/repos.c:1090
-#, fuzzy
 msgid "Creating post-obliterate hook"
-msgstr "Erzeuge Aktion »post-commit«"
+msgstr "Erzeuge Aktion »post-obliterate«"
 
 #: ../libsvn_repos/repos.c:1100
 msgid "Creating conf directory"
@@ -7142,14 +7140,14 @@ msgid "Error restoring text for '%s'"
 msgstr "Fehler beim Wiederherstellen des Textes für »%s«"
 
 #: ../libsvn_wc/workqueue.c:1294
-#, fuzzy, c-format
+#, c-format
 msgid "Error processing post-commit work for '%s'"
-msgstr "Fehler beim Bearbeiten des Befehls »%s« in »%s«"
+msgstr "Fehler beim Verarbeiten der Arbeitsschritte nach Übertragung für »%s«"
 
 #: ../libsvn_wc/workqueue.c:2213
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized work item in the queue associated with '%s'"
-msgstr "Unbekannter Revisionstyp für »%s« angefragt"
+msgstr "Unbekannter Arbeitsschritt in Warteschlange von »%s« "
 
 #: ../svn/blame-cmd.c:302 ../svn/list-cmd.c:232
 msgid "'verbose' option invalid in XML mode"
@@ -7177,7 +7175,7 @@ msgstr "»%s« scheint keine URL zu sein"
 #: ../svn/commit-cmd.c:107
 #, c-format
 msgid "svn: warning: The depth of this commit is '%s', but copied directories will regardless be committed with depth '%s'. You must remove unwanted children of those directories in a separate commit.\n"
-msgstr ""
+msgstr "svn: Warnung: Die Tiefe dieser Übertragung ist »%s«, jedoch werden kopierte Verzeichnisse dennoch mit Tiefe »%s« übertragen. Sie müssen nicht gewollte Kinder dieser Verzeichnisse in einer gesonderten Übertragung entfernen.\n"
 
 #: ../svn/conflict-callbacks.c:158
 msgid "||||||| ORIGINAL"
@@ -7381,14 +7379,13 @@ msgstr ""
 "Ungültige Option; es gibt keine zusammengeführte Version zum Vergleichen.\n"
 "\n"
 
-# CHECKME: proper English?
 #: ../svn/conflict-callbacks.c:651
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option; cannot resolve property conflicts with an external merge tool.\n"
 "\n"
 msgstr ""
-"Ungültige Option; Auswahl anhand von Konflikten ist in einer Binärdatei nicht möglich.\n"
+"Ungültige Option; kann Konflikte in Eigenschaften nicht mit externem Werkzeug zum Zusammenführen auflösen\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:666 ../svn/conflict-callbacks.c:680
@@ -7934,11 +7931,8 @@ msgstr ""
 "                             übergeben"
 
 #: ../svn/main.c:210
-#, fuzzy
 msgid "limit operation by depth ARG ('empty', 'files',\n"
-msgstr ""
-"begrenzt Operation durch Tiefe PAR (»empty«,\n"
-"                            »files«, »immediates« oder »infinity«)"
+msgstr "begrenzt Operation durch Tiefe PAR (»empty«, »files«,\n"
 
 #: ../svn/main.c:214
 msgid "set new working copy depth to ARG ('exclude',\n"
@@ -8038,11 +8032,8 @@ msgstr ""
 "                             PAR lesen"
 
 #: ../svn/main.c:254
-#, fuzzy
 msgid "set user configuration option in the format:\n"
-msgstr ""
-"Benutzerkonfigurationsdateien aus dem Verzeichnis\n"
-"                             PAR lesen"
+msgstr "Konfigurationsoption in diesem Format setzen:\n"
 
 #: ../svn/main.c:261
 msgid "enable automatic properties"
@@ -8203,7 +8194,6 @@ msgstr ""
 "  Falls angegeben, bestimmt REV, in welcher Revision zuerst nachgeschaut wird.\n"
 
 #: ../svn/main.c:433
-#, fuzzy
 msgid ""
 "Associate (or dissociate) changelist CLNAME with the named files.\n"
 "usage: 1. changelist CLNAME PATH...\n"
@@ -8211,8 +8201,8 @@ msgid ""
 msgstr ""
 "Verknüpft Änderungsliste CLNAME (oder löst diese Verknüpfung)\n"
 "mit den angegebenen Dateien.\n"
-"Aufruf: 1. changelist CLNAME ZIEL...\n"
-"        2. changelist --remove ZIEL...\n"
+"Aufruf: 1. changelist CLNAME PFAD...\n"
+"        2. changelist --remove PFAD...\n"
 
 #: ../svn/main.c:439
 msgid ""
@@ -8265,7 +8255,6 @@ msgstr ""
 "  die die durchgeführte Aktion beschreiben.\n"
 
 #: ../svn/main.c:466
-#, fuzzy
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -8273,7 +8262,7 @@ msgid ""
 msgstr ""
 "Räumt die Arbeitskopie rekursiv auf, gibt Sperren frei,\n"
 "nimmt unvollständige Operationen wieder auf, usw.\n"
-"Aufruf: cleanup [PFAD...]\n"
+"Aufruf: cleanup [AKPFAD...]\n"
 
 #: ../svn/main.c:472
 msgid ""
@@ -8340,7 +8329,6 @@ msgstr ""
 "von der Quelle der Kopie in das Ziel weiterzureichen.\n"
 
 #: ../svn/main.c:505
-#, fuzzy
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -8356,8 +8344,7 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"Entfernt Dateien und Verzeichnisse aus der\n"
-"Versionskontrolle.\n"
+"Entfernt Dateien und Verzeichnisse aus der Versionskontrolle.\n"
 "Aufruf: 1. delete PFAD...\n"
 "        2. delete URL...\n"
 "\n"
@@ -8367,10 +8354,10 @@ msgstr ""
 "     die Option --keep-local wurde angegeben.\n"
 "     PFAD(e), die nicht versioniert oder geändert sind, bzw.\n"
 "     entsprechende Einträge enthalten, werden nur gelöscht, wenn\n"
-"     die Option »--force« angegeben wird.\n"
+"     die Optionen --force oder --keep-local angegeben wird.\n"
 "\n"
-"  2. Jede URL wird mittels einer sofortigen Übertragung aus dem\n"
-"     Projektarchiv entfernt.\n"
+"  2. Jedes mit einer URL angegebene Element wird mittels sofortiger\n"
+"     Übertragung aus dem Projektarchiv entfernt.\n"
 
 #: ../svn/main.c:521
 msgid ""
@@ -9564,6 +9551,8 @@ msgid ""
 "Upgrade the metadata storage format for a working copy.\n"
 "usage: upgrade WCPATH...\n"
 msgstr ""
+"Überführt die Metadaten einer Arbeitskopie in ein neues Speicherformat\n"
+"Aufruf: upgrade AKPATH...\n"
 
 #: ../svn/main.c:1221 ../svnadmin/main.c:86 ../svnlook/main.c:354
 #: ../svnsync/main.c:263
@@ -9585,7 +9574,7 @@ msgstr "-c kann nicht mit --old verwendet werden"
 #: ../svn/main.c:1391
 #, c-format
 msgid "Negative number in range (%s) not supported with -c"
-msgstr ""
+msgstr "Negative Zahl im Bereich (%s) ist mit -c nicht unterstützt"
 
 #: ../svn/main.c:1404
 #, c-format
@@ -9855,42 +9844,42 @@ msgstr "Konflikt von »%s« aufgelöst\n"
 #: ../svn/notify.c:320 ../svn/notify.c:360
 #, c-format
 msgid ">         applied hunk ## -%lu,%lu +%lu,%lu ## with offset %s"
-msgstr ""
+msgstr ">         Abschnitt ## -%lu,%lu +%lu,%lu ## mit Versatz %s angewandt"
 
 #: ../svn/notify.c:337 ../svn/notify.c:374
 #, c-format
 msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with offset %s"
-msgstr ""
+msgstr ">         Abschnitt @@ -%lu,%lu +%lu,%lu @@ mit Versatz %s angewandt"
 
 #: ../svn/notify.c:395
 #, c-format
 msgid ">         applied hunk ## -%lu,%lu +%lu,%lu ## with fuzz %d (%s)\n"
-msgstr ""
+msgstr ">         Abschnitt ## -%lu,%lu +%lu,%lu ## mit Unschärfe %d (%s) angewandt\n"
 
 #: ../svn/notify.c:405
 #, c-format
 msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with fuzz %d\n"
-msgstr ""
+msgstr ">         Abschnitt @@ -%lu,%lu +%lu,%lu @@ mit Unschärfe %d angewandt\n"
 
 #: ../svn/notify.c:423
 #, c-format
 msgid ">         rejected hunk ## -%lu,%lu +%lu,%lu ## (%s)\n"
-msgstr ""
+msgstr ">         Abschnitt ## -%lu,%lu +%lu,%lu ## (%s) zurückgewiesen\n"
 
 #: ../svn/notify.c:432
 #, c-format
 msgid ">         rejected hunk @@ -%lu,%lu +%lu,%lu @@\n"
-msgstr ""
+msgstr ">         Abschnitt @@ -%lu,%lu +%lu,%lu @@ zurückgewiesen\n"
 
 #: ../svn/notify.c:446
 #, c-format
 msgid ">         hunk ## -%lu,%lu +%lu,%lu ## already applied (%s)\n"
-msgstr ""
+msgstr ">         Abschnitt ## -%lu,%lu +%lu,%lu ## bereits angewandt (%s)\n"
 
 #: ../svn/notify.c:456
 #, c-format
 msgid ">         hunk @@ -%lu,%lu +%lu,%lu @@ already applied\n"
-msgstr ""
+msgstr ">         Abschnitt @@ -%lu,%lu +%lu,%lu @@ bereits angewandt\n"
 
 #  Currently this is used for checkouts and switches too.  If we
 #  want different output, we'll have to add new actions.
@@ -10157,7 +10146,7 @@ msgstr "Ziel muss die Revision als Zahl angegeben"
 
 #: ../svn/obliterate-cmd.c:119
 msgid "Target must specify a URL"
-msgstr ""
+msgstr "Ziel muss eine URL angeben"
 
 #: ../svn/propdel-cmd.c:117
 #, c-format
@@ -10303,7 +10292,7 @@ msgstr "hinzugefügt"
 
 #: ../svn/tree-conflicts.c:41 ../svn/tree-conflicts.c:63
 msgid "replace"
-msgstr ""
+msgstr "ersetzt"
 
 #: ../svn/tree-conflicts.c:60
 msgid "missing"
@@ -11154,7 +11143,7 @@ msgstr "Filterstatistik nicht anzeigen."
 
 #: ../svndumpfilter/main.c:926
 msgid "Treat the path prefixes as file glob patterns."
-msgstr ""
+msgstr "Pfadpräfix als Dateiplatzhalter behandeln."
 
 #: ../svndumpfilter/main.c:928
 msgid "Remove revisions emptied by filtering."
@@ -11754,7 +11743,7 @@ msgstr "Versuchen Sie »svnlook help« für weitere Informationen"
 
 #: ../svnrdump/load_editor.c:97 ../svnsync/main.c:351
 msgid "Target server does not support atomic revision property edits; consider upgrading it to 1.7 or using an external locking program"
-msgstr ""
+msgstr "Zielserver unterstützt keine atomaren Änderungen von Revisionseigenschaften; Verwenden Sie entweder 1.7 oder ein externes Programm zum Sperren."
 
 #: ../svnrdump/load_editor.c:106 ../svnsync/main.c:360
 #, c-format
@@ -11775,7 +11764,7 @@ msgstr "Konnte Sperre für Zielprojektarchiv nach %d Versuchen nicht erhalten"
 
 #: ../svnrdump/load_editor.c:684
 msgid "\"svnrdump load\"'s lock was stolen; can't remove it"
-msgstr ""
+msgstr "Die Sperre von »svnrump load« wurde gestohlen und konnte nicht entfernt werden"
 
 #: ../svnrdump/svnrdump.c:58
 msgid ""
@@ -11784,6 +11773,10 @@ msgid ""
 "Dump revisions LOWER to UPPER of repository at remote URL to stdout in a 'dumpfile' portable format.\n"
 "If only LOWER is given, dump that one revision.\n"
 msgstr ""
+"Aufruf: svnrdump dump URL [-r VON[:BIS]]\n"
+"\n"
+"Gibt einen Abzug der Revisionen VON:BIS eines Projektarchivs an der entferten URL in einem portablen »Dump«-Format aus.\n"
+"Falls nur VON angegeben wurde, wird nur diese Revision ausgegeben.\n"
 
 #: ../svnrdump/svnrdump.c:64
 msgid ""
@@ -11791,6 +11784,9 @@ msgid ""
 "\n"
 "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"
 msgstr ""
+"Aufruf: svnrdump load URL\n"
+"\n"
+"Liest einen Datenstrom im »Dump«-Format von der Standardeingabe in ein Projektarchive an entfertner URL.\n"
 
 #: ../svnrdump/svnrdump.c:69
 msgid ""
@@ -11839,7 +11835,7 @@ msgstr "Revision %ld existiert nicht.\n"
 #: ../svnrdump/svnrdump.c:592
 #, c-format
 msgid "LOWER cannot be greater than UPPER.\n"
-msgstr ""
+msgstr "VON kann nicht größer als BIS sein.\n"
 
 #: ../svnserve/cyrus_auth.c:264
 #, c-format
@@ -11928,6 +11924,11 @@ msgid ""
 "                             at the same time is not supported in daemon mode.\n"
 "                             Use inetd mode or tunnel mode if you need this.]"
 msgstr ""
+"Bevorzuge IPv6 beim Auflösen des abzuhörenden Rechnernamens\n"
+"                             [IPv4 ist als bevorzugt vorgegeben. Gleichzeitige\n"
+"                             Verwendung von IPv4 und IPv6 ist im Daemon-Modus\n"
+"                             nicht unterstützt. Verwenden Sie bei Bedarf inetd\n"
+"                             oder den Tunnel-Modus."
 
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
