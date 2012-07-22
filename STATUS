@@ -110,16 +110,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1352068
-   Do not use non-constant initializers in struct variables, since this
-   violates C'89 and C'90.
-   Justification:
-     Fixes compatibility with SunPRO compiler.
-   Branch: 1.7.x-r1352068
-     (just omits the changes where they are not
-     applicable in 1.7.x, in three source files)
-   Notes:
-     r1352080 is an optional white-space follow-up.
-   Votes:
-     +1: julianfoad, rhuijben, cmpilato
-
