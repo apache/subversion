@@ -258,7 +258,6 @@ svn_opt_subcommand_t
   svn_cl__blame,
   svn_cl__cat,
   svn_cl__changelist,
-  svn_cl__changepassword,
   svn_cl__checkout,
   svn_cl__cleanup,
   svn_cl__commit,

@@ -213,63 +213,6 @@ svn_auth__ssl_client_cert_pw_set(svn_boolean_t *done,
                                  svn_boolean_t non_interactive,
                                  apr_pool_t *pool);
 
-
-/*** Master Passphrase ***/
-
-/** The master passphrase "provider" vtable. */
-typedef struct svn_auth__masterpass_provider_t
-{
-   /* Set *PASSPHRASE to the value of the Subversion master passphrase
-      hash digest string.  If NON_INTERACTIVE is set, do not prompt
-      the user.  Set *DONE to TRUE if the passphrase is successfully
-      fetched; to FALSE otherwise. */
-  svn_error_t *
-  (*svn_auth__masterpass_fetch_t)(const char **passphrase,
-                                  svn_boolean_t non_interactive,
-                                  void *provider_baton,
-                                  apr_pool_t *pool);
-
-   /* Store PASSPHRASE as the value of the Subversion master
-      passphrase hash digest string.  If NON_INTERACTIVE is set, do
-      not prompt the user.  Set *DONE to TRUE if the passphrase is
-      successfully stored; to FALSE otherwise. */
-  svn_error_t *
-  (*svn_auth__masterpass_store_t)(const char *passphrase,
-                                  svn_boolean_t non_interactive,
-                                  void *provider_baton,
-                                  apr_pool_t *pool);
-
-} svn_auth__masterpass_provider_t;
-
-/** A master passphrase provider object and baton. */
-typedef struct svn__auth_masterpass_provider_object_t
-{
-  const svn_auth__masterpass_provider_t *vtable;
-  void *provider_baton;
-
-} svn_auth__masterpass_provider_object_t;
-
-/** The type of function returning a master passphrase provider. */
-typedef void (*svn_auth__masterpass_provider_func_t)(
-    svn_auth__masterpass_provider_object_t **provider,
-    apr_pool_t *pool);
-
-/* Set *PROVIDERS to an array of svn_auth_provider_object_t's
-   appropriate for the client platform and which honor the allowed
-   providers specified in CONFIG.  Allocate providers from POOL.  */
-svn_error_t *
-svn_auth__get_masterpass_providers(apr_array_header_t **providers,
-                                   svn_config_t *config,
-                                   apr_pool_t *pool);
-
-#if !defined(WIN32)
-/* Set *PROVIDER to a master passphrase provider which uses the GPG
-   Agent for storage/retrieval.  */
-void svn_auth__get_gpg_agent_masterpass_provider(
-    svn_auth__masterpass_provider_object_t **provider,
-    apr_pool_t *pool);
-#endif /* !defined(WIN32) */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

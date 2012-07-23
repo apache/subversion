@@ -33,7 +33,6 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 #include "svn_dso.h"
-#include "svn_base64.h"
 #include "svn_version.h"
 
 /* AN OVERVIEW

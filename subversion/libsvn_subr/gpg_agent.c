@@ -152,29 +152,17 @@ send_option(int sd, char *buf, size_t n, const char *option, const char *value,
   return (strncmp(buf, "OK", 2) == 0);
 }
 
-/* Create the CACHE_ID which will be generated based on REALMSTRING
-   (similar to other password caching mechanisms). */
-static const char *
-cacheid_from_realmstring(const char *realmstring,
-                         apr_pool_t *pool)
-{
-  svn_checksum_t *digest = svn_checksum_create(svn_checksum_md5, pool);
-  svn_checksum(&digest, svn_checksum_md5, realmstring,
-               strlen(realmstring), pool);
-  return svn_checksum_to_cstring(digest, pool);
-}
-
-
 /* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
 static svn_error_t *
-password_get_gpg_agent_helper(svn_boolean_t *done,
-                              const char **password,
-                              const char *password_prompt,
-                              const char *realm_prompt,
-                              const char *cache_id,
-                              svn_boolean_t non_interactive,
-                              apr_pool_t *pool)
+password_get_gpg_agent(svn_boolean_t *done,
+                       const char **password,
+                       apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       apr_hash_t *parameters,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
 {
   int sd;
   char *gpg_agent_info = NULL;
@@ -184,12 +172,16 @@ password_get_gpg_agent_helper(svn_boolean_t *done,
 
   apr_array_header_t *socket_details;
   const char *request = NULL;
+  const char *cache_id = NULL;
   struct sockaddr_un addr;
   const char *tty_name;
   const char *tty_type;
   const char *lc_ctype;
   const char *display;
   const char *socket_name = NULL;
+  svn_checksum_t *digest = NULL;
+  char *password_prompt;
+  char *realm_prompt;
 
   *done = FALSE;
 
@@ -338,11 +330,23 @@ password_get_gpg_agent_helper(svn_boolean_t *done,
         }
     }
 
+  /* Create the CACHE_ID which will be generated based on REALMSTRING similar
+     to other password caching mechanisms. */
+  digest = svn_checksum_create(svn_checksum_md5, pool);
+  svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
+               pool);
+  cache_id = svn_checksum_to_cstring(digest, pool);
+
+  password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
+  realm_prompt = apr_psprintf(pool, _("Enter your Subversion password for %s"),
+                              realmstring);
   request = apr_psprintf(pool,
                          "GET_PASSPHRASE --data %s--repeat=1 "
                          "%s X %s %s\n",
                          non_interactive ? "--no-ask " : "",
-                         cache_id, password_prompt, realm_prompt);
+                         cache_id,
+                         escape_blanks(password_prompt),
+                         escape_blanks(realm_prompt));
 
   if (write(sd, request, strlen(request)) == -1)
     {
@@ -377,35 +381,6 @@ password_get_gpg_agent_helper(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
-
-/* Implementation of svn_auth__password_get_t that retrieves the password
-   from gpg-agent */
-static svn_error_t *
-password_get_gpg_agent(svn_boolean_t *done,
-                       const char **password,
-                       apr_hash_t *creds,
-                       const char *realmstring,
-                       const char *username,
-                       apr_hash_t *parameters,
-                       svn_boolean_t non_interactive,
-                       apr_pool_t *pool)
-{
-  const char *cache_id = cacheid_from_realmstring(realmstring, pool);
-  char *password_prompt =
-    apr_psprintf(pool, _("Password for '%s': "), username);
-  char *realm_prompt =
-    apr_psprintf(pool, _("Enter your Subversion password for %s"), realmstring);
-
-  escape_blanks(realm_prompt);
-  escape_blanks(password_prompt);
-
-  return svn_error_trace(password_get_gpg_agent_helper(done, password,
-                                                       cache_id,
-                                                       password_prompt,
-                                                       realm_prompt,
-                                                       non_interactive,
-                                                       pool));
-}
 
 /* Implementation of svn_auth__password_set_t that would store the
    password in GPG Agent if that's how this particular integration
@@ -481,66 +456,6 @@ svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
   po->vtable = &gpg_agent_simple_provider;
   *provider = po;
 }
-
-
-
-
-/*-----------------------------------------------------------------------*/
-/* GPG Agent master passphrase.                                          */
-/*-----------------------------------------------------------------------*/
-
-/* Implements svn_auth__masterpass_fetch_t. */
-static svn_error_t *
-gpg_agent_masterpass_fetch(const char **passphrase,
-                           svn_boolean_t non_interactive,
-                           void *provider_baton,
-                           apr_pool_t *pool)
-{
-  const char *cache_id = "Subversion Master Password";
-  const char *password_prompt = _("Password:");
-  const char *realm_prompt = _("Enter+your+Subversion+master+password");
-  svn_boolean_t done;
-  const char *password;
-  svn_checksum_t *digest;
-  
-  SVN_ERR(password_get_gpg_agent_helper(&done, &password, cache_id,
-                                        password_prompt, realm_prompt,
-                                        non_interactive, pool));
-
-  /* ### FIXME: Should be SHA-256 */
-  svn_checksum(&digest, svn_checksum_sha1, password, strlen(password), pool);
-  *passphrase = svn_checksum_to_cstring_display(digest, pool);
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_auth__masterpass_store_t. */
-static svn_error_t *
-gpg_agent_masterpass_store(const char *passphrase,
-                           svn_boolean_t non_interactive,
-                           void *provider_baton,
-                           apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static const svn_auth__masterpass_provider_t
-gpg_agent_masterpass_provider = {
-  gpg_agent_masterpass_fetch,
-  gpg_agent_masterpass_store
-};
-
-/* Public API */
-void
-svn_auth__get_gpg_agent_masterpass_provider(
-    svn_auth__masterpass_provider_object_t **provider,
-    apr_pool_t *pool)
-{
-  svn_auth__masterpass_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
-
-  po->vtable = &gpg_agent_masterpass_provider;
-  *provider = po;
-}
-
 
 #endif /* SVN_HAVE_GPG_AGENT */
 #endif /* !WIN32 */

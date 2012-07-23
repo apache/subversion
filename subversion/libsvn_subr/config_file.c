@@ -552,7 +552,6 @@ ensure_auth_dirs(const char *path,
 
   /* If a provider exists that wants to store credentials in
      ~/.subversion, a subdirectory for the cred_kind must exist. */
-  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_MASTER_PASSPHRASE, pool);
   ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SIMPLE, pool);
   ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_USERNAME, pool);
   ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SSL_SERVER_TRUST, pool);

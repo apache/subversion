@@ -340,52 +340,6 @@ typedef struct svn_auth_cred_ssl_server_trust_t
 } svn_auth_cred_ssl_server_trust_t;
 
 
-/** Master passphrase credential type.
- * 
- * This is a special type of credential used locally only, not as part
- * of any server-related challenge.
- *
- * The following auth parameters are available to the providers:
- *
- * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
- * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
- *
- * The following optional auth parameters are relevant to the providers:
- *
- * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
- */
-#define SVN_AUTH_CRED_MASTER_PASSPHRASE "svn.masterpassphrase"
-
-typedef struct svn_auth_cred_master_passphrase_t
-{
-  /** Master passphrase */
-  const char *passphrase;
-  /** Indicates if the credentials may be saved (to disk). For example, a
-   * GUI prompt implementation with a remember password checkbox shall set
-   * @a may_save to TRUE if the checkbox is checked.
-   */
-  svn_boolean_t may_save;
-} svn_auth_cred_master_passphrase_t;
-
-/* Set *PASSPHRASE to the master passphrase for authentication
-   credentials stored in the runtime configuration associated with
-   AUTH_BATON, allocated from RESULT_POOL.  Use SCRATCH_POOL for
-   temporary allocations. */
-svn_error_t *
-svn_auth_master_passphrase_get(const char **passphrase,
-                               svn_auth_baton_t *auth_baton,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-/* Set the master passphrase for authentication credentials stored in the
-   runtime configuration associated with AUTH_BATON to NEW_PASSPHRASE
-   (which may be NULL to remove an existing passphrase).  Use
-   SCRATCH_POOL for necessary allocation.  */
-svn_error_t *
-svn_auth_master_passphrase_set(svn_auth_baton_t *auth_baton,
-                               const char *new_passphrase,
-                               apr_pool_t *scratch_pool);
-
 
 /** Credential-constructing prompt functions. **/
 
@@ -622,12 +576,6 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
 /** @} */
-
-/** @brief Cached value of the master passphrase.
- * @since New in 1.7.
- */
-#define SVN_AUTH_PARAM_DEFAULT_MASTER_PASSPHRASE  SVN_AUTH_PARAM_PREFIX \
-                                                      "master-passphrase"
 
 /** @brief The application doesn't want any providers to prompt
  * users. Property value is irrelevant; only property's existence

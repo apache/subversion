@@ -279,7 +279,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
-  {"remove",        opt_remove, 0, N_("remove an existing association")},
+  {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG")},
   {"keep-changelists", opt_keep_changelists, 0,
@@ -456,13 +456,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Associate (or dissociate) changelist CLNAME with the named files.\n"
      "usage: 1. changelist CLNAME PATH...\n"
      "       2. changelist --remove PATH...\n"),
-    { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
-
-  { "changepassword", svn_cl__changepassword, {"chpasswd"}, N_
-    ("Set (or unset) the master password/passphrase used to encrypt locally\n"
-     "cached authentication credentials.\n"
-     "usage: 1. changepassword NEWPASSWORD\n"
-     "       2. changepassword --remove\n"),
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
