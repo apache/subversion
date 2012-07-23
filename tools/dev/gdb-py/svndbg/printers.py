@@ -95,7 +95,7 @@ svn__apr_hash_index_val = InferiorFunction('svn__apr_hash_index_val')
 
 def children_of_apr_hash(hash_p, value_type=None):
     """Iterate over an 'apr_hash_t *' GDB value, in the way required for a
-       pretty-printer 'children' method when the display-hint is 'array'.
+       pretty-printer 'children' method when the display-hint is 'map'.
        Cast the value pointers to VALUE_TYPE, or return values as '...' if
        VALUE_TYPE is None."""
     hi = apr_hash_first(0, hash_p)
@@ -115,7 +115,10 @@ def children_of_apr_hash(hash_p, value_type=None):
 class AprHashPrinter:
     """for 'apr_hash_t' of 'char *' keys and unknown values"""
     def __init__(self, val):
-        self.hash_p = val.address
+        if val.type.code == gdb.TYPE_CODE_PTR:
+            self.hash_p = val
+        else:
+            self.hash_p = val.address
 
     def to_string(self):
         """Return a string to be displayed before children are displayed, or
@@ -132,15 +135,13 @@ class AprHashPrinter:
     def display_hint(self):
         return 'map'
 
-class PtrAprHashPrinter(AprHashPrinter):
-    """for pointer to 'apr_hash_t' of 'char *' keys and unknown values"""
-    def __init__(self, val):
-        self.hash_p = val
-
 class AprArrayPrinter:
     """for 'apr_array_header_t' of unknown elements"""
     def __init__(self, val):
-        self.array = val
+        if val.type.code == gdb.TYPE_CODE_PTR and val:
+            self.array = val.dereference()
+        else:
+            self.array = val
 
     def to_string(self):
         if not self.array:
@@ -155,31 +156,25 @@ class AprArrayPrinter:
     def display_hint(self):
         return 'array'
 
-class PtrAprArrayPrinter(AprArrayPrinter):
-    """for pointer to 'apr_array_header_t' of unknown elements"""
-    def __init__(self, val):
-        if not val:
-            self.array = None
-        else:
-            self.array = val.dereference()
-
 
 ########################################################################
 
-# Pretty-printing for Subversion library types.
+# Pretty-printing for Subversion libsvn_subr types.
 
 class SvnStringPrinter:
     def __init__(self, val):
-        self.val = val
+        if val.type.code == gdb.TYPE_CODE_PTR and val:
+            self.val = val.dereference()
+        else:
+            self.val = val
 
     def to_string(self):
-        # Make sure string * works, too
-        val = self.val
+        if not self.val:
+            return 'NULL'
 
-        ptr = val['data']
-        len = val['len']
-
-        return "length: " + str(int(len)) + "; contents: '" + ptr.string(length=len) + "'"
+        data = self.val['data']
+        len = int(self.val['len'])
+        return data.string(length=len)
 
     def display_hint(self):
         return 'string'
@@ -196,15 +191,32 @@ class SvnMergeinfoCatalogPrinter:
 
     def children(self):
         if self.hash_p == 0:
-            # Return an empty list so GDB prints only the 'NULL' that is
-            # returned by to_string().  If instead we were to return None
-            # here, GDB would issue a 'not iterable' error message.
+            # Return [] here so GDB prints just the 'NULL' of to_string();
+            # returning 'None' here would give a 'not iterable' error.
             return []
         mergeinfoType = gdb.lookup_type('svn_mergeinfo_t')
         return children_as_map(children_of_apr_hash(self.hash_p, mergeinfoType))
 
     def display_hint(self):
         return 'map'
+
+########################################################################
+
+# Pretty-printing for Subversion libsvn_client types.
+
+class SvnPathrevPrinter:
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        rev = int(self.val['rev'])
+        url = self.val['url'].string()
+        repos_root_url = self.val['repos_root_url'].string()
+        relpath = url[len(repos_root_url):]
+        return "%s@%d" % (relpath, rev)
+
+    def display_hint(self):
+        return 'string'
 
 
 ########################################################################
@@ -231,15 +243,20 @@ def build_libsvn_printers():
     # after stripping const/volatile qualifiers.
     #
     # TODO: The "apr_foo_t *" entries are in this collection merely because
-    #       the collection above can't match them, but ideally we'd fix that
-    #       matching and move these entries to there so that they get used
+    #       the collection above can't match any pointer type (because the
+    #       pointer itself has no tag-name).  Ideally we'd improve that
+    #       matching so that for example the 'apr_hash_t *' entry would
+    #       match both
+    #         any typedef that resolves to pointer-to-apr_hash_t
+    #       and
+    #         pointer to any typedef that resolves to apr_hash_t
     #       for any typedef that doesn't have its own specific pretty-printer
     #       registered.
     libapr_printer2 = TypedefRegexCollectionPrettyPrinter("libapr2")
     libapr_printer2.add_printer('apr_hash_t *', r'^apr_hash_t \*$',
-                                PtrAprHashPrinter)
+                                AprHashPrinter)
     libapr_printer2.add_printer('apr_array_header_t *', r'^apr_array_header_t \*$',
-                                PtrAprArrayPrinter)
+                                AprArrayPrinter)
 
     # These sub-printers match a struct's (or union)'s tag name,
     # after stripping typedefs, references and const/volatile qualifiers.
@@ -250,6 +267,10 @@ def build_libsvn_printers():
     # These sub-printers match a type name at the point of use,
     # after stripping const/volatile qualifiers.
     libsvn_printer2 = TypedefRegexCollectionPrettyPrinter("libsvn2")
+    libsvn_printer2.add_printer('svn_string_t *', r'^svn_string_t \*$',
+                               SvnStringPrinter)
+    libsvn_printer2.add_printer('svn_client__pathrev_t', r'^svn_client__pathrev_t$',
+                                SvnPathrevPrinter)
     libsvn_printer2.add_printer('svn_mergeinfo_catalog_t', r'^svn_mergeinfo_catalog_t$',
                                 SvnMergeinfoCatalogPrinter)
 
