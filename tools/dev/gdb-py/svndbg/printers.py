@@ -156,6 +156,14 @@ class AprArrayPrinter:
     def display_hint(self):
         return 'array'
 
+def children_of_apr_array(array, value_type):
+    """Iterate over an 'apr_array_header_t' GDB value, in the way required for
+       a pretty-printer 'children' method when the display-hint is 'array'.
+       Cast the value pointers to VALUE_TYPE."""
+    nelts = int(array['nelts'])
+    elts = array['elts'].reinterpret_cast(value_type.pointer())
+    for i in range(nelts):
+        yield str(i), elts[i]
 
 ########################################################################
 
@@ -179,26 +187,84 @@ class SvnStringPrinter:
     def display_hint(self):
         return 'string'
 
-class SvnMergeinfoCatalogPrinter:
-    """for svn_mergeinfo_catalog_t"""
+class SvnMergeRangePrinter:
+    def __init__(self, val):
+        if val.type.code == gdb.TYPE_CODE_PTR and val:
+            self.val = val.dereference()
+        else:
+            self.val = val
+
+    def to_string(self):
+        if not self.val:
+            return 'NULL'
+
+        r = self.val
+        rs = str(r['start']) + '-' + str(r['end'])
+        if not r['inheritable']:
+          rs += '*'
+        return rs
+
+    def display_hint(self):
+        return 'string'
+
+class SvnRangelistPrinter:
+    def __init__(self, val):
+        if val.type.code == gdb.TYPE_CODE_PTR and val:
+            self.array = val.dereference()
+        else:
+            self.array = val
+        self.svn_merge_range_t = gdb.lookup_type('svn_merge_range_t')
+
+    def to_string(self):
+        if not self.array:
+            return 'NULL'
+
+        s = ''
+        for key, val in children_of_apr_array(self.array,
+                       self.svn_merge_range_t.pointer()):
+            if s:
+              s += ','
+            s += SvnMergeRangePrinter(val).to_string()
+        return s
+
+    def display_hint(self):
+        return 'string'
+
+class SvnMergeinfoPrinter:
+    """for svn_mergeinfo_t"""
     def __init__(self, val):
         self.hash_p = val
+        self.svn_rangelist_t = gdb.lookup_type('svn_rangelist_t')
 
     def to_string(self):
         if self.hash_p == 0:
             return 'NULL'
-        return 'mergeinfo catalog of ' + str(apr_hash_count(self.hash_p)) + ' items'
 
-    def children(self):
+        s = ''
+        for key, val in children_of_apr_hash(self.hash_p,
+                                             self.svn_rangelist_t.pointer()):
+            if s:
+              s += '; '
+            s += key + ':' + SvnRangelistPrinter(val).to_string()
+        return '{ ' + s + ' }'
+
+class SvnMergeinfoCatalogPrinter:
+    """for svn_mergeinfo_catalog_t"""
+    def __init__(self, val):
+        self.hash_p = val
+        self.svn_mergeinfo_t = gdb.lookup_type('svn_mergeinfo_t')
+
+    def to_string(self):
         if self.hash_p == 0:
-            # Return [] here so GDB prints just the 'NULL' of to_string();
-            # returning 'None' here would give a 'not iterable' error.
-            return []
-        mergeinfoType = gdb.lookup_type('svn_mergeinfo_t')
-        return children_as_map(children_of_apr_hash(self.hash_p, mergeinfoType))
+            return 'NULL'
 
-    def display_hint(self):
-        return 'map'
+        s = ''
+        for key, val in children_of_apr_hash(self.hash_p,
+                                             self.svn_mergeinfo_t):
+            if s:
+              s += ',\n  '
+            s += "'" + key + "': " + SvnMergeinfoPrinter(val).to_string()
+        return '{ ' + s + ' }'
 
 ########################################################################
 
@@ -271,6 +337,16 @@ def build_libsvn_printers():
                                SvnStringPrinter)
     libsvn_printer2.add_printer('svn_client__pathrev_t', r'^svn_client__pathrev_t$',
                                 SvnPathrevPrinter)
+    libsvn_printer2.add_printer('svn_merge_range_t', r'^svn_merge_range_t$',
+                                SvnMergeRangePrinter)
+    libsvn_printer2.add_printer('svn_merge_range_t *', r'^svn_merge_range_t \*$',
+                                SvnMergeRangePrinter)
+    libsvn_printer2.add_printer('svn_rangelist_t', r'^svn_rangelist_t$',
+                                SvnRangelistPrinter)
+    libsvn_printer2.add_printer('svn_rangelist_t *', r'^svn_rangelist_t \*$',
+                                SvnRangelistPrinter)
+    libsvn_printer2.add_printer('svn_mergeinfo_t', r'^svn_mergeinfo_t$',
+                                SvnMergeinfoPrinter)
     libsvn_printer2.add_printer('svn_mergeinfo_catalog_t', r'^svn_mergeinfo_catalog_t$',
                                 SvnMergeinfoCatalogPrinter)
 
