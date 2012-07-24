@@ -10017,9 +10017,8 @@ log_find_operative_revs(void *baton,
    MERGEINFO_CATALOG may be empty if the source has no explicit or inherited
    mergeinfo.
 
-   Using RA_SESSION, which is pointed at TARGET_LOC, check that all
-   of the unmerged revisions in UNMERGED_CATALOG's mergeinfos are "phantoms",
-   that is, one of the following conditions holds:
+   Check that all of the unmerged revisions in UNMERGED_CATALOG's
+   mergeinfos are "phantoms", that is, one of the following conditions holds:
 
      1) The revision affects no corresponding paths in SOURCE_LOC.
 
@@ -10032,6 +10031,9 @@ log_find_operative_revs(void *baton,
 
    Note: The keys in all mergeinfo catalogs used here are relative to the
    root of the repository.
+
+   RA_SESSION is an RA session open to the repository of TARGET_LOC; it may
+   be temporarily reparented within this function.
 
    Use SCRATCH_POOL for all temporary allocations. */
 static svn_error_t *
@@ -10079,6 +10081,10 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
                        potentially_unmerged_ranges->nelts - 1,
                        svn_merge_range_t *))->end;
       log_find_operative_baton_t log_baton;
+      const char *old_session_url;
+
+      SVN_ERR(svn_client__ensure_ra_session_url(
+                &old_session_url, ra_session, target_loc->url, scratch_pool));
 
       log_baton.merged_catalog = merged_catalog;
       log_baton.unmerged_catalog = true_unmerged_catalog;
@@ -10092,6 +10098,8 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
                       TRUE, /* discover_changed_paths */
                       log_find_operative_revs, &log_baton,
                       scratch_pool));
+
+      SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
     }
 
   return SVN_NO_ERROR;
