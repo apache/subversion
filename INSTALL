@@ -99,20 +99,20 @@ I.    INTRODUCTION
       * libserf  (OPTIONAL for client)
 
          The Serf library allows the Subversion client to send HTTP
-		 requests.  This is necessary if you want your client to access
-		 a repository served by the Apache HTTP server.  There is an
-		 alternate 'svnserve' server as well, though, and clients
-		 automatically know how to speak the svnserve protocol.
-		 Thus it's not strictly necessary for your client to be able
-		 to speak HTTP... though we still recommend that your client
-		 be built to speak both HTTP and svnserve protocols.
+         requests.  This is necessary if you want your client to access
+         a repository served by the Apache HTTP server.  There is an
+         alternate 'svnserve' server as well, though, and clients
+         automatically know how to speak the svnserve protocol.
+         Thus it's not strictly necessary for your client to be able
+         to speak HTTP... though we still recommend that your client
+         be built to speak both HTTP and svnserve protocols.
 
       * OpenSSL (OPTIONAL for client and server)
 
          OpenSSL enables your client to access SSL-encrypted https://
          URLs (using libserf) in addition to unencrypted http:// URLs.
-		 To use SSL with Subversion's WebDAV server, Apache needs to be
-		 compiled with OpenSSL as well.
+         To use SSL with Subversion's WebDAV server, Apache needs to be
+         compiled with OpenSSL as well.
 
       * Berkeley DB (OPTIONAL for client and server)
 
@@ -172,9 +172,9 @@ I.    INTRODUCTION
       libraries (Apache Portable Runtime, Sqlite, and Zlib).  The script,
       'get-deps.sh', is available in the same directory as this file.
       When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
-	  'sqlite-amalgamation' directories directly into your unpacked Subversion
-	  distribution, where they will be automatically configured and built by
-	  Subversion's build process.
+      'sqlite-amalgamation' directories directly into your unpacked Subversion
+      distribution, where they will be automatically configured and built by
+      Subversion's build process.
 
       Note: there are optional dependencies (such as openssl, swig, and httpd)
       which get-deps.sh does not download and Subversion does not attempt to
@@ -314,15 +314,15 @@ I.    INTRODUCTION
       serf.  Though optional, we strongly recommend this.
 
       In order to use ra_serf, you must install serf, and run Subversion's
-	  ./configure with the argument --with-serf.  If serf is installed in a
-	  non-standard place, you should use
+      ./configure with the argument --with-serf.  If serf is installed in a
+      non-standard place, you should use
 
                --with-serf=/path/to/serf/install
 
       instead.
 
       For more information on serf and Subversion's ra_serf, see the file
-	  subversion/libsvn_ra_serf/README.
+      subversion/libsvn_ra_serf/README.
 
       6. OpenSSL  (OPTIONAL)
 
@@ -331,7 +331,7 @@ I.    INTRODUCTION
       ### zlib.
 
       The Serf library has support for SSL encryption by relying on the
-	  OpenSSL library.
+      OpenSSL library.
 
         a. Using OpenSSL on the client through Serf
 
@@ -913,7 +913,7 @@ II.   INSTALLATION
         and install it from source if you are not using Visual Studio 6 and
         want to build and/or test the server modules.
       * If you checked out Subversion from the repository then install the serf
-	    sources into SVN\src-trunk\serf.
+        sources into SVN\src-trunk\serf.
       * If you want BDB backend support, extract the Berkeley DB files
         into SVN\src-trunk\db4-win32. It's a good idea to add
         SVN\src-trunk\db4-win32\bin to your PATH, so that Subversion can find
