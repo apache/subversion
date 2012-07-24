@@ -11626,6 +11626,24 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       merge_source_t source;
       svn_ra_session_t *ra_session = NULL;
 
+      /* Check for and reject any abnormalities -- such as revisions that
+       * have not yet been merged in the opposite direction -- that a
+       * 'reintegrate' merge would have rejected. */
+      {
+        merge_source_t *source2;
+        svn_ra_session_t *source_ra_session = NULL;
+        svn_ra_session_t *target_ra_session = NULL;
+
+        SVN_ERR(ensure_ra_session_url(&source_ra_session, merge->right->url,
+                                      ctx, scratch_pool));
+        SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
+                                      ctx, scratch_pool));
+        SVN_ERR(find_reintegrate_merge(&source2, NULL,
+                                       source_ra_session, merge->right,
+                                       target_ra_session, target,
+                                       ctx, scratch_pool, scratch_pool));
+      }
+
       source.loc1 = merge->base;
       source.loc2 = merge->right;
       source.ancestral = (merge->mid == NULL);
