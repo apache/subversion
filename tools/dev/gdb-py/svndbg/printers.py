@@ -234,7 +234,8 @@ class SvnMergeinfoPrinter:
     """for svn_mergeinfo_t"""
     def __init__(self, val):
         self.hash_p = val
-        self.svn_rangelist_t = gdb.lookup_type('svn_rangelist_t')
+        # We don't actually have an svn_rangelist_t in Subversion...
+        self.svn_rangelist_t = gdb.lookup_type('apr_array_header_t')
 
     def to_string(self):
         if self.hash_p == 0:
@@ -341,10 +342,11 @@ def build_libsvn_printers():
                                 SvnMergeRangePrinter)
     libsvn_printer2.add_printer('svn_merge_range_t *', r'^svn_merge_range_t \*$',
                                 SvnMergeRangePrinter)
-    libsvn_printer2.add_printer('svn_rangelist_t', r'^svn_rangelist_t$',
-                                SvnRangelistPrinter)
-    libsvn_printer2.add_printer('svn_rangelist_t *', r'^svn_rangelist_t \*$',
-                                SvnRangelistPrinter)
+    # If we define an 'svn_rangelist_t' type in Subversion, we'll want these:
+    #libsvn_printer2.add_printer('svn_rangelist_t', r'^svn_rangelist_t$',
+    #                            SvnRangelistPrinter)
+    #libsvn_printer2.add_printer('svn_rangelist_t *', r'^svn_rangelist_t \*$',
+    #                            SvnRangelistPrinter)
     libsvn_printer2.add_printer('svn_mergeinfo_t', r'^svn_mergeinfo_t$',
                                 SvnMergeinfoPrinter)
     libsvn_printer2.add_printer('svn_mergeinfo_catalog_t', r'^svn_mergeinfo_catalog_t$',
