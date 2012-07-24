@@ -1087,7 +1087,6 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     }
   else /* ! svn_path_is_url() */
     {
-      /* Acquire return values. */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
         mergeinfo_catalog, NULL, NULL, include_descendants, FALSE,
         ignore_invalid_mergeinfo, svn_mergeinfo_inherited,
