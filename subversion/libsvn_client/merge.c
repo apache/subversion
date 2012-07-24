@@ -10298,8 +10298,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
              exist at all.  If simply doesn't exist we can ignore it
              altogether. */
           svn_node_kind_t kind;
-          svn_mergeinfo_catalog_t subtree_catalog;
-          apr_array_header_t *source_paths_rel_to_session;
 
           SVN_ERR(svn_ra_check_path(source_ra_session,
                                     path_rel_to_session,
@@ -10309,20 +10307,11 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           /* Else source_path does exist though it has no explicit mergeinfo.
              Find its inherited mergeinfo.  If it doesn't have any then simply
              set source_mergeinfo to an empty hash. */
-          source_paths_rel_to_session =
-            apr_array_make(iterpool, 1, sizeof(const char *));
-          APR_ARRAY_PUSH(source_paths_rel_to_session, const char *)
-            = path_rel_to_session;
-          SVN_ERR(svn_ra_get_mergeinfo(source_ra_session, &subtree_catalog,
-                                       source_paths_rel_to_session,
-                                       source_loc->rev, svn_mergeinfo_inherited,
-                                       FALSE, iterpool));
-          if (subtree_catalog)
-            source_mergeinfo = apr_hash_get(subtree_catalog,
-                                            path_rel_to_session,
-                                            APR_HASH_KEY_STRING);
-
-          /* A path might not have any inherited mergeinfo either. */
+          SVN_ERR(svn_client__get_repos_mergeinfo(
+                    &source_mergeinfo, source_ra_session,
+                    source_pathrev->url, source_pathrev->rev,
+                    svn_mergeinfo_inherited, FALSE /*squelch_incapable*/,
+                    iterpool));
           if (!source_mergeinfo)
             source_mergeinfo = apr_hash_make(iterpool);
         }
@@ -10476,8 +10465,6 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
                          apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_catalog_t mergeinfo_catalog, unmerged_catalog;
-  apr_array_header_t *source_repos_rel_path_as_array
-    = apr_array_make(scratch_pool, 1, sizeof(const char *));
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
   /* hash of paths mapped to arrays of svn_mergeinfo_t. */
@@ -10553,18 +10540,11 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
 
   /* Get the mergeinfo from the source, including its descendants
      with differing explicit mergeinfo. */
-  APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *) = "";
-  SVN_ERR(svn_ra_get_mergeinfo(source_ra_session, &mergeinfo_catalog,
-                               source_repos_rel_path_as_array, source_loc->rev,
-                               svn_mergeinfo_inherited,
-                               TRUE, iterpool));
-
-  if (mergeinfo_catalog)
-    SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(&mergeinfo_catalog,
-                                                 mergeinfo_catalog,
-                                                 svn_client__pathrev_relpath(
-                                                   source_loc, iterpool),
-                                                 iterpool, iterpool));
+  SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
+            &mergeinfo_catalog, source_ra_session,
+            source_loc->url, source_loc->rev,
+            svn_mergeinfo_inherited, FALSE /* squelch_incapable */,
+            TRUE /* include_descendants */, iterpool, iterpool));
 
   if (!mergeinfo_catalog)
     mergeinfo_catalog = apr_hash_make(iterpool);
