@@ -78,7 +78,6 @@ def _usage_exit():
   print("                           will be used, if not specified")
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
-  print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
@@ -127,7 +126,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
-                        'httpd-server', 'http-library=', 'http-short-circuit',
+                        'httpd-server', 'http-short-circuit',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
@@ -147,7 +146,6 @@ svnserve_args = None
 run_httpd = None
 httpd_port = None
 httpd_service = None
-http_library = 'serf'
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -199,8 +197,6 @@ for opt, val in opts:
     httpd_service = 0
   elif opt == '--httpd-service':
     httpd_service = 1
-  elif opt == '--http-library':
-    http_library = val
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -740,7 +736,7 @@ if not test_javahl:
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file,
                              fail_log_file,
-                             base_url, fs_type, http_library,
+                             base_url, fs_type, 'serf',
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
