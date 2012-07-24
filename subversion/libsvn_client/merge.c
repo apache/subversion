@@ -10593,8 +10593,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
 }
 
 /* Determine the URLs and revisions needed to perform a reintegrate merge
- * from SOURCE_PATH_OR_URL at SOURCE_PEG_REVISION into the working
- * copy at TARGET.
+ * from SOURCE_LOC into the working copy at TARGET.
  *
  * SOURCE_RA_SESSION and TARGET_RA_SESSION are RA sessions opened to the
  * source and target branches respectively.
