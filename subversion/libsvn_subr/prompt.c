@@ -35,6 +35,7 @@
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_checksum.h"
 
 #include "private/svn_cmdline_private.h"
 #include "svn_private_config.h"
@@ -494,6 +495,31 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
   return plaintext_prompt_helper(may_save_plaintext, realmstring,
                                  prompt_string, prompt_text, baton,
                                  pool);
+}
+
+
+/* This implements 'svn_auth__master_passphrase_fetch_t'. */
+svn_error_t *
+svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
+                                          void *baton, 
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  const char *response;
+  int response_len;
+  svn_cmdline_prompt_baton2_t *pb = baton;
+  svn_checksum_t *checksum;
+
+  SVN_ERR(prompt(&response, _("Enter master passphrase: "),
+                 TRUE, pb, scratch_pool));
+  response_len = strlen(response);
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
+                       response, response_len, scratch_pool));
+  memset((void *)response, 0, response_len);
+  *secret = svn_string_ncreate((const char *)checksum->digest,
+                               svn_checksum_size(checksum),
+                               result_pool);
+  return SVN_NO_ERROR;
 }
 
 

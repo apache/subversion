@@ -41,6 +41,7 @@
 #include "svn_types.h"
 #include "svn_auth.h"
 #include "svn_config.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -313,6 +314,19 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
                                              const char *realmstring,
                                              void *baton,
                                              apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth__master_passphrase_fetch_t that
+ * prompts the user for the master passphrase which protects an
+ * encrypted authentication store.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
+                                          void *baton, 
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 
 /** Set @a *ab to an authentication baton allocated from @a pool and

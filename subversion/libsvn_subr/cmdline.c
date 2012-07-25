@@ -447,33 +447,12 @@ ssl_trust_unknown_server_cert
 }
 
 
-/* Implements `svn_auth__master_passphrase_fetch_t' */
-static svn_error_t *
-fetch_nonsecret_secret(const svn_string_t **secret,
-                       void *baton,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  *secret = svn_string_create("2secretive4u", result_pool);
-  return SVN_NO_ERROR;
-}
-
-
-/* APR pool cleanup handler which closes an auth_store. */
-static apr_status_t
-cleanup_auth_store_close(void *arg)
-{
-  svn_auth__store_t *auth_store = arg;
-  svn_auth__store_close(auth_store, NULL); /* ### FIXME: NULL pool? Uncool. */
-  return 0;
-}
-
-
 /* Instantiate and open an auth store. */
 static svn_error_t *
 open_auth_store(svn_auth__store_t **auth_store_p,
                 const char *config_dir,
                 svn_boolean_t use_master_password,
+                svn_cmdline_prompt_baton2_t *pb,
                 apr_pool_t *pool)
 {
   svn_auth__store_t *auth_store;
@@ -486,21 +465,16 @@ open_auth_store(svn_auth__store_t **auth_store_p,
       SVN_ERR(svn_config_get_user_config_path(&auth_config_path, config_dir,
                                               SVN_CONFIG__AUTH_SUBDIR, pool));
       SVN_ERR(svn_crypto__context_create(&crypto_ctx, pool));
-      SVN_ERR(svn_auth__pathetic_store_get(&auth_store,
-                                           svn_path_join(auth_config_path,
-                                                         "pathetic.db",
-                                                         pool),
-                                           crypto_ctx,
-                                           fetch_nonsecret_secret,
-                                           NULL, pool, pool));
+      SVN_ERR(svn_auth__pathetic_store_get(
+                  &auth_store,
+                  svn_path_join(auth_config_path, "pathetic.db", pool),
+                  crypto_ctx, svn_cmdline_auth_master_passphrase_prompt,
+                  pb, pool, pool));
     }
   else
     {
       SVN_ERR(svn_auth__config_store_get(&auth_store, config_dir, pool, pool));
     }
-
-  apr_pool_cleanup_register(pool, auth_store, cleanup_auth_store_close,
-                            apr_pool_cleanup_null);
   
   SVN_ERR(svn_auth__store_open(auth_store, TRUE, pool));
   *auth_store_p = auth_store;
@@ -646,7 +620,8 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                            auth_password);
 
   /* Open the appropriate auth store, and cache it in the auth baton. */
-  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password, pool));
+  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password,
+                          pb, pool));
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);
 
   /* Same with the --non-interactive option. */

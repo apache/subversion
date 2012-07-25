@@ -33,6 +33,7 @@ struct svn_auth__store_t
   svn_auth__store_cb_get_cred_hash_t get_cred_hash_func;
   svn_auth__store_cb_set_cred_hash_t set_cred_hash_func;
   svn_auth__store_cb_iterate_creds_t iterate_creds_func;
+  apr_pool_t *pool;
 };
 
 
@@ -41,6 +42,7 @@ svn_auth__store_create(svn_auth__store_t **auth_store,
                        apr_pool_t *result_pool)
 {
   *auth_store = apr_pcalloc(result_pool, sizeof(**auth_store));
+  (*auth_store)->pool = result_pool;
   return SVN_NO_ERROR;
 }
 
@@ -108,6 +110,15 @@ svn_auth__store_set_iterate_creds(svn_auth__store_t *auth_store,
 }
 
 
+/* APR pool cleanup handler which closes an auth_store. */
+static apr_status_t
+cleanup_auth_store_close(void *arg)
+{
+  svn_auth__store_t *auth_store = arg;
+  svn_auth__store_close(auth_store, auth_store->pool);
+  return 0;
+}
+
 
 svn_error_t *
 svn_auth__store_open(svn_auth__store_t *auth_store,
@@ -119,6 +130,12 @@ svn_auth__store_open(svn_auth__store_t *auth_store,
     {
       SVN_ERR(auth_store->open_func(auth_store->store_baton, create,
                                     scratch_pool));
+
+      /* Register a pool cleanup handler which closes the store. */
+      apr_pool_cleanup_register(auth_store->pool, auth_store,
+                                cleanup_auth_store_close,
+                                apr_pool_cleanup_null);
+
       auth_store->is_open = TRUE;
     }
   else
@@ -133,8 +150,7 @@ svn_error_t *
 svn_auth__store_close(svn_auth__store_t *auth_store,
                       apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(auth_store->is_open);
-  if (auth_store->close_func)
+  if (auth_store->is_open && auth_store->close_func)
     SVN_ERR(auth_store->close_func(auth_store->store_baton, scratch_pool));
   return SVN_NO_ERROR;
 }
