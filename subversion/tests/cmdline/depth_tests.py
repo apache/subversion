@@ -2882,21 +2882,26 @@ def commit_then_immediates_update(sbox):
                                         None, None, None, None, None, False,
                                         "--depth=immediates", wc_dir)
 
-@XFail()
 def revert_depth_files(sbox):
   "depth immediate+files should revert deleted files"
 
   sbox.build(read_only = True)
   
   expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
+  
+  # Apply an unrelated delete one level to deep
+  sbox.simple_rm('A/D/gamma')
 
   sbox.simple_rm('A/mu')
-  # This one works as expected
+  # Expect reversion of just 'mu'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=immediates', sbox.ospath('A'))
 
+  # Apply an unrelated directory delete
+  sbox.simple_rm('A/D')
+
   sbox.simple_rm('A/mu')
-  # And this one fails on trunk and 1.7.x
+  # Expect reversion of just 'mu'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=files', sbox.ospath('A'))
 
