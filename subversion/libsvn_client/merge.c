@@ -10150,6 +10150,9 @@ find_youngest_merged_rev(svn_revnum_t *youngest_merged_rev,
  * place, to include the natural history (implicit mergeinfo) of
  * SOURCE_PATHREV.  ### But make these additions in SCRATCH_POOL.
  *
+ * SOURCE_RA_SESSION is an RA session open to the repository containing
+ * SOURCE_PATHREV; it may be temporarily reparented within this function.
+ *
  * ### [JAF] This function is named '..._subroutine' simply because I
  *     factored it out based on code similarity, without knowing what it's
  *     purpose is.  We should clarify its purpose and choose a better name.
