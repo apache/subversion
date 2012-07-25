@@ -158,11 +158,11 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                                         STMT_GET_MAX_REV));
       SVN_ERR(svn_sqlite__step(&have_row, stmt2));
       max = svn_sqlite__column_revnum(stmt2, 0);
-      SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
+      if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
+        SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
       SVN_ERR(svn_sqlite__reset(stmt2));
     }
 
-  /* Get the statement. (There are no arguments to bind.) */
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
                                     STMT_GET_REPS_FOR_RANGE));
   SVN_ERR(svn_sqlite__bindf(stmt, "rr",

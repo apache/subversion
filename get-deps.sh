@@ -48,7 +48,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | neon | serf | zlib | sqlite ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite ] ..."
     exit $1
 }
 
