@@ -2119,7 +2119,7 @@ revert_partial(svn_wc__db_t *db,
         {
           svn_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath,
                                        FALSE /* allow_missing */,
                                        FALSE /* show_hidden */,
                                        iterpool));
