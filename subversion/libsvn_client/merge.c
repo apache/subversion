@@ -7496,7 +7496,7 @@ log_find_operative_subtree_revs(void *baton,
    Set *OPERATIVE_CHILDREN to a hash (mapping const char * absolute
    working copy paths to those path's const char * repos absolute paths)
    containing all the immediate subtrees of MERGE_TARGET_ABSPATH which would
-   have a different diff applied if MERGE_SOURCE_REPOS_PATH
+   have a different diff applied if MERGE_SOURCE_FSPATH
    -r(OLDEST_REV - 1):YOUNGEST_REV were merged to MERGE_TARGET_ABSPATH at
    svn_depth_infinity rather than DEPTH.
 
