@@ -405,7 +405,9 @@ pathetic_store_open(void *baton,
                                                    check_skel->len),
                                     scratch_pool));
   if (! valid_secret)
-    return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, _("Invalid secret"));
+    return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                            _("Invalid secret; unable to open "
+                              "encrypted store"));
 
   return SVN_NO_ERROR;
 }
