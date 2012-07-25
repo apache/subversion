@@ -1935,7 +1935,7 @@ new_revert_partial(svn_wc__db_t *db,
         {
           svn_wc__db_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
                                        iterpool));
           if (kind != svn_wc__db_kind_file)
             continue;

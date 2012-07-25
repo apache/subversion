@@ -2881,7 +2881,24 @@ def commit_then_immediates_update(sbox):
                                         expected_status,
                                         None, None, None, None, None, False,
                                         "--depth=immediates", wc_dir)
+
+@XFail()
+def revert_depth_files(sbox):
+  "depth immediate+files should revert deleted files"
+
+  sbox.build(read_only = True)
   
+  expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
+
+  sbox.simple_rm('A/mu')
+  # This one works as expected
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=immediates', sbox.ospath('A'))
+
+  sbox.simple_rm('A/mu')
+  # And this one fails on trunk and 1.7.x
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=files', sbox.ospath('A'))
 
 
 #----------------------------------------------------------------------
@@ -2932,6 +2949,7 @@ test_list = [ None,
               sparse_update_with_dash_dash_parents,
               update_below_depth_empty,
               commit_then_immediates_update,
+              revert_depth_files,
               ]
 
 if __name__ == "__main__":
