@@ -1952,12 +1952,14 @@ revert_internal(svn_wc__db_t *db,
      when local_abspath is the working copy root. */
   {
     const char *dir_abspath;
+    svn_boolean_t is_wcroot;
 
-    SVN_ERR(svn_wc__db_get_wcroot(&dir_abspath, db, local_abspath,
-                                  scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, scratch_pool));
 
-    if (svn_dirent_is_child(dir_abspath, local_abspath, NULL))
+    if (! is_wcroot)
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    else
+      dir_abspath = local_abspath;
 
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
   }
