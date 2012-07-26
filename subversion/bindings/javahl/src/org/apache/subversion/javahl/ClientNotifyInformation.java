@@ -552,9 +552,14 @@ public class ClientNotifyInformation extends EventObject
         /** Operation failed because a node is obstructed */
         failed_obstructed ("failed by obstruction"),
 
-        /** Conflict resolver is starting/ending. */
+        /** Conflict resolver is starting. */
         conflict_resolver_starting ("conflict resolver starting"),
-        conflict_resolver_done ("conflict resolver done");
+
+        /** Conflict resolver is done. */
+        conflict_resolver_done ("conflict resolver done"),
+
+        /** Operation left local modifications. */
+        left_local_modifications ("left local modifications);
 
         /**
          * The description of the action.

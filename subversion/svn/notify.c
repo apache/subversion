@@ -214,6 +214,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
+    case svn_wc_notify_left_local_modifications:
+      if ((err = svn_cmdline_printf(pool, "Left local modifications as '%s'\n",
+                                        path_local)))
+        goto print_error;
+      break;
+
     case svn_wc_notify_update_replace:
       nb->received_some_change = TRUE;
       if ((err = svn_cmdline_printf(pool, "R    %s\n", path_local)))
