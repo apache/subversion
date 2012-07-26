@@ -1309,7 +1309,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
-                                                 TRUE, FALSE,
+                                                 TRUE, TRUE,
                                                  cancel_func, cancel_baton,
                                                  scratch_pool));
   else

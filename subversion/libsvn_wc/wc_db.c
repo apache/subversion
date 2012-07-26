@@ -6546,8 +6546,17 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
 /* Baton for remove_node_txn */
 struct remove_node_baton
 {
+  svn_wc__db_t *db;
+  svn_boolean_t left_changes;
+  svn_boolean_t destroy_wc;
+  svn_boolean_t destroy_changes;
   svn_revnum_t not_present_rev;
+  svn_wc__db_status_t not_present_status;
   svn_kind_t not_present_kind;
+  const svn_skel_t *conflict;
+  const svn_skel_t *work_items;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 };
 
 /* Implements svn_wc__db_txn_callback_t for svn_wc__db_op_remove_node */
@@ -6563,7 +6572,11 @@ remove_node_txn(void *baton,
   apr_int64_t repos_id;
   const char *repos_relpath;
 
-  SVN_ERR_ASSERT(*local_relpath != '\0'); /* Never on a wcroot */
+  /* Note that unlike many similar functions it is a valid scenario for this
+     function to be called on a wcroot! */
+
+   /* db set when destroying wc */
+  SVN_ERR_ASSERT(!rnb->destroy_wc || rnb->db != NULL);
 
   /* Need info for not_present node? */
   if (SVN_IS_VALID_REVNUM(rnb->not_present_rev))
@@ -6573,13 +6586,188 @@ remove_node_txn(void *baton,
                           wcroot, local_relpath,
                           scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
+  if (rnb->destroy_wc
+      && (!rnb->destroy_changes || *local_relpath == '\0'))
+    {
+      svn_boolean_t have_row;
+      apr_pool_t *iterpool;
+      svn_error_t *err = NULL;
 
-  /* Remove all nodes at or below local_relpath where op_depth >= 0 */
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                            wcroot->wc_id, local_relpath, 0));
+      /* Install WQ items for deleting the unmodified files and all dirs */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_WORKING_PRESENT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                wcroot->wc_id, local_relpath));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      iterpool = svn_pool_create(scratch_pool);
+
+      while (have_row)
+        {
+          const char *child_relpath;
+          const char *child_abspath;
+          svn_kind_t child_kind;
+          svn_boolean_t have_checksum;
+          svn_filesize_t recorded_size;
+          apr_int64_t recorded_mod_time;
+          const svn_io_dirent2_t *dirent;
+          svn_boolean_t modified_p = TRUE;
+          svn_skel_t *work_item = NULL;
+
+          svn_pool_clear(iterpool);
+
+          child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+
+          child_abspath = svn_dirent_join(wcroot->abspath, child_relpath,
+                                          iterpool);
+
+          if (child_kind == svn_kind_file)
+            {
+              have_checksum = !svn_sqlite__column_is_null(stmt, 2);
+              recorded_size = get_recorded_size(stmt, 3);
+              recorded_mod_time = svn_sqlite__column_int64(stmt, 4);
+            }
+
+          if (rnb->cancel_func)
+            err = rnb->cancel_func(rnb->cancel_baton);
+
+          if (err)
+            break;
+
+          err = svn_io_stat_dirent(&dirent, child_abspath, TRUE,
+                                   iterpool, iterpool);
+
+          if (err)
+            break;
+
+          if (rnb->destroy_changes
+              || dirent->kind != svn_node_file
+              || child_kind != svn_kind_file)
+            {
+              /* Not interested in keeping changes */
+              modified_p = FALSE; 
+            }
+          else if (child_kind == svn_kind_file
+                   && dirent->kind == svn_node_file
+                   && dirent->filesize == recorded_size
+                   && dirent->mtime == recorded_mod_time)
+            {
+              modified_p = FALSE; /* File matches recorded state */
+            }
+          else if (have_checksum)
+            err = svn_wc__internal_file_modified_p(&modified_p,
+                                                   rnb->db, child_abspath,
+                                                   FALSE, iterpool);
+
+          if (err)
+            break;
+
+          if (modified_p)
+            rnb->left_changes = TRUE;
+          else if (child_kind == svn_kind_dir)
+            {
+              err = svn_wc__wq_build_dir_remove(&work_item,
+                                                rnb->db, wcroot->abspath,
+                                                child_abspath, FALSE,
+                                                iterpool, iterpool);
+            }
+          else /* svn_kind_file || svn_kind_symlink */
+            {
+              err = svn_wc__wq_build_file_remove(&work_item,
+                                                 rnb->db, wcroot->abspath,
+                                                 child_abspath,
+                                                 iterpool, iterpool);
+            }
+
+          if (err)
+            break;
+
+          if (work_item)
+            {
+              err = add_work_items(wcroot->sdb, work_item, iterpool);
+              if (err)
+                break;
+            }
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+      svn_pool_destroy(iterpool);
+
+      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+
+  if (rnb->destroy_wc && *local_relpath != '\0')
+    {
+      /* Create work item for destroying the root */
+      svn_wc__db_status_t status;
+      svn_kind_t kind;
+      SVN_ERR(read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_added
+          || status == svn_wc__db_status_incomplete)
+        {
+          svn_skel_t *work_item = NULL;
+          const char *local_abspath = svn_dirent_join(wcroot->abspath,
+                                                          local_relpath,
+                                                          scratch_pool);
+
+          if (kind == svn_kind_dir)
+            {
+              SVN_ERR(svn_wc__wq_build_dir_remove(&work_item,
+                                                  rnb->db, wcroot->abspath,
+                                                  local_abspath,
+                                                  rnb->destroy_changes
+                                                      /* recursive */,
+                                                  scratch_pool, scratch_pool));
+            }
+          else
+            {
+              svn_boolean_t modified_p = FALSE;
+
+              if (!rnb->destroy_changes)
+                {
+                  SVN_ERR(svn_wc__internal_file_modified_p(&modified_p,
+                                                           rnb->db,
+                                                           local_abspath,
+                                                           FALSE,
+                                                           scratch_pool));
+                }
+
+              if (!modified_p)
+                SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                     rnb->db, wcroot->abspath,
+                                                     local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+              else
+                rnb->left_changes = TRUE;
+            }
+
+          SVN_ERR(add_work_items(wcroot->sdb, work_item, scratch_pool));
+        }
+    }
+
+  /* Remove all nodes below local_relpath */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_NODE_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath, 0));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Delete the root NODE when this is not the working copy root */
+  if (local_relpath[0] != '\0')
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath, 0));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE_RECURSIVE));
@@ -6596,7 +6784,11 @@ remove_node_txn(void *baton,
       blank_ibb(&ibb);
 
       ibb.repos_id = repos_id;
-      ibb.status = svn_wc__db_status_not_present;
+
+      SVN_ERR_ASSERT(rnb->not_present_status == svn_wc__db_status_not_present
+                     || rnb->not_present_status == svn_wc__db_status_excluded);
+
+      ibb.status = rnb->not_present_status;
       ibb.kind = rnb->not_present_kind;
 
       ibb.repos_relpath = repos_relpath;
@@ -6605,14 +6797,26 @@ remove_node_txn(void *baton,
       SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
     }
 
+  SVN_ERR(add_work_items(wcroot->sdb, rnb->work_items, scratch_pool));
+  if (rnb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, rnb->conflict, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc__db_op_remove_node(svn_wc__db_t *db,
+svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
+                          svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t destroy_wc,
+                          svn_boolean_t destroy_changes,
                           svn_revnum_t not_present_revision,
+                          svn_wc__db_status_t not_present_status,
                           svn_kind_t not_present_kind,
+                          const svn_skel_t *conflict,
+                          const svn_skel_t *work_items,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -6625,8 +6829,17 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
+  rnb.db = db;
+  rnb.left_changes = FALSE;
+  rnb.destroy_wc = destroy_wc;
+  rnb.destroy_changes = destroy_changes;
   rnb.not_present_rev = not_present_revision;
+  rnb.not_present_status = not_present_status;
   rnb.not_present_kind = not_present_kind;
+  rnb.conflict = conflict;
+  rnb.work_items = work_items;
+  rnb.cancel_func = cancel_func;
+  rnb.cancel_baton = cancel_baton;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, remove_node_txn,
                               &rnb, scratch_pool));
@@ -6634,6 +6847,9 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
   /* Flush everything below this node in all ways */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_infinity,
                         scratch_pool));
+
+  if (left_changes)
+    *left_changes = rnb.left_changes;
 
   return SVN_NO_ERROR;
 }
