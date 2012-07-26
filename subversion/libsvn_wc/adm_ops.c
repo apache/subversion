@@ -128,8 +128,6 @@ process_committed_leaf(svn_wc__db_t *db,
   const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
   svn_boolean_t have_base;
-  svn_boolean_t have_work;
-  svn_boolean_t had_props;
   svn_boolean_t prop_mods;
   svn_skel_t *work_item = NULL;
 
@@ -138,8 +136,8 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &copied_checksum,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &had_props, &prop_mods,
-                               &have_base, NULL, &have_work,
+                               NULL, NULL, NULL, NULL, NULL, &prop_mods,
+                               &have_base, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
