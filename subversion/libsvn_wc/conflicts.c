@@ -1155,7 +1155,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
         else
-          old_props = their_props;
+          old_props = their_original_props;
 
         prop_data = prop_conflict_skel_new(result_pool);
 
