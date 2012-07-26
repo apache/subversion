@@ -2322,7 +2322,6 @@ svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
-                                              svn_boolean_t instant_error,
                                               svn_cancel_func_t cancel_func,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool)
@@ -2358,7 +2357,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
     {
       svn_boolean_t text_modified_p = FALSE;
 
-      if (instant_error || destroy_wf)
+      if (destroy_wf)
         {
           svn_node_kind_t on_disk;
           SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
@@ -2368,10 +2367,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
               SVN_ERR(svn_wc__internal_file_modified_p(&text_modified_p, db,
                                                        local_abspath, FALSE,
                                                        scratch_pool));
-              if (text_modified_p && instant_error)
-                return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
-                       _("File '%s' has local modifications"),
-                       svn_dirent_local_style(local_abspath, scratch_pool));
             }
         }
 
@@ -2452,19 +2447,14 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
           err = svn_wc__internal_remove_from_revision_control(
                             db, node_abspath,
-                            destroy_wf, instant_error,
+                            destroy_wf,
                             cancel_func, cancel_baton,
                             iterpool);
 
           if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
             {
-              if (instant_error)
-                return svn_error_trace(err);
-              else
-                {
-                  svn_error_clear(err);
-                  left_something = TRUE;
-                }
+              svn_error_clear(err);
+              left_something = TRUE;
             }
           else if (err)
             return svn_error_trace(err);
@@ -2530,6 +2520,26 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_wc_status_func4_t for svn_wc_remove_from_revision_control2 */
+static svn_error_t *
+remove_from_revision_status_callback(void *baton,
+                                     const char *local_abspath,
+                                     const svn_wc_status3_t *status,
+                                     apr_pool_t *scratch_pool)
+{
+  /* For legacy reasons we only check the file contents for changes */
+  if (status->versioned
+      && status->kind == svn_node_file
+      && (status->text_status == svn_wc_status_modified
+          || status->text_status == svn_wc_status_conflicted))
+    {
+      return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
+                               _("File '%s' has local modifications"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
@@ -2540,11 +2550,18 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
                                     void *cancel_baton,
                                     apr_pool_t *scratch_pool)
 {
+  if (instant_error)
+    {
+      SVN_ERR(svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_infinity,
+                                 FALSE, FALSE, FALSE, NULL,
+                                 remove_from_revision_status_callback, NULL,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+    }
   return svn_error_trace(
       svn_wc__internal_remove_from_revision_control(wc_ctx->db,
                                                     local_abspath,
                                                     destroy_wf,
-                                                    instant_error,
                                                     cancel_func,
                                                     cancel_baton,
                                                     scratch_pool));

@@ -564,7 +564,6 @@ svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
-                                              svn_boolean_t instant_error,
                                               svn_cancel_func_t cancel_func,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
