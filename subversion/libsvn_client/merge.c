@@ -363,7 +363,6 @@ typedef struct merge_cmd_baton_t {
 
 /*** Utilities ***/
 
-#ifdef SVN_DEBUG
 /* Return TRUE iff the session URL of RA_SESSION is equal to URL.  Useful in
  * asserting preconditions. */
 static svn_boolean_t
@@ -378,7 +377,6 @@ session_url_is(svn_ra_session_t *ra_session,
   SVN_ERR_ASSERT_NO_RETURN(! err);
   return strcmp(url, session_url) == 0;
 }
-#endif /* SVN_DEBUG */
 
 /* Return a new merge_source_t structure, allocated in RESULT_POOL,
  * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
