@@ -140,7 +140,6 @@ crop_children(svn_wc__db_t *db,
                                                    db,
                                                    child_abspath,
                                                    TRUE, /* destroy */
-                                                   FALSE, /* instant error */
                                                    cancel_func, cancel_baton,
                                                    iterpool));
           else
@@ -156,7 +155,6 @@ crop_children(svn_wc__db_t *db,
                                                      db,
                                                      child_abspath,
                                                      TRUE, /* destroy */
-                                                     FALSE, /* instant error */
                                                      cancel_func,
                                                      cancel_baton,
                                                      iterpool));
@@ -277,8 +275,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
   IGNORE_LOCAL_MOD(svn_wc__internal_remove_from_revision_control(
                                     wc_ctx->db,
                                     local_abspath,
-                                    TRUE,
-                                    FALSE,
+                                    TRUE /* destroy */,
                                     cancel_func, cancel_baton,
                                     scratch_pool));
 
