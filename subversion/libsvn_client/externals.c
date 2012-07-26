@@ -59,6 +59,8 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -121,6 +123,18 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
         }
 
       /* ### TODO: We should notify the user about the rename */
+      if (notify_func)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(err ? local_abspath : new_path,
+                                        svn_wc_notify_left_local_modifications,
+                                        scratch_pool);
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          notify_func(notify_baton, notify, scratch_pool);
+        }
     }
 
   return svn_error_trace(err);
@@ -266,6 +280,7 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(relegate_dir_external(ctx->wc_ctx, defining_abspath,
                                     local_abspath,
                                     ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
                                     pool));
     }
   else
@@ -560,6 +575,17 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
       notify->err = err;
 
       (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                      svn_wc_notify_left_local_modifications,
+                                      scratch_pool);
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+        }
     }
 
   if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)

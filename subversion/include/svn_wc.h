@@ -1229,12 +1229,22 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.8. */
   svn_wc_notify_failed_obstruction,
 
-  /** Conflict resolver is starting or done.
+  /** Conflict resolver is starting.
    * This can be used by clients to detect when to display conflict summary
    * information, for example.
    * @since New in 1.8. */
   svn_wc_notify_conflict_resolver_starting,
-  svn_wc_notify_conflict_resolver_done
+
+  /** Conflict resolver is done.
+   * This can be used by clients to detect when to display conflict summary
+   * information, for example.
+   * @since New in 1.8. */
+  svn_wc_notify_conflict_resolver_done,
+
+  /** The current operation left local changes of something that was deleted
+   * The changes are available on (and below) the notified path
+   * @since New in 1.8. */
+  svn_wc_notify_left_local_modifications
 
 } svn_wc_notify_action_t;
 
