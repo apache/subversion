@@ -1828,7 +1828,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                scratch_pool, scratch_pool));
       else
-        old_props = their_original_props;
+        old_props = old_their_props;
 
       iterpool = svn_pool_create(scratch_pool);
 
