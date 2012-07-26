@@ -240,6 +240,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 #endif
 
+  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+
   // Build all mutexes.
   g_finalizedObjectsMutex = new JNIMutex(g_pool);
   if (isExceptionThrown())
