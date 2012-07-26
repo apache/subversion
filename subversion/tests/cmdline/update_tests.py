@@ -5520,6 +5520,7 @@ def update_to_HEAD_plus_1(sbox):
                                         None, None,
                                         None, None, None, wc_dir, '-r', '2')
 
+@XFail()
 def update_moved_dir_leaf_del(sbox):
   "update locally moved dir with leaf del"
   sbox.build()
@@ -5554,6 +5555,7 @@ def update_moved_dir_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_edited_leaf_del(sbox):
   "update locally moved dir with edited leaf del"
   sbox.build()
@@ -5592,6 +5594,7 @@ def update_moved_dir_edited_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_file_add(sbox):
   "update locally moved dir with incoming file"
   sbox.build()
@@ -5634,6 +5637,7 @@ def update_moved_dir_file_add(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_dir_add(sbox):
   "update locally moved dir with incoming dir"
   sbox.build()
