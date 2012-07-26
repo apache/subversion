@@ -2084,10 +2084,9 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
 
-   PATH is the path to the item to be resolved, BASE_NAME is the basename
-   of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conflicts respectively are to be resolved.
+   LOCAL_ABSPATH in DB is the path to the item to be resolved.
+   RESOLVE_TEXT, RESOLVE_PROPS and RESOLVE_TREE are TRUE iff text, property
+   and tree conflicts respectively are to be resolved.
 
    If this call marks any conflict as resolved, set *DID_RESOLVE to true,
    else do not change *DID_RESOLVE.
