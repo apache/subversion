@@ -63,6 +63,9 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath,
+                                     FALSE, scratch_pool, scratch_pool));
+
   err = svn_wc__external_remove(wc_ctx, wri_abspath, local_abspath, FALSE,
                                 cancel_func, cancel_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
@@ -103,8 +106,21 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
       /* Do our best, but no biggy if it fails. The rename will fail. */
       svn_error_clear(svn_io_remove_file2(new_path, TRUE, scratch_pool));
 
-      /* Rename. */
-      SVN_ERR(svn_io_file_rename(local_abspath, new_path, scratch_pool));
+      /* Rename. If this is still a working copy we should use the working
+         copy rename function (to release open handles) */
+      err = svn_wc__rename_wc(wc_ctx, local_abspath, new_path,
+                              scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        {
+          svn_error_clear(err);
+
+          /* And if it is no longer a working copy, we should just rename
+             it */
+          err = svn_io_file_rename(local_abspath, new_path, scratch_pool);
+        }
+
+      /* ### TODO: We should notify the user about the rename */
     }
 
   return svn_error_trace(err);
@@ -247,9 +263,6 @@ switch_dir_external(const char *local_abspath,
   if (kind == svn_node_dir)
     {
       /* Buh-bye, old and busted ... */
-      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
-                                         FALSE, pool, pool));
-
       SVN_ERR(relegate_dir_external(ctx->wc_ctx, defining_abspath,
                                     local_abspath,
                                     ctx->cancel_func, ctx->cancel_baton,
