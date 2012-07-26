@@ -559,7 +559,7 @@ public class ClientNotifyInformation extends EventObject
         conflict_resolver_done ("conflict resolver done"),
 
         /** Operation left local modifications. */
-        left_local_modifications ("left local modifications);
+        left_local_modifications ("left local modifications");
 
         /**
          * The description of the action.
