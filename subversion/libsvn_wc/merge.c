@@ -241,13 +241,11 @@ detranslate_wc_file(const char **detranslated_abspath,
 
   if (force_copy || keywords || eol || special)
     {
-      const char *wcroot_abspath, *temp_dir_abspath;
+      const char *temp_dir_abspath;
       const char *detranslated;
 
       /* Force a copy into the temporary wc area to avoid having
          temporary files created below to appear in the actual wc. */
-      SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, mt->db, mt->wri_abspath,
-                                    scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, mt->db,
                                              mt->wri_abspath,
                                              scratch_pool, scratch_pool));
