@@ -750,6 +750,11 @@ test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
             "dir"
         },
         {
+            "../../../../home dir",
+            "u://svr/svn/home",
+            "dir",
+        },
+        {
             "^/../repB/tools/scripts scripts",
             "u://svr/svn/cur/repB/tools/scripts",
             "scripts"
@@ -788,6 +793,7 @@ test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
                                 == items[i].peg_rev);
       if (items[i].rev != 0)
         SVN_TEST_ASSERT(external_item->revision.value.number == items[i].rev);
+      SVN_TEST_ASSERT(svn_uri_is_canonical(resolved_url, pool));
     }
 
 
