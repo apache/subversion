@@ -3902,8 +3902,8 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
           /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    "r%ld's root node's predecessor is r%ld"
-                                   " but must be earlier revision",
-                                   root->rev, pred_rev);
+                                   " but should be r%ld",
+                                   root->rev, pred_rev, root->rev - 1);
       }
   }
 
