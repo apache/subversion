@@ -27,6 +27,7 @@
 
 /*** Includes ***/
 
+#include <assert.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
@@ -3541,9 +3542,9 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t is_rollback = source->loc2->rev < source->loc1->rev;
 
-  SVN_ERR_ASSERT(session_url_is(
-                   ra_session, (is_rollback ? source->loc1 : source->loc2)->url,
-                   scratch_pool));
+  assert(session_url_is(ra_session,
+                        (is_rollback ? source->loc1 : source->loc2)->url,
+                        scratch_pool));
 
   /* CHILDREN_WITH_MERGEINFO is sorted in depth-first order, so
      start at index 1 to examine only subtrees. */
@@ -8432,7 +8433,7 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   apr_array_header_t *inoperative_ranges;
   apr_pool_t *iterpool;
 
-  SVN_ERR_ASSERT(session_url_is(ra_session, source->loc2->url, scratch_pool));
+  assert(session_url_is(ra_session, source->loc2->url, scratch_pool));
 
   /* This function is only intended to work with forward merges. */
   if (source->loc1->rev > source->loc2->rev)
@@ -9296,10 +9297,8 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
      subtree mergeinfo, then this will help keep memory use in check. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR_ASSERT(session_url_is(URL1_ra_session, source->loc1->url,
-                                scratch_pool));
-  SVN_ERR_ASSERT(session_url_is(URL2_ra_session, source->loc2->url,
-                                scratch_pool));
+  assert(session_url_is(URL1_ra_session, source->loc1->url, scratch_pool));
+  assert(session_url_is(URL2_ra_session, source->loc2->url, scratch_pool));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
   SVN_ERR_ASSERT(! source->ancestral);
@@ -10280,10 +10279,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR_ASSERT(session_url_is(source_ra_session, source_loc->url,
-                                scratch_pool));
-  SVN_ERR_ASSERT(session_url_is(target_ra_session, target->loc.url,
-                                scratch_pool));
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
 
   *youngest_merged_rev = SVN_INVALID_REVNUM;
 
@@ -10516,10 +10513,8 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
   svn_revnum_t youngest_merged_rev;
   svn_client__pathrev_t *yc_ancestor;
 
-  SVN_ERR_ASSERT(session_url_is(source_ra_session, source_loc->url,
-                                scratch_pool));
-  SVN_ERR_ASSERT(session_url_is(target_ra_session, target->loc.url,
-                                scratch_pool));
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
 
   /* Initialize our return variables. */
   *left_p = NULL;
@@ -10673,10 +10668,8 @@ find_reintegrate_merge(merge_source_t **source_p,
   svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
 
-  SVN_ERR_ASSERT(session_url_is(source_ra_session, source_loc->url,
-                                scratch_pool));
-  SVN_ERR_ASSERT(session_url_is(target_ra_session, target->loc.url,
-                                scratch_pool));
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
 
   /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's
