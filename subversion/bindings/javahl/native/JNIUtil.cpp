@@ -179,9 +179,9 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       apr_allocator_max_free_set(allocator, 1);
     }
 
-  svn_utf_initialize(pool); /* Optimize character conversions */
-  svn_fs_initialize(pool); /* Avoid some theoretical issues */
-  svn_ra_initialize(pool);
+  svn_utf_initialize(g_pool); /* Optimize character conversions */
+  svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
+  svn_ra_initialize(g_pool);
 
   /* We shouldn't fill the JVMs memory with FS cache data unless explictly
      requested. */
