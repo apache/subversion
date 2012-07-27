@@ -37,9 +37,13 @@
 #include <apr_lib.h>
 
 #include "svn_pools.h"
+#include "svn_fs.h"
+#include "svn_ra.h"
+#include "svn_utf.h"
 #include "svn_wc.h"
 #include "svn_dso.h"
 #include "svn_path.h"
+#include "svn_cache_config.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
@@ -175,6 +179,19 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       apr_allocator_max_free_set(allocator, 1);
     }
 
+  svn_utf_initialize(pool); /* Optimize character conversions */
+  svn_fs_initialize(pool); /* Avoid some theoretical issues */
+  svn_ra_initialize(pool);
+
+  /* We shouldn't fill the JVMs memory with FS cache data unless explictly
+     requested. */
+  {
+    svn_cache_config_t settings = *svn_cache_config_get();
+    settings.cache_size = 0;
+    settings.file_handle_count = 0;
+    settings.single_threaded = FALSE;
+    svn_cache_config_set(&settings);
+  }
 
 #ifdef ENABLE_NLS
 #ifdef WIN32
