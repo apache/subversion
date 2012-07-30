@@ -207,9 +207,22 @@ class SvnMergeRangePrinter:
             return 'NULL'
 
         r = self.val
-        rs = str(r['start']) + '-' + str(r['end'])
+        start = int(r['start'])
+        end = int(r['end'])
+        if start >= 0 and start < end:
+            if start + 1 == end:
+                rs = str(end)
+            else:
+                rs = str(start + 1) + '-' + str(end)
+        elif end >= 0 and end < start:
+            if start == end + 1:
+                rs = '-' + str(start)
+            else:
+                rs = str(start) + '-' + str(end + 1)
+        else:
+            rs = '(INVALID: s=%d, e=%d)' % (start, end)
         if not r['inheritable']:
-          rs += '*'
+            rs += '*'
         return rs
 
     def display_hint(self):
