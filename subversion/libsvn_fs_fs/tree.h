@@ -78,6 +78,12 @@ svn_fs_fs__node_created_rev(svn_revnum_t *revision,
                             const char *path,
                             apr_pool_t *pool);
 
+/* Verify metadata for ROOT.
+   ### Currently only implemented for revision roots. */
+svn_error_t *
+svn_fs_fs__verify_root(svn_fs_root_t *root,
+                       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

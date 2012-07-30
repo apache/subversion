@@ -141,7 +141,7 @@ prev_log_path(const char **prev_path_p,
               svn_sort__item_t item = APR_ARRAY_IDX(paths,
                                                     i - 1, svn_sort__item_t);
               const char *ch_path = item.key;
-              int len = strlen(ch_path);
+              size_t len = strlen(ch_path);
 
               /* See if our path is the child of this change path.  If
                  not, keep looking.  */
@@ -757,8 +757,9 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
       /* Compute and send delta if client asked for it. */
       if (delta_handler)
         {
-          /* Get the content delta. */
-          svn_txdelta(&delta_stream, last_stream, stream, lastpool);
+          /* Get the content delta. Don't calculate checksums as we don't
+           * use them. */
+          svn_txdelta2(&delta_stream, last_stream, stream, FALSE, lastpool);
 
           /* And send. */
           SVN_ERR(svn_txdelta_send_txstream(delta_stream, delta_handler,

@@ -959,16 +959,21 @@ open_target_session(svn_ra_session_t **target_session_p,
 typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
+  /* Extra 'backdoor' session for fetching data *from* the target repo. */
+  svn_ra_session_t *extra_to_session;
+  svn_revnum_t current_revision;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
   int normalized_rev_props_count;
   int normalized_node_props_count;
+  const char *to_root;
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
    data from the provided parameters. */
-static replay_baton_t *
-make_replay_baton(svn_ra_session_t *from_session,
+static svn_error_t *
+make_replay_baton(replay_baton_t **baton_p,
+                  svn_ra_session_t *from_session,
                   svn_ra_session_t *to_session,
                   subcommand_baton_t *sb, apr_pool_t *pool)
 {
@@ -976,7 +981,16 @@ make_replay_baton(svn_ra_session_t *from_session,
   rb->from_session = from_session;
   rb->to_session = to_session;
   rb->sb = sb;
-  return rb;
+
+  SVN_ERR(svn_ra_get_repos_root2(to_session, &rb->to_root, pool));
+
+#ifdef ENABLE_EV2_SHIMS
+  /* Open up the extra baton.  Only needed for Ev2 shims. */
+  SVN_ERR(open_target_session(&rb->extra_to_session, sb, pool));
+#endif
+
+  *baton_p = rb;
+  return SVN_NO_ERROR;
 }
 
 /* Return TRUE iff KEY is the name of an svn:date or svn:author or any svnsync
@@ -1027,6 +1041,137 @@ static svn_boolean_t
 filter_include_log(const char *key)
 {
   return ! filter_exclude_log(key);
+}
+
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct replay_baton_t *rb = baton;
+  svn_stream_t *fstream;
+  svn_error_t *err;
+
+  if (svn_path_is_url(path))
+    path = svn_uri_skip_ancestor(rb->to_root, path, scratch_pool);
+  else if (path[0] == '/')
+    path += 1;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->current_revision - 1;
+
+  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  err = svn_ra_get_file(rb->extra_to_session, path, base_revision,
+                        fstream, NULL, NULL, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_stream_close(fstream));
+
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_close(fstream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct replay_baton_t *rb = baton;
+  svn_node_kind_t node_kind;
+
+  if (svn_path_is_url(path))
+    path = svn_uri_skip_ancestor(rb->to_root, path, scratch_pool);
+  else if (path[0] == '/')
+    path += 1;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->current_revision - 1;
+
+  SVN_ERR(svn_ra_check_path(rb->extra_to_session, path, base_revision,
+                            &node_kind, scratch_pool));
+
+  if (node_kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(rb->extra_to_session, path, base_revision,
+                              NULL, NULL, props, result_pool));
+    }
+  else if (node_kind == svn_node_dir)
+    {
+      apr_array_header_t *tmp_props;
+
+      SVN_ERR(svn_ra_get_dir2(rb->extra_to_session, NULL, NULL, props, path,
+                              base_revision, 0 /* Dirent fields */,
+                              result_pool));
+      tmp_props = svn_prop_hash_to_array(*props, result_pool);
+      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
+                                   result_pool));
+      *props = svn_prop_array_to_hash(tmp_props, result_pool);
+    }
+  else
+    {
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct replay_baton_t *rb = baton;
+  svn_node_kind_t node_kind;
+
+  if (svn_path_is_url(path))
+    path = svn_uri_skip_ancestor(rb->to_root, path, scratch_pool);
+  else if (path[0] == '/')
+    path += 1;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->current_revision - 1;
+
+  SVN_ERR(svn_ra_check_path(rb->extra_to_session, path, base_revision,
+                            &node_kind, scratch_pool));
+
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_delta_shim_callbacks_t *
+get_shim_callbacks(replay_baton_t *rb,
+                   apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = rb;
+
+  return callbacks;
 }
 
 
@@ -1096,6 +1241,8 @@ replay_rev_started(svn_revnum_t revision,
                                      rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->to_session,
+                                get_shim_callbacks(rb, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
@@ -1118,6 +1265,7 @@ replay_rev_started(svn_revnum_t revision,
   *editor = cancel_editor;
   *edit_baton = cancel_baton;
 
+  rb->current_revision = revision;
   return SVN_NO_ERROR;
 }
 
@@ -1311,7 +1459,7 @@ do_synchronize(svn_ra_session_t *to_session,
 
   /* Ok, so there are new revisions, iterate over them copying them
      into the destination repository. */
-  rb = make_replay_baton(from_session, to_session, baton, pool);
+  SVN_ERR(make_replay_baton(&rb, from_session, to_session, baton, pool));
 
   /* For compatibility with older svnserve versions, check first if we
      support adding revprops to the commit. */
@@ -1740,7 +1888,6 @@ main(int argc, const char *argv[])
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
-  apr_allocator_t *allocator;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
@@ -1754,13 +1901,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   err = svn_ra_initialize(pool);
   if (err)

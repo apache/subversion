@@ -94,6 +94,7 @@ main(int argc, const char **argv)
   if (err)
     {
       svn_handle_error2(err, stderr, FALSE, "svnauthz-validate: ");
+      svn_error_clear(err);
       return 1;
     }
   else

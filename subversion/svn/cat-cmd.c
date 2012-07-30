@@ -98,7 +98,7 @@ svn_cl__cat(apr_getopt_t *os,
 
           if (status == SVN_ERR_ENTRY_NOT_FOUND ||
               status == SVN_ERR_FS_NOT_FOUND)
-            err = svn_error_quick_wrap(err, 
+            err = svn_error_quick_wrap(err,
                                        _("Could not cat all targets because "
                                          "some targets don't exist"));
           else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
@@ -113,6 +113,6 @@ svn_cl__cat(apr_getopt_t *os,
 
       return svn_error_trace(err);
     }
-  
+
   return SVN_NO_ERROR;
 }

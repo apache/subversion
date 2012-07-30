@@ -38,6 +38,7 @@ from svntest.actions import run_and_verify_status
 from svntest.actions import run_and_verify_info
 from svntest.actions import get_virginal_state
 import shutil
+import logging
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -49,16 +50,7 @@ Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
 
-# If verbose mode is enabled, print the LINE and a newline.
-def verbose_print(line):
-  if main.options.verbose:
-    print(line)
-
-# If verbose mode is enabled, print the (assumed newline-terminated) LINES.
-def verbose_printlines(lines):
-  if main.options.verbose:
-    for line in lines:
-      sys.stdout.write(line)
+logger = logging.getLogger()
 
 ######################################################################
 # Tests
@@ -388,14 +380,14 @@ def ensure_tree_conflict(sbox, operation,
   def url_of(repo_relative_path):
     return sbox.repo_url + '/' + repo_relative_path
 
-  verbose_print("")
-  verbose_print("=== Starting a set of '" + operation + "' tests.")
+  logger.debug("")
+  logger.debug("=== Starting a set of '" + operation + "' tests.")
 
   # Path to source branch, relative to wc_dir.
   # Source is where the "incoming" mods are made.
   source_br = "branch1"
 
-  verbose_print("--- Creating changes in repos")
+  logger.debug("--- Creating changes in repos")
   source_wc_dir = os.path.join(wc_dir, source_br)
   source_left_rev, source_right_rev = set_up_repos(wc_dir, source_wc_dir,
                                                    incoming_scenarios)
@@ -430,9 +422,9 @@ def ensure_tree_conflict(sbox, operation,
       source_url = url_of(source_br + '/' + scen_name)
       target_path = os.path.join(target_br, scen_name)
 
-      verbose_print("=== " + str(inc_action) + " onto " + str(loc_action))
+      logger.debug("=== " + str(inc_action) + " onto " + str(loc_action))
 
-      verbose_print("--- Making local mods")
+      logger.debug("--- Making local mods")
       for modaction in loc_action:
         modify(modaction, localmod_paths(".", target_path), is_init=False)
       if commit_local_mods:
@@ -444,7 +436,7 @@ def ensure_tree_conflict(sbox, operation,
       # For update, verify the pre-condition that WC is out of date.
       # For switch/merge, there is no such precondition.
       if operation == 'update':
-        verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
+        logger.debug("--- Trying to commit (expecting 'out-of-date' error)")
         run_and_verify_commit(".", None, None, "Commit failed",
                               target_path)
 
@@ -462,15 +454,15 @@ def ensure_tree_conflict(sbox, operation,
                                                       match_all=False)
       # Do the main action
       if operation == 'update':
-        verbose_print("--- Updating")
+        logger.debug("--- Updating")
         run_and_verify_svn(None, expected_stdout, [],
                            'update', target_path)
       elif operation == 'switch':
-        verbose_print("--- Switching")
+        logger.debug("--- Switching")
         run_and_verify_svn(None, expected_stdout, [],
                            'switch', source_url, target_path)
       elif operation == 'merge':
-        verbose_print("--- Merging")
+        logger.debug("--- Merging")
         run_and_verify_svn(None, expected_stdout, [],
                            'merge', '--ignore-ancestry',
                            '--allow-mixed-revisions',
@@ -479,7 +471,7 @@ def ensure_tree_conflict(sbox, operation,
       else:
         raise Exception("unknown operation: '" + operation + "'")
 
-      verbose_print("--- Checking that 'info' reports the conflict")
+      logger.debug("--- Checking that 'info' reports the conflict")
       if operation == 'update' or operation == 'switch':
         incoming_left_rev = target_start_rev
       else:
@@ -495,39 +487,39 @@ def ensure_tree_conflict(sbox, operation,
             re.escape(victim_name + '@' + str(incoming_right_rev)) + r')' }
       run_and_verify_info([expected_info], victim_path)
 
-      verbose_print("--- Trying to commit (expecting 'conflict' error)")
+      logger.debug("--- Trying to commit (expecting 'conflict' error)")
       ### run_and_verify_commit() requires an "output_tree" argument, but
       #   here we get away with passing None because we know an implementation
       #   detail: namely that it's not going to look at that argument if it
       #   gets the stderr that we're expecting.
       run_and_verify_commit(".", None, None, ".*conflict.*", victim_path)
 
-      verbose_print("--- Checking that 'status' reports the conflict")
+      logger.debug("--- Checking that 'status' reports the conflict")
       expected_stdout = svntest.verify.RegexOutput("^......C.* " +
                                                    re.escape(victim_path) + "$",
                                                    match_all=False)
       run_and_verify_svn(None, expected_stdout, [],
                          'status', victim_path)
 
-      verbose_print("--- Resolving the conflict")
+      logger.debug("--- Resolving the conflict")
       # Make sure resolving the parent does nothing.
       run_and_verify_resolved([], os.path.dirname(victim_path))
       # The real resolved call.
       run_and_verify_resolved([victim_path])
 
-      verbose_print("--- Checking that 'status' does not report a conflict")
+      logger.debug("--- Checking that 'status' does not report a conflict")
       exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
                                                 'status', victim_path)
       for line in stdout:
         if line[6] == 'C': # and line.endswith(victim_path + '\n'):
           raise svntest.Failure("unexpected status C") # on victim_path
 
-      # verbose_print("--- Committing (should now succeed)")
+      # logger.debug("--- Committing (should now succeed)")
       # run_and_verify_svn(None, None, [],
       #                    'commit', '-m', '', target_path)
       # target_start_rev += 1
 
-      verbose_print("")
+      logger.debug("")
 
     os.chdir(saved_cwd)
 
@@ -1224,7 +1216,7 @@ def actual_only_node_behaviour(sbox):
                      "export", foo_path, sbox.get_tempname())
   # import
   expected_stdout = None
-  expected_stderr = ".*foo.*does not exist.*"
+  expected_stderr = ".*(foo.*does not exist|Can't stat.*foo).*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "import", '-m', svntest.main.make_log_msg(),
                      foo_path, sbox.repo_url + '/foo_imported')
@@ -1351,6 +1343,18 @@ def actual_only_node_behaviour(sbox):
   svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
                        os.path.join(wc_dir, 'A'))
 
+  # revert
+  expected_stdout = "Reverted.*foo.*"
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "revert", "-R", foo_path)
+
+  # revert the entire working copy and repeat the merge so we can test
+  # more commands
+  svntest.main.run_svn(None, "revert", "-R", wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
   # status (stat, st)
   expected_status = wc.State(foo_path, {
     '' : Item(status='! ', treeconflict='C'),
@@ -1406,7 +1410,8 @@ def update_dir_with_not_present(sbox):
   sbox.simple_rm('A/B')
 
   # We can't commit this without updating (ra_svn produces its own error)
-  run_and_verify_svn(None, None, "svn: (E155011|E160028): Dir.*B.*out of date",
+  run_and_verify_svn(None, None,
+                    "svn: (E155011|E160028|E170004): (Dir|Item).*B.*out of date",
                      'ci', '-m', '', wc_dir)
 
   # So we run update

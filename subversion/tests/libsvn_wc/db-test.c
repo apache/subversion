@@ -228,8 +228,12 @@ static const char * const TESTING_DATA = (
   "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
-  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'base-deleted',"
-  "  0, 'J/J-d', 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'normal',"
+  "  0, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  10, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'moved/file', 2, 'moved', 2, 'moved/file', 2, 'base-deleted',"
+  "  0, 'J/J-d', 'file', '()', null, null, null, null, null, null,"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
@@ -660,7 +664,8 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum,
-            NULL, NULL, FALSE, NULL, FALSE, FALSE, NULL,
+            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, NULL,
             pool));
 
   /* Create a new symlink node. */
@@ -672,7 +677,8 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             "O-target",
-            NULL, NULL, FALSE, NULL, NULL,
+            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, NULL,
             pool));
 
   /* Replace an incomplete node with an absent file node. */
@@ -1411,6 +1417,7 @@ test_externals_store(apr_pool_t *pool)
                                        12,
                                        FALSE, NULL,
                                        FALSE,
+                                       NULL,
                                        NULL,
                                        pool));
 

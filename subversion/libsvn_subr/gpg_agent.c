@@ -169,7 +169,7 @@ password_get_gpg_agent(svn_boolean_t *done,
   const char *p = NULL;
   char *ep = NULL;
   char *buffer;
-  
+
   apr_array_header_t *socket_details;
   const char *request = NULL;
   const char *cache_id = NULL;
@@ -204,7 +204,7 @@ password_get_gpg_agent(svn_boolean_t *done,
       sd = socket(AF_UNIX, SOCK_STREAM, 0);
       if (sd == -1)
         return SVN_NO_ERROR;
-    
+
       if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         {
           close(sd);
@@ -332,7 +332,6 @@ password_get_gpg_agent(svn_boolean_t *done,
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
      to other password caching mechanisms. */
-  digest = svn_checksum_create(svn_checksum_md5, pool);
   svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
                pool);
   cache_id = svn_checksum_to_cstring(digest, pool);
@@ -363,7 +362,7 @@ password_get_gpg_agent(svn_boolean_t *done,
 
   if (strncmp(buffer, "ERR", 3) == 0)
     return SVN_NO_ERROR;
-  
+
   p = NULL;
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
@@ -413,12 +412,11 @@ simple_gpg_agent_first_creds(void **credentials,
                              const char *realmstring,
                              apr_pool_t *pool)
 {
-  return svn_auth__simple_first_creds_helper(credentials,
-                                             iter_baton, provider_baton,
-                                             parameters, realmstring,
-                                             password_get_gpg_agent,
-                                             SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                             pool);
+  return svn_auth__simple_creds_cache_get(credentials, iter_baton,
+                                          provider_baton, parameters,
+                                          realmstring, password_get_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 
@@ -431,12 +429,11 @@ simple_gpg_agent_save_creds(svn_boolean_t *saved,
                             const char *realmstring,
                             apr_pool_t *pool)
 {
-  return svn_auth__simple_save_creds_helper(saved, credentials,
-                                            provider_baton, parameters,
-                                            realmstring,
-                                            password_set_gpg_agent,
-                                            SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                            pool);
+  return svn_auth__simple_creds_cache_set(saved, credentials,
+                                          provider_baton, parameters,
+                                          realmstring, password_set_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 

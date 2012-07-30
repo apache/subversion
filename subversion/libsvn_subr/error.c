@@ -218,6 +218,28 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
 
 
 svn_error_t *
+svn_error__trace(const char *file, long line, svn_error_t *err)
+{
+#ifndef SVN_DEBUG
+
+  /* We shouldn't even be here, but whatever. Just return the error as-is.  */
+  return err;
+
+#else
+
+  /* Only do the work when an error occurs.  */
+  if (err)
+    {
+      svn_error__locate(file, line);
+      return svn_error_quick_wrap(err, SVN_ERR__TRACED);
+    }
+  return SVN_NO_ERROR;
+
+#endif
+}
+
+
+svn_error_t *
 svn_error_compose_create(svn_error_t *err1,
                          svn_error_t *err2)
 {

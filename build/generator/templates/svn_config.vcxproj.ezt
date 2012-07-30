@@ -26,6 +26,7 @@
     </ProjectConfiguration>
 [end][end]  </ItemGroup>
   <PropertyGroup Label="Globals">
+    <ProjectName>svn_config</ProjectName>
     <ProjectGuid>[project_guid]</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
   </PropertyGroup>
@@ -34,6 +35,7 @@
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>[is configs "Debug"]true[else]false[end]</UseDebugLibraries>
     <PlatformToolset>[toolset_version]</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -67,6 +69,9 @@
 [end][end]
     </CustomBuild>
 [end]  </ItemGroup>
+  <ItemGroup>
+[for sql][for sql.dependencies]    <None Include="$(SolutionDir)\[sql.dependencies]" />
+[end][end]  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

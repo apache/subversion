@@ -34,6 +34,7 @@
 #include "config_impl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 
 
@@ -561,6 +562,7 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
                const char *section, const char *option,
                const char *default_value)
 {
+  *valuep = default_value;
   if (cfg)
     {
       cfg_section_t *sec;
@@ -570,23 +572,21 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
           make_string_from_option(valuep, cfg, sec, opt, NULL);
         }
       else
-        {
-          apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
-          const char *x_default;
-          expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
-          if (x_default)
-            {
-              svn_stringbuf_set(cfg->tmp_value, x_default);
-              *valuep = cfg->tmp_value->data;
-            }
-          else
-            *valuep = default_value;
-          svn_pool_destroy(tmp_pool);
-        }
-    }
-  else
-    {
-      *valuep = default_value;
+        /* before attempting to expand an option, check for the placeholder.
+         * If none is there, there is no point in calling expand_option_value.
+         */
+        if (default_value && strchr(default_value, '%'))
+          {
+            apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
+            const char *x_default;
+            expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
+            if (x_default)
+              {
+                svn_stringbuf_set(cfg->tmp_value, x_default);
+                *valuep = cfg->tmp_value->data;
+              }
+            svn_pool_destroy(tmp_pool);
+          }
     }
 }
 
@@ -694,6 +694,33 @@ svn_config_set_bool(svn_config_t *cfg,
 {
   svn_config_set(cfg, section, option,
                  (value ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE));
+}
+
+svn_error_t *
+svn_config_get_int64(svn_config_t *cfg,
+                     apr_int64_t *valuep,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t default_value)
+{
+  const char *tmp_value;
+  svn_config_get(cfg, &tmp_value, section, option, NULL);
+  if (tmp_value)
+    return svn_cstring_strtoi64(valuep, tmp_value,
+                                APR_INT64_MIN, APR_INT64_MAX, 10);
+
+  *valuep = default_value;
+  return SVN_NO_ERROR;
+}
+
+void
+svn_config_set_int64(svn_config_t *cfg,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t value)
+{
+  svn_config_set(cfg, section, option,
+                 apr_psprintf(cfg->pool, "%" APR_INT64_T_FMT, value));
 }
 
 svn_error_t *

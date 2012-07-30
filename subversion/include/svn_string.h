@@ -200,7 +200,7 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 
-/** Create a truely empty string object (length and blocksize are 0)
+/** Create a new, empty bytestring.
  * @since New in 1.8.
  */
 svn_stringbuf_t *
@@ -209,8 +209,8 @@ svn_stringbuf_create_empty(apr_pool_t *pool);
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * The allocated string buffer will be one byte larger than @a minimum_size
- * to account for a final '\\0'.
+ * The allocated string buffer will be at least one byte larger than
+ * @a minimum_size to account for a final '\\0'.
  *
  * @since New in 1.6.
  */
@@ -235,10 +235,16 @@ svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
   __attribute__((format(printf, 2, 0)));
 
-/** Make sure that the string @a str has at least @a minimum_size bytes of
- * space available in the memory block.
+/** Make sure that the stringbuf @a str has at least @a minimum_size
+ * bytes of space available in the memory block.
  *
- * (@a minimum_size should include space for the terminating NULL character.)
+ * The allocated string buffer will be at least one byte larger than
+ * @a minimum_size to account for a final '\\0'.
+ *
+ * @note: Before Subversion 1.8 this function did not ensure space for
+ * one byte more than @a minimum_size.  If compatibility with pre-1.8
+ * behaviour is required callers must assume space for only
+ * @a minimum_size-1 data bytes plus a final '\\0'.
  */
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size);

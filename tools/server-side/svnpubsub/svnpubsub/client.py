@@ -74,7 +74,12 @@ class Client(asynchat.async_chat):
     self.skipping_headers = True
 
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.connect((host, port))
+    try:
+      self.connect((host, port))
+    except:
+      self.handle_error()
+      return
+        
     ### should we allow for repository restrictions?
     self.push('GET /commits/xml HTTP/1.0\r\n\r\n')
 
@@ -117,7 +122,7 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
   def startElement(self, name, attrs):
     if name == 'commit':
-      self.rev = Revision(attrs['repository'], attrs['revision'])
+      self.rev = Revision(attrs['repository'], int(attrs['revision']))
     # No other elements to worry about.
 
   def characters(self, data):
@@ -145,8 +150,8 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
 
 class Revision(object):
-  def __init__(self, repos, rev):
-    self.repos = repos
+  def __init__(self, uuid, rev):
+    self.uuid = uuid
     self.rev = rev
     self.dirs_changed = [ ]
     self.author = None

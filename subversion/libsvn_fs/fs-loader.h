@@ -172,7 +172,7 @@ typedef struct fs_vtable_t
                                   const svn_string_t *const *old_value_p,
                                   const svn_string_t *value,
                                   apr_pool_t *pool);
-  svn_error_t *(*get_uuid)(svn_fs_t *fs, const char **uuid, apr_pool_t *pool);
+  /* There is no get_uuid(); see svn_fs_t.uuid docstring. */
   svn_error_t *(*set_uuid)(svn_fs_t *fs, const char *uuid, apr_pool_t *pool);
   svn_error_t *(*revision_root)(svn_fs_root_t **root_p, svn_fs_t *fs,
                                 svn_revnum_t rev, apr_pool_t *pool);
@@ -333,6 +333,7 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
+  /* Mergeinfo. */
   svn_error_t *(*get_mergeinfo)(svn_mergeinfo_catalog_t *catalog,
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
@@ -390,6 +391,9 @@ struct svn_fs_t
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
   void *fsap_data;
+
+  /* UUID, stored by open(), create(), and set_uuid(). */
+  const char *uuid;
 };
 
 

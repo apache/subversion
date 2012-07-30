@@ -223,12 +223,12 @@ svn_cl__proplist(apr_getopt_t *os,
       if (errors->nelts > 0)
         {
           svn_error_t *err;
-          
+
           err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
           for (i = 0; i < errors->nelts; i++)
             {
               apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
-              
+
               if (status == SVN_ERR_ENTRY_NOT_FOUND)
                 err = svn_error_quick_wrap(err,
                                            _("Could not display properties "

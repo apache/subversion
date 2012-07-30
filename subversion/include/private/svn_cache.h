@@ -55,7 +55,7 @@ extern "C" {
  * i.e. modify @a data directly and return it in @a *out.
  */
 typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
-                                                      char *data,
+                                                      void *data,
                                                       apr_size_t data_len,
                                                       apr_pool_t *result_pool);
 
@@ -67,7 +67,7 @@ typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
  * not require the whole structure to be processed.
  */
 typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
-                                                         const char *data,
+                                                         const void *data,
                                                          apr_size_t data_len,
                                                          void *baton,
                                                          apr_pool_t *result_pool);
@@ -80,7 +80,7 @@ typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
  * values must be passed back in @a *data_len and @a *data, respectively.
  * Allocations will be done from @a result_pool.
  */
-typedef svn_error_t *(*svn_cache__partial_setter_func_t)(char **data,
+typedef svn_error_t *(*svn_cache__partial_setter_func_t)(void **data,
                                                          apr_size_t *data_len,
                                                          void *baton,
                                                          apr_pool_t *result_pool);
@@ -90,7 +90,7 @@ typedef svn_error_t *(*svn_cache__partial_setter_func_t)(char **data,
  * function should allocate the serialized value in @a result_pool, set
  * @a *data to the serialized value, and set @a *data_len to its length.
  */
-typedef svn_error_t *(*svn_cache__serialize_func_t)(char **data,
+typedef svn_error_t *(*svn_cache__serialize_func_t)(void **data,
                                                     apr_size_t *data_len,
                                                     void *in,
                                                     apr_pool_t *result_pool);
@@ -296,7 +296,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * assumed to be an svn_stringbuf_t.
  *
  * If @a thread_safe is true, and APR is compiled with threads, all
- * accesses to the cache will be protected with a mutex, if the shared 
+ * accesses to the cache will be protected with a mutex, if the shared
  * @a memcache has also been created with thread_safe flag set.
  *
  * These caches do not support svn_cache__iter.

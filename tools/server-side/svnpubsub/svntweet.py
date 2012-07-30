@@ -21,9 +21,9 @@
 #
 # Example:
 #  svntweet.py  my-config.json
-#  
+#
 # With my-config.json containing stream paths and the twitter auth info:
-#    {"stream": "http://svn-master.apache.org:2069/commits/xml",
+#    {"stream": "http://svn.apache.org:2069/commits/xml",
 #     "username": "asfcommits",
 #     "password": "MyLuggageComboIs1234"}
 #
@@ -90,9 +90,9 @@ class Revision:
         self.log = None
         self.date = None
 
-class StreamHandler(handler.ContentHandler):   
+class StreamHandler(handler.ContentHandler):
     def __init__(self, bdec):
-        handler.ContentHandler.__init__(self) 
+        handler.ContentHandler.__init__(self)
         self.bdec =  bdec
         self.rev = None
         self.text_value = None
@@ -115,7 +115,7 @@ class StreamHandler(handler.ContentHandler):
             self.bdec.stillalive()
     def characters(self, data):
         if self.text_value is not None:
-            self.text_value = self.text_value + data 
+            self.text_value = self.text_value + data
         else:
             self.text_value = data
 
@@ -179,7 +179,7 @@ class BigDoEverythingClasss(object):
     def pageStart(self):
         log.msg("Stream Connection Established")
         self.failures = 0
-        
+
     def _restartStream(self):
         (self.stream, self.transport) = connectTo(self.url, self)
         self.stream.deferred.addBoth(self.streamDead)
@@ -253,6 +253,6 @@ def main(config_file):
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print "invalid args, read source code"
-        sys.exit(0) 
+        sys.exit(0)
     log.startLogging(sys.stdout)
     main(sys.argv[1])

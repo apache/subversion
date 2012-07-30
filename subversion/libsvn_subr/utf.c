@@ -200,8 +200,8 @@ atomic_swap(void * volatile * mem, void *new_value)
 #endif
 }
 
-/* Set *RET to a newly created handle node for converting from FROMPAGE 
-   to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set 
+/* Set *RET to a newly created handle node for converting from FROMPAGE
+   to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set
    (*RET)->handle to NULL.  If fail for any other reason, return the error.
    Allocate *RET and its xlate handle in POOL. */
 static svn_error_t *
@@ -274,11 +274,11 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 
 /* Extend xlate_alloc_handle by using USERDATA_KEY as a key in our
    global hash map, if available.
-   
+
    Allocate *RET and its xlate handle in POOL if svn_utf_initialize()
    hasn't been called or USERDATA_KEY is NULL.  Else, allocate them
    in the pool of xlate_handle_hash.
-   
+
    Note: this function is not thread-safe. Call get_xlate_handle_node
    instead. */
 static svn_error_t *
@@ -292,7 +292,7 @@ get_xlate_handle_node_internal(xlate_handle_node_t **ret,
       xlate_handle_node_t *old_node = NULL;
 
       /* 2nd level: hash lookup */
-      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash, 
+      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash,
                                                       userdata_key,
                                                       APR_HASH_KEY_STRING);
       if (old_node_p)
@@ -381,7 +381,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
 }
 
 /* Put back NODE into the xlate handle cache for use by other calls.
-   
+
    Note: this function is not thread-safe. Call put_xlate_handle_node
    instead. */
 static svn_error_t *
@@ -403,7 +403,7 @@ put_xlate_handle_node_internal(xlate_handle_node_t *node,
     }
   node->next = *node_p;
   *node_p = node;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -431,7 +431,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
         return SVN_NO_ERROR;
 
       SVN_MUTEX__WITH_LOCK(xlate_handle_mutex,
-                           put_xlate_handle_node_internal(node, 
+                           put_xlate_handle_node_internal(node,
                                                           userdata_key));
     }
   else
@@ -439,7 +439,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       /* Store it in the per-pool cache. */
       apr_pool_userdata_set(node, userdata_key, apr_pool_cleanup_null, pool);
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -748,7 +748,7 @@ svn_utf_stringbuf_to_utf8(svn_stringbuf_t **dest,
 
   return svn_error_compose_create(err,
                                   put_xlate_handle_node
-                                     (node, 
+                                     (node,
                                       SVN_UTF_NTOU_XLATE_HANDLE,
                                       pool));
 }
@@ -782,7 +782,7 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
 
   return svn_error_compose_create(err,
                                   put_xlate_handle_node
-                                     (node, 
+                                     (node,
                                       SVN_UTF_NTOU_XLATE_HANDLE,
                                       pool));
 }
@@ -827,7 +827,7 @@ svn_utf_cstring_to_utf8(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   SVN_ERR(svn_error_compose_create(err,
                                    put_xlate_handle_node
-                                      (node, 
+                                      (node,
                                        SVN_UTF_NTOU_XLATE_HANDLE,
                                        pool)));
   return check_cstring_utf8(*dest, pool);
@@ -850,7 +850,7 @@ svn_utf_cstring_to_utf8_ex2(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   SVN_ERR(svn_error_compose_create(err,
                                    put_xlate_handle_node
-                                      (node, 
+                                      (node,
                                        SVN_UTF_NTOU_XLATE_HANDLE,
                                        pool)));
 

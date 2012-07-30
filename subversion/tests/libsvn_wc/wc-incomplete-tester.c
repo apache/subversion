@@ -78,7 +78,7 @@ int main(int argc, const char *argv[])
               "Mark WCPATH incomplete at REVISION [and REPOS_RELPATH]\n");
       exit(EXIT_FAILURE);
     }
-          
+
   if (apr_initialize())
     {
       fprintf(stderr, "apr_initialize failed\n");

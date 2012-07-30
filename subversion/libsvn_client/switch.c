@@ -73,7 +73,8 @@ switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *url, *target, *source_root, *switch_rev_url;
+  const char *anchor_url, *target;
+  svn_client__pathrev_t *switch_loc;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
@@ -141,8 +142,9 @@ switch_internal(svn_revnum_t *result_rev,
   else
     target = "";
 
-  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, anchor_abspath, pool, pool));
-  if (! url)
+  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                               pool, pool));
+  if (! anchor_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor_abspath, pool));
@@ -175,20 +177,17 @@ switch_internal(svn_revnum_t *result_rev,
     }
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                           &switch_rev_url,
-                                           switch_url, anchor_abspath,
-                                           peg_revision, revision,
-                                           ctx, pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
+                                            switch_url, anchor_abspath,
+                                            peg_revision, revision,
+                                            ctx, pool));
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_uri__is_ancestor(source_root, url))
+  if (! svn_uri__is_ancestor(switch_loc->repos_root_url, anchor_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
-                             url, source_root);
+                             anchor_url, switch_loc->repos_root_url);
 
   /* If we're not ignoring ancestry, then error out if the switch
      source and target don't have a common ancestory.
@@ -197,27 +196,29 @@ switch_internal(svn_revnum_t *result_rev,
      ### okay? */
   if (! ignore_ancestry)
     {
-      const char *target_url, *yc_url;
-      svn_revnum_t target_rev, yc_rev;
+      svn_client__pathrev_t *target_base_loc, *yca;
 
-      SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
-                                   pool, pool));
-      SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
-                                        local_abspath, pool));
-      /* ### It would be nice if this function could reuse the existing
+      SVN_ERR(svn_client__wc_node_get_base(&target_base_loc, local_abspath,
+                                           ctx->wc_ctx, pool, pool));
+
+      if (!target_base_loc)
+        yca = NULL; /* Not versioned */
+      else
+        {
+          /* ### It would be nice if this function could reuse the existing
              ra session instead of opening two for its own use. */
-      SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_url, &yc_rev,
-                                                       switch_rev_url, revnum,
-                                                       target_url, target_rev,
-                                                       ctx, pool));
-      if (! (yc_url && SVN_IS_VALID_REVNUM(yc_rev)))
+          SVN_ERR(svn_client__get_youngest_common_ancestor(
+                  &yca, switch_loc, target_base_loc, ra_session, ctx,
+                  pool, pool));
+        }
+      if (! yca)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("'%s' shares no common ancestry with '%s'"),
-                                 switch_url, local_abspath);
+                                 switch_url,
+                                 svn_dirent_dirname(local_abspath, pool));
     }
 
-
-  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
@@ -225,12 +226,12 @@ switch_internal(svn_revnum_t *result_rev,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
   dfb.ra_session = ra_session;
-  SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
-  dfb.target_revision = revnum;
+  dfb.anchor_url = anchor_url;
+  dfb.target_revision = switch_loc->rev;
 
   SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, switch_rev_url, use_commit_times,
+                                    target, switch_loc->url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
@@ -244,10 +245,11 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
+  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
+                            switch_loc->rev,
                             target,
                             depth_is_sticky ? depth : svn_depth_unknown,
-                            switch_rev_url,
+                            switch_loc->url,
                             switch_editor, switch_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
@@ -288,7 +290,8 @@ switch_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           source_root, local_abspath,
+                                           switch_loc->repos_root_url,
+                                           local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }

@@ -615,7 +615,7 @@ static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *scratch_pool)
 {
-  const char *pathname;
+  const char *pathname = "";
   apr_array_header_t *existing_rangelist;
   apr_array_header_t *rangelist = apr_array_make(scratch_pool, 1,
                                                  sizeof(svn_merge_range_t *));
@@ -1112,12 +1112,12 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
                           j++;
                         }
                     }
-                  else 
+                  else
                     {
                       /* CHANGE and RANGE share the same start rev, but
                          CHANGE is considered older because its end rev
                          is older.
-                         
+
                          Insert the intersection of RANGE and CHANGE into
                          RANGELIST and then set RANGE to the non-intersecting
                          portion of RANGE. */
@@ -2111,7 +2111,6 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_ssize_t prefix_len = strlen(prefix_path);
 
   SVN_ERR_ASSERT(prefix_path[0] == '/');
 
@@ -2120,23 +2119,13 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
   for (hi = apr_hash_first(pool, in_catalog); hi; hi = apr_hash_next(hi))
     {
       const char *original_path = svn__apr_hash_index_key(hi);
-      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
       svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
-      apr_ssize_t padding = 0;
+      const char *new_path;
 
-      SVN_ERR_ASSERT(klen >= prefix_len);
-      SVN_ERR_ASSERT(svn_fspath__skip_ancestor(prefix_path, original_path));
+      new_path = svn_fspath__skip_ancestor(prefix_path, original_path);
+      SVN_ERR_ASSERT(new_path);
 
-      /* If the ORIGINAL_PATH doesn't match the PREFIX_PATH exactly
-         and we're not simply removing a single leading slash (such as
-         when PREFIX_PATH is "/"), we advance our string offset by an
-         extra character (to get past the directory separator that
-         follows the prefix).  */
-      if ((strcmp(original_path, prefix_path) != 0) && (prefix_len != 1))
-        padding = 1;
-
-      apr_hash_set(*out_catalog, original_path + prefix_len + padding,
-                   klen - prefix_len - padding, value);
+      apr_hash_set(*out_catalog, new_path, APR_HASH_KEY_STRING, value);
     }
 
   return SVN_NO_ERROR;

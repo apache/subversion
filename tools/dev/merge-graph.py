@@ -19,25 +19,40 @@
 #    under the License.
 # ====================================================================
 
-args_message = 'GRAPH_CONFIG_FILE...'
+args_message = '[-f png|svg|gif|dia... [-f ...]] GRAPH_CONFIG_FILE...'
 help_message = """Produce pretty graphs representing branches and merging.
-For each config file specified, construct a graph and write it as a PNG file."""
+For each config file specified, construct a graph and write it as a PNG file
+(or other graphical file formats)."""
 
 import sys
+import getopt
 from mergegraph import MergeDot
 
 
 # If run as a program, process each input filename as a graph config file.
 if __name__ == '__main__':
+  optlist, args = getopt.getopt(sys.argv[1:], 'f:', ['format'])
+
   prog_name = sys.argv[0]
-  if len(sys.argv) == 1:
+  if not args:
     usage = '%s: usage: "%s %s"' % (prog_name, prog_name, args_message)
     print >> sys.stderr, usage
     sys.exit(1)
 
-  for config_filename in sys.argv[1:]:
-    print prog_name + ": reading '" + config_filename + "',",
-    graph = MergeDot(config_filename, rankdir='LR')
-    print "writing '" + graph.filename + "'"
-    graph.write_png(graph.filename)
+  formats = []
 
+  for opt, opt_arg in optlist:
+    if opt == '-f':
+      formats.append(opt_arg)
+
+  if not formats:
+    formats.append('png')
+
+  for config_filename in args:
+    print "%s: reading '%s'," % (prog_name, config_filename),
+    graph = MergeDot(config_filename, rankdir='LR', dpi='72')
+    for format in formats:
+      filename = '%s.%s' % (graph.basename, format)
+      print "writing '%s'" % filename,
+      graph.save(format=format, filename=filename)
+    print

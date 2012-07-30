@@ -36,6 +36,7 @@
 #include "svn_version.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
@@ -1184,9 +1185,9 @@ create_repos_structure(svn_repos_t *repos,
   /* Write the top-level README file. */
   {
     const char * const readme_header =
-      "This is a Subversion repository; use the 'svnadmin' tool to examine"  NL
-      "it.  Do not add, delete, or modify files here unless you know how"    NL
-      "to avoid corrupting the repository."                                  NL
+      "This is a Subversion repository; use the 'svnadmin' and 'svnlook' "   NL
+      "tools to examine it.  Do not add, delete, or modify files here "      NL
+      "unless you know how to avoid corrupting the repository."              NL
       ""                                                                     NL;
     const char * const readme_bdb_insert =
       "The directory \"" SVN_REPOS__DB_DIR "\" contains a Berkeley DB environment."  NL
@@ -1563,7 +1564,8 @@ svn_repos_has_capability(svn_repos_t *repos,
 
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
-      err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);
+      err = svn_fs_get_mergeinfo2(&ignored, root, paths, FALSE, FALSE,
+                                  TRUE, pool, pool);
 
       if (err)
         {
@@ -1968,3 +1970,17 @@ svn_repos_remember_client_capabilities(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos__fs_type(const char **fs_type,
+                   const char *repos_path,
+                   apr_pool_t *pool)
+{
+  svn_repos_t repos;
+  repos.path = (char*)repos_path;
+
+  SVN_ERR(check_repos_format(&repos, pool));
+
+  return svn_fs_type(fs_type,
+                     svn_dirent_join(repos_path, SVN_REPOS__DB_DIR, pool),
+                     pool);
+}

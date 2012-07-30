@@ -28,6 +28,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_ctype.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -59,10 +60,11 @@ do_one_diff(apr_file_t *source_file, apr_file_t *target_file,
 
   *count = 0;
   *len = 0;
-  svn_txdelta(&delta_stream,
-              svn_stream_from_aprfile(source_file, fpool),
-              svn_stream_from_aprfile(target_file, fpool),
-              fpool);
+  svn_txdelta2(&delta_stream,
+               svn_stream_from_aprfile(source_file, fpool),
+               svn_stream_from_aprfile(target_file, fpool),
+               FALSE,
+               fpool);
   do {
     svn_error_t *err;
     err = svn_txdelta_next_window(&delta_window, delta_stream, wpool);
@@ -82,74 +84,16 @@ do_one_diff(apr_file_t *source_file, apr_file_t *target_file,
 }
 
 
-static apr_file_t *
-open_binary_read(const char *path, apr_pool_t *pool)
+static void
+do_one_test_cycle(apr_file_t *source_file_A, apr_file_t *target_file_A,
+                  apr_file_t *source_file_B, apr_file_t *target_file_B,
+                  int quiet, apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  apr_file_t *fp;
-
-  apr_err = apr_file_open(&fp, path, (APR_READ | APR_BINARY),
-                          APR_OS_DEFAULT, pool);
-
-  if (apr_err)
-    {
-      fprintf(stderr, "unable to open \"%s\" for reading\n", path);
-      exit(1);
-    }
-
-  return fp;
-}
-
-
-int
-main(int argc, char **argv)
-{
-  apr_file_t *source_file_A = NULL;
-  apr_file_t *target_file_A = NULL;
   int count_A = 0;
   apr_off_t len_A = 0;
 
-  apr_file_t *source_file_B = NULL;
-  apr_file_t *target_file_B = NULL;
   int count_B = 0;
   apr_off_t len_B = 0;
-
-  apr_pool_t *pool;
-  int quiet = 0;
-
-  if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 'q')
-    {
-      quiet = 1;
-      --argc; ++argv;
-    }
-
-  apr_initialize();
-  pool = svn_pool_create(NULL);
-
-  if (argc == 2)
-    {
-      target_file_A = open_binary_read(argv[1], pool);
-    }
-  else if (argc == 3)
-    {
-      source_file_A = open_binary_read(argv[1], pool);
-      target_file_A = open_binary_read(argv[2], pool);
-    }
-  else if (argc == 4)
-    {
-      source_file_A = open_binary_read(argv[1], pool);
-      target_file_A = open_binary_read(argv[2], pool);
-      source_file_B = open_binary_read(argv[2], pool);
-      target_file_B = open_binary_read(argv[3], pool);
-    }
-  else
-    {
-      fprintf(stderr,
-              "Usage: vdelta-test [-q] <target>\n"
-              "   or: vdelta-test [-q] <source> <target>\n"
-              "   or: vdelta-test [-q] <source> <intermediate> <target>\n");
-      exit(1);
-    }
 
   do_one_diff(source_file_A, target_file_A,
               &count_A, &len_A, quiet, pool, "A ", stdout);
@@ -181,14 +125,16 @@ main(int argc, char **argv)
         apr_file_seek(target_file_B, APR_SET, &offset);
       }
 
-      svn_txdelta(&stream_A,
-                  svn_stream_from_aprfile(source_file_A, fpool),
-                  svn_stream_from_aprfile(target_file_A, fpool),
-                  fpool);
-      svn_txdelta(&stream_B,
-                  svn_stream_from_aprfile(source_file_B, fpool),
-                  svn_stream_from_aprfile(target_file_B, fpool),
-                  fpool);
+      svn_txdelta2(&stream_A,
+                   svn_stream_from_aprfile(source_file_A, fpool),
+                   svn_stream_from_aprfile(target_file_A, fpool),
+                   FALSE,
+                   fpool);
+      svn_txdelta2(&stream_B,
+                   svn_stream_from_aprfile(source_file_B, fpool),
+                   svn_stream_from_aprfile(target_file_B, fpool),
+                   FALSE,
+                   fpool);
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
         {
@@ -218,6 +164,98 @@ main(int argc, char **argv)
 
       fprintf(stdout, "AB: (LENGTH %" APR_OFF_T_FMT " +%d)\n",
               len_AB, count_AB);
+    }
+}
+
+
+static apr_file_t *
+open_binary_read(const char *path, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_file_t *fp;
+
+  apr_err = apr_file_open(&fp, path, (APR_READ | APR_BINARY),
+                          APR_OS_DEFAULT, pool);
+
+  if (apr_err)
+    {
+      fprintf(stderr, "unable to open \"%s\" for reading\n", path);
+      exit(1);
+    }
+
+  return fp;
+}
+
+
+int
+main(int argc, char **argv)
+{
+  apr_file_t *source_file_A = NULL;
+  apr_file_t *target_file_A = NULL;
+
+  apr_file_t *source_file_B = NULL;
+  apr_file_t *target_file_B = NULL;
+
+  apr_pool_t *pool;
+  int quiet = 0;
+  int repeat = 1;
+
+  while (argc > 1)
+    {
+      const char *const arg = argv[1];
+      if (arg[0] != '-')
+        break;
+
+      if (arg[1] == 'q')
+        quiet = 1;
+      else if (svn_ctype_isdigit(arg[1]))
+        repeat = atoi(arg + 1);
+      else
+        break;
+      --argc; ++argv;
+    }
+
+  apr_initialize();
+  pool = svn_pool_create(NULL);
+
+  if (argc == 2)
+    {
+      target_file_A = open_binary_read(argv[1], pool);
+    }
+  else if (argc == 3)
+    {
+      source_file_A = open_binary_read(argv[1], pool);
+      target_file_A = open_binary_read(argv[2], pool);
+    }
+  else if (argc == 4)
+    {
+      source_file_A = open_binary_read(argv[1], pool);
+      target_file_A = open_binary_read(argv[2], pool);
+      source_file_B = open_binary_read(argv[2], pool);
+      target_file_B = open_binary_read(argv[3], pool);
+    }
+  else
+    {
+      fprintf(stderr,
+              "Usage: vdelta-test [-q] [-<repeat>] <target>\n"
+              "   or: vdelta-test [-q] [-<repeat>] <source> <target>\n"
+              "   or: vdelta-test [-q] [-<repeat>] "
+              "<source> <intermediate> <target>\n");
+      exit(1);
+    }
+
+  while (0 < repeat--)
+    {
+      apr_off_t offset = 0;
+
+      do_one_test_cycle(source_file_A, target_file_A,
+                        source_file_B, target_file_B,
+                        quiet, pool);
+
+      if (source_file_A) apr_file_seek(source_file_A, APR_SET, &offset);
+      if (target_file_A) apr_file_seek(target_file_A, APR_SET, &offset);
+      if (source_file_B) apr_file_seek(source_file_B, APR_SET, &offset);
+      if (target_file_B) apr_file_seek(target_file_B, APR_SET, &offset);
     }
 
   if (source_file_A) apr_file_close(source_file_A);

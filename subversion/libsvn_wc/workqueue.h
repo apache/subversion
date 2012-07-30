@@ -114,15 +114,29 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
 
 
 /* Set *WORK_ITEM to a new work item that will remove a single
-   file.  */
+   file LOCAL_ABSPATH from the working copy identified by the pair DB,
+   WRI_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
+                             const char *wri_abspath,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* Set *WORK_ITEM to a new work item that describes a moves of
+/* Set *WORK_ITEM to a new work item that will remove a single
+   directory or if RECURSIVE is TRUE a directory with all its
+   descendants.  */
+svn_error_t *
+svn_wc__wq_build_dir_remove(svn_skel_t **work_item,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const char *local_abspath,
+                            svn_boolean_t recursive,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* Set *WORK_ITEM to a new work item that describes a move of
    a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
    storing in the working copy managing DST_ABSPATH.
 
@@ -181,81 +195,6 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
-
-/* Set *WORK_ITEM to a new work item that will record file information of
-   LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
-   the svn_wc__db_global_record_fileinfo() function.
-
-   If SET_TIME is not 0, set LOCAL_ABSPATH's last modified time to this
-   time and after that record the actual file time.
-
-   ### it is unclear whether this should survive.  */
-svn_error_t *
-svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_time_t set_time,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/* Set *WORK_ITEM to a new work item that will remove all the data of
-   the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
-   any WORKING_NODE data.
-
-   This function doesn't check for local modifications of the text files
-   as these would have triggered a tree conflict before.
-
-   ### This is only used from update_editor.c's do_entry_deletion().
- */
-svn_error_t *
-svn_wc__wq_build_base_remove(svn_skel_t **work_item,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             svn_revnum_t not_present_revision,
-                             svn_kind_t not_present_kind,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-
-/* ### Temporary helper to store text conflict marker locations as a wq
-   ### operation. Eventually the data must be stored in the pristine store+db
-   ### before the wq runs (within the operation transaction) and then a wq
-   ### operation will create the markers.
-
-   Set *WORK_ITEM to a new work item that sets the conflict marker values
-   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
-
-   Allocate the result in RESULT_POOL and perform temporary allocations
-   in SCRATCH_POOL
-*/
-svn_error_t *
-svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
-                                               svn_wc__db_t *db,
-                                               const char *local_abspath,
-                                               const char *old_abspath,
-                                               const char *new_abspath,
-                                               const char *wrk_abspath,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool);
-
-/* ### Temporary helper to store the property conflict marker location as a wq
-   ### operation. Eventually the data must be stored in the pristine store+db
-   ### before the wq runs (within the operation transaction) and then a wq
-   ### operation will create the marker.
-
-   Set *WORK_ITEM to a new work item that sets the conflict marker values
-   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
-
-   Allocate the result in RESULT_POOL and perform temporary allocations
-   in SCRATCH_POOL
-*/
-svn_error_t *
-svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
-                                                  svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *prej_abspath,
-                                                  apr_pool_t *result_pool,
-                                                  apr_pool_t *scratch_pool);
 
 /* Handle the final post-commit step of retranslating and recording the
    working copy state of a committed file.

@@ -27,6 +27,7 @@ from libsvn.fs import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 
@@ -114,7 +115,7 @@ class FileDiff:
           + [self.tempfile1, self.tempfile2]
 
     # open the pipe, and return the file object for reading from the child.
-    p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE,
+    p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                           close_fds=_sys.platform != "win32")
     return p.stdout
 

@@ -600,10 +600,11 @@ close_file(void *file_baton,
       eb->new_pristine_abspath = NULL;
     }
 
-  /* ### TODO: Merge the changes */
+  /* Merge the changes */
 
   {
     svn_skel_t *all_work_items = NULL;
+    svn_skel_t *conflict_skel = NULL;
     svn_skel_t *work_item;
     apr_hash_t *base_props = NULL;
     apr_hash_t *actual_props = NULL;
@@ -675,26 +676,20 @@ close_file(void *file_baton,
 
       if (regular_prop_changes->nelts > 0)
         {
-          SVN_ERR(svn_wc__merge_props(&work_item, &prop_state,
+          SVN_ERR(svn_wc__merge_props(&conflict_skel,
+                                      &prop_state,
                                       &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
                                       svn_kind_file,
-                                      NULL, NULL,
                                       NULL /* server_baseprops*/,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
                                       TRUE /* base_merge */,
                                       FALSE /* dry_run */,
-                                      eb->conflict_func,
-                                      eb->conflict_baton,
                                       eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
-
-          if (work_item)
-            all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                              pool);
         }
       else
         {
@@ -740,6 +735,7 @@ close_file(void *file_baton,
                 enum svn_wc_merge_outcome_t merge_outcome;
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
+                                                   &conflict_skel,
                                                    &merge_outcome,
                                                    eb->db,
                                                    eb->local_abspath,
@@ -752,8 +748,6 @@ close_file(void *file_baton,
                                                    *eb->target_revision,
                                                    eb->propchanges,
                                                    eb->diff3cmd,
-                                                   eb->conflict_func,
-                                                   eb->conflict_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));
@@ -784,6 +778,29 @@ close_file(void *file_baton,
         /* ### Retranslate on magic property changes, etc. */
       }
 
+    if (conflict_skel)
+      {
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                            conflict_skel,
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    eb->original_revision,
+                                    svn_node_file,
+                                    pool),
+                            pool, pool));
+
+
+        SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                eb->db, eb->local_abspath,
+                                                conflict_skel,
+                                                pool, pool));
+
+        all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                          pool);
+      }
+
     SVN_ERR(svn_wc__db_external_add_file(
                         eb->db,
                         eb->local_abspath,
@@ -804,6 +821,7 @@ close_file(void *file_baton,
                         eb->recorded_revision,
                         TRUE, new_actual_props,
                         FALSE /* keep_recorded_info */,
+                        conflict_skel,
                         all_work_items,
                         pool));
 
@@ -1134,19 +1152,17 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
                        svn_wc__committable_external_info_t *xinfo,
                        apr_pool_t *scratch_pool)
 {
-  const char *x_repos_relpath;
-  const char *x_repos_root_url;
+  const char *repos_relpath;
+  const char *repos_root_url;
   svn_error_t *err;
 
   *is_rolled_out = FALSE;
 
-  err = svn_wc__node_get_origin(NULL, NULL,
-                                &x_repos_relpath,
-                                &x_repos_root_url,
-                                NULL, NULL,
-                                wc_ctx, xinfo->local_abspath,
-                                FALSE, /* scan_deleted */
-                                scratch_pool, scratch_pool);
+  err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                 &repos_root_url, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 wc_ctx->db, xinfo->local_abspath,
+                                 scratch_pool, scratch_pool);
 
   if (err)
     {
@@ -1158,8 +1174,8 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
       SVN_ERR(err);
     }
 
-  *is_rolled_out = (strcmp(xinfo->repos_root_url, x_repos_root_url) == 0 &&
-                    strcmp(xinfo->repos_relpath, x_repos_relpath) == 0);
+  *is_rolled_out = (strcmp(xinfo->repos_root_url, repos_root_url) == 0 &&
+                    strcmp(xinfo->repos_relpath, repos_relpath) == 0);
   return SVN_NO_ERROR;
 }
 
@@ -1181,7 +1197,7 @@ svn_wc__committable_externals_below(apr_array_header_t **externals,
                                                  local_abspath,
                                                  depth != svn_depth_infinity,
                                                  result_pool, scratch_pool));
-  
+
   if (orig_externals == NULL)
     return SVN_NO_ERROR;
 
@@ -1272,6 +1288,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1287,15 +1304,22 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
                                      NULL, scratch_pool));
 
+  if (declaration_only)
+    return SVN_NO_ERROR;
+
   if (kind == svn_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
-                                                 TRUE, FALSE,
+                                                 TRUE, TRUE,
                                                  cancel_func, cancel_baton,
                                                  scratch_pool));
   else
     {
-      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath, scratch_pool));
-      SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
+                                     FALSE, SVN_INVALID_REVNUM,
+                                     NULL, NULL, scratch_pool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1530,7 +1554,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
   /* The remaining URLs are relative to either the scheme or server root
      and can only refer to locations inside that scope, so backpaths are
      not allowed. */
-  if (svn_path_is_backpath_present(url + 2))
+  if (svn_path_is_backpath_present(url))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),

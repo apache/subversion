@@ -66,19 +66,16 @@ static svn_error_t *
 build_info_from_dirent(svn_client_info2_t **info,
                        const svn_dirent_t *dirent,
                        svn_lock_t *lock,
-                       const char *URL,
-                       svn_revnum_t revision,
-                       const char *repos_UUID,
-                       const char *repos_root,
+                       const svn_client__pathrev_t *pathrev,
                        apr_pool_t *pool)
 {
   svn_client_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
 
-  tmpinfo->URL                  = URL;
-  tmpinfo->rev                  = revision;
+  tmpinfo->URL                  = pathrev->url;
+  tmpinfo->rev                  = pathrev->rev;
   tmpinfo->kind                 = dirent->kind;
-  tmpinfo->repos_UUID           = repos_UUID;
-  tmpinfo->repos_root_URL       = repos_root;
+  tmpinfo->repos_UUID           = pathrev->repos_uuid;
+  tmpinfo->repos_root_URL       = pathrev->repos_root_url;
   tmpinfo->last_changed_rev     = dirent->created_rev;
   tmpinfo->last_changed_date    = dirent->time;
   tmpinfo->last_changed_author  = dirent->last_author;
@@ -111,11 +108,8 @@ build_info_from_dirent(svn_client_info2_t **info,
 */
 static svn_error_t *
 push_dir_info(svn_ra_session_t *ra_session,
-              const char *session_URL,
+              const svn_client__pathrev_t *pathrev,
               const char *dir,
-              svn_revnum_t rev,
-              const char *repos_UUID,
-              const char *repos_root,
               svn_client_info_receiver2_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
@@ -128,15 +122,16 @@ push_dir_info(svn_ra_session_t *ra_session,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
-                          dir, rev, DIRENT_FIELDS, pool));
+                          dir, pathrev->rev, DIRENT_FIELDS, pool));
 
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
-      const char *path, *URL, *fs_path;
+      const char *path, *fs_path;
       svn_lock_t *lock;
       svn_client_info2_t *info;
       const char *name = svn__apr_hash_index_key(hi);
       svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
+      svn_client__pathrev_t *child_pathrev;
 
       svn_pool_clear(subpool);
 
@@ -144,14 +139,13 @@ push_dir_info(svn_ra_session_t *ra_session,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       path = svn_relpath_join(dir, name, subpool);
-      URL = svn_path_url_add_component2(session_URL, name, subpool);
-      fs_path = svn_fspath__canonicalize(
-                  svn_uri_skip_ancestor(repos_root, URL, subpool), subpool);
+      child_pathrev = svn_client__pathrev_join_relpath(pathrev, name, subpool);
+      fs_path = svn_client__pathrev_fspath(child_pathrev, subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 
-      SVN_ERR(build_info_from_dirent(&info, the_ent, lock, URL, rev,
-                                     repos_UUID, repos_root, subpool));
+      SVN_ERR(build_info_from_dirent(&info, the_ent, lock, child_pathrev,
+                                     subpool));
 
       if (depth >= svn_depth_immediates
           || (depth == svn_depth_files && the_ent->kind == svn_node_file))
@@ -161,8 +155,7 @@ push_dir_info(svn_ra_session_t *ra_session,
 
       if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
         {
-          SVN_ERR(push_dir_info(ra_session, URL, path,
-                                rev, repos_UUID, repos_root,
+          SVN_ERR(push_dir_info(ra_session, child_pathrev, path,
                                 receiver, receiver_baton,
                                 depth, ctx, locks, subpool));
         }
@@ -338,9 +331,7 @@ svn_client_info3(const char *abspath_or_url,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
-  const char *url;
-  const char *repos_root_URL, *repos_UUID;
+  svn_client__pathrev_t *pathrev;
   svn_lock_t *lock;
   svn_boolean_t related;
   const char *base_name;
@@ -357,7 +348,10 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      wc_info_receiver_baton_t b = { receiver, receiver_baton };
+      wc_info_receiver_baton_t b;
+
+      b.client_receiver_func = receiver;
+      b.client_receiver_baton = receiver_baton;
       return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
                         fetch_excluded, fetch_actual_only, changelists,
@@ -370,18 +364,14 @@ svn_client_info3(const char *abspath_or_url,
   /* Trace rename history (starting at path_or_url@peg_revision) and
      return RA session to the possibly-renamed URL as it exists in REVISION.
      The ra_session returned will be anchored on this "final" URL. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, abspath_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
+                                            abspath_or_url, NULL, peg_revision,
+                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
-
-  svn_uri_split(NULL, &base_name, url, pool);
+  svn_uri_split(NULL, &base_name, pathrev->url, pool);
 
   /* Get the dirent for the URL itself. */
-  err = ra_stat_compatible(ra_session, rev, &the_ent, DIRENT_FIELDS,
+  err = ra_stat_compatible(ra_session, pathrev->rev, &the_ent, DIRENT_FIELDS,
                            ctx, pool);
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
@@ -407,7 +397,7 @@ svn_client_info3(const char *abspath_or_url,
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("URL '%s' non-existent in revision %ld"),
-                             url, rev);
+                             pathrev->url, pathrev->rev);
 
   /* Check if the URL exists in HEAD and refers to the same resource.
      In this case, we check the repository for a lock on this URL.
@@ -417,7 +407,8 @@ svn_client_info3(const char *abspath_or_url,
      ### check in a loop which only terminates if the HEAD revision is the same
      ### before and after this check.  That could, however, lead to a
      ### starvation situation instead.  */
-  SVN_ERR(same_resource_in_head(&related, url, rev, ra_session, ctx, pool));
+  SVN_ERR(same_resource_in_head(&related, pathrev->url, pathrev->rev,
+                                ra_session, ctx, pool));
   if (related)
     {
       err = svn_ra_get_lock(ra_session, &lock, "", pool);
@@ -437,8 +428,7 @@ svn_client_info3(const char *abspath_or_url,
     lock = NULL;
 
   /* Push the URL's dirent (and lock) at the callback.*/
-  SVN_ERR(build_info_from_dirent(&info, the_ent, lock, url, rev,
-                                 repos_UUID, repos_root_URL, pool));
+  SVN_ERR(build_info_from_dirent(&info, the_ent, lock, pathrev, pool));
   SVN_ERR(receiver(receiver_baton, base_name, info, pool));
 
   /* Possibly recurse, using the original RA session. */
@@ -466,8 +456,7 @@ pre_1_2_recurse:
       else
         locks = apr_hash_make(pool); /* use an empty hash */
 
-      SVN_ERR(push_dir_info(ra_session, url, "", rev,
-                            repos_UUID, repos_root_URL,
+      SVN_ERR(push_dir_info(ra_session, pathrev, "",
                             receiver, receiver_baton,
                             depth, ctx, locks, pool));
     }

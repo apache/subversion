@@ -1382,6 +1382,15 @@ merge(dav_resource *target,
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
+  if (! source->exists)
+    {
+      return dav_svn__new_error_tag(pool, HTTP_METHOD_NOT_ALLOWED,
+                                    SVN_ERR_INCORRECT_PARAMS,
+                                    "MERGE activity or transaction resource "
+                                    "does not exist.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
+    }
 
   /* Before attempting the final commit, we need to push any incoming
      lock-tokens into the filesystem's access_t.   Normally they come

@@ -386,6 +386,27 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /*** From commit.c ***/
 svn_error_t *
+svn_client_import4(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_import5(path, url, depth, no_ignore,
+                                            ignore_unknown_node_types,
+                                            revprop_table,
+                                            NULL, NULL,
+                                            commit_callback, commit_baton,
+                                            ctx, pool));
+}
+
+
+svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
                    const char *url,
@@ -865,7 +886,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                           revision2, relative_to_dir, depth,
                           ignore_ancestry, no_diff_deleted,
                           show_copies_as_adds, ignore_content_type, FALSE,
-                          use_git_diff_format, header_encoding,
+                          FALSE, use_git_diff_format, header_encoding,
                           outstream, errstream, changelists, ctx, pool);
 }
 
@@ -992,6 +1013,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                               no_diff_deleted,
                               show_copies_as_adds,
                               ignore_content_type,
+                              FALSE,
                               FALSE,
                               use_git_diff_format,
                               header_encoding,
@@ -1621,7 +1643,10 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 {
   if (svn_path_is_url(target))
     {
-      struct capture_baton_t cb = { commit_info_p, pool };
+      struct capture_baton_t cb;
+
+      cb.info = commit_info_p;
+      cb.pool = pool;
 
       SVN_ERR(svn_client_propset_remote(propname, propval, target, skip_checks,
                                         base_revision_for_url, revprop_table,
@@ -1934,8 +1959,11 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  struct status4_wrapper_baton swb = { ctx->wc_ctx, status_func,
-                                       status_baton };
+  struct status4_wrapper_baton swb;
+
+  swb.wc_ctx = ctx->wc_ctx;
+  swb.old_func = status_func;
+  swb.old_baton = status_baton;
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
                             update, no_ignore, ignore_externals, TRUE,
@@ -2536,6 +2564,34 @@ svn_client_url_from_path(const char **url,
 }
 
 /*** From mergeinfo.c ***/
+svn_error_t *
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *target_path_or_url,
+                         const svn_opt_revision_t *target_peg_revision,
+                         const char *source_path_or_url,
+                         const svn_opt_revision_t *source_peg_revision,
+                         svn_log_entry_receiver_t receiver,
+                         void *receiver_baton,
+                         svn_boolean_t discover_changed_paths,
+                         svn_depth_t depth,
+                         const apr_array_header_t *revprops,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_opt_revision_t start_revision, end_revision;
+
+  start_revision.kind = svn_opt_revision_unspecified;
+  end_revision.kind = svn_opt_revision_unspecified;
+
+  return svn_client_mergeinfo_log2(finding_merged,
+                                   target_path_or_url, target_peg_revision,
+                                   source_path_or_url, source_peg_revision,
+                                   &start_revision, &end_revision,
+                                   receiver, receiver_baton,
+                                   discover_changed_paths, depth, revprops,
+                                   ctx, scratch_pool);
+}
+
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,

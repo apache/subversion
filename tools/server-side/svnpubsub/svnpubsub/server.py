@@ -37,7 +37,7 @@
 #   URL is built into 3 parts:
 #       /${type}/${optional_repo_uuid}/${format}
 #
-#   If the repository UUID is included in the URl, you will only recieve 
+#   If the repository UUID is included in the URl, you will only receive
 #   messages about that repository.
 #
 # Example Pub clients:
@@ -88,7 +88,7 @@ class Revision:
                                           'author': self.author,
                                           'log': self.log,
                                           'date': self.date}}) +","
-        elif format == "xml": 
+        elif format == "xml":
             c = ET.Element('commit', {'repository': self.repos, 'revision': "%d" % (self.rev)})
             ET.SubElement(c, 'author').text = self.author
             ET.SubElement(c, 'date').text = self.date
@@ -107,7 +107,7 @@ class Revision:
             return json.dumps({'commit': {'repository': self.repos,
                                           'revision': self.rev,
                                           'dirs_changed': self.dirs_changed}}) +","
-        elif format == "xml": 
+        elif format == "xml":
             c = ET.Element('commit', {'repository': self.repos, 'revision': "%d" % (self.rev)})
             d = ET.SubElement(c, 'dirs_changed')
             for p in self.dirs_changed:
@@ -133,7 +133,7 @@ class Client(object):
     def finished(self, reason):
         self.alive = False
         log.msg("CLOSE: %s:%d (%d clients online)"% (self.r.getClientIP(), self.r.client.port, self.pubsub.cc()))
-        try: 
+        try:
             self.pubsub.remove(self)
         except ValueError:
             pass
@@ -210,11 +210,11 @@ class SvnPubSub(resource.Resource):
         else:
             fmt = uri[3]
             uuid = uri[2]
-        
+
         if type not in self.clients.keys():
             request.setResponseCode(400)
             return "Invalid Reuqest Type\n"
-        
+
         clients = {'json': JSONClient, 'xml': XMLClient}
         clientCls = clients.get(fmt)
         if clientCls == None:
@@ -262,7 +262,7 @@ def svnpubsub_server():
     root.putChild("commits", s)
     root.putChild("commit", s)
     return server.Site(root)
-  
+
 if __name__ == "__main__":
     log.startLogging(sys.stdout)
     # Port 2069 "HTTP Event Port", whatever, sounds good to me

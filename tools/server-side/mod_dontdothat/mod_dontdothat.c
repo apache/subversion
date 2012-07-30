@@ -271,7 +271,7 @@ dontdothat_filter(ap_filter_t *f,
             return rv;
         }
 
-      if (! XML_Parse(ctx->xmlp, str, len, last))
+      if (! XML_Parse(ctx->xmlp, str, (int)len, last))
         {
           /* let_it_go so we clean up our parser, no_soup_for_you so that we
            * bail out before bothering to parse this stuff a second time. */

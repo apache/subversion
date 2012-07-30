@@ -455,7 +455,7 @@ void svn_xml_signal_bailout(svn_error_t *error,
 /*** Attribute walking. ***/
 
 const char *
-svn_xml_get_attr_value(const char *name, const char **atts)
+svn_xml_get_attr_value(const char *name, const char *const *atts)
 {
   while (atts && (*atts))
     {

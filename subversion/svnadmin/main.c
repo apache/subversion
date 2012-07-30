@@ -108,11 +108,13 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
-  /* construct FS configuration parameters: enable all available caches */
+  /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                APR_HASH_KEY_STRING, "1");
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+               APR_HASH_KEY_STRING, "1");
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                APR_HASH_KEY_STRING, "1");
 
   /* now, open the requested repository */
@@ -189,7 +191,8 @@ enum svnadmin__cmdline_options_t
     svnadmin__wait,
     svnadmin__pre_1_4_compatible,
     svnadmin__pre_1_5_compatible,
-    svnadmin__pre_1_6_compatible
+    svnadmin__pre_1_6_compatible,
+    svnadmin__pre_1_8_compatible
   };
 
 /* Option codes and descriptions.
@@ -278,6 +281,10 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.6")},
 
+    {"pre-1.8-compatible",     svnadmin__pre_1_8_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.8")},
+
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
         "                             minimize redundant operations. Default: 16.\n"
@@ -303,7 +310,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
     svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible
+    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible,
+    svnadmin__pre_1_8_compatible
     } },
 
   {"deltify", subcommand_deltify, {0}, N_
@@ -363,7 +371,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
-  
+
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
@@ -473,6 +481,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
+  svn_boolean_t pre_1_8_compatible;                 /* --pre-1.8-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -623,6 +632,11 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  "1");
 
+  if (opt_state->pre_1_8_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
+                 APR_HASH_KEY_STRING,
+                 "1");
+
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
                            NULL, NULL, NULL, fs_config, pool));
   svn_fs_set_warning_func(svn_repos_fs(repos), warning_func, NULL);
@@ -725,8 +739,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_pack_shard_end:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("done.\n")));
+      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
       return;
 
     case svn_repos_notify_pack_shard_start_revprop:
@@ -741,8 +754,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_pack_shard_end_revprop:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("done.\n")));
+      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
       return;
 
     case svn_repos_notify_load_txn_committed:
@@ -836,7 +848,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_upgrade_start:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+      svn_error_clear(svn_stream_puts(feedback_stream,
                              _("Repository lock acquired.\n"
                                "Please wait; upgrading the"
                                " repository may take some time...\n")));
@@ -1027,7 +1039,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       lower = upper;
     }
-  
+
   /* Ensure correct range ordering. */
   if (lower > upper)
     {
@@ -1483,7 +1495,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     lock_token = APR_ARRAY_IDX(args, 3, const char *);
 
   SVN_ERR(target_arg_to_dirent(&comment_file_name, comment_file_name, pool));
-  
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
 
@@ -1496,10 +1508,10 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
 
   SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
-  
+
   if (opt_state->bypass_hooks)
     SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
-                        lock_token,          
+                        lock_token,
                         file_contents->data, /* comment */
                         0,                   /* is_dav_comment */
                         0,                   /* no expiration time. */
@@ -1507,7 +1519,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         FALSE, pool));
   else
     SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path_utf8,
-                              lock_token,          
+                              lock_token,
                               file_contents->data, /* comment */
                               0,                   /* is_dav_comment */
                               0,                   /* no expiration time. */
@@ -1768,7 +1780,6 @@ main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -1785,13 +1796,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1902,6 +1907,9 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__pre_1_6_compatible:
         opt_state.pre_1_6_compatible = TRUE;
+        break;
+      case svnadmin__pre_1_8_compatible:
+        opt_state.pre_1_8_compatible = TRUE;
         break;
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);

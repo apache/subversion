@@ -292,40 +292,56 @@ svn_client_status5(svn_revnum_t *result_rev,
   sb.wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
-  {
-    svn_node_kind_t kind;
 
-    SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool));
+  if (update)
+    {
+      /* The status editor only works on directories, so get the ancestor
+         if necessary */
 
-    /* Dir must be a working copy directory or the status editor fails */
-    if (kind == svn_node_dir)
-      {
-        dir_abspath = target_abspath;
-        target_basename = "";
-        dir = path;
-      }
-    else
-      {
-        dir_abspath = svn_dirent_dirname(target_abspath, pool);
-        target_basename = svn_dirent_basename(target_abspath, NULL);
-        dir = svn_dirent_dirname(path, pool);
-
-        if (kind != svn_node_file)
-          {
-            err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
-                                   pool);
-
-            svn_error_clear(err);
-
-            if (err || kind != svn_node_dir)
-              {
-                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                         _("'%s' is not a working copy"),
-                                         svn_dirent_local_style(path, pool));
-              }
-          }
-      }
-  }
+      svn_node_kind_t kind;
+ 
+      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                               pool));
+ 
+      /* Dir must be a working copy directory or the status editor fails */
+      if (kind == svn_node_dir)
+        {
+          dir_abspath = target_abspath;
+          target_basename = "";
+          dir = path;
+        }
+      else
+        {
+          dir_abspath = svn_dirent_dirname(target_abspath, pool);
+          target_basename = svn_dirent_basename(target_abspath, NULL);
+          dir = svn_dirent_dirname(path, pool);
+ 
+          if (kind == svn_node_file)
+            {
+              if (depth == svn_depth_empty)
+                depth = svn_depth_files;
+            }
+          else
+            {
+              err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
+                                     pool);
+ 
+              svn_error_clear(err);
+ 
+              if (err || kind != svn_node_dir)
+                {
+                  return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                           _("'%s' is not a working copy"),
+                                           svn_dirent_local_style(path, pool));
+                }
+            }
+        }
+    }
+  else
+    {
+      dir = path;
+      dir_abspath = target_abspath;
+    }
 
   if (svn_dirent_is_absolute(dir))
     {
@@ -516,13 +532,13 @@ svn_client_status5(svn_revnum_t *result_rev,
   */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      apr_hash_t *externals_new;
-      SVN_ERR(svn_wc__externals_gather_definitions(&externals_new, NULL,
-                                                   ctx->wc_ctx, target_abspath,
-                                                   depth, pool, pool));
+      apr_hash_t *external_map;
+      SVN_ERR(svn_wc__externals_defined_below(&external_map,
+                                              ctx->wc_ctx, target_abspath,
+                                              pool, pool));
 
 
-      SVN_ERR(svn_client__do_external_status(ctx, externals_new,
+      SVN_ERR(svn_client__do_external_status(ctx, external_map,
                                              depth, get_all,
                                              update, no_ignore,
                                              status_func, status_baton, pool));
@@ -625,7 +641,6 @@ svn_client__create_status(svn_client_status_t **cst,
   if (status->file_external)
     {
       (*cst)->switched = FALSE;
-      (*cst)->node_status = (*cst)->text_status;
     }
 
   (*cst)->lock = status->lock;

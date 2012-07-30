@@ -58,7 +58,12 @@ my $current_rev = 0;
 $SVN::Error::handler = undef;
 
 # Get username we are running as
-my $username = getlogin() || getpwuid($>);
+my $username;
+if ($^O eq 'MSWin32') {
+    $username = getlogin();
+} else {
+    $username = getpwuid($>) || getlogin();
+}
 
 # This is ugly to create the test repo with SVN::Repos, but
 # it seems to be the most reliable way.
@@ -337,8 +342,14 @@ is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
                                                  'author param is expected' .
                                                  'value');
                                               ok($date,'date is defined');
-                                              is($line,'foobar',
-                                                 'line is expected value');
+                                              if ($^O eq 'MSWin32') {
+                                                #### Why two \r-s?
+                                                is($line,"foobar\r\r",
+                                                   'line is expected value');
+                                              } else {
+                                                is($line,'foobar',
+                                                   'line is expected value');
+                                              }
                                               isa_ok($pool,'_p_apr_pool_t',
                                                      'pool param is ' .
                                                      '_p_apr_pool_t');

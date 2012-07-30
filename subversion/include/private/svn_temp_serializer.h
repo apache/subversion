@@ -188,10 +188,10 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr);
 /**
  * Similar to svn_temp_deserializer__resolve() but instead of modifying
  * the buffer content, the resulting pointer is passed back to the caller
- * a the return value.
+ * as the return value.
  */
 const void *
-svn_temp_deserializer__ptr(const void *buffer, const void **ptr);
+svn_temp_deserializer__ptr(const void *buffer, const void *const *ptr);
 
 #ifdef __cplusplus
 }

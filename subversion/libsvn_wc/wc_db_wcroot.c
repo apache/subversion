@@ -372,6 +372,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   svn_boolean_t moved_upwards = FALSE;
   svn_boolean_t always_check = FALSE;
   int wc_format = 0;
+  const char *adm_relpath;
 
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
@@ -459,48 +460,60 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      database in the right place. If we find it... great! If not, then
      peel off some components, and try again. */
 
+  adm_relpath = svn_wc_get_adm_dir(scratch_pool);
   while (TRUE)
     {
       svn_error_t *err;
+      svn_node_kind_t adm_subdir_kind;
 
-      /* We always open the database in read/write mode.  If the database
-         isn't writable in the filesystem, SQLite will internally open
-         it as read-only, and we'll get an error if we try to do a write
-         operation.
+      const char *adm_subdir = svn_dirent_join(local_abspath, adm_relpath,
+                                               scratch_pool);
 
-         We could decide what to do on a per-operation basis, but since
-         we're caching database handles, it make sense to be as permissive
-         as the filesystem allows. */
-      err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
-                                    svn_sqlite__mode_readwrite, NULL,
-                                    db->state_pool, scratch_pool);
-      if (err == NULL)
+      SVN_ERR(svn_io_check_path(adm_subdir, &adm_subdir_kind, scratch_pool));
+
+      if (adm_subdir_kind == svn_node_dir)
         {
+          /* We always open the database in read/write mode.  If the database
+             isn't writable in the filesystem, SQLite will internally open
+             it as read-only, and we'll get an error if we try to do a write
+             operation.
+
+             We could decide what to do on a per-operation basis, but since
+             we're caching database handles, it make sense to be as permissive
+             as the filesystem allows. */
+          err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
+                                        svn_sqlite__mode_readwrite, NULL,
+                                        db->state_pool, scratch_pool);
+          if (err == NULL)
+            {
 #ifdef SVN_DEBUG
-          /* Install self-verification trigger statements. */
-          SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_VERIFICATION_TRIGGERS));
+              /* Install self-verification trigger statements. */
+              SVN_ERR(svn_sqlite__exec_statements(sdb,
+                                                  STMT_VERIFICATION_TRIGGERS));
 #endif
-          break;
-        }
-      if (err->apr_err != SVN_ERR_SQLITE_ERROR
-          && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_trace(err);
-      svn_error_clear(err);
+              break;
+            }
+          if (err->apr_err != SVN_ERR_SQLITE_ERROR
+              && !APR_STATUS_IS_ENOENT(err->apr_err))
+            return svn_error_trace(err);
+          svn_error_clear(err);
 
-      /* If we have not moved upwards, then check for a wc-1 working copy.
-         Since wc-1 has a .svn in every directory, and we didn't find one
-         in the original directory, then we aren't looking at a wc-1.
+          /* If we have not moved upwards, then check for a wc-1 working copy.
+             Since wc-1 has a .svn in every directory, and we didn't find one
+             in the original directory, then we aren't looking at a wc-1.
 
-         If the original path is not present, then we have to check on every
-         iteration. The content may be the immediate parent, or possibly
-         five ancetors higher. We don't test for directory presence (just
-         for the presence of subdirs/files), so we don't know when we can
-         stop checking ... so just check always.  */
-      if (!moved_upwards || always_check)
-        {
-          SVN_ERR(get_old_version(&wc_format, local_abspath, scratch_pool));
-          if (wc_format != 0)
-            break;
+             If the original path is not present, then we have to check on every
+             iteration. The content may be the immediate parent, or possibly
+             five ancetors higher. We don't test for directory presence (just
+             for the presence of subdirs/files), so we don't know when we can
+             stop checking ... so just check always.  */
+          if (!moved_upwards || always_check)
+            {
+              SVN_ERR(get_old_version(&wc_format, local_abspath,
+                                      scratch_pool));
+              if (wc_format != 0)
+                break;
+            }
         }
 
       /* We couldn't open the SDB within the specified directory, so
@@ -624,7 +637,7 @@ try_symlink_as_dir:
        * in this DB -- in that case, use this wcroot. Else, if the symlink
        * points to a directory, try to find a wcroot in that directory
        * instead. */
-      
+
       err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
                                           NULL, NULL, NULL, NULL, NULL, NULL,
                                           NULL, NULL, NULL, NULL, NULL, NULL,
@@ -666,7 +679,7 @@ try_symlink_as_dir:
               goto try_symlink_as_dir;
             }
         }
-    } 
+    }
 
   /* We've found the appropriate WCROOT for the requested path. Stash
      it into that path's directory.  */

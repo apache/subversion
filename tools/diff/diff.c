@@ -89,6 +89,8 @@ int main(int argc, const char *argv[])
 
   options_array = apr_array_make(pool, 0, sizeof(const char *));
 
+  diff_options = svn_diff_file_options_create(pool);
+
   for (i = 1 ; i < argc ; i++)
     {
       if (!no_more_options && (argv[i][0] == '-'))
@@ -103,6 +105,11 @@ int main(int argc, const char *argv[])
           if (argv[i][1] == 'p' && !argv[i][2])
             {
               show_c_function = TRUE;
+              continue;
+            }
+          if (argv[i][1] == 'w' && !argv[i][2])
+            {
+              diff_options->ignore_space = svn_diff_file_ignore_space_all;
               continue;
             }
           APR_ARRAY_PUSH(options_array, const char *) = argv[i];
@@ -126,8 +133,6 @@ int main(int argc, const char *argv[])
       print_usage(ostream, argv[0], pool);
       return 2;
     }
-
-  diff_options = svn_diff_file_options_create(pool);
 
   svn_err = svn_diff_file_options_parse(diff_options, options_array, pool);
   if (svn_err)

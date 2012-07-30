@@ -53,5 +53,5 @@ def main(config_file):
 if __name__ == "__main__":
   if len(sys.argv) != 2:
     print "invalid args, read source code"
-    sys.exit(0) 
+    sys.exit(0)
   main(sys.argv[1])

@@ -27,8 +27,19 @@ import os
 import sys
 import re
 import urllib
+import logging
+import pprint
+
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 
 import svntest
+
+logger = logging.getLogger()
 
 
 #
@@ -87,7 +98,7 @@ _re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
-_re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
+_re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
                                 '([B ])'
                                 '([CAUD ])\s+'
                                 '(.+)')
@@ -362,9 +373,8 @@ class State:
     if 0:
       check = tree.as_state()
       if self != check:
-        import pprint
-        pprint.pprint(self.desc)
-        pprint.pprint(check.desc)
+        logger.warn(pprint.pformat(self.desc))
+        logger.warn(pprint.pformat(check.desc))
         # STATE -> TREE -> STATE is lossy.
         # In many cases, TREE -> STATE -> TREE is not.
         # Even though our conversion from a TREE has lost some information, we
@@ -894,21 +904,29 @@ def display_nodes(label, path, expected, actual):
   'Display two nodes, expected and actual.'
   expected = item_to_node(path, expected)
   actual = item_to_node(path, actual)
-  print("=============================================================")
-  print("Expected '%s' and actual '%s' in %s tree are different!"
-        % (expected.name, actual.name, label))
-  print("=============================================================")
-  print("EXPECTED NODE TO BE:")
-  print("=============================================================")
-  expected.pprint()
-  print("=============================================================")
-  print("ACTUAL NODE FOUND:")
-  print("=============================================================")
-  actual.pprint()
+
+  o = StringIO()
+  o.write("=============================================================\n")
+  o.write("Expected '%s' and actual '%s' in %s tree are different!\n"
+                % (expected.name, actual.name, label))
+  o.write("=============================================================\n")
+  o.write("EXPECTED NODE TO BE:\n")
+  o.write("=============================================================\n")
+  expected.pprint(o)
+  o.write("=============================================================\n")
+  o.write("ACTUAL NODE FOUND:\n")
+  o.write("=============================================================\n")
+  actual.pprint(o)
+
+  logger.warn(o.getvalue())
+  o.close()
 
 ### yanked from tree.py
 def default_singleton_handler(description, path, item):
   node = item_to_node(path, item)
-  print("Couldn't find node '%s' in %s tree" % (node.name, description))
-  node.pprint()
+  logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
+  o = StringIO()
+  node.pprint(o)
+  logger.warn(o.getvalue())
+  o.close()
   raise svntest.tree.SVNTreeUnequal

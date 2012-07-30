@@ -50,20 +50,6 @@
 #include "svn_private_config.h"
 
 
-/* ### This file maps URL schemes to particular RA libraries.
-   ### Currently, the only pair of RA libraries which support the same
-   ### protocols are neon and serf.  svn_ra_open3 makes the assumption
-   ### that this is the case; that their 'schemes' fields are both
-   ### dav_schemes; and that "neon" is listed first.
-
-   ### Users can choose which dav library to use with the http-library
-   ### preference in .subversion/servers; however, it is ignored by
-   ### any code which uses the pre-1.2 API svn_ra_get_ra_library
-   ### instead of svn_ra_open. */
-
-#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
-#define CHOOSABLE_DAV_MODULE
-#endif
 
 
 /* These are the URI schemes that the respective libraries *may* support.
@@ -84,15 +70,6 @@ static const struct ra_lib_defn {
   svn_ra__init_func_t initfunc;
   svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
-  {
-    "neon",
-    dav_schemes,
-#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
-    svn_ra_neon__init,
-    svn_ra_dav_init
-#endif
-  },
-
   {
     "svn",
     svn_schemes,
@@ -413,8 +390,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             DEFAULT_HTTP_LIBRARY);
 
-          if (strcmp(http_library, "neon") != 0 &&
-              strcmp(http_library, "serf") != 0)
+          if (strcmp(http_library, "serf") != 0)
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
@@ -706,6 +682,39 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
   return ccwb->original_callback(ci, ccwb->original_baton, pool);
 }
 
+
+/* Some RA layers do not correctly fill in REPOS_ROOT in commit_info, or
+   they are third-party layers conforming to an older commit_info structure.
+   Interpose a utility function to ensure the field is valid.  */
+static void
+remap_commit_callback(svn_commit_callback2_t *callback,
+                      void **callback_baton,
+                      svn_ra_session_t *session,
+                      svn_commit_callback2_t original_callback,
+                      void *original_baton,
+                      apr_pool_t *result_pool)
+{
+  if (original_callback == NULL)
+    {
+      *callback = NULL;
+      *callback_baton = NULL;
+    }
+  else
+    {
+      /* Allocate this in RESULT_POOL, since the callback will be called
+         long after this function has returned. */
+      struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
+
+      ccwb->session = session;
+      ccwb->original_callback = original_callback;
+      ccwb->original_baton = original_baton;
+
+      *callback = commit_callback_wrapper;
+      *callback_baton = ccwb;
+    }
+}
+
+
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -716,20 +725,13 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  /* Allocate this in a pool, since the callback will be called long after
-     this function as returned. */
-  struct ccw_baton *ccwb = apr_palloc(pool, sizeof(*ccwb));
-
-  ccwb->original_callback = callback;
-  ccwb->original_baton = callback_baton;
-  ccwb->session = session;
+  remap_commit_callback(&callback, &callback_baton,
+                        session, callback, callback_baton,
+                        pool);
 
   return session->vtable->get_commit_editor(session, editor, edit_baton,
                                             revprop_table,
-                                            callback
-                                                ? commit_callback_wrapper
-                                                : NULL,
-                                            callback ? ccwb : NULL,
+                                            callback, callback_baton,
                                             lock_tokens, keep_locks, pool);
 }
 
@@ -876,6 +878,8 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
@@ -1141,6 +1145,17 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra__replay_ev2(svn_ra_session_t *session,
+                   svn_revnum_t revision,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   svn_editor_t *editor,
+                   apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
+svn_error_t *
 svn_ra_replay_range(svn_ra_session_t *session,
                     svn_revnum_t start_revision,
                     svn_revnum_t end_revision,
@@ -1193,6 +1208,20 @@ svn_ra_replay_range(svn_ra_session_t *session,
   return err;
 }
 
+svn_error_t *
+svn_ra__replay_range_ev2(svn_ra_session_t *session,
+                         svn_revnum_t start_revision,
+                         svn_revnum_t end_revision,
+                         svn_revnum_t low_water_mark,
+                         svn_boolean_t send_deltas,
+                         svn_ra__replay_revstart_ev2_callback_t revstart_func,
+                         svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+                         void *replay_baton,
+                         apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
                                    svn_boolean_t *has,
                                    const char *capability,
@@ -1228,8 +1257,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                          end_revision,
                                          revision_deleted,
                                          pool);
-  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE     /* serf */
-              || err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)) /* neon */
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     {
       svn_error_clear(err);
 
@@ -1239,6 +1267,67 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                              pool);
     }
   return err;
+}
+
+
+svn_error_t *
+svn_ra__get_commit_ev2(svn_editor_t **editor,
+                       svn_ra_session_t *session,
+                       apr_hash_t *revprop_table,
+                       svn_commit_callback2_t callback,
+                       void *callback_baton,
+                       apr_hash_t *lock_tokens,
+                       svn_boolean_t keep_locks,
+                       svn_ra__provide_base_cb_t provide_base_cb,
+                       svn_ra__provide_props_cb_t provide_props_cb,
+                       svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                       void *cb_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  if (session->vtable->get_commit_ev2 == NULL)
+    {
+      /* The specific RA layer does not have an implementation. Use our
+         default shim over the normal commit editor.  */
+
+      /* Remap for RA layers exposing Ev1.  */
+      remap_commit_callback(&callback, &callback_baton,
+                            session, callback, callback_baton,
+                            result_pool);
+
+      return svn_error_trace(svn_ra__use_commit_shim(
+                               editor,
+                               session,
+                               revprop_table,
+                               callback, callback_baton,
+                               lock_tokens,
+                               keep_locks,
+                               provide_base_cb,
+                               provide_props_cb,
+                               get_copysrc_kind_cb,
+                               cb_baton,
+                               cancel_func, cancel_baton,
+                               result_pool, scratch_pool));
+    }
+
+  /* Note: no need to remap the callback for Ev2. RA layers providing this
+     vtable entry should completely fill in commit_info.  */
+
+  return svn_error_trace(session->vtable->get_commit_ev2(
+                           editor,
+                           session,
+                           revprop_table,
+                           callback, callback_baton,
+                           lock_tokens,
+                           keep_locks,
+                           provide_base_cb,
+                           provide_props_cb,
+                           get_copysrc_kind_cb,
+                           cb_baton,
+                           cancel_func, cancel_baton,
+                           result_pool, scratch_pool));
 }
 
 

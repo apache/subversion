@@ -154,6 +154,8 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
                              const char *path,
                              apr_pool_t *pool)
 {
+  apr_hash_t *revprops;
+
   svn_fs_t *fs = svn_fs_root_fs(root);
 
   /* ### It might be simpler just to declare that revision
@@ -164,13 +166,16 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   /* Get the CR field out of the node's skel. */
   SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
 
-  /* Get the date property of this revision. */
-  SVN_ERR(svn_fs_revision_prop(&committed_date_s, fs, *committed_rev,
-                               SVN_PROP_REVISION_DATE, pool));
+  /* Get the revision properties of this revision. */
+  SVN_ERR(svn_fs_revision_proplist(&revprops, fs, *committed_rev, pool));
 
-  /* Get the author property of this revision. */
-  SVN_ERR(svn_fs_revision_prop(&last_author_s, fs, *committed_rev,
-                               SVN_PROP_REVISION_AUTHOR, pool));
+  /* Extract date and author from these revprops. */
+  committed_date_s = apr_hash_get(revprops,
+                                  SVN_PROP_REVISION_DATE,
+                                  sizeof(SVN_PROP_REVISION_DATE)-1);
+  last_author_s = apr_hash_get(revprops,
+                               SVN_PROP_REVISION_AUTHOR,
+                               sizeof(SVN_PROP_REVISION_AUTHOR)-1);
 
   *committed_date = committed_date_s ? committed_date_s->data : NULL;
   *last_author = last_author_s ? last_author_s->data : NULL;

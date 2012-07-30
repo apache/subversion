@@ -87,6 +87,17 @@ combined_status(const svn_client_status_t *status)
   return new_status;
 }
 
+/* Return the combined repository STATUS as shown in 'svn status' based
+   on the repository node status and repository text status */
+static enum svn_wc_status_kind
+combined_repos_status(const svn_client_status_t *status)
+{
+  if (status->repos_node_status == svn_wc_status_modified)
+    return status->repos_text_status;
+
+  return status->repos_node_status;
+}
+
 /* Return the single character representation of the switched column
    status. */
 static char
@@ -130,10 +141,10 @@ generate_status_desc(enum svn_wc_status_kind status)
    RELATIVE_TO_PATH and TARGET_PATH must be based on the same parent path,
    i.e. they can either both be absolute or they can both be relative to the
    same parent directory. Both paths are expected to be canonical.
-   
+
    If above conditions are met, a relative path that leads to TARGET_ABSPATH
    from RELATIVE_TO_PATH is returned, but there is no error checking involved.
-   
+
    The returned path is allocated from RESULT_POOL, all other allocations are
    made in SCRATCH_POOL. */
 static const char *
@@ -148,7 +159,7 @@ make_relpath(const char *relative_to_path,
   /* An example:
    *  relative_to_path = /a/b/c
    *  target_path      = /a/x/y/z
-   *  result           = ../../x/y/z 
+   *  result           = ../../x/y/z
    *
    * Another example (Windows specific):
    *  relative_to_path = F:/wc
@@ -509,7 +520,7 @@ svn_cl__print_status_xml(const char *cwd_abspath,
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repos-status",
                             "item",
-                            generate_status_desc(status->repos_text_status),
+                            generate_status_desc(combined_repos_status(status)),
                             "props",
                             generate_status_desc(status->repos_prop_status),
                             NULL);

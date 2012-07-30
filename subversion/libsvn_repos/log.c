@@ -1180,7 +1180,7 @@ send_log(svn_revnum_t rev,
               apr_array_header_t *rangelist =
                 svn__apr_hash_index_val(hi2);
 
-              /* Check whether CHANGED_PATH at revision REV is a child of 
+              /* Check whether CHANGED_PATH at revision REV is a child of
                  a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
               if (svn_fspath__skip_ancestor(mergeinfo_path, changed_path))
                 {
@@ -1742,7 +1742,7 @@ reduce_search(apr_array_header_t *paths,
       if (!ranges)
         continue;
 
-      /* ranges is ordered, could we use some sort of binay search
+      /* ranges is ordered, could we use some sort of binary search
          rather than iterating? */
       for (j = 0; j < ranges->nelts; ++j)
         {
@@ -1811,7 +1811,7 @@ store_search(svn_mergeinfo_t processed,
                                                   sizeof(svn_merge_range_t*));
       svn_merge_range_t *range = apr_palloc(processed_pool,
                                             sizeof(svn_merge_range_t));
-      
+
       range->start = start;
       range->end = end;
       range->inheritable = TRUE;
@@ -2281,7 +2281,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
           svn_boolean_t readable;
           svn_fs_root_t *rev_root;
 
-          SVN_ERR(svn_fs_revision_root(&rev_root, fs, 
+          SVN_ERR(svn_fs_revision_root(&rev_root, fs,
                                        descending_order ? end : start, pool));
           SVN_ERR(authz_read_func(&readable, rev_root, "",
                                   authz_read_baton, pool));

@@ -94,7 +94,7 @@ class SvnReposTest < Test::Unit::TestCase
   end
 
   def test_create
-    tmp_repos_path = File.join(@tmp_path, "repos")
+    tmp_repos_path = File.join(@tmp_path, "repos2")
     fs_type = Svn::Fs::TYPE_FSFS
     fs_config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
     repos = nil

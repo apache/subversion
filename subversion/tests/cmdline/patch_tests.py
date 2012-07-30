@@ -64,7 +64,7 @@ def patch(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -194,11 +194,11 @@ def patch(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -297,8 +297,8 @@ def patch_offset(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = sbox.ospath('A/mu')
+  iota_path = sbox.ospath('iota')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -510,7 +510,7 @@ def patch_chopped_leading_spaces(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -640,11 +640,11 @@ def patch_chopped_leading_spaces(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -680,7 +680,7 @@ def patch_strip1(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -810,11 +810,11 @@ def patch_strip1(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -850,8 +850,8 @@ def patch_no_index_line(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_path = sbox.ospath('A/D/gamma')
+  iota_path = sbox.ospath('iota')
 
   gamma_contents = [
     "\n",
@@ -906,8 +906,8 @@ def patch_no_index_line(sbox):
     "Some more bytes\n",
   ]
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -969,21 +969,21 @@ def patch_add_new_dir(sbox):
     "+new\n",
   ]
 
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  C_path = sbox.ospath('A/C')
+  E_path = sbox.ospath('A/B/E')
   svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
                                      'rm', C_path)
   svntest.actions.run_and_verify_svn("Deleting E failed", None, [],
                                      'rm', E_path)
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  A_B_E_Y_new_path = os.path.join(wc_dir, 'A', 'B', 'E', 'Y', 'new')
-  A_C_new_path = os.path.join(wc_dir, 'A', 'C', 'new')
-  A_Z_new_path = os.path.join(wc_dir, 'A', 'Z', 'new')
+  A_B_E_Y_new_path = sbox.ospath('A/B/E/Y/new')
+  A_C_new_path = sbox.ospath('A/C/new')
+  A_Z_new_path = sbox.ospath('A/Z/new')
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'X'),
-    'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
-    'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
+    'A         %s\n' % sbox.ospath('X'),
+    'A         %s\n' % sbox.ospath('X/Y'),
+    'A         %s\n' % sbox.ospath('X/Y/new'),
     'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
     'Skipped missing target: \'%s\'\n' % A_C_new_path,
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
@@ -1084,22 +1084,22 @@ def patch_remove_empty_dirs(sbox):
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_path = sbox.ospath('A/B/F')
   svntest.actions.run_and_verify_svn("Deleting F failed", None, [],
                                      'rm', F_path)
   svntest.actions.run_and_verify_svn("Update failed", None, [],
                                      'up', wc_dir)
 
   # We should be able to handle one path beeing missing.
-  os.remove(os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))
+  os.remove(sbox.ospath('A/D/H/chi'))
 
   expected_output = [
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'psi'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'lambda'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    'D         %s\n' % sbox.ospath('A/D/H/psi'),
+    'D         %s\n' % sbox.ospath('A/D/H/omega'),
+    'D         %s\n' % sbox.ospath('A/B/lambda'),
+    'D         %s\n' % sbox.ospath('A/B/E/alpha'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    'D         %s\n' % sbox.ospath('A/B'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1146,7 +1146,7 @@ def patch_reject(sbox):
 
   # Set gamma contents
   gamma_contents = "Hello there! I'm the file 'gamma'.\n"
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.file_write(gamma_path, gamma_contents)
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma'       : Item(verb='Sending'),
@@ -1173,7 +1173,7 @@ def patch_reject(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'C         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'C         %s\n' % sbox.ospath('A/D/gamma'),
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
     'Summary of conflicts:\n',
     '  Text conflicts: 1\n',
@@ -1216,11 +1216,11 @@ def patch_keywords(sbox):
 
   # Set gamma contents
   gamma_contents = "$Rev$\nHello there! I'm the file 'gamma'.\n"
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.file_write(gamma_path, gamma_contents)
   # Expand the keyword
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Rev',
-                       os.path.join(wc_dir, 'A', 'D', 'gamma'))
+                       sbox.ospath('A/D/gamma'))
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma'       : Item(verb='Sending'),
     })
@@ -1247,7 +1247,7 @@ def patch_keywords(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1276,7 +1276,7 @@ def patch_with_fuzz(sbox):
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   # We have replaced a couple of lines to cause fuzz. Those lines contains
   # the word fuzz
@@ -1386,7 +1386,7 @@ def patch_with_fuzz(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'U         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -1,6 +1,7 @@ with fuzz 1\n',
     '>         applied hunk @@ -7,7 +8,9 @@ with fuzz 2\n',
     '>         applied hunk @@ -19,6 +20,7 @@ with offset 1 and fuzz 2\n',
@@ -1415,7 +1415,7 @@ def patch_reverse(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -1545,11 +1545,11 @@ def patch_reverse(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1585,7 +1585,7 @@ def patch_no_svn_eol_style(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   if os.name == 'nt':
     crlf = '\n'
@@ -1658,7 +1658,7 @@ def patch_no_svn_eol_style(sbox):
       svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
       expected_output = [
-        'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+        'G         %s\n' % sbox.ospath('A/mu'),
       ]
       expected_disk = svntest.main.greek_state.copy()
       expected_disk.tweak('A/mu', contents=''.join(mu_contents))
@@ -1688,7 +1688,7 @@ def patch_with_svn_eol_style(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
 
   if os.name == 'nt':
@@ -1770,7 +1770,7 @@ def patch_with_svn_eol_style(sbox):
       svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
       expected_output = [
-        'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+        'U         %s\n' % sbox.ospath('A/mu'),
       ]
       expected_disk = svntest.main.greek_state.copy()
       expected_disk.tweak('A/mu', contents=''.join(mu_contents),
@@ -1802,7 +1802,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
 
   if os.name == 'nt':
@@ -1879,7 +1879,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
       svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
       expected_output = [
-        'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+        'G         %s\n' % sbox.ospath('A/mu'),
       ]
       expected_disk = svntest.main.greek_state.copy()
       expected_disk.tweak('A/mu', contents=''.join(mu_contents),
@@ -1910,7 +1910,7 @@ def patch_with_ignore_whitespace(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -2016,7 +2016,7 @@ def patch_with_ignore_whitespace(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'U         %s\n' % sbox.ospath('A/mu'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2044,7 +2044,7 @@ def patch_replace_locally_deleted_file(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -2128,7 +2128,7 @@ def patch_no_eol_at_eof(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   iota_contents = [
     "One line\n",
@@ -2174,7 +2174,7 @@ def patch_no_eol_at_eof(sbox):
     "The last line with missing eol\n",
   ]
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'U         %s\n' % sbox.ospath('iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2201,7 +2201,7 @@ def patch_with_properties(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   modified_prop_contents = "This is the property 'modified'.\n"
   deleted_prop_contents = "This is the property 'deleted'.\n"
@@ -2245,7 +2245,7 @@ def patch_with_properties(sbox):
   added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
-    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
+    ' U        %s\n' % sbox.ospath('iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2272,8 +2272,8 @@ def patch_same_twice(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  mu_path = sbox.ospath('A/mu')
+  beta_path = sbox.ospath('A/B/E/beta')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -2403,10 +2403,10 @@ def patch_same_twice(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
     'D         %s\n' % beta_path,
   ]
 
@@ -2436,9 +2436,9 @@ def patch_same_twice(sbox):
                                        1) # dry-run
   # apply the patch again
   expected_output = [
-    'G         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'G         %s\n' % sbox.ospath('A/D/gamma'),
     '>         hunk @@ -1,1 +1,1 @@ already applied\n',
-    'G         %s\n' % os.path.join(wc_dir, 'iota'),
+    'G         %s\n' % sbox.ospath('iota'),
     # The iota patch inserts a line after the first line in the file,
     # with no trailing context. Currently, Subversion applies this patch
     # multiple times, which matches the behaviour of Larry Wall's patch
@@ -2447,9 +2447,9 @@ def patch_same_twice(sbox):
     # the duplicate application. Should Subversion be taught to detect it,
     # we need this line here:
     # '>         hunk @@ -1,1 +1,2 @@ already applied\n',
-    'G         %s\n' % os.path.join(wc_dir, 'new'),
+    'G         %s\n' % sbox.ospath('new'),
     '>         hunk @@ -0,0 +1,1 @@ already applied\n',
-    'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'G         %s\n' % sbox.ospath('A/mu'),
     '>         hunk @@ -6,6 +6,9 @@ already applied\n',
     '>         hunk @@ -14,11 +17,8 @@ already applied\n',
     'Skipped \'%s\'\n' % beta_path,
@@ -2479,7 +2479,7 @@ def patch_dir_properties(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  B_path = os.path.join(wc_dir, 'A', 'B')
+  B_path = sbox.ospath('A/B')
 
   modified_prop_contents = "This is the property 'modified'.\n"
   deleted_prop_contents = "This is the property 'deleted'.\n"
@@ -2539,7 +2539,7 @@ def patch_dir_properties(sbox):
 
   expected_output = [
     ' U        %s\n' % wc_dir,
-    ' C        %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    ' C        %s\n' % sbox.ospath('A/B'),
     'Summary of conflicts:\n',
     '  Property conflicts: 1\n',
   ]
@@ -2575,7 +2575,7 @@ def patch_add_path_with_props(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   # Apply patch that adds two files, one of which is empty.
   # Both files have properties.
@@ -2610,8 +2610,8 @@ def patch_add_path_with_props(sbox):
   added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'A         %s\n' % os.path.join(wc_dir, 'X'),
+    'A         %s\n' % sbox.ospath('new'),
+    'A         %s\n' % sbox.ospath('X'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2641,7 +2641,7 @@ def patch_prop_offset(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   prop1_content = ''.join([
     "Dear internet user,\n",
@@ -2855,7 +2855,7 @@ def patch_prop_with_fuzz(sbox):
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   # We have replaced a couple of lines to cause fuzz. Those lines contains
   # the word fuzz
@@ -2969,7 +2969,7 @@ def patch_prop_with_fuzz(sbox):
   ])
 
   expected_output = [
-    ' U        %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    ' U        %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk ## -1,6 +1,7 ## with fuzz 1 (prop)\n',
     '>         applied hunk ## -7,7 +8,9 ## with fuzz 2 (prop)\n',
     '>         applied hunk ## -19,6 +20,7 ## with offset 1 and fuzz 2 (prop)\n',
@@ -2998,7 +2998,7 @@ def patch_git_empty_files(sbox):
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
 
-  new_path = os.path.join(wc_dir, 'new')
+  new_path = sbox.ospath('new')
 
   unidiff_patch = [
     "Index: new\n",
@@ -3014,8 +3014,8 @@ def patch_git_empty_files(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'D         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'D         %s\n' % sbox.ospath('iota'),
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'new' : Item(contents="")})
@@ -3043,7 +3043,7 @@ def patch_old_target_names(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -3142,7 +3142,7 @@ def patch_old_target_names(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'U         %s\n' % sbox.ospath('A/mu'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -3169,7 +3169,7 @@ def patch_reverse_revert(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents_pre_patch = [
     "Dear internet user,\n",
@@ -3299,11 +3299,11 @@ def patch_reverse_revert(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % sbox.ospath('A/D/gamma'),
+    'U         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('new'),
+    'U         %s\n' % sbox.ospath('A/mu'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -3333,11 +3333,11 @@ def patch_reverse_revert(sbox):
 
   # Applying the same patch in reverse should undo local mods
   expected_output = [
-    'G         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'G         %s\n' % os.path.join(wc_dir, 'iota'),
-    'D         %s\n' % os.path.join(wc_dir, 'new'),
-    'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'A         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'G         %s\n' % sbox.ospath('A/D/gamma'),
+    'G         %s\n' % sbox.ospath('iota'),
+    'D         %s\n' % sbox.ospath('new'),
+    'G         %s\n' % sbox.ospath('A/mu'),
+    'A         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=''.join(mu_contents_pre_patch))
@@ -3368,7 +3368,7 @@ def patch_one_property(sbox, trailing_eol):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   # Apply patch
 
@@ -3464,7 +3464,7 @@ def patch_add_symlink(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'iota_symlink'),
+    'A         %s\n' % sbox.ospath('iota_symlink'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -3491,7 +3491,7 @@ def patch_moved_away(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
     "Dear internet user,\n",
@@ -3592,7 +3592,7 @@ def patch_moved_away(sbox):
   ]
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu2'),
+    'U         %s\n' % sbox.ospath('A/mu2'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -3623,8 +3623,8 @@ def patch_lacking_trailing_eol(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
 
   # Prepare
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -3648,7 +3648,7 @@ def patch_lacking_trailing_eol(sbox):
   new_contents = "new\n"
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'U         %s\n' % sbox.ospath('iota'),
   ]
 
   # Expect a newline to be appended
@@ -3677,7 +3677,7 @@ def patch_deletes_prop(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
                        iota_path)
@@ -3712,7 +3712,7 @@ def patch_deletes_prop(sbox):
   expected_status.tweak('iota', wc_rev=2)
   expected_skip = wc.State('', { })
   expected_output = [
-    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
+    ' U        %s\n' % sbox.ospath('iota'),
   ]
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output,
@@ -3727,7 +3727,7 @@ def patch_deletes_prop(sbox):
   # *adds* the property.
   svntest.main.run_svn(None, 'revert', iota_path)
 
-  # Apply patch 
+  # Apply patch
   unidiff_patch = [
     "Index: iota\n",
     "===================================================================\n",
@@ -3750,7 +3750,7 @@ def patch_deletes_prop(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 @Issue(4004)
 def patch_reversed_add_with_props(sbox):
@@ -3761,7 +3761,7 @@ def patch_reversed_add_with_props(sbox):
   patch_file_path = make_patch_path(sbox)
 
   # Add a new file which also has props set on it.
-  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_path = sbox.ospath('newfile')
   newfile_contents = ["This is the file 'newfile'.\n"]
   svntest.main.file_write(newfile_path, ''.join(newfile_contents))
   svntest.main.run_svn(None, 'add', newfile_path)
@@ -3799,7 +3799,7 @@ def patch_reversed_add_with_props(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 @Issue(4004)
 def patch_reversed_add_with_props2(sbox):
@@ -3810,7 +3810,7 @@ def patch_reversed_add_with_props2(sbox):
   patch_file_path = make_patch_path(sbox)
 
   # Add a new file which also has props set on it.
-  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_path = sbox.ospath('newfile')
   newfile_contents = ["This is the file 'newfile'.\n"]
   svntest.main.file_write(newfile_path, ''.join(newfile_contents))
   svntest.main.run_svn(None, 'add', newfile_path)
@@ -3854,7 +3854,7 @@ def patch_reversed_add_with_props2(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 def patch_dev_null(sbox):
   "patch with /dev/null filenames"
@@ -3888,8 +3888,8 @@ def patch_dev_null(sbox):
 
   new_contents = "new\n"
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'new'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'A         %s\n' % sbox.ospath('new'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -3996,7 +3996,7 @@ def patch_target_no_eol_at_eof(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   iota_contents = [
     "This is the file iota."
@@ -4026,7 +4026,7 @@ def patch_target_no_eol_at_eof(sbox):
     "It is really the file 'iota'."
   ]
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'U         %s\n' % sbox.ospath('iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -4071,10 +4071,10 @@ def patch_add_and_delete(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
-    'A         %s\n' % os.path.join(wc_dir, 'P'),
-    'A         %s\n' % os.path.join(wc_dir, 'P', 'Q'),
-    'A         %s\n' % os.path.join(wc_dir, 'P', 'Q', 'foo'),
-    'D         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % sbox.ospath('P'),
+    'A         %s\n' % sbox.ospath('P/Q'),
+    'A         %s\n' % sbox.ospath('P/Q/foo'),
+    'D         %s\n' % sbox.ospath('iota'),
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('iota')

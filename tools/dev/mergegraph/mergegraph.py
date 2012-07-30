@@ -65,7 +65,8 @@ from pydot import Node, Edge
 
 def mergeinfo_to_node_list(mi):
   """Convert a mergeinfo string such as '/foo:1,3-5*' into a list of
-     node names such as ['foo1', 'foo3', 'foo4', 'foo5']."""
+     node names such as ['foo1', 'foo3', 'foo4', 'foo5'].
+  """
   ### Doesn't yet strip the leading slash.
   l = []
   if mi:
@@ -89,7 +90,8 @@ def mergeinfo_to_node_list(mi):
 
 class MergeGraph(pydot.Graph):
   """Base class, not intended for direct use.  Use MergeDot for the main
-     graph and MergeSubgraph for a subgraph."""
+     graph and MergeSubgraph for a subgraph.
+  """
 
   def mk_origin_node(graph, name, label):
     """Add a node to the graph"""
@@ -136,7 +138,7 @@ class MergeGraph(pydot.Graph):
              label='"' + label + '"',
              color=color, fontcolor=color,
              style='bold')
-    if kind == 'cherry':
+    if kind.startswith('cherry'):
       e.set_style('dashed')
     graph.add_edge(e)
 
@@ -158,7 +160,7 @@ class MergeGraph(pydot.Graph):
     """Add a merge"""
     base_node, src_node, tgt_node, kind = merge
 
-    if base_node and src_node:  # and kind != 'cherry':
+    if base_node and src_node:  # and not kind.startwith('cherry'):
       graph.mk_mergeinfo_edge(base_node, src_node, important)
 
     # Merge target node
@@ -169,13 +171,15 @@ class MergeGraph(pydot.Graph):
 
   def add_annotation(graph, node, label, color='lightblue'):
     """Add a graph node that serves as an annotation to a normal node.
-       More than one annotation can be added to the same normal node."""
+       More than one annotation can be added to the same normal node.
+    """
     subg_name = node + '_annotations'
 
     def get_subgraph(graph, name):
       """Equivalent to pydot.Graph.get_subgraph() when there is no more than
          one subgraph of the given name, but working aroung a bug in
-         pydot.Graph.get_subgraph()."""
+         pydot.Graph.get_subgraph().
+      """
       for subg in graph.get_subgraph_list():
         if subg.get_name() == name:
           return subg
@@ -228,11 +232,11 @@ class MergeDot(MergeGraph, pydot.Dot):
     """Initialize a MergeDot graph's input data from a config file."""
     import ConfigParser
     if config_filename.endswith('.txt'):
-      default_filename = config_filename[:-4] + '.png'
+      default_basename = config_filename[:-4]
     else:
-      default_filename = config_filename + '.png'
+      default_basename = config_filename
 
-    config = ConfigParser.SafeConfigParser({ 'filename': default_filename,
+    config = ConfigParser.SafeConfigParser({ 'basename': default_basename,
                                              'title': None,
                                              'merges': '[]',
                                              'annotations': '[]' })
@@ -240,7 +244,7 @@ class MergeDot(MergeGraph, pydot.Dot):
     if len(files_read) == 0:
       print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
       sys.exit(1)
-    graph.filename = config.get('graph', 'filename')
+    graph.basename = config.get('graph', 'basename')
     graph.title = config.get('graph', 'title')
     graph.branches = eval(config.get('graph', 'branches'))
     graph.changes = eval(config.get('graph', 'changes'))
@@ -294,3 +298,16 @@ class MergeDot(MergeGraph, pydot.Dot):
     if graph.title:
       graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
 
+  def save(graph, format='png', filename=None):
+    """Save this merge graph to the given file format. If filename is None,
+       construct a filename from the basename of the original file (as passed
+       to the constructor and then stored in graph.basename) and the suffix
+       according to the given format.
+    """
+    if not filename:
+      filename = graph.basename + '.' + format
+    if format == 'sh':
+      import save_as_sh
+      save_as_sh.write_sh_file(graph, filename)
+    else:
+      pydot.Dot.write(graph, filename, format=format)

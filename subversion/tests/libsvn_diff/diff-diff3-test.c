@@ -2394,7 +2394,40 @@ merge_adjacent_changes(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Issue #4133, '"diff -x -w" showing wrong change'.
+   The magic number used in this test, 1<<17, is
+   CHUNK_SIZE from ../../libsvn_diff/diff_file.c
+ */
+static svn_error_t *
+test_wrap(apr_pool_t *pool)
+{
+  char ldata[(1<<17) + 4+4+3+1];
+  char rdata[(1<<17) + 4+3+3+1];
+  svn_string_t left, right;
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+  diff_opts->ignore_space = svn_diff_file_ignore_space_change;
 
+  /* Two long lines. */
+  memset(ldata, '@', 1<<17);
+  memset(rdata, '@', 1<<17);
+  strcpy(&ldata[1<<17], "foo\n" "ba \n" "x \n");
+  strcpy(&rdata[1<<17], "foo\n" "ba\n"  "x\t\n");
+
+  /* Cast them to svn_string_t. */
+  left.data = ldata;
+  right.data = rdata;
+  left.len = sizeof(ldata)-1;
+  right.len = sizeof(rdata)-1;
+
+  /* Diff them.  Modulo whitespace, they are identical. */
+  {
+    svn_diff_t *diff;
+    SVN_ERR(svn_diff_mem_string_diff(&diff, &left, &right, diff_opts, pool));
+    SVN_TEST_ASSERT(FALSE == svn_diff_contains_diffs(diff));
+  }
+
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -2425,5 +2458,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "3-way merge with conflict styles"),
     SVN_TEST_PASS2(test_diff4,
                    "4-way merge; see variance-adjusted-patching.html"),
+    SVN_TEST_XFAIL2(test_wrap,
+                   "difference at the start of a 128KB window"),
     SVN_TEST_NULL
   };

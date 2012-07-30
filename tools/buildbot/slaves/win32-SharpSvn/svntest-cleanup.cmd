@@ -31,12 +31,13 @@ IF NOT EXIST "imports\" (
   svn co --username guest --password "" http://sharpsvn.open.collab.net/svn/sharpsvn/trunk/imports imports
 )
 IF NOT EXIST build\imports.done (
+  svn up imports
   copy /y imports\dev-default.build default.build
   nant prep-dev %NANTARGS%
   IF ERRORLEVEL 1 (
     exit /B 1
   )
-  del release\bin\*svn* release\bin\_*.*
+  del release\bin\*svn* release\bin\_*.* 2>nul:
   echo. > build\imports.done
 )
 
@@ -56,7 +57,10 @@ taskkill /im svnserve.exe /f 2> nul:
 taskkill /im svnrdump.exe /f 2> nul:
 taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
+taskkill /im java.exe /f 2> nul:
+taskkill /im perl.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )

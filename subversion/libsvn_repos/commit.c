@@ -37,8 +37,11 @@
 #include "svn_checksum.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
-#include "repos.h"
 #include "svn_private_config.h"
+#include "svn_editor.h"
+
+#include "repos.h"
+
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 
@@ -128,6 +131,29 @@ struct file_baton
 };
 
 
+struct ev2_baton
+{
+  /* The repository we are editing.  */
+  svn_repos_t *repos;
+
+  /* The authz baton for checks; NULL to skip authz.  */
+  svn_authz_t *authz;
+
+  /* The repository name and user for performing authz checks.  */
+  const char *authz_repos_name;
+  const char *authz_user;
+
+  /* Callback to provide info about the committed revision.  */
+  svn_commit_callback2_t commit_cb;
+  void *commit_baton;
+
+  /* The FS txn editor  */
+  svn_editor_t *inner;
+
+  /* The name of the open transaction (so we know what to commit)  */
+  const char *txn_name;
+};
+
 
 /* Create and return a generic out-of-dateness error. */
 static svn_error_t *
@@ -140,6 +166,40 @@ out_of_date(const char *path, svn_node_kind_t kind)
                             ? _("File '%s' is out of date")
                             : _("'%s' is out of date")),
                            path);
+}
+
+
+static svn_error_t *
+invoke_commit_cb(svn_commit_callback2_t commit_cb,
+                 void *commit_baton,
+                 svn_fs_t *fs,
+                 svn_revnum_t revision,
+                 const char *post_commit_errstr,
+                 apr_pool_t *scratch_pool)
+{
+  /* FS interface returns non-const values.  */
+  /* const */ svn_string_t *date;
+  /* const */ svn_string_t *author;
+  svn_commit_info_t *commit_info;
+
+  if (commit_cb == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_revision_prop(&date, fs, revision, SVN_PROP_REVISION_DATE,
+                               scratch_pool));
+  SVN_ERR(svn_fs_revision_prop(&author, fs, revision,
+                               SVN_PROP_REVISION_AUTHOR,
+                               scratch_pool));
+
+  commit_info = svn_create_commit_info(scratch_pool);
+
+  /* fill up the svn_commit_info structure */
+  commit_info->revision = revision;
+  commit_info->date = date ? date->data : NULL;
+  commit_info->author = author ? author->data : NULL;
+  commit_info->post_commit_err = post_commit_errstr;
+
+  return svn_error_trace(commit_cb(commit_info, commit_baton, scratch_pool));
 }
 
 
@@ -631,7 +691,8 @@ svn_repos__post_commit_error_str(svn_error_t *err,
   else
     hook_err2 = hook_err1;
 
-  /* This implementation counts on svn_repos_fs_commit_txn() returning
+  /* This implementation counts on svn_repos_fs_commit_txn() and
+     libsvn_repos/commit.c:complete_cb() returning
      svn_fs_commit_txn() as the parent error with a child
      SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED error.  If the parent error
      is SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED then there was no error
@@ -703,7 +764,6 @@ close_edit(void *edit_baton,
              display it as a warning) and clear the error. */
           post_commit_err = svn_repos__post_commit_error_str(err, pool);
           svn_error_clear(err);
-          err = SVN_NO_ERROR;
         }
     }
   else
@@ -730,41 +790,19 @@ close_edit(void *edit_baton,
                                          svn_fs_abort_txn(eb->txn, pool)));
     }
 
+  /* At this point, the post-commit error has been converted to a string.
+     That information will be passed to a callback, if provided. If the
+     callback invocation fails in some way, that failure is returned here.
+     IOW, the post-commit error information is low priority compared to
+     other gunk here.  */
+
   /* Pass new revision information to the caller's callback. */
-  {
-    svn_string_t *date, *author;
-    svn_commit_info_t *commit_info;
-
-    /* Even if there was a post-commit hook failure, it's more serious
-       if one of the calls here fails, so we explicitly check for errors
-       here, while saving the possible post-commit error for later. */
-
-    err = svn_fs_revision_prop(&date, svn_repos_fs(eb->repos),
-                                new_revision, SVN_PROP_REVISION_DATE,
-                                pool);
-    if (! err)
-      {
-        err = svn_fs_revision_prop(&author, svn_repos_fs(eb->repos),
-                                   new_revision, SVN_PROP_REVISION_AUTHOR,
-                                   pool);
-      }
-
-    if ((! err) && eb->commit_callback)
-      {
-        commit_info = svn_create_commit_info(pool);
-
-        /* fill up the svn_commit_info structure */
-        commit_info->revision = new_revision;
-        commit_info->date = date ? date->data : NULL;
-        commit_info->author = author ? author->data : NULL;
-        commit_info->post_commit_err = post_commit_err;
-        err = (*eb->commit_callback)(commit_info,
-                                     eb->commit_callback_baton,
-                                     pool);
-      }
-  }
-
-  return svn_error_trace(err);
+  return svn_error_trace(invoke_commit_cb(eb->commit_callback,
+                                          eb->commit_callback_baton,
+                                          eb->repos->fs,
+                                          new_revision,
+                                          post_commit_err,
+                                          pool));
 }
 
 
@@ -783,30 +821,16 @@ abort_edit(void *edit_baton,
 
 
 static svn_error_t *
-prop_fetch_func(apr_hash_t **props,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
@@ -825,7 +849,7 @@ prop_fetch_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-kind_fetch_func(svn_kind_t *kind,
+fetch_kind_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
@@ -838,27 +862,13 @@ kind_fetch_func(svn_kind_t *kind,
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = svn_fs_txn_base_revision(eb->txn);
 
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
-
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
-} 
+}
 
 static svn_error_t *
 fetch_base_func(const char **filename,
@@ -877,20 +887,6 @@ fetch_base_func(const char **filename,
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = svn_fs_txn_base_revision(eb->txn);
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
@@ -987,13 +983,384 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = e;
 
-  shim_callbacks->fetch_props_func = prop_fetch_func;
-  shim_callbacks->fetch_kind_func = kind_fetch_func;
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   eb->repos_url, eb->base_path,
                                    shim_callbacks, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+#if 0
+static svn_error_t *
+ev2_check_authz(const struct ev2_baton *eb,
+                const char *relpath,
+                svn_repos_authz_access_t required,
+                apr_pool_t *scratch_pool)
+{
+  const char *fspath;
+  svn_boolean_t allowed;
+
+  if (eb->authz == NULL)
+    return SVN_NO_ERROR;
+
+  if (relpath)
+    fspath = apr_pstrcat(scratch_pool, "/", relpath, NULL);
+  else
+    fspath = NULL;
+
+  SVN_ERR(svn_repos_authz_check_access(eb->authz, eb->authz_repos_name, fspath,
+                                       eb->authz_user, required,
+                                       &allowed, scratch_pool));
+  if (!allowed)
+    return svn_error_create(required & svn_authz_write
+                            ? SVN_ERR_AUTHZ_UNWRITABLE
+                            : SVN_ERR_AUTHZ_UNREADABLE,
+                            NULL, "Access denied");
+
+  return SVN_NO_ERROR;
+}
+#endif
+
+
+/* This implements svn_editor_cb_add_directory_t */
+static svn_error_t *
+add_directory_cb(void *baton,
+                 const char *relpath,
+                 const apr_array_header_t *children,
+                 apr_hash_t *props,
+                 svn_revnum_t replaces_rev,
+                 apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_add_directory(eb->inner, relpath, children, props,
+                                   replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_add_file_t */
+static svn_error_t *
+add_file_cb(void *baton,
+            const char *relpath,
+            const svn_checksum_t *checksum,
+            svn_stream_t *contents,
+            apr_hash_t *props,
+            svn_revnum_t replaces_rev,
+            apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_add_file(eb->inner, relpath, checksum, contents, props,
+                              replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_add_symlink_t */
+static svn_error_t *
+add_symlink_cb(void *baton,
+               const char *relpath,
+               const char *target,
+               apr_hash_t *props,
+               svn_revnum_t replaces_rev,
+               apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_add_symlink(eb->inner, relpath, target, props,
+                                 replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_add_absent_t */
+static svn_error_t *
+add_absent_cb(void *baton,
+              const char *relpath,
+              svn_kind_t kind,
+              svn_revnum_t replaces_rev,
+              apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_add_absent(eb->inner, relpath, kind, replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_alter_directory_t */
+static svn_error_t *
+alter_directory_cb(void *baton,
+                   const char *relpath,
+                   svn_revnum_t revision,
+                   const apr_array_header_t *children,
+                   apr_hash_t *props,
+                   apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_alter_directory(eb->inner, relpath, revision,
+                                     children, props));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_alter_file_t */
+static svn_error_t *
+alter_file_cb(void *baton,
+              const char *relpath,
+              svn_revnum_t revision,
+              apr_hash_t *props,
+              const svn_checksum_t *checksum,
+              svn_stream_t *contents,
+              apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
+                                checksum, contents));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_alter_symlink_t */
+static svn_error_t *
+alter_symlink_cb(void *baton,
+                 const char *relpath,
+                 svn_revnum_t revision,
+                 apr_hash_t *props,
+                 const char *target,
+                 apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
+                                   target));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_delete_t */
+static svn_error_t *
+delete_cb(void *baton,
+          const char *relpath,
+          svn_revnum_t revision,
+          apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_delete(eb->inner, relpath, revision));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_copy_t */
+static svn_error_t *
+copy_cb(void *baton,
+        const char *src_relpath,
+        svn_revnum_t src_revision,
+        const char *dst_relpath,
+        svn_revnum_t replaces_rev,
+        apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_copy(eb->inner, src_relpath, src_revision, dst_relpath,
+                          replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_move_t */
+static svn_error_t *
+move_cb(void *baton,
+        const char *src_relpath,
+        svn_revnum_t src_revision,
+        const char *dst_relpath,
+        svn_revnum_t replaces_rev,
+        apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_move(eb->inner, src_relpath, src_revision, dst_relpath,
+                          replaces_rev));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_rotate_t */
+static svn_error_t *
+rotate_cb(void *baton,
+          const apr_array_header_t *relpaths,
+          const apr_array_header_t *revisions,
+          apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_rotate(eb->inner, relpaths, revisions));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements svn_editor_cb_complete_t */
+static svn_error_t *
+complete_cb(void *baton,
+            apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+  svn_revnum_t revision;
+  svn_error_t *post_commit_err;
+  const char *conflict_path;
+  svn_error_t *err;
+  const char *post_commit_errstr;
+
+  /* The transaction has been fully edited. Let the pre-commit hook
+     have a look at the thing.  */
+  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
+
+  /* Hook is done. Let's do the actual commit.  */
+  SVN_ERR(svn_fs_editor_commit(&revision, &post_commit_err, &conflict_path,
+                               eb->inner, scratch_pool, scratch_pool));
+
+  /* Did a conflict occur during the commit process?  */
+  if (conflict_path != NULL)
+    return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+                             _("Conflict at '%s'"), conflict_path);
+
+  /* Since did not receive an error during the commit process, and no
+     conflict was specified... we committed a revision. Run the hooks.
+     Other errors may have occurred within the FS (specified by the
+     POST_COMMIT_ERR localvar), but we need to run the hooks.  */
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  err = svn_repos__hooks_post_commit(eb->repos, revision, eb->txn_name,
+                                     scratch_pool);
+  if (err)
+    err = svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
+                           _("Commit succeeded, but post-commit hook failed"));
+
+  /* Combine the FS errors with the hook errors, and stringify.  */
+  err = svn_error_compose_create(post_commit_err, err);
+  if (err)
+    {
+      post_commit_errstr = svn_repos__post_commit_error_str(err, scratch_pool);
+      svn_error_clear(err);
+    }
+  else
+    {
+      post_commit_errstr = NULL;
+    }
+
+  return svn_error_trace(invoke_commit_cb(eb->commit_cb, eb->commit_baton,
+                                          eb->repos->fs, revision,
+                                          post_commit_errstr,
+                                          scratch_pool));
+}
+
+
+/* This implements svn_editor_cb_abort_t */
+static svn_error_t *
+abort_cb(void *baton,
+         apr_pool_t *scratch_pool)
+{
+  struct ev2_baton *eb = baton;
+
+  SVN_ERR(svn_editor_abort(eb->inner));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+apply_revprops(svn_fs_t *fs,
+               const char *txn_name,
+               apr_hash_t *revprops,
+               apr_pool_t *scratch_pool)
+{
+  svn_fs_txn_t *txn;
+  const apr_array_header_t *revprops_array;
+
+  /* The FS editor has a TXN inside it, but we can't access it. Open another
+     based on the TXN_NAME.  */
+  SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, scratch_pool));
+
+  /* Validate and apply the revision properties.  */
+  revprops_array = svn_prop_hash_to_array(revprops, scratch_pool);
+  SVN_ERR(svn_repos_fs_change_txn_props(txn, revprops_array, scratch_pool));
+
+  /* ### do we need to force the txn to close, or is it enough to wait
+     ### for the pool to be cleared?  */
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos__get_commit_ev2(svn_editor_t **editor,
+                          svn_repos_t *repos,
+                          svn_authz_t *authz,
+                          const char *authz_repos_name,
+                          const char *authz_user,
+                          apr_hash_t *revprops,
+                          svn_commit_callback2_t commit_cb,
+                          void *commit_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  static const svn_editor_cb_many_t editor_cbs = {
+    add_directory_cb,
+    add_file_cb,
+    add_symlink_cb,
+    add_absent_cb,
+    alter_directory_cb,
+    alter_file_cb,
+    alter_symlink_cb,
+    delete_cb,
+    copy_cb,
+    move_cb,
+    rotate_cb,
+    complete_cb,
+    abort_cb
+  };
+  struct ev2_baton *eb;
+  const svn_string_t *author;
+
+  /* Can the user modify the repository at all?  */
+  /* ### check against AUTHZ.  */
+
+  /* Okay... some access is allowed. Let's run the start-commit hook.  */
+  author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
+                        APR_HASH_KEY_STRING);
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        repos->client_capabilities,
+                                        scratch_pool));
+
+  eb = apr_palloc(result_pool, sizeof(*eb));
+  eb->repos = repos;
+  eb->authz = authz;
+  eb->authz_repos_name = authz_repos_name;
+  eb->authz_user = authz_user;
+  eb->commit_cb = commit_cb;
+  eb->commit_baton = commit_baton;
+
+  SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
+                               repos->fs, SVN_FS_TXN_CHECK_LOCKS,
+                               cancel_func, cancel_baton,
+                               result_pool, scratch_pool));
+
+  /* The TXN has been created. Go ahead and apply all revision properties.  */
+  SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
+
+  /* Wrap the FS editor within our editor.  */
+  SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(svn_editor_setcb_many(*editor, &editor_cbs, scratch_pool));
 
   return SVN_NO_ERROR;
 }

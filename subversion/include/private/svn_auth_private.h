@@ -82,36 +82,45 @@ typedef svn_error_t * (*svn_auth__password_set_t)
    svn_boolean_t non_interactive,
    apr_pool_t *pool);
 
-/* Common implementation for simple_first_creds and
-   windows_simple_first_creds. Uses PARAMETERS, REALMSTRING and the
-   simple auth provider's username and password cache to fill a set of
-   CREDENTIALS. PASSWORD_GET is used to obtain the password value.
-   PASSTYPE identifies the type of the cached password. CREDENTIALS are
-   allocated from POOL. */
-svn_error_t *
-svn_auth__simple_first_creds_helper(void **credentials,
-                                    void **iter_baton,
-                                    void *provider_baton,
-                                    apr_hash_t *parameters,
-                                    const char *realmstring,
-                                    svn_auth__password_get_t password_get,
-                                    const char *passtype,
-                                    apr_pool_t *pool);
+/* Use PARAMETERS and REALMSTRING to set *CREDENTIALS to a set of
+   pre-cached authentication credentials pulled from the simple
+   credential cache store identified by PASSTYPE.  PASSWORD_GET is
+   used to obtain the password value.  Allocate *CREDENTIALS from
+   POOL.
 
-/* Common implementation for simple_save_creds and
-   windows_simple_save_creds. Uses PARAMETERS and REALMSTRING to save
-   a set of CREDENTIALS to the simple auth provider's username and
-   password cache. PASSWORD_SET is used to store the password.
-   PASSTYPE identifies the type of the cached password. Allocates from POOL. */
+   NOTE:  This function is a common implementation of code used by
+   several of the simple credential providers (the default disk cache
+   mechanism, Windows CryptoAPI, GNOME Keyring, etc.), typically in
+   their "first_creds" implementation.  */
 svn_error_t *
-svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
-                                   void *credentials,
-                                   void *provider_baton,
-                                   apr_hash_t *parameters,
-                                   const char *realmstring,
-                                   svn_auth__password_set_t password_set,
-                                   const char *passtype,
-                                   apr_pool_t *pool);
+svn_auth__simple_creds_cache_get(void **credentials,
+                                 void **iter_baton,
+                                 void *provider_baton,
+                                 apr_hash_t *parameters,
+                                 const char *realmstring,
+                                 svn_auth__password_get_t password_get,
+                                 const char *passtype,
+                                 apr_pool_t *pool);
+
+/* Use PARAMETERS and REALMSTRING to save CREDENTIALS in the simple
+   credential cache store identified by PASSTYPE.  PASSWORD_SET is
+   used to do the actual storage.  Use POOL for necessary allocations.
+   Set *SAVED according to whether or not the credentials were
+   successfully stored.
+
+   NOTE:  This function is a common implementation of code used by
+   several of the simple credential providers (the default disk cache
+   mechanism, Windows CryptoAPI, GNOME Keyring, etc.) typically in
+   their "save_creds" implementation.  */
+svn_error_t *
+svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
+                                 void *credentials,
+                                 void *provider_baton,
+                                 apr_hash_t *parameters,
+                                 const char *realmstring,
+                                 svn_auth__password_set_t password_set,
+                                 const char *passtype,
+                                 apr_pool_t *pool);
 
 /* Implementation of svn_auth__password_get_t that retrieves
    the plaintext password from CREDS when USERNAME matches the stored
@@ -139,39 +148,45 @@ svn_auth__simple_password_set(svn_boolean_t *done,
                               apr_pool_t *pool);
 
 
-/* Common implementation for ssl_client_cert_pw_file_first_credentials.
-   Uses PARAMETERS, REALMSTRING and the ssl client passphrase auth provider's
-   passphrase cache to fill the CREDENTIALS. PASSPHRASE_GET is used to obtain
-   the passphrase value. PASSTYPE identifies the type of the cached passphrase.
-   CREDENTIALS are allocated from POOL. */
-svn_error_t *
-svn_auth__ssl_client_cert_pw_file_first_creds_helper
-  (void **credentials,
-   void **iter_baton,
-   void *provider_baton,
-   apr_hash_t *parameters,
-   const char *realmstring,
-   svn_auth__password_get_t passphrase_get,
-   const char *passtype,
-   apr_pool_t *pool);
+/* Use PARAMETERS and REALMSTRING to set *CREDENTIALS to a set of
+   pre-cached authentication credentials pulled from the SSL client
+   certificate passphrase credential cache store identified by
+   PASSTYPE.  PASSPHRASE_GET is used to obtain the passphrase value.
+   Allocate *CREDENTIALS from POOL.
 
-/* Common implementation for ssl_client_cert_pw_file_save_credentials and
-   windows_ssl_client_cert_pw_file_save_credentials. Uses PARAMETERS and
-   REALMSTRING to save a set of CREDENTIALS to the ssl client cert auth
-   provider's passphrase cache. PASSPHRASE_SET is used to store the
-   passphrase. PASSTYPE identifies the type of the cached passphrase.
-   Allocates from POOL. */
+   NOTE:  This function is a common implementation of code used by
+   several of the ssl client passphrase credential providers (the
+   default disk cache mechanism, Windows CryptoAPI, GNOME Keyring,
+   etc.), typically in their "first_creds" implementation.  */
 svn_error_t *
-svn_auth__ssl_client_cert_pw_file_save_creds_helper
-  (svn_boolean_t *saved,
-   void *credentials,
-   void *provider_baton,
-   apr_hash_t *parameters,
-   const char *realmstring,
-   svn_auth__password_set_t passphrase_set,
-   const char *passtype,
-   apr_pool_t *pool);
+svn_auth__ssl_client_cert_pw_cache_get(void **credentials,
+                                       void **iter_baton,
+                                       void *provider_baton,
+                                       apr_hash_t *parameters,
+                                       const char *realmstring,
+                                       svn_auth__password_get_t passphrase_get,
+                                       const char *passtype,
+                                       apr_pool_t *pool);
 
+/* Use PARAMETERS and REALMSTRING to save CREDENTIALS in the SSL
+   client certificate passphrase credential cache store identified by
+   PASSTYPE.  PASSPHRASE_SET is used to do the actual storage.  Use
+   POOL for necessary allocations.  Set *SAVED according to whether or
+   not the credentials were successfully stored.
+
+   NOTE:  This function is a common implementation of code used by
+   several of the simple credential providers (the default disk cache
+   mechanism, Windows CryptoAPI, GNOME Keyring, etc.) typically in
+   their "save_creds" implementation.  */
+svn_error_t *
+svn_auth__ssl_client_cert_pw_cache_set(svn_boolean_t *saved,
+                                       void *credentials,
+                                       void *provider_baton,
+                                       apr_hash_t *parameters,
+                                       const char *realmstring,
+                                       svn_auth__password_set_t passphrase_set,
+                                       const char *passtype,
+                                       apr_pool_t *pool);
 
 /* This implements the svn_auth__password_get_t interface.
    Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;

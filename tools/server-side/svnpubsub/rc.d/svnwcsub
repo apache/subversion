@@ -18,22 +18,21 @@ load_rc_config $name
 svnwcsub_enable=${svnwcsub_enable-"NO"}
 svnwcsub_user=${svnwcsub_user-"svnwc"}
 svnwcsub_group=${svnwcsub_group-"svnwc"}
-svnwcsub_reactor=${svnwcsub_reactor-"poll"}
 svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pub"}
-svnwcsub_program=${svnwcsub_program-"/usr/local/bin/twistd"}
 svnwcsub_env="PYTHON_EGG_CACHE"
 svnwcsub_cmd_int=${svnwcsub_cmd_int-"python"}
+svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
+svnwcsub_logfile=${svnwcsub_logfile-"/var/log/svnwcsub/svnwcsub.log"}
 pidfile="${svnwcsub_pidfile}"
 
 export PYTHON_EGG_CACHE="/var/run/svnwcsub"
 
-command="/usr/local/bin/twistd"
+command="/usr/local/svnpubsub/svnwcsub.py"
 command_interpreter="/usr/local/bin/${svnwcsub_cmd_int}"
-command_args="-y /usr/local/svnpubsub/svnwcsub.tac \
-            --logfile=/var/log/svnwcsub.log \
-            --pidfile=${pidfile} \
-            --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
-            --umask=002 -r${svnwcsub_reactor}"
+command_args="--daemon \
+              --logfile=${svnwcsub_logfile} \
+              --pidfile=${pidfile} \
+              --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              --umask=002 ${svnwcsub_config}"
 
 run_rc_command "$1"
-

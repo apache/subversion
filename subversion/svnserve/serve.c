@@ -1470,9 +1470,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path, *file_path, *cauthor, *cdate;
+  const char *path, *full_path;
   svn_revnum_t rev;
-  apr_hash_t *entries, *props = NULL, *file_props;
+  apr_hash_t *entries, *props = NULL;
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
@@ -1540,9 +1540,17 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (want_props)
     SVN_CMD_ERR(get_props(&props, root, full_path, pool));
 
-  /* Fetch the directory entries if requested. */
+  /* Begin response ... */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
+
+  /* Fetch the directory entries if requested and send them immediately. */
   if (want_contents)
     {
+      /* Use epoch for a placeholder for a missing date.  */
+      const char *missing_date = svn_time_to_cstring(0, pool);
+
       SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
       /* Transform the hash table's FS entries into dirents.  This probably
@@ -1552,43 +1560,44 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         {
           const char *name = svn__apr_hash_index_key(hi);
           svn_fs_dirent_t *fsent = svn__apr_hash_index_val(hi);
-          svn_dirent_t *entry;
+          const char *file_path;
+
+          /* The fields in the entry tuple.  */
+          svn_node_kind_t entry_kind = svn_node_none;
+          svn_filesize_t entry_size = 0;
+          svn_boolean_t has_props = FALSE;
+          /* If 'created rev' was not requested, send 0.  We can't use
+           * SVN_INVALID_REVNUM as the tuple field is not optional.
+           * See the email thread on dev@, 2012-03-28, subject
+           * "buildbot failure in ASF Buildbot on svn-slik-w2k3-x64-ra",
+           * <http://svn.haxx.se/dev/archive-2012-03/0655.shtml>. */
+          svn_revnum_t created_rev = 0;
+          const char *cdate = NULL;
+          const char *last_author = NULL;
 
           svn_pool_clear(subpool);
 
           file_path = svn_fspath__join(full_path, name, subpool);
-
           if (! lookup_access(subpool, b, conn, svn_authz_read,
                               file_path, FALSE))
-            {
-              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-              continue;
-            }
-
-          entry = apr_pcalloc(pool, sizeof(*entry));
+            continue;
 
           if (dirent_fields & SVN_DIRENT_KIND)
-            {
-              /* kind */
-              entry->kind = fsent->kind;
-            }
+              entry_kind = fsent->kind;
 
           if (dirent_fields & SVN_DIRENT_SIZE)
-            {
-              /* size */
-              if (entry->kind == svn_node_dir)
-                entry->size = 0;
-              else
-                SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
+              if (entry_kind != svn_node_dir)
+                SVN_CMD_ERR(svn_fs_file_length(&entry_size, root, file_path,
                                                subpool));
-            }
 
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             {
+              apr_hash_t *file_props;
+
               /* has_props */
               SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
                                                subpool));
-              entry->has_props = (apr_hash_count(file_props) > 0);
+              has_props = (apr_hash_count(file_props) > 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)
@@ -1596,47 +1605,33 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               || (dirent_fields & SVN_DIRENT_CREATED_REV))
             {
               /* created_rev, last_author, time */
-              SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev,
+              SVN_CMD_ERR(svn_repos_get_committed_info(&created_rev,
                                                        &cdate,
-                                                       &cauthor, root,
+                                                       &last_author,
+                                                       root,
                                                        file_path,
                                                        subpool));
-              entry->last_author = apr_pstrdup(pool, cauthor);
-              if (cdate)
-                SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate,
-                                                  subpool));
-              else
-                entry->time = (time_t) -1;
             }
 
-          /* Store the entry. */
-          apr_hash_set(entries, name, APR_HASH_KEY_STRING, entry);
+          /* The client does not properly handle a missing CDATE. For
+             interoperability purposes, we must fill in some junk.
+
+             See libsvn_ra_svn/client.c:ra_svn_get_dir()  */
+          if (cdate == NULL)
+            cdate = missing_date;
+
+          /* Send the entry. */
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
+                                         svn_node_kind_to_word(entry_kind),
+                                         (apr_uint64_t) entry_size,
+                                         has_props, created_rev,
+                                         cdate, last_author));
         }
       svn_pool_destroy(subpool);
     }
 
-  /* Write out response. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
-  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
-  if (want_contents)
-    {
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          const char *name = svn__apr_hash_index_key(hi);
-          svn_dirent_t *entry = svn__apr_hash_index_val(hi);
-
-          cdate = (entry->time == (time_t) -1) ? NULL
-            : svn_time_to_cstring(entry->time, pool);
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
-                                         svn_node_kind_to_word(entry->kind),
-                                         (apr_uint64_t) entry->size,
-                                         entry->has_props, entry->created_rev,
-                                         cdate, entry->last_author));
-        }
-    }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
-  return SVN_NO_ERROR;
+  /* Finish response. */
+  return svn_ra_svn_write_tuple(conn, pool, "!))");
 }
 
 static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -2047,9 +2042,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__log(full_paths, start_rev, end_rev,
-                                   limit, send_changed_paths, strict_node,
-                                   include_merged_revisions, revprops,
-                                   pool)));
+                                   (int) limit, send_changed_paths,
+                                   strict_node, include_merged_revisions,
+                                   revprops, pool)));
 
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
@@ -2933,7 +2928,7 @@ repos_path_valid(const char *path)
          consisting of just dots and spaces.  Win32 functions treat
          paths such as ".. " and "......." inconsistently.  Make sure
          no one can escape out of the root. */
-      if (path - s >= 2 && strspn(s, ". ") == path - s)
+      if (path - s >= 2 && strspn(s, ". ") == (size_t)(path - s))
         return FALSE;
 #else  /* ! WIN32 */
       if (path - s == 2 && s[0] == '.' && s[1] == '.')
@@ -3094,6 +3089,140 @@ fs_warning_func(void *baton, svn_error_t *err)
   svn_pool_clear(b->pool);
 }
 
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  server_baton_t *sb = baton;
+  svn_fs_root_t *fs_root;
+  svn_error_t *err;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  server_baton_t *sb = baton;
+  svn_node_kind_t node_kind;
+  svn_fs_root_t *fs_root;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  server_baton_t *sb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  svn_fs_root_t *fs_root;
+  svn_error_t *err;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool)
 {
@@ -3125,6 +3254,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
   apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, params->cache_revprops ? "1" : "0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
@@ -3255,6 +3386,19 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     if (supports_mergeinfo)
       SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  }
+
+  /* Set up editor shims. */
+  {
+    svn_delta_shim_callbacks_t *callbacks =
+                                svn_delta_shim_callbacks_default(pool);
+
+    callbacks->fetch_base_func = fetch_base_func;
+    callbacks->fetch_props_func = fetch_props_func;
+    callbacks->fetch_kind_func = fetch_kind_func;
+    callbacks->fetch_baton = &b;
+
+    SVN_ERR(svn_ra_svn__set_shim_callbacks(conn, callbacks));
   }
 
   return svn_ra_svn_handle_commands2(conn, pool, main_commands, &b, FALSE);

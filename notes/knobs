@@ -134,20 +134,23 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 3.6 SVN_FS_FS_MAX_LINEAR_DELTIFICATION
 
   Scope:     libsvn_fs_fs
-  Purpose:   max length + 1 of the linear deltification history
-             before skip-deltification kicks in
+  Purpose:   Controls the space efficiency vs. reconstruction costs tradeoff
+             of rep deltification.  Defines the max length of the linear
+             deltification history before skip-deltification kicks in.
+             Values < 2 result in skip-delta-only behavior.
   Default:   16
-  Range:     natural integers
-  Suggested: 2, 4, 8, 16, 32, 64
+  Range:     natural integers; should be a power of 2
+  Suggested: 1, 4, 8, 16, 32, 64
 
 3.7 SVN_FS_FS_MAX_DELTIFICATION_WALK
 
   Scope:     libsvn_fs_fs
-  Purpose:   max skip deltification range. Change histories
-             longer than that will be restarted with a fulltext.
+  Purpose:   Limits the skip deltification range to provide commit runtime
+             guarantees. Change histories longer than that will be restarted
+             with a fulltext.  Values < 1 disable deltification.
   Default:   1023
-  Range:     natural integers
-  Suggested: 1, 2, 3, 4, 5, 7, 11
+  Range:     natural integers; should be a power of 2 minus one
+  Suggested: 0, 63, 1023, 4095, 16383
 
 3.8 SVN_UNALIGNED_ACCESS_IS_OK
 
@@ -456,6 +459,11 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Purpose:   A "yes" value causes the RA modules to ignore the server's
              advertisement of HTTPv2 protocol support (if any), effectively
              causing them to only speak our original HTTP protocol.
+
+7.7 SVN_SVNMUCC_IS_SVNSYITF
+
+  Scope:     'make install-tools'
+  Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
 
 * (TODO: others)
 

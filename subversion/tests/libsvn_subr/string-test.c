@@ -39,7 +39,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
-
+#include "private/svn_string_private.h"
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -511,6 +511,35 @@ test23(apr_pool_t *pool)
   return test_stringbuf_unequal("abc", "abb", pool);
 }
 
+static svn_error_t *
+test24(apr_pool_t *pool)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t length;
+
+  length = svn__i64toa(buffer, 0);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__i64toa(buffer, 0x8000000000000000ll);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
+
+  length = svn__i64toa(buffer, 0x7fffffffffffffffll);
+  SVN_TEST_ASSERT(length == 19);
+  SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
+
+  length = svn__ui64toa(buffer, 0ull);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
+
+  return test_stringbuf_unequal("abc", "abb", pool);
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -568,5 +597,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare stringbufs; different lengths"),
     SVN_TEST_PASS2(test23,
                    "compare stringbufs; same length, different content"),
+    SVN_TEST_PASS2(test24,
+                   "verify i64toa"),
     SVN_TEST_NULL
   };

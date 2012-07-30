@@ -391,25 +391,16 @@ def merge_history_repos(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
-  # Merge branches/c to trunk, which produces a conflict - r17
+  # Merge branches/c to trunk - r17
   #
   # Mergeinfo changes on /trunk:
   #    Merged /branches/c:r5-16
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
                        os.path.join('..', branch_c) + '@HEAD')
-  svntest.main.file_write(os.path.join('A', 'mu'),
-                          "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.",
-                          "wb")
-  # Resolve conflicts, and commit
-  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
-                                           os.path.join('A', 'xi'),
-                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Merge branches/c to trunk, " +
-                       "resolving a conflict in 'mu'.",
+                       "Merge branches/c to trunk.",
                        '--username', svntest.main.wc_author2)
   os.chdir('..')
 
@@ -2217,6 +2208,126 @@ def log_xml_old(sbox):
                                          expected_paths=paths)
 
 
+@Issue(4153)
+def log_diff_moved(sbox):
+  "log --diff on moved file"
+
+  sbox.build()
+
+  sbox.simple_move('A/mu', 'A/mu2')
+  svntest.main.file_append(sbox.ospath('A/mu2'), "now mu2\n")
+  sbox.simple_commit()
+  sbox.simple_move('A/mu2', 'A/mu3')
+  svntest.main.file_append(sbox.ospath('A/mu3'), "now mu3\n")
+  sbox.simple_commit()
+  
+  mu_at_1 = sbox.repo_url + '/A/mu@1'
+  mu3_at_3 = sbox.repo_url + '/A/mu3@3'
+
+  r1diff = [make_diff_header('mu', 'revision 0', 'revision 1')
+            + ["@@ -0,0 +1 @@\n",
+               "+This is the file 'mu'.\n"]]
+
+  # The mu2@2 and mu3@3 diffs show diffs relative to the copy source
+  r2diff = [make_diff_header('mu',
+                             '.../mu)\t(revision 1',
+                             '.../mu2)\t(revision 2')
+            + ["@@ -1 +1,2 @@\n",
+               " This is the file 'mu'.\n",
+               "+now mu2\n"]]
+
+  r3diff = [make_diff_header('mu2',
+                             '.../mu2)\t(revision 2',
+                             '.../mu3)\t(revision 3')
+            + ["@@ -1,2 +1,3 @@\n",
+               " This is the file 'mu'.\n",
+               " now mu2\n",
+               "+now mu3\n"]]
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu_at_1)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r1diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3:2', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 2:
+    raise SVNLogParseError("%d logs found, 2 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+
+  # XFAIL mu3 not found at revisions 0 and 1
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 3:
+    raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+  compare_diff_output(r1diff, log_chain[2]['diff_lines'])
+
+
+#----------------------------------------------------------------------
+def log_search(sbox):
+  "'svn log --search'"
+
+  guarantee_repos_and_wc(sbox)
+
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--search',
+                             'for revision [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+  # case-insensitive search
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--isearch',
+                             'FOR REVISION [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_sensitive_log_with_search(sbox):
+  "test 'svn log -g --search'"
+
+  merge_history_repos(sbox)
+
+  TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
+
+  # Run log -g on a non-copying revision that adds mergeinfo,
+  # and perform a search that only matches the merged revision
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r6',
+                                                              '--search',
+                                                              'upsilon',
+                                                              TRUNK_path)
+
+  # Parse and check output. The only revision should be r4 (the merge rev).
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    4 : [6],
+  }
+  check_merge_results(log_chain, expected_merges)
+
 
 ########################################################################
 # Run the tests
@@ -2260,6 +2371,9 @@ test_list = [ None,
               merge_sensitive_log_copied_path_inherited_mergeinfo,
               log_diff,
               log_xml_old,
+              log_diff_moved,
+              log_search,
+              merge_sensitive_log_with_search,
              ]
 
 if __name__ == '__main__':

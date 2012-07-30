@@ -33,7 +33,7 @@
 /* This enables runtime checks of the editor API constraints.  This may
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
-   
+
    ### Remove before release? */
 #define ENABLE_ORDERING_CHECK
 #endif
@@ -55,15 +55,26 @@ struct svn_editor_t
   apr_pool_t *scratch_pool;
 
 #ifdef ENABLE_ORDERING_CHECK
+  svn_boolean_t within_callback;
+
   apr_hash_t *pending_incomplete_children;
   apr_hash_t *completed_nodes;
   svn_boolean_t finished;
 
-  apr_pool_t *result_pool;
+  apr_pool_t *state_pool;
 #endif
 };
 
+
 #ifdef ENABLE_ORDERING_CHECK
+
+#define START_CALLBACK(editor)                       \
+  do {                                               \
+    svn_editor_t *editor__tmp_e = (editor);          \
+    SVN_ERR_ASSERT(!editor__tmp_e->within_callback); \
+    editor__tmp_e->within_callback = TRUE;           \
+  } while (0)
+#define END_CALLBACK(editor) ((editor)->within_callback = FALSE)
 
 /* Marker to indicate no further changes are allowed on this node.  */
 static const int marker_done;
@@ -94,7 +105,7 @@ static const int marker_added_dir;
 
 #define MARK_RELPATH(editor, relpath, value) \
   apr_hash_set((editor)->completed_nodes, \
-               apr_pstrdup((editor)->result_pool, relpath), \
+               apr_pstrdup((editor)->state_pool, relpath), \
                APR_HASH_KEY_STRING, value)
 
 #define MARK_COMPLETED(editor, relpath) \
@@ -117,6 +128,36 @@ static const int marker_added_dir;
   MARK_RELPATH(editor, relpath, MARKER_ADDED_DIR)
 #define CHECK_UNKNOWN_CHILD(editor, relpath) \
   SVN_ERR_ASSERT(check_unknown_child(editor, relpath))
+
+/* When a child is changed in some way, mark the parent directory as needing
+   to be "stable" (no future structural changes). IOW, only allow "alter" on
+   the parent. Prevents parent-add/delete/move after any child operation.  */
+#define MARK_PARENT_STABLE(editor, relpath) \
+  mark_parent_stable(editor, relpath)
+
+/* If the parent is MARKER_ALLOW_ADD, then it has been moved-away, and we
+   know it does not exist. All other cases: it might exist.  */
+#define VERIFY_PARENT_MAY_EXIST(editor, relpath) \
+  SVN_ERR_ASSERT(apr_hash_get((editor)->completed_nodes, \
+                              svn_relpath_dirname(relpath, \
+                                                  (editor)->scratch_pool), \
+                              APR_HASH_KEY_STRING) != MARKER_ALLOW_ADD)
+
+/* If the parent is MARKER_ADDED_DIR, then we should not be deleting
+   children(*). If the parent is MARKER_ALLOW_ADD, then it has been
+   moved-away, so children cannot exist. That leaves MARKER_DONE,
+   MARKER_ALLOW_ALTER, and NULL as possible values. Just assert that
+   we didn't get either of the bad ones.
+
+   (*) if the child as added via add_*(), then it would have been marked
+   as completed and delete/move-away already test against completed nodes.
+   This test is to beware of trying to delete "children" that are not
+   actually (and can't possibly be) present.  */
+#define CHILD_DELETIONS_ALLOWED(editor, relpath) \
+  SVN_ERR_ASSERT(!allow_either(editor, \
+                               svn_relpath_dirname(relpath, \
+                                                   (editor)->scratch_pool), \
+                               MARKER_ADDED_DIR, MARKER_ALLOW_ADD))
 
 static svn_boolean_t
 allow_either(const svn_editor_t *editor,
@@ -155,11 +196,38 @@ check_unknown_child(const svn_editor_t *editor,
   return TRUE;
 }
 
+static void
+mark_parent_stable(const svn_editor_t *editor,
+                   const char *relpath)
+{
+  const char *parent = svn_relpath_dirname(relpath, editor->scratch_pool);
+  const void *marker = apr_hash_get(editor->completed_nodes,
+                                    parent, APR_HASH_KEY_STRING);
+
+  /* If RELPATH has already been marked (to disallow adds, or that it
+     has been fully-completed), then do nothing.  */
+  if (marker == MARKER_ALLOW_ALTER
+      || marker == MARKER_DONE
+      || marker == MARKER_ADDED_DIR)
+    return;
+
+  /* If the marker is MARKER_ALLOW_ADD, then that means the parent was
+     moved away. There is no way to work on a child. That should have
+     been tested before we got here by VERIFY_PARENT_MAY_EXIST().  */
+  SVN_ERR_ASSERT_NO_RETURN(marker != MARKER_ALLOW_ADD);
+
+  /* MARKER is NULL. Upgrade it to MARKER_ALLOW_ALTER.  */
+  MARK_RELPATH(editor, parent, MARKER_ALLOW_ALTER);
+}
+
 #else
 
 /* Be wary with the definition of these macros so that we don't
    end up with "statement with no effect" warnings. Obviously, this
    depends upon particular usage, which is easy to verify.  */
+
+#define START_CALLBACK(editor)  /* empty */
+#define END_CALLBACK(editor)  /* empty */
 
 #define MARK_FINISHED(editor)  /* empty */
 #define SHOULD_NOT_BE_FINISHED(editor)  /* empty */
@@ -177,6 +245,10 @@ check_unknown_child(const svn_editor_t *editor,
 
 #define MARK_ADDED_DIR(editor, relpath)  /* empty */
 #define CHECK_UNKNOWN_CHILD(editor, relpath)  /* empty */
+
+#define MARK_PARENT_STABLE(editor, relpath)  /* empty */
+#define VERIFY_PARENT_MAY_EXIST(editor, relpath)  /* empty */
+#define CHILD_DELETIONS_ALLOWED(editor, relpath)  /* empty */
 
 #endif /* ENABLE_ORDERING_CHECK */
 
@@ -200,10 +272,17 @@ svn_editor_create(svn_editor_t **editor,
   (*editor)->pending_incomplete_children = apr_hash_make(result_pool);
   (*editor)->completed_nodes = apr_hash_make(result_pool);
   (*editor)->finished = FALSE;
-  (*editor)->result_pool = result_pool;
+  (*editor)->state_pool = result_pool;
 #endif
 
   return SVN_NO_ERROR;
+}
+
+
+void *
+svn_editor_get_baton(const svn_editor_t *editor)
+{
+  return editor->baton;
 }
 
 
@@ -364,6 +443,22 @@ svn_editor_setcb_many(svn_editor_t *editor,
 }
 
 
+static svn_error_t *
+check_cancel(svn_editor_t *editor)
+{
+  svn_error_t *err = NULL;
+
+  if (editor->cancel_func)
+    {
+      START_CALLBACK(editor);
+      err = editor->cancel_func(editor->cancel_baton);
+      END_CALLBACK(editor);
+    }
+
+  return svn_error_trace(err);
+}
+
+
 svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
@@ -373,21 +468,28 @@ svn_editor_add_directory(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(children != NULL);
   SVN_ERR_ASSERT(props != NULL);
+  /* ### validate children are just basenames?  */
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_directory)
-    err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
-                                         props, replaces_rev,
-                                         editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
+                                           props, replaces_rev,
+                                           editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ADDED_DIR(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
 
 #ifdef ENABLE_ORDERING_CHECK
@@ -397,7 +499,7 @@ svn_editor_add_directory(svn_editor_t *editor,
       {
         const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
         const char *child = svn_relpath_join(relpath, child_basename,
-                                             editor->result_pool);
+                                             editor->state_pool);
 
         apr_hash_set(editor->pending_incomplete_children, child,
                      APR_HASH_KEY_STRING, "");
@@ -406,7 +508,7 @@ svn_editor_add_directory(svn_editor_t *editor,
 #endif
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -420,26 +522,33 @@ svn_editor_add_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
+  SVN_ERR_ASSERT(checksum != NULL
+                    && checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_file)
-    err = editor->funcs.cb_add_file(editor->baton, relpath,
-                                    checksum, contents, props,
-                                    replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_file(editor->baton, relpath,
+                                      checksum, contents, props,
+                                      replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -452,23 +561,29 @@ svn_editor_add_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_symlink)
-    err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
-                                       replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
+                                         replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -480,22 +595,28 @@ svn_editor_add_absent(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_absent)
-    err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
-                                      replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
+                                        replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -503,26 +624,54 @@ svn_error_t *
 svn_editor_alter_directory(svn_editor_t *editor,
                            const char *relpath,
                            svn_revnum_t revision,
+                           const apr_array_header_t *children,
                            apr_hash_t *props)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
+  SVN_ERR_ASSERT(children != NULL || props != NULL);
+  /* ### validate children are just basenames?  */
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_directory)
-    err = editor->funcs.cb_alter_directory(editor->baton,
-                                           relpath, revision, props,
-                                           editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_directory(editor->baton,
+                                             relpath, revision,
+                                             children, props,
+                                             editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
+
+#ifdef ENABLE_ORDERING_CHECK
+  /* ### this is not entirely correct. we probably need to adjust the
+     ### check_unknown_child() function for this scenario.  */
+#if 0
+  {
+    int i;
+    for (i = 0; i < children->nelts; i++)
+      {
+        const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+        const char *child = svn_relpath_join(relpath, child_basename,
+                                             editor->state_pool);
+
+        apr_hash_set(editor->pending_incomplete_children, child,
+                     APR_HASH_KEY_STRING, "");
+      }
+  }
+#endif
+#endif
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -536,25 +685,33 @@ svn_editor_alter_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
                  || (checksum == NULL && contents == NULL));
   SVN_ERR_ASSERT(props != NULL || checksum != NULL);
+  if (checksum)
+    SVN_ERR_ASSERT(checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_file)
-    err = editor->funcs.cb_alter_file(editor->baton,
-                                      relpath, revision, props,
-                                      checksum, contents,
-                                      editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_file(editor->baton,
+                                        relpath, revision, props,
+                                        checksum, contents,
+                                        editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -567,23 +724,29 @@ svn_editor_alter_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(props != NULL || target != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_symlink)
-    err = editor->funcs.cb_alter_symlink(editor->baton,
-                                         relpath, revision, props,
-                                         target,
-                                         editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_symlink(editor->baton,
+                                           relpath, revision, props,
+                                           target,
+                                           editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -594,20 +757,27 @@ svn_editor_delete(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, relpath);
+  CHILD_DELETIONS_ALLOWED(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_delete)
-    err = editor->funcs.cb_delete(editor->baton, relpath, revision,
-                                  editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_delete(editor->baton, relpath, revision,
+                                    editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
+  MARK_PARENT_STABLE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -620,22 +790,30 @@ svn_editor_copy(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, src_relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, dst_relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_copy)
-    err = editor->funcs.cb_copy(editor->baton, src_relpath, src_revision,
-                                dst_relpath, replaces_rev,
-                                editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_copy(editor->baton, src_relpath, src_revision,
+                                  dst_relpath, replaces_rev,
+                                  editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  MARK_PARENT_STABLE(editor, dst_relpath);
   CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -648,24 +826,34 @@ svn_editor_move(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, src_relpath);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, src_relpath);
+  CHILD_DELETIONS_ALLOWED(editor, src_relpath);
+  VERIFY_PARENT_MAY_EXIST(editor, dst_relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_move)
-    err = editor->funcs.cb_move(editor->baton, src_relpath, src_revision,
-                                dst_relpath, replaces_rev,
-                                editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_move(editor->baton, src_relpath, src_revision,
+                                  dst_relpath, replaces_rev,
+                                  editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ALLOW_ADD(editor, src_relpath);
+  MARK_PARENT_STABLE(editor, src_relpath);
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  MARK_PARENT_STABLE(editor, dst_relpath);
   CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -683,17 +871,24 @@ svn_editor_rotate(svn_editor_t *editor,
     for (i = 0; i < relpaths->nelts; i++)
       {
         const char *relpath = APR_ARRAY_IDX(relpaths, i, const char *);
+
+        SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
         SHOULD_NOT_BE_COMPLETED(editor, relpath);
+        VERIFY_PARENT_MAY_EXIST(editor, relpath);
+        CHILD_DELETIONS_ALLOWED(editor, relpath);
       }
   }
 #endif
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_rotate)
-    err = editor->funcs.cb_rotate(editor->baton, relpaths, revisions,
-                                  editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_rotate(editor->baton, relpaths, revisions,
+                                    editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
 #ifdef ENABLE_ORDERING_CHECK
   {
@@ -702,12 +897,13 @@ svn_editor_rotate(svn_editor_t *editor,
       {
         const char *relpath = APR_ARRAY_IDX(relpaths, i, const char *);
         MARK_ALLOW_ALTER(editor, relpath);
+        MARK_PARENT_STABLE(editor, relpath);
       }
   }
 #endif
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -722,12 +918,16 @@ svn_editor_complete(svn_editor_t *editor)
 #endif
 
   if (editor->funcs.cb_complete)
-    err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_FINISHED(editor);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -739,10 +939,14 @@ svn_editor_abort(svn_editor_t *editor)
   SHOULD_NOT_BE_FINISHED(editor);
 
   if (editor->funcs.cb_abort)
-    err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_FINISHED(editor);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }

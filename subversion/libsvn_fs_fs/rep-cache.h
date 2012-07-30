@@ -50,7 +50,7 @@ svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *rep,
                                                      void *walker_baton,
-                                                     svn_fs_t *fs, 
+                                                     svn_fs_t *fs,
                                                      apr_pool_t *scratch_pool),
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,

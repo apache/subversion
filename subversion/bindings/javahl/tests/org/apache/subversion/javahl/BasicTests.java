@@ -148,10 +148,10 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(1);
         urls.add(thisTest.getUrl() + "/Y");
-        try 
+        try
         {
             tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
-        } 
+        }
         catch(JNIError e)
         {
 	        return; // Test passes!
@@ -1983,6 +1983,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong date with getTimeMillis()",
                      lm[0].getDate(),
                      new java.util.Date(lm[0].getTimeMillis()));
+
+        // Ensure that targets get canonicalized
+        String non_canonical = thisTest.getUrl().toString() + "/";
+        LogMessage lm2[] = collectLogMessages(non_canonical, null,
+                                              ranges, false, true, false, 0);
     }
 
     /**
@@ -3104,10 +3109,12 @@ public class BasicTests extends SVNTests
                 conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
         assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
 
-        assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
-        assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
-        assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
-
+        if (conflict.getSrcRightVersion() != null)
+        {
+            assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
+            assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
+            assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+        }
     }
 
     /**
@@ -3142,12 +3149,12 @@ public class BasicTests extends SVNTests
 
         // check the status of the working copy
         thisTest.checkStatus();
-        
+
         // now edit the propval directly in the repository
         long baseRev = 2L;
         client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
                                  new ConstMsg("edit prop"), false, null, null);
-        
+
         // update the WC and verify that the property was changed
         client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
                       false, false);

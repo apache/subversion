@@ -13,7 +13,7 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@gmail.com>
-         brane   Branko Čibej <brane@xbc.nu>
+         brane   Branko Čibej <brane@apache.org>
         jorton   Joe Orton <joe@manyfish.co.uk>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -39,7 +39,7 @@ Blanket commit access:
         pburba   Paul Burba <pburba@collab.net>
        glasser   David Glasser <glasser@davidglasser.net>
            lgo   Lieven Govaerts <lgo@mobsol.be>
-       hwright   Hyrum Wright <hyrum.wright@wandisco.com>
+       hwright   Hyrum Wright <hyrum@hyrumwright.org>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh@collab.net>
       markphip   Mark Phippard <mphippard@collab.net>
@@ -57,6 +57,7 @@ Blanket commit access:
         dannas   Daniel Näslund <dannas@dannas.name>
        stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de>
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
+         trent   Trent Nelson <trent@snakebite.org>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -92,8 +93,9 @@ Commit access for specific areas:
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
-          sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
-        rdonch   Роман Донченко <DXDragon@yandex.ru>         (Swig-Python b.)
+          sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
+        rdonch   Роман Донченко <dpb@corrigendum.ru>         (Swig-Python b.)
+          vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
 
   Packages:
 
@@ -186,6 +188,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
   Experimental branches:
 
+         ashod   Ashod Nakashian <ashod@apache.org>          (compressed-
+                                                                 pristines br.)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
                                                              [EMAIL IS BOUNCING]
@@ -198,6 +202,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
          moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
+          vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (javahl-ra br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

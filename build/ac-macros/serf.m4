@@ -32,14 +32,14 @@ AC_DEFUN(SVN_LIB_SERF,
   serf_check_patch="$3"
 
   AC_ARG_WITH(serf,AS_HELP_STRING([--with-serf=PREFIX],
-                                  [Serf WebDAV client library]),
+                                  [Serf HTTP client library]),
   [
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-serf requires an argument.])
     elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
-      for serf_major in serf-2 serf-1 serf-0; do
+      for serf_major in serf-2 serf-1; do
         if ! test -d $serf_prefix/include/$serf_major; then continue; fi
         save_cppflags="$CPPFLAGS"
         CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/$serf_major"
@@ -62,20 +62,7 @@ AC_DEFUN(SVN_LIB_SERF,
         test $serf_found = yes && break
       done
     fi
-  ], [
-       if test -d "$srcdir/serf"; then
-         serf_found=reconfig
-       fi
-     ])
-
-
-  if test $serf_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([serf], [--with-apr=$apr_config --with-apr-util=$apu_config])
-    serf_major=serf-`$srcdir/serf/build/get-version.sh major $srcdir/serf/serf.h SERF`
-    serf_prefix=$prefix
-    SVN_SERF_INCLUDES="-I$srcdir/serf"
-    SVN_SERF_LIBS="$abs_builddir/serf/lib$serf_major.la"
-  fi
+  ])
 
   if test $serf_found = "yes"; then
     SVN_SERF_INCLUDES="-I$serf_prefix/include/$serf_major"
@@ -85,8 +72,6 @@ AC_DEFUN(SVN_LIB_SERF,
       SVN_SERF_LIBS="-l$serf_major"
       LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
     fi
-  elif test $serf_found = "reconfig"; then
-    serf_found=yes
   fi
 
   svn_lib_serf=$serf_found

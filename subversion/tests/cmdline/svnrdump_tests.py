@@ -142,7 +142,7 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     svntest.verify.compare_and_display_lines(
       "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
       None, mismatched_headers_re)
-    
+
   else:
     compare_repos_dumps(sbox, svnadmin_dumpfile)
 

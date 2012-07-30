@@ -443,7 +443,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # and skipped). 'A_COPY_2/D/H/zeta' must therefore get its own explicit
   # mergeinfo from this merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
-                                     wc_restricted)  
+                                     wc_restricted)
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     'zeta'  : Item(status='A '),

@@ -255,7 +255,7 @@ if sys.version_info[0] >= 3:
   from io import StringIO
 else:
   # Python <3.0
-  from StringIO import StringIO
+  from cStringIO import StringIO
 
 def make(wc_dir, commands, prev_status=None, prev_disk=None, verbose=True):
   """The Factory Invocation Function. This is typically the only one

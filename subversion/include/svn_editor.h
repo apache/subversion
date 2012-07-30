@@ -153,6 +153,15 @@ extern "C" {
  * "should", "should not", "recommended", "may", and "optional" in this
  * document are to be interpreted as described in RFC 2119.
  *
+ * @note The editor objects are *not* reentrant. The receiver should not
+ * directly or indirectly invoke an editor API with the same object unless
+ * it has been marked as explicitly supporting reentrancy during a
+ * receiver's callback. This limitation extends to the cancellation
+ * callback, too. (This limitation is due to the scratch_pool shared by
+ * all callbacks, and cleared after each callback; a reentrant call could
+ * clear the outer call's pool). Note that the code itself is reentrant, so
+ * there is no problem using the APIs on different editor objects.
+ *
  * \n
  * <h3>Life-Cycle</h3>
  *
@@ -237,6 +246,10 @@ extern "C" {
  * In order to reduce complexity of callback receivers, the editor callbacks
  * must be driven in adherence to these rules:
  *
+ * - If any path is added (with add_*) or deleted/moved/rotated, then
+ *   an svn_editor_alter_directory() call must be made for its parent
+ *   directory with the target/eventual set of children.
+ *
  * - svn_editor_add_directory() -- Another svn_editor_add_*() call must
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
@@ -247,9 +260,8 @@ extern "C" {
  *   This allows the parent directory to properly mark the child as
  *   "incomplete" until the child's add_* call arrives.
  *
- * - A path should
- *   never be referenced more than once by the add_*, alter_*, and
- *   delete operations (the "Once Rule"). The source path of a copy (and
+ * - A path should never be referenced more than once by the add_*, alter_*,
+ *   and delete operations (the "Once Rule"). The source path of a copy (and
  *   its children, if a directory) may be copied many times, and are
  *   otherwise subject to the Once Rule. The destination path of a copy
  *   or move may have alter_* operations applied, but not add_* or delete.
@@ -333,14 +345,19 @@ extern "C" {
  *
  * <h3>Paths</h3>
  * Each driver/receiver implementation of this editor interface must
- * establish the expected root path for the paths sent and received via the
- * callbacks' @a relpath arguments.
+ * establish the expected root for all the paths sent and received via
+ * the callbacks' @a relpath arguments.
  *
- * For example, during an "update", the driver has a working copy checked
- * out at a specific repository URL. The receiver sees the repository as a
- * whole. Here, the receiver could tell the driver which repository
- * URL the working copy refers to, and thus the driver could send
- * @a relpath arguments that are relative to the receiver's working copy.
+ * For example, during an "update", the driver is the repository, as a
+ * whole. The receiver may have just a portion of that repository. Here,
+ * the receiver could tell the driver which repository URL the working
+ * copy refers to, and thus the driver could send @a relpath arguments
+ * that are relative to the receiver's working copy.
+ *
+ * @note Because the source of a copy may be located *anywhere* in the
+ * repository, editor drives should typically use the repository root
+ * as the negotiated root. This allows the @a src_relpath argument in
+ * svn_editor_copy() to specify any possible source.
  * \n\n
  *
  * <h3>Pool Usage</h3>
@@ -382,6 +399,13 @@ extern "C" {
  * @since New in 1.8.
  */
 typedef struct svn_editor_t svn_editor_t;
+
+/** The kind of the checksum to be used throughout the #svn_editor_t APIs.
+ *
+ * @note ### This may change before Ev2 is official released, so just like
+ * everything else in this file, please don't rely upon it until then.
+ */
+#define SVN_EDITOR_CHECKSUM_KIND svn_checksum_sha1
 
 
 /** These function types define the callback functions a tree delta consumer
@@ -459,6 +483,7 @@ typedef svn_error_t *(*svn_editor_cb_alter_directory_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
+  const apr_array_header_t *children,
   apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
@@ -563,6 +588,17 @@ svn_editor_create(svn_editor_t **editor,
                   void *cancel_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
+
+
+/** Return an editor's private baton.
+ *
+ * In some cases, the baton is required outside of the callbacks. This
+ * function returns the private baton for use.
+ *
+ * @since New in 1.8.
+ */
+void *
+svn_editor_get_baton(const svn_editor_t *editor);
 
 
 /** Sets the #svn_editor_cb_add_directory_t callback in @a editor
@@ -846,14 +882,24 @@ svn_editor_add_absent(svn_editor_t *editor,
 
 /** Drive @a editor's #svn_editor_cb_alter_directory_t callback.
  *
- * Alter the properties of the directory at @a relpath. @a revision
- * specifies the expected revision of the directory. This is used to
- * catched attempts at altering out-of-date directories. If the
+ * Alter the properties of the directory at @a relpath.
+ *
+ * @a revision specifies the expected revision of the directory and is
+ * used to catch attempts at altering out-of-date directories. If the
  * directory does not have a corresponding revision in the repository
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
  *
- * For a description of @a props, see svn_editor_add_file().
+ * If any changes to the set of children will be made in the future of
+ * the edit drive, then @a children MUST specify the resulting set of
+ * children. See svn_editor_add_directory() for the format of @a children.
+ * If not changes will be made, then NULL may be specified.
+ *
+ * For a description of @a props, see svn_editor_add_file(). If no changes
+ * to the properties will be made (ie. only future changes to the set of
+ * children), then @a props may be NULL.
+ *
+ * It is an error to pass NULL for both @a children and @a props.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -862,6 +908,7 @@ svn_error_t *
 svn_editor_alter_directory(svn_editor_t *editor,
                            const char *relpath,
                            svn_revnum_t revision,
+                           const apr_array_header_t *children,
                            apr_hash_t *props);
 
 /** Drive @a editor's #svn_editor_cb_alter_file_t callback.
@@ -941,6 +988,11 @@ svn_editor_delete(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
+ * @note See the general instructions on paths for this API. Since the
+ * @a src_relpath argument must generally be able to reference any node
+ * in the repository, the implication is that the editor's root must be
+ * the repository root.
+ *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
  */
@@ -956,6 +1008,9 @@ svn_editor_copy(svn_editor_t *editor,
  * src_revision of that path, to @a dst_relpath.
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
+ *
+ * ### what happens if one side of this move is not "within" the receiver's
+ * ### set of paths?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -985,6 +1040,9 @@ svn_editor_move(svn_editor_t *editor,
  * (which had already by edited by the move from A). In order to keep the
  * restrictions against multiple moves of a single node, the rotation
  * operation is needed for certain types of tree edits.
+ *
+ * ### what happens if one of the paths of the rotation is not "within" the
+ * ### receiver's set of paths?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.

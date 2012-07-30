@@ -25,7 +25,6 @@
 
 
 #include <apr_uri.h>
-#include <expat.h>
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -50,81 +49,59 @@ typedef struct gls_context_t {
   svn_location_segment_receiver_t receiver;
   void *receiver_baton;
 
-  /* subpool used only as long as a single receiver invocation */
-  apr_pool_t *subpool;
-
-  /* True iff we're looking at a child of the outer report tag */
-  svn_boolean_t inside_report;
-
-  int status_code;
-
-  svn_boolean_t done;
 } gls_context_t;
 
+enum {
+  INITIAL = 0,
+  REPORT,
+  SEGMENT
+};
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t gls_ttable[] = {
+  { INITIAL, S_, "get-location-segments-report", REPORT,
+    FALSE, { NULL }, FALSE },
+
+  { REPORT, S_, "location-segment", SEGMENT,
+    FALSE, { "?path", "range-start", "range-end", NULL }, TRUE },
+
+  { 0 }
+};
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_gls(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name,
-          const char **attrs)
+gls_closed(svn_ra_serf__xml_estate_t *xes,
+           void *baton,
+           int leaving_state,
+           const svn_string_t *cdata,
+           apr_hash_t *attrs,
+           apr_pool_t *scratch_pool)
 {
-  gls_context_t *gls_ctx = userData;
+  gls_context_t *gls_ctx = baton;
+  const char *path;
+  const char *start_str;
+  const char *end_str;
+  svn_location_segment_t segment;
 
-  if ((! gls_ctx->inside_report)
-      && strcmp(name.name, "get-location-segments-report") == 0)
-    {
-      gls_ctx->inside_report = TRUE;
-    }
-  else if (gls_ctx->inside_report
-           && strcmp(name.name, "location-segment") == 0)
-    {
-      const char *rev_str;
-      svn_revnum_t range_start = SVN_INVALID_REVNUM;
-      svn_revnum_t range_end = SVN_INVALID_REVNUM;
-      const char *path = NULL;
+  SVN_ERR_ASSERT(leaving_state == SEGMENT);
 
-      path = svn_xml_get_attr_value("path", attrs);
-      rev_str = svn_xml_get_attr_value("range-start", attrs);
-      if (rev_str)
-        range_start = SVN_STR_TO_REV(rev_str);
-      rev_str = svn_xml_get_attr_value("range-end", attrs);
-      if (rev_str)
-        range_end = SVN_STR_TO_REV(rev_str);
+  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+  start_str = apr_hash_get(attrs, "range-start", APR_HASH_KEY_STRING);
+  end_str = apr_hash_get(attrs, "range-end", APR_HASH_KEY_STRING);
 
-      if (SVN_IS_VALID_REVNUM(range_start) && SVN_IS_VALID_REVNUM(range_end))
-        {
-          svn_location_segment_t *segment = apr_pcalloc(gls_ctx->subpool,
-                                                        sizeof(*segment));
-          segment->path = path;
-          segment->range_start = range_start;
-          segment->range_end = range_end;
-          SVN_ERR(gls_ctx->receiver(segment,
-                                    gls_ctx->receiver_baton,
-                                    gls_ctx->subpool));
-          svn_pool_clear(gls_ctx->subpool);
-        }
-      else
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                  _("Expected valid revision range"));
-        }
-    }
+  /* The transition table said these must exist.  */
+  SVN_ERR_ASSERT(start_str && end_str);
+
+  segment.path = path;  /* may be NULL  */
+  segment.range_start = SVN_STR_TO_REV(start_str);
+  segment.range_end = SVN_STR_TO_REV(end_str);
+  SVN_ERR(gls_ctx->receiver(&segment, gls_ctx->receiver_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-end_gls(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
-{
-  gls_context_t *gls_ctx = userData;
-
-  if (strcmp(name.name, "get-location-segments-report") == 0)
-    gls_ctx->inside_report = FALSE;
-
-  return SVN_NO_ERROR;
-}
 
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
@@ -182,8 +159,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_context_t *gls_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url, *req_url;
+  svn_ra_serf__xml_context_t *xmlctx;
+  const char *req_url;
   svn_error_t *err;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
@@ -193,16 +170,17 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->end_rev = end_rev;
   gls_ctx->receiver = receiver;
   gls_ctx->receiver_baton = receiver_baton;
-  gls_ctx->subpool = svn_pool_create(pool);
-  gls_ctx->inside_report = FALSE;
-  gls_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, peg_revision, NULL, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, peg_revision,
+                                      pool, pool));
 
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
-
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
+                                           NULL, gls_closed, NULL,
+                                           gls_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -212,34 +190,13 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = gls_ctx;
-  parser_ctx->start = start_gls;
-  parser_ctx->end = end_gls;
-  parser_ctx->status_code = &gls_ctx->status_code;
-  parser_ctx->done = &gls_ctx->done;
-
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
-
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&gls_ctx->done, session, pool);
-
-  if (gls_ctx->inside_report)
-    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
-                            _("Location segment report failed on '%s'@'%ld'"),
-                              path, peg_revision);
+  err = svn_ra_serf__context_run_one(handler, pool);
 
   err = svn_error_compose_create(
-         svn_ra_serf__error_on_status(gls_ctx->status_code,
+         svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
-                                      parser_ctx->location),
-         err);;
-
-  svn_pool_destroy(gls_ctx->subpool);
+                                      handler->location),
+         err);
 
   if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);

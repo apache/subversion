@@ -46,6 +46,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_client_private.h"
 
 
 /*
@@ -68,62 +69,6 @@
 
 
 /*** Code. ***/
-
-/* Obtain the implied mergeinfo and the existing mergeinfo of the
-   source path, combine them and return the result in
-   *TARGET_MERGEINFO.  One of LOCAL_ABSPATH and SRC_URL must be valid,
-   the other must be NULL. */
-static svn_error_t *
-calculate_target_mergeinfo(svn_ra_session_t *ra_session,
-                           apr_hash_t **target_mergeinfo,
-                           const char *local_abspath,
-                           const char *src_url,
-                           svn_revnum_t src_revnum,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
-{
-  svn_boolean_t locally_added = FALSE;
-  apr_hash_t *src_mergeinfo = NULL;
-
-  SVN_ERR_ASSERT((local_abspath && !src_url) || (!local_abspath && src_url));
-
-  /* If we have a schedule-add WC path (which was not copied from
-     elsewhere), it doesn't have any repository mergeinfo, so don't
-     bother checking. */
-  if (local_abspath)
-    {
-      const char *repos_root_url;
-      const char *repos_relpath;
-
-      SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-      SVN_ERR(svn_wc__node_get_origin(NULL, &src_revnum,
-                                      &repos_relpath, &repos_root_url,
-                                      NULL, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE,
-                                      pool, pool));
-
-      if (repos_relpath)
-        {
-          src_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                                pool);
-        }
-      else
-        locally_added = TRUE;
-    }
-
-  if (! locally_added)
-    {
-      /* Fetch any existing (explicit) mergeinfo. */
-      SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
-                                              src_url, src_revnum,
-                                              svn_mergeinfo_inherited,
-                                              TRUE, pool));
-    }
-
-  *target_mergeinfo = src_mergeinfo;
-  return SVN_NO_ERROR;
-}
 
 /* Extend the mergeinfo for the single WC path TARGET_WCPATH, adding
    MERGEINFO to any mergeinfo pre-existing in the WC. */
@@ -379,7 +324,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           lock_src = TRUE;
           lock_dst = FALSE;
         }
-      else if (svn_dirent_is_child(pair->dst_parent_abspath, src_parent_abspath,
+      else if (svn_dirent_is_child(pair->dst_parent_abspath,
+                                   src_parent_abspath,
                                    iterpool))
         {
           lock_src = FALSE;
@@ -400,7 +346,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           FALSE, iterpool);
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                              lock_src, lock_dst, ctx, iterpool));
+                                              lock_src, lock_dst, ctx,
+                                              iterpool));
 
     }
   svn_pool_destroy(iterpool);
@@ -502,6 +449,16 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
         {
           SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
                                                  TRUE, ctx, iterpool));
+        }
+      else if (make_parents && dst_parent_kind == svn_node_dir)
+        {
+          /* Check if parent is already versioned */
+          SVN_ERR(svn_wc_read_kind(&dst_parent_kind, ctx->wc_ctx,
+                                   pair->dst_parent_abspath, FALSE, iterpool));
+
+          if (dst_parent_kind == svn_node_none)
+            SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
+                                                   TRUE, ctx, iterpool));
         }
       else if (dst_parent_kind != svn_node_dir)
         {
@@ -740,7 +697,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *path_infos;
   const char *top_url, *top_url_all, *top_url_dst;
   const char *message, *repos_root;
-  svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -796,9 +752,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Go ahead and grab mergeinfo from the source, too. */
       SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL,
-                                         pair->src_abspath_or_url,
-                                         pair->src_revnum, ctx, pool));
+      SVN_ERR(svn_client__get_repos_mergeinfo(
+                &mergeinfo, ra_session,
+                pair->src_abspath_or_url, pair->src_revnum,
+                svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
       if (mergeinfo)
         SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
@@ -993,7 +950,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
       dst_rel = svn_uri_skip_ancestor(top_url, pair->dst_abspath_or_url, pool);
-      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest,
+      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
@@ -1037,14 +994,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                    path_driver_info_t *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_url_add_component2(top_url, info->dst_path, pool);
+          item->url = svn_path_url_add_component2(top_url, info->dst_path,
+                                                  pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
           if (is_move && (! info->resurrection))
             {
               item = apr_pcalloc(pool, sizeof(*item));
-              item->url = svn_path_url_add_component2(top_url, info->src_path, pool);
+              item->url = svn_path_url_add_component2(top_url, info->src_path,
+                                                      pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1107,7 +1066,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   cb_baton.is_move = is_move;
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
+  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM, paths,
                               path_driver_cb_func, &cb_baton, pool);
   if (err)
     {
@@ -1156,7 +1115,8 @@ check_url_kind(void *baton,
 
 /* ### Copy ...
  * COMMIT_INFO_P is ...
- * COPY_PAIRS is ...
+ * COPY_PAIRS is ... such that each 'src_abspath_or_url' is a local abspath
+ * and each 'dst_abspath_or_url' is a URL.
  * MAKE_PARENTS is ...
  * REVPROP_TABLE is ...
  * CTX is ... */
@@ -1175,6 +1135,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
+  apr_hash_t *relpath_map = NULL;
   void *edit_baton;
   svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
@@ -1192,19 +1153,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
      operation? */
 
   iterpool = svn_pool_create(pool);
-
-  /* Verify that all the source paths exist, are versioned, etc.
-     We'll do so by querying the base revisions of those things (which
-     we'll need to know later anyway). */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__node_get_base_rev(&pair->src_revnum, ctx->wc_ctx,
-                                        pair->src_abspath_or_url, iterpool));
-    }
 
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
@@ -1356,17 +1304,26 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      svn_client__pathrev_t *src_origin;
 
       svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_client__wc_node_get_origin(&src_origin,
+                                             pair->src_abspath_or_url,
+                                             ctx, iterpool, iterpool));
 
       /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
       item->outgoing_prop_changes = apr_array_make(pool, 1,
                                                    sizeof(svn_prop_t *));
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo,
-                                         pair->src_abspath_or_url,
-                                         NULL, SVN_INVALID_REVNUM,
-                                         ctx, iterpool));
+      /* Repository mergeinfo (or NULL if it's locally added)... */
+      if (src_origin)
+        SVN_ERR(svn_client__get_repos_mergeinfo(
+                  &mergeinfo, ra_session, src_origin->url, src_origin->rev,
+                  svn_mergeinfo_inherited, TRUE /*sqelch_inc.*/, iterpool));
+      else
+        mergeinfo = NULL;
+      /* ... and WC mergeinfo. */
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                           pair->src_abspath_or_url,
                                           iterpool, iterpool));
@@ -1399,6 +1356,29 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, pool));
 
+#ifdef ENABLE_EV2_SHIMS
+  if (commit_items)
+    {
+      relpath_map = apr_hash_make(pool);
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item = APR_ARRAY_IDX(commit_items, i,
+                                                  svn_client_commit_item3_t *);
+          const char *relpath;
+
+          if (!item->path)
+            continue;
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL, NULL,
+                                          ctx->wc_ctx, item->path, FALSE, pool,
+                                          iterpool));
+          if (relpath)
+            apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
+        }
+    }
+#endif
+
   /* Open an RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
                                                NULL, commit_items,
@@ -1406,8 +1386,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       NULL, pool)));
+                        svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
+                                                       pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
@@ -1419,7 +1399,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  NULL, NULL, ctx, pool, pool),
+                                  NULL, ctx, pool, pool),
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
@@ -1479,13 +1459,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   if (pair->src_kind == svn_node_dir)
     {
       svn_boolean_t sleep_needed = FALSE;
-      const char *tmp_abspath;
+      const char *tmpdir_abspath, *tmp_abspath;
 
-      /* Find a temporary location in which to check out the copy source.
-       * (This function is deprecated, but we intend to replace this whole
-       * code path with something else.) */
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_abspath, dst_abspath,
-                                      svn_io_file_del_on_close, pool));
+      /* Find a temporary location in which to check out the copy source. */
+      SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                                 pool, pool));
+                                 
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                       svn_io_file_del_on_close, pool, pool));
 
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it
@@ -1588,9 +1569,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   /* Record the implied mergeinfo (before the notification callback
      is invoked for the root node). */
-  SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
-                                     pair->src_abspath_or_url,
-                                     pair->src_revnum, ctx, pool));
+  SVN_ERR(svn_client__get_repos_mergeinfo(
+            &src_mergeinfo, ra_session,
+            pair->src_abspath_or_url, pair->src_revnum,
+            svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
   SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
   /* Do our own notification for the root node, even if we could possibly

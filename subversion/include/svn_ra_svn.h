@@ -157,6 +157,15 @@ typedef struct svn_ra_svn_item_t
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
+/**
+ * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
+ *
+ * @note This is a private API, external consumers should not use it.
+ */
+svn_error_t *
+svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
+                               svn_delta_shim_callbacks_t *shim_callbacks);
+
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *

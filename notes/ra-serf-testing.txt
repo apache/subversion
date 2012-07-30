@@ -1,3 +1,5 @@
+[ THE CUSTOM TESTING CODE DESCRIBED BELOW WAS REMOVED in r1302567 ]
+
 For the 1.7 release, ra_serf grew a new internal feature to "pause"
 the parsing of (large) XML response bodies. This file intends to
 document the strategy for testing this new feature.

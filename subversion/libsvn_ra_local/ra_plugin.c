@@ -76,8 +76,6 @@ get_username(svn_ra_session_t *session,
              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  svn_auth_iterstate_t *iterstate;
-  svn_fs_access_t *access_ctx;
 
   /* If we've already found the username don't ask for it again. */
   if (! sess->username)
@@ -88,6 +86,8 @@ get_username(svn_ra_session_t *session,
         {
           void *creds;
           svn_auth_cred_username_t *username_creds;
+          svn_auth_iterstate_t *iterstate;
+
           SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
                                              SVN_AUTH_CRED_USERNAME,
                                              sess->uuid, /* realmstring */
@@ -118,6 +118,8 @@ get_username(svn_ra_session_t *session,
   */
   if (*sess->username)
     {
+      svn_fs_access_t *access_ctx;
+
       SVN_ERR(svn_fs_create_access(&access_ctx, sess->username,
                                    session->pool));
       SVN_ERR(svn_fs_set_access(sess->fs, access_ctx));
@@ -153,7 +155,7 @@ cache_init(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_error_quick_wrap(svn_cstring_atoui64(&memory_cache_size,
                                                        memory_cache_size_str),
                                    _("memory-cache-size invalid")));
-      settings.cache_size = 1024 * 1024 * memory_cache_size; 
+      settings.cache_size = 1024 * 1024 * memory_cache_size;
       svn_cache_config_set(&settings);
     }
 
@@ -367,11 +369,12 @@ struct deltify_etc_baton
 {
   svn_fs_t *fs;                     /* the fs to deltify in */
   svn_repos_t *repos;               /* repos for unlocking */
-  const char *fs_path;              /* fs-path part of split session URL */
+  const char *fspath_base;          /* fs-path part of split session URL */
+
   apr_hash_t *lock_tokens;          /* tokens to unlock, if any */
-  apr_pool_t *pool;                 /* pool for scratch work */
-  svn_commit_callback2_t callback;  /* the original callback */
-  void *callback_baton;             /* the original callback's baton */
+
+  svn_commit_callback2_t commit_cb; /* the original callback */
+  void *commit_baton;               /* the original callback's baton */
 };
 
 /* This implements 'svn_commit_callback_t'.  Its invokes the original
@@ -380,59 +383,106 @@ struct deltify_etc_baton
    BATON is 'struct deltify_etc_baton *'. */
 static svn_error_t *
 deltify_etc(const svn_commit_info_t *commit_info,
-            void *baton, apr_pool_t *pool)
+            void *baton,
+            apr_pool_t *scratch_pool)
 {
-  struct deltify_etc_baton *db = baton;
+  struct deltify_etc_baton *deb = baton;
   svn_error_t *err1 = SVN_NO_ERROR;
   svn_error_t *err2;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  if (db->callback)
-    err1 = db->callback(commit_info, db->callback_baton, pool);
+  if (deb->commit_cb)
+    err1 = deb->commit_cb(commit_info, deb->commit_baton, scratch_pool);
 
   /* Maybe unlock the paths. */
-  if (db->lock_tokens)
+  if (deb->lock_tokens)
     {
-      iterpool = svn_pool_create(db->pool);
-      for (hi = apr_hash_first(db->pool, db->lock_tokens); hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, deb->lock_tokens); hi;
            hi = apr_hash_next(hi))
         {
-          const void *rel_path;
-          void *val;
-          const char *abs_path, *token;
+          const void *relpath = svn__apr_hash_index_key(hi);
+          const char *token = svn__apr_hash_index_val(hi);
+          const char *fspath;
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &rel_path, NULL, &val);
-          token = val;
-          abs_path = svn_fspath__join(db->fs_path, rel_path, iterpool);
+
+          fspath = svn_fspath__join(deb->fspath_base, relpath, iterpool);
+
           /* We may get errors here if the lock was broken or stolen
              after the commit succeeded.  This is fine and should be
              ignored. */
-          svn_error_clear(svn_repos_fs_unlock(db->repos, abs_path, token,
+          svn_error_clear(svn_repos_fs_unlock(deb->repos, fspath, token,
                                               FALSE, iterpool));
         }
+
       svn_pool_destroy(iterpool);
     }
 
   /* But, deltification shouldn't be stopped just because someone's
      random callback failed, so proceed unconditionally on to
      deltification. */
-  err2 = svn_fs_deltify_revision(db->fs, commit_info->revision, db->pool);
+  err2 = svn_fs_deltify_revision(deb->fs, commit_info->revision, scratch_pool);
 
-  /* It's more interesting if the original callback failed, so let
-     that one dominate. */
-  if (err1)
+  return svn_error_compose_create(err1, err2);
+}
+
+
+/* If LOCK_TOKENS is not NULL, then copy all tokens into the access context
+   of FS. The tokens' paths will be prepended with FSPATH_BASE.
+
+   ACCESS_POOL must match (or exceed) the lifetime of the access context
+   that was associated with FS. Typically, this is the session pool.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+static svn_error_t *
+apply_lock_tokens(svn_fs_t *fs,
+                  const char *fspath_base,
+                  apr_hash_t *lock_tokens,
+                  apr_pool_t *access_pool,
+                  apr_pool_t *scratch_pool)
+{
+  if (lock_tokens)
     {
-      svn_error_clear(err2);
-      return err1;
+      svn_fs_access_t *access_ctx;
+
+      SVN_ERR(svn_fs_get_access(&access_ctx, fs));
+
+      /* If there is no access context, the filesystem will scream if a
+         lock is needed.  */
+      if (access_ctx)
+        {
+          apr_hash_index_t *hi;
+
+          /* Note: we have no use for an iterpool here since the data
+             within the loop is copied into ACCESS_POOL.  */
+
+          for (hi = apr_hash_first(scratch_pool, lock_tokens); hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *relpath = svn__apr_hash_index_key(hi);
+              const char *token = svn__apr_hash_index_val(hi);
+              const char *fspath;
+
+              /* The path needs to live as long as ACCESS_CTX.  */
+              fspath = svn_fspath__join(fspath_base, relpath, access_pool);
+
+              /* The token must live as long as ACCESS_CTX.  */
+              token = apr_pstrdup(access_pool, token);
+
+              SVN_ERR(svn_fs_access_add_lock_token2(access_ctx, fspath,
+                                                    token));
+            }
+        }
     }
 
-  return err2;
+  return SVN_NO_ERROR;
 }
+
 
 /*----------------------------------------------------------------*/
 
@@ -679,47 +729,24 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  struct deltify_etc_baton *db = apr_palloc(pool, sizeof(*db));
-  apr_hash_index_t *hi;
-  svn_fs_access_t *fs_access;
+  struct deltify_etc_baton *deb = apr_palloc(pool, sizeof(*deb));
 
-  db->fs = sess->fs;
-  db->repos = sess->repos;
-  db->fs_path = sess->fs_path->data;
+  /* Prepare the baton for deltify_etc()  */
+  deb->fs = sess->fs;
+  deb->repos = sess->repos;
+  deb->fspath_base = sess->fs_path->data;
   if (! keep_locks)
-    db->lock_tokens = lock_tokens;
+    deb->lock_tokens = lock_tokens;
   else
-    db->lock_tokens = NULL;
-  db->pool = pool;
-  db->callback = callback;
-  db->callback_baton = callback_baton;
+    deb->lock_tokens = NULL;
+  deb->commit_cb = callback;
+  deb->commit_baton = callback_baton;
 
   SVN_ERR(get_username(session, pool));
 
   /* If there are lock tokens to add, do so. */
-  if (lock_tokens)
-    {
-      SVN_ERR(svn_fs_get_access(&fs_access, sess->fs));
-
-      /* If there is no access context, the filesystem will scream if a
-         lock is needed. */
-      if (fs_access)
-        {
-          for (hi = apr_hash_first(pool, lock_tokens); hi;
-               hi = apr_hash_next(hi))
-            {
-              void *val;
-              const char *abs_path, *token;
-              const void *key;
-
-              apr_hash_this(hi, &key, NULL, &val);
-              abs_path = svn_fspath__join(sess->fs_path->data, key, pool);
-              token = val;
-              SVN_ERR(svn_fs_access_add_lock_token2(fs_access,
-                                                    abs_path, token));
-            }
-        }
-    }
+  SVN_ERR(apply_lock_tokens(sess->fs, sess->fs_path->data, lock_tokens,
+                            session->pool, pool));
 
   /* Copy the revprops table so we can add the username. */
   revprop_table = apr_hash_copy(pool, revprop_table);
@@ -730,7 +757,7 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   return svn_repos_get_commit_editor5
          (editor, edit_baton, sess->repos, NULL,
           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
-          revprop_table, deltify_etc, db, NULL, NULL, pool);
+          revprop_table, deltify_etc, deb, NULL, NULL, pool);
 }
 
 
@@ -1514,6 +1541,62 @@ svn_ra_local__register_editor_shim_callbacks(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_local__get_commit_ev2(svn_editor_t **editor,
+                             svn_ra_session_t *session,
+                             apr_hash_t *revprops,
+                             svn_commit_callback2_t commit_cb,
+                             void *commit_baton,
+                             apr_hash_t *lock_tokens,
+                             svn_boolean_t keep_locks,
+                             svn_ra__provide_base_cb_t provide_base_cb,
+                             svn_ra__provide_props_cb_t provide_props_cb,
+                             svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                             void *cb_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  struct deltify_etc_baton *deb = apr_palloc(result_pool, sizeof(*deb));
+
+  /* NOTE: the RA callbacks are ignored. We pass everything directly to
+     the REPOS editor.  */
+
+  /* Prepare the baton for deltify_etc()  */
+  deb->fs = sess->fs;
+  deb->repos = sess->repos;
+  deb->fspath_base = sess->fs_path->data;
+  if (! keep_locks)
+    deb->lock_tokens = lock_tokens;
+  else
+    deb->lock_tokens = NULL;
+  deb->commit_cb = commit_cb;
+  deb->commit_baton = commit_baton;
+
+  /* Ensure there is a username (and an FS access context) associated with
+     the session and its FS handle.  */
+  SVN_ERR(get_username(session, scratch_pool));
+
+  /* If there are lock tokens to add, do so.  */
+  SVN_ERR(apply_lock_tokens(sess->fs, sess->fs_path->data, lock_tokens,
+                            session->pool, scratch_pool));
+
+  /* Copy the REVPROPS and insert the author/username.  */
+  revprops = apr_hash_copy(scratch_pool, revprops);
+  apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+               svn_string_create(sess->username, scratch_pool));
+
+  return svn_error_trace(svn_repos__get_commit_ev2(
+                           editor, sess->repos, NULL /* authz */,
+                           NULL /* authz_repos_name */, NULL /* authz_user */,
+                           revprops,
+                           deltify_etc, deb, cancel_func, cancel_baton,
+                           result_pool, scratch_pool));
+}
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1561,7 +1644,8 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
   svn_ra_local__get_deleted_rev,
-  svn_ra_local__register_editor_shim_callbacks
+  svn_ra_local__register_editor_shim_callbacks,
+  svn_ra_local__get_commit_ev2
 };
 
 

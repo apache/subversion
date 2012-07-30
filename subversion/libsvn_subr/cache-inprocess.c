@@ -201,7 +201,7 @@ inprocess_cache_get_internal(char **buffer,
 
       *size = entry->size;
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -223,7 +223,7 @@ inprocess_cache_get(void **value_p,
                                                       cache,
                                                       key,
                                                       result_pool));
-    
+
   /* deserialize the buffer content. Usually, this will directly
      modify the buffer content directly.
    */
@@ -304,7 +304,7 @@ inprocess_cache_set_internal(inprocess_cache_t *cache,
       cache->data_size -= existing_entry->size;
       if (value)
         {
-          SVN_ERR(cache->serialize_func((char **)&existing_entry->value,
+          SVN_ERR(cache->serialize_func(&existing_entry->value,
                                         &existing_entry->size,
                                         value,
                                         page->page_pool));
@@ -356,7 +356,7 @@ inprocess_cache_set_internal(inprocess_cache_t *cache,
     new_entry->key = duplicate_key(cache, key, page->page_pool);
     if (value)
       {
-        SVN_ERR(cache->serialize_func((char **)&new_entry->value,
+        SVN_ERR(cache->serialize_func(&new_entry->value,
                                       &new_entry->size,
                                       value,
                                       page->page_pool));
@@ -445,7 +445,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
   b.user_baton = user_baton;
 
   SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       svn_iter_apr_hash(completed, cache->hash, 
+                       svn_iter_apr_hash(completed, cache->hash,
                                          iter_cb, &b, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -512,10 +512,10 @@ inprocess_cache_set_partial_internal(inprocess_cache_t *cache,
       SVN_ERR(move_page_to_front(cache, entry->page));
 
       cache->data_size -= entry->size;
-      SVN_ERR(func((char **)&entry->value,
-                  &entry->size,
-                  baton,
-                  entry->page->page_pool));
+      SVN_ERR(func(&entry->value,
+                   &entry->size,
+                   baton,
+                   entry->page->page_pool));
       cache->data_size += entry->size;
     }
 

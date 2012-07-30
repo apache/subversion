@@ -34,6 +34,9 @@
 #include <http_core.h>  /* for ap_construct_url */
 #include <mod_dav.h>
 
+#define CORE_PRIVATE      /* To make ap_show_mpm public in 2.2 */
+#include <http_config.h>
+
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -50,6 +53,7 @@
 #include "svn_dirent_uri.h"
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
+#include "private/svn_repos_private.h"
 
 #include "dav_svn.h"
 
@@ -1569,7 +1573,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
-            *cp = apr_tolower(*cp);
+            *cp = (char)apr_tolower(*cp);
           }
 
         if (!*cp)
@@ -2144,6 +2148,8 @@ get_resource(request_rec *r,
   repos->repos = userdata;
   if (repos->repos == NULL)
     {
+      const char *fs_type;
+
       /* construct FS configuration parameters */
       fs_config = apr_hash_make(r->connection->pool);
       apr_hash_set(fs_config,
@@ -2154,10 +2160,34 @@ get_resource(request_rec *r,
                    SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                    APR_HASH_KEY_STRING,
                    dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                   APR_HASH_KEY_STRING,
+                   dav_svn__get_revprop_cache_flag(r) ? "1" : "0");
+
+      /* Disallow BDB/event until issue 4157 is fixed. */
+      if (!strcmp(ap_show_mpm(), "event"))
+        {
+          serr = svn_repos__fs_type(&fs_type, fs_path, r->connection->pool);
+          if (serr)
+            {
+              /* svn_repos_open2 is going to fail, use that error. */
+              svn_error_clear(serr);
+              serr = NULL;
+            }
+          else if (!strcmp(fs_type, "bdb"))
+            serr = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     "BDB repository at '%s' is not compatible "
+                                     "with event MPM",
+                                     fs_path);
+        }
+      else
+        serr = NULL;
 
       /* open the FS */
-      serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,
-                             r->connection->pool);
+      if (!serr)
+        serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,
+                               r->connection->pool);
       if (serr != NULL)
         {
           /* The error returned by svn_repos_open2 might contain the
@@ -3013,14 +3043,12 @@ set_headers(request_rec *r, const dav_resource *resource)
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn__getetag(resource, resource->pool));
 
-#if 0
   /* As version resources don't change, encourage caching. */
-  /* ### FIXME: This conditional is wrong -- type is often REGULAR,
-     ### and the resource doesn't seem to be baselined. */
-  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
+  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR
+       && resource->versioned && !resource->collection)
+      || resource->type == DAV_RESOURCE_TYPE_VERSION)
     /* Cache resource for one week (specified in seconds). */
     apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
-#endif
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -3264,7 +3292,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               if (dirent->kind == svn_node_file && dirent->special)
                 {
                   svn_node_kind_t resolved_kind;
-                  const char *link_path = 
+                  const char *link_path =
                     svn_dirent_join(fs_parent_path, key, resource->pool);
 
                   serr = svn_io_check_resolved_path(link_path, &resolved_kind,
@@ -3277,7 +3305,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                                 resource->pool);
                   if (resolved_kind != svn_node_dir)
                     continue;
-                  
+
                   dirent->kind = svn_node_dir;
                 }
               else if (dirent->kind != svn_node_dir)

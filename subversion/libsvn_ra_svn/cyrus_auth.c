@@ -125,7 +125,7 @@ static int check_result(svn_error_t *err)
       svn_error_clear(err);
       return -1;
     }
-    
+
   return 0;
 }
 
@@ -180,9 +180,9 @@ svn_ra_svn__sasl_common_init(apr_pool_t *pool)
                  sasl_mutex_free_cb);
   free_mutexes = apr_array_make(sasl_pool, 0, sizeof(svn_mutex__t *));
   return svn_mutex__init(&array_mutex, TRUE, sasl_pool);
-    
+
 #endif /* APR_HAS_THREADS */
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -533,7 +533,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
       clear_sasl_errno();
       result = sasl_client_step(sasl_ctx,
                                 in->data,
-                                in->len,
+                                (const unsigned int) in->len,
                                 &client_interact,
                                 &out, /* Filled in by SASL. */
                                 &outlen);
@@ -620,7 +620,7 @@ static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
           return SVN_NO_ERROR;
         }
       clear_sasl_errno();
-      result = sasl_decode(sasl_baton->ctx, buffer, len2,
+      result = sasl_decode(sasl_baton->ctx, buffer, (unsigned int) len2,
                            &sasl_baton->read_buf,
                            &sasl_baton->read_len);
       if (result != SASL_OK)
@@ -662,7 +662,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
       /* Make sure we don't write too much. */
       *len = (*len > sasl_baton->maxsize) ? sasl_baton->maxsize : *len;
       clear_sasl_errno();
-      result = sasl_encode(sasl_baton->ctx, buffer, *len,
+      result = sasl_encode(sasl_baton->ctx, buffer, (unsigned int) *len,
                            &sasl_baton->write_buf,
                            &sasl_baton->write_len);
 
@@ -755,9 +755,8 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
             {
               clear_sasl_errno();
               result = sasl_decode(sasl_ctx, conn->read_ptr,
-                                   conn->read_end - conn->read_ptr,
-                                   &sasl_baton->read_buf,
-                                   &sasl_baton->read_len);
+                             (unsigned int) (conn->read_end - conn->read_ptr),
+                             &sasl_baton->read_buf, &sasl_baton->read_len);
               if (result != SASL_OK)
                 return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                         get_sasl_error(sasl_ctx, result, pool));

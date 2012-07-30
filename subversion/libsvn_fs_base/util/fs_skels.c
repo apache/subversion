@@ -32,6 +32,7 @@
 
 #include "private/svn_skel.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_checksum.h"
 #include "fs_skels.h"
@@ -511,18 +512,18 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
     {
       svn_skel_t *checksum_skel = header_skel->children->next->next;
       rep->md5_checksum =
-        svn_checksum__from_digest((const unsigned char *)
-                                  (checksum_skel->children->next->data),
-                                  svn_checksum_md5, pool);
+        svn_checksum__from_digest_md5((const unsigned char *)
+                                      (checksum_skel->children->next->data),
+                                      pool);
 
       /* SHA1 */
       if (header_skel->children->next->next->next)
         {
           checksum_skel = header_skel->children->next->next->next;
           rep->sha1_checksum =
-            svn_checksum__from_digest((const unsigned char *)
-                                      (checksum_skel->children->next->data),
-                                      svn_checksum_sha1, pool);
+            svn_checksum__from_digest_sha1(
+              (const unsigned char *)(checksum_skel->children->next->data),
+              pool);
         }
     }
 

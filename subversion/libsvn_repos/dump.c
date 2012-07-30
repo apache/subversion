@@ -34,6 +34,7 @@
 #include "svn_time.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
@@ -71,7 +72,8 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   /* Compute the delta and send it to the temporary file. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream, oldroot, oldpath,
                                        newroot, newpath, pool));
-  svn_txdelta_to_svndiff2(&wh, &whb, temp_stream, 0, pool);
+  svn_txdelta_to_svndiff3(&wh, &whb, temp_stream, 0,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream, wh, whb, pool));
 
   /* Get the length of the temporary file and rewind it. */
@@ -282,11 +284,11 @@ dump_node(struct edit_baton *eb,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
                             path));
   if (kind == svn_node_file)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
   else if (kind == svn_node_dir)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
@@ -301,9 +303,8 @@ dump_node(struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": change\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
 
       /* either the text or props changed, or possibly both. */
       SVN_ERR(svn_fs_revision_root(&compare_root,
@@ -323,9 +324,9 @@ dump_node(struct edit_baton *eb,
       if (! is_copy)
         {
           /* a simple delete+add, implied by a single 'replace' action. */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": replace\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": replace\n"));
 
           /* definitely need to dump all content for a replace. */
           if (kind == svn_node_file)
@@ -338,9 +339,9 @@ dump_node(struct edit_baton *eb,
 
           /* the path & kind headers have already been printed;  just
              add a delete action, and end the current record.*/
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": delete\n\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": delete\n\n"));
 
           /* recurse:  print an additional add-with-history record. */
           SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
@@ -354,9 +355,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": delete\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
       /* we can leave this routine quietly now, don't need to dump
          any content. */
@@ -365,8 +365,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
@@ -511,9 +511,8 @@ dump_node(struct edit_baton *eb,
              saying that our property contents are a delta. */
           SVN_ERR(svn_fs_node_proplist(&oldhash, compare_root, compare_path,
                                        pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_PROP_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_PROP_DELTA ": true\n"));
         }
       else
         oldhash = apr_hash_make(pool);
@@ -544,9 +543,8 @@ dump_node(struct edit_baton *eb,
              saying our text contents are a delta. */
           SVN_ERR(store_delta(&delta_file, &textlen, compare_root,
                               compare_path, eb->fs_root, path, pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_TEXT_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_TEXT_DELTA ": true\n"));
 
           if (compare_root)
             {
@@ -738,17 +736,20 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+  apr_array_header_t *sorted_entries;
 
-  for (hi = apr_hash_first(pool, db->deleted_entries);
-       hi;
-       hi = apr_hash_next(hi))
+  /* Sort entries lexically instead of as paths. Even though the entries
+   * are full paths they're all in the same directory (see comment in struct
+   * dir_baton definition). So we really want to sort by basename, in which
+   * case the lexical sort function is more efficient. */
+  sorted_entries = svn_sort__hash(db->deleted_entries,
+                                  svn_sort_compare_items_lexically, pool);
+  for (i = 0; i < sorted_entries->nelts; i++)
     {
-      const void *key;
-      const char *path;
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
+      const char *path = APR_ARRAY_IDX(sorted_entries, i,
+                                       svn_sort__item_t).key;
 
       svn_pool_clear(subpool);
 
@@ -1009,7 +1010,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, pool, pool));
+                                   NULL, NULL, shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1406,7 +1407,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
-      svn_delta_editor_t *dump_editor;
+      const svn_delta_editor_t *dump_editor;
       void *dump_edit_baton;
       const svn_delta_editor_t *cancel_editor;
       void *cancel_edit_baton;
@@ -1416,8 +1417,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Get cancellable dump editor, but with our close_directory handler. */
-      SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
-                              &dump_edit_baton, fs, rev, "",
+      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
+                              fs, rev, "",
                               svn_stream_empty(iterpool),
                               NULL, NULL,
                               verify_close_directory,

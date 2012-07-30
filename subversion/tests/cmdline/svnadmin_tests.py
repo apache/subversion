@@ -29,6 +29,10 @@ import os
 import re
 import shutil
 import sys
+import threading
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -99,6 +103,16 @@ def check_hotcopy_fsfs(src, dst):
                                     % (row, rows1[i]))
           continue
 
+        # Special case for revprop-generation: It will always be zero in
+        # the hotcopy destination (i.e. a fresh cache generation)
+        if src_file == 'revprop-generation':
+          f2 = open(dst_path, 'r')
+          revprop_gen = int(f2.read().strip())
+          if revprop_gen != 0:
+              raise svntest.Failure("Hotcopy destination has non-zero " +
+                                    "revprop generation")
+          continue
+
         f1 = open(src_path, 'r')
         f2 = open(dst_path, 'r')
         while True:
@@ -111,10 +125,10 @@ def check_hotcopy_fsfs(src, dst):
               # both at EOF
               break
             elif buf1:
-              raise svntest.Failure("%s differs at offset %i" % 
+              raise svntest.Failure("%s differs at offset %i" %
                                     (dst_path, offset))
             elif buf2:
-              raise svntest.Failure("%s differs at offset %i" % 
+              raise svntest.Failure("%s differs at offset %i" %
                                     (dst_path, offset))
           if len(buf1) != len(buf2):
             raise svntest.Failure("%s differs in length" % dst_path)
@@ -170,11 +184,12 @@ def get_txns(repo_dir):
   return txns
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
-                               revs, dump, *varargs):
-  """Load the array of lines passed in 'dump' into the
-  current tests' repository and verify the repository content
-  using the array of wc.States passed in revs. VARARGS are optional
-  arguments passed to the 'load' command"""
+                               revs, check_props, dump, *varargs):
+  """Load the array of lines passed in DUMP into the current tests'
+  repository and verify the repository content using the array of
+  wc.States passed in REVS.  If CHECK_PROPS is True, check properties
+  of each rev's items.  VARARGS are optional arguments passed to the
+  'load' command."""
 
   if isinstance(dump, str):
     dump = [ dump ]
@@ -209,7 +224,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                          "update", "-r%s" % (rev+1),
                                          sbox.wc_dir)
 
-      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
+      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir, check_props)
       rev_tree = revs[rev].old_tree()
 
       try:
@@ -218,6 +233,10 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
 
+def load_dumpstream(sbox, dump, *varargs):
+  "Load dump text without verification."
+  return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
+                                    *varargs)
 
 ######################################################################
 # Tests
@@ -294,7 +313,7 @@ def extra_headers(sbox):
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -313,7 +332,7 @@ def extra_blockcontent(sbox):
   # Insert the extra content after "PROPS-END\n"
   dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -327,7 +346,7 @@ def inconsistent_headers(sbox):
   dumpfile[-2] = "Content-length: 30\n\n"
 
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dumpfile)
+                             dumpfile_revisions, False, dumpfile)
 
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
@@ -347,7 +366,7 @@ def empty_date(sbox):
          "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
   # Verify that the revision still lacks the svn:date property.
@@ -457,7 +476,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print("Error: hotcopy failed")
+    logger.warn("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -470,7 +489,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print("Error: db/format file contents do not match after hotcopy")
+    logger.warn("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -487,7 +506,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print("Error: 'setlog' failed")
+    logger.warn("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -506,7 +525,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print("Error: 'setrevprop' failed")
+    logger.warn("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -693,7 +712,8 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header '[^']*' in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file"
+                    "|.*Missing id field in node-rev.*")
 
 #----------------------------------------------------------------------
 
@@ -793,8 +813,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             '/sample')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', '/sample')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'
   svntest.actions.run_and_verify_svn(None,
@@ -816,8 +835,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 11.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample-2",
                                      "-m", "Create sample-2 dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             'sample-2')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', 'sample-2')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'.
   svntest.actions.run_and_verify_svn(None,
@@ -858,7 +876,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print("Error: new UUID matches the original one")
+    logger.warn("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -869,7 +887,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print("Error: new UUID doesn't match the original one")
+    logger.warn("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -892,11 +910,10 @@ def reflect_dropped_renumbered_revs(sbox):
                                      "-m", "Create toplevel dir")
 
   # Load the dump stream in sbox.repo_url
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile)
+  load_dumpstream(sbox, dumpfile)
 
   # Load the dump stream in toplevel dir
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
-                             '/toplevel')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', '/toplevel')
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -1127,7 +1144,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
                                     'svnadmin_tests_data',
                                     'mergeinfo_included_full.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -1169,15 +1186,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(), '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
@@ -1206,13 +1217,11 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--parent-dir', 'Projects/Project-X',
+                  '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.  This is exactly the
   # same expected mergeinfo we previously checked, except that the
@@ -1248,22 +1257,15 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load this skeleton repos into the empty target:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
@@ -1387,7 +1389,7 @@ text
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dump_str,
+                             dumpfile_revisions, False, dump_str,
                              '--ignore-uuid')
 
   # Now try it again bypassing prop validation.  (This interface takes
@@ -1408,8 +1410,8 @@ def verify_non_utf8_paths(sbox):
   test_create(sbox)
 
   # Load the dumpstream
-  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
-                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
+                             dumpfile, '--ignore-uuid')
 
   # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
   # This has been observed in repositories in the wild, though Subversion
@@ -1466,7 +1468,7 @@ def verify_non_utf8_paths(sbox):
 
 def test_lslocks_and_rmlocks(sbox):
   "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
-  
+
   sbox.build(create_wc=False)
   iota_url = sbox.repo_url + '/iota'
   lambda_url = sbox.repo_url + '/A/B/lambda'
@@ -1480,7 +1482,7 @@ def test_lslocks_and_rmlocks(sbox):
   expected_output = UnorderedOutput(
     ["'A/B/lambda' locked by user 'jrandom'.\n",
      "'iota' locked by user 'jrandom'.\n"])
-  
+
   # Lock iota and A/B/lambda using svn client
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], "lock", "-m", "Locking files",
@@ -1495,18 +1497,18 @@ def test_lslocks_and_rmlocks(sbox):
       "Comment \(1 line\):",
       "Locking files",
       "Path: /iota",
-      "UUID Token: opaquelocktoken.*",      
-      "\n", # empty line    
+      "UUID Token: opaquelocktoken.*",
+      "\n", # empty line
       ]
 
   # List all locks
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
                                                         sbox.repo_dir)
-  
+
   if errput:
     raise SVNUnexpectedStderr(errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
-    
+
   try:
     expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
     svntest.verify.compare_and_display_lines('lslocks output mismatch',
@@ -1540,7 +1542,7 @@ def test_lslocks_and_rmlocks(sbox):
     "Expires:",
     "Comment \(1 line\):",
     "Locking files",
-    "\n", # empty line    
+    "\n", # empty line
     ])
 
   svntest.verify.compare_and_display_lines('message', 'label',
@@ -1554,7 +1556,7 @@ def test_lslocks_and_rmlocks(sbox):
                                                         "A/B/lambda")
   expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
                                      "Removed lock on '/A/B/lambda'.\n"])
-  
+
   svntest.verify.verify_outputs(
     "Unexpected output while running 'svnadmin rmlocks'.",
     output, [], expected_output, None)
@@ -1575,13 +1577,13 @@ def load_ranges(sbox):
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
   # the correct youngest revision after each load.
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  load_dumpstream(sbox, dumpdata, '-r0:2')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  load_dumpstream(sbox, dumpdata, '-r3:4')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  load_dumpstream(sbox, dumpdata, '-r5:6')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
 
@@ -1652,7 +1654,7 @@ def hotcopy_incremental_packed(sbox):
 def locking(sbox):
   "svnadmin lock tests"
   sbox.build(create_wc=False)
-  
+
   comment_path = os.path.join(svntest.main.temp_dir, "comment")
   svntest.main.file_write(comment_path, "dummy comment")
 
@@ -1662,15 +1664,15 @@ def locking(sbox):
   # Test illegal character in comment file.
   expected_error = ".*svnadmin: E130004:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           invalid_comment_path)
-  
+
   # Test locking path with --bypass-hooks
   expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path,
@@ -1678,13 +1680,13 @@ def locking(sbox):
 
   # Remove lock
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          None, "rmlocks", 
+                                          None, "rmlocks",
                                           sbox.repo_dir, "iota")
-  
+
   # Test locking path without --bypass-hooks
   expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1692,7 +1694,7 @@ def locking(sbox):
   # Test locking already locked path.
   expected_error = ".*svnadmin: E160035:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1700,7 +1702,7 @@ def locking(sbox):
   # Test locking non-existent path.
   expected_error = ".*svnadmin: E160013:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "non-existent", "jrandom",
                                           comment_path)
@@ -1709,7 +1711,7 @@ def locking(sbox):
   expected_output = "'A/D/G/rho' locked by user 'jrandom'."
   lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "A/D/G/rho", "jrandom",
                                           comment_path, lock_token)
@@ -1718,11 +1720,11 @@ def locking(sbox):
   expected_error = ".*svnadmin: E160040:.*"
   wrong_lock_token = "opaquelocktoken:12345670-9ab8-defc-9ab8-def01234567c"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "unlock", 
+                                          expected_error, "unlock",
                                           sbox.repo_dir,
                                           "A/D/G/rho", "jrandom",
                                           wrong_lock_token)
-  
+
   # Test unlocking the path again, but this time provide the correct
   # lock token.
   expected_output = "'A/D/G/rho' unlocked."
@@ -1737,12 +1739,12 @@ def locking(sbox):
   svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
   hook_path = svntest.main.get_pre_unlock_hook_path(sbox.repo_dir)
   svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
-  
+
   # Test locking a path.  Don't use --bypass-hooks, though, as we wish
   # to verify that hook script is really getting executed.
   expected_error = ".*svnadmin: E165001:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1764,7 +1766,7 @@ def locking(sbox):
   # with a preventative hook in place.
   expected_error = ".*svnadmin: E165001:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "unlock", 
+                                          expected_error, "unlock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           iota_token)
@@ -1778,6 +1780,47 @@ def locking(sbox):
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           iota_token)
+
+
+@SkipUnless(svntest.main.is_threaded_python)
+@Issue(4129)
+def mergeinfo_race(sbox):
+  "concurrent mergeinfo commits invalidate pred-count"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  ## Create wc2.
+  svntest.main.run_svn(None, 'checkout', '-q', sbox.repo_url, wc2_dir)
+
+  ## Some random edits.
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d1', wc_dir))
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d2', wc2_dir))
+
+  ## Set random mergeinfo properties.
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/P:42', sbox.ospath('A', wc_dir))
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/Q:42', sbox.ospath('iota', wc2_dir))
+
+  def makethread(some_wc_dir):
+    def worker():
+      svntest.main.run_svn(None, 'commit', '-mm', some_wc_dir)
+    return worker
+
+  t1 = threading.Thread(None, makethread(wc_dir))
+  t2 = threading.Thread(None, makethread(wc2_dir))
+
+  # t2 will trigger the issue #4129 sanity check in fs_fs.c
+  t1.start(); t2.start();
+
+  t1.join(); t2.join();
+
+  # Crude attempt to make sure everything worked.
+  # TODO: better way to catch exceptions in the thread
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
+    raise svntest.Failure("one or both commits failed")
+
+
 
 
 ########################################################################
@@ -1814,6 +1857,7 @@ test_list = [ None,
               hotcopy_incremental,
               hotcopy_incremental_packed,
               locking,
+              mergeinfo_race,
              ]
 
 if __name__ == '__main__':

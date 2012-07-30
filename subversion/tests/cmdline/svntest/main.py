@@ -23,18 +23,20 @@
 #    under the License.
 ######################################################################
 
-import sys     # for argv[]
+import sys
 import os
-import shutil  # for rmtree()
+import shutil
 import re
-import stat    # for ST_MODE
+import stat
 import subprocess
-import time    # for time()
-import traceback # for print_exc()
+import time
 import threading
-import optparse # for argument parsing
+import optparse
 import xml
 import urllib
+import logging
+import hashlib
+from urlparse import urlparse
 
 try:
   # Python >=3.0
@@ -78,6 +80,10 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
+# Don't try to use this before calling execute_tests()
+logger = None
+
+
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
@@ -105,7 +111,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:///'
+  file_scheme_prefix = 'file:'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -132,23 +138,6 @@ wc_author2 = 'jconstant' # use the same password as wc_author
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
 
-# This function mimics the Python 2.3 urllib function of the same name.
-def pathname2url(path):
-  """Convert the pathname PATH from the local syntax for a path to the form
-  used in the path component of a URL. This does not produce a complete URL.
-  The return value will already be quoted using the quote() function."""
-
-  # Don't leave ':' in file://C%3A/ escaped as our canonicalization
-  # rules will replace this with a ':' on input.
-  return urllib_parse_quote(path.replace('\\', '/')).replace('%3A', ':')
-
-# This function mimics the Python 2.3 urllib function of the same name.
-def url2pathname(path):
-  """Convert the path component PATH from an encoded URL to the local syntax
-  for a path. This does not accept a complete URL. This function uses
-  unquote() to decode PATH."""
-  return os.path.normpath(urllib_parse_unquote(path))
-
 ######################################################################
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
@@ -161,13 +150,12 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
-svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
-                               _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -235,7 +223,7 @@ greek_state = svntest.wc.State('', {
 
 ######################################################################
 # Utilities shared by the tests
-def wrap_ex(func):
+def wrap_ex(func, output):
   "Wrap a function, catch, print and ignore exceptions"
   def w(*args, **kwds):
     try:
@@ -244,9 +232,9 @@ def wrap_ex(func):
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          logger.warn('EXCEPTION: %s: %s', ex.__class__.__name__, ex_args)
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
+          logger.warn('EXCEPTION: %s', ex.__class__.__name__)
   return w
 
 def setup_development_mode():
@@ -383,7 +371,7 @@ def _quote_arg(arg):
     # Quoting suitable for most Unix shells.
     return "'" + arg.replace("'", "'\\''") + "'"
 
-def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
+def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
   STDOUT, and STDERR.  BUFSIZE is passed to subprocess.Popen's
   argument of the same name.
@@ -444,25 +432,19 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       exit_signal = exit_code
 
     if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-      sys.stdout.flush()
+      logger.info("".join(stdout_lines))
     if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-      sys.stderr.flush()
-    if options.verbose:
-      # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (command_string, exit_signal))
-      sys.stderr.flush()
+      logger.warning("".join(stderr_lines))
+    # show the whole path to make it easier to start a debugger
+    logger.warning("CMD: %s terminated by signal %d"
+                     % (command_string, exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
-    if exit_code and options.verbose:
-      sys.stderr.write("CMD: %s exited with %d\n"
-                       % (command_string, exit_code))
-      sys.stderr.flush()
+    if exit_code:
+      logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
   BUFSIZE dictates the pipe buffer size used in communication with the
@@ -477,10 +459,9 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
     raise TypeError("stdin_lines should have list type")
 
   # Log the command line
-  if options.verbose and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
-                                      ' '.join([_quote_arg(x) for x in varargs])))
-    sys.stdout.flush()
+  if not command.endswith('.py'):
+    logger.info('CMD: %s %s' % (os.path.basename(command),
+                                  ' '.join([_quote_arg(x) for x in varargs])))
 
   infile, outfile, errfile, kid = open_pipe([command] + list(varargs), bufsize)
 
@@ -496,7 +477,7 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -511,8 +492,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   If ERROR_EXPECTED is None, any stderr output will be printed and any
   stderr output or a non-zero exit code will raise an exception."""
 
-  if options.verbose:
-    start = time.time()
+  start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
@@ -520,25 +500,42 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  if options.verbose:
-    stop = time.time()
-    print('<TIME = %.6f>' % (stop - start))
-    for x in stdout_lines:
-      sys.stdout.write(x)
-    for x in stderr_lines:
-      sys.stdout.write(x)
+  def _line_contains_repos_diskpath(line):
+    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### or the diskpath isn't realpath()'d somewhere on the way from
+    # ### the server's configuration and the client's stderr.  We could
+    # ### check for both the symlinked path and the realpath.
+    return \
+         os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+
+  for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
+    if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
+      break
+    # Does the server leak the repository on-disk path?
+    # (prop_tests-12 installs a hook script that does that intentionally)
+    if any(map(_line_contains_repos_diskpath, lines)) \
+       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+      raise Failure("Repository diskpath in %s: %r" % (name, lines))
+
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
+  for x in stdout_lines:
+    logger.info(x.rstrip())
+  for x in stderr_lines:
+    logger.info(x.rstrip())
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
-    if not options.verbose:
-      for x in stderr_lines:
-        sys.stdout.write(x)
+    for x in stderr_lines:
+      logger.warning(x.rstrip())
     raise Failure
 
   return exit_code, \
          [line for line in stdout_lines if not line.startswith("DBG:")], \
          stderr_lines
 
-def create_config_dir(cfgdir, config_contents=None, server_contents=None):
+def create_config_dir(cfgdir, config_contents=None, server_contents=None,
+                      ssl_cert=None, ssl_url=None):
   "Create config directories and files"
 
   # config file names
@@ -575,6 +572,56 @@ store-passwords=yes
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
+
+  if (ssl_cert and ssl_url):
+    trust_ssl_cert(cfgdir, ssl_cert, ssl_url)
+  elif cfgdir != default_config_dir:
+    copy_trust(cfgdir, default_config_dir)
+
+
+def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
+  """Setup config dir to trust the given ssl_cert for the given ssl_url
+  """
+
+  cert_rep = ''
+  fp = open(ssl_cert, 'r')
+  for line in fp.readlines()[1:-1]:
+    cert_rep = cert_rep + line.strip()
+
+  parsed_url = urlparse(ssl_url)
+  netloc_url = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
+  ssl_dir = os.path.join(cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(ssl_dir):
+    os.makedirs(ssl_dir)
+  md5_name = hashlib.md5(netloc_url).hexdigest()
+  md5_file = os.path.join(ssl_dir, md5_name)
+  md5_file_contents = """K 10
+ascii_cert
+V %d
+%s
+K 8
+failures
+V 1
+8
+K 15
+svn:realmstring
+V %d
+%s
+END
+""" % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
+
+  file_write(md5_file, md5_file_contents)
+
+def copy_trust(dst_cfgdir, src_cfgdir):
+  """Copy svn.ssl.server files from one config dir to another.
+  """
+
+  src_ssl_dir = os.path.join(src_cfgdir, 'auth', 'svn.ssl.server')
+  dst_ssl_dir = os.path.join(dst_cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(dst_ssl_dir):
+    os.makedirs(dst_ssl_dir)
+  for f in os.listdir(src_ssl_dir):
+    shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_config_dir(args):
   if '--config-dir' in args:
@@ -682,7 +729,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
-                     options.http_library, want_error and 1 or 0)
+                     want_error and 1 or 0, default_config_dir)
 
 def run_wc_lock_tester(recursive, path):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
@@ -873,11 +920,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
 
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
-  if options.verbose:
-    sys.stdout.write('CMD: %s %s | %s %s\n' %
+
+  logger.info('CMD: %s %s | %s %s' %
                      (os.path.basename(svnadmin_binary), ' '.join(dump_args),
                       os.path.basename(svnadmin_binary), ' '.join(load_args)))
-    sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = open_pipe(
@@ -885,10 +931,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   load_in, load_out, load_err, load_kid = open_pipe(
     [svnadmin_binary] + load_args,
     stdin=dump_out) # Attached to dump_kid
-
-  stop = time.time()
-  if options.verbose:
-    print('<TIME = %.6f>' % (stop - start))
 
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
@@ -900,6 +942,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   load_out.close()
   load_err.close()
 
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
+
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
   else:
@@ -910,11 +955,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print('ERROR:  dump failed: %s' % dump_line.strip())
+      logger.warn('ERROR:  dump failed: %s', dump_line.strip())
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  dump failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
@@ -923,11 +968,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        print('ERROR:  load failed: %s' % load_line.strip())
+        logger.warn('ERROR:  load failed: %s', load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  load failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  load failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
 
@@ -942,18 +987,23 @@ def canonicalize_url(input):
     return input
 
 
-def create_python_hook_script(hook_path, hook_script_code):
+def create_python_hook_script(hook_path, hook_script_code,
+                              cmd_alternative=None):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
   if windows:
-    # Use an absolute path since the working directory is not guaranteed
-    hook_path = os.path.abspath(hook_path)
-    # Fill the python file.
-    file_write("%s.py" % hook_path, hook_script_code)
-    # Fill the batch wrapper file.
-    file_append("%s.bat" % hook_path,
-                "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
+    if cmd_alternative is not None:
+      file_write("%s.bat" % hook_path,
+                  cmd_alternative)
+    else:
+      # Use an absolute path since the working directory is not guaranteed
+      hook_path = os.path.abspath(hook_path)
+      # Fill the python file.
+      file_write("%s.py" % hook_path, hook_script_code)
+      # Fill the batch wrapper file.
+      file_write("%s.bat" % hook_path,
+                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
@@ -1145,6 +1195,9 @@ def is_os_darwin():
 def is_fs_case_insensitive():
   return (is_os_darwin() or is_os_windows())
 
+def is_threaded_python():
+  return True
+
 def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
@@ -1201,7 +1254,7 @@ class TestSpawningThread(threading.Thread):
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if options.verbose:
+    if logger.getEffectiveLevel() <= logging.DEBUG:
       args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
@@ -1215,6 +1268,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--mode-filter=' + options.mode_filter)
     if options.milestone_filter:
       args.append('--milestone-filter=' + options.milestone_filter)
+    if options.ssl_cert:
+      args.append('--ssl-cert=' + options.ssl_cert)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1275,7 +1330,7 @@ class TestRunner:
       # If there is no filter or this test made if through
       # the filter then print it!
       if options.milestone_filter is None or len(issues):
-        if options.verbose and self.pred.inprogress:
+        if self.pred.inprogress:
           tail += " [[%s]]" % self.pred.inprogress
         else:
           print(" %3d    %-5s  %s%s" % (self.index,
@@ -1347,32 +1402,29 @@ class TestRunner:
       result = svntest.testcase.RESULT_SKIP
     except Failure, ex:
       result = svntest.testcase.RESULT_FAIL
+      msg = ''
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
       # *is* information in the exception's arguments, then print it.
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
-        print('CWD: %s' % os.getcwd())
+        logger.warn('CWD: %s' % os.getcwd())
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          msg = 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
-      traceback.print_exc(file=sys.stdout)
-      sys.stdout.flush()
+          msg = 'EXCEPTION: %s' % ex.__class__.__name__
+      logger.warn(msg, exc_info=True)
     except KeyboardInterrupt:
-      print('Interrupted')
+      logger.error('Interrupted')
       sys.exit(0)
     except SystemExit, ex:
-      print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
+      logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
-      print('CWD: %s' % os.getcwd())
-      print('UNEXPECTED EXCEPTION:')
-      traceback.print_exc(file=sys.stdout)
-      sys.stdout.flush()
+      logger.warn('CWD: %s' % os.getcwd(), exc_info=True)
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
@@ -1490,6 +1542,14 @@ def create_default_options():
 
 def _create_parser():
   """Return a parser for our test suite."""
+  def set_log_level(option, opt, value, parser, level=None):
+    if level:
+      # called from --verbose
+      logger.setLevel(level)
+    else:
+      # called from --set-log-level
+      logger.setLevel(getattr(logging, value, None) or int(value))
+
   # set up the parser
   _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
@@ -1498,8 +1558,10 @@ def _create_parser():
                     help='Print test doc strings instead of running them')
   parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
                     help='Limit --list to those with target milestone specified')
-  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-                    help='Print binary command-lines (not with --quiet)')
+  parser.add_option('-v', '--verbose', action='callback',
+                    callback=set_log_level, callback_args=(logging.DEBUG, ),
+                    help='Print binary command-lines (same as ' +
+                         '"--set-log-level logging.DEBUG")')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
   parser.add_option('-p', '--parallel', action='store_const',
@@ -1537,6 +1599,13 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
+  parser.add_option('--set-log-level', action='callback', type='str',
+                    callback=set_log_level,
+                    help="Set log level (numerically or symbolically). " +
+                         "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
+                         "INFO, DEBUG")
+  parser.add_option('--log-with-timestamps', action='store_true',
+                    help="Show timestamps in test log.")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
@@ -1547,11 +1616,14 @@ def _create_parser():
                          'useful during test development!')
   parser.add_option('--srcdir', action='store', dest='srcdir',
                     help='Source directory.')
+  parser.add_option('--ssl-cert', action='store',
+                    help='Path to SSL server certificate.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
-        url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
+        url=file_scheme_prefix + \
+                        urllib.pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
   return parser
@@ -1567,8 +1639,6 @@ def _parse_options(arglist=sys.argv[1:]):
   (options, args) = parser.parse_args(arglist)
 
   # some sanity checking
-  if options.verbose and options.quiet:
-    parser.error("'verbose' and 'quiet' are incompatible")
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
 
@@ -1638,6 +1708,28 @@ def get_target_milestones_for_issues(issue_numbers):
 
   return issue_dict
 
+
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
+
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
+
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -1648,6 +1740,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
+  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -1664,12 +1757,41 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = _parse_options()
     test_selection = args
   else:
     parser = _create_parser()
+
+  # If there are no handlers registered yet, then install our own with
+  # our custom formatter. (anything currently installed *is* our handler
+  # as tested above)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -1719,7 +1841,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                    "or function '%s'\n" % arg)
 
   # Calculate pristine_greek_repos_url from test_area_url.
-  pristine_greek_repos_url = options.test_area_url + '/' + pathname2url(pristine_greek_repos_dir)
+  pristine_greek_repos_url = options.test_area_url + '/' + \
+                                urllib.pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -1732,7 +1855,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
-    svnversion_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
+    svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
@@ -1795,7 +1918,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   if not options.is_child_process:
     # Build out the default configuration directory
-    create_config_dir(default_config_dir)
+    create_config_dir(default_config_dir,
+                      ssl_cert=options.ssl_cert,
+                      ssl_url=options.test_area_url)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

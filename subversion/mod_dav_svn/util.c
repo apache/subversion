@@ -527,11 +527,23 @@ dav_svn__sanitize_error(svn_error_t *serr,
   svn_error_t *safe_err = serr;
   if (new_msg != NULL)
     {
+      /* Purge error tracing from the error chain. */
+      svn_error_t *purged_serr = svn_error_purge_tracing(serr);
+
       /* Sanitization is necessary.  Create a new, safe error and
            log the original error. */
-        safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                      "%s", serr->message);
+      safe_err = svn_error_create(purged_serr->apr_err, NULL, new_msg);
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                    "%s", purged_serr->message);
+
+      /* Log the entire error chain. */
+      while (purged_serr->child)
+        {
+          purged_serr = purged_serr->child;
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", purged_serr->message);
+        }
+
         svn_error_clear(serr);
       }
     return dav_svn__convert_err(safe_err, http_status,

@@ -316,6 +316,9 @@ svn_boolean_t dav_svn__get_txdelta_cache_flag(request_rec *r);
 /* for the repository referred to by this request, is fulltext caching active? */
 svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 
+/* for the repository referred to by this request, is revprop caching active? */
+svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */

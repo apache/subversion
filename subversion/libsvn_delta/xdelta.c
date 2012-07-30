@@ -29,8 +29,6 @@
 
 #include "svn_delta.h"
 #include "delta.h"
-
-#include "private/svn_adler32.h"
 
 /* This is pseudo-adler32. It is adler32 without the prime modulus.
    The idea is borrowed from monotone, and is a translation of the C++
@@ -44,7 +42,7 @@
  */
 #define MATCH_BLOCKSIZE 64
 
-/* "no" / "invalid" / "unused" value for positions within the detla windows
+/* "no" / "invalid" / "unused" value for positions within the delta windows
  */
 #define NO_POSITION ((apr_uint32_t)-1)
 
@@ -67,7 +65,7 @@ adler32_replace(apr_uint32_t adler32, const char c_out, const char c_in)
   return adler32 + adler32 * 0x10000;
 }
 
-/* Calculate an peudo-adler32 checksum for MATCH_BLOCKSIZE bytes starting
+/* Calculate an pseudo-adler32 checksum for MATCH_BLOCKSIZE bytes starting
    at DATA.  Return the checksum value.  */
 
 static APR_INLINE apr_uint32_t
@@ -111,7 +109,12 @@ struct block
 /* A hash table, using open addressing, of the blocks of the source. */
 struct blocks
 {
-  /* The largest valid index of slots. */
+  /* The largest valid index of slots.
+     This value has an upper bound proportionate to the text delta
+     window size, so unless we dramatically increase the window size,
+     it's safe to make this a 32-bit value.  In any case, it has to be
+     hte same width as the block position index, (struct
+     block).pos. */
   apr_uint32_t max;
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
@@ -178,17 +181,30 @@ init_blocks_table(const char *data,
                   struct blocks *blocks,
                   apr_pool_t *pool)
 {
-  apr_size_t i;
   apr_size_t nblocks;
-  apr_size_t nslots = 1;
+  apr_size_t wnslots = 1;
+  apr_uint32_t nslots;
+  apr_uint32_t i;
 
-  /* Be pesimistic about the block count. */
+  /* Be pessimistic about the block count. */
   nblocks = datalen / MATCH_BLOCKSIZE + 1;
   /* Find nearest larger power of two. */
-  while (nslots <= nblocks)
-    nslots *= 2;
+  while (wnslots <= nblocks)
+    wnslots *= 2;
   /* Double the number of slots to avoid a too high load. */
-  nslots *= 2;
+  wnslots *= 2;
+  /* Narrow the number of slots to 32 bits, which is the size of the
+     block position index in the hash table.
+     Sanity check: On 64-bit platforms, apr_size_t is likely to be
+     larger than apr_uint32_t. Make sure that the number of slots
+     actually fits into blocks->max.  It's safe to use a hard assert
+     here, because the largest possible value for nslots is
+     proportional to the text delta window size and is therefore much
+     smaller than the range of an apr_uint32_t.  If we ever happen to
+     increase the window size too much, this assertion will get
+     triggered by the test suite. */
+  nslots = (apr_uint32_t) wnslots;
+  SVN_ERR_ASSERT_NO_RETURN(wnslots == nslots);
   blocks->max = nslots - 1;
   blocks->data = data;
   blocks->slots = apr_palloc(pool, nslots * sizeof(*(blocks->slots)));
@@ -235,9 +251,10 @@ match_length(const char *a, const char *b, apr_size_t max_len)
   return pos;
 }
 
-/* Return the smallest byte index at which positions left of A and B differ
- * (A[-result] != B[-result]).  If no difference can be found in the first
- * MAX_LEN characters, MAX_LEN will be returned.
+/* Return the number of bytes before A and B that don't differ.  If no
+ * difference can be found in the first MAX_LEN characters,  MAX_LEN will
+ * be returned.  Please note that A-MAX_LEN and B-MAX_LEN must both be
+ * valid addresses.
  */
 static apr_size_t
 reverse_match_length(const char *a, const char *b, apr_size_t max_len)
@@ -257,21 +274,25 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
       break;
 
   pos -= sizeof(apr_size_t);
-    
+
 #endif
 
+  /* If we find a mismatch at -pos, pos-1 characters matched.
+   */
   while (++pos <= max_len)
-    if (a[-pos] != b[-pos])
-      break;
-    
-  return pos-1;
+    if (a[0-pos] != b[0-pos])
+      return pos - 1;
+
+  /* No mismatch found -> at least MAX_LEN matching chars.
+   */
+  return max_len;
 }
 
 
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in A we ended up in (in
-   case we extended it backwards) in APOSP and update the correspnding
+   case we extended it backwards) in APOSP and update the corresponding
    position within B given in BPOSP. PENDING_INSERT_START sets the
    lower limit to BPOSP.
    Return number of matching bytes starting at ASOP.  Return 0 if
@@ -380,9 +401,9 @@ store_delta_trailer(svn_txdelta__ops_baton_t *build_baton,
 static void
 compute_delta(svn_txdelta__ops_baton_t *build_baton,
               const char *a,
-              apr_uint32_t asize,
+              apr_size_t asize,
               const char *b,
-              apr_uint32_t bsize,
+              apr_size_t bsize,
               apr_pool_t *pool)
 {
   struct blocks blocks;
@@ -390,7 +411,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   apr_size_t lo = 0, pending_insert_start = 0;
 
   /* Optimization: directly compare window starts. If more than 4
-   * bytes match, we can immediately create a matching windows. 
+   * bytes match, we can immediately create a matching windows.
    * Shorter sequences result in a net data increase. */
   lo = match_length(a, b, asize > bsize ? bsize : asize);
   if ((lo > 4) || (lo == bsize))
@@ -442,7 +463,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             svn_txdelta__insert_op(build_baton, svn_txdelta_new,
                                    0, lo - pending_insert_start,
                                    b + pending_insert_start, pool);
-          else 
+          else
             {
               /* the match borders on the previous op. Maybe, we found a
                * match that is better than / overlapping the previous one. */

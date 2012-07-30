@@ -80,6 +80,13 @@ typedef struct svn_sort__item_t {
      apr_array_header_t *array;
      array = svn_sort__hash(hsh, svn_sort_compare_items_as_paths, pool);
    @endcode
+ *
+ * This function works like svn_sort_compare_items_lexically() except that it
+ * orders children in subdirectories directly after their parents. This allows
+ * using the given ordering for a depth first walk, but at a performance
+ * penalty. Code that doesn't need this special behavior for children, e.g. when
+ * sorting files at a single directory level should use
+ * svn_sort_compare_items_lexically() instead.
  */
 int
 svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
@@ -112,9 +119,9 @@ svn_sort_compare_revisions(const void *a,
 
 
 /**
- * Compare two @c const char * paths, returning an integer greater
- * than, equal to, or less than 0, using the same comparison rules as
- * are used by svn_path_compare_paths().
+ * Compare two @c const char * paths, @a *a and @a *b, returning an
+ * integer greater than, equal to, or less than 0, using the same
+ * comparison rules as are used by svn_path_compare_paths().
  *
  * This function is compatible for use with qsort().
  *
@@ -125,13 +132,13 @@ svn_sort_compare_paths(const void *a,
                        const void *b);
 
 /**
- * Compare two @c svn_merge_range_t *'s, returning an integer greater
- * than, equal to, or less than 0 if the first range is greater than,
- * equal to, or less than, the second range.
+ * Compare two @c svn_merge_range_t *'s, @a *a and @a *b, returning an
+ * integer greater than, equal to, or less than 0 if the first range is
+ * greater than, equal to, or less than, the second range.
  *
  * Both @c svn_merge_range_t *'s must describe forward merge ranges.
  *
- * If @a a and @a b intersect then the range with the lower start revision
+ * If @a *a and @a *b intersect then the range with the lower start revision
  * is considered the lesser range.  If the ranges' start revisions are
  * equal then the range with the lower end revision is considered the
  * lesser range.
