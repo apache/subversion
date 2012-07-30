@@ -1263,7 +1263,7 @@ svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
 
    If CONSIDER_INHERITANCE is true, then take the inheritance of the
    ranges in RANGELIST1 and RANGELIST2 into account when comparing them
-   for intersection, see the doc string for svn_rangelist_intersection().
+   for intersection, see the doc string for svn_rangelist_intersect().
 
    If CONSIDER_INHERITANCE is false, then ranges with differing inheritance
    may intersect, but the resulting intersection is non-inheritable only
