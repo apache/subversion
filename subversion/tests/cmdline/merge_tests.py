@@ -4501,6 +4501,12 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
     r(5 + NBR_OF_BRANCHES) - A/D/H/omega
   Return (expected_disk, expected_status).'''
 
+  # With the default parameters, the branching looks like this:
+  #
+  #   A         -1-----3-4-5-6--
+  #                \
+  #   A_COPY        2-----------
+
   wc_dir = sbox.wc_dir
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
