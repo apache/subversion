@@ -65,7 +65,7 @@ typedef struct svn_client__merge_path_t
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
      may be empty but should never be NULL unless ABSENT is true. */
-  apr_array_header_t *remaining_ranges;
+  svn_rangelist_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
                                            on ABSPATH prior to a merge.

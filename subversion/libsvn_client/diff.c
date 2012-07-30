@@ -103,7 +103,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
        hi; hi = apr_hash_next(hi))
     {
       const char *from_path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       svn_pool_clear(iterpool);
@@ -120,7 +120,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
        hi; hi = apr_hash_next(hi))
     {
       const char *from_path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       svn_pool_clear(iterpool);

@@ -274,7 +274,7 @@ typedef struct merge_cmd_baton_t {
      See http://subversion.tigris.org/issues/show_bug.cgi?id=3432.
      Updated during each call to do_directory_merge().  May be NULL if there
      is no gap. */
-  apr_array_header_t *implicit_src_gap;
+  svn_rangelist_t *implicit_src_gap;
 
   svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
@@ -823,7 +823,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
     {
       int i;
       const char *merge_source_path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -845,7 +845,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
                  than REVISION.  Remove the younger rangelists from
                  *MERGEINFO and put them in *YOUNGER_MERGEINFO. */
               int j;
-              apr_array_header_t *younger_rangelist =
+              svn_rangelist_t *younger_rangelist =
                 apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
               for (j = i; j < rangelist->nelts; j++)
@@ -1048,9 +1048,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             {
               int j;
               const char *source_path = svn__apr_hash_index_key(hi);
-              apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
               const char *merge_source_url;
-              apr_array_header_t *adjusted_rangelist =
+              svn_rangelist_t *adjusted_rangelist =
                 apr_array_make(iterpool, 0, sizeof(svn_merge_range_t *));
 
               merge_source_url =
@@ -3210,8 +3210,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
  * effect is to discard any non-inheritable input ranges.  Therefore the
  * ranges in *OUT_RANGELIST will always be inheritable. */
 static svn_error_t *
-rangelist_intersect_range(apr_array_header_t **out_rangelist,
-                          const apr_array_header_t *in_rangelist,
+rangelist_intersect_range(svn_rangelist_t **out_rangelist,
+                          const svn_rangelist_t *in_rangelist,
                           svn_revnum_t rev1,
                           svn_revnum_t rev2,
                           svn_boolean_t consider_inheritance,
@@ -3222,7 +3222,7 @@ rangelist_intersect_range(apr_array_header_t **out_rangelist,
 
   if (rev1 < rev2)
     {
-      apr_array_header_t *simple_rangelist =
+      svn_rangelist_t *simple_rangelist =
         svn_rangelist__initialize(rev1, rev2, TRUE, scratch_pool);
 
       SVN_ERR(svn_rangelist_intersect(out_rangelist,
@@ -3382,7 +3382,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
             }
           else
             {
-              apr_array_header_t *deleted_rangelist;
+              svn_rangelist_t *deleted_rangelist;
               svn_revnum_t rev_primary_url_deleted;
 
               /* PRIMARY_URL@older_rev exists, so it was deleted at some
@@ -3451,7 +3451,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
     }
   else /* PRIMARY_URL@peg_rev exists. */
     {
-      apr_array_header_t *non_existent_rangelist;
+      svn_rangelist_t *non_existent_rangelist;
       svn_location_segment_t *segment =
         APR_ARRAY_IDX(segments, (segments->nelts - 1),
                       svn_location_segment_t *);
@@ -3553,7 +3553,7 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       svn_client__merge_path_t *parent;
-      apr_array_header_t *deleted_rangelist, *added_rangelist;
+      svn_rangelist_t *deleted_rangelist, *added_rangelist;
 
       SVN_ERR_ASSERT(child);
       if (child->absent)
@@ -3905,7 +3905,7 @@ static svn_error_t *
 filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_client__merge_path_t *child,
                         const char *mergeinfo_path,
-                        apr_array_header_t *target_rangelist,
+                        svn_rangelist_t *target_rangelist,
                         svn_revnum_t revision1,
                         svn_revnum_t revision2,
                         svn_boolean_t child_inherits_implicit,
@@ -3914,7 +3914,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *requested_rangelist,
+  svn_rangelist_t *requested_rangelist,
     *target_implicit_rangelist, *explicit_rangelist;
 
   /* Convert REVISION1 and REVISION2 to a rangelist.
@@ -3933,7 +3933,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
 
   if (revision1 > revision2) /* This is a reverse merge. */
     {
-      apr_array_header_t *added_rangelist, *deleted_rangelist;
+      svn_rangelist_t *added_rangelist, *deleted_rangelist;
 
       /* The revert range and will need to be reversed for
          our svn_rangelist_* APIs to work properly. */
@@ -3989,7 +3989,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
         }
       else /* We need to check CHILD's implicit mergeinfo. */
         {
-          apr_array_header_t *implicit_rangelist;
+          svn_rangelist_t *implicit_rangelist;
 
           SVN_ERR(ensure_implicit_mergeinfo(parent,
                                             child,
@@ -4166,7 +4166,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                                                           scratch_pool);
   /* Intersection of TARGET_MERGEINFO and the merge history
      described by SOURCE. */
-  apr_array_header_t *target_rangelist;
+  svn_rangelist_t *target_rangelist;
   svn_revnum_t child_base_revision;
 
   /* Since this function should only be called when honoring mergeinfo and
@@ -4322,7 +4322,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
     = (source->loc1->rev < source->loc2->rev) ? source->loc2 : source->loc1;
   const char *merge_src_fspath = svn_client__pathrev_fspath(primary_src,
                                                             scratch_pool);
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
 
   SVN_ERR_ASSERT(source->ancestral);
 
@@ -4377,13 +4377,13 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
     }
   else if (apr_hash_count(implicit_src_mergeinfo) > 1) /* Rename */
     {
-      apr_array_header_t *requested_rangelist =
+      svn_rangelist_t *requested_rangelist =
         svn_rangelist__initialize(MIN(source->loc1->rev, source->loc2->rev),
                                   MAX(source->loc1->rev, source->loc2->rev),
                                   TRUE, scratch_pool);
-      apr_array_header_t *implicit_rangelist =
+      svn_rangelist_t *implicit_rangelist =
         apr_array_make(scratch_pool, 2, sizeof(svn_merge_range_t *));
-      apr_array_header_t *gap_rangelist;
+      svn_rangelist_t *gap_rangelist;
 
       SVN_ERR(svn_rangelist__merge_many(implicit_rangelist,
                                         implicit_src_mergeinfo,
@@ -4713,8 +4713,8 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
   for (hi = apr_hash_first(scratch_pool, merges); hi; hi = apr_hash_next(hi))
     {
       const char *local_abspath = svn__apr_hash_index_key(hi);
-      apr_array_header_t *ranges = svn__apr_hash_index_val(hi);
-      apr_array_header_t *rangelist;
+      svn_rangelist_t *ranges = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist;
       svn_error_t *err;
       const char *local_abspath_rel_to_target;
       const char *fspath;
@@ -4846,7 +4846,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
    MERGEINFO_PATH to MERGE_B->target. */
 static svn_error_t *
 record_skips(const char *mergeinfo_path,
-             const apr_array_header_t *rangelist,
+             const svn_rangelist_t *rangelist,
              svn_boolean_t is_rollback,
              apr_hash_t *skipped_abspaths,
              merge_cmd_baton_t *merge_b,
@@ -6259,7 +6259,7 @@ log_changed_revs(void *baton,
 static void
 merge_range_find_extremes(svn_revnum_t *min_rev_p,
                           svn_revnum_t *max_rev_p,
-                          const apr_array_header_t *rangelist)
+                          const svn_rangelist_t *rangelist)
 {
   int i;
 
@@ -6325,16 +6325,16 @@ get_log(svn_ra_session_t *ra_session,
 
    Use POOL for temporary allocations.  */
 static svn_error_t *
-remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
+remove_noop_merge_ranges(svn_rangelist_t **operative_ranges_p,
                          svn_ra_session_t *ra_session,
-                         const apr_array_header_t *ranges,
+                         const svn_rangelist_t *ranges,
                          apr_pool_t *pool)
 {
   int i;
   svn_revnum_t oldest_rev, youngest_rev;
   apr_array_header_t *changed_revs =
     apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t));
-  apr_array_header_t *operative_ranges =
+  svn_rangelist_t *operative_ranges =
     apr_array_make(ranges->pool, ranges->nelts, ranges->elt_size);
 
   /* Find the revision extremes of the RANGES we have. */
@@ -6522,7 +6522,7 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
 static svn_error_t *
 normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                                  const svn_client__pathrev_t *source_loc,
-                                 const apr_array_header_t *merge_range_ts,
+                                 const svn_rangelist_t *merge_range_ts,
                                  svn_ra_session_t *ra_session,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
@@ -6699,7 +6699,7 @@ static svn_error_t *
 normalize_merge_sources(apr_array_header_t **merge_sources_p,
                         const char *source_path_or_url,
                         const svn_client__pathrev_t *source_loc,
-                        const apr_array_header_t *ranges_to_merge,
+                        const svn_rangelist_t *ranges_to_merge,
                         svn_ra_session_t *ra_session,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
@@ -6707,7 +6707,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
 {
   const char *source_abspath_or_url;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *merge_range_ts;
+  svn_rangelist_t *merge_range_ts;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
@@ -6786,14 +6786,14 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
 
    Allocate *FILTERED_RANGELIST in POOL. */
 static svn_error_t *
-filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
+filter_natural_history_from_mergeinfo(svn_rangelist_t **filtered_rangelist,
                                       const char *source_rel_path,
                                       svn_mergeinfo_t implicit_mergeinfo,
                                       svn_merge_range_t *requested_range,
                                       apr_pool_t *pool)
 {
   /* Make the REQUESTED_RANGE into a rangelist. */
-  apr_array_header_t *requested_rangelist =
+  svn_rangelist_t *requested_rangelist =
     svn_rangelist__initialize(requested_range->start, requested_range->end,
                               requested_range->inheritable, pool);
 
@@ -6804,7 +6804,7 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
   if (implicit_mergeinfo
       && (requested_range->start < requested_range->end))
     {
-      apr_array_header_t *implied_rangelist =
+      svn_rangelist_t *implied_rangelist =
         apr_hash_get(implicit_mergeinfo, source_rel_path,
                      APR_HASH_KEY_STRING);
 
@@ -6891,7 +6891,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               merge_cmd_baton_t *merge_b,
               apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *remaining_ranges;
+  svn_rangelist_t *remaining_ranges;
   svn_client_ctx_t *ctx = merge_b->ctx;
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
@@ -6968,7 +6968,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
   if (!merge_b->record_only)
     {
-      apr_array_header_t *ranges_to_merge = remaining_ranges;
+      svn_rangelist_t *ranges_to_merge = remaining_ranges;
       const char *target_relpath = "";  /* relative to root of merge */
       int i;
 
@@ -7115,7 +7115,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
     {
       const char *mergeinfo_path = svn_client__pathrev_fspath(primary_src,
                                                               scratch_pool);
-      apr_array_header_t *filtered_rangelist;
+      svn_rangelist_t *filtered_rangelist;
 
       /* Filter any ranges from TARGET_WCPATH's own history, there is no
          need to record this explicitly in mergeinfo, it is already part
@@ -7866,7 +7866,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
     {
       const char *child_repos_path;
       const char *child_merge_src_fspath;
-      apr_array_header_t *child_merge_rangelist;
+      svn_rangelist_t *child_merge_rangelist;
       apr_hash_t *child_merges;
       svn_client__merge_path_t *child =
                      APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
@@ -7972,7 +7972,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
             {
               svn_error_t *err;
               svn_mergeinfo_t subtree_history_as_mergeinfo;
-              apr_array_header_t *child_merge_src_rangelist;
+              svn_rangelist_t *child_merge_src_rangelist;
               svn_client__pathrev_t *subtree_mergeinfo_pathrev
                 = svn_client__pathrev_create_with_relpath(
                     merge_b->target->loc.repos_root_url,
@@ -8133,7 +8133,7 @@ record_mergeinfo_for_added_subtrees(
           svn_node_kind_t added_path_kind;
           svn_mergeinfo_t merge_mergeinfo;
           svn_mergeinfo_t adds_history_as_mergeinfo;
-          apr_array_header_t *rangelist;
+          svn_rangelist_t *rangelist;
           const char *rel_added_path;
           const char *added_path_mergeinfo_fspath;
           svn_client__pathrev_t *added_path_pathrev;
@@ -8222,8 +8222,8 @@ typedef struct log_noop_baton_t
 
   /* Initially empty rangelists allocated in POOL. The rangelists are
    * populated across multiple invocations of log_noop_revs(). */
-  apr_array_header_t *operative_ranges;
-  apr_array_header_t *merged_ranges;
+  svn_rangelist_t *operative_ranges;
+  svn_rangelist_t *merged_ranges;
 
   /* Pool to store the rangelists. */
   apr_pool_t *pool;
@@ -8240,7 +8240,7 @@ typedef struct log_noop_baton_t
    This turns the special case of a single incoming younger range into O(1).
    */
 static svn_error_t *
-rangelist_merge_revision(apr_array_header_t *rangelist,
+rangelist_merge_revision(svn_rangelist_t *rangelist,
                          svn_revnum_t revision,
                          apr_pool_t *result_pool)
 {
@@ -8316,7 +8316,7 @@ log_noop_revs(void *baton,
       const char *fspath = svn__apr_hash_index_key(hi);
       const char *rel_path;
       const char *cwmi_abspath;
-      apr_array_header_t *paths_explicit_rangelist = NULL;
+      svn_rangelist_t *paths_explicit_rangelist = NULL;
       svn_boolean_t mergeinfo_inherited = FALSE;
 
       /* Adjust REL_PATH so it is relative to the merge source then use it to
@@ -8366,8 +8366,8 @@ log_noop_revs(void *baton,
 
       if (paths_explicit_rangelist)
         {
-          apr_array_header_t *intersecting_range;
-          apr_array_header_t *rangelist;
+          svn_rangelist_t *intersecting_range;
+          svn_rangelist_t *rangelist;
 
           rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
                                                 scratch_pool);
@@ -8424,13 +8424,13 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   int i;
   svn_client__merge_path_t *root_child =
     APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
-  apr_array_header_t *requested_ranges;
-  apr_array_header_t *subtree_gap_ranges;
-  apr_array_header_t *subtree_remaining_ranges;
+  svn_rangelist_t *requested_ranges;
+  svn_rangelist_t *subtree_gap_ranges;
+  svn_rangelist_t *subtree_remaining_ranges;
   log_noop_baton_t log_gap_baton;
   svn_merge_range_t *oldest_gap_rev;
   svn_merge_range_t *youngest_gap_rev;
-  apr_array_header_t *inoperative_ranges;
+  svn_rangelist_t *inoperative_ranges;
   apr_pool_t *iterpool;
 
   assert(session_url_is(ra_session, source->loc2->url, scratch_pool));
@@ -10070,7 +10070,7 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *potentially_unmerged_ranges = NULL;
+  svn_rangelist_t *potentially_unmerged_ranges = NULL;
 
   /* Convert all the unmerged history to a rangelist. */
   if (apr_hash_count(unmerged_catalog))
@@ -10993,7 +10993,7 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
 static svn_error_t *
 merge_peg_locked(const char *source_path_or_url,
                  const svn_opt_revision_t *source_peg_revision,
-                 const apr_array_header_t *ranges_to_merge,
+                 const svn_rangelist_t *ranges_to_merge,
                  const char *target_abspath,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
@@ -11131,7 +11131,7 @@ location_on_branch_at_rev(const branch_history_t *branch_history,
        hi = apr_hash_next(hi))
     {
       const char *fspath = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       int i;
 
       for (i = 0; i < rangelist->nelts; i++)

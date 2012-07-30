@@ -78,7 +78,7 @@ verify_mergeinfo_parse(const char *input,
     {
       const void *path;
       void *val;
-      apr_array_header_t *ranges;
+      svn_rangelist_t *ranges;
       svn_merge_range_t *range;
       int j;
 
@@ -236,7 +236,7 @@ test_mergeinfo_dup(apr_pool_t *pool)
 {
   apr_hash_t *orig_mergeinfo, *copied_mergeinfo;
   apr_pool_t *subpool;
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
 
   /* Assure that copies which should be empty turn out that way. */
   subpool = svn_pool_create(pool);
@@ -399,7 +399,7 @@ range_to_string(svn_merge_range_t *range,
    verified (e.g. "svn_rangelist_intersect"), while TYPE is a word
    describing what the ranges being examined represent. */
 static svn_error_t *
-verify_ranges_match(const apr_array_header_t *actual_rangelist,
+verify_ranges_match(const svn_rangelist_t *actual_rangelist,
                     svn_merge_range_t *expected_ranges, int nbr_expected,
                     const char *func_verified, const char *type,
                     apr_pool_t *pool)
@@ -436,7 +436,7 @@ verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
                         const char *func_verified, const char *type,
                         apr_pool_t *pool)
 {
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
 
   if (apr_hash_count(deltas) != 1)
     /* Deltas on "/trunk" expected. */
@@ -479,7 +479,7 @@ test_diff_mergeinfo(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_reverse(apr_pool_t *pool)
 {
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
   svn_merge_range_t expected_rangelist[3] =
     { {10, 9, TRUE}, {7, 4, TRUE}, {3, 2, TRUE} };
 
@@ -494,7 +494,7 @@ test_rangelist_reverse(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_intersect(apr_pool_t *pool)
 {
-  apr_array_header_t *rangelist1, *rangelist2, *intersection;
+  svn_rangelist_t *rangelist1, *rangelist2, *intersection;
 
   /* Expected intersection when considering inheritance. */
   svn_merge_range_t intersection_consider_inheritance[] =
@@ -562,7 +562,7 @@ test_mergeinfo_intersect(apr_pool_t *pool)
 {
   svn_merge_range_t expected_intersection[3] =
     { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE} };
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
   apr_hash_t *intersection;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16\n/foo: 31", pool));
@@ -728,7 +728,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
 
       for (j = 0; j < mergeinfo[i].expected_paths; j++)
         {
-          apr_array_header_t *rangelist =
+          svn_rangelist_t *rangelist =
             apr_hash_get(info1, mergeinfo[i].path_rngs[j].path,
                          APR_HASH_KEY_STRING);
           if (!rangelist)
@@ -751,7 +751,7 @@ test_remove_rangelist(apr_pool_t *pool)
 {
   int i, j;
   svn_error_t *err, *child_err;
-  apr_array_header_t *output, *eraser, *whiteboard;
+  svn_rangelist_t *output, *eraser, *whiteboard;
 
   /* Struct for svn_rangelist_remove test data.
      Parse WHITEBOARD and ERASER to hashes and then get the rangelist for
@@ -938,7 +938,7 @@ randomly_fill_rev_array(svn_boolean_t *revs)
 /* Set *RANGELIST to a rangelist representing the revisions that are marked
  * with TRUE in the array REVS[RANDOM_REV_ARRAY_LENGTH]. */
 static svn_error_t *
-rev_array_to_rangelist(apr_array_header_t **rangelist,
+rev_array_to_rangelist(svn_rangelist_t **rangelist,
                        svn_boolean_t *revs,
                        apr_pool_t *pool)
 {
@@ -980,7 +980,7 @@ test_rangelist_remove_randomly(apr_pool_t *pool)
       svn_boolean_t first_revs[RANDOM_REV_ARRAY_LENGTH],
         second_revs[RANDOM_REV_ARRAY_LENGTH],
         expected_revs[RANDOM_REV_ARRAY_LENGTH];
-      apr_array_header_t *first_rangelist, *second_rangelist,
+      svn_rangelist_t *first_rangelist, *second_rangelist,
         *expected_rangelist, *actual_rangelist;
       /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in
          expected_rangelist. */
@@ -1038,7 +1038,7 @@ test_rangelist_intersect_randomly(apr_pool_t *pool)
       svn_boolean_t first_revs[RANDOM_REV_ARRAY_LENGTH],
         second_revs[RANDOM_REV_ARRAY_LENGTH],
         expected_revs[RANDOM_REV_ARRAY_LENGTH];
-      apr_array_header_t *first_rangelist, *second_rangelist,
+      svn_rangelist_t *first_rangelist, *second_rangelist,
         *expected_rangelist, *actual_rangelist;
       /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in
          expected_rangelist. */
@@ -1105,7 +1105,7 @@ test_remove_mergeinfo(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_to_string(apr_pool_t *pool)
 {
-  apr_array_header_t *result;
+  svn_rangelist_t *result;
   svn_string_t *output;
   svn_string_t *expected = svn_string_create("3,5,7-11,13-14", pool);
 
@@ -1162,7 +1162,7 @@ test_rangelist_merge(apr_pool_t *pool)
 {
   int i;
   svn_error_t *err, *child_err;
-  apr_array_header_t *rangelist1, *rangelist2;
+  svn_rangelist_t *rangelist1, *rangelist2;
 
   /* Struct for svn_rangelist_merge test data.  Similar to
      mergeinfo_merge_test_data struct in svn_mergeinfo_merge() test. */
@@ -1359,7 +1359,7 @@ test_rangelist_diff(apr_pool_t *pool)
 {
   int i;
   svn_error_t *err, *child_err;
-  apr_array_header_t *from, *to, *added, *deleted;
+  svn_rangelist_t *from, *to, *added, *deleted;
 
   /* Structure containing two ranges to diff and the expected output of the
      diff both when considering and ignoring range inheritance. */
