@@ -195,7 +195,7 @@ class AprHashPrinter:
 def children_of_apr_array(array, value_type):
     """Iterate over an 'apr_array_header_t' GDB value, in the way required for
        a pretty-printer 'children' method when the display-hint is 'array'.
-       Cast the value pointers to VALUE_TYPE.
+       Cast the values to VALUE_TYPE.
     """
     nelts = int(array['nelts'])
     elts = array['elts'].reinterpret_cast(value_type.pointer())
@@ -238,7 +238,8 @@ class SvnStringPrinter:
         return data.string(length=len)
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 class SvnMergeRangePrinter:
     """for svn_merge_range_t"""
@@ -269,7 +270,8 @@ class SvnMergeRangePrinter:
         return rs
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 class SvnRangelistPrinter:
     """for svn_rangelist_t"""
@@ -283,14 +285,15 @@ class SvnRangelistPrinter:
 
         s = ''
         for key, val in children_of_apr_array(self.array,
-                       self.svn_merge_range_t.pointer()):
+                                              self.svn_merge_range_t.pointer()):
             if s:
-              s += ','
+                s += ','
             s += SvnMergeRangePrinter(val).to_string()
         return s
 
     def display_hint(self):
-        return 'string'
+        if self.array:
+            return 'string'
 
 class SvnMergeinfoPrinter:
     """for svn_mergeinfo_t"""
@@ -306,7 +309,7 @@ class SvnMergeinfoPrinter:
         for key, val in children_of_apr_hash(self.hash_p,
                                              self.svn_rangelist_t.pointer()):
             if s:
-              s += '; '
+                s += '; '
             s += key + ':' + SvnRangelistPrinter(val).to_string()
         return '{ ' + s + ' }'
 
@@ -324,7 +327,7 @@ class SvnMergeinfoCatalogPrinter:
         for key, val in children_of_apr_hash(self.hash_p,
                                              self.svn_mergeinfo_t):
             if s:
-              s += ',\n  '
+                s += ',\n  '
             s += "'" + key + "': " + SvnMergeinfoPrinter(val).to_string()
         return '{ ' + s + ' }'
 
@@ -338,6 +341,9 @@ class SvnPathrevPrinter:
         self.val = val
 
     def to_string(self):
+        if not self.val:
+            return 'NULL'
+
         rev = int(self.val['rev'])
         url = self.val['url'].string()
         repos_root_url = self.val['repos_root_url'].string()
@@ -345,7 +351,8 @@ class SvnPathrevPrinter:
         return "%s@%d" % (relpath, rev)
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 
 ########################################################################
