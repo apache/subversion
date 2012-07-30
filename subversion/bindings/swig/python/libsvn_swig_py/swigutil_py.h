@@ -135,9 +135,9 @@ PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
 /* helper function to convert an apr_array_header_t* (of
    svn_merge_range_t *) to a Python list */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
-                                        swig_type_info *type,
-                                        PyObject *py_pool);
+PyObject *svn_swig_py_pointerlist_to_list(apr_array_header_t *list,
+                                          swig_type_info *type,
+                                          PyObject *py_pool);
 
 /* helper function to convert an apr_hash_t* (const char *->array of
    svn_merge_range_t *) to a Python dict */
@@ -422,6 +422,13 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
                                                   apr_pool_t *pool);
 
 /* auth provider callbacks */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t * svn_swig_py_auth_gnome_keyring_unlock_prompt_func(
+        char **keyring_passwd,
+        const char *keyring_name,
+        void *baton,
+        apr_pool_t *pool);
+
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_auth_simple_prompt_func(
     svn_auth_cred_simple_t **cred,

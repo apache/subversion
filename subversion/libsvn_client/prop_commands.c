@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"
 
 
@@ -117,7 +118,8 @@ get_file_for_validation(const svn_string_t **mime_type,
 
 static
 svn_error_t *
-do_url_propset(const char *propname,
+do_url_propset(const char *url,
+               const char *propname,
                const svn_string_t *propval,
                const svn_node_kind_t kind,
                const svn_revnum_t base_revision_for_url,
@@ -133,8 +135,10 @@ do_url_propset(const char *propname,
   if (kind == svn_node_file)
     {
       void *file_baton;
-      SVN_ERR(editor->open_file("", root_baton, base_revision_for_url,
-                                pool, &file_baton));
+      const char *uri_basename = svn_uri_basename(url, pool);
+
+      SVN_ERR(editor->open_file(uri_basename, root_baton,
+                                base_revision_for_url, pool, &file_baton));
       SVN_ERR(editor->change_file_prop(file_baton, propname, propval, pool));
       SVN_ERR(editor->close_file(file_baton, NULL, pool));
     }
@@ -186,6 +190,18 @@ propset_on_url(const char *propname,
        _("Path '%s' does not exist in revision %ld"),
        target, base_revision_for_url);
 
+  if (node_kind == svn_node_file)
+    {
+      /* We need to reparent our session one directory up, since editor
+         semantics require the root is a directory.
+
+         ### How does this interact with authz? */
+      const char *parent_url;
+      parent_url = svn_uri_dirname(target, pool);
+
+      SVN_ERR(svn_ra_reparent(ra_session, parent_url, pool));
+    }
+
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
      inappropriate property is allowed, however, since older clients
@@ -227,6 +243,9 @@ propset_on_url(const char *propname,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
@@ -234,8 +253,8 @@ propset_on_url(const char *propname,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
-  err = do_url_propset(propname, propval, node_kind, base_revision_for_url,
-                       editor, edit_baton, pool);
+  err = do_url_propset(target, propname, propval, node_kind,
+                       base_revision_for_url, editor, edit_baton, pool);
 
   if (err)
     {

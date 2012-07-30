@@ -52,8 +52,9 @@ static const WCHAR description[] = L"auth_svn.simple.wincrypt";
 
 /* Implementation of svn_auth__password_set_t that encrypts
    the incoming password using the Windows CryptoAPI. */
-static svn_boolean_t
-windows_password_encrypter(apr_hash_t *creds,
+static svn_error_t *
+windows_password_encrypter(svn_boolean_t *done,
+                           apr_hash_t *creds,
                            const char *realmstring,
                            const char *username,
                            const char *in,
@@ -73,20 +74,21 @@ windows_password_encrypter(apr_hash_t *creds,
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
       apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
-      crypted = svn_auth__simple_password_set(creds, realmstring, username,
-                                              coded, parameters,
-                                              non_interactive, pool);
+      SVN_ERR(svn_auth__simple_password_set(done, creds, realmstring, username,
+                                            coded, parameters,
+                                            non_interactive, pool));
       LocalFree(blobout.pbData);
     }
 
-  return crypted;
+  return SVN_NO_ERROR;
 }
 
 /* Implementation of svn_auth__password_get_t that decrypts
    the incoming password using the Windows CryptoAPI and verifies its
    validity. */
-static svn_boolean_t
-windows_password_decrypter(const char **out,
+static svn_error_t *
+windows_password_decrypter(svn_boolean_t *done,
+                           const char **out,
                            apr_hash_t *creds,
                            const char *realmstring,
                            const char *username,
@@ -100,9 +102,10 @@ windows_password_decrypter(const char **out,
   svn_boolean_t decrypted;
   char *in;
 
-  if (!svn_auth__simple_password_get(&in, creds, realmstring, username,
-                                     parameters, non_interactive, pool))
-    return FALSE;
+  SVN_ERR(svn_auth__simple_password_get(done, &in, creds, realmstring, username,
+                                        parameters, non_interactive, pool));
+  if (!done)
+    return SVN_NO_ERROR;
 
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
@@ -119,7 +122,8 @@ windows_password_decrypter(const char **out,
       LocalFree(descr);
     }
 
-  return decrypted;
+  *done = decrypted;
+  return SVN_NO_ERROR;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
@@ -186,8 +190,9 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 
 /* Implementation of svn_auth__password_set_t that encrypts
    the incoming password using the Windows CryptoAPI. */
-static svn_boolean_t
-windows_ssl_client_cert_pw_encrypter(apr_hash_t *creds,
+static svn_error_t *
+windows_ssl_client_cert_pw_encrypter(svn_boolean_t *done,
+                                     apr_hash_t *creds,
                                      const char *realmstring,
                                      const char *username,
                                      const char *in,
@@ -207,20 +212,21 @@ windows_ssl_client_cert_pw_encrypter(apr_hash_t *creds,
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
       apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
-      crypted = svn_auth__ssl_client_cert_pw_set(creds, realmstring, username,
-                                                 coded, parameters,
-                                                 non_interactive, pool);
+      SVN_ERR(svn_auth__ssl_client_cert_pw_set(done, creds, realmstring,
+                                               username, coded, parameters,
+                                               non_interactive, pool));
       LocalFree(blobout.pbData);
     }
 
-  return crypted;
+  return SVN_NO_ERROR;
 }
 
 /* Implementation of svn_auth__password_get_t that decrypts
    the incoming password using the Windows CryptoAPI and verifies its
    validity. */
-static svn_boolean_t
-windows_ssl_client_cert_pw_decrypter(const char **out,
+static svn_error_t *
+windows_ssl_client_cert_pw_decrypter(svn_boolean_t *done,
+                                     const char **out,
                                      apr_hash_t *creds,
                                      const char *realmstring,
                                      const char *username,
@@ -234,9 +240,11 @@ windows_ssl_client_cert_pw_decrypter(const char **out,
   svn_boolean_t decrypted;
   char *in;
 
-  if (!svn_auth__ssl_client_cert_pw_get(&in, creds, realmstring, username,
-                                        parameters, non_interactive, pool))
-    return FALSE;
+  SVN_ERR(svn_auth__ssl_client_cert_pw_get(done, &in, creds, realmstring,
+                                           username, parameters,
+                                           non_interactive, pool));
+  if (!done)
+    return SVN_NO_ERROR;
 
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
@@ -253,7 +261,8 @@ windows_ssl_client_cert_pw_decrypter(const char **out,
       LocalFree(descr);
     }
 
-  return decrypted;
+  *done = decrypted;
+  return SVN_NO_ERROR;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */

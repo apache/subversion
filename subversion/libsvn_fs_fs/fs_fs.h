@@ -42,13 +42,21 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
                                apr_pool_t *pool);
 
-/* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
-   Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
-                                const char *dst_path,
-                                apr_pool_t *pool);
+/* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
+ * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
+ * exists in DST_FS. Use POOL for temporary allocations. */
+svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
+                                 svn_fs_t *dst_fs,
+                                 const char *src_path,
+                                 const char *dst_path,
+                                 svn_boolean_t incremental,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *pool);
 
 /* Recover the fsfs associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
@@ -100,6 +108,12 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
+/* Return an error iff REV does not exist in FS. */
+svn_error_t *
+svn_fs_fs__revision_exists(svn_revnum_t rev,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
+
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
@@ -117,14 +131,15 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
-   by NODEREV in filesystem FS.  The returned object is allocated in POOL,
-   which is also used for temporary allocations. */
+   by NODEREV in filesystem FS.  The returned object is allocated in
+   RESULT_POOL; SCRATCH_POOL used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
                                   const char *name,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.

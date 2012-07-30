@@ -1354,7 +1354,9 @@ typedef struct svn_wc_notify_t {
    * In all other cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
 
-  /** When @c action is #svn_wc_notify_merge_begin, and both the
+  /** When @c action is #svn_wc_notify_merge_begin or
+   * #svn_wc_notify_foreign_merge_begin or
+   * #svn_wc_notify_merge_record_info_begin, and both the
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
@@ -4047,6 +4049,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    apr_pool_t *scratch_pool);
 
 /**
+ * DEPRECATED -- please use APIs from svn_client.h
+ *
+ * ---
+ *
  * Set @a *editor and @a *edit_baton to an editor that generates
  * #svn_wc_status3_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor_abspath is a working copy directory
@@ -4108,7 +4114,9 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * in a subpool of @a result_pool.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void **edit_baton,
@@ -5485,6 +5493,10 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
 
 
 /**
+ * DEPRECATED -- please use APIs from svn_client.h
+ *
+ * ---
+ *
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
  *
@@ -5558,7 +5570,9 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * before returning the editor to allow using the primary ra session for this.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
@@ -5689,6 +5703,10 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
                          apr_pool_t *pool);
 
 /**
+ * DEPRECATED -- please use APIs from svn_client.h
+ *
+ * ---
+ *
  * A variant of svn_wc_get_update_editor4().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
@@ -5699,7 +5717,9 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * All other parameters behave as for svn_wc_get_update_editor4().
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
@@ -6136,6 +6156,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  */
 
 /**
+ * DEPRECATED -- please use APIs from svn_client.h
+ *
+ * ---
+ *
  * Return an @a editor/@a edit_baton for diffing a working copy against the
  * repository. The editor is allocated in @a result_pool; temporary
  * calculations are performed in @a scratch_pool.
@@ -6189,7 +6213,9 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * editor.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         void **edit_baton,

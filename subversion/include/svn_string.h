@@ -383,6 +383,20 @@ svn_boolean_t
 svn_cstring_match_list(const char *str, const apr_array_header_t *list);
 
 /**
+ * Get the next token from @a *str interpreting any char from @a sep as a
+ * token separator.  Separators at the beginning of @a str will be skipped.
+ * Returns a pointer to the beginning of the first token in @a *str or NULL
+ * if no token is left.  Modifies @a str such that the next call will return
+ * the next token.
+ *
+ * Note that the content of @a *str may be modified by this function.
+ *
+ * @since New in 1.8.
+ */
+char *
+svn_cstring_tokenize(const char *sep, char **str);
+
+/**
  * Return the number of line breaks in @a msg, allowing any kind of newline
  * termination (CR, LF, CRLF, or LFCR), even inconsistent.
  *

@@ -247,7 +247,7 @@ add_file_or_directory(const char *path,
          out-of-dateness error. */
       SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
+        return svn_error_trace(out_of_date(full_path, kind));
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -396,13 +396,13 @@ delete_entry(const char *path,
 
   /* If PATH doesn't exist in the txn, the working copy is out of date. */
   if (kind == svn_node_none)
-    return out_of_date(full_path, kind);
+    return svn_error_trace(out_of_date(full_path, kind));
 
   /* Now, make sure we're deleting the node we *think* we're
      deleting, else return an out-of-dateness error. */
   SVN_ERR(svn_fs_node_created_rev(&cr_rev, eb->txn_root, full_path, pool));
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
-    return out_of_date(full_path, kind);
+    return svn_error_trace(out_of_date(full_path, kind));
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
@@ -518,7 +518,7 @@ open_file(const char *path,
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
   if (SVN_IS_VALID_REVNUM(base_revision) && (base_revision < cr_rev))
-    return out_of_date(full_path, svn_node_file);
+    return svn_error_trace(out_of_date(full_path, svn_node_file));
 
   /* Build a new file baton */
   new_fb = apr_pcalloc(pool, sizeof(*new_fb));
@@ -602,7 +602,7 @@ change_dir_prop(void *dir_baton,
                                       eb->txn_root, db->path, pool));
 
       if (db->base_rev < created_rev)
-        return out_of_date(db->path, svn_node_dir);
+        return svn_error_trace(out_of_date(db->path, svn_node_dir));
     }
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
@@ -786,16 +786,40 @@ static svn_error_t *
 prop_fetch_func(apr_hash_t **props,
                 void *baton,
                 const char *path,
+                svn_revnum_t base_revision,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_fs_root_t *fs_root;
+  svn_error_t *err;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(eb->base_path, path, scratch_pool);
+    }
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
                                scratch_pool));
-  SVN_ERR(svn_fs_node_proplist(props, fs_root, path, result_pool));
+  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
@@ -804,16 +828,90 @@ static svn_error_t *
 kind_fetch_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
+                svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
+  svn_fs_root_t *fs_root;
 
-  SVN_ERR(svn_fs_check_path(&node_kind, eb->txn_root, path, scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_txn_base_revision(eb->txn);
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(eb->base_path, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
 } 
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  svn_fs_root_t *fs_root;
+  svn_error_t *err;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_txn_base_revision(eb->txn);
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(eb->base_path, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -890,9 +988,9 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *editor = e;
 
   shim_callbacks->fetch_props_func = prop_fetch_func;
-  shim_callbacks->fetch_props_baton = eb;
   shim_callbacks->fetch_kind_func = kind_fetch_func;
-  shim_callbacks->fetch_kind_baton = eb;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));

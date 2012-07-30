@@ -170,9 +170,11 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
                     _authz_callback, 1, 1, 0, 0)
 
-    # Check results
-    self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
-    self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")
+    # Check results.
+    # Ignore the order in which the editor delivers the two sibling files.
+    self.assertEqual(set([editor.textdeltas[0].new_data,
+                          editor.textdeltas[1].new_data]),
+                     set(["This is a test.\n", "A test.\n"]))
     self.assertEqual(len(editor.textdeltas), 2)
 
   def test_retrieve_and_change_rev_prop(self):

@@ -531,19 +531,6 @@ svn_wc__min_max_revisions(svn_revnum_t *min_revision,
 
 
 svn_error_t *
-svn_wc__is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__db_is_sparse_checkout(is_sparse_checkout,
-                                                       wc_ctx->db,
-                                                       local_abspath,
-                                                       scratch_pool));
-}
-
-
-svn_error_t *
 svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               svn_wc_context_t *wc_ctx,
                               const char *local_abspath,

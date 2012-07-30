@@ -32,7 +32,7 @@ IF NOT EXIST "imports\" (
 )
 IF NOT EXIST build\imports.done (
   copy /y imports\dev-default.build default.build
-  nant build %NANTARGS%
+  nant prep-dev %NANTARGS%
   IF ERRORLEVEL 1 (
     exit /B 1
   )
@@ -48,14 +48,20 @@ IF NOT ERRORLEVEL 1 (
 )
 POPD
 
+
 taskkill /im svn.exe /f 2> nul:
+taskkill /im svnlook.exe /f 2> nul:
 taskkill /im svnadmin.exe /f 2> nul:
 taskkill /im svnserve.exe /f 2> nul:
 taskkill /im svnrdump.exe /f 2> nul:
 taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+taskkill /im op-depth-test.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
+)
+IF EXIST "%TESTDIR%\swig\" (
+  rmdir /s /q  "%TESTDIR%\swig"
 )
 
 del "%TESTDIR%\tests\*.log" 2> nul:

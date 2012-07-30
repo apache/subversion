@@ -100,7 +100,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       apache_minor_version_wanted_regex=["[1-4]"]
       ;;
     2)
-      apache_minor_version_wanted_regex=["[3-4]"]
+      apache_minor_version_wanted_regex=["[3-5]"]
       ;;
     *)
       AC_MSG_ERROR([unknown APR version])

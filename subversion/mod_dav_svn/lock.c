@@ -149,7 +149,7 @@ unescape_xml(const char **output,
 
   apr_xml_to_text(pool, xml_doc->root, APR_XML_X2T_INNER,
                   xml_doc->namespaces, NULL, output, NULL);
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 

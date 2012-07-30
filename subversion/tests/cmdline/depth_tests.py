@@ -1076,7 +1076,8 @@ def diff_in_depthy_wc(sbox):
     "___________________________________________________________________\n",
     "Deleted: foo\n",
     "## -1 +0,0 ##\n",
-    "-foo-val\n"]
+    "-foo-val\n",
+    "\\ No newline at end of property\n"]
 
   os.chdir(wc_empty)
 

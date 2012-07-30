@@ -1100,7 +1100,7 @@ svn_opt__print_version_info(const char *pgm_name,
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
   SVN_ERR(svn_cmdline_fputs(
-             _("Copyright (C) 2011 The Apache Software Foundation.\n"
+             _("Copyright (C) 2012 The Apache Software Foundation.\n"
                "This software consists of contributions made by many "
                "people; see the NOTICE\n"
                "file for more information.\n"

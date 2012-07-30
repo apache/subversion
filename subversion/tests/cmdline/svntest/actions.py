@@ -129,7 +129,7 @@ def guarantee_empty_repository(path):
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_greek_repository was called once before
 # using this function.
-def guarantee_greek_repository(path):
+def guarantee_greek_repository(path, minor_version):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
 
@@ -139,7 +139,7 @@ def guarantee_greek_repository(path):
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_greek_repos_dir, path, 1):
+  if main.copy_repos(main.pristine_greek_repos_dir, path, 1, 1, minor_version):
     print("ERROR:  copying repository failed.")
     sys.exit(1)
 
@@ -556,9 +556,13 @@ class LogEntry:
       self.revprops = revprops
 
   def assert_changed_paths(self, changed_paths):
-    """Not implemented, so just raises svntest.Failure.
+    """Assert that changed_paths is the same as this entry's changed_paths
+    Raises svntest.Failure if not.
     """
-    raise Failure('NOT IMPLEMENTED')
+    if self.changed_paths != changed_paths:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(changed_paths).splitlines(),
+            pprint.pformat(self.changed_paths).splitlines())))
 
   def assert_revprops(self, revprops):
     """Assert that the dict revprops is the same as this entry's revprops.
@@ -591,11 +595,13 @@ class LogParser:
     self.parser.EndElementHandler = self.handle_end_element
     self.parser.CharacterDataHandler = self.handle_character_data
     # Ignore some things.
-    self.ignore_elements('log', 'paths', 'path', 'revprops')
+    self.ignore_elements('log', 'paths', 'revprops')
     self.ignore_tags('logentry_end', 'author_start', 'date_start', 'msg_start')
     # internal state
     self.cdata = []
     self.property = None
+    self.kind = None
+    self.action = None
     # the result
     self.entries = []
 
@@ -639,6 +645,12 @@ class LogParser:
     self.property = attrs['name']
   def property_end(self):
     self.entries[-1].revprops[self.property] = self.use_cdata()
+  def path_start(self, attrs):
+    self.kind = attrs['kind']
+    self.action = attrs['action']
+  def path_end(self):
+    self.entries[-1].changed_paths[self.use_cdata()] = [{'kind': self.kind,
+                                                         'action': self.action}]
 
 def run_and_verify_log_xml(message=None, expected_paths=None,
                            expected_revprops=None, expected_stdout=None,
@@ -1079,13 +1091,21 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   if dry_run and merge_diff_out != out_dry:
     # Due to the way ra_serf works, it's possible that the dry-run and
     # real merge operations did the same thing, but the output came in
-    # a different order.  Let's see if maybe that's the case.
+    # a different order.  Let's see if maybe that's the case by comparing
+    # the outputs as unordered sets rather than as lists.
     #
-    # NOTE:  Would be nice to limit this dance to serf tests only, but...
-    out_copy = merge_diff_out[:]
-    out_dry_copy = out_dry[:]
-    out_copy.sort()
-    out_dry_copy.sort()
+    # This now happens for other RA layers with modern APR because the
+    # hash order now varies.
+    #
+    # The different orders of the real and dry-run merges may cause
+    # the "Merging rX through rY into" lines to be duplicated a
+    # different number of times in the two outputs.  The list-set
+    # conversion removes duplicates so these differences are ignored.
+    # It also removes "U some/path" duplicate lines.  Perhaps we
+    # should avoid that?
+    out_copy = set(merge_diff_out[:])
+    out_dry_copy = set(out_dry[:])
+
     if out_copy != out_dry_copy:
       print("=============================================================")
       print("Merge outputs differ")
@@ -1198,16 +1218,11 @@ def run_and_verify_patch(dir, patch_path,
     raise verify.SVNUnexpectedStderr
 
   if dry_run and out != out_dry:
-    print("=============================================================")
-    print("Outputs differ")
-    print("'svn patch --dry-run' output:")
-    for x in out_dry:
-      sys.stdout.write(x)
-    print("'svn patch' output:")
-    for x in out:
-      sys.stdout.write(x)
-    print("=============================================================")
-    raise main.SVNUnmatchedError
+    # APR hash order means the output order can vary, assume everything is OK
+    # if only the order changes.
+    out_dry_expected = svntest.verify.UnorderedOutput(out)
+    verify.compare_and_display_lines('dry-run patch output not as expected',
+                                     '', out_dry_expected, out_dry)
 
   def missing_skip(a, b):
     print("=============================================================")
@@ -1230,7 +1245,8 @@ def run_and_verify_patch(dir, patch_path,
 
   # when the expected output is a list, we want a line-by-line
   # comparison to happen instead of a tree comparison
-  if isinstance(output_tree, list):
+  if (isinstance(output_tree, list)
+      or isinstance(output_tree, verify.UnorderedOutput)):
     verify.verify_outputs(None, out, err, output_tree, error_re_string)
     output_tree = None
 
@@ -1503,6 +1519,56 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree):
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
+def run_and_verify_status_xml(expected_entries = [],
+                              *args):
+  """ Run 'status --xml' with arguments *ARGS.  If successful the output
+  is parsed into an XML document and will be verified by comparing against
+  EXPECTED_ENTRIES.
+  """
+
+  exit_code, output, errput = run_and_verify_svn(None, None, [],
+                                                 'status', '--xml', *args)
+
+  if len(errput) > 0:
+    raise Failure
+
+  doc = parseString(''.join(output))
+  entries = doc.getElementsByTagName('entry')
+
+  def getText(nodelist):
+    rc = []
+    for node in nodelist:
+        if node.nodeType == node.TEXT_NODE:
+            rc.append(node.data)
+    return ''.join(rc)
+
+  actual_entries = {}
+  for entry in entries:
+    wcstatus = entry.getElementsByTagName('wc-status')[0]
+    commit = entry.getElementsByTagName('commit')
+    author = entry.getElementsByTagName('author')
+    rstatus = entry.getElementsByTagName('repos-status')
+
+    actual_entry = {'wcprops' : wcstatus.getAttribute('props'),
+                    'wcitem' : wcstatus.getAttribute('item'),
+                    }
+    if wcstatus.hasAttribute('revision'):
+      actual_entry['wcrev'] = wcstatus.getAttribute('revision')
+    if (commit):
+      actual_entry['crev'] = commit[0].getAttribute('revision')
+    if (author):
+      actual_entry['author'] = getText(author[0].childNodes)
+    if (rstatus):
+      actual_entry['rprops'] = rstatus[0].getAttribute('props')
+      actual_entry['ritem'] = rstatus[0].getAttribute('item')
+
+    actual_entries[entry.getAttribute('path')] = actual_entry
+
+  if expected_entries != actual_entries:
+    raise Failure('\n' + '\n'.join(difflib.ndiff(
+          pprint.pformat(expected_entries).splitlines(),
+          pprint.pformat(actual_entries).splitlines())))
+
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,
                                       expected_paths = [],
@@ -1678,7 +1744,8 @@ def run_and_verify_revert(expected_paths, *args):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox, create_wc = True, read_only = False):
+def make_repo_and_wc(sbox, create_wc = True, read_only = False,
+                     minor_version = None):
   """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
   If READ_ONLY is False, a dedicated repository will be created, at the path
@@ -1693,7 +1760,7 @@ def make_repo_and_wc(sbox, create_wc = True, read_only = False):
 
   # Create (or copy afresh) a new repos with a greek tree in it.
   if not read_only:
-    guarantee_greek_repository(sbox.repo_dir)
+    guarantee_greek_repository(sbox.repo_dir, minor_version)
 
   if create_wc:
     # Generate the expected output tree.
@@ -1823,7 +1890,7 @@ def create_failing_post_commit_hook(repo_dir):
 # set_prop can be used for properties with NULL characters which are not
 # handled correctly when passed to subprocess.Popen() and values like "*"
 # which are not handled correctly on Windows.
-def set_prop(name, value, path, expected_err=None):
+def set_prop(name, value, path, expected_re_string=None):
   """Set a property with specified value"""
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
@@ -1833,10 +1900,17 @@ def set_prop(name, value, path, expected_err=None):
     value_file.write(value)
     value_file.flush()
     value_file.close()
-    main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
+                                       '-F', value_file_path, name, path)
     os.remove(value_file_path)
   else:
-    main.run_svn(expected_err, 'propset', name, value, path)
+    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
+                                       name, value, path)
+  if expected_re_string:
+    if not expected_re_string.startswith(".*"):
+      expected_re_string = ".*(" + expected_re_string + ")"
+    expected_err = verify.RegexOutput(expected_re_string, match_all=False)
+    verify.verify_outputs(None, None, err, None, expected_err)
 
 def check_prop(name, path, exp_out, revprop=None):
   """Verify that property NAME on PATH has a value of EXP_OUT.

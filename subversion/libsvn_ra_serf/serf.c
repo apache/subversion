@@ -103,12 +103,11 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 
   if (http_auth_types)
     {
-      char *token, *last;
+      char *token;
       char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
       apr_collapse_spaces(auth_types_list, http_auth_types);
-      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+      while ((token = svn_cstring_tokenize(";", &auth_types_list)) != NULL)
         {
-          auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
             *authn_types |= SERF_AUTHN_BASIC;
           else if (svn_cstring_casecmp("digest", token) == 0)
@@ -404,6 +403,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->last_status_code = -1;
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
+  serf_sess->conns[0]->server_cert_failures = 0;
   serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostname = url.hostname;
   serf_sess->conns[0]->useragent = NULL;
@@ -1157,7 +1157,8 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__replay,
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
-  svn_ra_serf__get_deleted_rev
+  svn_ra_serf__get_deleted_rev,
+  svn_ra_serf__register_editor_shim_callbacks
 };
 
 svn_error_t *

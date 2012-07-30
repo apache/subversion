@@ -362,5 +362,5 @@ dav_svn__merge_response(ap_filter_t *output,
   /* send whatever is left in the brigade */
   (void) ap_pass_brigade(output, bb);
 
-  return SVN_NO_ERROR;
+  return NULL;
 }

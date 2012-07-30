@@ -31,6 +31,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,6 +126,11 @@ svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
                                     const char **fspath,
                                     const char *url,
                                     apr_pool_t *pool);
+
+/** Register CALLBACKS to be used with the Ev2 shims in RA_SESSION. */
+svn_error_t *
+svn_ra__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
+                                       svn_delta_shim_callbacks_t *callbacks);
 
 #ifdef __cplusplus
 }

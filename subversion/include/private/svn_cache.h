@@ -295,8 +295,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * svn_string_t; if @a serialize_func is NULL, then the data is
  * assumed to be an svn_stringbuf_t.
  *
- * These caches themselves are thread safe, the shared @a memcache may
- * be not, depending on its creation parameters.
+ * If @a thread_safe is true, and APR is compiled with threads, all
+ * accesses to the cache will be protected with a mutex, if the shared 
+ * @a memcache has also been created with thread_safe flag set.
  *
  * These caches do not support svn_cache__iter.
  */
@@ -307,6 +308,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   svn_cache__deserialize_func_t deserialize,
                                   apr_ssize_t klen,
                                   const char *prefix,
+                                  svn_boolean_t thread_safe,
                                   apr_pool_t *result_pool);
 
 /**
@@ -340,9 +342,9 @@ svn_cache__is_cachable(svn_cache__t *cache,
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
  * setting @a *found to TRUE iff it is in the cache and FALSE if it is
- * not found.  The value is copied into @a result_pool using the copy
+ * not found.  @a key may be NULL in which case @a *found will be
+ * FALSE.  The value is copied into @a result_pool using the deserialize
  * function provided to the cache's constructor.
- * ### what copy function? there are serialize/deserialize functions, no copy functions
  */
 svn_error_t *
 svn_cache__get(void **value,
@@ -355,7 +357,8 @@ svn_cache__get(void **value,
  * Stores the value @a value under the key @a key in @a cache.  Uses @a
  * scratch_pool for temporary allocations.  The cache makes copies of
  * @a key and @a value if necessary (that is, @a key and @a value may
- * have shorter lifetimes than the cache).
+ * have shorter lifetimes than the cache).  @a key may be NULL in which
+ * case the cache will remain unchanged.
  *
  * If there is already a value for @a key, this will replace it.  Bear
  * in mind that in some circumstances this may leak memory (that is,
@@ -399,8 +402,10 @@ svn_cache__iter(svn_boolean_t *completed,
 /**
  * Similar to svn_cache__get() but will call a specific de-serialization
  * function @a func. @a found will be set depending on whether the @a key
- * has been found. Even if that reports @c TRUE, @a values may still return
- * a @c NULL pointer depending on the logic inside @a func.
+ * has been found. Even if that reports @c TRUE, @a value may still return
+ * a @c NULL pointer depending on the logic inside @a func.  For a @a NULL
+ * @a key, no data will be found.  @a value will be allocated in
+ * @a result_pool.
  */
 svn_error_t *
 svn_cache__get_partial(void **value,
@@ -415,8 +420,8 @@ svn_cache__get_partial(void **value,
  * Find the item identified by @a key in the @a cache. If it has been found,
  * call @a func for it and @a baton to potentially modify the data. Changed
  * data will be written back to the cache. If the item cannot be found,
- * @a func does not get called. @a scratch_pool is used for temporary
- * allocations.
+ * or if @a key is NULL, @a func does not get called. @a scratch_pool is
+ * used for temporary allocations.
  */
 svn_error_t *
 svn_cache__set_partial(svn_cache__t *cache,

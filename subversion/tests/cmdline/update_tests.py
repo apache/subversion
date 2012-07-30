@@ -307,6 +307,92 @@ def update_binary_file_2(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(4128)
+def update_binary_file_3(sbox):
+  "update locally modified file to equal versions"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Suck up contents of a test .png file.
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
+
+  # Write our files contents out to disk, in A/theta.
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  # Now, `svn add' that file.
+  svntest.main.run_svn(None, 'add', theta_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit the new binary file, creating revision 2.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Make some mods to the binary files.
+  svntest.main.file_append(theta_path, "foobar")
+  new_theta_contents = theta_contents + "foobar"
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3),
+    })
+
+  # Commit modified working copy, creating revision 3.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now we locally modify the file back to the old version.  
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  # Create expected output tree for an update to rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(status='  '),
+    })
+
+  # Create expected disk tree for the update
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents,
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Do an update from revision 2 and make sure that our binary file
+  # gets reverted to its original contents.
+  # This used to raise a conflict.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '2', wc_dir)
+
+#----------------------------------------------------------------------
+
 def update_missing(sbox):
   "update missing items (by name) in working copy"
 
@@ -1189,6 +1275,7 @@ def another_hudson_problem(sbox):
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None,
                                      expected_output, [],
                                      'up', G_path)
@@ -3142,19 +3229,17 @@ def mergeinfo_update_elision(sbox):
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
   # Make a branch A/B_COPY
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
+  expected_stdout =  verify.UnorderedOutput([
+     "A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "alpha") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "beta") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "F") + "\n",
      "Checked out revision 1.\n",
-     "A         " + B_COPY_path + "\n"],
-    [],
-    'copy',
-    sbox.repo_url + "/A/B",
-    B_COPY_path)
+     "A         " + B_COPY_path + "\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+                                     sbox.repo_url + "/A/B", B_COPY_path)
 
   expected_output = wc.State(wc_dir, {'A/B_COPY' : Item(verb='Adding')})
 
@@ -5682,6 +5767,7 @@ test_list = [ None,
               update_moved_dir_file_add,
               update_moved_dir_dir_add,
               update_moved_dir_file_move,
+              update_binary_file_3,
              ]
 
 if __name__ == '__main__':

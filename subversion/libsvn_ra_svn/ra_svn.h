@@ -87,6 +87,7 @@ struct svn_ra_svn_conn_st {
   apr_hash_t *capabilities;
   int compression_level;
   char *remote_ip;
+  svn_delta_shim_callbacks_t *shim_callbacks;
   apr_pool_t *pool;
 };
 

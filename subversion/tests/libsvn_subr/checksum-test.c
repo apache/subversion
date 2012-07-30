@@ -59,11 +59,34 @@ test_checksum_parse(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_checksum_empty(apr_pool_t *pool)
+{
+  svn_checksum_t *checksum;
+  char data = '\0';
+
+  checksum = svn_checksum_empty_checksum(svn_checksum_md5, pool);
+  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+
+  checksum = svn_checksum_empty_checksum(svn_checksum_sha1, pool);
+  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, &data, 0, pool));
+  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1, &data, 0, pool));
+  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_checksum_parse,
                    "checksum parse"),
+    SVN_TEST_PASS2(test_checksum_empty,
+                   "checksum emptiness"),
     SVN_TEST_NULL
   };

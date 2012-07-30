@@ -428,7 +428,9 @@ int main(int argc, const char *argv[])
   const char *host = NULL;
   int family = APR_INET;
   apr_int32_t sockaddr_info_flags = 0;
+#if APR_HAVE_IPV6
   svn_boolean_t prefer_v6 = FALSE;
+#endif
   svn_boolean_t quiet = FALSE;
   svn_boolean_t is_version = FALSE;
   int mode_opt_count = 0;
@@ -486,7 +488,10 @@ int main(int argc, const char *argv[])
       switch (opt)
         {
         case '6':
+#if APR_HAVE_IPV6
           prefer_v6 = TRUE;
+#endif
+          /* ### Maybe error here if we don't have IPV6 support? */
           break;
 
         case 'h':

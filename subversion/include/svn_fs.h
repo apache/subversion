@@ -250,6 +250,10 @@ svn_fs_upgrade(const char *path,
  * to the Subversion filesystem located in the directory @a path.
  * Use @a pool for necessary allocations.
  *
+ * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
+ * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
+ * verified, global invariants may be verified as well.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
@@ -260,7 +264,9 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool);
+              svn_revnum_t start,
+              svn_revnum_t end,
+              apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -309,8 +315,31 @@ svn_fs_delete_fs(const char *path,
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
  *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_hotcopy2(const char *src_path,
+                const char *dest_path,
+                svn_boolean_t clean,
+                svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy(const char *src_path,
                const char *dest_path,

@@ -1856,7 +1856,7 @@ close_edit(void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         void **edit_baton,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,
@@ -1880,6 +1880,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
+  struct svn_wc__shim_fetch_baton_t *sfb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                 svn_delta_shim_callbacks_default(result_pool);
 
@@ -1932,6 +1933,17 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                             editor,
                                             edit_baton,
                                             result_pool));
+
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = wc_ctx->db;
+  sfb->base_abspath = eb->anchor_abspath;
+  sfb->fetch_base = TRUE;
+
+  shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
+  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_baton = sfb;
+
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, result_pool, scratch_pool));

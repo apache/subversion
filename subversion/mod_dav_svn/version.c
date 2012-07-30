@@ -1180,7 +1180,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! doc)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Sanity check. */
@@ -1191,7 +1191,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
          definitely no lock-tokens to harvest.  This is likely a
          request from an old client. */
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   if ((doc->root->ns == ns)
@@ -1217,7 +1217,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! child)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Then look for N different <lock> structures within. */
@@ -1262,7 +1262,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
     }
 
   *locks = hash;
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 

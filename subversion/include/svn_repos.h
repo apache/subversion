@@ -516,7 +516,29 @@ svn_repos_fs(svn_repos_t *repos);
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
+ *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented by the filesystem backend, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/** 
+ * Like svn_repos_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_hotcopy(const char *src_path,
                   const char *dst_path,
@@ -741,6 +763,17 @@ svn_repos_pre_unlock_hook(svn_repos_t *repos,
 const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
+
+/** Set the environment that @a repos's hooks will inherit to @a hooks_env,
+ * a hash table where keys and values represent names and values of environment
+ * variables. @a hooks_env must live at least as long as @a repos.
+ *
+ * If this function is not called, hooks will run in an empty environment.
+ *
+ * @since New in 1.8. */
+void
+svn_repos_hooks_setenv(svn_repos_t *repos,
+                       apr_hash_t *hooks_env);
 
 /** @} */
 
@@ -2993,6 +3026,10 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  *
  * For compatibility with 1.6, and earlier, @a repos_name can be NULL
  * in which case it is equivalent to a @a repos_name of "".
+ *
+ * @note Presently, @a repos_name must byte-for-byte match the repos_name
+ * specified in the authz file; it is treated as an opaque string, and not
+ * as a dirent.
  *
  * @since New in 1.3.
  */

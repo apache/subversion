@@ -38,6 +38,10 @@ usage: 1. log [PATH][@REV]
     svn log http://www.example.com/repo/project foo.c bar.c
     svn log http://www.example.com/repo/project@50 foo.c bar.c
 
+    This command shows the log entry for the revision the branch
+    ^/branches/foo was created in:
+      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
+
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
                              A revision argument can be one of:
@@ -157,9 +161,10 @@ Valid options:
   --ignore-ancestry        : ignore ancestry when calculating merges
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
-                             ('postpone', 'base', 'mine-conflict',
+                             ('postpone', 'working', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
+                             (shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')
 
 Global options:
   --username ARG           : specify a username ARG

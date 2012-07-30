@@ -147,11 +147,16 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
    If TOKEN is empty, or is already terminated by an EOL marker,
    return TOKEN unmodified. Else, return a new string consisting
    of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL. */
+   The new string is allocated from POOL.
+   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
 static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
+                 apr_pool_t *pool)
 {
   const char *curp;
+
+  if (had_eol)
+    *had_eol = FALSE;
 
   if (token->len == 0)
     return token;
@@ -159,6 +164,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
   curp = token->data + token->len - 1;
   if (*curp == '\r')
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
   else if (*curp != '\n')
@@ -167,6 +174,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
   else
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
 }
@@ -665,18 +674,19 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
+        svn_boolean_t val_has_eol;
 
         /* The last character in a property is often not a newline.
-           Since the diff is not useful anyway for patching properties an
-           eol character is appended when needed to remove those pescious
-           ' \ No newline at end of file' lines. */
+           An eol character is appended to prevent the diff API to add a
+           ' \ No newline at end of file' line. We add 
+           ' \ No newline at end of property' manually if needed. */
         tmp = original_value ? original_value 
                              : svn_string_create_empty(iterpool);
-        orig = maybe_append_eol(tmp, iterpool);
+        orig = maybe_append_eol(tmp, NULL, iterpool);
 
         tmp = propchange->value ? propchange->value :
                                   svn_string_create_empty(iterpool);
-        val = maybe_append_eol(tmp, iterpool);
+        val = maybe_append_eol(tmp, &val_has_eol, iterpool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
                                          iterpool));
@@ -695,7 +705,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                            svn_dirent_local_style(path,
                                                                   iterpool),
                                            encoding, orig, val, iterpool));
-
+        if (!val_has_eol)
+          {
+            const char *s = "\\ No newline at end of property" APR_EOL_STR;
+            apr_size_t len = strlen(s);
+            SVN_ERR(svn_stream_write(outstream, s, &len));
+          }
       }
     }
   svn_pool_destroy(iterpool);
@@ -762,6 +777,9 @@ struct diff_cmd_baton {
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
 
+  /* Whether property differences are ignored. */
+  svn_boolean_t ignore_prop_diff;
+
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
@@ -801,6 +819,10 @@ diff_props_changed(svn_wc_notify_state_t *state,
 {
   apr_array_header_t *props;
   svn_boolean_t show_diff_header;
+
+  /* If property differences are ignored, there's nothing to do. */
+  if (diff_cmd_baton->ignore_prop_diff)
+    return SVN_NO_ERROR;
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
                                scratch_pool));
@@ -1592,7 +1614,7 @@ diff_prepare_repos_repos(const char **url1,
                                  *url1, *rev1, *rev2);
       else
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("Diff targets '%s and '%s' were not found "
+                                 _("Diff targets '%s' and '%s' were not found "
                                    "in the repository at revisions '%ld' and "
                                    "'%ld'"),
                                  *url1, *url2, *rev1, *rev2);
@@ -1988,7 +2010,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
-  SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
+  SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
                                   target,
@@ -2398,6 +2420,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_prop_diff,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2427,6 +2450,7 @@ svn_client_diff6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
@@ -2455,6 +2479,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_prop_diff,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -2480,6 +2505,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;

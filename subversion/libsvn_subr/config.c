@@ -974,5 +974,13 @@ svn_config_get_server_setting_bool(svn_config_t *cfg,
 svn_boolean_t
 svn_config_has_section(svn_config_t *cfg, const char *section)
 {
-  return apr_hash_get(cfg->sections, section, APR_HASH_KEY_STRING) != NULL;
+  cfg_section_t *sec;
+
+  /* Canonicalize the hash key */
+  svn_stringbuf_set(cfg->tmp_key, section);
+  if (! cfg->section_names_case_sensitive)
+    make_hash_key(cfg->tmp_key->data);
+
+  sec = apr_hash_get(cfg->sections, cfg->tmp_key->data, APR_HASH_KEY_STRING);
+  return sec != NULL;
 }

@@ -243,6 +243,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   *pwdb = NULL;
   if (pwdb_path)
     {
+      pwdb_path = svn_dirent_canonicalize(pwdb_path, pool);
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
       err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
@@ -290,6 +291,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       const char *case_force_val;
 
+      authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
       authzdb_path = svn_dirent_join(base, authzdb_path, pool);
       err = svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool);
       if (err)
@@ -1979,7 +1981,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
-  svn_boolean_t changed_paths, strict_node, include_merged_revisions;
+  svn_boolean_t send_changed_paths, strict_node, include_merged_revisions;
   apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
   char *revprop_word;
   svn_ra_svn_item_t *elt;
@@ -1988,7 +1990,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   log_baton_t lb;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
-                                 &start_rev, &end_rev, &changed_paths,
+                                 &start_rev, &end_rev, &send_changed_paths,
                                  &strict_node, &limit,
                                  &include_merged_revs_param,
                                  &revprop_word, &revprop_items));
@@ -2045,7 +2047,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__log(full_paths, start_rev, end_rev,
-                                   limit, changed_paths, strict_node,
+                                   limit, send_changed_paths, strict_node,
                                    include_merged_revisions, revprops,
                                    pool)));
 
@@ -2054,7 +2056,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.conn = conn;
   lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
-                            (int) limit, changed_paths, strict_node,
+                            (int) limit, send_changed_paths, strict_node,
                             include_merged_revisions, revprops,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
@@ -2947,6 +2949,24 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
+/* Callback which receives hook environment variables from the hook
+ * environment configuration section,
+ * An implementation of svn_config_enumerator2_t. */
+static svn_boolean_t
+hooks_env_conf_cb(const char *name,
+                  const char *value,
+                  void *baton,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *hooks_env = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get(hooks_env);
+
+  apr_hash_set(hooks_env, apr_pstrdup(hash_pool, name),
+               APR_HASH_KEY_STRING, apr_pstrdup(hash_pool, value));
+
+  return TRUE;
+}
+
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B.  Set B->repos's client
@@ -3036,6 +3056,17 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  "No access allowed to this repository",
                                  b, conn, pool);
+
+  /* If a hook environment has been configured, set it up. */
+  if (svn_config_has_section(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV))
+    {
+      apr_hash_t *hooks_env = apr_hash_make(pool);
+
+      svn_config_enumerate2(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV,
+                            hooks_env_conf_cb, hooks_env, pool);
+
+      svn_repos_hooks_setenv(b->repos, hooks_env);
+    }
 
   return SVN_NO_ERROR;
 }

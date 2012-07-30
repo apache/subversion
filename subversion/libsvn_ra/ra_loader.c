@@ -1304,6 +1304,15 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
 }
 
 
+svn_error_t *
+svn_ra__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                       svn_delta_shim_callbacks_t *callbacks)
+{
+  SVN_ERR(session->vtable->register_editor_shim_callbacks(session, callbacks));
+  return SVN_NO_ERROR;
+}
+
+
 /* Return the library version number. */
 const svn_version_t *
 svn_ra_version(void)

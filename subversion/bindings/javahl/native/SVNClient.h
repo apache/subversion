@@ -177,13 +177,13 @@ class SVNClient :public SVNBase
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, StringArray &changelists,
@@ -212,7 +212,7 @@ class SVNClient :public SVNBase
             OutputStream &outputStream, svn_depth_t depth,
             StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps);
 
   Path m_lastPath;
   ClientContext context;

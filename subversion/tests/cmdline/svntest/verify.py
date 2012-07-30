@@ -25,7 +25,8 @@
 ######################################################################
 
 import re, sys
-from difflib import unified_diff
+from difflib import unified_diff, ndiff
+import pprint
 
 import svntest
 
@@ -66,6 +67,10 @@ class SVNUnexpectedExitCode(SVNUnexpectedOutput):
 class SVNIncorrectDatatype(SVNUnexpectedOutput):
   """Exception raised if invalid input is passed to the
   run_and_verify_* API"""
+  pass
+
+class SVNDumpParseError(svntest.Failure):
+  """Exception raised if parsing a dump file fails"""
   pass
 
 
@@ -397,3 +402,193 @@ def verify_exit_code(message, actual, expected,
     display_lines(message, "Exit Code",
                   str(expected) + '\n', str(actual) + '\n')
     raise raisable
+
+# A simple dump file parser.  While sufficient for the current
+# testsuite it doesn't cope with all valid dump files.
+class DumpParser:
+  def __init__(self, lines):
+    self.current = 0
+    self.lines = lines
+    self.parsed = {}
+
+  def parse_line(self, regex, required=True):
+    m = re.match(regex, self.lines[self.current])
+    if not m:
+      if required:
+        raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                % (regex, self.current,
+                                   self.lines[self.current]))
+      else:
+        return None
+    self.current += 1
+    return m.group(1)
+
+  def parse_blank(self, required=True):
+    if self.lines[self.current] != '\n':  # Works on Windows
+      if required:
+        raise SVNDumpParseError("expected blank at line %d\n%s"
+                                % (self.current, self.lines[self.current]))
+      else:
+        return False
+    self.current += 1
+    return True
+
+  def parse_format(self):
+    return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
+
+  def parse_uuid(self):
+    return self.parse_line('UUID: ([0-9a-z-]+)$')
+
+  def parse_revision(self):
+    return self.parse_line('Revision-number: ([0-9]+)$')
+
+  def parse_prop_length(self, required=True):
+    return self.parse_line('Prop-content-length: ([0-9]+)$', required)
+
+  def parse_content_length(self, required=True):
+    return self.parse_line('Content-length: ([0-9]+)$', required)
+
+  def parse_path(self):
+    path = self.parse_line('Node-path: (.+)$', required=False)
+    if not path and self.lines[self.current] == 'Node-path: \n':
+      self.current += 1
+      path = ''
+    return path
+
+  def parse_kind(self):
+    return self.parse_line('Node-kind: (.+)$', required=False)
+
+  def parse_action(self):
+    return self.parse_line('Node-action: ([0-9a-z-]+)$')
+
+  def parse_copyfrom_rev(self):
+    return self.parse_line('Node-copyfrom-rev: ([0-9]+)$', required=False)
+
+  def parse_copyfrom_path(self):
+    path = self.parse_line('Node-copyfrom-path: (.+)$', required=False)
+    if not path and self.lines[self.current] == 'Node-copyfrom-path: \n':
+      self.current += 1
+      path = ''
+    return path
+
+  def parse_copy_md5(self):
+    return self.parse_line('Text-copy-source-md5: ([0-9a-z]+)$', required=False)
+
+  def parse_copy_sha1(self):
+    return self.parse_line('Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
+
+  def parse_text_md5(self):
+    return self.parse_line('Text-content-md5: ([0-9a-z]+)$', required=False)
+
+  def parse_text_sha1(self):
+    return self.parse_line('Text-content-sha1: ([0-9a-z]+)$', required=False)
+
+  def parse_text_length(self):
+    return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
+
+  # One day we may need to parse individual property name/values into a map
+  def get_props(self):
+    props = []
+    while not re.match('PROPS-END$', self.lines[self.current]):
+      props.append(self.lines[self.current])
+      self.current += 1
+    self.current += 1
+    return props
+
+  def get_content(self, length):
+    content = ''
+    while len(content) < length:
+      content += self.lines[self.current]
+      self.current += 1
+    if len(content) == length + 1:
+      content = content[:-1]
+    elif len(content) != length:
+      raise SVNDumpParseError("content length expected %d actual %d at line %d"
+                              % (length, len(content), self.current))
+    return content
+
+  def parse_one_node(self):
+    node = {}
+    node['kind'] = self.parse_kind()
+    action = self.parse_action()
+    node['copyfrom_rev'] = self.parse_copyfrom_rev()
+    node['copyfrom_path'] = self.parse_copyfrom_path()
+    node['copy_md5'] = self.parse_copy_md5()
+    node['copy_sha1'] = self.parse_copy_sha1()
+    node['prop_length'] = self.parse_prop_length(required=False)
+    node['text_length'] = self.parse_text_length()
+    node['text_md5'] = self.parse_text_md5()
+    node['text_sha1'] = self.parse_text_sha1()
+    node['content_length'] = self.parse_content_length(required=False)
+    self.parse_blank()
+    if node['prop_length']:
+      node['props'] = self.get_props()
+    if node['text_length']:
+      node['content'] = self.get_content(int(node['text_length']))
+    # Hard to determine how may blanks is 'correct' (a delete that is
+    # followed by an add that is a replace and a copy has one fewer
+    # than expected but that can't be predicted until seeing the add)
+    # so allow arbitrary number
+    blanks = 0
+    while self.current < len(self.lines) and self.parse_blank(required=False):
+      blanks += 1
+    node['blanks'] = blanks
+    return action, node
+
+  def parse_all_nodes(self):
+    nodes = {}
+    while True:
+      if self.current >= len(self.lines):
+        break
+      path = self.parse_path()
+      if not path and not path is '':
+        break
+      if not nodes.get(path):
+        nodes[path] = {}
+      action, node = self.parse_one_node()
+      if nodes[path].get(action):
+        raise SVNDumpParseError("duplicate action '%s' for node '%s' at line %d"
+                                % (action, path, self.current))
+      nodes[path][action] = node
+    return nodes
+
+  def parse_one_revision(self):
+    revision = {}
+    number = self.parse_revision()
+    revision['prop_length'] = self.parse_prop_length()
+    revision['content_length'] = self.parse_content_length()
+    self.parse_blank()
+    revision['props'] = self.get_props()
+    self.parse_blank()
+    revision['nodes'] = self.parse_all_nodes()
+    return number, revision
+
+  def parse_all_revisions(self):
+    while self.current < len(self.lines):
+      number, revision = self.parse_one_revision()
+      if self.parsed.get(number):
+        raise SVNDumpParseError("duplicate revision %d at line %d"
+                                % (number, self.current))
+      self.parsed[number] = revision
+
+  def parse(self):
+    self.parsed['format'] = self.parse_format()
+    self.parse_blank()
+    self.parsed['uuid'] = self.parse_uuid()
+    self.parse_blank()
+    self.parse_all_revisions()
+    return self.parsed
+
+def compare_dump_files(message, label, expected, actual):
+  """Parse two dump files EXPECTED and ACTUAL, both of which are lists
+  of lines as returned by run_and_verify_dump, and check that the same
+  revisions, nodes, properties, etc. are present in both dumps.
+  """
+
+  parsed_expected = DumpParser(expected).parse()
+  parsed_actual = DumpParser(actual).parse()
+
+  if parsed_expected != parsed_actual:
+    raise svntest.Failure('\n' + '\n'.join(ndiff(
+          pprint.pformat(parsed_expected).splitlines(),
+          pprint.pformat(parsed_actual).splitlines())))

@@ -265,15 +265,14 @@ ver_minor=`echo $VERSION | cut -d '.' -f 2`
 ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
-
-if [ "$VERSION" != "trunk" ]; then
+if [ "$VERSION" != "trunk" ] && [ "$VERSION" != "nightly" ]; then
   sed \
-   -e "/#define *SVN_VER_MAJOR/s/[0-9]\\+/$ver_major/" \
-   -e "/#define *SVN_VER_MINOR/s/[0-9]\\+/$ver_minor/" \
-   -e "/#define *SVN_VER_PATCH/s/[0-9]\\+/$ver_patch/" \
+   -e "/#define *SVN_VER_MAJOR/s/[0-9][0-9]*/$ver_major/" \
+   -e "/#define *SVN_VER_MINOR/s/[0-9][0-9]*/$ver_minor/" \
+   -e "/#define *SVN_VER_PATCH/s/[0-9][0-9]*/$ver_patch/" \
    -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
    -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
-   -e "/#define *SVN_VER_REVISION/s/[0-9]\\+/$REVISION/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9][0-9]*/$REVISION/" \
     < "$vsn_file" > "$vsn_file.tmp"
 else
   # Don't munge the version number if we are creating a nightly trunk tarball
@@ -283,7 +282,6 @@ else
    -e "/#define *SVN_VER_REVISION/s/[0-9]\\+/$REVISION/" \
     < "$vsn_file" > "$vsn_file.tmp"
 fi
-
 mv -f "$vsn_file.tmp" "$vsn_file"
 
 echo "Creating svn_version.h.dist, for use in tagging matching tarball..."

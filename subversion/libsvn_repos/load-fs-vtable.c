@@ -160,12 +160,12 @@ change_rev_prop(svn_repos_t *repos,
                 apr_pool_t *pool)
 {
   if (validate_props)
-    return svn_fs_change_rev_prop2(svn_repos_fs(repos), revision, name,
-                                   NULL, value, pool);
-  else
     return svn_repos_fs_change_rev_prop4(repos, revision, NULL, name,
                                          NULL, value, FALSE, FALSE,
                                          NULL, NULL, pool);
+  else
+    return svn_fs_change_rev_prop2(svn_repos_fs(repos), revision, name,
+                                   NULL, value, pool);
 }
 
 /* Change property NAME to VALUE for PATH in TXN_ROOT.  If
@@ -487,7 +487,7 @@ new_revision_record(void **revision_baton,
      several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) (rb->rev) - (head_rev + 1);
+  rb->rev_offset = (apr_int32_t) ((rb->rev) - (head_rev + 1));
 
   if ((rb->rev > 0) && (! rb->skipped))
     {
@@ -787,6 +787,10 @@ delete_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
+  /* If we're skipping this revision, we're done here. */
+  if (rb->skipped)
+    return SVN_NO_ERROR;
+
   return change_node_prop(rb->txn_root, nb->path, name, NULL,
                           rb->pb->validate_props, nb->pool);
 }
@@ -830,7 +834,10 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
-    return SVN_NO_ERROR;
+    {
+      *handler = NULL;
+      return SVN_NO_ERROR;
+    }
 
   return svn_fs_apply_textdelta(handler, handler_baton,
                                 rb->txn_root, nb->path,
@@ -851,7 +858,10 @@ set_fulltext(svn_stream_t **stream,
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
-    return SVN_NO_ERROR;
+    {
+      *stream = NULL;
+      return SVN_NO_ERROR;
+    }
 
   return svn_fs_apply_text(stream,
                            rb->txn_root, nb->path,
@@ -890,19 +900,28 @@ close_revision(void *baton)
   const char *conflict_msg = NULL;
   svn_revnum_t committed_rev;
   svn_error_t *err;
+  const char *txn_name;
 
   /* If we're skipping this revision or it has an invalid revision
      number, we're done here. */
   if (rb->skipped || (rb->rev <= 0))
     return SVN_NO_ERROR;
 
+  /* Get the txn name, if it will be needed. */
+  if (pb->use_pre_commit_hook || pb->use_post_commit_hook)
+    {
+      err = svn_fs_txn_name(&txn_name, rb->txn, rb->pool);
+      if (err)
+        {
+          svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
+          return svn_error_trace(err);
+        }
+    }
+
   /* Run the pre-commit hook, if so commanded. */
   if (pb->use_pre_commit_hook)
     {
-      const char *txn_name;
-      err = svn_fs_txn_name(&txn_name, rb->txn, rb->pool);
-      if (! err)
-        err = svn_repos__hooks_pre_commit(pb->repos, txn_name, rb->pool);
+      err = svn_repos__hooks_pre_commit(pb->repos, txn_name, rb->pool);
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
@@ -935,7 +954,7 @@ close_revision(void *baton)
   if (pb->use_post_commit_hook)
     {
       if ((err = svn_repos__hooks_post_commit(pb->repos, committed_rev,
-                                              rb->pool)))
+                                              txn_name, rb->pool)))
         return svn_error_create
           (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
            _("Commit succeeded, but post-commit hook failed"));

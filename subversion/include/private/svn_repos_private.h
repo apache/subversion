@@ -44,6 +44,14 @@ extern "C" {
  *
  * Use @a pool for temporary allocations.
  *
+ * @note This function is used to implement server-side validation.
+ * Consequently, if you make this function stricter in what it accepts, you
+ * (a) break svnsync'ing of existing repositories that contain now-invalid
+ * properties, (b) do not preclude such invalid values from entering the
+ * repository via tools that use the svn_fs_* API directly (possibly
+ * including svnadmin and svnlook).  This has happened before and there
+ * are known (documented, but unsupported) upgrade paths in some cases.
+ * 
  * @since New in 1.7.
  */
 svn_error_t *

@@ -4715,58 +4715,8 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-
 
 /*** Returning editors. ***/
-
-struct fetch_baton
-{
-  svn_wc__db_t *db;
-  const char *target_abspath;
-};
-
-static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fpb = baton;
-  const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
-                                              scratch_pool);
-  svn_error_t *err;
-
-  err = svn_wc__db_read_props(props, fpb->db, local_abspath,
-                              result_pool, scratch_pool);
-
-  /* If the path doesn't exist, just return an empty set of props. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      *props = apr_hash_make(result_pool);
-    }
-  else if (err)
-    return svn_error_trace(err);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
-                void *baton,
-                const char *path,
-                apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fpb = baton;
-  const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
-                                              scratch_pool);
-
-  SVN_ERR(svn_wc__db_read_kind(kind, fpb->db, local_abspath, FALSE,
-                               scratch_pool));
-  
-  return SVN_NO_ERROR;
-}
 
 /* Helper for the three public editor-supplying functions. */
 static svn_error_t *
@@ -4805,7 +4755,7 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  struct fetch_baton *fpb;
+  struct svn_wc__shim_fetch_baton_t *sfb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                 svn_delta_shim_callbacks_default(edit_pool);
 
@@ -5035,14 +4985,15 @@ make_editor(svn_revnum_t *target_revision,
                                             edit_baton,
                                             result_pool));
 
-  fpb = apr_palloc(result_pool, sizeof(*fpb));
-  fpb->db = db;
-  fpb->target_abspath = eb->target_abspath;
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = db;
+  sfb->base_abspath = eb->anchor_abspath;
+  sfb->fetch_base = TRUE;
 
-  shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = fpb;
-  shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_props_baton = fpb;
+  shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
+  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, result_pool, scratch_pool));
@@ -5052,7 +5003,7 @@ make_editor(svn_revnum_t *target_revision,
 
 
 svn_error_t *
-svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
@@ -5095,7 +5046,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
-svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,

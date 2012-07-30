@@ -114,6 +114,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
         tgt_peg_revision.kind = svn_opt_revision_base;
     }
 
+  SVN_ERR_W(svn_cl__check_related_source_and_target(source, &src_peg_revision,
+                                                    target, &tgt_peg_revision,
+                                                    ctx, pool),
+            _("Source and target must be different but related branches"));
+
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {

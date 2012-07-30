@@ -1699,7 +1699,7 @@ apply_hunk(patch_target_t *target, target_content_t *content,
                                                    &eol_str, &eof,
                                                    iterpool, iterpool));
       lines_read++;
-      if (! eof && lines_read > hi->fuzz &&
+      if (lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
           apr_size_t len;
@@ -2718,7 +2718,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
   empty_dirs = apr_hash_make(scratch_pool);
   non_empty_dirs = apr_hash_make(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < targets_info->nelts; i++)
+  for (i = 0; i < deleted_targets->nelts; i++)
     {
       svn_boolean_t parent_empty;
       patch_target_info_t *target_info;
@@ -2729,7 +2729,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
+      target_info = APR_ARRAY_IDX(deleted_targets, i, patch_target_info_t *);
 
       parent = svn_dirent_dirname(target_info->local_abspath, iterpool);
 

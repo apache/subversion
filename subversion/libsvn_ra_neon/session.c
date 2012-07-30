@@ -590,10 +590,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 #ifdef SVN_NEON_0_26
   if (http_auth_types)
     {
-      char *token, *last;
+      char *token;
       char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
       apr_collapse_spaces(auth_types_list, http_auth_types);
-      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+      while ((token = svn_cstring_tokenize(";", &auth_types_list)) != NULL)
         {
           auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
@@ -985,13 +985,15 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
       if (authorities != NULL)
         {
-          char *files, *file, *last;
-          files = apr_pstrdup(pool, authorities);
+          int i;
+          apr_array_header_t *files = svn_cstring_split(authorities, ";", TRUE,
+                                                        pool);
 
-          while ((file = apr_strtok(files, ";", &last)) != NULL)
+          for (i = 0; i < files->nelts; ++i)
             {
               ne_ssl_certificate *ca_cert;
-              files = NULL;
+              const char *file = APR_ARRAY_IDX(files, i, const char *);
+
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
@@ -1227,7 +1229,8 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
   svn_ra_neon__replay_range,
-  svn_ra_neon__get_deleted_rev
+  svn_ra_neon__get_deleted_rev,
+  svn_ra_neon__register_editor_shim_callbacks
 };
 
 svn_error_t *

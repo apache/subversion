@@ -1612,6 +1612,11 @@ class TestFactory:
 
   def ensure_path_var(self, wc, pathelements):
     "Given a path in a working copy, make sure we have a variable for it."
+
+    # special case: if a path is '.', simply use wc_dir.
+    if pathelements == ['.']:
+      return wc.py, wc.realpath
+
     name = "_".join(pathelements)
 
     if wc.suffix is not None:

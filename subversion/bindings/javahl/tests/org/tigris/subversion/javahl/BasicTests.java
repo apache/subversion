@@ -2674,7 +2674,8 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.propertySet(aPath, "testprop", "Test property value." + NL,
+                           false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false);
@@ -2692,7 +2693,8 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.propertySet(aPath, "testprop", "Test property value." + NL,
+                           false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false);

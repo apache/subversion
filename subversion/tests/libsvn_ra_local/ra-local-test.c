@@ -125,7 +125,7 @@ try_split_url(const char *url, apr_pool_t *pool)
   err = svn_ra_local__split_URL(&repos, &repos_path, &fs_path, url, pool);
 
   if (! err)
-    return SVN_NO_ERROR;
+    return APR_SUCCESS;
 
   apr_err = err->apr_err;
   svn_error_clear(err);

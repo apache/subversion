@@ -132,7 +132,7 @@ test_spillbuf_file(apr_pool_t *pool)
   int i;
   const char *readptr;
   apr_size_t readlen;
-  int cur_index;
+  apr_size_t cur_index;
 
   /* Place enough data into the buffer to cause a spill to disk. Note that
      we are writing data that is *smaller* than the blocksize.  */
@@ -277,6 +277,55 @@ test_spillbuf_reader(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_spillbuf_stream(apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream__from_spillbuf(8 /* blocksize */,
+                                                   15 /* maxsize */,
+                                                   pool);
+  char readbuf[256];
+  apr_size_t readlen;
+  apr_size_t writelen;
+
+  writelen = 6;
+  SVN_ERR(svn_stream_write(stream, "abcdef", &writelen));
+  SVN_ERR(svn_stream_write(stream, "ghijkl", &writelen));
+  /* now: two blocks of 8 and 4 bytes  */
+
+  readlen = 8;
+  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_TEST_ASSERT(readlen == 8
+                  && memcmp(readbuf, "abcdefgh", 8) == 0);
+  /* now: one block of 4 bytes  */
+
+  SVN_ERR(svn_stream_write(stream, "mnopqr", &writelen));
+  /* now: two blocks of 8 and 2 bytes  */
+
+  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_TEST_ASSERT(readlen == 8
+                  && memcmp(readbuf, "ijklmnop", 8) == 0);
+  /* now: one block of 2 bytes  */
+
+  SVN_ERR(svn_stream_write(stream, "stuvwx", &writelen));
+  SVN_ERR(svn_stream_write(stream, "ABCDEF", &writelen));
+  SVN_ERR(svn_stream_write(stream, "GHIJKL", &writelen));
+  /* now: two blocks of 8 and 6 bytes, and 6 bytes spilled to a file  */
+
+  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_TEST_ASSERT(readlen == 8
+                  && memcmp(readbuf, "qrstuvwx", 8) == 0);
+  readlen = 6;
+  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_TEST_ASSERT(readlen == 6
+                  && memcmp(readbuf, "ABCDEF", 6) == 0);
+  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_TEST_ASSERT(readlen == 6
+                  && memcmp(readbuf, "GHIJKL", 6) == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -287,5 +336,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_spillbuf_interleaving,
                    "interleaving reads and writes"),
     SVN_TEST_PASS2(test_spillbuf_reader, "spill buffer reader test"),
+    SVN_TEST_PASS2(test_spillbuf_stream, "spill buffer stream test"),
     SVN_TEST_NULL
   };

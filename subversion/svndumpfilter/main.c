@@ -110,7 +110,10 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 }
 
 
-/* Prefix matching function to compare node-path with set of prefixes. */
+/* Compare the node-path PATH with the (const char *) prefixes in PFXLIST.
+ * Return TRUE if any prefix is a prefix of PATH (matching whole path
+ * components); FALSE otherwise.
+ * PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
@@ -125,7 +128,7 @@ ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
       if (path_len < pfx_len)
         continue;
       if (strncmp(path, pfx, pfx_len) == 0
-          && (path[pfx_len] == '\0' || path[pfx_len] == '/'))
+          && (pfx_len == 1 || path[pfx_len] == '\0' || path[pfx_len] == '/'))
         return TRUE;
     }
 
@@ -134,7 +137,8 @@ ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 
 
 /* Check whether we need to skip this PATH based on its presence in
-   the PREFIXES list, and the DO_EXCLUDE option. */
+   the PREFIXES list, and the DO_EXCLUDE option.
+   PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
 static APR_INLINE svn_boolean_t
 skip_path(const char *path, const apr_array_header_t *prefixes,
           svn_boolean_t do_exclude, svn_boolean_t glob)

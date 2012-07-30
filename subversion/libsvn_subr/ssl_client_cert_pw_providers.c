@@ -63,8 +63,9 @@ typedef struct ssl_client_cert_pw_file_provider_baton_t
 /* This implements the svn_auth__password_get_t interface.
    Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;
    ignore other parameters. */
-svn_boolean_t
-svn_auth__ssl_client_cert_pw_get(const char **passphrase,
+svn_error_t *
+svn_auth__ssl_client_cert_pw_get(svn_boolean_t *done,
+                                 const char **passphrase,
                                  apr_hash_t *creds,
                                  const char *realmstring,
                                  const char *username,
@@ -77,15 +78,18 @@ svn_auth__ssl_client_cert_pw_get(const char **passphrase,
   if (str && str->data)
     {
       *passphrase = str->data;
-      return TRUE;
+      *done = TRUE;
+      return SVN_NO_ERROR;
     }
+  *done = FALSE;
   return FALSE;
 }
 
 /* This implements the svn_auth__password_set_t interface.
    Store PASSPHRASE in CREDS; ignore other parameters. */
-svn_boolean_t
-svn_auth__ssl_client_cert_pw_set(apr_hash_t *creds,
+svn_error_t *
+svn_auth__ssl_client_cert_pw_set(svn_boolean_t *done,
+                                 apr_hash_t *creds,
                                  const char *realmstring,
                                  const char *username,
                                  const char *passphrase,
@@ -95,7 +99,8 @@ svn_auth__ssl_client_cert_pw_set(apr_hash_t *creds,
 {
   apr_hash_set(creds, AUTHN_PASSPHRASE_KEY, APR_HASH_KEY_STRING,
                svn_string_create(passphrase, pool));
-  return TRUE;
+  *done = TRUE;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -137,8 +142,11 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
       svn_error_clear(err);
       if (! err && creds_hash)
         {
-          if (!passphrase_get(&password, creds_hash, realmstring,
-                              NULL, parameters, non_interactive, pool))
+          svn_boolean_t done;
+
+          SVN_ERR(passphrase_get(&done, &password, creds_hash, realmstring,
+                                 NULL, parameters, non_interactive, pool));
+          if (!done)
             password = NULL;
         }
     }
@@ -176,16 +184,9 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
                  APR_HASH_KEY_STRING) != NULL;
-  const char *store_ssl_client_cert_pp_plaintext =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-                 APR_HASH_KEY_STRING);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  ssl_client_cert_pw_file_provider_baton_t *b =
-    (ssl_client_cert_pw_file_provider_baton_t *)provider_baton;
-
   svn_boolean_t no_auth_cache =
     (! creds->may_save) || (apr_hash_get(parameters,
                                          SVN_AUTH_PARAM_NO_AUTH_CACHE,
@@ -219,6 +220,16 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
         }
       else
         {
+#ifdef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+          may_save_passphrase = FALSE;
+#else
+          const char *store_ssl_client_cert_pp_plaintext =
+            apr_hash_get(parameters,
+                         SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                         APR_HASH_KEY_STRING);
+          ssl_client_cert_pw_file_provider_baton_t *b =
+            (ssl_client_cert_pw_file_provider_baton_t *)provider_baton;
+
           if (svn_cstring_casecmp(store_ssl_client_cert_pp_plaintext,
                                   SVN_CONFIG_ASK) == 0)
             {
@@ -297,13 +308,14 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
                 store_ssl_client_cert_pp_plaintext,
                 SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT);
             }
+#endif
         }
 
       if (may_save_passphrase)
         {
-          *saved = passphrase_set(creds_hash, realmstring,
-                                  NULL, creds->password, parameters,
-                                  non_interactive, pool);
+          SVN_ERR(passphrase_set(saved, creds_hash, realmstring,
+                                 NULL, creds->password, parameters,
+                                 non_interactive, pool));
 
           if (*saved && passtype)
             {

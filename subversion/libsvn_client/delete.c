@@ -39,6 +39,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 
 #include "svn_private_config.h"
 
@@ -187,6 +188,9 @@ single_repos_delete(svn_ra_session_t *ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
@@ -271,6 +275,12 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
                        relpaths_list);
           APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
         }
+
+      /* Check we identified a non-root relpath.  Return an RA error
+         code for 1.6 compatibility. */
+      if (!repos_relpath || !*repos_relpath)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 "URL '%s' not within a repository", uri);
 
       /* Now, test to see if the thing actually exists. */
       SVN_ERR(svn_ra_check_path(ra_session, repos_relpath, SVN_INVALID_REVNUM,

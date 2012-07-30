@@ -552,3 +552,56 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
   return svn_error_trace(svn_spillbuf__write(&reader->buf, data, len,
                                              scratch_pool));
 }
+
+
+struct spillbuf_baton
+{
+  svn_spillbuf_reader_t *reader;
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+read_handler_spillbuf(void *baton, char *buffer, apr_size_t *len)
+{
+  struct spillbuf_baton *sb = baton;
+
+  SVN_ERR(svn_spillbuf__reader_read(len, sb->reader, buffer, *len,
+                                    sb->scratch_pool));
+
+  svn_pool_clear(sb->scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_handler_spillbuf(void *baton, const char *data, apr_size_t *len)
+{
+  struct spillbuf_baton *sb = baton;
+
+  SVN_ERR(svn_spillbuf__reader_write(sb->reader, data, *len, sb->scratch_pool));
+
+  svn_pool_clear(sb->scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream__from_spillbuf(apr_size_t blocksize,
+                          apr_size_t maxsize,
+                          apr_pool_t *result_pool)
+{
+  svn_stream_t *stream;
+  struct spillbuf_baton *sb = apr_pcalloc(result_pool, sizeof(*sb));
+
+  sb->reader = svn_spillbuf__reader_create(blocksize, maxsize, result_pool);
+  sb->scratch_pool = svn_pool_create(result_pool);
+
+  stream = svn_stream_create(sb, result_pool);
+
+  svn_stream_set_read(stream, read_handler_spillbuf);
+  svn_stream_set_write(stream, write_handler_spillbuf);
+
+
+  return stream;
+}

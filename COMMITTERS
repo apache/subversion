@@ -137,7 +137,7 @@ Commit access for specific areas:
        madanus   Madan U S <madan@collab.net>                (svnmerge) [EMAIL
                                                              IS BOUNCING]
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
-        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py,
+        bhuvan   Bhuvaneswaran A <bhuvan@apache.org>         (svn2feed.py,
                                                               build/hudson)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
@@ -154,12 +154,15 @@ Commit access for specific areas:
                                                               tools/buildbot)
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
          arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
+          joes   Joe Schaefer <joe_schaefer@yahoo.com>       (svnpubsub)
+
 
   Translation of message files:
 
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
     jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
+      astieger   Andreas Stieger <andreas.stieger@gmx.de>    (po: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)

@@ -1258,7 +1258,7 @@ def actual_only_node_behaviour(sbox):
   # merge
   # note: this is intentionally a no-op merge that does not record mergeinfo
   expected_stdout = None
-  expected_stderr = ".*foo.*does not exist.*"
+  expected_stderr = ".*foo.*was not found.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "merge", '--ignore-ancestry', '-c', '4',
                      A_copy_url + '/mu', foo_path)

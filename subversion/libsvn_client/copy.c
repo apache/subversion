@@ -44,6 +44,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
 
 
@@ -98,7 +99,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_wc__node_get_origin(NULL, &src_revnum,
                                       &repos_relpath, &repos_root_url,
-                                      NULL,
+                                      NULL, NULL,
                                       ctx->wc_ctx, local_abspath, FALSE,
                                       pool, pool));
 
@@ -113,20 +114,11 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
-         reparent to the target URL here, just to keep the code simple.
-         We could, as an alternative, first see if the target URL was a
-         child of the session URL and use the relative "remainder",
-         falling back to this reparenting as necessary.  */
-      const char *old_session_url = NULL;
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
-                                                ra_session, src_url, pool));
+      /* Fetch any existing (explicit) mergeinfo. */
       SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
-                                              "", src_revnum,
+                                              src_url, src_revnum,
                                               svn_mergeinfo_inherited,
                                               TRUE, pool));
-      if (old_session_url)
-        SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
 
   *target_mergeinfo = src_mergeinfo;
@@ -981,7 +973,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
       else
         {
-          const char *old_url = NULL;
+          const char *old_url;
 
           src_rel = NULL;
           SVN_ERR_ASSERT(! is_move);
@@ -1098,6 +1090,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
@@ -1410,6 +1405,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                FALSE, FALSE, ctx, pool));
 
   /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
@@ -1512,7 +1510,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             pair->src_original,
                                             tmp_abspath,
                                             &pair->src_peg_revision,
-                                            &pair->src_op_revision, NULL,
+                                            &pair->src_op_revision,
                                             svn_depth_infinity,
                                             ignore_externals, FALSE,
                                             &sleep_needed, ctx, pool);
@@ -1567,27 +1565,18 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   else if (pair->src_kind == svn_node_file)
     {
-      svn_stream_t *fstream;
-      const char *new_text_path;
       apr_hash_t *new_props;
       const char *src_rel;
-      svn_stream_t *new_base_contents;
-
-      SVN_ERR(svn_stream_open_unique(&fstream, &new_text_path, NULL,
-                                     svn_io_file_del_on_pool_cleanup, pool,
-                                     pool));
+      svn_stream_t *new_base_contents = svn_stream_buffered(pool);
 
       SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
                                                   pair->src_abspath_or_url,
                                                   pool));
       /* Fetch the file content. While doing so, resolve pair->src_revnum
        * to an actual revision number if it's 'invalid' meaning 'head'. */
-      SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum, fstream,
+      SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
+                              new_base_contents,
                               &pair->src_revnum, &new_props, pool));
-      SVN_ERR(svn_stream_close(fstream));
-
-      SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
-                                       pool, pool));
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
@@ -2127,7 +2116,7 @@ try_copy(const apr_array_header_t *sources,
                   SVN_ERR(svn_wc__node_get_origin(NULL, &copyfrom_rev,
                                                   &copyfrom_repos_relpath,
                                                   &copyfrom_repos_root_url,
-                                                  NULL,
+                                                  NULL, NULL,
                                                   ctx->wc_ctx,
                                                   pair->src_abspath_or_url,
                                                   TRUE, iterpool, iterpool));

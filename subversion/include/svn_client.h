@@ -2877,6 +2877,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_prop_diff,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2886,7 +2887,8 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  apr_pool_t *pool);
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3035,6 +3037,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_prop_diff,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3044,7 +3047,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      apr_pool_t *pool);
 
 /** Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3435,14 +3439,46 @@ svn_client_merge(const char *source1,
                  apr_pool_t *pool);
 
 
+/**
+ * Determine the URLs and revisions needed to perform a reintegrate merge
+ * from @a source_path_or_url at @a source_peg_revision into the working
+ * copy at @a target_wcpath.
+ *
+ * Set @a *url1_p and @a *rev1_p to the left side, and @a *url2_p and
+ * @a *rev2_p to the right side, URLs and revisions of the source of the
+ * required two-URL merge.
+ *
+ * If no merge should be performed, set @a *url1_p to NULL and @a *rev1_p
+ * to #SVN_INVALID_REVNUM.
+ *
+ * The authentication baton cached in @a ctx is used to communicate with the
+ * repository.
+ *
+ * Allocate all the results in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_find_reintegrate_merge(const char **url1_p,
+                                  svn_revnum_t *rev1_p,
+                                  const char **url2_p,
+                                  svn_revnum_t *rev2_p,
+                                  /* inputs */
+                                  const char *source_path_or_url,
+                                  const svn_opt_revision_t *source_peg_revision,
+                                  const char *target_wcpath,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /**
- * Perform a reintegration merge of @a source at @a peg_revision
+ * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
- * source must reflect that all of the target has been merged into it.
+ * source_path_or_url must reflect that all of the target has been merged into it.
  * Then this behaves like a merge with svn_client_merge4() from the
  * target's URL to the source.
  *
@@ -3452,8 +3488,8 @@ svn_client_merge(const char *source1,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_merge_reintegrate(const char *source,
-                             const svn_opt_revision_t *peg_revision,
+svn_client_merge_reintegrate(const char *source_path_or_url,
+                             const svn_opt_revision_t *source_peg_revision,
                              const char *target_wcpath,
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
@@ -3461,8 +3497,8 @@ svn_client_merge_reintegrate(const char *source,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between the ranges described
+ * Merge the changes between the filesystem object @a source_path_or_url in peg
+ * revision @a source_peg_revision, as it changed between the ranges described
  * in @a ranges_to_merge.
  *
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
@@ -3478,9 +3514,9 @@ svn_client_merge_reintegrate(const char *source,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_merge_peg4(const char *source,
+svn_client_merge_peg4(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
-                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *source_peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,

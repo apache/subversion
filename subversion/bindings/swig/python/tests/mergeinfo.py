@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os
+import unittest, os, sys, gc
 from svn import core, repos, fs
 import utils
 
@@ -28,6 +28,15 @@ class RevRange:
   def __init__(self, start, end):
     self.start = start
     self.end = end
+
+def get_svn_merge_range_t_objects():
+  """Returns a list 'svn_merge_range_t' objects being tracked by the
+     garbage collector, used for detecting memory leaks."""
+  return [
+    o for o in gc.get_objects()
+      if hasattr(o, '__class__') and
+        o.__class__.__name__ == 'svn_merge_range_t'
+  ]
 
 class SubversionMergeinfoTestCase(unittest.TestCase):
   """Test cases for mergeinfo"""
@@ -115,6 +124,53 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
             '/trunk'      : [RevRange(1, 9)],  },
       }
     self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
+
+  def test_mergeinfo_leakage__incorrect_range_t_refcounts(self):
+    """Ensure that the ref counts on svn_merge_range_t objects returned by
+       svn_mergeinfo_parse() are correct."""
+    # When reference counting is working properly, each svn_merge_range_t in
+    # the returned mergeinfo will have a ref count of 1...
+    mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    for (path, rangelist) in mergeinfo.items():
+      # ....and now 2 (incref during iteration of rangelist)
+
+      for (i, r) in enumerate(rangelist):
+        # ....and now 3 (incref during iteration of each range object)
+
+        refcount = sys.getrefcount(r)
+        # ....and finally, 4 (getrefcount() also increfs)
+        expected = 4
+
+        # Note: if path and index are not '/trunk' and 0 respectively, then
+        # only some of the range objects are leaking, which is, as far as
+        # leaks go, even more impressive.
+        self.assertEquals(refcount, expected, (
+          "Memory leak!  Expected a ref count of %d for svn_merge_range_t "
+          "object, but got %d instead (path: %s, index: %d).  Probable "
+          "cause: incorrect Py_INCREF/Py_DECREF usage in libsvn_swig_py/"
+          "swigutil_py.c." % (expected, refcount, path, i)))
+
+    del mergeinfo
+    gc.collect()
+
+  def test_mergeinfo_leakage__lingering_range_t_objects_after_del(self):
+    """Ensure that there are no svn_merge_range_t objects being tracked by
+       the garbage collector after we explicitly `del` the results returned
+       by svn_mergeinfo_parse().  We call gc.collect() to force an explicit
+       garbage collection cycle after the `del`;
+       if our reference counts are correct, the allocated svn_merge_range_t
+       objects will be garbage collected and thus, not appear in the list of
+       objects returned by gc.get_objects()."""
+    mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    del mergeinfo
+    gc.collect()
+    lingering = get_svn_merge_range_t_objects()
+    self.assertEquals(lingering, list(), (
+      "Memory leak!  Found lingering svn_merge_range_t objects left over from "
+      "our call to svn_mergeinfo_parse(), even though we explicitly deleted "
+      "the returned mergeinfo object.  Probable cause: incorrect Py_INCREF/"
+      "Py_DECREF usage in libsvn_swig_py/swigutil_py.c.  Lingering objects:\n"
+      "%s" % lingering))
 
   def inspect_mergeinfo_dict(self, mergeinfo, merge_source, nbr_rev_ranges):
     rangelist = mergeinfo.get(merge_source)

@@ -109,6 +109,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *username,
                     const char *password,
                     const char *config_dir,
+                    svn_config_t *cfg_config,
                     svn_boolean_t non_interactive,
                     svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
@@ -119,7 +120,8 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                         non_interactive,
                                         username, password, config_dir,
                                         no_auth_cache,
-                                        FALSE, NULL, NULL, NULL, pool));
+                                        FALSE /* trust_server_certs */,
+                                        cfg_config, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
 
@@ -629,13 +631,17 @@ execute(const apr_array_header_t *actions,
   struct operation root;
   svn_error_t *err;
   apr_hash_t *config;
+  svn_config_t *cfg_config;
   int i;
 
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
+  cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                            APR_HASH_KEY_STRING);
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
-                              non_interactive, no_auth_cache, pool));
+                              cfg_config, non_interactive, no_auth_cache,
+                              pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
@@ -654,9 +660,9 @@ execute(const apr_array_header_t *actions,
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
+      const char *path1, *path2;
       switch (action->action)
         {
-          const char *path1, *path2;
         case ACTION_MV:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
@@ -820,7 +826,7 @@ main(int argc, const char **argv)
                                                sizeof(struct action *));
   const char *anchor = NULL;
   svn_error_t *err = SVN_NO_ERROR;
-  apr_getopt_t *getopt;
+  apr_getopt_t *opts;
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
     config_inline_opt,
@@ -860,15 +866,15 @@ main(int argc, const char **argv)
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
-  apr_getopt_init(&getopt, pool, argc, argv);
-  getopt->interleave = 1;
+  apr_getopt_init(&opts, pool, argc, argv);
+  opts->interleave = 1;
   while (1)
     {
       int opt;
       const char *arg;
       const char *opt_arg;
 
-      apr_status_t status = apr_getopt_long(getopt, options, &opt, &arg);
+      apr_status_t status = apr_getopt_long(opts, options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
@@ -951,7 +957,7 @@ main(int argc, const char **argv)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_INT_ERR(display_version(getopt, pool));
+          SVN_INT_ERR(display_version(opts, pool));
           exit(EXIT_SUCCESS);
           break;
         case 'h':
@@ -962,10 +968,10 @@ main(int argc, const char **argv)
 
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
-  action_args = apr_array_make(pool, getopt->argc, sizeof(const char *));
-  while (getopt->ind < getopt->argc)
+  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
+  while (opts->ind < opts->argc)
     {
-      const char *arg = getopt->argv[getopt->ind++];
+      const char *arg = opts->argv[opts->ind++];
       if ((err = svn_utf_cstring_to_utf8(&(APR_ARRAY_PUSH(action_args,
                                                           const char *)),
                                          arg, pool)))

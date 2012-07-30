@@ -584,7 +584,7 @@ dnl GPG Agent -------------------
 AC_ARG_WITH(gpg_agent,
 AS_HELP_STRING([--without-gpg-agent], 
                [Disable support for GPG-Agent]),
-               [with_gpg_agent=no], [with_gpg_agent=yes])
+               [], [with_gpg_agent=yes])
 AC_MSG_CHECKING([whether to support GPG-Agent])
 if test "$svn_enable_shared" != "yes"; then
   AC_MSG_RESULT([no (shared library support is disabled)])
@@ -792,6 +792,20 @@ if test "$svn_lib_kwallet" = "yes"; then
             [Defined if KWallet support is enabled])
 fi
 
+dnl plaintext passwords -------------------
+AC_ARG_ENABLE(plaintext-password-storage,
+AS_HELP_STRING([--disable-plaintext-password-storage],
+               [Disable on-disk caching of plaintext passwords and passphrases.
+                (Leaving this functionality enabled will not force Subversion
+                to store passwords in plaintext, but does permit users to
+                explicitly allow that behavior via runtime configuration.)]),
+[
+   if test "$enableval" = "no"; then
+      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+                [Defined if plaintext password/passphrase storage is disabled])
+   fi
+])
 
 dnl Build and install rules -------------------
 
@@ -1120,7 +1134,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.4 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.5 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])

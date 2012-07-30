@@ -55,7 +55,7 @@ typedef void svn_mutex__t;
 
 #endif
 
-/** Initialize the @a *mutex. If @a enable_mutex is TRUE, the mutex will
+/** Initialize the @a *mutex. If @a mutex_required is TRUE, the mutex will
  * actually be created with a lifetime defined by @a result_pool. Otherwise,
  * the pointer will be set to @c NULL and @ref svn_mutex__lock as well as
  * @ref svn_mutex__unlock will be no-ops.
@@ -64,7 +64,7 @@ typedef void svn_mutex__t;
  */
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex,
-                svn_boolean_t enable_mutex,
+                svn_boolean_t mutex_required,
                 apr_pool_t *result_pool);
 
 /** Acquire the @a mutex, if that has been enabled in @ref svn_mutex__init.

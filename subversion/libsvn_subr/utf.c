@@ -23,6 +23,7 @@
 
 
 
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
@@ -55,6 +56,7 @@ static const char *SVN_UTF_UTON_XLATE_HANDLE = "svn-utf-uton-xlate-handle";
 static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 
 static svn_mutex__t *xlate_handle_mutex = NULL;
+static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
 
 /* The xlate handle cache is a global hash table with linked lists of xlate
  * handles.  In multi-threaded environments, a thread "borrows" an xlate
@@ -118,7 +120,8 @@ xlate_handle_node_cleanup(void *arg)
 }
 
 void
-svn_utf_initialize(apr_pool_t *pool)
+svn_utf_initialize2(apr_pool_t *pool,
+                    svn_boolean_t assume_native_utf8)
 {
   if (!xlate_handle_hash)
     {
@@ -141,6 +144,9 @@ svn_utf_initialize(apr_pool_t *pool)
       apr_pool_cleanup_register(subpool, NULL, xlate_cleanup,
                                 apr_pool_cleanup_null);
     }
+
+    if (!assume_native_charset_is_utf8)
+      assume_native_charset_is_utf8 = assume_native_utf8;
 }
 
 /* Return a unique string key based on TOPAGE and FROMPAGE.  TOPAGE and
@@ -442,7 +448,9 @@ static svn_error_t *
 get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
   return get_xlate_handle_node(ret, SVN_APR_UTF8_CHARSET,
-                               SVN_APR_LOCALE_CHARSET,
+                               assume_native_charset_is_utf8
+                                 ? SVN_APR_UTF8_CHARSET
+                                 : SVN_APR_LOCALE_CHARSET,
                                SVN_UTF_NTOU_XLATE_HANDLE, pool);
 }
 
@@ -455,7 +463,10 @@ get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 static svn_error_t *
 get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
-  return get_xlate_handle_node(ret, SVN_APR_LOCALE_CHARSET,
+  return get_xlate_handle_node(ret,
+                               assume_native_charset_is_utf8
+                                 ? SVN_APR_UTF8_CHARSET
+                                 : SVN_APR_LOCALE_CHARSET,
                                SVN_APR_UTF8_CHARSET,
                                SVN_UTF_UTON_XLATE_HANDLE, pool);
 }

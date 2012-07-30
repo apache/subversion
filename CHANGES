@@ -12,6 +12,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'commit --include-externals' option (related to issues #1167, #3563)
+    * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
+    * reject some attempts to merge between unrelated branches (r1215273)
+    * support GPG agent for password storage on UNIX-like platforms (r1150783)
+    * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
+    * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
+    * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
+    * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --patch-compatible option for 'svn diff' (r1239561)
 
   - Client-side bugfixes:
     *
@@ -24,13 +32,118 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   
  Developer-visible changes:
   - General:
-    *
+    * Now require Python 2.5 for tests and dev tools (r1243627)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
 
   - Bindings:
     *
+
+
+Version 1.7.4
+(?? ??? 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.4
+
+  User-visible changes:
+    * fix 'svn log --diff' for moved paths (r1210147, et al)
+    * fix ra_serf problem with reading directory entries via HTTPv2 (r1238121)
+    * prepend "sqlite:" to error messages from SQLite (r1245738, -817)
+    * fix randomly missing "Merged via" notifications in 'svn log -g' (r1293229)
+    * fix spurious conflict when merging deleted symbolic link (issue #4052)
+    * fix URL-to-WC copy of externals on Windows (issue #4123)
+    * improve an FSFS sanity-check error message (r1294470)
+
+  Developer-visible changes:
+    * don't build mod_dontdothat if not building with httpd (r1243976)
+    * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
+
+
+Version 1.7.3
+(14 Feb 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.3
+
+  General:
+    * ship mod_dontdothat with the standard release
+
+  User-visible changes:
+    * fix segfault on 'svn rm $ROOT_URL' (issue #4074)
+    * replace a couple of assertions in favor of errors (r1207858, -949)
+    * fix a server assert after being upgraded (r1210195)
+    * fix segfault on 'svn mkdir svn://localhost' (r1211483)
+    * make 'svnadmin recover' prune the rep cache (r1213331, et al)
+    * make svnmucc use values from --config-dir option
+    * update and clarify the merge help text (r1154121, et al)
+    * replace wc assertion with informative error (r1222521, -693)
+    * copy permissions correctly for FSFS dirs (r1229252)
+    * improve 'svn log --with-all-revprops' over ra-dav (issue #4082)
+    * fix segfault when remapping a file external (issue #4093)
+    * fix segfault caused by obstructing unversioned dir (r1229677)
+    * fix regression on first update of external dir with '-r' (issue #4053)
+    * fix various EOL-handling problems in 'svn patch' (issues #3814, #3991)
+    * fix segfault in 'svn revert' (r1229303)
+    * improve correctness of 'svn patch --dry-run' (r1231944, -5)
+    * enforce revisions given in 'svn:externals' (issue #4053)
+    * fix potential corruption on 32-bit FSFS with large files (r1230212)
+    * make 'svn status --xml' show new files (issue #4097)
+    * fix 'svn mergeinfo' correctness (issue #4050)
+    * return the correct status for non-present nodes (r1232202, -07, -21, -22)
+    * improve SASL error messages (r1236343, et al)
+    * improve server cert error code for ra_serf (r1232413)
+    * fix SVNParentPath listings for parent path symlinks (r1221767, -80)
+    * fix mod_dav_svn's handling of POST errors (issue #4086)
+    * log some mod_dav_svn errors, rather than ignoring them (r1237720, -9596)
+    * relax requirements for canonicalization in mod_dav_svn (r1236173)
+    * fix a rare source of FSFS corruption (r1240752)
+    * allow committing the result of some copy operations (issue #4059)
+    * prevent one-byte buffer overflow in base64 decoding (r1242337)
+
+  Developer-visible changes:
+    * JavaHL: Add missing notify action, fixing an exception (r1221793)
+    * fix swig-py memory leak (r1235264, -296, -302, -736)
+    * fix spurious test suite failure (r1220742, -50)
+    * allow running tests on UNC shares (r1225491)
+    * bindings: see platform-specific password providers (r1242660, -1)
+    * skip 'svnrdump dump' tests over ra_serf (r1242537)
+    * convert a few ra_serf assertions to errors (r1242607)
+
+
+Version 1.7.2
+(02 Dec 2011, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.2
+
+  User-visible changes:
+   * fix working copy corruption after interrupted update/switch (issue #4040)
+   * avoid segfaults against pre-1.5 servers (r1186928)
+   * improve configure error message if apr-util uses old or no bdb (r1186784)
+   * make 'svn patch' ignore '/dev/null' targets for compat with git (r1197998)
+   * fix 'svn patch' segfault on patch that skips and deletes files (r1199950)
+   * omit "Committed revision N." output from 'svn commit --quiet' (r1200837)
+   * fix authz denial when svnserve root is a repository (issue #4060)
+   * fix uninitialized memory read in client diff code (r1201002)
+   * avoid potential segfault during merges (r1202807)
+   * fix an assertion failure when a symlink is updated (r1186944, -81, -83)
+   * make working copy operations fail if nodes have no base checksum (r1202630)
+   * fix nested <Location>s when using v2 protocol (r1203546, -651, -653)
+   * make mod_dav_svn ignore non-Subversion POST requests (r1187695)
+   * avoid reading freed memory (r1204478)
+   * recognize empty (only byte order mark) UTF-8 files as text (issue #4064)
+   * fix 1.7 client regression when operating against a 1.0.x server (r1199876)
+   * remove empty parent dirs of removed externals on update (issue #4044)
+   * make 'svn diff -c N' work for files added in rN (issue #2873)
+   * plug a memory leak in the bdb backend (r1205726)
+   * fix 'svn import' with native eol-style and inconsistent EOLs (r1205193)
+   * fix reading beyond the end of a string in bdb backend (r1205839, -48)
+   * don't assert when committing an incomplete directory (issue #4042)
+
+  Developer-visible changes:
+   * JavaHL: allow 'status -u' to function properly (r1189190, -395)
+   * don't put '\r' characters in our generate sql headers (r1189580)
+   * properly define WIN64 on Windows x64 builds (r1188609)
+   * better adherence to C89 in enum definitions (r1189665)
+   * bump copyright year in Windows DLLs (r1189261)
+   * log a better error when opening rep-cache.db fails (r1204610, -73)
+
 
 Version 1.7.1
 (24 Oct 2011, from /branches/1.7.x)

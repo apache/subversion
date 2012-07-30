@@ -25,6 +25,7 @@
 
 #include <httpd.h>
 #include <http_core.h>
+#include <http_log.h>
 #include <util_xml.h>
 #include <mod_dav.h>
 
@@ -281,6 +282,9 @@ insert_prop_internal(const dav_resource *resource,
   int global_ns;
   svn_error_t *serr;
 
+  /* ### TODO proper errors */
+  static const char *const error_value = "###error###";
+
   /*
   ** Almost none of the SVN provider properties are defined if the
   ** resource does not exist.  We do need to return the one VCC
@@ -377,9 +381,14 @@ insert_prop_internal(const dav_resource *resource,
                                            scratch_pool);
             if (serr != NULL)
               {
-                /* ### what to do? */
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                              resource->info->r,
+                              "Can't get created-rev of '%s': "
+                              "%s",
+                              resource->info->repos_path,
+                              serr->message);
                 svn_error_clear(serr);
-                value = "###error###";
+                value = error_value;
                 break;
               }
           }
@@ -395,9 +404,14 @@ insert_prop_internal(const dav_resource *resource,
                                 scratch_pool);
         if (serr)
           {
-            /* ### what to do? */
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                          resource->info->r,
+                          "Can't get author of r%ld: "
+                          "%s",
+                          committed_rev,
+                          serr->message);
             svn_error_clear(serr);
-            value = "###error###";
+            value = error_value;
             break;
           }
 
@@ -425,8 +439,14 @@ insert_prop_internal(const dav_resource *resource,
                                   resource->info->repos_path, scratch_pool);
         if (serr != NULL)
           {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                          resource->info->r,
+                          "Can't get filesize of '%s': "
+                          "%s",
+                          resource->info->repos_path,
+                          serr->message);
             svn_error_clear(serr);
-            value = "0";  /* ### what to do? */
+            value = error_value;
             break;
           }
 
@@ -538,9 +558,15 @@ insert_prop_internal(const dav_resource *resource,
                                      scratch_pool);
           if (serr != NULL)
             {
-              /* ### what to do? */
+              ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                            resource->info->r,
+                            "Can't get youngest revision in '%s': "
+                            "%s",
+                            svn_fs_path(resource->info->repos->fs,
+                                        scratch_pool),
+                            serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
           s = dav_svn__build_uri(resource->info->repos,
@@ -612,9 +638,14 @@ insert_prop_internal(const dav_resource *resource,
                                          scratch_pool);
           if (serr != NULL)
             {
-              /* ### what to do? */
+              ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                            resource->info->r,
+                            "Can't get created-rev of '%s': "
+                            "%s",
+                            resource->info->repos_path,
+                            serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
 
@@ -643,19 +674,31 @@ insert_prop_internal(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
+          svn_node_kind_t kind;
           svn_checksum_t *checksum;
 
-          serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                      resource->info->root.root,
-                                      resource->info->repos_path, TRUE,
-                                      scratch_pool);
+          serr = svn_fs_check_path(&kind, resource->info->root.root,
+                                   resource->info->repos_path, scratch_pool);
+          if (!serr && kind == svn_node_file)
+            serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                        resource->info->root.root,
+                                        resource->info->repos_path, TRUE,
+                                        scratch_pool);
           if (serr != NULL)
             {
-              /* ### what to do? */
+              ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                            resource->info->r,
+                            "Can't fetch or compute MD5 checksum of '%s': "
+                            "%s",
+                            resource->info->repos_path,
+                            serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
+
+          if (kind != svn_node_file)
+            return DAV_PROP_INSERT_NOTSUPP;
 
           value = svn_checksum_to_cstring(checksum, scratch_pool);
 
@@ -671,9 +714,14 @@ insert_prop_internal(const dav_resource *resource,
       serr = svn_fs_get_uuid(resource->info->repos->fs, &value, scratch_pool);
       if (serr != NULL)
         {
-          /* ### what to do? */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                        resource->info->r,
+                        "Can't fetch UUID of '%s': "
+                        "%s",
+                        svn_fs_path(resource->info->repos->fs, scratch_pool),
+                        serr->message);
           svn_error_clear(serr);
-          value = "###error###";
+          value = error_value;
           break;
         }
       break;
@@ -691,9 +739,14 @@ insert_prop_internal(const dav_resource *resource,
                                     resource->info->repos_path, scratch_pool);
         if (serr != NULL)
           {
-            /* ### what to do? */
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                          resource->info->r,
+                          "Can't fetch proplist of '%s': "
+                          "%s",
+                          resource->info->repos_path,
+                          serr->message);
             svn_error_clear(serr);
-            value = "###error###";
+            value = error_value;
             break;
           }
 

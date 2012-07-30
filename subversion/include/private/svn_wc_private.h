@@ -263,6 +263,15 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
+/* Close the DB for LOCAL_ABSPATH.  Perform temporary allocations in
+   SCRATCH_POOL.
+
+   Wraps svn_wc__db_drop_root(). */
+svn_error_t *
+svn_wc__close_db(const char *external_abspath,
+                 svn_wc_context_t *wc_ctx,
+                 apr_pool_t *scratch_pool);
+
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
  * conflict state of @a victim_abspath, or to @c NULL if @a victim_abspath
@@ -479,6 +488,12 @@ svn_wc__node_get_url(const char **url,
  * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
  * @a repos_uuid to the original (if a copy) or their current values.
  *
+ * If @a copy_root_abspath is not NULL, and @a *is_copy indicates that the
+ * node was copied, set @a *copy_root_abspath to the local absolute path of
+ * the root of the copied subtree containing the node. If the copied node is
+ * a root by itself, @a *copy_root_abspath will match @a local_abspath (but
+ * won't necessarily point to the same string in memory).
+ *
  * If @a scan_deleted is TRUE, determine the origin of the deleted node. If
  * @a scan_deleted is FALSE, return NULL, SVN_INVALID_REVNUM or FALSE for
  * deleted nodes.
@@ -491,6 +506,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,
@@ -947,19 +963,6 @@ svn_wc__min_max_revisions(svn_revnum_t *min_revision,
                           svn_boolean_t committed,
                           apr_pool_t *scratch_pool);
 
-/* Indicate in @a *is_sparse_checkout whether any of the nodes within
- * @a local_abspath is sparse, using context @a wc_ctx.
- * Use @a scratch_pool for temporary allocations.
- *
- * This function provides a subset of the functionality of
- * svn_wc_revision_status2() and is more efficient if the caller
- * doesn't need all information returned by svn_wc_revision_status2(). */
-svn_error_t *
-svn_wc__is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool);
-
 /* Indicate in @a is_switched whether any node beneath @a local_abspath
  * is switched, using context @a wc_ctx.
  * Use @a scratch_pool for temporary allocations.
@@ -1308,6 +1311,316 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
                                       const char *parent_dir_url,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
+
+
+/**
+ * Set @a *editor and @a *edit_baton to an editor that generates
+ * #svn_wc_status3_t structures and sends them through @a status_func /
+ * @a status_baton.  @a anchor_abspath is a working copy directory
+ * directory which will be used as the root of our editor.  If @a
+ * target_basename is not "", it represents a node in the @a anchor_abspath
+ * which is the subject of the editor drive (otherwise, the @a
+ * anchor_abspath is the subject).
+ *
+ * If @a set_locks_baton is non-@c NULL, it will be set to a baton that can
+ * be used in a call to the svn_wc_status_set_repos_locks() function.
+ *
+ * Callers drive this editor to describe working copy out-of-dateness
+ * with respect to the repository.  If this information is not
+ * available or not desired, callers should simply call the
+ * close_edit() function of the @a editor vtable.
+ *
+ * If the editor driver calls @a editor's set_target_revision() vtable
+ * function, then when the edit drive is completed, @a *edit_revision
+ * will contain the revision delivered via that interface.
+ *
+ * Assuming the target is a directory, then:
+ *
+ *   - If @a get_all is FALSE, then only locally-modified entries will be
+ *     returned.  If TRUE, then all entries will be returned.
+ *
+ *   - If @a depth is #svn_depth_empty, a status structure will
+ *     be returned for the target only; if #svn_depth_files, for the
+ *     target and its immediate file children; if
+ *     #svn_depth_immediates, for the target and its immediate
+ *     children; if #svn_depth_infinity, for the target and
+ *     everything underneath it, fully recursively.
+ *
+ *     If @a depth is #svn_depth_unknown, take depths from the
+ *     working copy and behave as above in each directory's case.
+ *
+ *     If the given @a depth is incompatible with the depth found in a
+ *     working copy directory, the found depth always governs.
+ *
+ * If @a no_ignore is set, statuses that would typically be ignored
+ * will instead be reported.
+ *
+ * @a ignore_patterns is an array of file patterns matching
+ * unversioned files to ignore for the purposes of status reporting,
+ * or @c NULL if the default set of ignorable file patterns should be used.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
+ * the @a statushash to determine if the client has canceled the operation.
+ *
+ * If @a depth_as_sticky is set handle @a depth like when depth_is_sticky is
+ * passed for updating. This will show excluded nodes show up as added in the
+ * repository.
+ *
+ * If @a server_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
+ *
+ * Allocate the editor itself in @a result_pool, and use @a scratch_pool
+ * for temporary allocations. The editor will do its temporary allocations
+ * in a subpool of @a result_pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__get_status_editor(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          svn_boolean_t depth_as_sticky,
+                          svn_boolean_t server_performs_filtering,
+                          const apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func4_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/**
+ * Set @a *editor and @a *edit_baton to an editor and baton for updating a
+ * working copy.
+ *
+ * @a anchor_abspath is a local working copy directory, with a fully recursive
+ * write lock in @a wc_ctx, which will be used as the root of our editor.
+ *
+ * @a target_basename is the entry in @a anchor_abspath that will actually be
+ * updated, or the empty string if all of @a anchor_abspath should be updated.
+ *
+ * The editor invokes @a notify_func with @a notify_baton as the update
+ * progresses, if @a notify_func is non-NULL.
+ *
+ * If @a cancel_func is non-NULL, the editor will invoke @a cancel_func with
+ * @a cancel_baton as the update progresses to see if it should continue.
+ *
+ * If @a conflict_func is non-NULL, then invoke it with @a
+ * conflict_baton whenever a conflict is encountered, giving the
+ * callback a chance to resolve the conflict before the editor takes
+ * more drastic measures (such as marking a file conflicted, or
+ * bailing out of the update).
+ *
+ * If @a external_func is non-NULL, then invoke it with @a external_baton
+ * whenever external changes are encountered, giving the callback a chance
+ * to store the external information for processing.
+ *
+ * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
+ * any merging; otherwise, use the built-in merge code.
+ *
+ * @a preserved_exts is an array of filename patterns which, when
+ * matched against the extensions of versioned files, determine for
+ * which such files any related generated conflict files will preserve
+ * the original file's extension as their own.  If a file's extension
+ * does not match any of the patterns in @a preserved_exts (which is
+ * certainly the case if @a preserved_exts is @c NULL or empty),
+ * generated conflict files will carry Subversion's custom extensions.
+ *
+ * @a target_revision is a pointer to a revision location which, after
+ * successful completion of the drive of this editor, will be
+ * populated with the revision to which the working copy was updated.
+ *
+ * If @a use_commit_times is TRUE, then all edited/added files will
+ * have their working timestamp set to the last-committed-time.  If
+ * FALSE, the working files will be touched with the 'now' time.
+ *
+ * If @a allow_unver_obstructions is TRUE, then allow unversioned
+ * obstructions when adding a path.
+ *
+ * If @a adds_as_modification is TRUE, a local addition at the same path
+ * as an incoming addition of the same node kind results in a normal node
+ * with a possible local modification, instead of a tree conflict.
+ *
+ * If @a depth is #svn_depth_infinity, update fully recursively.
+ * Else if it is #svn_depth_immediates, update the uppermost
+ * directory, its file entries, and the presence or absence of
+ * subdirectories (but do not descend into the subdirectories).
+ * Else if it is #svn_depth_files, update the uppermost directory
+ * and its immediate file entries, but not subdirectories.
+ * Else if it is #svn_depth_empty, update exactly the uppermost
+ * target, and don't touch its entries.
+ *
+ * If @a depth_is_sticky is set and @a depth is not
+ * #svn_depth_unknown, then in addition to updating PATHS, also set
+ * their sticky ambient depth value to @a depth.
+ *
+ * If @a server_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
+ *
+ * If @a fetch_dirents_func is not NULL, the update editor may call this
+ * callback, when asked to perform a depth restricted update. It will do this
+ * before returning the editor to allow using the primary ra session for this.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__get_update_editor(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/**
+ * A variant of svn_wc__get_update_editor().
+ *
+ * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
+ * a working copy to a new @a switch_url.  (Right now, this URL must be
+ * within the same repository that the working copy already comes
+ * from.)  @a switch_url must not be @c NULL.
+ *
+ * All other parameters behave as for svn_wc__get_update_editor().
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t server_performs_filtering,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+
+/**
+ * Return an @a editor/@a edit_baton for diffing a working copy against the
+ * repository. The editor is allocated in @a result_pool; temporary
+ * calculations are performed in @a scratch_pool.
+ *
+ * This editor supports diffing either the actual files and properties in the
+ * working copy (when @a use_text_base is #FALSE), or the current pristine
+ * information (when @a use_text_base is #TRUE) against the editor driver.
+ *
+ * @a anchor_abspath/@a target represent the base of the hierarchy to be
+ * compared. The diff callback paths will be relative to this path.
+ *
+ * Diffs will be reported as valid relpaths, with @a anchor_abspath being
+ * the root ("").
+ *
+ * @a callbacks/@a callback_baton is the callback table to use.
+ *
+ * If @a depth is #svn_depth_empty, just diff exactly @a target or
+ * @a anchor_path if @a target is empty.  If #svn_depth_files then do the same
+ * and for top-level file entries as well (if any).  If
+ * #svn_depth_immediates, do the same as #svn_depth_files but also diff
+ * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
+ * then diff fully recursively.
+ *
+ * @a ignore_ancestry determines whether paths that have discontinuous node
+ * ancestry are treated as delete/add or as simple modifications.  If
+ * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
+ * result in the diff given as a full delete followed by an add.
+ *
+ * @a show_copies_as_adds determines whether paths added with history will
+ * appear as a diff against their copy source, or whether such paths will
+ * appear as if they were newly added in their entirety.
+ *
+ * If @a use_git_diff_format is TRUE, copied paths will be treated as added
+ * if they weren't modified after being copied. This allows the callbacks
+ * to generate appropriate --git diff headers for such files.
+ *
+ * Normally, the difference from repository->working_copy is shown.
+ * If @a reverse_order is TRUE, then show working_copy->repository diffs.
+ *
+ * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
+ * to periodically check if the client has canceled the operation.
+ *
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelist_filter is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
+  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_abspath,
+                        const char *target,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
+                        const apr_array_header_t *changelist_filter,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

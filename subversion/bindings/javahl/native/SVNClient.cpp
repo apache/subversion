@@ -829,10 +829,11 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
         return NULL;
 
     apr_hash_t *props;
-    SVN_JNI_ERR(svn_client_propget3(&props, name,
+    SVN_JNI_ERR(svn_client_propget4(&props, name,
                                     intPath.c_str(), pegRevision.revision(),
                                     revision.revision(), NULL, svn_depth_empty,
-                                    NULL, ctx, subPool.getPool()),
+                                    NULL, ctx, subPool.getPool(),
+                                    subPool.getPool()),
                 NULL);
 
     apr_hash_index_t *hi;
@@ -935,7 +936,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      OutputStream &outputStream, svn_depth_t depth,
                      StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds)
+                     bool showCopiesAsAdds, bool ignoreProps)
 {
     SVN::Pool subPool(pool);
     const char *c_relToDir = relativeToDir ?
@@ -971,7 +972,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    noDiffDelete,
                                    showCopiesAsAdds,
                                    force,
-                                   FALSE,
+                                   ignoreProps,
+                                   FALSE, /* use_git_diff_format */
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
                                    NULL /* error file */,
@@ -997,7 +999,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                noDiffDelete,
                                showCopiesAsAdds,
                                force,
-                               FALSE,
+                               ignoreProps,
+                               FALSE, /* use_git_diff_format */
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
                                NULL /* error stream */,
@@ -1013,11 +1016,11 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds)
+                     bool showCopiesAsAdds, bool ignoreProps)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
          outputStream, depth, changelists, ignoreAncestry, noDiffDelete, force,
-         showCopiesAsAdds);
+         showCopiesAsAdds, ignoreProps);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
@@ -1025,11 +1028,12 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds)
+                     bool showCopiesAsAdds, bool ignoreProps)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
          relativeToDir, outputStream, depth, changelists,
-         ignoreAncestry, noDiffDelete, force, showCopiesAsAdds);
+         ignoreAncestry, noDiffDelete, force, showCopiesAsAdds,
+         ignoreProps);
 }
 
 void

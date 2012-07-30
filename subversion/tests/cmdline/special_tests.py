@@ -30,7 +30,7 @@ import sys, os, re
 # Our testing module
 import svntest
 
-from svntest.main import server_has_mergeinfo
+from svntest.main import server_has_mergeinfo, run_svn, file_write
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -551,7 +551,9 @@ def diff_symlink_to_dir(sbox):
     "___________________________________________________________________\n",
     "Added: svn:special\n",
     "## -0,0 +1 ##\n",
-    "+*\n" ]
+    "+*\n",
+    "\\ No newline at end of property\n"
+  ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '.')
   # We should get the same output if we the diff the symlink itself.
@@ -904,6 +906,167 @@ def update_symlink(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
+@Issue(4091)
+@SkipUnless(svntest.main.is_posix_os)
+def replace_symlinks(sbox):
+  "replace symlinks"
+  sbox.build()
+  wc = sbox.ospath
+
+  # Some of these tests are implemented for git (in test script
+  # t/t9100-git-svn-basic.sh) using the Perl bindings for Subversion.
+  # Our issue #4091 is about 'svn update' failures in the git tests.
+
+  sbox.simple_mkdir('A/D/G/Z')
+  sbox.simple_mkdir('A/D/Gx')
+  sbox.simple_mkdir('A/D/Gx/Z')
+  sbox.simple_mkdir('A/D/Hx')
+  sbox.simple_mkdir('A/D/Y')
+  sbox.simple_mkdir('Ax')
+
+  os.symlink('../Y', wc('A/D/H/Z'))
+  os.symlink('../Y', wc('A/D/Hx/Z'))
+  sbox.simple_add('A/D/H/Z',
+                  'A/D/Hx/Z')
+
+  for p in ['Ax/mu',
+            'A/D/Gx/pi',
+            'A/D/Hx/chi',
+            ]:
+      file_write(wc(p), 'This starts as a normal file.\n')
+      sbox.simple_add(p)
+  for p in ['iota.sh',
+            'A/mu.sh',
+            'Ax/mu.sh',
+            'A/D/gamma.sh',
+            'A/B/E/beta.sh',
+            'A/D/G/rho.sh',
+            'A/D/Gx/rho.sh',
+            'A/D/H/psi.sh',
+            'A/D/Hx/psi.sh',
+            ]:
+      file_write(wc(p), '#!/bin/sh\necho "hello, svn!"\n')
+      os.chmod(wc(p), 0775)
+      sbox.simple_add(p)
+  sbox.simple_commit() # r2
+
+  # Failing git-svn test: 'new symlink is added to a file that was
+  # also just made executable', i.e., in the same revision.
+  sbox.simple_propset("svn:executable", "*", 'A/B/E/alpha')
+  os.symlink('alpha', wc('A/B/E/sym-alpha'))
+  sbox.simple_add('A/B/E/sym-alpha')
+
+  # Add a symlink to a file made non-executable in the same revision.
+  sbox.simple_propdel("svn:executable", 'A/B/E/beta.sh')
+  os.symlink('beta.sh', wc('A/B/E/sym-beta.sh'))
+  sbox.simple_add('A/B/E/sym-beta.sh')
+
+  # Replace a normal {file, exec, dir} with a symlink to the same kind
+  # via Subversion replacement.
+  sbox.simple_rm('A/D/G/pi',
+                 'A/D/G/rho.sh',
+                 #'A/D/G/Z', # Ooops, not compatible with --bin=svn1.6.
+                 )
+  os.symlink(wc('../gamma'), wc('A/D/G/pi'))
+  os.symlink(wc('../gamma.sh'), wc('A/D/G/rho.sh'))
+  #os.symlink(wc('../Y'), wc('A/D/G/Z'))
+  sbox.simple_add('A/D/G/pi',
+                  'A/D/G/rho.sh',
+                  #'A/D/G/Z',
+                  )
+
+  # Replace a symlink to {file, exec, dir} with a normal item of the
+  # same kind via Subversion replacement.
+  sbox.simple_rm('A/D/H/chi',
+                 'A/D/H/psi.sh',
+                 #'A/D/H/Z',
+                 )
+  os.symlink(wc('../gamma'), wc('A/D/H/chi'))
+  os.symlink(wc('../gamma.sh'), wc('A/D/H/psi.sh'))
+  #os.symlink(wc('../Y'), wc('A/D/H/Z'))
+  sbox.simple_add('A/D/H/chi',
+                  'A/D/H/psi.sh',
+                  #'A/D/H/Z',
+                  )
+
+  # Replace a normal {file, exec} with a symlink to {exec, file} via
+  # Subversion replacement.
+  sbox.simple_rm('A/mu',
+                 'A/mu.sh')
+  os.symlink('../iota2', wc('A/mu'))
+  os.symlink('../iota', wc('A/mu.sh'))
+  sbox.simple_add('A/mu',
+                  'A/mu.sh')
+ 
+  # Ditto, without the Subversion replacement.  Failing git-svn test
+  # 'executable file becomes a symlink to bar/zzz (file)'.
+  os.remove(wc('Ax/mu'))
+  os.remove(wc('Ax/mu.sh'))
+  os.symlink('../iota2', wc('Ax/mu'))
+  os.symlink('../iota', wc('Ax/mu.sh'))
+  sbox.simple_propset('svn:special', '*',
+                      'Ax/mu',
+                      'Ax/mu.sh')
+  sbox.simple_propdel('svn:executable', 'Ax/mu.sh')
+  
+  ### TODO Replace a normal {file, exec, dir, dir} with a symlink to
+  ### {dir, dir, file, exec}.  And the same symlink-to-normal.
+
+  ### Commit fails as of r1226697 with either "svn: E145001: Entry
+  ### '.../A/D/Gx/Z' has unexpectedly changed special status" or "svn:
+  ### E155010: The node '.../Ax/mu' was not found".
+  sbox.simple_commit() # r3
+
+  # Try updating from HEAD-1 to HEAD.
+  run_svn(None, 'up', '-r2', sbox.wc_dir)
+  sbox.simple_update()
+
+
+@Issue(4102)
+@SkipUnless(svntest.main.is_posix_os)
+def externals_as_symlink_targets(sbox):
+  "externals as symlink targets"
+  sbox.build()
+  wc = sbox.ospath
+
+  # Control: symlink to normal dir and file.
+  os.symlink('E', wc('sym_E'))
+  os.symlink('mu', wc('sym_mu'))
+
+  # Test case: symlink to external dir and file.
+  sbox.simple_propset("svn:externals",
+                      '^/A/B/E ext_E\n'
+                      '^/A/mu ext_mu',
+                      '')
+  sbox.simple_update()
+  os.symlink('ext_E', wc('sym_ext_E'))
+  os.symlink('ext_mu', wc('sym_ext_mu'))
+
+  # Adding symlinks to normal items and to a file external is OK.
+  sbox.simple_add('sym_E', 'sym_mu', 'sym_ext_mu')
+
+  ### Adding a symlink to an external dir failed with
+  ###   svn: E200009: Could not add all targets because some targets are
+  ###   already versioned
+  sbox.simple_add('sym_ext_E')
+
+  sbox.simple_commit()
+    
+@XFail()
+@Issue(4119)
+@SkipUnless(svntest.main.is_posix_os)
+def cat_added_symlink(sbox):
+  "cat added symlink"
+
+  sbox.build(read_only = True)
+
+  kappa_path = sbox.ospath('kappa')
+  os.symlink('iota', kappa_path)
+  sbox.simple_add('kappa')
+  svntest.actions.run_and_verify_svn(None, "link iota", [],
+                                     "cat", kappa_path)
+
 ########################################################################
 # Run the tests
 
@@ -931,6 +1094,9 @@ test_list = [ None,
               symlink_to_wc_basic,
               symlink_to_wc_svnversion,
               update_symlink,
+              replace_symlinks,
+              externals_as_symlink_targets,
+              cat_added_symlink,
              ]
 
 if __name__ == '__main__':

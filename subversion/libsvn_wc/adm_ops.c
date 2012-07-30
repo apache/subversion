@@ -610,8 +610,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_kind_t kind;
-  svn_boolean_t conflicted;
-  const apr_array_header_t *conflicts;
+  const apr_array_header_t *conflicts = NULL;
   apr_array_header_t *versioned_targets;
   const char *local_abspath;
   int i;
@@ -622,6 +621,8 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                      sizeof(const char *));
   for (i = 0; i < targets->nelts; i++)
     {
+      svn_boolean_t conflicted = FALSE;
+
       svn_pool_clear(iterpool);
 
       local_abspath = APR_ARRAY_IDX(targets, i, const char *);
@@ -699,7 +700,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                     cancel_func, cancel_baton,
                                     notify_func, notify_baton, scratch_pool));
 
-  if (!keep_local && conflicted && conflicts != NULL)
+  if (!keep_local && conflicts != NULL)
     {
       svn_pool_clear(iterpool);
 
@@ -1460,11 +1461,11 @@ remove_conflict_file(svn_boolean_t *notify_required,
 static int
 compare_revert_list_copied_children(const void *a, const void *b)
 {
-  const svn_wc__db_revert_list_copied_child_info_t *ca = a;
-  const svn_wc__db_revert_list_copied_child_info_t *cb = b;
+  const svn_wc__db_revert_list_copied_child_info_t * const *ca = a;
+  const svn_wc__db_revert_list_copied_child_info_t * const *cb = b;
   int i;
 
-  i = svn_path_compare_paths(ca->abspath, cb->abspath);
+  i = svn_path_compare_paths(ca[0]->abspath, cb[0]->abspath);
 
   /* Reverse the result of svn_path_compare_paths() to achieve
    * descending order. */
@@ -1736,8 +1737,15 @@ revert_restore(svn_wc__db_t *db,
         }
       else if (on_disk == svn_node_file && kind != svn_kind_file)
         {
-          SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
-          on_disk = svn_node_none;
+#ifdef HAVE_SYMLINK
+          /* Preserve symlinks pointing at directories. Changes on the
+           * directory node have been reverted. The symlink should remain. */
+          if (!(special && kind == svn_kind_dir))
+#endif
+            {
+              SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
+              on_disk = svn_node_none;
+            }
         }
       else if (on_disk == svn_node_file)
         {

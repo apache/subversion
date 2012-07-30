@@ -49,6 +49,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
 
 #include "svn_private_config.h"
@@ -145,19 +146,22 @@ send_file_contents(const char *path,
       if (svn_subst_translation_required(eol_style, eol, keywords,
                                          FALSE, TRUE))
         {
-          svn_boolean_t repair = FALSE;
+          if (eol_style == svn_subst_eol_style_unknown)
+            return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                    _("%s property on '%s' contains "
+                                      "unrecognized EOL-style '%s'"),
+                                    SVN_PROP_EOL_STYLE, path,
+                                    eol_style_val->data);
 
+          /* We're importing, so translate files with 'native' eol-style to
+           * repository-normal form, not to this platform's native EOL. */
           if (eol_style == svn_subst_eol_style_native)
             eol = SVN_SUBST_NATIVE_EOL_STR;
-          else if (eol_style == svn_subst_eol_style_fixed)
-            repair = TRUE;
-          else if (eol_style != svn_subst_eol_style_none)
-            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
           /* Wrap the working copy stream with a filter to detranslate it. */
           contents = svn_subst_stream_translated(contents,
                                                  eol,
-                                                 repair,
+                                                 TRUE /* repair */,
                                                  keywords,
                                                  FALSE /* expand */,
                                                  pool);
@@ -642,6 +646,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *commit_revprops;
+  const char *anchor_abspath;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
@@ -666,7 +671,22 @@ get_ra_editor(svn_ra_session_t **ra_session,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
+  /* We need this for the shims. */
+  if (base_dir_abspath)
+    {
+      const char *relpath;
+
+      SVN_ERR(svn_ra_get_path_relative_to_root(*ra_session, &relpath, base_url,
+                                               pool));
+      anchor_abspath = svn_dirent_join(base_dir_abspath, relpath, pool);
+    }
+  else
+    anchor_abspath = NULL;
+
   /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       anchor_abspath, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
                                     commit_revprops, commit_callback,
                                     commit_baton, lock_tokens, keep_locks,
@@ -822,7 +842,7 @@ svn_client_import4(const char *path,
                     ignore_unknown_node_types, ctx, subpool)))
     {
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
-      return err;
+      return svn_error_trace(err);
     }
 
   svn_pool_destroy(subpool);

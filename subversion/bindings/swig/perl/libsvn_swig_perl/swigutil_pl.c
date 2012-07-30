@@ -984,6 +984,34 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_gnome_keyring_unlock_prompt(char **keyring_password,
+                                                           const char *keyring_name,
+                                                           void *baton,
+                                                           apr_pool_t *pool)
+{
+    SV *result;
+    STRLEN len;
+    /* The baton is the actual prompt function passed from perl, so we
+     * call that one and process the result. */
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               baton, &result,
+                               "sS", keyring_name,
+                               pool, POOLINFO);
+    if (!SvOK(result) || result == &PL_sv_undef) {
+        *keyring_password = NULL;
+    }
+    else if (SvPOK(result)) {
+        *keyring_password = apr_pstrdup(pool, SvPV(result, len));
+    }
+    else {
+        SvREFCNT_dec(result);
+        croak("not a string");
+    }
+
+    SvREFCNT_dec(result);
+    return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
                                              void *baton,
                                              const char *realm,

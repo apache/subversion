@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 
@@ -271,6 +272,8 @@ ssl_server_cert(void *baton, int failures,
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
     {
+      if (failures)
+        conn->server_cert_failures |= ssl_convert_serf_failures(failures);
       return APR_SUCCESS;
     }
 
@@ -295,7 +298,8 @@ ssl_server_cert(void *baton, int failures,
   cert_info.issuer_dname = convert_organisation_to_str(issuer, scratch_pool);
   cert_info.ascii_cert = serf_ssl_cert_export(cert, scratch_pool);
 
-  svn_failures = ssl_convert_serf_failures(failures);
+  svn_failures = (ssl_convert_serf_failures(failures)
+                  | conn->server_cert_failures);
 
   /* Try to find matching server name via subjectAltName first... */
   if (san) {
@@ -383,24 +387,26 @@ static svn_error_t *
 load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
                  apr_pool_t *pool)
 {
-  char *files, *file, *last;
-  files = apr_pstrdup(pool, authorities);
+  apr_array_header_t *files = svn_cstring_split(authorities, ";",
+                                                TRUE /* chop_whitespace */,
+                                                pool);
+  int i;
 
-  while ((file = apr_strtok(files, ";", &last)) != NULL)
+  for (i = 0; i < files->nelts; ++i)
     {
+      const char *file = APR_ARRAY_IDX(files, i, const char *);
       serf_ssl_certificate_t *ca_cert;
       apr_status_t status = serf_ssl_load_cert_file(&ca_cert, file, pool);
+
       if (status == APR_SUCCESS)
         status = serf_ssl_trust_cert(conn->ssl_context, ca_cert);
 
       if (status != APR_SUCCESS)
         {
-          return svn_error_createf
-            (SVN_ERR_BAD_CONFIG_VALUE, NULL,
+          return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_dirent_local_style(file, pool));
         }
-      files = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -478,7 +484,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
-  apr_status_t status = SVN_NO_ERROR;
+  apr_status_t status = APR_SUCCESS;
 
   svn_error_t *err = conn_setup(sock,
                                 read_bkt,
@@ -2459,5 +2465,15 @@ svn_ra_serf__error_on_status(int status_code,
                                  _("'%s': no lock token available"), path);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
+                                    svn_delta_shim_callbacks_t *callbacks)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+
+  session->shim_callbacks = callbacks;
   return SVN_NO_ERROR;
 }

@@ -219,7 +219,7 @@ create_cache(svn_cache__t **cache_p,
       {
         SVN_ERR(svn_cache__create_membuffer_cache(
                   cache_p, membuffer, serializer, deserializer,
-                  klen, prefix, pool));
+                  klen, prefix, FALSE, pool));
       }
     else if (pages)
       {
@@ -359,6 +359,27 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     }
 
   SVN_ERR(init_callbacks(ffd->txdelta_window_cache, fs, no_handler, pool));
+
+  /* initialize txdelta window cache, if that has been enabled */
+  if (cache_txdeltas)
+    {
+      SVN_ERR(create_cache(&(ffd->combined_window_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           /* Values are svn_stringbuf_t */
+                           NULL, NULL,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "COMBINED_WINDOW",
+                                       (char *)NULL),
+                           fs->pool));
+    }
+  else
+    {
+      ffd->combined_window_cache = NULL;
+    }
+
+  SVN_ERR(init_callbacks(ffd->combined_window_cache, fs, no_handler, pool));
 
   /* initialize node revision cache, if caching has been enabled */
   SVN_ERR(create_cache(&(ffd->node_revision_cache),

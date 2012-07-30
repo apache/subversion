@@ -148,7 +148,9 @@ svn_client__repos_locations(const char **start_url,
  *
  * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
  * revision OP_REVNUM.
- * RA_SESSION is required. */
+ *
+ * RA_SESSION is an open RA session to the correct repository; it may be
+ * temporarily reparented inside this function. */
 svn_error_t *
 svn_client__repos_location(const char **start_url,
                            svn_ra_session_t *ra_session,
@@ -161,8 +163,8 @@ svn_client__repos_location(const char **start_url,
 
 
 /* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
-   representing a reposition location segment for the history of PATH
-   (which is relative to RA_SESSION's session URL) in PEG_REVISION
+   representing a reposition location segment for the history of URL
+   in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
    segment to youngest.  *SEGMENTS may be empty but it will never
    be NULL.
@@ -171,13 +173,16 @@ svn_client__repos_location(const char **start_url,
    svn_ra_get_location_segments() interface, which see for the rules
    governing PEG_REVISION, START_REVISION, and END_REVISION.
 
+   RA_SESSION is an RA session open to the repository of URL; it may be
+   temporarily reparented within this function.
+
    CTX is the client context baton.
 
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_location_segments(apr_array_header_t **segments,
                                     svn_ra_session_t *ra_session,
-                                    const char *path,
+                                    const char *url,
                                     svn_revnum_t peg_revision,
                                     svn_revnum_t start_revision,
                                     svn_revnum_t end_revision,
@@ -185,19 +190,30 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                     apr_pool_t *pool);
 
 
-/* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
-   ancestor path (a path relative to the root of the repository) and
-   revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
-   baton cached in CTX to authenticate against the repository.
-   This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1
-   both refer to the same repository.  Use POOL for all allocations. */
+/* Find the common ancestor of two locations in a repository.
+   Ancestry is determined by the 'copy-from' relationship and the normal
+   successor relationship.
+
+   Set *ANCESTOR_RELPATH, *ANCESTOR_URL, and *ANCESTOR_REVISION to the
+   path (relative to the root of the repository, with no leading '/'),
+   URL, and revision, respectively, of the youngest common ancestor of
+   the two locations URL1@REV1 and URL2@REV2.  Set *ANCESTOR_RELPATH and
+   *ANCESTOR_URL to NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if
+   they have no common ancestor.  This function assumes that URL1@REV1
+   and URL2@REV2 both refer to the same repository.
+
+   Use the authentication baton cached in CTX to authenticate against
+   the repository.  Use POOL for all allocations.
+
+   See also svn_client__youngest_common_ancestor().
+*/
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
+                                         const char **ancestor_url,
                                          svn_revnum_t *ancestor_revision,
-                                         const char *path_or_url1,
+                                         const char *url1,
                                          svn_revnum_t rev1,
-                                         const char *path_or_url2,
+                                         const char *url2,
                                          svn_revnum_t rev2,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool);
@@ -238,11 +254,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
-   reparenting that session if necessary.  If reparenting occurs,
-   store the previous session URL in *OLD_SESSION_URL (so that if the
+   reparenting that session if necessary.
+   Store the previous session URL in *OLD_SESSION_URL (so that if the
    reparenting is meant to be temporary, the caller can reparent the
-   session back to where it was); otherwise set *OLD_SESSION_URL to
-   NULL.
+   session back to where it was).
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
    the RA session to the root of the repository".
@@ -257,8 +272,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
        [...]
 
-       if (old_session_url)
-         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+       SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
 */
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
@@ -485,36 +499,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
-/* Structure holding the results of svn_client__ra_session_from_path()
-   plus the repository root URL and UUID and the node kind for the
-   input URL, REVISION and PEG_REVISION .  See
-   svn_client__ra_session_from_path() for the meaning of these fields.
-   This structure is used by svn_client__checkout_internal() to save
-   one or more round-trips if the client already gathered some of this
-   information.  Not all the fields need to be filled in.  */
-typedef struct svn_client__ra_session_from_path_results
-{
-  /* The repository root URL.  A NULL value means the root URL is
-     unknown.*/
-  const char *repos_root_url;
-
-  /* The repository UUID.  A NULL value means the UUID is unknown.  */
-  const char *repos_uuid;
-
-  /* The actual final resulting URL for the input URL.  This may be
-     different because of copy history.  A NULL value means the
-     resulting URL is unknown.  */
-  const char *ra_session_url;
-
-  /* The actual final resulting revision for the input URL.  An
-     invalid revnum as determined by SVN_IS_VALID_REVNUM() means the
-     revnum is unknown.  */
-  svn_revnum_t ra_revnum;
-
-  /* An optional node kind for the URL.  svn_node_unknown if unknown */
-  svn_node_kind_t kind;
-} svn_client__ra_session_from_path_results;
-
 /* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
    NULL) set RESULT_REV to the checked out revision.
 
@@ -551,7 +535,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              const svn_client__ra_session_from_path_results *ra_cache,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
@@ -1090,6 +1073,11 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Return a set of callbacks to use with the Ev2 shims. */
+svn_delta_shim_callbacks_t *
+svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
+                               const char *anchor_abspath,
+                               apr_pool_t *result_pool);
 
 /* Return true if KIND is a revision kind that is dependent on the working
  * copy. Otherwise, return false. */

@@ -164,6 +164,9 @@ def svndumpfilter_loses_mergeinfo(sbox):
 
 
 def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
+  """Run svndumpfilter with arguments DUMPARGS, taking input from DUMPFILE.
+     Check that the output consists of the standard Greek tree excluding
+     all paths that start with 'A/B/E', 'A/D/G' or 'A/D/H'."""
   wc_dir = sbox.wc_dir
 
   filtered_output, filtered_err = filter_and_return_output(dumpfile, 0,
@@ -596,6 +599,58 @@ def dropped_but_not_renumbered_empty_revs(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+#----------------------------------------------------------------------
+def match_empty_prefix(sbox):
+  "svndumpfilter with an empty prefix"
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = open(dumpfile_location).read()
+
+  def test(sbox, dumpfile, *dumpargs):
+    """Run svndumpfilter with DUMPFILE as the input lines, load
+       the result and check it matches EXPECTED_DISK, EXPECTED_OUTPUT,
+       EXPECTED_STATUS."""
+
+    # Filter the Greek tree dump
+    filtered_output, filtered_err = filter_and_return_output(dumpfile, 0,
+                                                             '--quiet',
+                                                             *dumpargs)
+    if filtered_err:
+      raise verify.UnexpectedStderr(filtered_err)
+
+    # Load the filtered dump into a repo and check the result
+    test_create(sbox)
+    load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
+                               '--ignore-uuid')
+    svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status)
+
+  # Test excluding everything
+  expected_disk = svntest.wc.State(sbox.wc_dir, {})
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+                      '': Item(status='  ', wc_rev=1) })
+
+  test(sbox, dumpfile, 'exclude', '')
+
+  # Test including everything
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.main.greek_state.copy().tweak(status='A ')
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  test(sbox, dumpfile, 'include', '', '/A/D/G')
+
+  # Note: We also ought to test the '--pattern' option, including or
+  # excluding a pattern of '*'.  However, passing a wildcard parameter
+  # is troublesome on Windows: it may be expanded, depending on whether
+  # the svndumpfilter executable was linked with 'setargv.obj', and there
+  # doesn't seem to be a consistent way to quote such an argument to
+  # prevent expansion.
+
 ########################################################################
 # Run the tests
 
@@ -608,6 +663,7 @@ test_list = [ None,
               dumpfilter_with_patterns,
               filter_mergeinfo_revs_outside_of_dump_stream,
               dropped_but_not_renumbered_empty_revs,
+              match_empty_prefix,
               ]
 
 if __name__ == '__main__':

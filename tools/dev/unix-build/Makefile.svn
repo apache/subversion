@@ -70,7 +70,7 @@ SERF_VER	= 1.0.0
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3070603
-LIBMAGIC_VER	= 5.07
+LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p334
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.2
@@ -1352,7 +1352,8 @@ endif
 
 .PHONY: libpath
 libpath:
-	@echo export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH
+	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 

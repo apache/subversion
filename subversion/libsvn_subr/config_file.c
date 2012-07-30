@@ -766,16 +766,20 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
         "###                              to disk in any way."               NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "###   store-plaintext-passwords  Specifies whether passwords may"   NL
         "###                              be cached on disk unencrypted."    NL
+#endif
         "###   store-ssl-client-cert-pp   Specifies whether passphrase used" NL
         "###                              to authenticate against a client"  NL
         "###                              certificate may be cached to disk" NL
         "###                              in any way"                        NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "###   store-ssl-client-cert-pp-plaintext"                           NL
         "###                              Specifies whether client cert"     NL
         "###                              passphrases may be cached on disk" NL
         "###                              unencrypted (i.e., as plaintext)." NL
+#endif
         "###   store-auth-creds           Specifies whether any auth info"   NL
         "###                              (passwords as well as server certs)"
                                                                              NL
@@ -783,15 +787,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords on disk" NL
-        "### in any way, including in password stores. It defaults to 'yes',"
-                                                                             NL
-        "### but Subversion will never save your password to disk in plaintext"
-                                                                             NL
-        "### unless you tell it to."                                         NL
+        "### in any way, including in password stores.  It defaults to"      NL
+        "### 'yes', but Subversion will never save your password to disk in" NL
+        "### plaintext unless explicitly configured to do so."               NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
         "###"                                                                NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
         "### passwords in unencrypted form in the auth/ area of your config" NL
         "### directory. Set it to 'yes' to allow Subversion to store"        NL
@@ -801,11 +804,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### this option has no effect if either 'store-passwords' or "      NL
         "### 'store-auth-creds' is set to 'no'."                             NL
         "###"                                                                NL
+#endif
         "### Set store-ssl-client-cert-pp to 'no' to avoid storing ssl"      NL
         "### client certificate passphrases in the auth/ area of your"       NL
         "### config directory.  It defaults to 'yes', but Subversion will"   NL
-        "### never save your passphrase to disk in plaintext unless you tell"NL
-        "### it to via 'store-ssl-client-cert-pp-plaintext' (see below)."    NL
+        "### never save your passphrase to disk in plaintext unless"         NL
+        "### explicitly configured to do so."                                NL
         "###"                                                                NL
         "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
         "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
@@ -814,6 +818,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                    svn.serverconfig.netmodel.html\\"            NL
         "###                    #svn.serverconfig.netmodel.credcache"        NL
         "###"                                                                NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "### Set store-ssl-client-cert-pp-plaintext to 'no' to avoid storing"NL
         "### passphrases in unencrypted form in the auth/ area of your"      NL
         "### config directory.  Set it to 'yes' to allow Subversion to"      NL
@@ -823,6 +828,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### this option has no effect if either 'store-auth-creds' or "     NL
         "### 'store-ssl-client-cert-pp' is set to 'no'."                     NL
         "###"                                                                NL
+#endif
         "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
         "### Note that this includes SSL server certificates."               NL
@@ -858,7 +864,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-auth-types = basic;digest;negotiate"                         NL
 #endif
         "# neon-debug-mask = 130"                                            NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
+#endif
         "# username = harry"                                                 NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
@@ -904,9 +912,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "#"                                                                  NL
         "# Password / passphrase caching parameters:"                        NL
         "# store-passwords = no"                                             NL
-        "# store-plaintext-passwords = no"                                   NL
         "# store-ssl-client-cert-pp = no"                                    NL
-        "# store-ssl-client-cert-pp-plaintext = no"                          NL;
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+        "# store-plaintext-passwords = no"                                   NL
+        "# store-ssl-client-cert-pp-plaintext = no"                          NL
+#endif
+        ;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -1039,7 +1050,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### path separator.  A single backslash will be treated as an"      NL
         "### escape for the following character."                            NL
         ""                                                                   NL
-        "### Section for configuring miscelleneous Subversion options."      NL
+        "### Section for configuring miscellaneous Subversion options."      NL
         "[miscellany]"                                                       NL
         "### Set global-ignores to a set of whitespace-delimited globs"      NL
         "### which Subversion will ignore in its 'status' output, and"       NL

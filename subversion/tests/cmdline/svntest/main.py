@@ -302,12 +302,10 @@ def get_start_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "start-commit")
 
-
 def get_pre_commit_hook_path(repo_dir):
   "Return the path of the pre-commit-hook conf file in REPO_DIR."
 
   return os.path.join(repo_dir, "hooks", "pre-commit")
-
 
 def get_post_commit_hook_path(repo_dir):
   "Return the path of the post-commit-hook conf file in REPO_DIR."
@@ -318,6 +316,16 @@ def get_pre_revprop_change_hook_path(repo_dir):
   "Return the path of the pre-revprop-change hook script in REPO_DIR."
 
   return os.path.join(repo_dir, "hooks", "pre-revprop-change")
+
+def get_pre_lock_hook_path(repo_dir):
+  "Return the path of the pre-lock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-lock")
+
+def get_pre_unlock_hook_path(repo_dir):
+  "Return the path of the pre-unlock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-unlock")
 
 def get_svnserve_conf_file_path(repo_dir):
   "Return the path of the svnserve.conf file in REPO_DIR."
@@ -758,7 +766,7 @@ def file_substitute(path, contents, new_contents):
   open(path, 'w').write(fcontent)
 
 # For creating blank new repositories
-def create_repos(path):
+def create_repos(path, minor_version = None):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
   exist, create it."""
 
@@ -766,11 +774,13 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if options.server_minor_version < 4:
+  if not minor_version or minor_version > options.server_minor_version:
+    minor_version = options.server_minor_version
+  if minor_version < 4:
     opts += ("--pre-1.4-compatible",)
-  elif options.server_minor_version < 5:
+  elif minor_version < 5:
     opts += ("--pre-1.5-compatible",)
-  elif options.server_minor_version < 6:
+  elif minor_version < 6:
     opts += ("--pre-1.6-compatible",)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
@@ -794,6 +804,9 @@ def create_repos(path):
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
     file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
+    # This actually creates TWO [users] sections in the file (one of them is
+    # uncommented in `svnadmin create`'s template), so we exercise the .ini
+    # files reading code's handling of duplicates, too. :-)
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
@@ -844,7 +857,8 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
+               minor_version = None):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # Save any previous value of SVN_DBG_QUIET
@@ -853,7 +867,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
-  create_repos(dst_path)
+  create_repos(dst_path, minor_version)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
 

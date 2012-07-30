@@ -34,6 +34,7 @@ from svntest import wc
 from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
+from diff_tests import make_diff_header, make_no_diff_deleted_header
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -178,7 +179,8 @@ def guarantee_repos_and_wc(sbox):
   to test the code"""
   svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "8")
-  svntest.main.file_append(rho_path, "8")
+  svntest.main.file_append(rho_path, "88") # More than one char so libmagic
+                                           # treats it as text.
   svntest.main.run_svn(None, 'add', rho_path)
   svntest.main.run_svn(None,
                        'ci', '-F', msg_file)
@@ -216,7 +218,7 @@ def guarantee_repos_and_wc(sbox):
 
 def merge_history_repos(sbox):
   """Make a repos with varied and interesting merge history, similar
-  to the repos found at: log_tests_data/merge_history_dump.png"""
+  to the repos found at: log_tests_data/merge_history_repo.png"""
 
   upsilon_path = os.path.join('A', 'upsilon')
   omicron_path = os.path.join('blocked', 'omicron')
@@ -279,7 +281,6 @@ def merge_history_repos(sbox):
   # From branch_a to trunk: add 'upsilon' and modify 'iota' and 'mu'.
   #
   # Mergeinfo changes on /trunk:
-  #    Merged /trunk:r2
   #    Merged /branches/a:r3-5
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a) + '@HEAD')
@@ -361,8 +362,6 @@ def merge_history_repos(sbox):
   # More merging - r14
   #
   # Mergeinfo changes on /trunk:
-  #    Reverse-merged /trunk:r2
-  #    Merged /trunk:r3-9
   #    Merged /branches/a:r6,8-11
   #    Merged /branches/b:r10-13
   os.chdir('trunk')
@@ -395,8 +394,7 @@ def merge_history_repos(sbox):
   # Merge branches/c to trunk, which produces a conflict - r17
   #
   # Mergeinfo changes on /trunk:
-  #    Merged /trunk:r2
-  #    Merged /branches/c:r3-16
+  #    Merged /branches/c:r5-16
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
                        os.path.join('..', branch_c) + '@HEAD')
@@ -424,7 +422,7 @@ class SVNLogParseError(Exception):
   pass
 
 
-def parse_log_output(log_lines):
+def parse_log_output(log_lines, with_diffs=False):
   """Return a log chain derived from LOG_LINES.
   A log chain is a list of hashes; each hash represents one log
   message, in the order it appears in LOG_LINES (the first log
@@ -438,6 +436,7 @@ def parse_log_output(log_lines):
      'date'     ===>  string
      'msg'      ===>  string  (the log message itself)
      'lines'    ===>  number  (so that it may be checked against rev)
+
   If LOG_LINES contains changed-path information, then the hash
   also contains
 
@@ -451,7 +450,11 @@ def parse_log_output(log_lines):
 
      'reverse_merges'   ===> list of reverse-merging revisions that resulted
   in this log being part of the list of messages.
-     """
+
+  If LOG_LINES contains diffs and WITH_DIFFS=True, then the hash also contains
+
+     'diff_lines'  ===> list of strings  (diffs)
+  """
 
   # Here's some log output to look at while writing this function:
 
@@ -566,6 +569,20 @@ def parse_log_output(log_lines):
       for line in log_lines[0:lines]:
         msg += line
       del log_lines[0:lines]
+
+      # Maybe accumulate a diff.
+      # If there is a diff, there is a blank line before and after it.
+      if with_diffs and len(log_lines) >= 2 and log_lines[0] == '\n':
+        log_lines.pop(0)
+        diff_lines = []
+        while len(log_lines) and log_lines[0] != msg_separator:
+          diff_lines.append(log_lines.pop(0))
+        if diff_lines[-1] == '\n':
+          diff_lines.pop()
+        else:
+          raise SVNLogParseError("no blank line after diff in log")
+        this_item['diff_lines'] = diff_lines
+
     elif this_line == msg_separator:
       if this_item:
         this_item['msg'] = msg
@@ -675,6 +692,42 @@ def check_log_chain(chain, revlist, path_counts=[]):
     raise SVNUnexpectedLogs('Unable to find expected revision(s) %s' %
                             missing_revs, chain)
 
+
+def parse_diff(output):
+  """Return a set containing the various diff bits, broken up by file."""
+
+  diff_set = []
+  current_diff = []
+  for line in output:
+    if line.startswith('Index: ') and current_diff:
+      diff_set.append(current_diff)
+      current_diff = []
+    current_diff.append(line)
+  diff_set.append(current_diff)
+
+  return diff_set
+
+
+def setify(diff_list):
+  """Take a list of lists and make it a set of tuples."""
+  s = set()
+  for diff in diff_list:
+    s.add(tuple(diff))
+  return s
+
+
+def compare_diff_output(expected_diffs, output):
+  """Compare the diffs in EXPECTED_DIFFS (which is a Python set) with the
+  text in OUTPUT, remembering that there is no canonical ordering for diffs."""
+
+  diffs = parse_diff(output)
+  diffs = setify(diffs)
+  expected_diffs = setify(expected_diffs)
+
+  if diffs.issubset(expected_diffs) and diffs.issuperset(expected_diffs):
+    return
+
+  raise svntest.Failure("Diffs not equal")
 
 
 ######################################################################
@@ -2093,6 +2146,78 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   log_chain = parse_log_output(out)
   check_merge_results(log_chain, expected_merges)
 
+#----------------------------------------------------------------------
+def log_diff(sbox):
+  "'svn log --diff'"
+
+  guarantee_repos_and_wc(sbox)
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff')
+  os.chdir(was_cwd)
+
+  for line in output:
+    if line.startswith('Index:'):
+      break
+  else:
+    raise SVNLogParseError("no diffs found in log output")
+
+  # After a copy, a log of the copy destination used to fail because the
+  # diff tried to use the head-revision URL with the old revision numbers
+  # without using the correct peg revision.
+
+  sbox.simple_copy('A', 'A2')
+  sbox.simple_commit()
+
+  os.chdir(sbox.wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r10:8', 'A2')
+  os.chdir(was_cwd)
+
+  r9diff = [ make_no_diff_deleted_header('A2/B/E/alpha', 8, 9),
+              make_diff_header('A2/B/E/beta', 'revision 8', 'revision 9')
+               + [ "@@ -1 +1,2 @@\n",
+                   " This is the file 'beta'.\n",
+                   "+9\n",
+                   "\ No newline at end of file\n",
+                 ]
+           ]
+  r8diff = [ make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8')
+              + [ "@@ -0,0 +1 @@\n",
+                  "+88\n",
+                  "\ No newline at end of file\n",
+                ]
+           ]
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 3:
+    raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
+  compare_diff_output(r9diff, log_chain[1]['diff_lines'])
+  compare_diff_output(r8diff, log_chain[2]['diff_lines'])
+
+def log_xml_old(sbox):
+  "log --xml shows kind for old style repository"
+
+  sbox.build(minor_version=5)
+
+  sbox.simple_copy('A/B', 'A/B2')
+  sbox.simple_rm('A/B/lambda', 'A/B/E', 'A/B2/lambda', 'A/B2/E')
+  sbox.simple_commit()
+
+  os.chdir(sbox.wc_dir)
+  paths=[{'/A/B/E'       : [{'kind':'dir',  'action':'D'}],
+          '/A/B/lambda'  : [{'kind':'file', 'action':'D'}],
+          '/A/B2'        : [{'kind':'dir',  'action':'A'}],
+          '/A/B2/E'      : [{'kind':'dir',  'action':'D'}],
+          '/A/B2/lambda' : [{'kind':'file', 'action':'D'}]}]
+  svntest.actions.run_and_verify_log_xml(args=['-r', '2', '-v'],
+                                         expected_paths=paths)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2133,6 +2258,8 @@ test_list = [ None,
               log_with_unrelated_peg_and_operative_revs,
               log_on_nonexistent_path_and_valid_rev,
               merge_sensitive_log_copied_path_inherited_mergeinfo,
+              log_diff,
+              log_xml_old,
              ]
 
 if __name__ == '__main__':

@@ -140,6 +140,10 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
+
+  /* The environment inherited to hook scripts. If NULL, hooks run
+   * in an empty environment. */
+  apr_hash_t *hooks_env;
 };
 
 
@@ -175,6 +179,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
 svn_error_t *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
                              svn_revnum_t rev,
+                             const char *txn_name,
                              apr_pool_t *pool);
 
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any

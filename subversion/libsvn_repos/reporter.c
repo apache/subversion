@@ -898,6 +898,21 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root), t_path,
                                     s_rev, b->t_rev, &deleted_rev,
                                     pool));
+
+      if (!SVN_IS_VALID_REVNUM(deleted_rev))
+        {
+          /* Two possibilities: either the thing doesn't exist in S_REV; or
+             it wasn't deleted between S_REV and B->T_REV.  In the first case,
+             I think we should leave DELETED_REV as SVN_INVALID_REVNUM, but
+             in the second, it should be set to B->T_REV-1 for the call to
+             delete_entry() below. */
+          svn_node_kind_t kind;
+
+          SVN_ERR(svn_fs_check_path(&kind, b->t_root, t_path, pool));
+          if (kind != svn_node_none)
+            deleted_rev = b->t_rev - 1;
+        }
+
       SVN_ERR(b->editor->delete_entry(e_path, deleted_rev, dir_baton,
                                       pool));
       s_path = NULL;

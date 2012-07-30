@@ -576,29 +576,22 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
                                                    apr_hash_t *lock_tokens,
                                                    apr_pool_t *pool)
 {
+#define SVN_LOCK_TOKEN_LIST \
+          "<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR
+#define SVN_LOCK "<S:lock>" DEBUG_CR
+#define SVN_LOCK_CLOSE "</S:lock>" DEBUG_CR
+#define SVN_LOCK_PATH "<S:lock-path>"
+#define SVN_LOCK_PATH_CLOSE "</S:lock-path>" DEBUG_CR
+#define SVN_LOCK_TOKEN "<S:lock-token>"
+#define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>" DEBUG_CR
+#define SVN_LOCK_TOKEN_LIST_CLOSE "</S:lock-token-list>"
+#define SVN_LEN(str) (sizeof(str) - 1)
+
   apr_hash_index_t *hi;
-  apr_size_t buf_size;
-  const char *closing_tag = "</S:lock-token-list>";
-  apr_size_t closing_tag_size = strlen(closing_tag);
   apr_pool_t *tmppool = svn_pool_create(pool);
   apr_hash_t *xml_locks = apr_hash_make(tmppool);
-  svn_stringbuf_t *lockbuf = svn_stringbuf_create
-    ("<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR, pool);
-
-  buf_size = lockbuf->len;
-
-#define SVN_LOCK "<S:lock>" DEBUG_CR
-#define SVN_LOCK_LEN sizeof(SVN_LOCK)-1
-#define SVN_LOCK_CLOSE "</S:lock>" DEBUG_CR
-#define SVN_LOCK_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
-#define SVN_LOCK_PATH "<S:lock-path>"
-#define SVN_LOCK_PATH_LEN sizeof(SVN_LOCK_PATH)-1
-#define SVN_LOCK_PATH_CLOSE "</S:lock-path>" DEBUG_CR
-#define SVN_LOCK_PATH_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
-#define SVN_LOCK_TOKEN "<S:lock-token>"
-#define SVN_LOCK_TOKEN_LEN sizeof(SVN_LOCK_TOKEN)-1
-#define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>" DEBUG_CR
-#define SVN_LOCK_TOKEN_CLOSE_LEN sizeof(SVN_LOCK_TOKEN_CLOSE)-1
+  svn_stringbuf_t *lockbuf = svn_stringbuf_create(SVN_LOCK_TOKEN_LIST, pool);
+  apr_size_t buf_size = lockbuf->len;
 
   /* First, figure out how much string data we're talking about,
      and allocate a stringbuf big enough to hold it all... we *never*
@@ -622,17 +615,17 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       apr_hash_set(xml_locks, lock_path_xml->data, lock_path_xml->len, val);
 
       /* Now, on with the stringbuf calculations. */
-      buf_size += SVN_LOCK_LEN;
-      buf_size += SVN_LOCK_PATH_LEN;
+      buf_size += SVN_LEN(SVN_LOCK);
+      buf_size += SVN_LEN(SVN_LOCK_PATH);
       buf_size += lock_path_xml->len;
-      buf_size += SVN_LOCK_PATH_CLOSE_LEN;
-      buf_size += SVN_LOCK_TOKEN_LEN;
+      buf_size += SVN_LEN(SVN_LOCK_PATH_CLOSE);
+      buf_size += SVN_LEN(SVN_LOCK_TOKEN);
       buf_size += strlen(val);
-      buf_size += SVN_LOCK_TOKEN_CLOSE_LEN;
-      buf_size += SVN_LOCK_CLOSE_LEN;
+      buf_size += SVN_LEN(SVN_LOCK_TOKEN_CLOSE);
+      buf_size += SVN_LEN(SVN_LOCK_CLOSE);
     }
 
-  buf_size += closing_tag_size;
+  buf_size += SVN_LEN(SVN_LOCK_TOKEN_LIST_CLOSE);
 
   svn_stringbuf_ensure(lockbuf, buf_size + 1);
 
@@ -659,25 +652,25 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_CLOSE);
     }
 
-  svn_stringbuf_appendcstr(lockbuf, closing_tag);
+  svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_TOKEN_LIST_CLOSE);
 
-#undef SVN_LOCK
-#undef SVN_LOCK_LEN
-#undef SVN_LOCK_CLOSE
-#undef SVN_LOCK_CLOSE_LEN
-#undef SVN_LOCK_PATH
-#undef SVN_LOCK_PATH_LEN
-#undef SVN_LOCK_PATH_CLOSE
-#undef SVN_LOCK_PATH_CLOSE_LEN
-#undef SVN_LOCK_TOKEN
-#undef SVN_LOCK_TOKEN_LEN
-#undef SVN_LOCK_TOKEN_CLOSE
-#undef SVN_LOCK_TOKEN_CLOSE_LEN
+  /* Check our size calculation was correct */
+  SVN_ERR_ASSERT(lockbuf->len == buf_size);
 
   *body = lockbuf;
 
   svn_pool_destroy(tmppool);
   return SVN_NO_ERROR;
+
+#undef SVN_LOCK_TOKEN_LIST
+#undef SVN_LOCK
+#undef SVN_LOCK_CLOSE
+#undef SVN_LOCK_PATH
+#undef SVN_LOCK_PATH_CLOSE
+#undef SVN_LOCK_TOKEN
+#undef SVN_LOCK_TOKEN_CLOSE
+#undef SVN_LOCK_TOKEN_LIST_CLOSE
+#undef SVN_LEN
 }
 
 

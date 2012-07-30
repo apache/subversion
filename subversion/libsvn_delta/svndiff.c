@@ -31,6 +31,8 @@
 #include "svn_private_config.h"
 #include <zlib.h>
 
+#include "private/svn_error_private.h"
+
 /* The zlib compressBound function was not exported until 1.2.0. */
 #if ZLIB_VERNUM >= 0x1200
 #define svnCompressBound(LEN) compressBound(LEN)
@@ -156,15 +158,18 @@ zlib_encode(const char *data,
     }
   else
     {
+      int zerr;
+
       svn_stringbuf_ensure(out, svnCompressBound(len) + intlen);
       endlen = out->blocksize;
 
-      if (compress2((unsigned char *)out->data + intlen, &endlen,
-                    (const unsigned char *)data, len,
-                    compression_level) != Z_OK)
-        return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
-                                NULL,
-                                _("Compression of svndiff data failed"));
+      zerr = compress2((unsigned char *)out->data + intlen, &endlen,
+                       (const unsigned char *)data, len,
+                       compression_level);
+      if (zerr != Z_OK)
+        return svn_error_trace(svn_error__wrap_zlib(
+                                 zerr, "compress2",
+                                 _("Compression of svndiff data failed")));
 
       /* Compression didn't help :(, just append the original text */
       if (endlen >= len)
@@ -472,12 +477,14 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
   else
     {
       unsigned long zlen = len;
+      int zerr;
 
       svn_stringbuf_ensure(out, len);
-      if (uncompress((unsigned char *)out->data, &zlen, in, inLen) != Z_OK)
-        return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
-                                NULL,
-                                _("Decompression of svndiff data failed"));
+      zerr = uncompress((unsigned char *)out->data, &zlen, in, inLen);
+      if (zerr != Z_OK)
+        return svn_error_trace(svn_error__wrap_zlib(
+                                 zerr, "uncompress",
+                                 _("Decompression of svndiff data failed")));
 
       /* Zlib should not produce something that has a different size than the
          original length we stored. */

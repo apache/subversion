@@ -1691,7 +1691,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          SVN_ERR_MALFUNCTION();
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unknown tag '%s' while at state %d"),
+                                   name.name, state);
         }
 
     }
@@ -1766,7 +1768,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          SVN_ERR_MALFUNCTION();
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unknown tag '%s' while at state %d"),
+                                   name.name, state);
         }
     }
   else if (state == IGNORE_PROP_NAME)

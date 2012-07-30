@@ -297,8 +297,11 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
+JAVAHL_MANIFEST_IN = $(abs_srcdir)/subversion/bindings/javahl/Manifest.in
+JAVAHL_MANIFEST = subversion/bindings/javahl/Manifest
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	$(JAR) cf $(JAVAHL_JAR) -C subversion/bindings/javahl/classes org; \
+	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST); \
+	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org; \
 	$(INSTALL_DATA) $(JAVAHL_JAR) $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
@@ -494,7 +497,7 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	            $$flags                                                  \
 	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
-	  echo "make check: Python 2.4 or greater is required,";             \
+	  echo "make check: Python 2.5 or greater is required,";             \
 	  echo "            but was not detected during configure";          \
 	  exit 1;                                                            \
 	fi;

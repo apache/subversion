@@ -955,8 +955,8 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
-            return derr;
+          if (svn_path_is_url(cdata))
+            cdata = svn_uri_canonicalize(cdata, resource->pool);
           if ((serr = dav_svn__simple_parse_uri(&this_info, resource,
                                                 cdata, resource->pool)))
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -970,8 +970,8 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
-            return derr;
+          if (svn_path_is_url(cdata))
+            cdata = svn_uri_canonicalize(cdata, resource->pool);
           if ((serr = dav_svn__simple_parse_uri(&this_info, resource,
                                                 cdata, resource->pool)))
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

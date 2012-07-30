@@ -184,6 +184,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
+  svn_boolean_t ignore_props;    /* ignore properties */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
@@ -229,6 +230,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
+  svn_boolean_t use_patch_diff_format; /* Output compatible with GNU patch */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
 } svn_cl__opt_state_t;
@@ -822,6 +824,23 @@ const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
+
+/* Check that PATH_OR_URL1@REVISION1 is related to PATH_OR_URL2@REVISION2.
+ * Raise an error if not.
+ *
+ * ### Ideally we would also check that they are on different lines of
+ * history.  That is easy in common cases, but to give a correct answer in
+ * general we need to know the operative revision(s) as well.  For example,
+ * when one location is the branch point from which the other branch was
+ * copied.
+ */
+svn_error_t *
+svn_cl__check_related_source_and_target(const char *path_or_url1,
+                                        const svn_opt_revision_t *revision1,
+                                        const char *path_or_url2,
+                                        const svn_opt_revision_t *revision2,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

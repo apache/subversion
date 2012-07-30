@@ -207,6 +207,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
   svn_lock_t *lock;
   svn_error_t *err;
   const char *lookup_path = path;
+  apr_size_t lookup_len;
 
   /* First, try to lookup PATH itself. */
   err = svn_fs_bdb__lock_token_get(&lock_token, fs, path, trail, pool);
@@ -224,7 +225,12 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     {
       SVN_ERR(get_lock(&lock, fs, path, lock_token, trail, pool));
       if (lock && get_locks_func)
-        SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+        {
+          SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+
+          /* Found a lock so PATH is a file and we can ignore depth */
+          return SVN_NO_ERROR;
+        }
     }
 
   /* If we're only looking at PATH itself (depth = empty), stop here. */
@@ -250,11 +256,13 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
 
   if (!svn_fspath__is_root(path, strlen(path)))
     lookup_path = apr_pstrcat(pool, path, "/", (char *)NULL);
+  lookup_len = strlen(lookup_path);
 
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
      know it is either LOOKUP_PATH or a decendant thereof.  */
   while ((! db_err)
-         && strncmp(lookup_path, key.data, strlen(lookup_path)) == 0)
+         && lookup_len < key.size
+         && strncmp(lookup_path, key.data, lookup_len) == 0)
     {
       const char *child_path;
 

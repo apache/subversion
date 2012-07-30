@@ -358,6 +358,18 @@ get_locks(const svn_test_opts_t *opts,
                                        num_expected_paths, pool));
   }
 
+  /* A path that is longer and alphabetically earlier than some locked
+     paths, this exercises the r1205848 BDB lock code. */
+  {
+    static const char *expected_paths[] = { 0 };
+    num_expected_paths = 0;
+    get_locks_baton = make_get_locks_baton(pool);
+    SVN_ERR(svn_fs_get_locks(fs, "A/D/H/ABCDEFGHIJKLMNOPQR", get_locks_callback,
+                             get_locks_baton, pool));
+    SVN_ERR(verify_matching_lock_paths(get_locks_baton, expected_paths,
+                                       num_expected_paths, pool));
+  }
+
   return SVN_NO_ERROR;
 }
 

@@ -182,7 +182,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__internal_get_origin(NULL, &tmpinfo->rev,
                                               &repos_relpath,
                                               &tmpinfo->repos_root_URL,
-                                              &tmpinfo->repos_UUID,
+                                              &tmpinfo->repos_UUID, NULL,
                                               db, local_abspath, TRUE,
                                               result_pool, scratch_pool));
         }

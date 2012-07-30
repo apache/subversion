@@ -2435,7 +2435,7 @@ def reintegrate_replaced_source(sbox):
   # Using cherrypick merges, simulate a series of sync merges from A to
   # A_COPY with a replace of A_COPY along the way.
   #
-  # r6 - Merge r3 from A to A_COPY
+  # r7 - Merge r3 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
@@ -2542,6 +2542,46 @@ def reintegrate_replaced_source(sbox):
                                        [], None, None, None, None, True, True,
                                        '--reintegrate', A_path)
   
+#----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(4052)
+def reintegrate_symlink_deletion(sbox):
+  "reintegrate symlink deletion"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  ## path vars
+  A_path = sbox.ospath('A')
+  A_omicron_path = sbox.ospath('A/omicron')
+  mu_path = sbox.ospath('A/mu')
+  A_COPY_path = sbox.ospath('A_COPY')
+  A_COPY_omicron_path = sbox.ospath('A_COPY/omicron')
+  A_url = sbox.repo_url + "/A"
+  A_COPY_url = sbox.repo_url + "/A_COPY"
+
+  ## add symlink
+  os.symlink(mu_path, A_omicron_path)
+  sbox.simple_add('A/omicron')
+  sbox.simple_commit(message='add symlink')
+
+  ## branch
+  sbox.simple_repo_copy('A', 'A_COPY')
+  sbox.simple_update()
+
+  ## branch rm
+  sbox.simple_rm('A_COPY/omicron')
+  sbox.simple_commit(message='remove symlink on branch')
+
+  ## Note: running update at this point avoids the bug.
+
+  ## reintegrate
+  # ### TODO: verify something here
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       A_COPY_url, A_path)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2565,6 +2605,7 @@ test_list = [ None,
               reintegrate_creates_bogus_mergeinfo,
               no_source_subtree_mergeinfo,
               reintegrate_replaced_source,
+              reintegrate_symlink_deletion,
              ]
 
 if __name__ == '__main__':

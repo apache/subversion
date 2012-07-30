@@ -216,8 +216,9 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
-
-      self.assertEqual(['', 'tags', 'branches', 'trunk'], list(entries.keys()))
+      keys = list(entries.keys())
+      keys.sort()
+      self.assertEqual(['', 'branches', 'tags', 'trunk'], keys)
 
   def test_get_ignores(self):
       self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
