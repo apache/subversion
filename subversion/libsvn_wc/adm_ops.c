@@ -641,8 +641,8 @@ create_delete_wq_items(svn_skel_t **work_items,
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
                                                    local_abspath,
                                                    marker_abspath,
-                                                   scratch_pool,
-                                                   result_pool));
+                                                   result_pool,
+                                                   scratch_pool));
 
               *work_items = svn_wc__wq_merge(*work_items, work_item,
                                              result_pool);
