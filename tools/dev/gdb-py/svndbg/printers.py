@@ -35,7 +35,8 @@ class TypedefRegexCollectionPrettyPrinter(RegexpCollectionPrettyPrinter):
 
        This is modeled on RegexpCollectionPrettyPrinter, which (in GDB 7.3)
        matches on the base type's tag name and can't match a pointer type or
-       any other type that doesn't have a tag name."""
+       any other type that doesn't have a tag name.
+    """
 
     def __init__(self, name):
         super(TypedefRegexCollectionPrettyPrinter, self).__init__(name)
@@ -59,7 +60,8 @@ class TypedefRegexCollectionPrettyPrinter(RegexpCollectionPrettyPrinter):
 
 class InferiorFunction:
     """A class whose instances are callable functions on the inferior
-       process."""
+       process.
+    """
     def __init__(self, function_name):
         self.function_name = function_name
         self.func = None
@@ -71,7 +73,8 @@ class InferiorFunction:
 
 def children_as_map(children_iterator):
     """Convert an iteration of (key, value) pairs into the form required for
-       a pretty-printer 'children' method when the display-hint is 'map'."""
+       a pretty-printer 'children' method when the display-hint is 'map'.
+    """
     for k, v in children_iterator:
         yield 'key', k
         yield 'val', v
@@ -97,7 +100,8 @@ def children_of_apr_hash(hash_p, value_type=None):
     """Iterate over an 'apr_hash_t *' GDB value, in the way required for a
        pretty-printer 'children' method when the display-hint is 'map'.
        Cast the value pointers to VALUE_TYPE, or return values as '...' if
-       VALUE_TYPE is None."""
+       VALUE_TYPE is None.
+    """
     hi = apr_hash_first(0, hash_p)
     while (hi):
         k = svn__apr_hash_index_key(hi).reinterpret_cast(cstringType)
@@ -122,7 +126,8 @@ class AprHashPrinter:
 
     def to_string(self):
         """Return a string to be displayed before children are displayed, or
-           return None if we don't want any such."""
+           return None if we don't want any such.
+        """
         if not self.hash_p:
             return 'NULL'
         return 'hash of ' + str(apr_hash_count(self.hash_p)) + ' items'
@@ -134,6 +139,16 @@ class AprHashPrinter:
 
     def display_hint(self):
         return 'map'
+
+def children_of_apr_array(array, value_type):
+    """Iterate over an 'apr_array_header_t' GDB value, in the way required for
+       a pretty-printer 'children' method when the display-hint is 'array'.
+       Cast the value pointers to VALUE_TYPE.
+    """
+    nelts = int(array['nelts'])
+    elts = array['elts'].reinterpret_cast(value_type.pointer())
+    for i in range(nelts):
+        yield str(i), elts[i]
 
 class AprArrayPrinter:
     """for 'apr_array_header_t' of unknown elements"""
@@ -156,20 +171,12 @@ class AprArrayPrinter:
     def display_hint(self):
         return 'array'
 
-def children_of_apr_array(array, value_type):
-    """Iterate over an 'apr_array_header_t' GDB value, in the way required for
-       a pretty-printer 'children' method when the display-hint is 'array'.
-       Cast the value pointers to VALUE_TYPE."""
-    nelts = int(array['nelts'])
-    elts = array['elts'].reinterpret_cast(value_type.pointer())
-    for i in range(nelts):
-        yield str(i), elts[i]
-
 ########################################################################
 
 # Pretty-printing for Subversion libsvn_subr types.
 
 class SvnStringPrinter:
+    """for svn_string_t"""
     def __init__(self, val):
         if val.type.code == gdb.TYPE_CODE_PTR and val:
             self.val = val.dereference()
@@ -188,6 +195,7 @@ class SvnStringPrinter:
         return 'string'
 
 class SvnMergeRangePrinter:
+    """for svn_merge_range_t"""
     def __init__(self, val):
         if val.type.code == gdb.TYPE_CODE_PTR and val:
             self.val = val.dereference()
@@ -208,6 +216,7 @@ class SvnMergeRangePrinter:
         return 'string'
 
 class SvnRangelistPrinter:
+    """for svn_rangelist_t"""
     def __init__(self, val):
         if val.type.code == gdb.TYPE_CODE_PTR and val:
             self.array = val.dereference()
@@ -271,6 +280,7 @@ class SvnMergeinfoCatalogPrinter:
 # Pretty-printing for Subversion libsvn_client types.
 
 class SvnPathrevPrinter:
+    """for svn_client__pathrev_t"""
     def __init__(self, val):
         self.val = val
 
