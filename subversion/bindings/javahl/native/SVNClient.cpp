@@ -760,7 +760,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
         jobject jranges =
-            CreateJ::RevisionRangeList((apr_array_header_t *) val);
+            CreateJ::RevisionRangeList((svn_rangelist_t *) val);
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 

@@ -911,7 +911,7 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 }
 
 jobject
-CreateJ::RevisionRangeList(apr_array_header_t *ranges)
+CreateJ::RevisionRangeList(svn_rangelist_t *ranges)
 {
   JNIEnv *env = JNIUtil::getEnv();
 

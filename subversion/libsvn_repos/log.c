@@ -1177,7 +1177,7 @@ send_log(svn_revnum_t rev,
             {
               const char *mergeinfo_path =
                 svn__apr_hash_index_key(hi2);
-              apr_array_header_t *rangelist =
+              svn_rangelist_t *rangelist =
                 svn__apr_hash_index_val(hi2);
 
               /* Check whether CHANGED_PATH at revision REV is a child of
@@ -1397,7 +1397,7 @@ struct path_list_range
    the paths can be accessed by revision. */
 struct rangelist_path
 {
-  apr_array_header_t *rangelist;
+  svn_rangelist_t *rangelist;
   const char *path;
 };
 
@@ -1735,8 +1735,8 @@ reduce_search(apr_array_header_t *paths,
   for (i = 0; i < paths->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      apr_array_header_t *ranges = apr_hash_get(processed, path,
-                                                APR_HASH_KEY_STRING);
+      svn_rangelist_t *ranges = apr_hash_get(processed, path,
+                                             APR_HASH_KEY_STRING);
       int j;
 
       if (!ranges)
@@ -1807,8 +1807,8 @@ store_search(svn_mergeinfo_t processed,
   for (i = 0; i < paths->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      apr_array_header_t *ranges = apr_array_make(processed_pool, 1,
-                                                  sizeof(svn_merge_range_t*));
+      svn_rangelist_t *ranges = apr_array_make(processed_pool, 1,
+                                               sizeof(svn_merge_range_t*));
       svn_merge_range_t *range = apr_palloc(processed_pool,
                                             sizeof(svn_merge_range_t));
 

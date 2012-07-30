@@ -41,7 +41,7 @@ extern "C" {
 /* Set inheritability of all ranges in RANGELIST to INHERITABLE.
    If RANGELIST is NULL do nothing. */
 void
-svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+svn_rangelist__set_inheritance(svn_rangelist_t *rangelist,
                                svn_boolean_t inheritable);
 
 /* Parse a rangelist from the string STR. Set *RANGELIST to the result,
@@ -52,7 +52,7 @@ svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
  * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
  * or combine adjacent and overlapping ranges. */
 svn_error_t *
-svn_rangelist__parse(apr_array_header_t **rangelist,
+svn_rangelist__parse(svn_rangelist_t **rangelist,
                      const char *str,
                      apr_pool_t *result_pool);
 
@@ -239,7 +239,7 @@ svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in
    RESULT_POOL. */
-apr_array_header_t *
+svn_rangelist_t *
 svn_rangelist__initialize(svn_revnum_t start,
                           svn_revnum_t end,
                           svn_boolean_t inheritable,
@@ -277,7 +277,7 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
  * RESULT_POOL. See svn_rangelist_merge2() for details of inheritability
  * etc. */
 svn_error_t *
-svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,
+svn_rangelist__merge_many(svn_rangelist_t *merged_rangelist,
                           svn_mergeinfo_t mergeinfo,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);

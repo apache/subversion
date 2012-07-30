@@ -1291,7 +1291,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
                hi = apr_hash_next(hi))
             {
               apr_pool_t *iterpool3;
-              apr_array_header_t *rangelist;
+              svn_rangelist_t *rangelist;
               const char *path;
               int j;
 
