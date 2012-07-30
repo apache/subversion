@@ -224,6 +224,19 @@ class AprArrayPrinter:
 
 # Pretty-printing for Subversion libsvn_subr types.
 
+class SvnBooleanPrinter:
+    """for svn_boolean_t"""
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        if self.val is None:
+            return '(NULL)'
+        if self.val:
+            return 'TRUE'
+        else:
+            return 'FALSE'
+
 class SvnStringPrinter:
     """for svn_string_t"""
     def __init__(self, val):
@@ -372,6 +385,8 @@ def build_libsvn_printers():
                                AprArrayPrinter)
 
     libsvn_printer = TypedefRegexCollectionPrettyPrinter("libsvn")
+    libsvn_printer.add_printer('svn_boolean_t', r'^svn_boolean_t$',
+                               SvnBooleanPrinter)
     libsvn_printer.add_printer('svn_string_t', r'^svn_string_t$',
                                SvnStringPrinter)
     libsvn_printer.add_printer('svn_client__pathrev_t', r'^svn_client__pathrev_t$',
