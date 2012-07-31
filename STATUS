@@ -57,43 +57,6 @@ Candidate changes:
    Votes:
      +0: stsp (pending a proper conflict-free backport)
 
- * r1354876, r1354907, r1355340
-   Allow non-existing but valid canonical absolute paths to pass through
-   svn_dirent_get_absolute().
-   Justification:
-     Resolves a few user reported problems.
-   Notes:
-     r1354907 undoes r1354876, and r1355340 fixes a return problem, so
-     it is easiest to review them as a single patch.
-   Votes:
-     +1: rhuijben, cmpilato
-
- * r1361007, r1361019
-   Don't record references to files in the system temp directory from
-   workqueue operations from the merge code.
-   Justification:
-     Removes cases where a ^C can break your workqueue, because the
-     diff code removes the files referenced from the workqueue in its
-     pool cleanup.
-   Branch: ^/subversion/branches/1.7.x-r1361007
-   Notes:
-     Requires a branch because the merge code has been reworked for 1.8.
-   Votes:
-     +1: rhuijben, cmpilato
-
- * r1361341
-   Avoid checking for working copies above the current working copy from
-   svn_wc__acquire_write_lock() to avoid checking for .svn/wc.db in
-   directories where we might not have read permission.
-   Justification:
-     Resolves a problem reported on the CollabNet Subversion forum.
-   Branch: ^/subversion/branches/1.7.x-r1361341
-   Notes:
-     Requires a backport branch because we renamed svn_wc__db_kind_dir to
-     svn_kind_dir for 1.8.
-   Votes:
-     +1: rhuijben, cmpilato
-
  * r1362508
    Avoid errors when users run 'svnlook changed', 'svnlook
    dirs-changed', or 'svnlook diff' on r0.  Though the output from
@@ -114,7 +77,15 @@ Candidate changes:
      Trivial patch in r1365554; the other patches are for adding and updating
      a regression test.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
+
+ * r1367498
+   Make FSFS revision files independent of APR hash order.
+   Justification:
+     Make 'svnadmin load', and other commits,  produce reproducible revision
+     files.
+   Votes:
+     +1: philip
      
 Veto-blocked changes:
 =====================
@@ -122,3 +93,39 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1354876, r1354907, r1355340
+   Allow non-existing but valid canonical absolute paths to pass through
+   svn_dirent_get_absolute().
+   Justification:
+     Resolves a few user reported problems.
+   Notes:
+     r1354907 undoes r1354876, and r1355340 fixes a return problem, so
+     it is easiest to review them as a single patch.
+   Votes:
+     +1: rhuijben, cmpilato, philip
+
+ * r1361007, r1361019
+   Don't record references to files in the system temp directory from
+   workqueue operations from the merge code.
+   Justification:
+     Removes cases where a ^C can break your workqueue, because the
+     diff code removes the files referenced from the workqueue in its
+     pool cleanup.
+   Branch: ^/subversion/branches/1.7.x-r1361007
+   Notes:
+     Requires a branch because the merge code has been reworked for 1.8.
+   Votes:
+     +1: rhuijben, cmpilato, philip
+
+ * r1361341
+   Avoid checking for working copies above the current working copy from
+   svn_wc__acquire_write_lock() to avoid checking for .svn/wc.db in
+   directories where we might not have read permission.
+   Justification:
+     Resolves a problem reported on the CollabNet Subversion forum.
+   Branch: ^/subversion/branches/1.7.x-r1361341
+   Notes:
+     Requires a backport branch because we renamed svn_wc__db_kind_dir to
+     svn_kind_dir for 1.8.
+   Votes:
+     +1: rhuijben, cmpilato, philip
