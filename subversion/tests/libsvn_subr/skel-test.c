@@ -873,6 +873,11 @@ unparse_list(apr_pool_t *pool)
 
     if (! skel_equal(top, reparsed))
       return fail(pool, "failed to reparse list of lists");
+
+    reparsed = svn_skel__dup(reparsed, TRUE, pool);
+
+    if (! skel_equal(top, reparsed))
+      return fail(pool, "failed to dup list of lists");
   }
 
   return SVN_NO_ERROR;

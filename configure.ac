@@ -1192,7 +1192,8 @@ SVN_CHECK_CTYPESGEN
 dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
 AS_HELP_STRING([--enable-runtime-module-search],
-               [Turn on dynamic loading of RA/FS libraries]),
+               [Turn on dynamic loading of RA/FS libraries including
+                third-party FS libraries]),
 [
     if test "$enableval" = "yes"; then
       use_dso=yes

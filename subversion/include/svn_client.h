@@ -3696,9 +3696,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 /**
  * Get the mergeinfo for a single target node (ignoring any subtrees).
  *
- * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
- * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
- * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
+ * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge source
+ * URLs to <tt>svn_rangelist_t *</tt> rangelists describing the ranges which
  * have been merged into @a path_or_url as of @a peg_revision, per
  * @a path_or_url's explicit mergeinfo or inherited mergeinfo if no
  * explicit mergeinfo if found.  If no explicit or inherited mergeinfo

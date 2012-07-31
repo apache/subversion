@@ -2844,6 +2844,7 @@ do_delete(svn_test__sandbox_t *b,
   SVN_ERR(check_db_rows(b, "", before));
   SVN_ERR(check_db_actual(b, actual_before));
   SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath, NULL,
+                               TRUE /* delete_dir_externals */,
                                NULL /* conflict */, NULL /* work_item */,
                                NULL, NULL /* cancellation */,
                                NULL, NULL /* notification */,
@@ -3649,8 +3650,6 @@ copy_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "A/B",   "normal", NO_COPY_FROM },
       { 0, "A/g",   "normal", 1, "f", TRUE },
       { 0, "A/B/g", "normal", 1, "f", TRUE },
-      { 0, "X/g",   "normal", 1, "f", TRUE },
-      { 0, "X/B/g", "normal", 1, "f", TRUE },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));

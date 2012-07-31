@@ -1288,6 +1288,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1303,9 +1304,12 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
                                      NULL, scratch_pool));
 
+  if (declaration_only)
+    return SVN_NO_ERROR;
+
   if (kind == svn_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
-                                                 TRUE, FALSE,
+                                                 TRUE, TRUE,
                                                  cancel_func, cancel_baton,
                                                  scratch_pool));
   else
@@ -1550,7 +1554,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
   /* The remaining URLs are relative to either the scheme or server root
      and can only refer to locations inside that scope, so backpaths are
      not allowed. */
-  if (svn_path_is_backpath_present(url + 2))
+  if (svn_path_is_backpath_present(url))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),

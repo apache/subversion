@@ -1466,6 +1466,10 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below LOCAL_ABSPATH.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
+ *
  * If MOVED_TO_ABSPATH is not NULL, mark the deletion of LOCAL_ABSPATH
  * as the delete-half of a move from LOCAL_ABSPATH to MOVED_TO_ABSPATH.
  *
@@ -1481,6 +1485,7 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
+                     svn_boolean_t delete_dir_externals,
                      svn_skel_t *conflict,
                      svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
@@ -1498,6 +1503,10 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
  * It currently lacks support for moves (though this could be changed,
  * at which point svn_wc__db_op_delete() becomes redundant).
  *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below the targets.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
+ *
  * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
  * for each node deleted. While this processing occurs, if CANCEL_FUNC is
  * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
@@ -1509,6 +1518,8 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete_many(svn_wc__db_t *db,
                           apr_array_header_t *targets,
+                          svn_boolean_t delete_dir_externals,
+                          const svn_skel_t *conflict,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -2873,19 +2884,39 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 */
 
 /* Removes all references to LOCAL_ABSPATH from DB, while optionally leaving
-   tree conflicts and/or a not present node.
+   a not present node.
 
    This operation always recursively removes all nodes at and below
    LOCAL_ABSPATH from NODES and ACTUAL.
 
    If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
-   BASE node at local_abspath. (Requires an existing BASE node before removing)
+   BASE node at local_abspath of the specified status and kind.
+   (Requires an existing BASE node before removing)
+
+   If DESTROY_WC is TRUE, this operation *installs* workqueue operations to
+   update the local filesystem after the database operation. If DESTROY_CHANGES
+   is FALSE, modified and unversioned files are left after running this
+   operation (and the WQ). If DESTROY_CHANGES and DESTROY_WC are TRUE,
+   LOCAL_ABSPATH and everything below it will be removed by the WQ.
+
+
+   Note: Unlike many similar functions it is a valid scenario for this
+   function to be called on a wcroot! In this case it will just leave the root
+   record in BASE
  */
 svn_error_t *
-svn_wc__db_op_remove_node(svn_wc__db_t *db,
+svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
+                          svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t destroy_wc,
+                          svn_boolean_t destroy_changes,
                           svn_revnum_t not_present_revision,
+                          svn_wc__db_status_t not_present_status,
                           svn_kind_t not_present_kind,
+                          const svn_skel_t *conflict,
+                          const svn_skel_t *work_items,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.

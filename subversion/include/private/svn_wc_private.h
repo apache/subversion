@@ -228,6 +228,9 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
 /* Remove the external at LOCAL_ABSPATH from the working copy identified by
    WRI_ABSPATH using WC_CTX.
 
+   If DECLARATION_ONLY is TRUE, only remove the registration and leave the
+   on-disk structure untouched.
+
    If not NULL, call CANCEL_FUNC with CANCEL_BATON to allow canceling while
    removing the working copy files.
 
@@ -237,6 +240,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool);

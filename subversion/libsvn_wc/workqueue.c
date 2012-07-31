@@ -739,6 +739,7 @@ run_file_remove(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
+                             const char *wri_abspath,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
@@ -746,7 +747,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
   const char *local_relpath;
   *work_item = svn_skel__make_empty_list(result_pool);
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);

@@ -986,32 +986,6 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                void *status_baton,
                                apr_pool_t *pool);
 
-/* Baton type for svn_wc__external_info_gatherer(). */
-typedef struct svn_client__external_func_baton_t
-{
-  apr_hash_t *externals_old;  /* Hash of old externals property values,
-                                 or NULL if the caller doesn't care. */
-  apr_hash_t *externals_new;  /* Hash of new externals property values,
-                                 or NULL if the caller doesn't care. */
-  apr_hash_t *ambient_depths; /* Hash of ambient depth values, or NULL
-                                 if the caller doesn't care. */
-  apr_pool_t *result_pool;    /* Pool to use for all stored values. */
-
-} svn_client__external_func_baton_t;
-
-
-/* This function gets invoked whenever external changes are encountered.
-   This implements the `svn_wc_external_update_t' interface, and can
-   be used with an svn_client__external_func_baton_t BATON to gather
-   information about changes to externals definitions. */
-svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool);
-
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t
 {

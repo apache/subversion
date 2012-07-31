@@ -4501,6 +4501,12 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
     r(5 + NBR_OF_BRANCHES) - A/D/H/omega
   Return (expected_disk, expected_status).'''
 
+  # With the default parameters, the branching looks like this:
+  #
+  #   A         -1-----3-4-5-6--
+  #                \
+  #   A_COPY        2-----------
+
   wc_dir = sbox.wc_dir
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -11061,6 +11067,18 @@ def reverse_merge_away_all_mergeinfo(sbox):
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
 
+  #                              +-> merge -c7 A/D/H/nu@7 H_COPY/nu
+  #                              | +-> merge -c2 A/D/H H_COPY
+  #                              | | +-> merge A/D/H H_COPY
+  #                              | | |
+  # A/D/H      A----------------------
+  #     +-psi  +-M-------------M------
+  #     +-nu       A-D C---M-D
+  # H_COPY               C---------G-G
+  #     +-psi            +---------+-.
+  #     +-nu             +-------G---.
+  #            1 2 3 4 5 6 7 8 9 w w w
+
   # Create our good 'ole greek tree.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -13124,7 +13142,7 @@ def merge_two_edits_to_same_prop(sbox):
       " C   %s\n" % mu_path,
       ], prop_conflicts=1,
       args=['--allow-mixed-revisions',
-            '--accept=theirs-conflict'],
+            '--accept=working'],
       resolved=[mu_path])
   svn_merge(rev4, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
