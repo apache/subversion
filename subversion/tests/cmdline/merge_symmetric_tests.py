@@ -785,6 +785,8 @@ def subtree_to_and_fro(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--symmetric',
                                      sbox.repo_url + '/A/D', A_COPY_D_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Symmetric subtree merge')
 
   # r9 - Make an edit to A/D/H/psi.
   svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
@@ -816,10 +818,10 @@ def subtree_to_and_fro(sbox):
   #   Select: (p) postpone, (df) diff-full, (e) edit,
   #           (mc) mine-conflict, (tc) theirs-conflict,
   #           (s) show all options: p
-  #   --- Merging r2 through r8 into 'A':
+  #   --- Merging r2 through r9 into 'A':
   #   C    A\D\H\psi
   #   U    A\D\gamma
-  #   --- Recording mergeinfo for merge of r2 through r8 into 'A':
+  #   --- Recording mergeinfo for merge of r2 through r9 into 'A':
   #    U   A
   #   Summary of conflicts:
   #     Text conflicts: 1
@@ -834,7 +836,7 @@ def subtree_to_and_fro(sbox):
                                 "in the way expected",
                                 err, None,
                                 "(svn: E195016: Reintegrate can only be used if "
-                                "revisions 2 through 8 were previously "
+                                "revisions 2 through 9 were previously "
                                 "merged from .*/A to the reintegrate source, "
                                 "but this is not the case:\n)"
                                 "|(  A_COPY\n)"
