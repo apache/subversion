@@ -65,7 +65,21 @@ Candidate changes:
    Justification:
      Resolves complaint made by user(s).
    Votes:
-     +1: cmpilato
+     +1: cmpilato, steveking
+
+ * r1367498
+   Make FSFS revision files independent of APR hash order.
+   Justification:
+     Make 'svnadmin load', and other commits,  produce reproducible revision
+     files.
+   Votes:
+     +1: philip, steveking
+     
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1365549, r1365554, r1365556
    Resolve regression where 'svn revert --depth files' only operates on the
@@ -77,21 +91,7 @@ Candidate changes:
      Trivial patch in r1365554; the other patches are for adding and updating
      a regression test.
    Votes:
-     +1: rhuijben, philip
-
- * r1367498
-   Make FSFS revision files independent of APR hash order.
-   Justification:
-     Make 'svnadmin load', and other commits,  produce reproducible revision
-     files.
-   Votes:
-     +1: philip
-     
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: rhuijben, philip, steveking
 
  * r1354876, r1354907, r1355340
    Allow non-existing but valid canonical absolute paths to pass through
