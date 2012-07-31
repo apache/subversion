@@ -133,6 +133,11 @@ svn_skel_t *svn_skel__mem_atom(const void *addr, apr_size_t len,
 /* Create an empty list skel, allocated from POOL.  */
 svn_skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 
+/* Duplicates the skel structure SRC_SKEL and if DUP_DATA is true also the
+   data it references in RESULT_POOL */
+svn_skel_t *svn_skel__dup(const svn_skel_t *src_skel, svn_boolean_t dup_data,
+                          apr_pool_t *result_pool);
+
 
 /* Prepend SKEL to LIST.  */
 void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);

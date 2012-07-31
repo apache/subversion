@@ -621,7 +621,10 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @a config is a hash mapping <tt>const char *</tt> keys to
  * @c svn_config_t * values.  For example, the @c svn_config_t for the
- * "~/.subversion/config" file is under the key "config".
+ * "~/.subversion/config" file is under the key "config".  @a config may
+ * be NULL.  This function examines some config settings under the
+ * "servers" key (if present) before loading the required RA module, and
+ * the RA module may also examine any config settings.
  *
  * All RA requests require a session; they will continue to
  * use @a pool for memory allocation.

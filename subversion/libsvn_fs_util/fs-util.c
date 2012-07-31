@@ -163,7 +163,7 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
 
       apr_hash_set(*output, svn_fspath__join(path, rel_path, pool),
                    APR_HASH_KEY_STRING, svn_rangelist_dup(rangelist, pool));

@@ -1155,7 +1155,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
         else
-          old_props = their_props;
+          old_props = their_original_props;
 
         prop_data = prop_conflict_skel_new(result_pool);
 
@@ -1607,7 +1607,7 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
     if (remove_source)
       {
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, install_from,
+                                             db, local_abspath, install_from,
                                              result_pool, scratch_pool));
         *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
       }
@@ -1828,7 +1828,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                scratch_pool, scratch_pool));
       else
-        old_props = their_props;
+        old_props = old_their_props;
 
       iterpool = svn_pool_create(scratch_pool);
 
@@ -2084,10 +2084,9 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
 
-   PATH is the path to the item to be resolved, BASE_NAME is the basename
-   of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conflicts respectively are to be resolved.
+   LOCAL_ABSPATH in DB is the path to the item to be resolved.
+   RESOLVE_TEXT, RESOLVE_PROPS and RESOLVE_TREE are TRUE iff text, property
+   and tree conflicts respectively are to be resolved.
 
    If this call marks any conflict as resolved, set *DID_RESOLVE to true,
    else do not change *DID_RESOLVE.
@@ -2107,6 +2106,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                          apr_pool_t *scratch_pool)
 {
   svn_skel_t *conflicts;
+  svn_wc_operation_t operation;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
   svn_boolean_t tree_conflicted;
@@ -2122,7 +2122,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
   if (!conflicts)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,
+  SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, &text_conflicted,
                                      &prop_conflicted, &tree_conflicted,
                                      db, local_abspath, conflicts,
                                      scratch_pool, scratch_pool));
@@ -2224,6 +2224,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_old,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2237,6 +2238,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_new,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2250,6 +2252,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_working,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2262,11 +2265,86 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
     {
       svn_node_kind_t node_kind;
       const char *prop_reject_file;
+      apr_hash_t *mine_props;
+      apr_hash_t *their_old_props;
+      apr_hash_t *their_props;
+      apr_hash_t *conflicted_props;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+      apr_hash_t *old_props;
+      apr_hash_t *resolve_from = NULL;
+#endif
 
       SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
-                                                  NULL, NULL, NULL, NULL,
+                                                  &mine_props, &their_old_props,
+                                                  &their_props, &conflicted_props,
                                                   db, local_abspath, conflicts,
                                                   scratch_pool, scratch_pool));
+
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+      if (operation == svn_wc_operation_merge)
+          SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
+        else
+          old_props = their_old_props;
+
+      /* We currently handle *_conflict as *_full as this argument is currently
+         always applied for all conflicts on a node at the same time. Giving
+         an error would break some tests that assumed that this would just
+         resolve property conflicts to working.
+
+         An alternative way to handle these conflicts would be to just copy all
+         property state from mine/theirs on the _full option instead of just the
+         conflicted properties. In some ways this feels like a sensible option as
+         that would take both properties and text from mine/theirs, but when not
+         both properties and text are conflicted we would fail in doing so.
+       */
+      switch (conflict_choice)
+        {
+        case svn_wc_conflict_choose_base:
+          resolve_from = their_old_props ? their_old_props : old_props;
+          break;
+        case svn_wc_conflict_choose_mine_full:
+        case svn_wc_conflict_choose_mine_conflict:
+          resolve_from = mine_props;
+          break;
+        case svn_wc_conflict_choose_theirs_full:
+        case svn_wc_conflict_choose_theirs_conflict:
+          resolve_from = their_props;
+          break;
+        case svn_wc_conflict_choose_merged:
+          resolve_from = NULL;
+          break;
+        default:
+          return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                  _("Invalid 'conflict_result' argument"));
+        }
+
+      if (conflicted_props && apr_hash_count(conflicted_props) && resolve_from)
+        {
+          apr_hash_index_t *hi;
+          apr_hash_t *actual_props;
+
+          SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+          for (hi = apr_hash_first(scratch_pool, conflicted_props);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *propname = svn__apr_hash_index_key(hi);
+              svn_string_t *new_value = NULL;
+
+              new_value = apr_hash_get(resolve_from, propname,
+                                       APR_HASH_KEY_STRING);
+
+              apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING,
+                           new_value);
+            }
+          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                          FALSE, NULL, NULL,
+                                          scratch_pool));
+        }
+#endif
 
       /* Legacy behavior: Only report property conflicts as resolved when the
          property reject file exists
@@ -2280,6 +2358,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    prop_reject_file,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);

@@ -264,7 +264,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source;
-      apr_array_header_t *rangelist;
+      svn_rangelist_t *rangelist;
       struct parse_baton *pb = rb->pb;
       int i;
       const void *key;

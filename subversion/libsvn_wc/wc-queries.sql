@@ -163,6 +163,28 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
                    AND op_depth > 0)
 ORDER BY local_relpath DESC
 
+-- STMT_SELECT_WORKING_PRESENT
+SELECT local_relpath, kind, checksum, translated_size, last_mod_time
+FROM nodes n
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND presence in ('normal', 'incomplete')
+  AND op_depth = (SELECT MAX(op_depth)
+                  FROM NODES w
+                  WHERE w.wc_id = ?1
+                    AND w.local_relpath = n.local_relpath)
+ORDER BY local_relpath DESC
+
+-- STMT_DELETE_NODE_RECURSIVE
+DELETE FROM NODES
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+
+-- STMT_DELETE_NODE
+DELETE
+FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2
+
 -- STMT_DELETE_ACTUAL_FOR_BASE_RECURSIVE
 /* The ACTUAL_NODE applies to BASE, unless there is in at least one op_depth
    a WORKING node that could have a conflict */
@@ -967,6 +989,24 @@ SELECT presence, kind, def_local_relpath, repos_id,
     def_repos_relpath, def_operational_revision, def_revision
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
+
+-- STMT_DELETE_FILE_EXTERNALS
+DELETE FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND file_external IS NOT NULL
+
+-- STMT_DELETE_FILE_EXTERNAL_REGISTATIONS
+DELETE FROM externals
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND kind != 'dir'
+
+-- STMT_DELETE_EXTERNAL_REGISTATIONS
+DELETE FROM externals
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 /* Select all committable externals, i.e. only unpegged ones on the same
  * repository as the target path ?2, that are defined by WC ?1 to

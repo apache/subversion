@@ -259,34 +259,34 @@
 /* -----------------------------------------------------------------------
    input rangelist
 */
-%apply apr_array_header_t *RANGELIST {
-  apr_array_header_t *rangeinput,
-  const apr_array_header_t *rangelist,
-  apr_array_header_t *from,
-  apr_array_header_t *to,
-  apr_array_header_t *changes,
-  apr_array_header_t *eraser,
-  apr_array_header_t *whiteboard,
-  apr_array_header_t *rangelist1,
-  apr_array_header_t *rangelist2
+%apply svn_rangelist_t *RANGELIST {
+  svn_rangelist_t *rangeinput,
+  const svn_rangelist_t *rangelist,
+  svn_rangelist_t *from,
+  svn_rangelist_t *to,
+  svn_rangelist_t *changes,
+  svn_rangelist_t *eraser,
+  svn_rangelist_t *whiteboard,
+  svn_rangelist_t *rangelist1,
+  svn_rangelist_t *rangelist2
 }
 
 /* -----------------------------------------------------------------------
    output rangelist
 */
-%apply apr_array_header_t **RANGELIST {
-  apr_array_header_t **rangelist,
-  apr_array_header_t **inheritable_rangelist,
-  apr_array_header_t **deleted,
-  apr_array_header_t **added,
-  apr_array_header_t **output
+%apply svn_rangelist_t **RANGELIST {
+  svn_rangelist_t **rangelist,
+  svn_rangelist_t **inheritable_rangelist,
+  svn_rangelist_t **deleted,
+  svn_rangelist_t **added,
+  svn_rangelist_t **output
 }
 
 /* -----------------------------------------------------------------------
    input and output rangelist
 */
-%apply apr_array_header_t **RANGELIST_INOUT {
-  apr_array_header_t **rangelist_inout
+%apply svn_rangelist_t **RANGELIST_INOUT {
+  svn_rangelist_t **rangelist_inout
 }
 
 /* -----------------------------------------------------------------------
@@ -1145,15 +1145,15 @@ svn_swig_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
 }
 
 static svn_error_t *
-svn_swig_rangelist_merge(apr_array_header_t **rangelist_inout,
-                         apr_array_header_t *changes,
+svn_swig_rangelist_merge(svn_rangelist_t **rangelist_inout,
+                         svn_rangelist_t *changes,
                          apr_pool_t *pool)
 {
   return svn_rangelist_merge(rangelist_inout, changes, pool);
 }
 
 static svn_error_t *
-svn_swig_rangelist_reverse(apr_array_header_t **rangelist_inout,
+svn_swig_rangelist_reverse(svn_rangelist_t **rangelist_inout,
                            apr_pool_t *pool)
 {
   return svn_rangelist_reverse(*rangelist_inout, pool);
