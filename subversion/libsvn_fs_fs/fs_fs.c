@@ -8610,9 +8610,17 @@ recover_body(void *baton, apr_pool_t *pool)
                                max_rev);
     }
 
-  /* Prune younger-than-(newfound-youngest) revisions from the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_fs_fs__del_rep_reference(fs, max_rev, pool));
+  /* Prune younger-than-(newfound-youngest) revisions from the rep
+     cache if sharing is enabled taking care not to create the cache
+     if it does not exist. */
+  if (ffd->rep_sharing_allowed)
+    {
+      svn_boolean_t rep_cache_exists;
+
+      SVN_ERR(svn_fs_fs__exists_rep_cache(&rep_cache_exists, fs, pool));
+      if (rep_cache_exists)
+        SVN_ERR(svn_fs_fs__del_rep_reference(fs, max_rev, pool));
+    }
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
