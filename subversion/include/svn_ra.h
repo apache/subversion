@@ -613,6 +613,17 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * corrected_url is NULL, return an #SVN_ERR_RA_SESSION_URL_MISMATCH
  * error.  Allocate all returned items in @a pool.
  *
+ * The @a repos_URL need not point to the root of the repository: subject
+ * to authorization, it may point to any path within the repository, even
+ * a path at which no node exists in the repository.  The session will
+ * remember this URL as its "session URL" (also called "session root URL"),
+ * until changed by svn_ra_reparent().  Many RA functions take or return
+ * paths that are relative to the session URL.
+ *
+ * If a @a corrected_url is returned, it will point to the same path
+ * within the new repository root URL that @a repos_URL pointed to within
+ * the old repository root URL.
+ *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
  *
@@ -702,7 +713,7 @@ svn_ra_reparent(svn_ra_session_t *ra_session,
                 const char *url,
                 apr_pool_t *pool);
 
-/** Set @a *url to the repository URL to which @a ra_session was
+/** Set @a *url to the session URL -- the URL to which @a ra_session was
  * opened or most recently reparented.
  *
  * @since New in 1.5.
@@ -713,8 +724,8 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 
-/** Convert @a url into a path relative to the URL at which @a ra_session
- * is parented, setting @a *rel_path to that value.  If @a url is not
+/** Convert @a url into a path relative to the session URL of @a ra_session,
+ * setting @a *rel_path to that value.  If @a url is not
  * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
  *
  * The returned path is uri decoded to allow using it with the ra or other
