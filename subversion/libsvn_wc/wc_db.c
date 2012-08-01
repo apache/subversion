@@ -8790,8 +8790,15 @@ read_url_txn(void *baton,
           else
             {
               /* The parent of the WORKING delete, must be an addition */
-              const char *work_relpath = svn_relpath_dirname(work_del_relpath,
-                                                             scratch_pool);
+              const char *work_relpath = NULL;
+
+              /* work_del_relpath should not be NULL. However, we have
+               * observed instances where that assumption was not met.
+               * Bail out in that case instead of crashing with a segfault.
+               */
+              SVN_ERR_ASSERT(work_del_relpath != NULL);
+              work_relpath = svn_relpath_dirname(work_del_relpath,
+                                                 scratch_pool);
 
               SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
