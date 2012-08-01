@@ -81,17 +81,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1354876, r1354907, r1355340
-   Allow non-existing but valid canonical absolute paths to pass through
-   svn_dirent_get_absolute().
-   Justification:
-     Resolves a few user reported problems.
-   Notes:
-     r1354907 undoes r1354876, and r1355340 fixes a return problem, so
-     it is easiest to review them as a single patch.
-   Votes:
-     +1: rhuijben, cmpilato, philip
-
  * r1361007, r1361019
    Don't record references to files in the system temp directory from
    workqueue operations from the merge code.
