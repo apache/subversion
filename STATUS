@@ -81,18 +81,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1365549, r1365554, r1365556
-   Resolve regression where 'svn revert --depth files' only operates on the
-   directory
-   Justification:
-     Simple regression fix.
-   Branch: ^/subversion/branches/1.7.x-r1365554
-   Notes:
-     Trivial patch in r1365554; the other patches are for adding and updating
-     a regression test.
-   Votes:
-     +1: rhuijben, philip, steveking
-
  * r1354876, r1354907, r1355340
    Allow non-existing but valid canonical absolute paths to pass through
    svn_dirent_get_absolute().
