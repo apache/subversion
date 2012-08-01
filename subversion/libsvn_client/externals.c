@@ -239,6 +239,10 @@ switch_dir_external(const char *local_abspath,
                     }
                   else if (err)
                     return svn_error_trace(err);
+
+                  /* If the relocation went without a hitch, we should
+                     have a new repository root URL. */
+                  repos_root_url = repos_root;
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, local_abspath, url,
