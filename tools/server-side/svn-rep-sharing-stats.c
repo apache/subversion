@@ -91,8 +91,8 @@ check_lib_versions(void)
       { "svn_fs",     svn_fs_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 
