@@ -204,31 +204,45 @@ switch_dir_external(const char *local_abspath,
               goto cleanup;
             }
 
+          /* We'd really prefer not to have to do a brute-force
+             relegation -- blowing away the current external working
+             copy and checking it out anew -- so we'll first see if we
+             can get away with a generally cheaper relocation (if
+             required) and switch-style update.
+
+             To do so, we need to know the repository root URL of the
+             external working copy as it currently sits. */
           SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
                                               ctx->wc_ctx, local_abspath,
                                               pool, subpool));
           if (repos_root_url)
             {
-              /* URLs don't match.  Try to relocate (if necessary) and then
-                 switch. */
+              /* If the new external target URL is not obviously a
+                 child of the external working copy's current
+                 repository root URL... */
               if (! svn_uri__is_ancestor(repos_root_url, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;
 
-                  /* Get the repos root of the new URL. */
-                  SVN_ERR(svn_client__open_ra_session_internal
-                          (&ra_session, NULL, url, NULL, NULL,
-                           FALSE, TRUE, ctx, subpool));
+                  /* ... then figure out precisely which repository
+                      root URL that target URL *is* a child of ... */
+                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                               NULL, url, NULL,
+                                                               NULL, FALSE,
+                                                               TRUE, ctx,
+                                                               subpool));
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
+                  /* ... and use that to try to relocate the external
+                     working copy to the target location.  */
                   err = svn_client_relocate2(local_abspath, repos_root_url,
-                                             repos_root,
-                                             FALSE, ctx, subpool);
-                  /* If the relocation failed because the new URL points
-                     to another repository, then we need to relegate and
-                     check out a new WC. */
+                                             repos_root, FALSE, ctx, subpool);
+
+                  /* If the relocation failed because the new URL
+                     points to a totally different repository, we've
+                     no choice but to relegate and check out a new WC. */
                   if (err
                       && (err->apr_err == SVN_ERR_WC_INVALID_RELOCATION
                           || (err->apr_err
