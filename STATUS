@@ -80,16 +80,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1361341
-   Avoid checking for working copies above the current working copy from
-   svn_wc__acquire_write_lock() to avoid checking for .svn/wc.db in
-   directories where we might not have read permission.
-   Justification:
-     Resolves a problem reported on the CollabNet Subversion forum.
-   Branch: ^/subversion/branches/1.7.x-r1361341
-   Notes:
-     Requires a backport branch because we renamed svn_wc__db_kind_dir to
-     svn_kind_dir for 1.8.
-   Votes:
-     +1: rhuijben, cmpilato, philip
