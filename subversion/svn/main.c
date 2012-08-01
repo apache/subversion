@@ -1894,7 +1894,7 @@ main(int argc, const char *argv[])
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (err)
           return svn_cmdline_handle_exit_error
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                _("Error converting depth "
                                  "from locale to UTF-8")), pool, "svn: ");
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
@@ -1913,7 +1913,7 @@ main(int argc, const char *argv[])
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (err)
           return svn_cmdline_handle_exit_error
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                _("Error converting depth "
                                  "from locale to UTF-8")), pool, "svn: ");
         opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
