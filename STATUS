@@ -74,6 +74,18 @@ Candidate changes:
      files.
    Votes:
      +1: philip, steveking
+
+ * r1368197, r1368198
+   Fix issue #4216 ("Error updating relocated working copy with
+   server-relative externals defined").
+   Justification:
+     Fixes user-reported problem.
+   Notes:
+     r1368197: This contains the actual fix.
+     r1368198: This contains some follow-up comment tweaks that help
+               explain the relevant code region more thoroughly.
+   Votes:
+     +1: cmpilato
      
 Veto-blocked changes:
 =====================
