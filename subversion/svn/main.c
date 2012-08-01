@@ -2792,19 +2792,7 @@ main(int argc, const char *argv[])
                          "(type 'svn help cleanup' for details)"));
         }
 
-      /* Issue #3014:
-       * Don't print anything on broken pipes. The pipe was likely
-       * closed by the process at the other end. We expect that
-       * process to perform error reporting as necessary.
-       *
-       * ### This assumes that there is only one error in a chain for
-       * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
-      if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
-        svn_handle_error2(err, stderr, FALSE, "svn: ");
-
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
   else
     {
