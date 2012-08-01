@@ -76,7 +76,6 @@ init(const char *application)
     {"svn_ra", svn_ra_version},
     {NULL, NULL}
   };
-
   SVN_VERSION_DEFINE(my_version);
 
   if (svn_cmdline_init(application, stderr))
