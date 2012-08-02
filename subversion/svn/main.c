@@ -2539,37 +2539,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
-  /* The --reintegrate option is mutually exclusive with both
-     --ignore-ancestry and --record-only. */
-  if (opt_state.reintegrate)
-    {
-      if (opt_state.ignore_ancestry)
-        {
-          if (opt_state.record_only)
-            {
-              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                     _("--reintegrate cannot be used with "
-                                       "--ignore-ancestry or "
-                                       "--record-only"));
-              return EXIT_ERROR(err);
-            }
-          else
-            {
-              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                     _("--reintegrate cannot be used with "
-                                       "--ignore-ancestry"));
-              return EXIT_ERROR(err);
-            }
-          }
-      else if (opt_state.record_only)
-        {
-          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                 _("--reintegrate cannot be used with "
-                                   "--record-only"));
-          return EXIT_ERROR(err);
-        }
-    }
-
   /* Update auto-props-enable option, and populate the MIME types map,
      for add/import commands */
   if (subcommand->cmd_func == svn_cl__add
