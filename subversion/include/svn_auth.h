@@ -1319,7 +1319,7 @@ svn_auth_get_ssl_client_cert_pw_prompt_provider(
  * will be retried @a retry_limit times. For infinite retries, set @a
  * retry_limit to value less than 0.
  *
- * @since New in 1.4.
+ * @since New in 1.8.
  */
 void svn_auth_get_master_passphrase_prompt_provider(
   svn_auth_provider_object_t **provider,
