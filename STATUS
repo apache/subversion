@@ -68,13 +68,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1307177
-   Move mod_dontdothat to install-tools.
-   Justification:
-     Undo compatibility break of 'make install' in 1.7.3.
-   Votes:
-     +1: danielsh, gstein, jerenkrantz
-
  * r1367498
    Make FSFS revision files independent of APR hash order.
    Justification:
