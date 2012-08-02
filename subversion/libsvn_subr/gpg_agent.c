@@ -155,12 +155,11 @@ send_option(int sd, char *buf, size_t n, const char *option, const char *value,
 /* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
 static svn_error_t *
-password_get_gpg_agent(svn_boolean_t *done,
+get_password_via_agent(svn_boolean_t *done,
                        const char **password,
-                       apr_hash_t *creds,
                        const char *realmstring,
-                       const char *username,
-                       apr_hash_t *parameters,
+                       const char *escaped_password_prompt,
+                       const char *escaped_realm_prompt,
                        svn_boolean_t non_interactive,
                        apr_pool_t *pool)
 {
@@ -180,8 +179,6 @@ password_get_gpg_agent(svn_boolean_t *done,
   const char *display;
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
-  char *password_prompt;
-  char *realm_prompt;
 
   *done = FALSE;
 
@@ -336,16 +333,12 @@ password_get_gpg_agent(svn_boolean_t *done,
                pool);
   cache_id = svn_checksum_to_cstring(digest, pool);
 
-  password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
-  realm_prompt = apr_psprintf(pool, _("Enter your Subversion password for %s"),
-                              realmstring);
-  request = apr_psprintf(pool,
-                         "GET_PASSPHRASE --data %s--repeat=1 "
-                         "%s X %s %s\n",
+  request = apr_psprintf(pool, 
+                         "GET_PASSPHRASE --data %s--repeat=1 %s X %s %s\n",
                          non_interactive ? "--no-ask " : "",
                          cache_id,
-                         escape_blanks(password_prompt),
-                         escape_blanks(realm_prompt));
+                         escaped_password_prompt,
+                         escaped_realm_prompt);
 
   if (write(sd, request, strlen(request)) == -1)
     {
@@ -380,6 +373,30 @@ password_get_gpg_agent(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
+
+/* Implementation of svn_auth__password_get_t that retrieves the password
+   from gpg-agent */
+static svn_error_t *
+password_get_gpg_agent(svn_boolean_t *done,
+                       const char **password,
+                       apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       apr_hash_t *parameters,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
+{
+  char *escaped_password_prompt =
+    escape_blanks(apr_psprintf(pool, _("Password for '%s': "), username));
+  char *escaped_realm_prompt =
+    escape_blanks(apr_psprintf(pool, _("Enter your Subversion password for %s"),
+                               realmstring));
+
+  SVN_ERR(get_password_via_agent(done, password, realmstring,
+                                 escaped_password_prompt, escaped_realm_prompt,
+                                 non_interactive, pool));
+  return SVN_NO_ERROR;
+}
 
 /* Implementation of svn_auth__password_set_t that would store the
    password in GPG Agent if that's how this particular integration
@@ -453,6 +470,72 @@ svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
   svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
 
   po->vtable = &gpg_agent_simple_provider;
+  *provider = po;
+}
+
+
+
+/*** Master Passphrase Provider ***/
+
+/* An implementation of svn_auth_provider_t::first_credentials() */
+static svn_error_t *
+master_passphrase_gpg_agent_first_creds(void **credentials,
+                                        void **iter_baton,
+                                        void *provider_baton,
+                                        apr_hash_t *parameters,
+                                        const char *realmstring,
+                                        apr_pool_t *pool)
+{
+  char *escaped_password_prompt = _("Subversion+master+password");
+  char *escaped_realm_prompt = _("Enter+your+Subversion+master+password");
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  svn_boolean_t done;
+  const char *passphrase;
+
+  *credentials = NULL;
+
+  SVN_ERR(get_password_via_agent(&done, &passphrase, realmstring,
+                                 escaped_password_prompt, escaped_realm_prompt,
+                                 non_interactive, pool));
+  if (done && passphrase)
+    {
+      svn_auth_cred_master_passphrase_t *creds;
+      svn_checksum_t *checksum;
+      int passphrase_len = strlen(passphrase);
+
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
+                           passphrase, passphrase_len, pool));
+      memset((void *)passphrase, 0, passphrase_len);
+      creds = apr_pcalloc(pool, sizeof(*creds));
+      creds->passphrase = svn_string_ncreate((const char *)checksum->digest,
+                                             svn_checksum_size(checksum),
+                                             pool);
+      *credentials = creds;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static const svn_auth_provider_t gpg_agent_master_passphrase_provider = {
+  SVN_AUTH_CRED_MASTER_PASSPHRASE,
+  master_passphrase_gpg_agent_first_creds,
+  NULL,
+  NULL,
+};
+
+
+/* Public API */
+void
+svn_auth_get_gpg_agent_master_passphrase_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+
+  po->vtable = &gpg_agent_master_passphrase_provider;
   *provider = po;
 }
 

@@ -1328,6 +1328,22 @@ void svn_auth_get_master_passphrase_prompt_provider(
   int retry_limit,
   apr_pool_t *pool);
 
+
+#if !defined(WIN32) || defined(DOXYGEN)
+/** Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_master_passphrase_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials via GPG-Agent.  The returned
+ * credentials are used to unlock Subversion's encrypted
+ * authentication credential store.
+ *
+ * @since New in 1.8.
+ */
+void
+svn_auth_get_gpg_agent_master_passphrase_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
+#endif /* !defined(WIN32) || defined(DOXYGEN) */
   
 #ifdef __cplusplus
 }

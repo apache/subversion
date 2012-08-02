@@ -477,6 +477,12 @@ open_auth_store(svn_auth__store_t **auth_store_p,
                                     sizeof(svn_auth_provider_object_t *));
       if (! non_interactive)
         {
+#if !defined(WIN32) || defined(DOXYGEN)
+          /* ### FIXME!!  This should be done by code that inspects
+             and honors the 'password-stores' configuration setting! */
+          svn_auth_get_gpg_agent_master_passphrase_provider(&provider, pool);
+          APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
+#endif /* !defined(WIN32) || defined(DOXYGEN) */
           svn_auth_get_master_passphrase_prompt_provider(
               &provider, svn_cmdline_auth_master_passphrase_prompt,
               pb, 3, pool);
