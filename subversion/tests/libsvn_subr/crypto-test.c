@@ -78,14 +78,35 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
 }
 
 
-/* Implements `svn_auth__master_passphrase_fetch_t' */
+/* Implements `svn_auth_master_passphrase_prompt_func_t' */
 static svn_error_t *
-fetch_secret(const svn_string_t **secret,
+fetch_secret(svn_auth_cred_master_passphrase_t **cred_p,
              void *baton,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
+             const char *realmstring,
+             svn_boolean_t may_save,
+             apr_pool_t *pool)
 {
-  *secret = svn_string_dup(baton, result_pool);
+  svn_auth_cred_master_passphrase_t *cred = apr_pcalloc(pool, sizeof(*cred));
+  cred->passphrase = svn_string_dup(baton, pool);
+  *cred_p = cred;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+get_master_passphrase_auth_baton(svn_auth_baton_t **auth_baton,
+                                 const svn_string_t *secret,
+                                 apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *provider;
+  apr_array_header_t *mp_providers = apr_array_make(pool, 1, sizeof(provider));
+  
+  /* Build an authentication baton with a single master passphrase provider. */
+  svn_auth_get_master_passphrase_prompt_provider(&provider, fetch_secret,
+                                                 (void *)secret, 0, pool);
+  APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
+  svn_auth_open(auth_baton, mp_providers, pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -101,15 +122,19 @@ create_ephemeral_auth_store(svn_auth__store_t **auth_store_p,
                             const svn_string_t *secret,
                             apr_pool_t *pool)
 {
+  svn_auth_baton_t *auth_baton;
+  
   SVN_ERR(svn_io_open_uniquely_named(NULL, auth_store_path, NULL,
                                      "auth_store", NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      pool, pool));
   SVN_ERR(svn_io_remove_file2(*auth_store_path, TRUE, pool));
+  SVN_ERR(svn_auth__pathetic_store_create(*auth_store_path, crypto_ctx,
+                                          secret, pool));
+  SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, secret, pool));
   SVN_ERR(svn_auth__pathetic_store_get(auth_store_p, *auth_store_path,
-                                       crypto_ctx, fetch_secret, 
-                                       (void *)secret, pool, pool));
-  SVN_ERR(svn_auth__store_open(*auth_store_p, TRUE, pool));
+                                       auth_baton, crypto_ctx, pool, pool));
+  SVN_ERR(svn_auth__store_open(*auth_store_p, FALSE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -218,6 +243,7 @@ test_auth_store_basic(apr_pool_t *pool)
   svn_crypto__ctx_t *ctx;
   svn_auth__store_t *auth_store;
   const char *auth_store_path;
+  svn_auth_baton_t *auth_baton;
   const svn_string_t *secret = svn_string_create("My Secret", pool);
   const svn_string_t *bad_secret = svn_string_create("Not My Secret", pool);
 
@@ -231,16 +257,16 @@ test_auth_store_basic(apr_pool_t *pool)
 
   /* Close and reopen the auth store. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
-  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
-                                       fetch_secret, (void *)secret,
-                                       pool, pool));
+  SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, secret, pool));
+  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path,
+                                       auth_baton, ctx, pool, pool));
   SVN_ERR(svn_auth__store_open(auth_store, FALSE, pool));
 
   /* Close and reopen the auth store with a bogus secret. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
-  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path, ctx,
-                                       fetch_secret, (void *)bad_secret,
-                                       pool, pool));
+  SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, bad_secret, pool));
+  SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path,
+                                       auth_baton, ctx, pool, pool));
   err = svn_auth__store_open(auth_store, FALSE, pool);
   if (! err)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,

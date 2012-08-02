@@ -34,6 +34,7 @@
 
 #include "svn_types.h"
 #include "svn_config.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -339,6 +340,44 @@ typedef struct svn_auth_cred_ssl_server_trust_t
   apr_uint32_t accepted_failures;
 } svn_auth_cred_ssl_server_trust_t;
 
+/** Master passphrase credential type.
+ *
+ * @note The realmstring used with this credential type should make it
+ * possible for the user to identify that this Subversion-wide master
+ * passphrase.
+ *
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
+ *
+ * @since New in 1.8.
+ */
+#define SVN_AUTH_CRED_MASTER_PASSPHRASE "svn.master-passphrase"
+
+/** @c SVN_AUTH_CRED_MASTER_PASSPHRASE credentials.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_auth_cred_master_passphrase_t
+{
+  /** Master passphrase: this is the SHA-1 digest (as a counted
+      string, not a pretty-printed C-string) of the user-supplied
+      passphrase.  Subversion doesn't want the actual passphrase! */
+  const svn_string_t *passphrase;
+
+  /** Indicates if the credentials may be saved (to disk). For
+   * example, a GUI prompt implementation with a remember password
+   * checkbox shall set @a may_save to TRUE if the checkbox is
+   * checked.
+   */
+  svn_boolean_t may_save;
+} svn_auth_cred_master_passphrase_t;
+
 
 
 /** Credential-constructing prompt functions. **/
@@ -518,6 +557,29 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)(
   const char *realmstring,
   void *baton,
   apr_pool_t *pool);
+
+
+/** Set @a *creds_p by prompting the user, allocating @a *creds_p in @a
+ * pool.  @a baton is an implementation-specific closure.  @a
+ * realmstring is a string identifying the encrypted authentication
+ * store whose master passphrase is required, and can be used in the
+ * prompt string.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the
+ * credentials to be saved (to disk).  A prompt function shall not ask
+ * the user if the credentials shall be saved if @a may_save is FALSE.
+ * For example, a GUI client with a "Remember passphrase" checkbox
+ * would grey out (disable) the checkbox if @a may_save is FALSE.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_auth_master_passphrase_prompt_func_t)(
+  svn_auth_cred_master_passphrase_t **creds_p,
+  void *baton,
+  const char *realmstring,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
 
 
 /** Initialize an authentication system.
@@ -1248,6 +1310,25 @@ svn_auth_get_ssl_client_cert_pw_prompt_provider(
   apr_pool_t *pool);
 
 
+/** Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_master_passphrase_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials by using the @a prompt_func
+ * and @a prompt_baton.  The returned credential is used to unlock
+ * Subversion's encrypted authentication credential store.  The prompt
+ * will be retried @a retry_limit times. For infinite retries, set @a
+ * retry_limit to value less than 0.
+ *
+ * @since New in 1.4.
+ */
+void svn_auth_get_master_passphrase_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_master_passphrase_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
+
+  
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

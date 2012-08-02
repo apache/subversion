@@ -200,38 +200,59 @@ svn_auth__store_iterate_creds(svn_auth__store_t *auth_store,
 
 /*** Pathetic Encrypted Authentication Store ***/
 
-/* Callback type used to fetch a master passphrase for unlocking an
-   encrypted auth store. */
-typedef svn_error_t *(*svn_auth__master_passphrase_fetch_t)(
-  const svn_string_t **secret,
-  void *baton, 
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
-
 /* Set *AUTH_STORE_P to an object which describes the encrypted
    authentication credential store located at AUTH_STORE_PATH.
 
    CRYPTO_CTX is the cryptographic context which the store will use
    for related functionality.
 
-   Use SECRET_FUNC/SECRET_BATON to acquire the master passphrase used
-   to encrypt the sensitive contents of the store.  When creating the
-   store it is registered with the store as-is, but when opening a
-   previously existing store, it is validated against the passphrase
-   self-checking information in the store itself.  Return
-   SVN_ERR_AUTHN_FAILED if the secret provided by SECRET_FUNC does not
-   validate against an existing store's checktext.
+   Use the providers registered with SECRET_AUTH_BATON to acquire the
+   master passphrase used to encrypt the sensitive contents of the
+   store.  When creating the store it is registered with the store
+   as-is, but when opening a previously existing store, it is
+   validated against the passphrase self-checking information in the
+   store itself.  Return SVN_ERR_AUTHN_FAILED if the secret provided
+   by SECRET_FUNC does not validate against an existing store's
+   checktext.
+
+   NOTE: An auth store opened via this interface will error out if
+   asked to "create" its persistent details via
+   svn_auth__store_open(create=TRUE).  Use
+   svn_auth__pathetic_store_create() for that purpose.
 
    ### TODO:  This is expected to be experimental code! ###
 */
 svn_error_t *
 svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
                              const char *auth_store_path,
+                             svn_auth_baton_t *secret_auth_baton,
                              svn_crypto__ctx_t *crypto_ctx,
-                             svn_auth__master_passphrase_fetch_t secret_func,
-                             void *secret_baton,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
+
+/* Create an encrypted authentication store at AUTH_STORE_PATH, using
+   CRYPTO_CTX and an initial master passphrase of SECRET.  */
+svn_error_t *
+svn_auth__pathetic_store_create(const char *auth_store_path,
+                                svn_crypto__ctx_t *crypto_ctx,
+                                const svn_string_t *secret,
+                                apr_pool_t *scratch_pool);
+
+/* Re-encrypt the contents of the authentication store located at
+   AUTH_STORE_PATH using NEW_SECRET as the new master passphrase.
+   OLD_SECRET is the current master passphrase.
+
+   CRYPTO_CTX is the cryptographic context which the store will use
+   for related functionality.
+
+   Return SVN_ERR_AUTHN_FAILED if OLD_SECRET does not validate against
+   an existing store's checktext.  */
+svn_error_t *
+svn_auth__pathetic_store_reencrypt(const char *auth_store_path,
+                                   svn_crypto__ctx_t *crypto_ctx,
+                                   const svn_string_t *old_secret,
+                                   const svn_string_t *new_secret,
+                                   apr_pool_t *scratch_pool);
 
 
 

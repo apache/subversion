@@ -452,6 +452,8 @@ static svn_error_t *
 open_auth_store(svn_auth__store_t **auth_store_p,
                 const char *config_dir,
                 svn_boolean_t use_master_password,
+                svn_boolean_t no_auth_cache,
+                svn_boolean_t non_interactive,
                 svn_cmdline_prompt_baton2_t *pb,
                 apr_pool_t *pool)
 {
@@ -460,16 +462,40 @@ open_auth_store(svn_auth__store_t **auth_store_p,
   if (use_master_password)
     {
       svn_crypto__ctx_t *crypto_ctx;
-      const char *auth_config_path;
+      const char *auth_config_path, *auth_db_path;
+      svn_auth_baton_t *mp_ab;
+      svn_auth_provider_object_t *provider;
+      apr_array_header_t *mp_providers;
+
+      SVN_ERR(svn_config_get_user_config_path(&auth_config_path, config_dir,
+                                              SVN_CONFIG__AUTH_SUBDIR, pool));
+      auth_db_path = svn_path_join(auth_config_path, "pathetic.db", pool);
+
+      /* Build an authentication baton with the relevant master
+         passphrase providers. */
+      mp_providers = apr_array_make(pool, 1, 
+                                    sizeof(svn_auth_provider_object_t *));
+      if (! non_interactive)
+        {
+          svn_auth_get_master_passphrase_prompt_provider(
+              &provider, svn_cmdline_auth_master_passphrase_prompt,
+              pb, 3, pool);
+          APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
+        }
+      svn_auth_open(&mp_ab, mp_providers, pool);
+
+      if (no_auth_cache)
+        svn_auth_set_parameter(mp_ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+      if (non_interactive)
+        svn_auth_set_parameter(mp_ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
+      if (config_dir)
+        svn_auth_set_parameter(mp_ab, SVN_AUTH_PARAM_CONFIG_DIR, config_dir);
 
       SVN_ERR(svn_config_get_user_config_path(&auth_config_path, config_dir,
                                               SVN_CONFIG__AUTH_SUBDIR, pool));
       SVN_ERR(svn_crypto__context_create(&crypto_ctx, pool));
-      SVN_ERR(svn_auth__pathetic_store_get(
-                  &auth_store,
-                  svn_path_join(auth_config_path, "pathetic.db", pool),
-                  crypto_ctx, svn_cmdline_auth_master_passphrase_prompt,
-                  pb, pool, pool));
+      SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_db_path,
+                                           mp_ab, crypto_ctx, pool, pool));
     }
   else
     {
@@ -619,11 +645,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                            auth_password);
 
-  /* Open the appropriate auth store, and cache it in the auth baton. */
-  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password,
-                          pb, pool));
-  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);
-
   /* Same with the --non-interactive option. */
   if (non_interactive)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
@@ -660,6 +681,13 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
                          &svn_cmdline__auth_gnome_keyring_unlock_prompt);
 #endif /* SVN_HAVE_GNOME_KEYRING */
+
+  /* Open the appropriate auth store, and cache it in the auth baton. */
+  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password,
+                          (no_auth_cache || ! store_auth_creds_val),
+                          non_interactive, pb, pool));
+  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);
+
 
   return SVN_NO_ERROR;
 }

@@ -498,17 +498,20 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
 }
 
 
-/* This implements 'svn_auth__master_passphrase_fetch_t'. */
+/* This implements 'svn_auth_master_passphrase_prompt_func_t'. */
 svn_error_t *
-svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
-                                          void *baton, 
-                                          apr_pool_t *result_pool,
-                                          apr_pool_t *scratch_pool)
+svn_cmdline_auth_master_passphrase_prompt(
+  svn_auth_cred_master_passphrase_t **creds_p,
+  void *baton,
+  const char *realmstring,
+  svn_boolean_t may_save,
+  apr_pool_t *scratch_pool)
 {
   const char *response;
   int response_len;
   svn_cmdline_prompt_baton2_t *pb = baton;
   svn_checksum_t *checksum;
+  svn_auth_cred_master_passphrase_t *creds;
 
   SVN_ERR(prompt(&response, _("Enter master passphrase: "),
                  TRUE, pb, scratch_pool));
@@ -516,9 +519,11 @@ svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
   SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
                        response, response_len, scratch_pool));
   memset((void *)response, 0, response_len);
-  *secret = svn_string_ncreate((const char *)checksum->digest,
-                               svn_checksum_size(checksum),
-                               result_pool);
+  creds = apr_pcalloc(scratch_pool, sizeof(*creds));
+  creds->passphrase = svn_string_ncreate((const char *)checksum->digest,
+                                         svn_checksum_size(checksum),
+                                         scratch_pool);
+  *creds_p = creds;
   return SVN_NO_ERROR;
 }
 

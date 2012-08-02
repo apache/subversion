@@ -63,10 +63,8 @@ typedef struct pathetic_auth_store_baton_t
   /* Cryptographic context. */
   svn_crypto__ctx_t *crypto_ctx;
 
-  /* Callback/baton for fetching the master passphrase (aka crypto
-     secret). */
-  svn_auth__master_passphrase_fetch_t secret_func;
-  void *secret_baton;
+  /* Auth baton for the master passphrase ("secret") acquisition system. */
+  svn_auth_baton_t *secret_auth_baton;
 
   /* Crypto secret (may be NULL if not yet provided). */
   const svn_string_t *secret;
@@ -155,6 +153,7 @@ read_auth_store(pathetic_auth_store_baton_t *auth_store,
    (because there's no configuration directory provided), do nothing.  */
 static svn_error_t *
 write_auth_store(pathetic_auth_store_baton_t *auth_store,
+                 svn_boolean_t create,
                  apr_pool_t *scratch_pool)
 {
   apr_file_t *authfile = NULL;
@@ -162,12 +161,14 @@ write_auth_store(pathetic_auth_store_baton_t *auth_store,
   apr_hash_t *hash = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   const svn_string_t *str;
+  apr_int32_t open_flags = (APR_WRITE | APR_TRUNCATE | APR_BUFFERED);
 
   SVN_ERR_ASSERT(auth_store->checktext_skel);
 
-  SVN_ERR_W(svn_io_file_open(&authfile, auth_store->path,
-                             (APR_WRITE | APR_CREATE | APR_TRUNCATE
-                              | APR_BUFFERED),
+  if (create)
+    open_flags |= APR_CREATE;
+
+  SVN_ERR_W(svn_io_file_open(&authfile, auth_store->path, open_flags,
                              APR_OS_DEFAULT, scratch_pool),
             _("Unable to open auth file for writing"));
 
@@ -215,6 +216,8 @@ create_auth_store(pathetic_auth_store_baton_t *auth_store,
   const svn_string_t *ciphertext, *iv, *salt;
   const char *checktext;
 
+  SVN_ERR_ASSERT(auth_store->secret);
+
   SVN_ERR(svn_crypto__generate_secret_checktext(&ciphertext, &iv,
                                                 &salt, &checktext,
                                                 auth_store->crypto_ctx,
@@ -236,7 +239,7 @@ create_auth_store(pathetic_auth_store_baton_t *auth_store,
                     auth_store->checktext_skel);
 
   auth_store->realmstring_skels = apr_hash_make(auth_store->pool);
-  SVN_ERR(write_auth_store(auth_store, scratch_pool));
+  SVN_ERR(write_auth_store(auth_store, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -337,10 +340,94 @@ set_cred_hash(struct pathetic_auth_store_baton_t *auth_store,
   apr_hash_set(auth_store->realmstring_skels, key,
                APR_HASH_KEY_STRING, realmstring_skel);
 
-  SVN_ERR(write_auth_store(auth_store, scratch_pool));
+  SVN_ERR(write_auth_store(auth_store, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+acquire_secret(pathetic_auth_store_baton_t *auth_store,
+               svn_boolean_t verify,
+               apr_pool_t *scratch_pool)
+{
+  void *creds;
+  svn_auth_iterstate_t *iterstate;
+
+  if (auth_store->secret)
+    return SVN_NO_ERROR;
+
+  if (! auth_store->secret_auth_baton)
+    return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                            _("Can't get master password"));
+
+  SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
+                                     SVN_AUTH_CRED_MASTER_PASSPHRASE,
+                                     "Pathetic Encrypted Auth Store",
+                                     auth_store->secret_auth_baton,
+                                     scratch_pool));
+  if (!creds)
+    {
+      return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                              _("Can't get master password"));
+    }
+  while (creds)
+    {
+      svn_boolean_t valid_secret;
+      const svn_string_t *passphrase =
+        ((svn_auth_cred_master_passphrase_t *) creds)->passphrase;
+
+      if (verify)
+        {
+          svn_skel_t *cipher_skel, *iv_skel, *salt_skel, *check_skel;
+
+          SVN_ERR_ASSERT(auth_store->checktext_skel);
+
+          cipher_skel = auth_store->checktext_skel->children;
+          iv_skel = auth_store->checktext_skel->children->next;
+          salt_skel = auth_store->checktext_skel->children->next->next;
+          check_skel = auth_store->checktext_skel->children->next->next->next;
+          
+          SVN_ERR(svn_crypto__verify_secret(
+                      &valid_secret, auth_store->crypto_ctx, passphrase,
+                      svn_string_ncreate(cipher_skel->data,
+                                         cipher_skel->len,
+                                         scratch_pool),
+                      svn_string_ncreate(iv_skel->data,
+                                         iv_skel->len,
+                                         scratch_pool),
+                      svn_string_ncreate(salt_skel->data,
+                                         salt_skel->len,
+                                         scratch_pool),
+                      apr_pstrmemdup(scratch_pool,
+                                     check_skel->data,
+                                     check_skel->len),
+                      scratch_pool));
+        }
+      else
+        {
+          valid_secret = TRUE;
+        }
+
+      if (valid_secret)
+        {
+          auth_store->secret = svn_string_dup(passphrase, auth_store->pool);
+          break;
+        }
+
+      SVN_ERR(svn_auth_next_credentials(&creds, iterstate, scratch_pool));
+    }
+  if (!creds)
+    {
+      return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                              _("Invalid master passphrase; unable to open "
+                                "encrypted store"));
+    }
+
+  SVN_ERR(svn_auth_save_credentials(iterstate, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** svn_auth__store_t Callback Functions ***/
@@ -352,62 +439,9 @@ pathetic_store_open(void *baton,
                     apr_pool_t *scratch_pool)
 {
   pathetic_auth_store_baton_t *auth_store = baton;
-  svn_error_t *err;
-  svn_skel_t *cipher_skel, *iv_skel, *salt_skel, *check_skel;
-  svn_boolean_t valid_secret;
 
-  SVN_ERR(auth_store->secret_func(&(auth_store->secret),
-                                  auth_store->secret_baton,
-                                  auth_store->pool,
-                                  scratch_pool));
-
-  err = read_auth_store(auth_store, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_NODE_NOT_FOUND)
-        {
-          if (create)
-            {
-              svn_error_clear(err);
-              return svn_error_trace(create_auth_store(auth_store,
-                                                       scratch_pool));
-            }
-          else
-            {
-              return err;
-            }
-        }
-      else
-        {
-          return err;
-        }
-    }
-                            
-  cipher_skel = auth_store->checktext_skel->children;
-  iv_skel     = auth_store->checktext_skel->children->next;
-  salt_skel   = auth_store->checktext_skel->children->next->next;
-  check_skel  = auth_store->checktext_skel->children->next->next->next;
-
-  SVN_ERR(svn_crypto__verify_secret(&valid_secret,
-                                    auth_store->crypto_ctx,
-                                    auth_store->secret,
-                                    svn_string_ncreate(cipher_skel->data,
-                                                       cipher_skel->len,
-                                                       scratch_pool),
-                                    svn_string_ncreate(iv_skel->data,
-                                                       iv_skel->len,
-                                                       scratch_pool),
-                                    svn_string_ncreate(salt_skel->data,
-                                                       salt_skel->len,
-                                                       scratch_pool),
-                                    apr_pstrmemdup(scratch_pool,
-                                                   check_skel->data,
-                                                   check_skel->len),
-                                    scratch_pool));
-  if (! valid_secret)
-    return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                            _("Invalid secret; unable to open "
-                              "encrypted store"));
+  SVN_ERR(read_auth_store(auth_store, scratch_pool));
+  SVN_ERR(acquire_secret(auth_store, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -474,16 +508,15 @@ pathetic_store_set_cred_hash(svn_boolean_t *stored,
 svn_error_t *
 svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
                              const char *auth_store_path,
+                             svn_auth_baton_t *secret_auth_baton,
                              svn_crypto__ctx_t *crypto_ctx,
-                             svn_auth__master_passphrase_fetch_t secret_func,
-                             void *secret_baton,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
   svn_auth__store_t *auth_store;
   pathetic_auth_store_baton_t *pathetic_store;
 
-  SVN_ERR_ASSERT(secret_func);
+  SVN_ERR_ASSERT(secret_auth_baton);
 
   if (! svn_crypto__is_available())
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -493,8 +526,7 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
   pathetic_store->pool = result_pool;
   pathetic_store->path = apr_pstrdup(result_pool, auth_store_path);
   pathetic_store->crypto_ctx = crypto_ctx;
-  pathetic_store->secret_func = secret_func;
-  pathetic_store->secret_baton = secret_baton;
+  pathetic_store->secret_auth_baton = secret_auth_baton;
 
   SVN_ERR(svn_auth__store_create(&auth_store, result_pool));
   SVN_ERR(svn_auth__store_set_baton(auth_store, pathetic_store));
@@ -511,3 +543,41 @@ svn_auth__pathetic_store_get(svn_auth__store_t **auth_store_p,
 }
 
 
+svn_error_t *
+svn_auth__pathetic_store_create(const char *auth_store_path,
+                                svn_crypto__ctx_t *crypto_ctx,
+                                const svn_string_t *secret,
+                                apr_pool_t *scratch_pool)
+{
+  pathetic_auth_store_baton_t *pathetic_store;
+
+  if (! svn_crypto__is_available())
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            _("Encrypted auth store feature not available"));
+
+  pathetic_store = apr_pcalloc(scratch_pool, sizeof(*pathetic_store));
+  pathetic_store->pool = scratch_pool;
+  pathetic_store->path = apr_pstrdup(scratch_pool, auth_store_path);
+  pathetic_store->crypto_ctx = crypto_ctx;
+  pathetic_store->secret = secret;
+  
+  SVN_ERR(create_auth_store(pathetic_store, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_auth__pathetic_store_reencrypt(const char *auth_store_path,
+                                   svn_crypto__ctx_t *crypto_ctx,
+                                   const svn_string_t *old_secret,
+                                   const svn_string_t *new_secret,
+                                   apr_pool_t *scratch_pool)
+{
+  if (! svn_crypto__is_available())
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            _("Encrypted auth store feature not available"));
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          _("Feature no worky yet"));
+}
