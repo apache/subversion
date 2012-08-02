@@ -1111,8 +1111,9 @@ svn_opt__print_version_info(const char *pgm_name,
     return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
-                                     "   compiled %s, %s\n\n"), pgm_name,
-                             SVN_VERSION, __DATE__, __TIME__));
+                                     "   compiled %s, %s on %s\n\n"),
+                             pgm_name, SVN_VERSION, __DATE__, __TIME__,
+                             SVN_BUILD_HOST));
   SVN_ERR(svn_cmdline_fputs(
              _("Copyright (C) 2012 The Apache Software Foundation.\n"
                "This software consists of contributions made by many "
