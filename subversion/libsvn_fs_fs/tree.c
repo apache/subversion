@@ -3881,7 +3881,6 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
     const svn_fs_id_t *pred_id;
     dag_node_t *pred;
     svn_revnum_t pred_rev;
-    svn_revnum_t delta;
 
     /* Only r0 should have no predecessor. */
     SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, frd->root_dir));
@@ -3899,28 +3898,12 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
       {
         SVN_ERR(svn_fs_fs__dag_get_node(&pred, root->fs, pred_id, pool));
         SVN_ERR(svn_fs_fs__dag_get_revision(&pred_rev, pred, pool));
-
-        /* Issue #4129: bogus predecessors. */
-        /* Check 1: predecessor must be an earlier revision.
-         */
-        if (pred_rev >= root->rev)
+        if (pred_rev+1 != root->rev)
+          /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    "r%ld's root node's predecessor is r%ld"
-                                   " but must be earlier revision",
-                                   root->rev, pred_rev);
-
-        /* Check 2: distances must be a power of 2.
-         * Note that this condition is not defined by the FSFS format but
-         * merely a byproduct of the current implementation. Therefore,
-         * it may help to spot corruptions for the time being but might
-         * need to be removed / relaxed in later versions.
-         */
-        delta = root->rev - pred_rev;
-        if (delta & (delta - 1))
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   "r%ld's root node's predecessor is r%ld"
-                                   " but the delta must be a power of 2",
-                                   root->rev, pred_rev);
+                                   " but should be r%ld",
+                                   root->rev, pred_rev, root->rev - 1);
       }
   }
 

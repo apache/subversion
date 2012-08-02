@@ -1207,7 +1207,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   *new_actual_props = NULL;
 
   if (!server_baseprops)
-    server_baseprops = pristine_props;
+    server_baseprops = apr_hash_copy(scratch_pool, pristine_props);
 
   their_props = apr_hash_copy(scratch_pool, server_baseprops);
 
@@ -1227,7 +1227,9 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       const char *propname;
       svn_boolean_t conflict_remains;
       const svn_prop_t *incoming_change;
-      const svn_string_t *from_val, *to_val, *base_val;
+      const svn_string_t *base_val; /* Pristine in WC */
+      const svn_string_t *from_val; /* Merge left */
+      const svn_string_t *to_val; /* Merge right */
 
       svn_pool_clear(iterpool);
 

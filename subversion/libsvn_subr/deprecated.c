@@ -1073,8 +1073,8 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
 }
 
 svn_error_t *
-svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
-                          const apr_array_header_t *rangelist,
+svn_rangelist_inheritable(svn_rangelist_t **inheritable_rangelist,
+                          const svn_rangelist_t *rangelist,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool)
@@ -1086,8 +1086,8 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
 }
 
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **rangelist,
-                    const apr_array_header_t *changes,
+svn_rangelist_merge(svn_rangelist_t **rangelist,
+                    const svn_rangelist_t *changes,
                     apr_pool_t *pool)
 {
   return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,

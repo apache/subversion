@@ -766,7 +766,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
 
       /* Determine whether the merge_source is a part of the prefix. */
@@ -1156,8 +1156,8 @@ check_lib_versions(void)
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 

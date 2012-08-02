@@ -2838,19 +2838,39 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 */
 
 /* Removes all references to LOCAL_ABSPATH from DB, while optionally leaving
-   tree conflicts and/or a not present node.
+   a not present node.
 
    This operation always recursively removes all nodes at and below
    LOCAL_ABSPATH from NODES and ACTUAL.
 
    If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
-   BASE node at local_abspath. (Requires an existing BASE node before removing)
+   BASE node at local_abspath of the specified status and kind.
+   (Requires an existing BASE node before removing)
+
+   If DESTROY_WC is TRUE, this operation *installs* workqueue operations to
+   update the local filesystem after the database operation. If DESTROY_CHANGES
+   is FALSE, modified and unversioned files are left after running this
+   operation (and the WQ). If DESTROY_CHANGES and DESTROY_WC are TRUE,
+   LOCAL_ABSPATH and everything below it will be removed by the WQ.
+
+
+   Note: Unlike many similar functions it is a valid scenario for this
+   function to be called on a wcroot! In this case it will just leave the root
+   record in BASE
  */
 svn_error_t *
-svn_wc__db_op_remove_node(svn_wc__db_t *db,
+svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
+                          svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t destroy_wc,
+                          svn_boolean_t destroy_changes,
                           svn_revnum_t not_present_revision,
+                          svn_wc__db_status_t not_present_status,
                           svn_kind_t not_present_kind,
+                          const svn_skel_t *conflict,
+                          const svn_skel_t *work_items,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.

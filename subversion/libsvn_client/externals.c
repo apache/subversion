@@ -59,9 +59,14 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath,
+                                     FALSE, scratch_pool, scratch_pool));
 
   err = svn_wc__external_remove(wc_ctx, wri_abspath, local_abspath, FALSE,
                                 cancel_func, cancel_baton, scratch_pool);
@@ -103,8 +108,33 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
       /* Do our best, but no biggy if it fails. The rename will fail. */
       svn_error_clear(svn_io_remove_file2(new_path, TRUE, scratch_pool));
 
-      /* Rename. */
-      SVN_ERR(svn_io_file_rename(local_abspath, new_path, scratch_pool));
+      /* Rename. If this is still a working copy we should use the working
+         copy rename function (to release open handles) */
+      err = svn_wc__rename_wc(wc_ctx, local_abspath, new_path,
+                              scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        {
+          svn_error_clear(err);
+
+          /* And if it is no longer a working copy, we should just rename
+             it */
+          err = svn_io_file_rename(local_abspath, new_path, scratch_pool);
+        }
+
+      /* ### TODO: We should notify the user about the rename */
+      if (notify_func)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(err ? local_abspath : new_path,
+                                        svn_wc_notify_left_local_modifications,
+                                        scratch_pool);
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          notify_func(notify_baton, notify, scratch_pool);
+        }
     }
 
   return svn_error_trace(err);
@@ -174,31 +204,45 @@ switch_dir_external(const char *local_abspath,
               goto cleanup;
             }
 
+          /* We'd really prefer not to have to do a brute-force
+             relegation -- blowing away the current external working
+             copy and checking it out anew -- so we'll first see if we
+             can get away with a generally cheaper relocation (if
+             required) and switch-style update.
+
+             To do so, we need to know the repository root URL of the
+             external working copy as it currently sits. */
           SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
                                               ctx->wc_ctx, local_abspath,
                                               pool, subpool));
           if (repos_root_url)
             {
-              /* URLs don't match.  Try to relocate (if necessary) and then
-                 switch. */
+              /* If the new external target URL is not obviously a
+                 child of the external working copy's current
+                 repository root URL... */
               if (! svn_uri__is_ancestor(repos_root_url, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;
 
-                  /* Get the repos root of the new URL. */
-                  SVN_ERR(svn_client__open_ra_session_internal
-                          (&ra_session, NULL, url, NULL, NULL,
-                           FALSE, TRUE, ctx, subpool));
+                  /* ... then figure out precisely which repository
+                      root URL that target URL *is* a child of ... */
+                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                               NULL, url, NULL,
+                                                               NULL, FALSE,
+                                                               TRUE, ctx,
+                                                               subpool));
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
+                  /* ... and use that to try to relocate the external
+                     working copy to the target location.  */
                   err = svn_client_relocate2(local_abspath, repos_root_url,
-                                             repos_root,
-                                             FALSE, ctx, subpool);
-                  /* If the relocation failed because the new URL points
-                     to another repository, then we need to relegate and
-                     check out a new WC. */
+                                             repos_root, FALSE, ctx, subpool);
+
+                  /* If the relocation failed because the new URL
+                     points to a totally different repository, we've
+                     no choice but to relegate and check out a new WC. */
                   if (err
                       && (err->apr_err == SVN_ERR_WC_INVALID_RELOCATION
                           || (err->apr_err
@@ -209,6 +253,10 @@ switch_dir_external(const char *local_abspath,
                     }
                   else if (err)
                     return svn_error_trace(err);
+
+                  /* If the relocation went without a hitch, we should
+                     have a new repository root URL. */
+                  repos_root_url = repos_root;
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, local_abspath, url,
@@ -247,12 +295,10 @@ switch_dir_external(const char *local_abspath,
   if (kind == svn_node_dir)
     {
       /* Buh-bye, old and busted ... */
-      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
-                                         FALSE, pool, pool));
-
       SVN_ERR(relegate_dir_external(ctx->wc_ctx, defining_abspath,
                                     local_abspath,
                                     ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
                                     pool));
     }
   else
@@ -547,6 +593,17 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
       notify->err = err;
 
       (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                      svn_wc_notify_left_local_modifications,
+                                      scratch_pool);
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+        }
     }
 
   if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
