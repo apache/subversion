@@ -1841,7 +1841,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case 'F':
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_INT_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
-                                         utf8_opt_arg, pool));
+                                             utf8_opt_arg, pool));
         dash_F_arg = opt_arg;
         break;
       case opt_targets:
@@ -1920,11 +1920,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_auth_username:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_username,
-                                      opt_arg, pool));
+                                            opt_arg, pool));
         break;
       case opt_auth_password:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
-                                      opt_arg, pool));
+                                            opt_arg, pool));
         break;
       case opt_encoding:
         opt_state.encoding = apr_pstrdup(pool, opt_arg);
@@ -1972,7 +1972,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.relocate = TRUE;
         break;
       case 'x':
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions, opt_arg, pool));
+        SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions,
+                                            opt_arg, pool));
         break;
       case opt_diff_cmd:
         opt_state.diff.diff_cmd = apr_pstrdup(pool, opt_arg);
@@ -2017,7 +2018,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
         SVN_INT_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
-                                                 opt_arg, pool));
+                                                     opt_arg, pool));
         break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
@@ -2068,7 +2069,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.no_revprops = TRUE;
         break;
       case opt_with_revprop:
-        SVN_INT_ERR(svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool));
+        SVN_INT_ERR(svn_opt_parse_revprop(&opt_state.revprop_table,
+                                          opt_arg, pool));
         break;
       case opt_parents:
         opt_state.parents = TRUE;
@@ -2213,7 +2215,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           if (subcommand == NULL)
             {
               const char *first_arg_utf8;
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool));
+              SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
+                                                  first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Unknown command: '%s'\n"),
@@ -2579,7 +2582,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       if (mimetypes_file && *mimetypes_file)
         {
           SVN_INT_ERR(svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
-                                                 mimetypes_file, pool));
+                                                  mimetypes_file, pool));
         }
 
       if (opt_state.autoprops)
@@ -2617,7 +2620,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     use_notifier = FALSE;
   if (use_notifier)
     {
-      SVN_INT_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, pool));
+      SVN_INT_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                       pool));
     }
 
   /* Set up our cancellation support. */
@@ -2648,25 +2652,25 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* Set up Authentication stuff. */
   SVN_INT_ERR(svn_cmdline_create_auth_baton(&ab,
-                                           opt_state.non_interactive,
-                                           opt_state.auth_username,
-                                           opt_state.auth_password,
-                                           opt_state.config_dir,
-                                           opt_state.no_auth_cache,
-                                           opt_state.trust_server_cert,
-                                           cfg_config,
-                                           ctx->cancel_func,
-                                           ctx->cancel_baton,
-                                           pool));
+                                            opt_state.non_interactive,
+                                            opt_state.auth_username,
+                                            opt_state.auth_password,
+                                            opt_state.config_dir,
+                                            opt_state.no_auth_cache,
+                                            opt_state.trust_server_cert,
+                                            cfg_config,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
+                                            pool));
 
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
   SVN_INT_ERR(svn_config_get_bool(cfg_config, &interactive_conflicts,
-                                 SVN_CONFIG_SECTION_MISCELLANY,
-                                 SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
-                                 TRUE));  /* ### interactivity on by default.
-                                                 we can change this. */
+                                  SVN_CONFIG_SECTION_MISCELLANY,
+                                  SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
+                                  TRUE));  /* ### interactivity on by default.
+                                                  we can change this. */
 
   /* The new svn behavior is to postpone everything until after the operation
      completed */
