@@ -371,6 +371,16 @@ svn_cl__merge(apr_getopt_t *os,
   /* More input validation. */
   if (opt_state->reintegrate)
     {
+      if (opt_state->ignore_ancestry)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--ignore-ancestry"));
+
+      if (opt_state->record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--record-only"));
+
       if (opt_state->depth != svn_depth_unknown)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                 _("--depth cannot be used with "
