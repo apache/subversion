@@ -67,13 +67,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1362508
-   Avoid errors when users run 'svnlook changed', 'svnlook
-   dirs-changed', or 'svnlook diff' on r0.  Though the output from
-   those requests will always be empty, there's nothing inherently
-   wrong with the requests themselves.
-   Justification:
-     Resolves complaint made by user(s).
-   Votes:
-     +1: cmpilato, steveking, jerenkrantz
