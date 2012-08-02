@@ -68,14 +68,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1367498
-   Make FSFS revision files independent of APR hash order.
-   Justification:
-     Make 'svnadmin load', and other commits,  produce reproducible revision
-     files.
-   Votes:
-     +1: philip, steveking, jerenkrantz
-
  * r1362508
    Avoid errors when users run 'svnlook changed', 'svnlook
    dirs-changed', or 'svnlook diff' on r0.  Though the output from
