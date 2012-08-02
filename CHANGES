@@ -67,7 +67,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
     * allow 'file:///C:\repos' style arguments on Windows, like 1.6 (r1346765)
     * fix ra_serf against Subversion 1.2 servers (r1349367)
     * fix 'svn upgrade' on working copies with certain tree conflicts (r1345482)
-    * avoid worqueue references to system temp dir (r1367854)
+    * avoid workqueue references to system temp dir (r1367854)
     * allow non-existant canonical paths (r1367853)
     * fix 'svn revert --depth files' to operate on files (r1365554)
     * fix ra_serf XML namespace handling against malicious server (r1337441)
