@@ -15,13 +15,6 @@ Status of 1.7.6:
 Candidate changes:
 ==================
 
- * r1307177
-   Move mod_dontdothat to install-tools.
-   Justification:
-     Undo compatibility break of 'make install' in 1.7.3.
-   Votes:
-     +1: danielsh, gstein
-
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
@@ -57,24 +50,6 @@ Candidate changes:
    Votes:
      +0: stsp (pending a proper conflict-free backport)
 
- * r1362508
-   Avoid errors when users run 'svnlook changed', 'svnlook
-   dirs-changed', or 'svnlook diff' on r0.  Though the output from
-   those requests will always be empty, there's nothing inherently
-   wrong with the requests themselves.
-   Justification:
-     Resolves complaint made by user(s).
-   Votes:
-     +1: cmpilato, steveking
-
- * r1367498
-   Make FSFS revision files independent of APR hash order.
-   Justification:
-     Make 'svnadmin load', and other commits,  produce reproducible revision
-     files.
-   Votes:
-     +1: philip, steveking
-
  * r1368197, r1368198
    Fix issue #4216 ("Error updating relocated working copy with
    server-relative externals defined").
@@ -92,3 +67,28 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1307177
+   Move mod_dontdothat to install-tools.
+   Justification:
+     Undo compatibility break of 'make install' in 1.7.3.
+   Votes:
+     +1: danielsh, gstein, jerenkrantz
+
+ * r1367498
+   Make FSFS revision files independent of APR hash order.
+   Justification:
+     Make 'svnadmin load', and other commits,  produce reproducible revision
+     files.
+   Votes:
+     +1: philip, steveking, jerenkrantz
+
+ * r1362508
+   Avoid errors when users run 'svnlook changed', 'svnlook
+   dirs-changed', or 'svnlook diff' on r0.  Though the output from
+   those requests will always be empty, there's nothing inherently
+   wrong with the requests themselves.
+   Justification:
+     Resolves complaint made by user(s).
+   Votes:
+     +1: cmpilato, steveking, jerenkrantz
