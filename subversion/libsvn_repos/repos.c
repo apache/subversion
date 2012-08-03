@@ -1018,7 +1018,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# password-db = passwd"                                                     NL
 "### The authz-db option controls the location of the authorization"         NL
 "### rules for path-based access control.  Unless you specify a path"        NL
-"### starting with a /, the file's location is relative to the the"          NL
+"### starting with a /, the file's location is relative to the"              NL
 "### directory containing this file.  If you don't specify an"               NL
 "### authz-db, no path-based access control is done."                        NL
 "### Uncomment the line below to use the default authorization file."        NL

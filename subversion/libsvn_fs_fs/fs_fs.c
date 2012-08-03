@@ -3429,7 +3429,7 @@ get_revprop_packname(svn_fs_t *fs,
   const char *manifest_file_path;
   int idx;
 
-  /* read content of the the manifest file */
+  /* read content of the manifest file */
   revprops->folder = path_revprops_pack_shard(fs, revprops->revision, pool);
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
 
@@ -9799,7 +9799,7 @@ hotcopy_io_dir_file_copy(const char *src_path,
 }
 
 /* Set *NAME_P to the UTF-8 representation of directory entry NAME.
- * NAME is in the the internal encoding used by APR; PARENT is in
+ * NAME is in the internal encoding used by APR; PARENT is in
  * UTF-8 and in internal (not local) style.
  *
  * Use PARENT only for generating an error string if the conversion

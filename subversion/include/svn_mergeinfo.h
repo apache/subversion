@@ -395,7 +395,7 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the intersection,
  * @see svn_mergeinfo_diff().  If @a consider_inheritance is FALSE then
- * ranges with different inheritance can intersect, but the the resulting
+ * ranges with different inheritance can intersect, but the resulting
  * @a *rangelist is non-inheritable only if the corresponding ranges from
  * both @a rangelist1 and @a rangelist2 are non-inheritable.
  * If @a consider_inheritance is TRUE, then ranges with different
