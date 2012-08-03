@@ -135,7 +135,7 @@ svn_dbg__print_props(apr_hash_t *props,
 
   if (props == NULL)
     {
-      SVN_DBG(("    (null)\n"));
+      svn_dbg__printf("    (null)\n");
       return;
     }
 
@@ -145,7 +145,7 @@ svn_dbg__print_props(apr_hash_t *props,
       const char *name = svn__apr_hash_index_key(hi);
       svn_string_t *val = svn__apr_hash_index_val(hi);
 
-      SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
+      svn_dbg__printf("    '%s' -> '%s'\n", name, val->data);
     }
 #endif /* SVN_DEBUG */
 }
