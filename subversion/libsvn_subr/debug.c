@@ -26,6 +26,8 @@
    builds is that this code is not thread-safe. */
 #include <stdarg.h>
 
+#include <apr_pools.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_string.h"
 
@@ -35,6 +37,9 @@
 #define DBG_FLAG "DBG: "
 
 /* This will be tweaked by the preamble code.  */
+static apr_pool_t *debug_pool = NULL;
+static const char *debug_file = NULL;
+static long debug_line = 0;
 static FILE * volatile debug_output = NULL;
 
 
@@ -48,6 +53,9 @@ quiet_mode(void)
 void
 svn_dbg__preamble(const char *file, long line, FILE *output)
 {
+  if (! debug_pool)
+    apr_pool_create(&debug_pool, NULL);
+
   debug_output = output;
 
   if (output != NULL && !quiet_mode())
@@ -57,25 +65,45 @@ svn_dbg__preamble(const char *file, long line, FILE *output)
 
       if (slash == NULL)
         slash = strrchr(file, '\\');
-      if (slash == NULL)
-        slash = file;
+      if (slash)
+        debug_file = slash + 1;
       else
-        ++slash;
-
-      fprintf(output, DBG_FLAG "%s:%4ld: ", slash, line);
+        debug_file = file;
     }
+  debug_line = line;
 }
 
 
+/* Print a formatted string using format FMT and argument-list AP,
+ * prefixing each line of output with a debug header. */
 static void
-print_line(const char *fmt, va_list ap)
+debug_vprintf(const char *fmt, va_list ap)
 {
   FILE *output = debug_output;
+  const char *prefix;
+  char *s;
 
   if (output == NULL || quiet_mode())
     return;
 
-  (void) vfprintf(output, fmt, ap);
+  prefix = apr_psprintf(debug_pool, DBG_FLAG "%s:%4ld: ",
+                        debug_file, debug_line);
+  s = apr_pvsprintf(debug_pool, fmt, ap);
+  do
+    {
+      char *newline = strchr(s, '\n');
+      if (newline)
+        *newline = '\0';
+
+      fputs(prefix, output);
+      fputs(s, output);
+      fputc('\n', output);
+
+      if (! newline)
+        break;
+      s = newline + 1;
+    }
+  while (*s);  /* print another line, except after a final newline */
 }
 
 
@@ -85,7 +113,7 @@ svn_dbg__printf(const char *fmt, ...)
   va_list ap;
 
   va_start(ap, fmt);
-  print_line(fmt, ap);
+  debug_vprintf(fmt, ap);
   va_end(ap);
 }
 
@@ -102,7 +130,7 @@ svn_dbg__print_props(apr_hash_t *props,
   va_list ap;
 
   va_start(ap, header_fmt);
-  print_line(header_fmt, ap);
+  debug_vprintf(header_fmt, ap);
   va_end(ap);
 
   if (props == NULL)
