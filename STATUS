@@ -50,18 +50,6 @@ Candidate changes:
    Votes:
      +0: stsp (pending a proper conflict-free backport)
 
- * r1368197, r1368198
-   Fix issue #4216 ("Error updating relocated working copy with
-   server-relative externals defined").
-   Justification:
-     Fixes user-reported problem.
-   Notes:
-     r1368197: This contains the actual fix.
-     r1368198: This contains some follow-up comment tweaks that help
-               explain the relevant code region more thoroughly.
-   Votes:
-     +1: cmpilato, brane
-
  * r1368662
    Add information about the build system to 'svn --version' output.
    Justification:
@@ -69,7 +57,7 @@ Candidate changes:
       default 'svn --version' output contains the config.guess
       identification of the build system.
    Votes:
-     +1: brane
+     +1: brane, steveking
 
  * r1368065
    Incomplete copy information leading to segfault.
@@ -80,7 +68,7 @@ Candidate changes:
       This issue is also the most common cause of SVN lib related
       crashes reported in TSVN.
    Votes:
-     +1: stefan2
+     +1: stefan2, steveking
 
  * r1368128
    Segfault in handling deleted wc items.
@@ -94,10 +82,22 @@ Candidate changes:
       This issue is also the 3rd-most common cause of SVN lib related
       crashes reported in TSVN.
    Votes:
-     +1: stefan2
+     +1: stefan2, steveking
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1368197, r1368198
+   Fix issue #4216 ("Error updating relocated working copy with
+   server-relative externals defined").
+   Justification:
+     Fixes user-reported problem.
+   Notes:
+     r1368197: This contains the actual fix.
+     r1368198: This contains some follow-up comment tweaks that help
+               explain the relevant code region more thoroughly.
+   Votes:
+     +1: cmpilato, brane, steveking
