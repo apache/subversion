@@ -58,7 +58,7 @@
  * The data buffer usage information is implicitly given by the directory
  * entries. Every USED entry has a reference to the previous and the next
  * used dictionary entry and this double-linked list is ordered by the
- * offsets of their item data within the the data buffer. So removing data,
+ * offsets of their item data within the data buffer. So removing data,
  * for instance, is done simply by unlinking it from the chain, implicitly
  * marking the entry as well as the data buffer section previously
  * associated to it as unused.

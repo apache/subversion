@@ -129,7 +129,7 @@ configuration file "enforcer.conf".
 
 When writing hooks, it is usually easier to test the hooks on committed
 transactions already in the repository, rather than installing the
-hook and making commits to test the them.  Enforcer allows you to
+hook and making commits to test them.  Enforcer allows you to
 specify either a transaction ID (for use in a hook script) or a
 revision number (for testing).  You can then, for example, find a
 revision that you would like to have blocked (or not) and test your
