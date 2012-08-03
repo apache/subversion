@@ -25,6 +25,7 @@
    be used in release code. One of the reasons to avoid this code in release
    builds is that this code is not thread-safe. */
 #include <stdarg.h>
+#include <assert.h>
 
 #include <apr_pools.h>
 #include <apr_strings.h>
@@ -37,7 +38,6 @@
 #define DBG_FLAG "DBG: "
 
 /* This will be tweaked by the preamble code.  */
-static apr_pool_t *debug_pool = NULL;
 static const char *debug_file = NULL;
 static long debug_line = 0;
 static FILE * volatile debug_output = NULL;
@@ -53,9 +53,6 @@ quiet_mode(void)
 void
 svn_dbg__preamble(const char *file, long line, FILE *output)
 {
-  if (! debug_pool)
-    apr_pool_create(&debug_pool, NULL);
-
   debug_output = output;
 
   if (output != NULL && !quiet_mode())
@@ -80,15 +77,18 @@ static void
 debug_vprintf(const char *fmt, va_list ap)
 {
   FILE *output = debug_output;
-  const char *prefix;
-  char *s;
+  char prefix[80], buffer[1000];
+  char *s = buffer;
+  int n;
 
   if (output == NULL || quiet_mode())
     return;
 
-  prefix = apr_psprintf(debug_pool, DBG_FLAG "%s:%4ld: ",
-                        debug_file, debug_line);
-  s = apr_pvsprintf(debug_pool, fmt, ap);
+  n = apr_snprintf(prefix, sizeof(prefix), DBG_FLAG "%s:%4ld: ",
+                   debug_file, debug_line);
+  assert(n < sizeof(prefix) - 1);
+  n = apr_vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  assert(n < sizeof(buffer) - 1);
   do
     {
       char *newline = strchr(s, '\n');
