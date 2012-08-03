@@ -225,7 +225,7 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
     {
       if (strcmp(fs_type, (*fst)->fs_type) == 0)
         break;
-      (*fst) = (*fst)->next;
+      fst = &(*fst)->next;
     }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
