@@ -900,6 +900,7 @@ svn_auth_get_platform_specific_client_providers(
   svn_config_t *config,
   apr_pool_t *pool);
 
+
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**
  * Set @a *provider to an authentication provider of type @c
@@ -1307,6 +1308,34 @@ svn_auth_get_ssl_client_cert_pw_prompt_provider(
   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
   void *prompt_baton,
   int retry_limit,
+  apr_pool_t *pool);
+
+
+
+/*** Master Passphrase Providers ***/
+
+/** Master passphrase providers are unique in Subversion in that they
+ * are used with a unique svn_auth_baton_t which is not the same auth
+ * baton used for other provider types ("simple", "username", etc.).
+ */
+
+/** A function returning a master passphrase provider. */
+typedef void (*svn_auth_master_passphrase_provider_func_t)(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
+
+/** Set @a *providers to an array of @c svn_auth_provider_object_t
+ * master passphrase providers appropriate for the client platform and
+ * which honor the allowed, ordered providers specified via the
+ * 'password-stores' option @a config.  Allocate providers from @a
+ * pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_auth_get_platform_specific_master_passphrase_providers(
+  apr_array_header_t **providers,
+  svn_config_t *config,
   apr_pool_t *pool);
 
 

@@ -450,6 +450,7 @@ ssl_trust_unknown_server_cert
 /* Instantiate and open an auth store. */
 static svn_error_t *
 open_auth_store(svn_auth__store_t **auth_store_p,
+                svn_config_t *cfg,
                 const char *config_dir,
                 svn_boolean_t use_master_password,
                 svn_boolean_t no_auth_cache,
@@ -473,16 +474,10 @@ open_auth_store(svn_auth__store_t **auth_store_p,
 
       /* Build an authentication baton with the relevant master
          passphrase providers. */
-      mp_providers = apr_array_make(pool, 1, 
-                                    sizeof(svn_auth_provider_object_t *));
       if (! non_interactive)
         {
-#if !defined(WIN32) || defined(DOXYGEN)
-          /* ### FIXME!!  This should be done by code that inspects
-             and honors the 'password-stores' configuration setting! */
-          svn_auth_get_gpg_agent_master_passphrase_provider(&provider, pool);
-          APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
-#endif /* !defined(WIN32) || defined(DOXYGEN) */
+          SVN_ERR(svn_auth_get_platform_specific_master_passphrase_providers(
+              &mp_providers, cfg, pool));
           svn_auth_get_master_passphrase_prompt_provider(
               &provider, svn_cmdline_auth_master_passphrase_prompt,
               pb, 3, pool);
@@ -689,7 +684,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 #endif /* SVN_HAVE_GNOME_KEYRING */
 
   /* Open the appropriate auth store, and cache it in the auth baton. */
-  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password,
+  SVN_ERR(open_auth_store(&auth_store, cfg, config_dir, use_master_password,
                           (no_auth_cache || ! store_auth_creds_val),
                           non_interactive, pb, pool));
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);

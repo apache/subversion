@@ -48,6 +48,13 @@ extern "C" {
 #define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
 #define SVN_AUTH__GPG_AGENT_PASSWORD_TYPE          "gpg-agent"
 
+/* Default ordered list of available third-party password storage
+ * providers.
+ */
+#define SVN_AUTH__DEFAULT_PROVIDER_LIST \
+         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
+
+
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
