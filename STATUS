@@ -60,7 +60,7 @@ Candidate changes:
      r1368198: This contains some follow-up comment tweaks that help
                explain the relevant code region more thoroughly.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, brane
 
  * r1368662
    Add information about the build system to 'svn --version' output.
