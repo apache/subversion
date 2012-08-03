@@ -199,10 +199,12 @@ static svn_error_t *
 get_or_allocate_third(struct fs_type_defn **fst,
                       const char *fs_type)
 {
-  fst = &fs_modules;
-
   while (*fst)
-    fst = &(*fst)->next;
+    {
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        return SVN_NO_ERROR;
+      fst = &(*fst)->next;
+    }
 
   *fst = apr_palloc(common_pool, sizeof(struct fs_type_defn));
   (*fst)->fs_type = apr_pstrdup(common_pool, fs_type);
@@ -220,12 +222,19 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
                    apr_pool_t *pool)
 {
   struct fs_type_defn **fst = &fs_modules;
+  svn_boolean_t known = FALSE;
 
-  while (*fst)
+  /* There are two FS module definitions known at compile time.  We
+     want to check these without any locking overhead even when
+     dynamic third party modules are enabled.  The third party modules
+     cannot be checked until the lock is held.  */
+  if (strcmp(fs_type, (*fst)->fs_type) == 0)
+    known = TRUE;
+  else
     {
-      if (strcmp(fs_type, (*fst)->fs_type) == 0)
-        break;
       fst = &(*fst)->next;
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        known = TRUE;
     }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
@@ -241,15 +250,17 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
      Change the content of fs-type to "base" in a BDB filesystem or to
      "fs" in an FSFS filesystem and they will be loaded as third party
      modules. */
-  if (! *fst)
+  if (!known)
     {
+      fst = &(*fst)->next;
       if (!common_pool)  /* Best-effort init, see get_library_vtable_direct. */
         SVN_ERR(svn_fs_initialize(NULL));
       SVN_MUTEX__WITH_LOCK(common_pool_lock,
                            get_or_allocate_third(fst, fs_type));
+      known = TRUE;
     }
 #endif
-  if (!*fst)
+  if (!known)
     return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
                              _("Unknown FS type '%s'"), fs_type);
   return get_library_vtable_direct(vtable, *fst, pool);
