@@ -65,17 +65,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1368065
-   Incomplete copy information leading to segfault.
-   Justification:
-      Although this doesn't address nor identify the root cause of
-      the problem, it is still better to return an svn_error_t*
-      instead of simply segfaulting.
-      This issue is also the most common cause of SVN lib related
-      crashes reported in TSVN.
-   Votes:
-     +1: stefan2, steveking, philip
-
  * r1368128
    Segfault in handling deleted wc items.
    Justification:
