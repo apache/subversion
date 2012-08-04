@@ -64,17 +64,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1368128
-   Segfault in handling deleted wc items.
-   Justification:
-      Unknown circumstances can lead to the situation that neither
-      the relpath for BASE nor the one for WORK are available.
-      The patch makes the implicit assumption of the latter being
-      non-NULL if the first isn't explicit. Even if the root cause
-      was random wc corruption, this patch will at least make our
-      code more robust.
-      This issue is also the 3rd-most common cause of SVN lib related
-      crashes reported in TSVN.
-   Votes:
-     +1: stefan2, steveking, philip
