@@ -651,7 +651,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
       "        (e2) edit your version and use the result,\n"
       "        (eb) edit both versions and use the result,\n"
       "        (p) postpone this conflicting section leaving conflict markers,\n"
-      "        (a) abort entire merge and return to main menu: "));
+      "        (a) abort file merge and return to main menu: "));
 
   /* Now let's see what the user wants to do with this conflict. */
   while (TRUE)
