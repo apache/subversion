@@ -830,6 +830,7 @@ svn_cl__merge_file(const char *base_path,
                    const char *my_path,
                    const char *merged_path,
                    const char *wc_path,
+                   const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
                    svn_boolean_t *remains_in_conflict,
@@ -843,6 +844,13 @@ svn_cl__merge_file(const char *base_path,
   apr_file_t *merged_file;
   const char *merged_file_name;
   struct file_merge_baton fmb;
+
+
+  SVN_ERR(svn_cmdline_printf(
+            scratch_pool, _("Merging '%s'.\n"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                            wc_path),
+                                   scratch_pool)));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
                            APR_READ|APR_BUFFERED|APR_BINARY,
@@ -887,6 +895,12 @@ svn_cl__merge_file(const char *base_path,
   if (fmb.abort_merge)
     {
       SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
+      SVN_ERR(svn_cmdline_printf(
+                scratch_pool, _("Merge of '%s' aborted.\n"),
+                svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                                wc_path),
+                                       scratch_pool)));
+                
       return SVN_NO_ERROR;
     }
 
@@ -899,5 +913,19 @@ svn_cl__merge_file(const char *base_path,
                          svn_dirent_local_style(merged_file_name,
                                                 scratch_pool)));
 
+  if (fmb.remains_in_conflict)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool,
+              _("Merge of '%s' completed (remains in conflict).\n"),
+              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                              wc_path),
+                                     scratch_pool)));
+  else
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("Merge of '%s' completed.\n"),
+              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                              wc_path),
+                                     scratch_pool)));
+                
   return SVN_NO_ERROR;
 }
