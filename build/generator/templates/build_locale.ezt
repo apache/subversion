@@ -18,7 +18,7 @@
 
 @echo off
 @rem **************************************************************************
-cd ..\..\subversion\po
+cd ..\..\..\subversion\po
 mkdir ..\..\%1\mo
 set exitcode=0
 [for pofiles]echo Running msgfmt on [pofiles.po]...
