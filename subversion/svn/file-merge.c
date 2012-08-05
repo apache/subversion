@@ -43,6 +43,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#if APR_HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include <fcntl.h>
 #include <stdlib.h>
 
@@ -309,8 +313,11 @@ get_term_width(void)
   if (fd != -1)
     {
       struct winsize ws;
+      int error;
 
-      if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
+      error = ioctl(fd, TIOCGWINSZ, &ws);
+      close(fd);
+      if (error != -1)
         {
           if (ws.ws_col < 80)
             return 80;
