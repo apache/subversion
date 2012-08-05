@@ -889,8 +889,9 @@ svn_cl__merge_file(const char *base_path,
   SVN_ERR(svn_io_file_close(latest_file, scratch_pool));
   SVN_ERR(svn_io_file_close(merged_file, scratch_pool));
 
+  /* Start out assuming that conflicts remain. */
   if (remains_in_conflict)
-    *remains_in_conflict = (fmb.remains_in_conflict || fmb.abort_merge);
+    *remains_in_conflict = TRUE;
 
   if (fmb.abort_merge)
     {
@@ -906,12 +907,21 @@ svn_cl__merge_file(const char *base_path,
 
   SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
             apr_psprintf(scratch_pool,
-                         _("Could not write merged result to '%s', "
-                         "saved instead at '%s'.\n"),
-                         svn_dirent_local_style(merged_path,
-                                                scratch_pool),
+                         _("Could not write merged result to '%s', saved "
+                           "instead at '%s'.\n'%s' remains in conflict.\n"),
+                         svn_dirent_local_style(
+                           svn_dirent_skip_ancestor(path_prefix, merged_path),
+                           scratch_pool),
                          svn_dirent_local_style(merged_file_name,
-                                                scratch_pool)));
+                                                scratch_pool),
+                         svn_dirent_local_style(
+                           svn_dirent_skip_ancestor(path_prefix, wc_path),
+                           scratch_pool)));
+
+  /* The merge was not aborted and we could install the merged result. The
+   * file remains in conflict unless all conflicting sections were resolved. */
+  if (remains_in_conflict)
+    *remains_in_conflict = fmb.remains_in_conflict;
 
   if (fmb.remains_in_conflict)
     SVN_ERR(svn_cmdline_printf(
