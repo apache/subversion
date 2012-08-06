@@ -185,7 +185,10 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 #ifdef SVN_WITH_SYMMETRIC_MERGE
 
 /* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
+typedef struct svn_client__symmetric_merge_t
+{
+  svn_client__pathrev_t *yca, *base, *mid, *right;
+} svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
  * branch into a target branch.  The information is the locations of the

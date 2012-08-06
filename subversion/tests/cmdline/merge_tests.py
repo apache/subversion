@@ -11063,7 +11063,8 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
 @SkipUnless(server_has_mergeinfo)
-@Issues(3138,3067)
+@XFail()
+@Issues(3138,3067,4217)
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
 
