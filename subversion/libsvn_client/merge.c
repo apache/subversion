@@ -11149,12 +11149,6 @@ location_on_branch_at_rev(const branch_history_t *branch_history,
   return NULL;
 }
 
-/* Details of a symmetric merge. */
-struct svn_client__symmetric_merge_t
-{
-  svn_client__pathrev_t *yca, *base, *mid, *right;
-};
-
 /* */
 typedef struct source_and_target_t
 {
@@ -11652,6 +11646,24 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       svn_ra_session_t *base_ra_session = NULL;
       svn_ra_session_t *right_ra_session = NULL;
       svn_ra_session_t *target_ra_session = NULL;
+
+      if (record_only)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the record-only option "
+                                  "cannot be used with this kind of merge"));
+
+      if (depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the depth option "
+                                  "cannot be used with this kind of merge"));
+
+      if (force)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the force option "
+                                  "cannot be used with this kind of merge"));
 
       SVN_ERR(ensure_ra_session_url(&base_ra_session, merge->base->url,
                                     ctx, scratch_pool));

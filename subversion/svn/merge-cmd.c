@@ -122,6 +122,7 @@ symmetric_merge(const char *source_path_or_url,
                 apr_pool_t *scratch_pool)
 {
   svn_client__symmetric_merge_t *merge;
+  svn_boolean_t reintegrate_like;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
   SVN_ERR(svn_client__find_symmetric_merge(&merge,
@@ -129,6 +130,35 @@ symmetric_merge(const char *source_path_or_url,
                                            target_wcpath, allow_mixed_rev,
                                            allow_local_mods, allow_switched_subtrees,
                                            ctx, scratch_pool, scratch_pool));
+
+  reintegrate_like = (merge->mid != NULL);
+
+  if (reintegrate_like)
+    {
+      if (record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --record-only option "
+                                  "cannot be used with this kind of merge"));
+
+      if (depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --depth option "
+                                  "cannot be used with this kind of merge"));
+
+      if (force)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --force option "
+                                  "cannot be used with this kind of merge"));
+
+      if (allow_mixed_rev)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --allow-mixed-revisions option "
+                                  "cannot be used with this kind of merge"));
+    }
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
@@ -404,21 +434,15 @@ svn_cl__merge(apr_getopt_t *os,
    * If any conflicts occur we'll run the conflict resolver later. */
 
 #ifdef SVN_WITH_SYMMETRIC_MERGE
-  if (opt_state->symmetric_merge)
+  /* Do a symmetric merge if just one source and no revisions. */
+  if ((! two_sources_specified)
+      && (! opt_state->reintegrate)
+      && (! opt_state->ignore_ancestry)
+      && first_range_start.kind == svn_opt_revision_unspecified
+      && first_range_end.kind == svn_opt_revision_unspecified)
     {
       svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
       svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
-
-      if (two_sources_specified)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("SOURCE2 can't be used with --symmetric"));
-      if (first_range_start.kind != svn_opt_revision_unspecified
-          || first_range_end.kind != svn_opt_revision_unspecified)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("a revision range can't be used with --symmetric"));
-      if (opt_state->ignore_ancestry)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--ignore-ancestry can't be used with --symmetric"));
 
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
