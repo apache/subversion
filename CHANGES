@@ -71,6 +71,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
     * allow non-existant canonical paths (r1367853)
     * fix 'svn revert --depth files' to operate on files (r1365554)
     * fix ra_serf XML namespace handling against malicious server (r1337441)
+    * fix relocate with server-relative externals (issue 4216)
+    * change two asserts into errors for TortoiseSVN (r1368128, r1368065)
 
   - Server-side bugfixes:
     * partial sync drops properties when converting to adds (issue #4184)
