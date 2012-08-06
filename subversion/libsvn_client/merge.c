@@ -9557,26 +9557,6 @@ open_target_wc(merge_target_t **target_p,
   return SVN_NO_ERROR;
 }
 
-/* Open an RA session to PATH_OR_URL at PEG_REVISION.  Set *RA_SESSION_P to
- * the session and set *LOCATION_P to the resolved revision, URL and
- * repository root.  Allocate the results in RESULT_POOL.  */
-static svn_error_t *
-open_source_session(svn_client__pathrev_t **location_p,
-                    svn_ra_session_t **ra_session_p,
-                    const char *path_or_url,
-                    const svn_opt_revision_t *peg_revision,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_client__ra_session_from_path2(
-            ra_session_p, location_p,
-            path_or_url, NULL, peg_revision, peg_revision,
-            ctx, result_pool));
-  return SVN_NO_ERROR;
-}
-
-
 /*-----------------------------------------------------------------------*/
 
 /*** Public APIs ***/
@@ -9621,10 +9601,12 @@ merge_locked(const char *source1,
   /* Open RA sessions to both sides of our merge source, and resolve URLs
    * and revisions. */
   sesspool = svn_pool_create(scratch_pool);
-  SVN_ERR(open_source_session(&source1_loc, &ra_session1, source1, revision1,
-                              ctx, sesspool, scratch_pool));
-  SVN_ERR(open_source_session(&source2_loc, &ra_session2, source2, revision2,
-                              ctx, sesspool, scratch_pool));
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &ra_session1, &source1_loc,
+            source1, NULL, revision1, revision1, ctx, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &ra_session2, &source2_loc,
+            source2, NULL, revision2, revision2, ctx, sesspool));
 
   /* We can't do a diff between different repositories. */
   /* ### We should also insist that the root URLs of the two sources match,
@@ -10832,9 +10814,10 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                              svn_dirent_local_style(target->abspath,
                                                     scratch_pool));
 
-  SVN_ERR(open_source_session(&source_loc, source_ra_session_p,
-                              source_path_or_url, source_peg_revision,
-                              ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client__ra_session_from_path2(
+            source_ra_session_p, &source_loc,
+            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
+            ctx, result_pool));
 
   /* source_loc and target->loc are required to be in the same repository,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -11024,9 +11007,10 @@ merge_peg_locked(const char *source_path_or_url,
                          ctx, sesspool, sesspool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
-  SVN_ERR(open_source_session(&source_loc, &ra_session,
-                              source_path_or_url, source_peg_revision,
-                              ctx, sesspool, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &ra_session, &source_loc,
+            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
+            ctx, sesspool));
 
   /* Normalize our merge sources. */
   SVN_ERR(normalize_merge_sources(&merge_sources, source_path_or_url,
@@ -11205,9 +11189,10 @@ open_source_and_target(source_and_target_t **source_and_target,
                                      ctx, session_pool));
 
   /* Source */
-  SVN_ERR(open_source_session(&s_t->source, &s_t->source_ra_session,
-                              source_path_or_url, source_peg_revision,
-                              ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &s_t->source_ra_session, &s_t->source,
+            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
+            ctx, result_pool));
 
   *source_and_target = s_t;
   return SVN_NO_ERROR;
