@@ -182,7 +182,7 @@ get_provider(svn_auth_provider_object_t **provider,
       library_label = apr_psprintf(pool, "svn_%s", provider_name);
       provider_func_name = 
         apr_psprintf(pool,
-                     "svn_auth__get_%s_master_passphrase_provider",
+                     "svn_auth_get_%s_master_passphrase_provider",
                      provider_name);
       version_func_name = 
         apr_psprintf(pool, "svn_auth_%s_version", provider_name);
@@ -263,10 +263,8 @@ svn_auth_get_platform_specific_master_passphrase_providers(
       /* GNOME Keyring */
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
-#if 0
           SVN_ERR(get_provider(&provider, "gnome_keyring", pool));
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
-#endif
           continue;
         }
 
