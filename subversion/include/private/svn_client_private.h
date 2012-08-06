@@ -178,11 +178,6 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* A macro to mark sections of code that belong to the 'symmetric merge'
- * feature while it's still new. */
-#define SVN_WITH_SYMMETRIC_MERGE
-
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 
 /* Details of a symmetric merge. */
 typedef struct svn_client__symmetric_merge_t
@@ -235,7 +230,6 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool);
 
-#endif /* SVN_WITH_SYMMETRIC_MERGE */
 
 #ifdef __cplusplus
 }

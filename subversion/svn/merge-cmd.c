@@ -104,7 +104,6 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 /* Symmetric, merge-tracking merge, used for sync or reintegrate purposes. */
 static svn_error_t *
 symmetric_merge(const char *source_path_or_url,
@@ -168,7 +167,6 @@ symmetric_merge(const char *source_path_or_url,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -433,7 +431,6 @@ svn_cl__merge(apr_getopt_t *os,
   /* Postpone conflict resolution during the merge operation.
    * If any conflicts occur we'll run the conflict resolver later. */
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
   /* Do a symmetric merge if just one source and no revisions. */
   if ((! two_sources_specified)
       && (! opt_state->reintegrate)
@@ -459,9 +456,7 @@ svn_cl__merge(apr_getopt_t *os,
                                   allow_switched_subtrees,
                                   options, ctx, pool);
     }
-  else
-#endif
-  if (opt_state->reintegrate)
+  else if (opt_state->reintegrate)
     {
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,

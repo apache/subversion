@@ -11079,7 +11079,6 @@ svn_client_merge_peg4(const char *source_path_or_url,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 
 /* The location-history of a branch.
  *
@@ -11753,5 +11752,3 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
 
   return SVN_NO_ERROR;
 }
-
-#endif /* SVN_WITH_SYMMETRIC_MERGE */
