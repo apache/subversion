@@ -129,7 +129,6 @@ typedef enum svn_cl__longopt_t {
   opt_diff,
   opt_allow_mixed_revisions,
   opt_include_externals,
-  opt_symmetric,
   opt_search,
   opt_isearch,
 } svn_cl__longopt_t;
@@ -375,8 +374,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "recursion. This does not include externals with a\n"
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
-  {"symmetric", opt_symmetric, 0,
-                       N_("Symmetric merge")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
 
@@ -1056,7 +1053,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions, opt_symmetric} },
+     opt_allow_mixed_revisions} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1983,9 +1980,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_record_only:
         opt_state.record_only = TRUE;
-        break;
-      case opt_symmetric:
-        opt_state.symmetric_merge = TRUE;
         break;
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
