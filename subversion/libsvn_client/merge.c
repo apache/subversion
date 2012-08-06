@@ -11558,8 +11558,17 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
   svn_client__symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, scratch_pool));
+
+  /* Open RA sessions to the source and target trees.  We're not going
+   * to check the target WC for mixed-rev, local mods or switched
+   * subtrees yet.  After we find out what kind of merge is required,
+   * then if a reintegrate-like merge is required we'll do the stricter
+   * checks, in do_symmetric_merge_locked(). */
   SVN_ERR(open_source_and_target(&s_t, source_path_or_url, source_revision,
-                                 target_abspath, allow_mixed_rev, allow_local_mods, allow_switched_subtrees,
+                                 target_abspath,
+                                 TRUE /*allow_mixed_rev*/,
+                                 TRUE /*allow_local_mods*/,
+                                 TRUE /*allow_switched_subtrees*/,
                                  ctx, result_pool, result_pool, scratch_pool));
 
   /* Check source is in same repos as target. */
@@ -11571,6 +11580,9 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
                                ctx, result_pool, scratch_pool));
   merge->yca = s_t->yca;
   merge->right = s_t->source;
+  merge->allow_mixed_rev = allow_mixed_rev;
+  merge->allow_local_mods = allow_local_mods;
+  merge->allow_switched_subtrees = allow_switched_subtrees;
 
   *merge_p = merge;
 
@@ -11618,13 +11630,17 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
                           apr_pool_t *scratch_pool)
 {
   merge_target_t *target;
+  svn_boolean_t reintegrate_like = (merge->mid != NULL);
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
 
-  SVN_ERR(open_target_wc(&target, target_abspath, TRUE, TRUE, TRUE,
+  SVN_ERR(open_target_wc(&target, target_abspath,
+                         merge->allow_mixed_rev && ! reintegrate_like,
+                         merge->allow_local_mods && ! reintegrate_like,
+                         merge->allow_switched_subtrees && ! reintegrate_like,
                          ctx, scratch_pool, scratch_pool));
 
-  if (merge->mid)
+  if (reintegrate_like)
     {
       merge_source_t source;
       svn_ra_session_t *base_ra_session = NULL;

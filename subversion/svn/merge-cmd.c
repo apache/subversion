@@ -438,9 +438,6 @@ svn_cl__merge(apr_getopt_t *os,
       && first_range_start.kind == svn_opt_revision_unspecified
       && first_range_end.kind == svn_opt_revision_unspecified)
     {
-      svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
-      svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
-
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
                   ctx, pool),
@@ -452,8 +449,8 @@ svn_cl__merge(apr_getopt_t *os,
                                   opt_state->record_only,
                                   opt_state->dry_run,
                                   opt_state->allow_mixed_rev,
-                                  allow_local_mods,
-                                  allow_switched_subtrees,
+                                  TRUE /*allow_local_mods*/,
+                                  TRUE /*allow_switched_subtrees*/,
                                   options, ctx, pool);
     }
   else if (opt_state->reintegrate)
