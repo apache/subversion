@@ -183,6 +183,7 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 typedef struct svn_client__symmetric_merge_t
 {
   svn_client__pathrev_t *yca, *base, *mid, *right;
+  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
 } svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
