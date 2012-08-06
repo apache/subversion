@@ -202,14 +202,11 @@ svn_auth__store_iterate_creds(svn_auth__store_t *auth_store,
    CRYPTO_CTX is the cryptographic context which the store will use
    for related functionality.
 
-   Use the providers registered with SECRET_AUTH_BATON to acquire the
-   master passphrase used to encrypt the sensitive contents of the
-   store.  When creating the store it is registered with the store
-   as-is, but when opening a previously existing store, it is
-   validated against the passphrase self-checking information in the
-   store itself.  Return SVN_ERR_AUTHN_FAILED if the secret provided
-   by SECRET_FUNC does not validate against an existing store's
-   checktext.
+   Use the providers registered with SECRET_AUTH_BATON to acquire
+   (when needed) the master passphrase used to encrypt the sensitive
+   contents of the store.  Any of the store-related functions may
+   return SVN_ERR_AUTHN_FAILED if the secret provided by SECRET_FUNC
+   does not validate against an existing store's checktext.
 
    ### TODO:  This is expected to be experimental code! ###
 */
