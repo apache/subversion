@@ -122,14 +122,12 @@ cleanup_auth_store_close(void *arg)
 
 svn_error_t *
 svn_auth__store_open(svn_auth__store_t *auth_store,
-                     svn_boolean_t create,
                      apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(! auth_store->is_open);
   if (auth_store->open_func)
     {
-      SVN_ERR(auth_store->open_func(auth_store->store_baton, create,
-                                    scratch_pool));
+      SVN_ERR(auth_store->open_func(auth_store->store_baton, scratch_pool));
 
       /* Register a pool cleanup handler which closes the store. */
       apr_pool_cleanup_register(auth_store->pool, auth_store,
@@ -357,7 +355,7 @@ svn_auth__get_store_from_parameters(svn_auth__store_t **auth_store,
       SVN_ERR(svn_auth__config_store_get(auth_store, config_dir,
                                          apr_hash_pool_get(parameters),
                                          pool));
-      SVN_ERR(svn_auth__store_open(*auth_store, FALSE, pool));
+      SVN_ERR(svn_auth__store_open(*auth_store, pool));
       apr_hash_set(parameters,
                    SVN_AUTH_PARAM_AUTH_STORE,
                    APR_HASH_KEY_STRING,

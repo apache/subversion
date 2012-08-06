@@ -39,7 +39,6 @@
 /* Implements svn_auth__store_cb_open_t. */
 static svn_error_t *
 config_store_open(void *baton,
-                  svn_boolean_t create,
                   apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR;

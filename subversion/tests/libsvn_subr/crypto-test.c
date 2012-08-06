@@ -134,7 +134,7 @@ create_ephemeral_auth_store(svn_auth__store_t **auth_store_p,
   SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, secret, pool));
   SVN_ERR(svn_auth__pathetic_store_get(auth_store_p, *auth_store_path,
                                        auth_baton, crypto_ctx, pool, pool));
-  SVN_ERR(svn_auth__store_open(*auth_store_p, FALSE, pool));
+  SVN_ERR(svn_auth__store_open(*auth_store_p, pool));
   return SVN_NO_ERROR;
 }
 
@@ -260,14 +260,14 @@ test_auth_store_basic(apr_pool_t *pool)
   SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, secret, pool));
   SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path,
                                        auth_baton, ctx, pool, pool));
-  SVN_ERR(svn_auth__store_open(auth_store, FALSE, pool));
+  SVN_ERR(svn_auth__store_open(auth_store, pool));
 
   /* Close and reopen the auth store with a bogus secret. */
   SVN_ERR(svn_auth__store_close(auth_store, pool));
   SVN_ERR(get_master_passphrase_auth_baton(&auth_baton, bad_secret, pool));
   SVN_ERR(svn_auth__pathetic_store_get(&auth_store, auth_store_path,
                                        auth_baton, ctx, pool, pool));
-  err = svn_auth__store_open(auth_store, FALSE, pool);
+  err = svn_auth__store_open(auth_store, pool);
   if (! err)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Successfully opened auth store with the wrong "

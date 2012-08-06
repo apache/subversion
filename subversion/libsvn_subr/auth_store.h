@@ -53,11 +53,9 @@ typedef svn_error_t *(*svn_auth__store_iterate_creds_func_t)(
 /* Authentication credential store object. */
 typedef struct svn_auth__store_t svn_auth__store_t;
 
-/* Callback type: Open (creating if necessary and if CREATE is TRUE)
-   an authentication store. */
+/* Callback type: Open an authentication store. */
 typedef svn_error_t *(*svn_auth__store_cb_open_t)(
   void *baton,
-  svn_boolean_t create,
   apr_pool_t *scratch_pool);
 
 /* Callback type: Close an authentication store. */
@@ -146,11 +144,9 @@ svn_auth__store_set_iterate_creds(svn_auth__store_t *auth_store,
                                   svn_auth__store_cb_iterate_creds_t func);
 
 
-/* Open (creating if necessary and if CREATE is set) the
-   authentication credential store identified by AUTH_STORE. */
+/* Open the authentication credential store identified by AUTH_STORE. */
 svn_error_t *
 svn_auth__store_open(svn_auth__store_t *auth_store,
-                     svn_boolean_t create,
                      apr_pool_t *scratch_pool);
                      
 /* Close the auth store represented by AUTH_STORE. */
@@ -215,11 +211,6 @@ svn_auth__store_iterate_creds(svn_auth__store_t *auth_store,
    by SECRET_FUNC does not validate against an existing store's
    checktext.
 
-   NOTE: An auth store opened via this interface will error out if
-   asked to "create" its persistent details via
-   svn_auth__store_open(create=TRUE).  Use
-   svn_auth__pathetic_store_create() for that purpose.
-
    ### TODO:  This is expected to be experimental code! ###
 */
 svn_error_t *
@@ -262,6 +253,9 @@ svn_auth__pathetic_store_reencrypt(const char *auth_store_path,
    runtime-config-based authentication credential store located at
    AUTH_STORE_PATH.  CFG is the configuration object with which the
    store is associated.
+
+   NOTE: This auth-store will be automatically created if not already
+   present on disk.
 */
 svn_error_t *
 svn_auth__config_store_get(svn_auth__store_t **auth_store_p,

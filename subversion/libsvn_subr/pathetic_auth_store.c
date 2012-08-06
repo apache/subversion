@@ -435,7 +435,6 @@ acquire_secret(pathetic_auth_store_baton_t *auth_store,
 /* Implements svn_auth__store_cb_open_t. */
 static svn_error_t *
 pathetic_store_open(void *baton,
-                    svn_boolean_t create,
                     apr_pool_t *scratch_pool)
 {
   pathetic_auth_store_baton_t *auth_store = baton;
