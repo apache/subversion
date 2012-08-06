@@ -245,107 +245,6 @@ create_auth_store(pathetic_auth_store_baton_t *auth_store,
 }
 
 
-/* ### TODO: document  */
-static svn_error_t *
-get_cred_hash(apr_hash_t **cred_hash,
-              struct pathetic_auth_store_baton_t *auth_store,
-              const char *cred_kind_string,
-              const char *realmstring,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
-{
-  const char *key, *plaintext;
-  svn_skel_t *realmstring_skel, *proplist_skel;
-  svn_skel_t *cipher_skel, *iv_skel, *salt_skel;
-  const svn_string_t *skel_str;
-
-  *cred_hash = NULL;
-
-  SVN_ERR_ASSERT(realmstring);
-  SVN_ERR_ASSERT(cred_kind_string);
-
-  key = apr_pstrcat(scratch_pool, cred_kind_string, ":", realmstring, NULL);
-  realmstring_skel = apr_hash_get(auth_store->realmstring_skels,
-                                  key, APR_HASH_KEY_STRING);
-  if (! realmstring_skel)
-    return SVN_NO_ERROR;
-
-  cipher_skel = realmstring_skel->children;
-  iv_skel     = realmstring_skel->children->next;
-  salt_skel   = realmstring_skel->children->next->next;
-
-  SVN_ERR(svn_crypto__decrypt_password(&plaintext,
-                                       auth_store->crypto_ctx,
-                                       svn_string_ncreate(cipher_skel->data,
-                                                          cipher_skel->len,
-                                                          scratch_pool),
-                                       svn_string_ncreate(iv_skel->data,
-                                                          iv_skel->len,
-                                                          scratch_pool),
-                                       svn_string_ncreate(salt_skel->data,
-                                                          salt_skel->len,
-                                                          scratch_pool),
-                                       auth_store->secret,
-                                       scratch_pool, scratch_pool));
-
-  skel_str = svn_base64_decode_string(svn_string_create(plaintext,
-                                                        scratch_pool),
-                                      scratch_pool);
-  proplist_skel = svn_skel__parse(skel_str->data, skel_str->len, scratch_pool);
-  SVN_ERR(svn_skel__parse_proplist(cred_hash, proplist_skel, result_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ### TODO: document  */
-static svn_error_t *
-set_cred_hash(struct pathetic_auth_store_baton_t *auth_store,
-              const char *cred_kind_string,
-              const char *realmstring,
-              apr_hash_t *cred_hash,
-              apr_pool_t *scratch_pool)
-{
-  const char *key;
-  svn_skel_t *proplist_skel, *realmstring_skel;
-  svn_stringbuf_t *skel_buf;
-  const svn_string_t *skel_str;
-  const svn_string_t *ciphertext, *iv, *salt;
-
-  SVN_ERR(svn_skel__unparse_proplist(&proplist_skel, cred_hash, scratch_pool));
-  skel_buf = svn_skel__unparse(proplist_skel, scratch_pool);
-  skel_str = svn_base64_encode_string2(svn_string_ncreate(skel_buf->data,
-                                                          skel_buf->len,
-                                                          scratch_pool),
-                                       FALSE, scratch_pool);
-                        
-  SVN_ERR(svn_crypto__encrypt_password(&ciphertext, &iv, &salt,
-                                       auth_store->crypto_ctx, skel_str->data,
-                                       auth_store->secret, auth_store->pool,
-                                       scratch_pool));
-  
-  realmstring_skel = svn_skel__make_empty_list(auth_store->pool);
-  svn_skel__prepend(svn_skel__mem_atom(salt->data, salt->len,
-                                       auth_store->pool),
-                    realmstring_skel);
-  svn_skel__prepend(svn_skel__mem_atom(iv->data, iv->len,
-                                       auth_store->pool),
-                    realmstring_skel);
-  svn_skel__prepend(svn_skel__mem_atom(ciphertext->data, ciphertext->len,
-                                       auth_store->pool),
-                    realmstring_skel);
-
-  key = apr_pstrcat(auth_store->pool, cred_kind_string, ":",
-                    realmstring, NULL);
-  apr_hash_set(auth_store->realmstring_skels, key,
-               APR_HASH_KEY_STRING, realmstring_skel);
-
-  SVN_ERR(write_auth_store(auth_store, FALSE, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 acquire_secret(pathetic_auth_store_baton_t *auth_store,
                svn_boolean_t verify,
@@ -429,6 +328,115 @@ acquire_secret(pathetic_auth_store_baton_t *auth_store,
 }
 
 
+/* ### TODO: document  */
+static svn_error_t *
+get_cred_hash(apr_hash_t **cred_hash,
+              struct pathetic_auth_store_baton_t *auth_store,
+              const char *cred_kind_string,
+              const char *realmstring,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  const char *key, *plaintext;
+  svn_skel_t *realmstring_skel, *proplist_skel;
+  svn_skel_t *cipher_skel, *iv_skel, *salt_skel;
+  const svn_string_t *skel_str;
+
+  *cred_hash = NULL;
+
+  SVN_ERR_ASSERT(realmstring);
+  SVN_ERR_ASSERT(cred_kind_string);
+
+  /* Ensure that we have a valid SECRET. */
+  if (! auth_store->secret)
+    SVN_ERR(acquire_secret(auth_store, TRUE, scratch_pool));
+
+  key = apr_pstrcat(scratch_pool, cred_kind_string, ":", realmstring, NULL);
+  realmstring_skel = apr_hash_get(auth_store->realmstring_skels,
+                                  key, APR_HASH_KEY_STRING);
+  if (! realmstring_skel)
+    return SVN_NO_ERROR;
+
+  cipher_skel = realmstring_skel->children;
+  iv_skel     = realmstring_skel->children->next;
+  salt_skel   = realmstring_skel->children->next->next;
+
+  SVN_ERR(svn_crypto__decrypt_password(&plaintext,
+                                       auth_store->crypto_ctx,
+                                       svn_string_ncreate(cipher_skel->data,
+                                                          cipher_skel->len,
+                                                          scratch_pool),
+                                       svn_string_ncreate(iv_skel->data,
+                                                          iv_skel->len,
+                                                          scratch_pool),
+                                       svn_string_ncreate(salt_skel->data,
+                                                          salt_skel->len,
+                                                          scratch_pool),
+                                       auth_store->secret,
+                                       scratch_pool, scratch_pool));
+
+  skel_str = svn_base64_decode_string(svn_string_create(plaintext,
+                                                        scratch_pool),
+                                      scratch_pool);
+  proplist_skel = svn_skel__parse(skel_str->data, skel_str->len, scratch_pool);
+  SVN_ERR(svn_skel__parse_proplist(cred_hash, proplist_skel, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### TODO: document  */
+static svn_error_t *
+set_cred_hash(struct pathetic_auth_store_baton_t *auth_store,
+              const char *cred_kind_string,
+              const char *realmstring,
+              apr_hash_t *cred_hash,
+              apr_pool_t *scratch_pool)
+{
+  const char *key;
+  svn_skel_t *proplist_skel, *realmstring_skel;
+  svn_stringbuf_t *skel_buf;
+  const svn_string_t *skel_str;
+  const svn_string_t *ciphertext, *iv, *salt;
+
+  /* Ensure that we have a valid SECRET. */
+  if (! auth_store->secret)
+    SVN_ERR(acquire_secret(auth_store, TRUE, scratch_pool));
+
+  SVN_ERR(svn_skel__unparse_proplist(&proplist_skel, cred_hash, scratch_pool));
+  skel_buf = svn_skel__unparse(proplist_skel, scratch_pool);
+  skel_str = svn_base64_encode_string2(svn_string_ncreate(skel_buf->data,
+                                                          skel_buf->len,
+                                                          scratch_pool),
+                                       FALSE, scratch_pool);
+                        
+  SVN_ERR(svn_crypto__encrypt_password(&ciphertext, &iv, &salt,
+                                       auth_store->crypto_ctx, skel_str->data,
+                                       auth_store->secret, auth_store->pool,
+                                       scratch_pool));
+  
+  realmstring_skel = svn_skel__make_empty_list(auth_store->pool);
+  svn_skel__prepend(svn_skel__mem_atom(salt->data, salt->len,
+                                       auth_store->pool),
+                    realmstring_skel);
+  svn_skel__prepend(svn_skel__mem_atom(iv->data, iv->len,
+                                       auth_store->pool),
+                    realmstring_skel);
+  svn_skel__prepend(svn_skel__mem_atom(ciphertext->data, ciphertext->len,
+                                       auth_store->pool),
+                    realmstring_skel);
+
+  key = apr_pstrcat(auth_store->pool, cred_kind_string, ":",
+                    realmstring, NULL);
+  apr_hash_set(auth_store->realmstring_skels, key,
+               APR_HASH_KEY_STRING, realmstring_skel);
+
+  SVN_ERR(write_auth_store(auth_store, FALSE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** svn_auth__store_t Callback Functions ***/
 
@@ -440,7 +448,6 @@ pathetic_store_open(void *baton,
   pathetic_auth_store_baton_t *auth_store = baton;
 
   SVN_ERR(read_auth_store(auth_store, scratch_pool));
-  SVN_ERR(acquire_secret(auth_store, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
