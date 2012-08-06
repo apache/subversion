@@ -211,9 +211,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
  *
  * Merge according to MERGE into the WC at TARGET_WCPATH.
  *
- * The other parameters are as in svn_client_merge4().  IGNORE_ANCESTRY
- * only controls the diffing of files, it doesn't prevent mergeinfo from
- * being used.
+ * The other parameters are as in svn_client_merge4().
  *
  * ### TODO: There's little point in this function being the only way the
  * caller can use the result of svn_client__find_symmetric_merge().  The
@@ -227,7 +225,6 @@ svn_error_t *
 svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const char *target_wcpath,
                                svn_depth_t depth,
-                               svn_boolean_t ignore_ancestry,
                                svn_boolean_t force,
                                svn_boolean_t record_only,
                                svn_boolean_t dry_run,

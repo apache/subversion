@@ -111,7 +111,6 @@ symmetric_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
-                svn_boolean_t ignore_ancestry,
                 svn_boolean_t force,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
@@ -133,7 +132,7 @@ symmetric_merge(const char *source_path_or_url,
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
-                                         ignore_ancestry, force, record_only,
+                                         force, record_only,
                                          dry_run, merge_options,
                                          ctx, scratch_pool));
 
@@ -417,6 +416,9 @@ svn_cl__merge(apr_getopt_t *os,
           || first_range_end.kind != svn_opt_revision_unspecified)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("a revision range can't be used with --symmetric"));
+      if (opt_state->ignore_ancestry)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--ignore-ancestry can't be used with --symmetric"));
 
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
@@ -425,7 +427,6 @@ svn_cl__merge(apr_getopt_t *os,
 
       merge_err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
-                                  opt_state->ignore_ancestry,
                                   opt_state->force,
                                   opt_state->record_only,
                                   opt_state->dry_run,

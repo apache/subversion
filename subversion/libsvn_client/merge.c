@@ -11632,7 +11632,6 @@ static svn_error_t *
 do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
                           const char *target_abspath,
                           svn_depth_t depth,
-                          svn_boolean_t ignore_ancestry,
                           svn_boolean_t force,
                           svn_boolean_t record_only,
                           svn_boolean_t dry_run,
@@ -11682,7 +11681,8 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
                                                    right_ra_session,
                                                    &source, merge->yca,
                                                    TRUE /* same_repos */,
-                                                   depth, ignore_ancestry,
+                                                   depth,
+                                                   FALSE /*ignore_ancestry*/,
                                                    force, record_only,
                                                    dry_run,
                                                    merge_options, &use_sleep,
@@ -11711,8 +11711,8 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
 
       err = do_merge(NULL, NULL, merge_sources, target, NULL,
-                     TRUE /*related*/,
-                     TRUE /*same_repos*/, ignore_ancestry, force, dry_run,
+                     TRUE /*related*/, TRUE /*same_repos*/,
+                     FALSE /*ignore_ancestry*/, force, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
                      &use_sleep, ctx, scratch_pool, scratch_pool);
     }
@@ -11729,7 +11729,6 @@ svn_error_t *
 svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const char *target_wcpath,
                                svn_depth_t depth,
-                               svn_boolean_t ignore_ancestry,
                                svn_boolean_t force,
                                svn_boolean_t record_only,
                                svn_boolean_t dry_run,
@@ -11745,13 +11744,13 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
   if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_symmetric_merge_locked(merge,
-                                target_abspath, depth, ignore_ancestry,
+                                target_abspath, depth,
                                 force, record_only, dry_run,
                                 merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(do_symmetric_merge_locked(merge,
-                                target_abspath, depth, ignore_ancestry,
+                                target_abspath, depth,
                                 force, record_only, dry_run,
                                 merge_options, ctx, pool));
 
