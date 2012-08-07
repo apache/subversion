@@ -57,8 +57,8 @@
     <CustomBuild Include="$(SolutionDir)\subversion\svn_private_config.hw">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Creating svn_private_config.h from svn_private_config.hw.</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">copy $(SolutionDir)\subversion\svn_private_config.hw $(SolutionDir)\subversion\svn_private_config.h &gt; nul:</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\subversion\svn_private_config.h;%(Outputs)</Outputs>
+[for sql]      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[sql.svn_python]" "$(SolutionDir)\build\transform_config_hw.py" $(Platform) $(SolutionDir)\subversion\svn_private_config.hw $(SolutionDir)\subversion\svn_private_config.h</Command>
+[end]      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\subversion\svn_private_config.h;%(Outputs)</Outputs>
 [end][end]    </CustomBuild>
 [for sql]    <CustomBuild Include="$(SolutionDir)\[sql.source]">
       <FileType>Document</FileType>
