@@ -68,9 +68,9 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
-					CommandLine="copy ..\..\..\subversion\svn_private_config.hw ..\..\..\subversion\svn_private_config.h &gt; nul
+[for sql]					CommandLine="&quot;[sql.svn_python]&quot; &quot;$(SolutionDir)\build\transform_config_hw.py&quot; [platforms] ..\..\..\subversion\svn_private_config.hw ..\..\..\subversion\svn_private_config.h
 "
-					Outputs="..\..\subversion\svn_private_config.h"/>
+[end]					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
 [for sql]		<File
