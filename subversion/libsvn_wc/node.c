@@ -1407,6 +1407,15 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
             return SVN_NO_ERROR; /* Local addition */
           }
 
+        /* We don't know how the following error condition can be fulfilled
+         * but we have seen that happening in the wild.  Better to create
+         * an error than a SEGFAULT. */
+        if (status == svn_wc__db_status_incomplete && !original_repos_relpath)
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("Incomplete copy information on path '%s'."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+
         *repos_relpath = svn_relpath_join(
                                 original_repos_relpath,
                                 svn_dirent_skip_ancestor(op_root_abspath,

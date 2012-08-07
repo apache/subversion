@@ -1284,6 +1284,30 @@ print_tree(svn_fs_root_t *root,
 }
 
 
+/* Set *BASE_REV to the revision on which the target root specified in
+   C is based, or to SVN_INVALID_REVNUM when C represents "revision
+   0" (because that revision isn't based on another revision). */
+static svn_error_t *
+get_base_rev(svn_revnum_t *base_rev, svnlook_ctxt_t *c, apr_pool_t *pool)
+{
+  if (c->is_revision)
+    {
+      *base_rev = c->rev_id - 1;
+    }
+  else
+    {
+      *base_rev = svn_fs_txn_base_revision(c->txn);
+
+      if (! SVN_IS_VALID_REVNUM(*base_rev))
+        return svn_error_createf
+          (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+           _("Transaction '%s' is not based on a revision; how odd"),
+           c->txn_name);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Subcommand handlers. ***/
 
@@ -1390,16 +1414,9 @@ do_dirs_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
                               TRUE, pool));
@@ -1496,16 +1513,9 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
                               TRUE, pool));
@@ -1525,16 +1535,9 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
                               TRUE, pool));

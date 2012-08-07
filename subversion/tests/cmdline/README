@@ -333,7 +333,8 @@ svntest/tree.py.  It will explain the general API that most tests use.
 
 Finally, try copying-and-pasting a simple test and then edit from
 there.  Don't forget to add your test to the 'test_list' variable at
-the bottom of the file.
+the bottom of the file. To avoid renumbering of existing tests, you
+should add new tests to the end of the list.
 
 
 Testing Compatability With Previous Release

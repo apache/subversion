@@ -4994,8 +4994,10 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_changelist_baton_t scb = { new_changelist, changelist_filter,
-                                        depth };
+  struct set_changelist_baton_t scb;
+  scb.new_changelist = new_changelist;
+  scb.changelist_filter = changelist_filter;
+  scb.depth = depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -5514,9 +5516,15 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct revert_list_read_baton b = {reverted, conflict_old, conflict_new,
-                                     conflict_working, prop_reject,
-                                     copied_here, kind, result_pool};
+  struct revert_list_read_baton b;
+  b.reverted = reverted;
+  b.conflict_old = conflict_old;
+  b.conflict_new = conflict_new;
+  b.conflict_working = conflict_working;
+  b.prop_reject = prop_reject;
+  b.copied_here = copied_here;
+  b.kind = kind;
+  b.result_pool = result_pool;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));
@@ -5588,7 +5596,9 @@ svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct revert_list_read_copied_children_baton b = {children, result_pool};
+  struct revert_list_read_copied_children_baton b;
+  b.children = children;
+  b.result_pool = result_pool;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));
@@ -7410,8 +7420,15 @@ read_url_txn(void *baton,
           else
             {
               /* The parent of the WORKING delete, must be an addition */
-              const char *work_relpath = svn_relpath_dirname(work_del_relpath,
-                                                             scratch_pool);
+              const char *work_relpath = NULL;
+
+              /* work_del_relpath should not be NULL. However, we have
+               * observed instances where that assumption was not met.
+               * Bail out in that case instead of crashing with a segfault.
+               */
+              SVN_ERR_ASSERT(work_del_relpath != NULL);
+              work_relpath = svn_relpath_dirname(work_del_relpath,
+                                                 scratch_pool);
 
               SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id,
                                     NULL, NULL, NULL,
@@ -7473,7 +7490,9 @@ read_url(const char **url,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
 {
-  struct read_url_baton_t rub = { url, result_pool };
+  struct read_url_baton_t rub;
+  rub.url = url;
+  rub.result_pool = result_pool;
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, read_url_txn, &rub,
                               scratch_pool));
 
@@ -12187,9 +12206,17 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct revision_status_baton_t rsb = { min_revision, max_revision,
-        is_sparse_checkout, is_modified, is_switched, trail_url, committed,
-        cancel_func, cancel_baton, db };
+  struct revision_status_baton_t rsb;
+  rsb.min_revision = min_revision;
+  rsb.max_revision = max_revision;
+  rsb.is_sparse_checkout = is_sparse_checkout;
+  rsb.is_modified = is_modified;
+  rsb.is_switched = is_switched;
+  rsb.trail_url = trail_url;
+  rsb.committed = committed;
+  rsb.cancel_func = cancel_func;
+  rsb.cancel_baton = cancel_baton;
+  rsb.db = db;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 

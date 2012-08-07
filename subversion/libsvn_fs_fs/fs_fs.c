@@ -3382,7 +3382,9 @@ set_cached_window(svn_txdelta_window_t *window,
   if (rs->window_cache)
     {
       /* store the window and the first offset _past_ it */
-      svn_fs_fs__txdelta_cached_window_t cached_window = { window, rs->off };
+      svn_fs_fs__txdelta_cached_window_t cached_window;
+      cached_window.window = window;
+      cached_window.end_offset = rs->off;
 
       /* but key it with the start offset because that is the known state
        * when we will look it up */
@@ -5254,7 +5256,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
-      replace_baton_t baton = {name, NULL};
+      replace_baton_t baton;
+      baton.name = name;
+      baton.new_entry = NULL;
 
       if (id)
         {
@@ -5988,16 +5992,23 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     {
       apr_pool_t *subpool;
       apr_hash_t *entries, *str_entries;
-      apr_hash_index_t *hi;
+      apr_array_header_t *sorted_entries;
+      int i;
 
       /* This is a directory.  Write out all the children first. */
       subpool = svn_pool_create(pool);
 
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool));
-
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      /* For the sake of the repository administrator sort the entries
+         so that the final file is deterministic and repeatable,
+         however the rest of the FSFS code doesn't require any
+         particular order here. */
+      sorted_entries = svn_sort__hash(entries, svn_sort_compare_items_lexically,
+                                      pool);
+      for (i = 0; i < sorted_entries->nelts; ++i)
         {
-          svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
+          svn_fs_dirent_t *dirent = APR_ARRAY_IDX(sorted_entries, i,
+                                                  svn_sort__item_t).value;
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
@@ -6136,19 +6147,25 @@ write_final_changed_path_info(apr_off_t *offset_p,
 {
   apr_hash_t *changed_paths;
   apr_off_t offset;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
+  apr_array_header_t *sorted_changed_paths;
+  int i;
 
   SVN_ERR(get_file_offset(&offset, file, pool));
 
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
+  /* For the sake of the repository administrator sort the changes so
+     that the final file is deterministic and repeatable, however the
+     rest of the FSFS code doesn't require any particular order here. */
+  sorted_changed_paths = svn_sort__hash(changed_paths,
+                                        svn_sort_compare_items_lexically, pool);
 
   /* Iterate through the changed paths one at a time, and convert the
      temporary node-id into a permanent one for each change entry. */
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
+  for (i = 0; i < sorted_changed_paths->nelts; ++i)
     {
       node_revision_t *noderev;
       const svn_fs_id_t *id;
@@ -6157,8 +6174,8 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
       svn_pool_clear(iterpool);
 
-      change = svn__apr_hash_index_val(hi);
-      path = svn__apr_hash_index_key(hi);
+      change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
+      path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
 
       id = change->node_rev_id;
 

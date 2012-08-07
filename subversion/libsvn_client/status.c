@@ -299,7 +299,12 @@ svn_client_status5(svn_revnum_t *result_rev,
         target_basename = svn_dirent_basename(target_abspath, NULL);
         dir = svn_dirent_dirname(path, pool);
 
-        if (kind != svn_node_file)
+        if (kind == svn_node_file)
+          {
+            if (depth == svn_depth_empty)
+              depth = svn_depth_files;
+          }
+        else
           {
             err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
                                    pool);

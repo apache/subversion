@@ -15,53 +15,6 @@ Status of 1.7.6:
 Candidate changes:
 ==================
 
- * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
-   r1294134, r1294147, r1294586
-   Two interdependent changes:
-   Fix issue #4121: copy followed by delete of unreadable child.
-   Fix svn:// authz in Python tests.
-   Justification:
-     User resorted to patching the commit editor to work around this.
-     Tests are broken.
-   Notes:
-     r1293945,r1293972,r1293976 are cosmetics.
-     r1293998 is the fix.
-     r1294136 is a test.
-     r1294236 fixes an uninitialized variable.
-   Notes:
-     r1294134 extends a test to demonstrate its brokenness.
-     r1294147 fixes said brokenness.
-     r1294586 fixes r1294147 for Windows.
-   Votes:
-     +1: danielsh, stsp
-
- * r1307177
-   Move mod_dontdothat to install-tools.
-   Justification:
-     Undo compatibility break of 'make install' in 1.7.3.
-   Votes:
-     +1: danielsh, gstein
-
- * r1337441
-   Fix XML namespace expansion in ra_serf
-   Justification:
-     Avoids segfaults caused by a malicious server sending unknown prefixes
-     to ra_serf. (and corrects the semantics for a bonus win)
-   Votes:
-     +1: gstein, rhuijben
-
- * r1338810, r1339164
-   Fix issue #4184 ("partial svnsync drops properties when converting
-   copies to adds").
-   Justification:
-     Syncs that don't aren't synced at all.
-   Notes:
-     r1338810 taught the code to send properties for demoted copies.
-     r1339164 fixed a theoretical use of uninitialized memory.
-   Votes:
-     +1: cmpilato
-     +1: rhuijben (r1338810 only)
-
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
@@ -76,10 +29,43 @@ Candidate changes:
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
    Branch:
-     ^/subversion/branches/1.7.x-issue4153  
+     ^/subversion/branches/1.7.x-issue4153
    Votes:
      +1: stsp
-   
+
+ * ^/subversion/branches/1.7.x-commit-performance
+   Use the working copy status walker as a first filter to find committable
+   nodes.
+   Justification:
+     Huge performance boost. Especially on NFS.
+   Notes:
+     Backports the status walker framework. Many other parts are backportable
+     too, but this branch delivers the plumbing.
+   Votes:
+     +0: rhuijben (I would like to see some test results before backporting)
+
+ * r1341060
+   Sort output of 'svn import'
+   Notes: Needs a backport branch, noted here for completeness.
+   Votes:
+     +0: stsp (pending a proper conflict-free backport)
+     -0: julianfoad (Nice behaviour enhancement but what's the justification
+            for back-porting this on its own without similar for other
+            commands?  The log msg says it was done to maintain stable output
+            with APR 1.4.6 random hash order, but it wasn't stable before
+            that because the order the directory entries were read into the
+            hash, and so the order of multiple keys in one bucket, was not
+            controlled.)
+
+ * r1368662
+   Add information about the build system to 'svn --version' output.
+   Justification:
+      Makes solving user problems a little bit easier since the
+      default 'svn --version' output contains the config.guess
+      identification of the build system.
+   Votes:
+     +1: brane, steveking
+
 Veto-blocked changes:
 =====================
 
