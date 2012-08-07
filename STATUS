@@ -33,7 +33,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * ^/subversion/branches/1.7.x-performance
+ * ^/subversion/branches/1.7.x-commit-performance
    Use the working copy status walker as a first filter to find committable
    nodes.
    Justification:
