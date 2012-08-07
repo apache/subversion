@@ -49,6 +49,13 @@ Candidate changes:
    Notes: Needs a backport branch, noted here for completeness.
    Votes:
      +0: stsp (pending a proper conflict-free backport)
+     -0: julianfoad (Nice behaviour enhancement but what's the justification
+            for back-porting this on its own without similar for other
+            commands?  The log msg says it was done to maintain stable output
+            with APR 1.4.6 random hash order, but it wasn't stable before
+            that because the order the directory entries were read into the
+            hash, and so the order of multiple keys in one bucket, was not
+            controlled.)
 
  * r1368662
    Add information about the build system to 'svn --version' output.
