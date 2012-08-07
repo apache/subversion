@@ -962,7 +962,11 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    libcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
+    expatlibcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
+    if self.static_apr:
+      libcfg = expatlibcfg
+    else:
+      libcfg = cfg
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.zlib_path),
@@ -976,10 +980,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.serf_lib:
       fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
-    fakelibdirs.append(self.apath(self.apr_path, cfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_path, libcfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, libcfg))
     fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
-                                  'lib', libcfg))
+                                  'lib', expatlibcfg))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
