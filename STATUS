@@ -34,6 +34,7 @@ Candidate changes:
      +1: stsp
 
  * ^/subversion/branches/1.7.x-commit-performance
+   r1337118, r1337281, r1337374, r1337377, r1337392, r1337394, r1337485
    Use the working copy status walker as a first filter to find committable
    nodes.
    Justification:
@@ -41,6 +42,8 @@ Candidate changes:
    Notes:
      Backports the status walker framework. Many other parts are backportable
      too, but this branch delivers the plumbing.
+     [JAF] We might want to include some of the subsequent updates to this
+           code, such as: r1337403, r1337475, r1337736, r1338059, r1338338.
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
