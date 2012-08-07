@@ -1503,7 +1503,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
   # r12 - Do a --record-only merge from 'A' to the feature branch so we
   # don't try to merge r11 from trunk during the next sync merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c11',
                                      '--record-only',
                                      sbox.repo_url + '/A',
                                      Feature_branch_path)

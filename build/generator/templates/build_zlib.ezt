@@ -108,7 +108,7 @@ set BUILD_OPTS=%ASM_OPTS%
 [end]
 @echo nmake /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
 nmake /nologo /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
-if not errorlevel 0 goto err
+if errorlevel 1 goto err
 goto end
 
 @rem **************************************************************************

@@ -2291,7 +2291,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
    values in the BASE_NODE table.
 
-   CHANGED_REVISION is the the new 'last changed' revision. If the node is
+   CHANGED_REVISION is the new 'last changed' revision. If the node is
    modified its value is equivalent to NEW_REVISION, but in case of a
    decendant of a copy/move it can be an older revision.
 

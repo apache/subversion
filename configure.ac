@@ -1389,6 +1389,10 @@ AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 # Ensure that SWIG is checked after reconfiguration.
 rm -f .swig_checked
 
+dnl Provide ${host} for use in compiled code (for svn --version)
+AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",
+                   [Defined to the config.guess name of the build system])
+
 AC_OUTPUT
 
 # ==== Print final messages to user ==========================================
