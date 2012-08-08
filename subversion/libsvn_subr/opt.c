@@ -49,6 +49,7 @@
 #include "private/svn_opt_private.h"
 
 #include "opt.h"
+#include "sysinfo.h"
 #include "svn_private_config.h"
 
 
@@ -1105,6 +1106,7 @@ svn_error_t *
 svn_opt__print_version_info(const char *pgm_name,
                             const char *footer,
                             svn_boolean_t quiet,
+                            svn_boolean_t verbose,
                             apr_pool_t *pool)
 {
   if (quiet)
@@ -1128,15 +1130,38 @@ svn_opt__print_version_info(const char *pgm_name,
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", footer));
     }
 
+  if (verbose)
+    {
+      const char *const host = svn_sysinfo__canonical_host(pool);
+      const char *const relname = svn_sysinfo__release_name(pool);
+      const char *const dlibs = svn_sysinfo__loaded_libs(pool);
+
+      SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
+      if (relname)
+        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"
+                                           "  - %s\n"),
+                                   host, relname));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"), host));
+
+      if (dlibs)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("\nLoaded shared libraries:\n"),
+                                    stdout, pool));
+          SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", dlibs));
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_opt_print_help3(apr_getopt_t *os,
+svn_opt_print_help4(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
                     svn_boolean_t quiet,
+                    svn_boolean_t verbose,
                     const char *version_footer,
                     const char *header,
                     const svn_opt_subcommand_desc2_t *cmd_table,
@@ -1162,8 +1187,8 @@ svn_opt_print_help3(apr_getopt_t *os,
         }
     }
   else if (print_version)   /* just --version */
-    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
-                                        pool));
+    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                        quiet, verbose, pool));
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help2(header,
                                 cmd_table,

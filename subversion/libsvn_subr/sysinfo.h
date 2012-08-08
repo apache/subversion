@@ -1,5 +1,5 @@
 /*
- * opt.h: share svn_opt__* functions
+ * sysinfo.h:  share svn_sysinfo__* functions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,31 +21,39 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_SUBR_OPT_H
-#define SVN_LIBSVN_SUBR_OPT_H
+#ifndef SVN_LIBSVN_SUBR_SYSINFO_H
+#define SVN_LIBSVN_SUBR_SYSINFO_H
 
-#include "svn_opt.h"
+#include <apr_pools.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* Print version info for PGM_NAME.  If QUIET is  true, print in
- * brief.  Else if QUIET is not true, print the version more
- * verbosely, and if FOOTER is non-null, print it following the
- * version information. If VERBOSE is true, print running system info.
+/* Return a canonical name similar to the output of config.guess,
+ * identifying the running system.
  *
- * Use POOL for temporary allocations.
+ * All allocations are done in POOL.
  */
-svn_error_t *
-svn_opt__print_version_info(const char *pgm_name,
-                            const char *footer,
-                            svn_boolean_t quiet,
-                            svn_boolean_t verbose,
-                            apr_pool_t *pool);
+const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
+
+/* Return the release name (i.e., marketing name) of the running
+ * system, or NULL if it's not available.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__release_name(apr_pool_t *pool);
+
+/* Return a string containing a list of shared libraries loaded by the
+ * running process, including their versions where applicable, or NULL
+ * if the information is not available.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__loaded_libs(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_SUBR_OPT_H */
+#endif /* SVN_LIBSVN_SUBR_SYSINFO_H */

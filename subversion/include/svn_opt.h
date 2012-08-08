@@ -680,7 +680,8 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * Else, if @a print_version is TRUE, then print version info, in
  * brief form if @a quiet is also TRUE; if @a quiet is FALSE, then if
  * @a version_footer is non-NULL, print it following the version
- * information.
+ * information. If @a verbose is TRUE, also print information about
+ * the running system and loaded shared libraries, where available.
  *
  * Else, if @a os is not @c NULL and does not contain arguments, print
  * generic help, via svn_opt_print_generic_help2() with the @a header,
@@ -695,8 +696,30 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * --version flag *and* subcommand arguments on a help command line.
  * The logic for handling such a situation should be in one place.
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+
+svn_error_t *
+svn_opt_print_help4(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    svn_boolean_t verbose,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const int *global_options,
+                    const char *footer,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_print_help4(), but with @a verbose always @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help3(apr_getopt_t *os,
                     const char *pgm_name,

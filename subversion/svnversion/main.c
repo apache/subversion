@@ -37,8 +37,8 @@
 static svn_error_t *
 version(svn_boolean_t quiet, apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, quiet, NULL, NULL,
-                             NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnversion", TRUE, quiet, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void

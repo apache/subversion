@@ -1135,11 +1135,12 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "\n"
       "Available subcommands:\n");
 
-  SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
+  SVN_ERR(svn_opt_print_help4(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              opt_state ? opt_state->quiet : FALSE, NULL,
-                              header, cmd_table, options_table, NULL,
-                              NULL, pool));
+                              opt_state ? opt_state->quiet : FALSE,
+                              /*###opt_state ? opt_state->verbose :*/ FALSE,
+                              NULL, header, cmd_table, options_table,
+                              NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

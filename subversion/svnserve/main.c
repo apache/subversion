@@ -327,7 +327,8 @@ static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help3(NULL, "svnserve", TRUE, quiet, version_footer->data,
+  return svn_opt_print_help4(NULL, "svnserve", TRUE, quiet, FALSE,
+                             version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
