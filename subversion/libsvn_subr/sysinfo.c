@@ -140,8 +140,11 @@ canonical_host_from_uname(apr_pool_t *pool)
 
 #ifdef WIN32
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
-typedef BOOL (WINAPI *FNGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
 
+/* Get sysstem and version info, and try to tell the difference
+   between the native system type and the runtime environment of the
+   current process. Populate results in SYSINFO, LOCAL_SYSINFO
+   (optional) and OSINFO. */
 static BOOL
 system_info(SYSTEM_INFO *sysinfo,
             SYSTEM_INFO *local_sysinfo,
@@ -171,6 +174,7 @@ system_info(SYSTEM_INFO *sysinfo,
   return TRUE;
 }
 
+/* Map the proccessor type from SYSINFO to a string. */
 static const char *
 processor_name(SYSTEM_INFO *sysinfo)
 {
@@ -191,14 +195,7 @@ processor_name(SYSTEM_INFO *sysinfo)
     }
 }
 
-static char *
-default_release_name(OSVERSIONINFOEXW *osinfo, apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "Windows v%u.%u",
-                      (unsigned int)osinfo->dwMajorVersion,
-                      (unsigned int)osinfo->dwMinorVersion);
-}
-
+/* Return the Windows-specific canonical host name. */
 static const char *
 win32_canonical_host(apr_pool_t *pool)
 {
@@ -228,243 +225,128 @@ win32_canonical_host(apr_pool_t *pool)
   return "unknown-microsoft-windows";
 }
 
+/* Convert a Unicode string to UTF-8. */
+static char *
+wcs_to_utf8(const wchar_t *wcs, apr_pool_t *pool)
+{
+  const int bufsize = WideCharToMultiByte(CP_UTF8, 0, wcs, -1,
+                                          NULL, 0, NULL, NULL);
+  if (bufsize > 0)
+    {
+      char *const utf8 = apr_palloc(pool, bufsize + 1);
+      WideCharToMultiByte(CP_UTF8, 0, wcs, -1, utf8, bufsize, NULL, NULL);
+      return utf8;
+    }
+  return NULL;
+}
+
+/* Query the value called NAME of the registry key HKEY. */
+static char *
+registry_value(HKEY hkey, wchar_t *name, apr_pool_t *pool)
+{
+  DWORD size;
+  wchar_t *value;
+
+  if (RegQueryValueExW(hkey, name, NULL, NULL, NULL, &size))
+    return NULL;
+
+  value = apr_palloc(pool, size + sizeof *value);
+  if (RegQueryValueExW(hkey, name, NULL, NULL, (void*)value, &size))
+    return NULL;
+  value[size / sizeof *value] = 0;
+  return wcs_to_utf8(value, pool);
+}
+
+/* Try to glean the Windows release name and associated info from the
+   registry. Failing that, construct a release name from the version
+   info. */
 static const char *
 win32_release_name(apr_pool_t *pool)
 {
   SYSTEM_INFO sysinfo;
   OSVERSIONINFOEXW osinfo;
-  char *relname = NULL;
+  HKEY hkcv;
 
   if (!system_info(&sysinfo, NULL, &osinfo))
     return NULL;
 
-  if (6 == osinfo.dwMajorVersion)
+  if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                     L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                     0, KEY_QUERY_VALUE, &hkcv))
     {
-      FNGETPRODUCTINFO GetProductInfo_ = (FNGETPRODUCTINFO)
-        GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetProductInfo");
-      DWORD product_type;
+      const char *release = registry_value(hkcv, L"ProductName", pool);
+      const char *spack = registry_value(hkcv, L"CSDVersion", pool);
+      const char *curver = registry_value(hkcv, L"CurrentVersion", pool);
+      const char *curtype = registry_value(hkcv, L"CurrentType", pool);
+      const char *install = registry_value(hkcv, L"InstallationType", pool);
+      const char *curbuild = registry_value(hkcv, L"CurrentBuildNumber", pool);
 
-      if (osinfo.wProductType == VER_NT_WORKSTATION)
-        switch (osinfo.dwMinorVersion)
-          {
-          case 2: relname = "Windows 8"; break;
-          case 1: relname = "Windows 7"; break;
-          case 0: relname = "Windows Vista"; break;
-          }
-      else
-        switch (osinfo.dwMinorVersion)
-          {
-          case 2: relname = "Windows Server 2012"; break;
-          case 1: relname = "Windows Server 2008 R2"; break;
-          case 0: relname = "Windows Server 2008"; break;
-          }
-      if (!relname)
-        relname = default_release_name(&osinfo, pool);
+      if (!spack && *osinfo.szCSDVersion)
+        spack = wcs_to_utf8(osinfo.szCSDVersion, pool);
 
-      GetProductInfo_(osinfo.dwMajorVersion, osinfo.dwMinorVersion,
-                      0, 0, &product_type);
-      switch (product_type)
+      if (!curbuild)
+        curbuild = registry_value(hkcv, L"CurrentBuild", pool);
+
+      if (release || spack || curver || curtype || curbuild)
         {
-        case PRODUCT_ULTIMATE:
-          relname = apr_pstrcat(pool, relname, " Ultimate Edition", NULL);
-          break;
-        case PRODUCT_PROFESSIONAL:
-          relname = apr_pstrcat(pool, relname, " Professional", NULL);
-          break;
-        case PRODUCT_HOME_PREMIUM:
-          relname = apr_pstrcat(pool, relname, " Home Premium Edition", NULL);
-          break;
-        case PRODUCT_HOME_BASIC:
-          relname = apr_pstrcat(pool, relname, " Home Basic Edition", NULL);
-          break;
-        case PRODUCT_ENTERPRISE:
-          relname = apr_pstrcat(pool, relname, " Enterprise Edition", NULL);
-          break;
-        case PRODUCT_BUSINESS:
-          relname = apr_pstrcat(pool, relname, " Business Edition", NULL);
-          break;
-        case PRODUCT_STARTER:
-          relname = apr_pstrcat(pool, relname, " Starter Edition", NULL);
-          break;
-        case PRODUCT_CLUSTER_SERVER:
-          relname = apr_pstrcat(pool, relname,
-                                " Cluster Server Edition", NULL);
-          break;
-        case PRODUCT_DATACENTER_SERVER:
-          relname = apr_pstrcat(pool, relname, " Datacenter Edition", NULL);
-          break;
-        case PRODUCT_DATACENTER_SERVER_CORE:
-          relname = apr_pstrcat(pool, relname,
-                                " Datacenter Edition (core installation)",
-                                NULL);
-          break;
-        case PRODUCT_ENTERPRISE_SERVER:
-          relname = apr_pstrcat(pool, relname, " Enterprise Edition", NULL);
-          break;
-        case PRODUCT_ENTERPRISE_SERVER_CORE:
-          relname = apr_pstrcat(pool, relname,
-                                " Enterprise Edition (core installation)",
-                                NULL);
-          break;
-        case PRODUCT_ENTERPRISE_SERVER_IA64:
-          relname = apr_pstrcat(pool, relname,
-                                " Enterprise Edition for Itanium", NULL);
-          break;
-        case PRODUCT_SMALLBUSINESS_SERVER:
-          relname = apr_pstrcat(pool, relname,
-                                " Small Business Server Edition", NULL);
-          break;
-        case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM:
-          relname = apr_pstrcat(pool, relname,
-                                " Small Business Server Premium Edition",
-                                NULL);
-          break;
-        case PRODUCT_STANDARD_SERVER:
-          relname = apr_pstrcat(pool, relname, " Standard Edition", NULL);
-          break;
-        case PRODUCT_STANDARD_SERVER_CORE:
-          relname = apr_pstrcat(pool, relname,
-                                " Standard Edition (core installation)",
-                                NULL);
-          break;
-        case PRODUCT_WEB_SERVER:
-          relname = apr_pstrcat(pool, relname, " Web Server Edition", NULL);
-          break;
-        }
-    }
-  else if (5 == osinfo.dwMajorVersion)
-    {
-      switch (osinfo.dwMinorVersion)
-        {
-        case 2:
-          if (GetSystemMetrics(SM_SERVERR2))
-            relname = "Windows Server 2003 R2";
-          else if (osinfo.wSuiteMask & VER_SUITE_STORAGE_SERVER)
-            relname = "Windows Storage Server 2003";
-          else if (osinfo.wSuiteMask & VER_SUITE_WH_SERVER)
-            relname = "Windows Home Server";
-          else if (osinfo.wProductType == VER_NT_WORKSTATION
-                   && (sysinfo.wProcessorArchitecture
-                       == PROCESSOR_ARCHITECTURE_AMD64))
-            relname = "Windows XP Professional x64 Edition";
-          else
-            relname = "Windows Server 2003";
-
-          if (osinfo.wProductType != VER_NT_WORKSTATION)
-            switch (sysinfo.wProcessorArchitecture)
-              {
-              case PROCESSOR_ARCHITECTURE_IA64:
-                if (osinfo.wSuiteMask & VER_SUITE_DATACENTER)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Datacenter Edition for Itanium",
-                                        NULL);
-                else if (osinfo.wSuiteMask & VER_SUITE_ENTERPRISE)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Enterprise Edition for Itanium",
-                                        NULL);
-                break;
-
-              case PROCESSOR_ARCHITECTURE_AMD64:
-                if (osinfo.wSuiteMask & VER_SUITE_DATACENTER)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Datacenter x64 Edition", NULL);
-                else if (osinfo.wSuiteMask & VER_SUITE_ENTERPRISE)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Enterprise x64 Edition", NULL);
-                else
-                  relname = apr_pstrcat(pool, relname,
-                                        " Standard x64 Edition", NULL);
-                break;
-
-              default:
-                if (osinfo.wSuiteMask & VER_SUITE_COMPUTE_SERVER)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Compute Cluster Edition", NULL);
-                else if (osinfo.wSuiteMask & VER_SUITE_DATACENTER)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Datacenter Edition", NULL);
-                else if (osinfo.wSuiteMask & VER_SUITE_ENTERPRISE)
-                  relname = apr_pstrcat(pool, relname,
-                                        " Enterprise Edition", NULL);
-                else if (osinfo.wSuiteMask & VER_SUITE_BLADE)
-                  relname = apr_pstrcat(pool, relname, " Web Edition", NULL);
-                else
-                  relname = apr_pstrcat(pool, relname,
-                                        " Standard Edition", NULL);
-              }
-          break;
-
-        case 1:
-          if (osinfo.wSuiteMask & VER_SUITE_PERSONAL)
-            relname = "Windows XP Home";
-          else
-            relname = "Windows XP Professional";
-          break;
-
-        case 0:
-          if (osinfo.wProductType == VER_NT_WORKSTATION)
-            relname = "Windows 2000 Professional";
-          else
+          const char *bootinfo = "";
+          if (curver || install || curtype)
             {
-              if (osinfo.wSuiteMask & VER_SUITE_DATACENTER)
-                relname = "Windows 2000 Datacenter Server";
-              else if (osinfo.wSuiteMask & VER_SUITE_ENTERPRISE)
-                relname = "Windows 2000 Advanced Server";
-              else
-                relname = "Windows 2000 Server";
+              bootinfo = apr_psprintf(pool, "[%s%s%s%s%s]",
+                                      (curver ? curver : ""),
+                                      (install ? (curver ? " " : "") : ""),
+                                      (install ? install : ""),
+                                      (curtype
+                                       ? (curver||install ? " " : "")
+                                       : ""),
+                                      (curtype ? curtype : ""));
             }
-          break;
 
-        default:
-          relname = default_release_name(&osinfo, pool);
+          return apr_psprintf(pool, "%s%s%s%s%s%s%s",
+                              (release ? release : ""),
+                              (spack ? (release ? ", " : "") : ""),
+                              (spack ? spack : ""),
+                              (curbuild
+                               ? (release||spack ? ", build " : "build ")
+                               : ""),
+                              (curbuild ? curbuild : ""),
+                              (bootinfo
+                               ? (release||spack||curbuild ? " " : "")
+                               : ""),
+                              (bootinfo ? bootinfo : ""));
         }
-    }
-  else if (5 > osinfo.dwMajorVersion)
-    {
-      relname = apr_psprintf(pool, "Windows NT %d.%d%s",
-                             (unsigned int)osinfo.dwMajorVersion,
-                             (unsigned int)osinfo.dwMinorVersion,
-                             (osinfo.wProductType != VER_NT_WORKSTATION
-                              ? " Server" : ""));
-    }
-  else
-    {
-      relname = default_release_name(&osinfo, pool);
     }
 
   if (*osinfo.szCSDVersion)
     {
-      const int bufsize = WideCharToMultiByte(CP_UTF8, 0,
-                                              osinfo.szCSDVersion, -1,
-                                              NULL, 0, NULL, NULL);
-      if (bufsize > 0)
-        {
-          char *const servicepack = apr_palloc(pool, bufsize + 1);
-          WideCharToMultiByte(CP_UTF8, 0,
-                              osinfo.szCSDVersion, -1,
-                              servicepack, bufsize,
-                              NULL, NULL);
-          relname = apr_psprintf(pool, "%s, %s, build %d",
-                                 relname, servicepack,
-                                 (unsigned int)osinfo.dwBuildNumber);
-        }
+      const char *servicepack = wcs_to_utf8(osinfo.szCSDVersion, pool);
+
+      if (servicepack)
+        return apr_psprintf(pool, "Windows NT %u.%u, %s, build %u",
+                            (unsigned int)osinfo.dwMajorVersion,
+                            (unsigned int)osinfo.dwMinorVersion,
+                            servicepack,
+                            (unsigned int)osinfo.dwBuildNumber);
+
       /* Assume wServicePackMajor > 0 if szCSDVersion is not empty */
-      else if (osinfo.wServicePackMinor)
-        relname = apr_psprintf(pool, "%s SP%d.%d, build %d", relname,
-                               (unsigned int)osinfo.wServicePackMajor,
-                               (unsigned int)osinfo.wServicePackMinor,
-                               (unsigned int)osinfo.dwBuildNumber);
-      else
-        relname = apr_psprintf(pool, "%s SP%d, build %d", relname,
-                               (unsigned int)osinfo.wServicePackMajor,
-                               (unsigned int)osinfo.dwBuildNumber);
-    }
-  else
-    {
-      relname = apr_psprintf(pool, "%s, build %d", relname,
-                             (unsigned int)osinfo.dwBuildNumber);
+      if (osinfo.wServicePackMinor)
+        return apr_psprintf(pool, "Windows NT %u.%u SP%u.%u, build %u",
+                            (unsigned int)osinfo.dwMajorVersion,
+                            (unsigned int)osinfo.dwMinorVersion,
+                            (unsigned int)osinfo.wServicePackMajor,
+                            (unsigned int)osinfo.wServicePackMinor,
+                            (unsigned int)osinfo.dwBuildNumber);
+
+      return apr_psprintf(pool, "Windows NT %u.%u SP%u, build %u",
+                          (unsigned int)osinfo.dwMajorVersion,
+                          (unsigned int)osinfo.dwMinorVersion,
+                          (unsigned int)osinfo.wServicePackMajor,
+                          (unsigned int)osinfo.dwBuildNumber);
     }
 
-  return relname;
+  return apr_psprintf(pool, "Windows NT %u.%u, build %u",
+                      (unsigned int)osinfo.dwMajorVersion,
+                      (unsigned int)osinfo.dwMinorVersion,
+                      (unsigned int)osinfo.dwBuildNumber);
 }
 #endif /* WIN32 */
