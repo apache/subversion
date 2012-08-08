@@ -60,7 +60,7 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1368662, r1370526, r1370557
+ * r1368662, r1370526, r1370557, r1370801
    Add information about the build system to 'svn --version' output.
    Justification:
       Makes solving user problems a little bit easier since the
