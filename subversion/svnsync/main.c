@@ -1857,9 +1857,10 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help3(os, "svnsync",
+  SVN_ERR(svn_opt_print_help4(os, "svnsync",
                               opt_baton ? opt_baton->version : FALSE,
                               opt_baton ? opt_baton->quiet : FALSE,
+                              /*###opt_state ? opt_state->verbose :*/ FALSE,
                               version_footer->data, header,
                               svnsync_cmd_table, svnsync_options, NULL,
                               NULL, pool));

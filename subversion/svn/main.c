@@ -2187,6 +2187,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 { "--version", svn_cl__help, {0}, "",
                   {opt_version,    /* must accept its own option */
                    'q',            /* brief output */
+                   'v',            /* verbose output */
                    opt_config_dir  /* all commands accept this */
                   } };
 

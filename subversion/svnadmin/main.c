@@ -990,9 +990,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help3(os, "svnadmin",
+  SVN_ERR(svn_opt_print_help4(os, "svnadmin",
                               opt_state ? opt_state->version : FALSE,
                               opt_state ? opt_state->quiet : FALSE,
+                              /*###opt_state ? opt_state->verbose :*/ FALSE,
                               version_footer->data,
                               header, cmd_table, options_table, NULL, NULL,
                               pool));
