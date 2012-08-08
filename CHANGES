@@ -73,6 +73,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
     * fix ra_serf XML namespace handling against malicious server (r1337441)
     * fix relocate with server-relative externals (issue 4216)
     * change two asserts into errors for TortoiseSVN (r1368128, r1368065)
+    * don't attempt to anchor an operation outside a wc root (r1361341)
 
   - Server-side bugfixes:
     * partial sync drops properties when converting to adds (issue #4184)
@@ -81,6 +82,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
     * make FSFS revision files independent of APR hash order (r1367498)
 
   - Other tool improvements and bugfixes:
+    * move mod_dontdothat to install-tools (r1307177)
 
  Developer-visible changes:
   - General:
