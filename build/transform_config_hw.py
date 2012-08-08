@@ -41,10 +41,11 @@ def usage_and_exit(msg):
 _wincpu_map = {
     'x86': 'x86',
     'x64': 'x86_64',
+    'amd64': 'x86_64',
     'x86_64': 'x86_64',
     'ia64': 'ia64',
     'powerpc': 'powerpc',
-    'alfa': 'alfa',
+    'alpha': 'alpha',
     }
 
 _arch_map = _wincpu_map.copy()
