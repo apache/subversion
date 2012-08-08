@@ -699,13 +699,23 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
-AH_BOTTOM(
+AH_BOTTOM([
+/* Indicate to translators that string X should be translated.  Do not look
+   up the translation at run time; just expand to X.  This macro is suitable
+   for use where a constant string is required at compile time. */
 #define N_(x) x
+/* Indicate to translators that we have decided the string X should not be
+   translated.  Expand to X. */
 #define U_(x) x
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
+/* Indicate to translators that string X should be translated.  At run time,
+   look up and return the translation of X. */
 #define _(x) dgettext(PACKAGE_NAME, x)
+/* Indicate to translators that strings X1 and X2 are singular and plural
+   forms of the same message, and should be translated.  At run time, return
+   an appropriate translation depending on the number N. */
 #define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
 #else
 #define _(x) (x)
@@ -713,7 +723,7 @@ AH_BOTTOM(
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
 #endif
-)
+])
 
 dnl Used to simulate makefile conditionals.
 GETTEXT_CODESET=\#
