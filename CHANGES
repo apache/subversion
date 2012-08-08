@@ -1,3 +1,49 @@
+Version 1.7.6
+(15 Aug 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.6
+
+ User-visible changes:
+  - Client- and server-side bugfixes:
+
+  - Client-side bugfixes:
+    * Fix "svn status -u --depth empty FILE" (r1348822, r1349215)
+    * Fix example output of 'svn help status' (issue #3962)
+    * svn propset of svn:eol-style might not notice related text changes (r1353572)
+    * sort output of 'svn propget -R' (r1355699)
+    * sort output of 'svn proplist' (r1355698)
+    * sort output of 'svn status' (r1341012)
+    * avoid a filestat per working copy find operation (r1340556)
+    * optimize 'svn upgrade' performance on large working copies (r1342984)
+    * allow 'file:///C:\repos' style arguments on Windows, like 1.6 (r1346765)
+    * fix ra_serf against Subversion 1.2 servers (r1349367)
+    * fix 'svn upgrade' on working copies with certain tree conflicts (r1345482)
+    * avoid workqueue references to system temp dir (r1367854)
+    * allow non-existant canonical paths (r1367853)
+    * fix 'svn revert --depth files' to operate on files (r1365554)
+    * fix ra_serf XML namespace handling against malicious server (r1337441)
+    * fix relocate with server-relative externals (issue 4216)
+    * change two asserts into errors for TortoiseSVN (r1368128, r1368065)
+    * don't attempt to anchor an operation outside a wc root (r1361341)
+
+  - Server-side bugfixes:
+    * partial sync drops properties when converting to adds (issue #4184)
+    * replaying a copy and delete of an unreadable child fails (issue #4121)
+    * allow svnlook to operate on r0 (r1362508)
+    * make FSFS revision files independent of APR hash order (r1367498)
+
+  - Other tool improvements and bugfixes:
+    * move mod_dontdothat to install-tools (r1307177)
+
+ Developer-visible changes:
+  - General:
+    * fix running tests against httpd 2.4 (r1291594)
+    * use constant struct initialisers for C89 compatibility (r1352068)
+
+  - Bindings:
+    * JavaHL: Don't assert on some invalid input (r1354626, r1354652)
+    * JavaHL: Add missing new in 1.7 notifications (r1351772)
+
+
 Version 1.7.5
 (17 May 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
