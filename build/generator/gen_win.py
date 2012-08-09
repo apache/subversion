@@ -94,6 +94,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     # Instrumentation options
     self.disable_shared = None
     self.static_apr = None
+    self.static_openssl = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -155,6 +156,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--with-static-apr':
         self.static_apr = 1
+      elif opt == '--with-static-openssl':
+        self.static_openssl = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vs_version = '2002'
@@ -1164,6 +1167,8 @@ class WinGeneratorBase(GeneratorBase):
     else:
       serflib = 'serf.lib'
 
+    apr_static = self.static_apr and 'APR_STATIC=1' or ''
+    openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources', serf_sources),
                          ('serf_headers', serf_headers),
@@ -1176,7 +1181,8 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_util_path', os.path.relpath(self.apr_util_path,
                                                            self.serf_path)),
                          ('project_guid', self.makeguid('serf')),
-                         ('apr_static', self.static_apr),
+                         ('apr_static', apr_static),
+                         ('openssl_static', openssl_static),
                          ('serf_lib', serflib),
                         ))
 
