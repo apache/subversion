@@ -70,6 +70,12 @@ Candidate changes:
      +1: brane
      +1 (only r1368662): steveking
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1371282
    Fix a sandbox violation in a test suite test.  (The test executes
    'svn' outside the typical framework for doing so without pointing
@@ -79,10 +85,4 @@ Candidate changes:
      Broken tests lead to false positives in the hunt for broken
      software.
    Votes:
-     +1: cmpilato, brane
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: cmpilato, brane, julianfoad
