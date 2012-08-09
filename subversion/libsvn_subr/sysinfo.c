@@ -150,7 +150,7 @@ canonical_host_from_uname(apr_pool_t *pool)
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
 typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE, DWORD, LPDWORD);
 
-/* Get sysstem and version info, and try to tell the difference
+/* Get system and version info, and try to tell the difference
    between the native system type and the runtime environment of the
    current process. Populate results in SYSINFO, LOCAL_SYSINFO
    (optional) and OSINFO. */
