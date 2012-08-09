@@ -70,6 +70,17 @@ Candidate changes:
      +1: brane
      +1 (only r1368662): steveking
 
+ * r1371282
+   Fix a sandbox violation in a test suite test.  (The test executes
+   'svn' outside the typical framework for doing so without pointing
+   the binary at the controlled runtime configuration directory used
+   by other tests.)
+   Justification:
+     Broken tests lead to false positives in the hunt for broken
+     software.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
