@@ -888,7 +888,7 @@ dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
 dnl check for uname
-AC_CHECK_HEADERS(sys/utsname.h, AC_CHECK_FUNCS(uname), [])
+AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
 
 dnl Process some configuration options ----------
 
