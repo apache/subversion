@@ -27,6 +27,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
     * new --search and --isearch options for 'svn log' (r1354666, -830)
     * new built-in interactive text conflict merge tool (r1357864, et al)
+    * new 'svn --version --verbose' option shows runtime environment info
 
   - Client-side bugfixes:
     *
