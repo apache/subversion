@@ -380,9 +380,48 @@ enum_loaded_modules(apr_pool_t *pool)
   return handles;
 }
 
+/* Find the version number, if any, embedded in FILENAME. */
+static const char *
+file_version_number(const wchar_t *filename, apr_pool_t *pool)
+{
+  VS_FIXEDFILEINFO info;
+  unsigned int major, minor, micro, nano;
+  void *data;
+  DWORD data_size = GetFileVersionInfoSizeW(filename, NULL);
+  void *vinfo;
+  UINT vinfo_size;
+
+  if (!data_size)
+    return NULL;
+
+  data = apr_palloc(pool, data_size);
+  if (!GetFileVersionInfoW(filename, 0, data_size, data))
+    return NULL;
+
+  if (!VerQueryValueW(data, L"\\", &vinfo, &vinfo_size))
+    return NULL;
+
+  if (vinfo_size != sizeof info)
+    return NULL;
+
+  memcpy(&info, vinfo, sizeof info);
+  major = (info.dwFileVersionMS >> 16) & 0xFFFF;
+  minor = info.dwFileVersionMS & 0xFFFF;
+  micro = (info.dwFileVersionLS >> 16) & 0xFFFF;
+  nano = info.dwFileVersionLS & 0xFFFF;
+
+  if (!nano)
+    {
+      if (!micro)
+        return apr_psprintf(pool, "%u.%u", major, minor);
+      else
+        return apr_psprintf(pool, "%u.%u.%u", major, minor, micro);
+    }
+  return apr_psprintf(pool, "%u.%u.%u.%u", major, minor, micro, nano);
+}
 
 /* List the shared libraries loaded by the current process. */
-const char *
+static const char *
 win32_shared_libs(apr_pool_t *pool)
 {
   wchar_t buffer[MAX_PATH + 1];
@@ -393,9 +432,11 @@ win32_shared_libs(apr_pool_t *pool)
   for (module = handles; module && *module; ++module)
     {
       const char *filename;
+      const char *version;
       if (GetModuleFileNameW(*module, buffer, MAX_PATH))
         {
           buffer[MAX_PATH] = 0;
+          version = file_version_number(buffer, pool);
           filename = wcs_to_utf8(buffer, pool);
           if (filename)
             {
@@ -405,8 +446,12 @@ win32_shared_libs(apr_pool_t *pool)
                                           | APR_FILEPATH_TRUENAME,
                                           pool))
                 filename = truename;
-              libinfo = apr_pstrcat(pool, libinfo, "  - ",
-                                    filename, "\n", NULL);
+              if (version)
+                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
+                                      "   (", version, ")\n", NULL);
+              else
+                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
+                                      "\n", NULL);
             }
         }
     }
