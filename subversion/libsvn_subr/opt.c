@@ -1146,9 +1146,9 @@ svn_opt__print_version_info(const char *pgm_name,
 
       if (dlibs)
         {
-          SVN_ERR(svn_cmdline_fputs(_("\nLoaded shared libraries:\n"),
+          SVN_ERR(svn_cmdline_fputs(_("* loaded shared libraries:\n"),
                                     stdout, pool));
-          SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", dlibs));
+          SVN_ERR(svn_cmdline_fputs(dlibs, stdout, pool));
         }
     }
 

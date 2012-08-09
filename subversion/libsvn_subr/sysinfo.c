@@ -25,7 +25,9 @@
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
+#define PSAPI_VERSION 1
 #include <windows.h>
+#include <psapi.h>
 #endif
 
 #define APR_WANT_STRFUNC
@@ -33,6 +35,7 @@
 
 #include <apr_lib.h>
 #include <apr_pools.h>
+#include <apr_file_info.h>
 
 #include "svn_ctype.h"
 #include "svn_error.h"
@@ -52,6 +55,7 @@ static const char* canonical_host_from_uname(apr_pool_t *pool);
 #ifdef WIN32
 static const char * win32_canonical_host(apr_pool_t *pool);
 static const char * win32_release_name(apr_pool_t *pool);
+static const char * win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
 
 
@@ -82,7 +86,11 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 const char *
 svn_sysinfo__loaded_libs(apr_pool_t *pool)
 {
+#ifdef WIN32
+  return win32_shared_libs(pool);
+#else
   return NULL;
+#endif
 }
 
 
@@ -140,6 +148,7 @@ canonical_host_from_uname(apr_pool_t *pool)
 
 #ifdef WIN32
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
+typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE, DWORD, LPDWORD);
 
 /* Get sysstem and version info, and try to tell the difference
    between the native system type and the runtime environment of the
@@ -348,5 +357,62 @@ win32_release_name(apr_pool_t *pool)
                       (unsigned int)osinfo.dwMajorVersion,
                       (unsigned int)osinfo.dwMinorVersion,
                       (unsigned int)osinfo.dwBuildNumber);
+}
+
+
+/* Get a list of handles of shared libs loaded by the current
+   process. Returns a NULL-terminated array alocated from POOL. */
+static HMODULE *
+enum_loaded_modules(apr_pool_t *pool)
+{
+  HANDLE current = GetCurrentProcess();
+  HMODULE dummy[1];
+  HMODULE *handles;
+  DWORD size;
+
+  if (!EnumProcessModules(current, dummy, sizeof(dummy), &size))
+    return NULL;
+
+  handles = apr_palloc(pool, size + sizeof *handles);
+  if (!EnumProcessModules(current, handles, size, &size))
+    return NULL;
+  handles[size / sizeof *handles] = NULL;
+  return handles;
+}
+
+
+/* List the shared libraries loaded by the current process. */
+const char *
+win32_shared_libs(apr_pool_t *pool)
+{
+  wchar_t buffer[MAX_PATH + 1];
+  HMODULE *handles = enum_loaded_modules(pool);
+  char *libinfo = "";
+  HMODULE *module;
+
+  for (module = handles; module && *module; ++module)
+    {
+      const char *filename;
+      if (GetModuleFileNameW(*module, buffer, MAX_PATH))
+        {
+          buffer[MAX_PATH] = 0;
+          filename = wcs_to_utf8(buffer, pool);
+          if (filename)
+            {
+              char *truename;
+              if (0 == apr_filepath_merge(&truename, "", filename,
+                                          APR_FILEPATH_NATIVE
+                                          | APR_FILEPATH_TRUENAME,
+                                          pool))
+                filename = truename;
+              libinfo = apr_pstrcat(pool, libinfo, "  - ",
+                                    filename, "\n", NULL);
+            }
+        }
+    }
+
+  if (*libinfo)
+    return libinfo;
+  return NULL;
 }
 #endif /* WIN32 */
