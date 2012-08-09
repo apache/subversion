@@ -471,6 +471,10 @@ get_master_passphrase_auth_baton(svn_auth_baton_t **mp_ab,
           pb, 3, pool);
       APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
     }
+  else
+    {
+      mp_providers = apr_array_make(pool, 1, sizeof(provider));
+    }
 
   /* Then, we create the auth baton. */
   svn_auth_open(mp_ab, mp_providers, pool);
