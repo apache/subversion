@@ -79,7 +79,7 @@ Candidate changes:
      Broken tests lead to false positives in the hunt for broken
      software.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, brane
 
 Veto-blocked changes:
 =====================
