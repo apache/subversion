@@ -924,21 +924,6 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
                                 apr_pool_t *scratch_pool);
 
 /**
- * Cache the inherited properties @a inherited_props (a depth-first ordered
- * array of #svn_prop_inherited_item_t * structures) for the BASE node at
- * @a local_abspath.  @a inherited_props may be empty.  If there is no base
- * node at @a local_abspath, then do nothing.  If @a local_abspath is not in
- * the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
- *
- * Use @a scratch_pool for temporary allocations.
- */
-svn_error_t *
-svn_wc__cache_iprops(apr_array_header_t *inherited_props,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool);
-
-/**
  * Set @a *iprops_paths to a hash mapping const char * absolute working
  * copy paths to the same for each path in the working copy at or below
  * @a local_abspath, limited by @a depth, that has cached inherited
@@ -1492,6 +1477,15 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
  *
+ * @a wcroot_iprops is a hash mapping const char * absolute working copy
+ * paths which are working copy roots (at or under the target within the
+ * constraints dictated by @a depth) to depth-first ordered arrays of
+ * svn_prop_inherited_item_t * structures which represent the inherited
+ * properties for the base of those paths at @a target_revision.  After a
+ * successful drive of this editor, the base nodes for these paths will
+ * have their inherited properties cache updated with the values from
+ * @a wcroot_iprops.
+ *
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
@@ -1533,6 +1527,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,
                           const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -1576,6 +1571,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           const char *anchor_abspath,
                           const char *target_basename,
                           const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,

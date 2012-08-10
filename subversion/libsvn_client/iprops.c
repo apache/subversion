@@ -50,12 +50,27 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_wc_root;
+  svn_error_t *err;
 
   /* Our starting assumption. */
   *needs_cache = FALSE;
 
-  SVN_ERR(svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx, abspath,
-                             scratch_pool));
+  err = svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx, abspath,
+                           scratch_pool);
+
+  /* ABSPATH can't need a cache if it doesn't exist. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          is_wc_root = FALSE;
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
 
   if (is_wc_root)
     {
@@ -75,16 +90,16 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
 }
 
 svn_error_t *
-svn_client__update_inheritable_props(const char *local_abspath,
-                                     svn_depth_t depth,
-                                     svn_ra_session_t *ra_session,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *scratch_pool)
+svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
+                                  const char *local_abspath,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
-  svn_revnum_t revision;
-
-  SVN_ERR(svn_wc__node_get_base(&revision, NULL, NULL, NULL, ctx->wc_ctx,
-                                local_abspath, scratch_pool, scratch_pool));
+  *wcroot_iprops = apr_hash_make(result_pool);
 
   /* If we don't have a base revision for LOCAL_ABSPATH then it can't
      possibly be a working copy root, nor can it contain any WC roots
@@ -146,14 +161,18 @@ svn_client__update_inheritable_props(const char *local_abspath,
                 }
 
               SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                                 "", revision, iterpool));
-              SVN_ERR(svn_wc__cache_iprops(inherited_props, ctx->wc_ctx,
-                                           child_abspath, iterpool));
+                                                 "", revision, result_pool));
+
+              if (old_session_url)
+                SVN_ERR(svn_ra_reparent(ra_session, old_session_url,
+                                        iterpool));
+
+              apr_hash_set(*wcroot_iprops,
+                           apr_pstrdup(result_pool, child_abspath),
+                           APR_HASH_KEY_STRING,
+                           inherited_props);
             }
         }
-
-      if (old_session_url)
-        SVN_ERR(svn_ra_reparent(ra_session, old_session_url, iterpool));
 
       svn_pool_destroy(iterpool);
     }

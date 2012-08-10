@@ -149,9 +149,10 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
-  dav_cache, symlink_target, file_external, moved_to, moved_here)
+  dav_cache, symlink_target, file_external, moved_to, moved_here,
+  inherited_props)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
+        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
 
 -- STMT_SELECT_BASE_PRESENT
 SELECT local_relpath, kind FROM nodes n
@@ -1499,10 +1500,10 @@ WHERE wc_id = ?1
   AND local_relpath = ?2
   AND op_depth = ?3
 
--- STMT_INSERT_IPROP
+-- STMT_UPDATE_IPROP
 UPDATE nodes
-SET inherited_props = ?4
-WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3)
+SET inherited_props = ?3
+WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
 
 -- STMT_SELECT_INODES
 SELECT local_relpath FROM nodes

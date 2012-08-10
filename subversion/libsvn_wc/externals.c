@@ -873,6 +873,7 @@ close_edit(void *edit_baton,
                                                        NULL, NULL, NULL,
                                                        *eb->target_revision,
                                                        apr_hash_make(pool),
+                                                       NULL,
                                                        pool));
     }
 
