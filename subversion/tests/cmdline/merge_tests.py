@@ -11191,9 +11191,6 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
                                      H_COPY_path)
 
   # H_COPY needs r6-9 applied while H_COPY/nu needs only 6,8-9.
-  # This means r6 will be done as a separate editor drive targeted
-  # on H_COPY.  But r6 was only the copy of A/D/H to H_COPY and
-  # so is a no-op and there will no notification for r6.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
