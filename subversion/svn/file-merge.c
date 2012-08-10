@@ -43,6 +43,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#if APR_HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include <fcntl.h>
 #include <stdlib.h>
 
@@ -309,8 +313,11 @@ get_term_width(void)
   if (fd != -1)
     {
       struct winsize ws;
+      int error;
 
-      if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
+      error = ioctl(fd, TIOCGWINSZ, &ws);
+      close(fd);
+      if (error != -1)
         {
           if (ws.ws_col < 80)
             return 80;
@@ -651,7 +658,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
       "        (e2) edit your version and use the result,\n"
       "        (eb) edit both versions and use the result,\n"
       "        (p) postpone this conflicting section leaving conflict markers,\n"
-      "        (a) abort entire merge and return to main menu: "));
+      "        (a) abort file merge and return to main menu: "));
 
   /* Now let's see what the user wants to do with this conflict. */
   while (TRUE)
@@ -830,6 +837,7 @@ svn_cl__merge_file(const char *base_path,
                    const char *my_path,
                    const char *merged_path,
                    const char *wc_path,
+                   const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
                    svn_boolean_t *remains_in_conflict,
@@ -843,6 +851,13 @@ svn_cl__merge_file(const char *base_path,
   apr_file_t *merged_file;
   const char *merged_file_name;
   struct file_merge_baton fmb;
+
+
+  SVN_ERR(svn_cmdline_printf(
+            scratch_pool, _("Merging '%s'.\n"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                            wc_path),
+                                   scratch_pool)));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
                            APR_READ|APR_BUFFERED|APR_BINARY,
@@ -881,23 +896,53 @@ svn_cl__merge_file(const char *base_path,
   SVN_ERR(svn_io_file_close(latest_file, scratch_pool));
   SVN_ERR(svn_io_file_close(merged_file, scratch_pool));
 
+  /* Start out assuming that conflicts remain. */
   if (remains_in_conflict)
-    *remains_in_conflict = (fmb.remains_in_conflict || fmb.abort_merge);
+    *remains_in_conflict = TRUE;
 
   if (fmb.abort_merge)
     {
       SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
+      SVN_ERR(svn_cmdline_printf(
+                scratch_pool, _("Merge of '%s' aborted.\n"),
+                svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                                wc_path),
+                                       scratch_pool)));
+                
       return SVN_NO_ERROR;
     }
 
   SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
             apr_psprintf(scratch_pool,
-                         _("Could not write merged result to '%s', "
-                         "saved instead at '%s'.\n"),
-                         svn_dirent_local_style(merged_path,
-                                                scratch_pool),
+                         _("Could not write merged result to '%s', saved "
+                           "instead at '%s'.\n'%s' remains in conflict.\n"),
+                         svn_dirent_local_style(
+                           svn_dirent_skip_ancestor(path_prefix, merged_path),
+                           scratch_pool),
                          svn_dirent_local_style(merged_file_name,
-                                                scratch_pool)));
+                                                scratch_pool),
+                         svn_dirent_local_style(
+                           svn_dirent_skip_ancestor(path_prefix, wc_path),
+                           scratch_pool)));
 
+  /* The merge was not aborted and we could install the merged result. The
+   * file remains in conflict unless all conflicting sections were resolved. */
+  if (remains_in_conflict)
+    *remains_in_conflict = fmb.remains_in_conflict;
+
+  if (fmb.remains_in_conflict)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool,
+              _("Merge of '%s' completed (remains in conflict).\n"),
+              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                              wc_path),
+                                     scratch_pool)));
+  else
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("Merge of '%s' completed.\n"),
+              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                              wc_path),
+                                     scratch_pool)));
+                
   return SVN_NO_ERROR;
 }

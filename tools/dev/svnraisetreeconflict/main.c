@@ -67,8 +67,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnraisetreeconflict", TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnraisetreeconflict", TRUE, FALSE, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -308,8 +308,8 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 

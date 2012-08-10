@@ -178,14 +178,13 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* A macro to mark sections of code that belong to the 'symmetric merge'
- * feature while it's still new. */
-#define SVN_WITH_SYMMETRIC_MERGE
-
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 
 /* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
+typedef struct svn_client__symmetric_merge_t
+{
+  svn_client__pathrev_t *yca, *base, *mid, *right;
+  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
+} svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
  * branch into a target branch.  The information is the locations of the
@@ -211,9 +210,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
  *
  * Merge according to MERGE into the WC at TARGET_WCPATH.
  *
- * The other parameters are as in svn_client_merge4().  IGNORE_ANCESTRY
- * only controls the diffing of files, it doesn't prevent mergeinfo from
- * being used.
+ * The other parameters are as in svn_client_merge4().
  *
  * ### TODO: There's little point in this function being the only way the
  * caller can use the result of svn_client__find_symmetric_merge().  The
@@ -227,7 +224,6 @@ svn_error_t *
 svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const char *target_wcpath,
                                svn_depth_t depth,
-                               svn_boolean_t ignore_ancestry,
                                svn_boolean_t force,
                                svn_boolean_t record_only,
                                svn_boolean_t dry_run,
@@ -235,7 +231,6 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool);
 
-#endif /* SVN_WITH_SYMMETRIC_MERGE */
 
 #ifdef __cplusplus
 }

@@ -203,7 +203,6 @@ typedef struct svn_cl__opt_state_t
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* the external editor command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
-  svn_boolean_t symmetric_merge; /* symmetric merge */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
@@ -588,6 +587,7 @@ svn_cl__merge_file(const char *base_path,
                    const char *my_path,
                    const char *merged_path,
                    const char *wc_path,
+                   const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
                    svn_boolean_t *remains_in_conflict,

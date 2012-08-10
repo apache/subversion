@@ -25,7 +25,10 @@
    be used in release code. One of the reasons to avoid this code in release
    builds is that this code is not thread-safe. */
 #include <stdarg.h>
+#include <assert.h>
 
+#include <apr_pools.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_string.h"
 
@@ -35,6 +38,8 @@
 #define DBG_FLAG "DBG: "
 
 /* This will be tweaked by the preamble code.  */
+static const char *debug_file = NULL;
+static long debug_line = 0;
 static FILE * volatile debug_output = NULL;
 
 
@@ -57,25 +62,48 @@ svn_dbg__preamble(const char *file, long line, FILE *output)
 
       if (slash == NULL)
         slash = strrchr(file, '\\');
-      if (slash == NULL)
-        slash = file;
+      if (slash)
+        debug_file = slash + 1;
       else
-        ++slash;
-
-      fprintf(output, DBG_FLAG "%s:%4ld: ", slash, line);
+        debug_file = file;
     }
+  debug_line = line;
 }
 
 
+/* Print a formatted string using format FMT and argument-list AP,
+ * prefixing each line of output with a debug header. */
 static void
-print_line(const char *fmt, va_list ap)
+debug_vprintf(const char *fmt, va_list ap)
 {
   FILE *output = debug_output;
+  char prefix[80], buffer[1000];
+  char *s = buffer;
+  int n;
 
   if (output == NULL || quiet_mode())
     return;
 
-  (void) vfprintf(output, fmt, ap);
+  n = apr_snprintf(prefix, sizeof(prefix), DBG_FLAG "%s:%4ld: ",
+                   debug_file, debug_line);
+  assert(n < sizeof(prefix) - 1);
+  n = apr_vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  assert(n < sizeof(buffer) - 1);
+  do
+    {
+      char *newline = strchr(s, '\n');
+      if (newline)
+        *newline = '\0';
+
+      fputs(prefix, output);
+      fputs(s, output);
+      fputc('\n', output);
+
+      if (! newline)
+        break;
+      s = newline + 1;
+    }
+  while (*s);  /* print another line, except after a final newline */
 }
 
 
@@ -85,7 +113,7 @@ svn_dbg__printf(const char *fmt, ...)
   va_list ap;
 
   va_start(ap, fmt);
-  print_line(fmt, ap);
+  debug_vprintf(fmt, ap);
   va_end(ap);
 }
 
@@ -102,12 +130,12 @@ svn_dbg__print_props(apr_hash_t *props,
   va_list ap;
 
   va_start(ap, header_fmt);
-  print_line(header_fmt, ap);
+  debug_vprintf(header_fmt, ap);
   va_end(ap);
 
   if (props == NULL)
     {
-      SVN_DBG(("    (null)\n"));
+      svn_dbg__printf("    (null)\n");
       return;
     }
 
@@ -117,7 +145,7 @@ svn_dbg__print_props(apr_hash_t *props,
       const char *name = svn__apr_hash_index_key(hi);
       svn_string_t *val = svn__apr_hash_index_val(hi);
 
-      SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
+      svn_dbg__printf("    '%s' -> '%s'\n", name, val->data);
     }
 #endif /* SVN_DEBUG */
 }

@@ -42,8 +42,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svn-rep-sharing-stats", TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svn-rep-sharing-stats", TRUE, FALSE, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -91,8 +91,8 @@ check_lib_versions(void)
       { "svn_fs",     svn_fs_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 

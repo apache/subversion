@@ -33,7 +33,7 @@ extern "C" {
 /* Print version info for PGM_NAME.  If QUIET is  true, print in
  * brief.  Else if QUIET is not true, print the version more
  * verbosely, and if FOOTER is non-null, print it following the
- * version information.
+ * version information. If VERBOSE is true, print running system info.
  *
  * Use POOL for temporary allocations.
  */
@@ -41,6 +41,7 @@ svn_error_t *
 svn_opt__print_version_info(const char *pgm_name,
                             const char *footer,
                             svn_boolean_t quiet,
+                            svn_boolean_t verbose,
                             apr_pool_t *pool);
 
 #ifdef __cplusplus
