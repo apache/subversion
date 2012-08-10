@@ -564,24 +564,29 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
 /*** Inheritable Properties ***/
 
-/* Fetch the inherited properties for the base of LOCAL_ABSPATH using
-   RA_SESSION and cache the results for all WC roots at or under
-   LOCAL_ABSPATH (limited by DEPTH).  If LOCAL_ABSPATH has no base then
-   do nothing.
+/* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
+   as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
+   RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
+   const char * absolute working copy paths to depth-first ordered arrays
+   of svn_prop_inherited_item_t * structures.
+
+   If LOCAL_ABSPATH has no base then do nothing.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
    or NULL, in which case this function will open its own temporary session.
 
-   ### IPROPS: This is a temporary private API.  Eventually this logic must
-   ### be run atomically as a work queue item in the update/switch editor
-   ### drive.
+   Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations.
 */
 svn_error_t *
-svn_client__update_inheritable_props(const char *local_abspath,
-                                     svn_depth_t depth,
-                                     svn_ra_session_t *ra_session,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *scratch_pool);
+svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
+                                  const char *local_abspath,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* ---------------------------------------------------------------- */
 

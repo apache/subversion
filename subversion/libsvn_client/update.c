@@ -202,6 +202,8 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t clean_checkout = FALSE;
   svn_boolean_t is_not_present;
   const char *diff3_cmd;
+  apr_hash_t *wcroot_iprops;
+  svn_opt_revision_t opt_rev;
   svn_ra_session_t *ra_session;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
@@ -351,10 +353,18 @@ update_internal(svn_revnum_t *result_rev,
       anchor_loc->url = corrected_url;
     }
 
+  /* Resolve unspecified REVISION now, because we need to retrieve the
+     correct inherited props prior to the editor drive and we need to
+     use the same value of HEAD for both. */
+  opt_rev.kind = revision->kind;
+  opt_rev.value = revision->value;
+  if (opt_rev.kind == svn_opt_revision_unspecified)
+    opt_rev.kind = svn_opt_revision_head;
+
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
-                                          local_abspath, ra_session, revision,
+                                          local_abspath, ra_session, &opt_rev,
                                           pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -364,12 +374,31 @@ update_internal(svn_revnum_t *result_rev,
   dfb.target_revision = revnum;
   dfb.anchor_url = anchor_loc->url;
 
+  err = svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
+                                          revnum, depth, ra_session, ctx,
+                                          pool, pool);
+
+  /* We might be trying to update to a non-existant path-rev. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc__get_update_editor(&update_editor, &update_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, use_commit_times, depth,
-                                    depth_is_sticky, allow_unver_obstructions,
+                                    target, wcroot_iprops, use_commit_times,
+                                    depth, depth_is_sticky,
+                                    allow_unver_obstructions,
                                     adds_as_modification,
                                     server_supports_depth,
                                     clean_checkout,
@@ -441,9 +470,6 @@ update_internal(svn_revnum_t *result_rev,
       err = SVN_NO_ERROR;
       is_not_present = TRUE;
     }
-  if (! is_not_present)
-    SVN_ERR(svn_client__update_inheritable_props(local_abspath, depth,
-                                                 ra_session, ctx, pool));
 
   if (sleep_here)
     svn_io_sleep_for_timestamps(local_abspath, pool);

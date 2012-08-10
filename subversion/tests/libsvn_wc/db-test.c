@@ -652,7 +652,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             children, svn_depth_infinity,
-            NULL, NULL, FALSE, NULL, NULL,
+            NULL, NULL, FALSE, NULL, NULL, NULL,
             pool));
 
   /* Replace an incomplete node with a file node. */

@@ -79,6 +79,8 @@ switch_internal(svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   const char *diff3_cmd;
+  apr_hash_t *wcroot_iprops;
+  apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
@@ -218,6 +220,12 @@ switch_internal(svn_revnum_t *result_rev,
                                  svn_dirent_dirname(local_abspath, pool));
     }
 
+  SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
+                                     "", switch_loc->rev, pool));
+  wcroot_iprops = apr_hash_make(pool);
+  apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
+               inherited_props);
+
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
@@ -231,8 +239,8 @@ switch_internal(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, switch_loc->url, use_commit_times,
-                                    depth,
+                                    target, switch_loc->url, wcroot_iprops,
+                                    use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
@@ -295,10 +303,6 @@ switch_internal(svn_revnum_t *result_rev,
                                            depth, use_sleep,
                                            ctx, pool));
     }
-
-  /* Cache inherited props. */
-  SVN_ERR(svn_client__update_inheritable_props(local_abspath, depth,
-                                               ra_session, ctx, pool));
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */

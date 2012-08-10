@@ -2477,62 +2477,6 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
 }
 
 svn_error_t *
-svn_wc__cache_iprops(apr_array_header_t *inherited_props,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool)
-{
-  if (inherited_props)
-    {
-      const char *repos_root_url;
-      svn_revnum_t revision;
-      svn_error_t *err = svn_wc__node_get_base(&revision, NULL,
-                                               &repos_root_url, NULL,
-                                               wc_ctx, local_abspath,
-                                               scratch_pool, scratch_pool);
-
-      /* Can't cache iprops for paths which aren't part of the WC. */
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-            {
-              svn_error_clear(err);
-
-              /* Keep error for consistent with the other of the svn_wc__*
-                 private APIs. */
-              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                       _("The node '%s' was not found."),
-                                       svn_dirent_local_style(local_abspath,
-                                                              scratch_pool));
-            }
-          else
-            {
-              return svn_error_trace(err);
-            }
-        }
-
-      /* If there is no base node at LOCAL_ABSPATH there is nothing to do. */
-      if (SVN_IS_VALID_REVNUM(revision))
-        {
-          if (inherited_props->nelts)
-            {
-              SVN_ERR(svn_wc__db_cache_iprops(inherited_props, wc_ctx->db,
-                                              local_abspath, scratch_pool));
-            }
-          else
-            {
-              SVN_ERR(svn_wc__db_cache_iprops(
-                apr_array_make(scratch_pool, 0,
-                               sizeof(svn_prop_inherited_item_t *)),
-                wc_ctx->db, local_abspath, scratch_pool));
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__get_cached_iprop_children(apr_hash_t **iprop_paths,
                                   svn_depth_t depth,
                                   svn_wc_context_t *wc_ctx,
