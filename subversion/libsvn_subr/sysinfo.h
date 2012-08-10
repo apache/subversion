@@ -1,4 +1,5 @@
-/* uuid.h : internal interface to uuid functions
+/*
+ * sysinfo.h:  share svn_sysinfo__* functions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,30 +21,39 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_UUID_H
-#define SVN_LIBSVN_FS_UUID_H
+#ifndef SVN_LIBSVN_SUBR_SYSINFO_H
+#define SVN_LIBSVN_SUBR_SYSINFO_H
+
+#include <apr_pools.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
+/* Return a canonical name similar to the output of config.guess,
+ * identifying the running system.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
 
-/* Set FS->UUID to the value read from the database, allocated
-   in FS->POOL.  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *svn_fs_base__populate_uuid(svn_fs_t *fs,
-                                        apr_pool_t *scratch_pool);
+/* Return the release name (i.e., marketing name) of the running
+ * system, or NULL if it's not available.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__release_name(apr_pool_t *pool);
 
-
-/* These functions implement some of the calls in the FS loader
-   library's fs vtable. */
-
-svn_error_t *svn_fs_base__set_uuid(svn_fs_t *fs, const char *uuid,
-                                   apr_pool_t *pool);
-
+/* Return a string containing a list of shared libraries loaded by the
+ * running process, including their versions where applicable, or NULL
+ * if the information is not available.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__loaded_libs(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_UUID_H */
+#endif /* SVN_LIBSVN_SUBR_SYSINFO_H */

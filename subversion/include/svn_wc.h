@@ -1685,7 +1685,7 @@ typedef struct svn_wc_conflict_version_t
  *
  * Set the @c repos_url field of the created struct to @a repos_url, the
  * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
- * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
+ * @a peg_rev and the @c node_kind to @c node_kind. Make only shallow
  * copies of the pointer arguments.
  *
  * @since New in 1.8.
@@ -4566,7 +4566,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
  * by code like that of "svn cp URL@rev path" @a copyfrom_url and
- * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
+ * @a copyfrom_rev MUST BE the url and revision of @a local_abspath
  * in the separate working copy.
  *
  * 2a) If the node was not versioned before it will be scheduled as a local

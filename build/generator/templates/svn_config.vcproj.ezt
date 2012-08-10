@@ -33,7 +33,7 @@
 			Name="[configs]|[platforms]"
 			OutputDirectory="."
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\$(ConfigurationName)"
+			IntermediateDirectory="..\..\..\$(ConfigurationName)"
 			ConfigurationType="10"
 			UseOfMFC="0"
 			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
@@ -53,7 +53,7 @@
 	</Configurations>
 	<Files>
 		<File
-			RelativePath="..\..\subversion\svn_private_config.h">
+			RelativePath="$(IntDir)\svn_private_config.h">
 [for platforms][for configs]			<FileConfiguration
 				Name="[configs]|[platforms]"
 				ExcludedFromBuild="TRUE">
@@ -68,19 +68,27 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
-					CommandLine="copy ..\..\..\subversion\svn_private_config.hw ..\..\..\subversion\svn_private_config.h &gt; nul
-"
-					Outputs="..\..\subversion\svn_private_config.h"/>
+					CommandLine="&quot;[svn_python]&quot; &quot;$(SolutionDir)\build\transform_config_hw.py&quot; [platforms] &quot;$(InputPath)&quot; &quot;$(IntDir)\svn_private_config.h&quot;"
+					Outputs="$(IntDir)subversion\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
 [for sql]		<File
+			RelativePath="$(SolutionDir)\[sql.header]">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+[end][end]		</File>
+		<File
 			RelativePath="../../../[sql.source]">
 [for platforms][for configs]			<FileConfiguration
 				Name="[configs]|[platforms]">
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Generating [sql.header]"
-					CommandLine="&quot;[sql.svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
+					CommandLine="&quot;[svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
 					AdditionalDependencies="[for sql.dependencies]$(SolutionDir)\[sql.dependencies];[end]"
 					Outputs="$(SolutionDir)\[sql.header]"
 				/>
@@ -91,4 +99,3 @@
 	<Globals>
 	</Globals>
 </VisualStudioProject>
-

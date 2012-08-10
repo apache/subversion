@@ -204,6 +204,9 @@ def _usage_exit(err=None):
   print("  --with-static-apr")
   print("           Use static apr and apr-util")
   print("")
+  print("  --with-static-openssl")
+  print("           Use static openssl")
+  print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
   print("           [only valid in combination with '-t vcproj']")
@@ -248,6 +251,7 @@ if __name__ == '__main__':
                             'with-sasl=',
                             'with-apr_memcache=',
                             'with-static-apr',
+                            'with-static-openssl',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',

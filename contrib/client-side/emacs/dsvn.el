@@ -130,6 +130,11 @@
   :type 'boolean
   :group 'dsvn)
 
+(defcustom svn-diff-args '("-x" "-p")
+  "*Additional arguments used for all invocations of `svn diff'."
+  :type '(repeat string)
+  :group 'dsvn)
+
 ;; start-file-process and process-file are needed for tramp but only appeared
 ;; in Emacs 23 and 22 respectively.
 (setq svn-start-file-process
@@ -351,7 +356,9 @@ during the run."
   "Run `svn diff'.
 Argument ARG are the command line arguments."
   (interactive "ssvn diff arguments: ")
-  (svn-run-with-output "diff" (split-string arg) 'diff-mode))
+  (svn-run-with-output "diff"
+		       (append svn-diff-args (split-string arg))
+		       'diff-mode))
 
 (defun svn-commit ()
   "Commit changes to one or more files."
@@ -573,7 +580,7 @@ VERBOSE-P."
       (erase-buffer)
       (setq default-directory dir)
       (svn-call-process diff-buf
-                        "diff" "-r"
+                        "diff" "-x" "-p" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
 (defun svn-log-edit-files (commit-id)
@@ -601,7 +608,9 @@ VERBOSE-P."
   "Run `svn diff' for the current log entry."
   (interactive)
   (let ((commit-id (svn-log-current-commit)))
-    (svn-run-with-output "diff" (list "-c" (number-to-string commit-id))
+    (svn-run-with-output "diff"
+			 (append svn-diff-args
+				 (list "-c" (number-to-string commit-id)))
                          'diff-mode)))
 
 (defun svn-log-edit ()
@@ -1957,7 +1966,8 @@ files instead."
                  (list (or (svn-getprop (point) 'file)
                            (svn-getprop (point) 'dir)
                            (error "No file on line"))))))
-    (unless (svn-run-with-output "diff" files 'diff-mode)
+    (unless (svn-run-with-output "diff" (append svn-diff-args files)
+				 'diff-mode)
       (message "No difference found"))))
 
 (defun svn-previous-file (arg)

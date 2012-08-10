@@ -301,7 +301,7 @@ def symmetric_merge(sbox, source, target, args=[],
 
   exp_out = expected_symmetric_merge_output(target, expect_3ways)
   exit, out, err = svntest.actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', '--symmetric',
+                                     'merge',
                                      '^/' + source, target,
                                      *args)
 
@@ -783,8 +783,10 @@ def subtree_to_and_fro(sbox):
   # r8 - Do a subtree sync merge from ^/A/D to A_COPY/D.
   # Note that among other things this changes A_COPY/D/H/psi.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--symmetric',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A/D', A_COPY_D_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Symmetric subtree merge')
 
   # r9 - Make an edit to A/D/H/psi.
   svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
@@ -798,7 +800,6 @@ def subtree_to_and_fro(sbox):
   #
   #   C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
   #     working_copies\merge_symmetric_tests-18>svn merge ^^/A_COPY A
-  #     --symmetric
   #   DBG: merge.c:11461: base on source: file:///C:/SVN/src-trunk/Debug/
   #     subversion/tests/cmdline/svn-test-work/repositories/
   #     merge_symmetric_tests-18/A@1
@@ -816,17 +817,17 @@ def subtree_to_and_fro(sbox):
   #   Select: (p) postpone, (df) diff-full, (e) edit,
   #           (mc) mine-conflict, (tc) theirs-conflict,
   #           (s) show all options: p
-  #   --- Merging r2 through r8 into 'A':
+  #   --- Merging r2 through r9 into 'A':
   #   C    A\D\H\psi
   #   U    A\D\gamma
-  #   --- Recording mergeinfo for merge of r2 through r8 into 'A':
+  #   --- Recording mergeinfo for merge of r2 through r9 into 'A':
   #    U   A
   #   Summary of conflicts:
   #     Text conflicts: 1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     None, [], svntest.verify.AnyOutput,
-    'merge', '--symmetric', sbox.repo_url + '/A_COPY', A_path)
+    'merge', sbox.repo_url + '/A_COPY', A_path)
 
   # The 'old' merge produced a warning that reintegrate could not be used.
   # Not claiming this is perfect, but it's better(?) than a conflict:
@@ -834,7 +835,7 @@ def subtree_to_and_fro(sbox):
                                 "in the way expected",
                                 err, None,
                                 "(svn: E195016: Reintegrate can only be used if "
-                                "revisions 2 through 8 were previously "
+                                "revisions 2 through 9 were previously "
                                 "merged from .*/A to the reintegrate source, "
                                 "but this is not the case:\n)"
                                 "|(  A_COPY\n)"
@@ -880,7 +881,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #     svn:mergeinfo
   #       /A/B:2-4,6
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--symmetric',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c-5',
                                      sbox.repo_url + '/A/B',
@@ -902,11 +903,11 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #   --- Eliding mergeinfo from 'A_COPY\B':
   #    U   A_COPY\B
   #
-  # But the --symmetric merge ignores the subtree mergeinfo and considers
+  # But the merge ignores the subtree mergeinfo and considers
   # only the mergeinfo on the target itself (and thus is a no-op but for
   # the mergeinfo change on the root of the merge target):
   #
-  #   >svn merge ^/A A_COPY --symmetric
+  #   >svn merge ^/A A_COPY
   #   --- Recording mergeinfo for merge of r7 into 'A_COPY':
   #    U   A_COPY
   #
@@ -984,7 +985,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '--symmetric', A_COPY_path)
+                                       None, 1, 0, A_COPY_path)
 
 ########################################################################
 # Run the tests
