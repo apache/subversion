@@ -11060,7 +11060,6 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issues(3138,3067,4217)
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
@@ -11194,7 +11193,9 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[6,9]], ['U    ' + os.path.join(H_COPY_path, "psi") + '\n',
+      [[7,9],  # Merge notification
+       [6,9]], # Mergeinfo notification
+               ['U    ' + os.path.join(H_COPY_path, "psi") + '\n',
                 'D    ' + os.path.join(H_COPY_path, "nu") + '\n',
                 ' U   ' + H_COPY_path + '\n',]),
     [], 'merge', sbox.repo_url + '/A/D/H', H_COPY_path, '--force')
