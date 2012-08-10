@@ -46,10 +46,10 @@
 [end][end]  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\$(Configuration)\</IntDir>
 [end][end]  </PropertyGroup>
   <ItemGroup>
-    <CustomBuild Include="$(SolutionDir)\subversion\svn_private_config.h">
+    <CustomBuild Include="$(IntDir)svn_private_config.h">
 [for configs][for platforms]      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">true</ExcludedFromBuild>
 [end][end]    </CustomBuild>
   </ItemGroup>
@@ -57,10 +57,13 @@
     <CustomBuild Include="$(SolutionDir)\subversion\svn_private_config.hw">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Creating svn_private_config.h from svn_private_config.hw.</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[svn_python]" "$(SolutionDir)\build\transform_config_hw.py" $(Platform) $(SolutionDir)\subversion\svn_private_config.hw $(SolutionDir)\subversion\svn_private_config.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\subversion\svn_private_config.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[svn_python]" "$(SolutionDir)\build\transform_config_hw.py" $(Platform) "%(FullPath)" "$(IntDir)svn_private_config.h"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(IntDir)svn_private_config.h;%(Outputs)</Outputs>
 [end][end]    </CustomBuild>
-[for sql]    <CustomBuild Include="$(SolutionDir)\[sql.source]">
+[for sql]    <CustomBuild Include="$(SolutionDir)\[sql.header]">
+[for configs][for platforms]      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">true</ExcludedFromBuild>
+[end][end]    </CustomBuild>
+    <CustomBuild Include="$(SolutionDir)\[sql.source]">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Generating [sql.header].</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[svn_python]" "$(SolutionDir)\build\transform_sql.py" "%(FullPath)" "$(SolutionDir)\[sql.header]"</Command>
