@@ -36,6 +36,7 @@
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_info.h>
+#include <apr_strings.h>
 
 #include "svn_ctype.h"
 #include "svn_error.h"
@@ -48,6 +49,10 @@
 #include <sys/utsname.h>
 #endif
 
+#if SVN_HAVE_MACOS_PLIST
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 #if HAVE_UNAME
 static const char* canonical_host_from_uname(apr_pool_t *pool);
 #endif
@@ -57,6 +62,10 @@ static const char * win32_canonical_host(apr_pool_t *pool);
 static const char * win32_release_name(apr_pool_t *pool);
 static const char * win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
+
+#if SVN_HAVE_MACOS_PLIST
+static const char *macos_release_name(apr_pool_t *pool);
+#endif  /* SVN_HAVE_MACOS_PLIST */
 
 
 const char *
@@ -77,6 +86,8 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_release_name(pool);
+#elif SVN_HAVE_MACOS_PLIST
+  return macos_release_name(pool);
 #else
   return NULL;
 #endif
@@ -461,3 +472,184 @@ win32_shared_libs(apr_pool_t *pool)
   return NULL;
 }
 #endif /* WIN32 */
+
+#if SVN_HAVE_MACOS_PLIST
+/* Load the SystemVersion.plist or ServerVersion.plist file into a
+   property list. Set SERVER to TRUE if the file read was
+   ServerVersion.plist. */
+static CFDictionaryRef
+system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
+{
+  static const UInt8 server_version[] =
+    "/System/Library/CoreServices/ServerVersion.plist";
+  static const UInt8 system_version[] =
+    "/System/Library/CoreServices/SystemVersion.plist";
+
+  CFPropertyListRef plist = NULL;
+  CFDataRef resource = NULL;
+  CFStringRef errstr = NULL;
+  CFURLRef url = NULL;
+  SInt32 errcode;
+
+  url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
+                                                server_version,
+                                                sizeof(server_version) - 1,
+                                                FALSE);
+  if (!url)
+    return NULL;
+
+  if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
+                                                url, &resource,
+                                                NULL, NULL, &errcode))
+    {
+      CFRelease(url);
+      url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
+                                                    system_version,
+                                                    sizeof(system_version) - 1,
+                                                    FALSE);
+      if (!url)
+        return NULL;
+
+      if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
+                                                    url, &resource,
+                                                    NULL, NULL, &errcode))
+        {
+          CFRelease(url);
+          return NULL;
+        }
+      else
+        {
+          CFRelease(url);
+          *server = FALSE;
+        }
+    }
+  else
+    {
+      CFRelease(url);
+      *server = TRUE;
+    }
+
+  /* ### CFPropertyListCreateFromXMLData is obsolete, but its
+         replacement CFPropertyListCreateWithData is only available
+         from Mac OS 1.6 onward. */
+  plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, resource,
+                                          kCFPropertyListImmutable,
+                                          &errstr);
+  if (resource)
+    CFRelease(resource);
+  if (errstr)
+    CFRelease(errstr);
+
+  if (CFDictionaryGetTypeID() != CFGetTypeID(plist))
+    {
+      /* Oops ... this really should be a dict. */
+      CFRelease(plist);
+      return NULL;
+    }
+
+  return plist;
+}
+
+/* Return the value for KEY from PLIST, or NULL if not available. */
+static const char *
+value_from_dict(CFDictionaryRef plist, CFStringRef key, apr_pool_t *pool)
+{
+  CFStringRef valref;
+  CFIndex bufsize;
+  const void *valptr;
+  const char *value;
+
+  if (!CFDictionaryGetValueIfPresent(plist, key, &valptr))
+    return NULL;
+
+  valref = valptr;
+  if (CFStringGetTypeID() != CFGetTypeID(valref))
+    return NULL;
+
+  value = CFStringGetCStringPtr(valref, kCFStringEncodingUTF8);
+  if (value)
+    return apr_pstrdup(pool, value);
+
+  bufsize =  5 * CFStringGetLength(valref) + 1;
+  value = apr_palloc(pool, bufsize);
+  if (!CFStringGetCString(valref, (char*)value, bufsize,
+                          kCFStringEncodingUTF8))
+    value = NULL;
+
+  return value;
+}
+
+/* Return the commercial name of the OS, given the version number in
+   a format that matches the regular expression /^10\.\d+(\..*)?$/ */
+static const char *
+release_name_from_version(const char *osver)
+{
+  char *end = NULL;
+  unsigned long num = strtoul(osver, &end, 10);
+
+  if (!end || *end != '.' || num != 10)
+    return NULL;
+
+  osver = end + 1;
+  end = NULL;
+  num = strtoul(osver, &end, 10);
+  if (!end || (*end && *end != '.'))
+    return NULL;
+
+  /* See http://en.wikipedia.org/wiki/History_of_OS_X#Release_timeline */
+  switch(num)
+    {
+    case 0: return "Cheetah";
+    case 1: return "Puma";
+    case 2: return "Jaguar";
+    case 3: return "Panther";
+    case 4: return "Tiger";
+    case 5: return "Leopard";
+    case 6: return "Snow Leopard";
+    case 7: return "Lion";
+    case 8: return "Mountain Lion";
+    }
+
+  return NULL;
+}
+
+static const char *
+macos_release_name(apr_pool_t *pool)
+{
+  svn_boolean_t server;
+  CFDictionaryRef plist = system_version_plist(&server, pool);
+
+  if (plist)
+    {
+      const char *osname = value_from_dict(plist, CFSTR("ProductName"), pool);
+      const char *osver = value_from_dict(plist,
+                                          CFSTR("ProductUserVisibleVersion"),
+                                          pool);
+      const char *build = value_from_dict(plist,
+                                          CFSTR("ProductBuildVersion"),
+                                          pool);
+      const char *release;
+
+      if (!osver)
+        osver = value_from_dict(plist, CFSTR("ProductVersion"), pool);
+      release = release_name_from_version(osver);
+
+      CFRelease(plist);
+      return apr_psprintf(pool, "%s%s%s%s%s%s%s%s",
+                          (osname ? osname : ""),
+                          (osver ? (osname ? " " : "") : ""),
+                          (osver ? osver : ""),
+                          (release ? (osname||osver ? " " : "") : ""),
+                          (release ? release : ""),
+                          (build
+                           ? (osname||osver||release ? ", " : "")
+                           : ""),
+                          (build
+                           ? (server ? "server build " : "build ")
+                           : ""),
+                          (build ? build : ""));
+    }
+
+  return NULL;
+}
+#endif  /* SVN_HAVE_MACOS_PLIST */

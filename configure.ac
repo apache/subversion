@@ -477,43 +477,10 @@ if test "$svn_lib_sasl" = "yes"; then
             [Defined if Cyrus SASL v2 is present on the system])
 fi
 
-dnl Mac OS KeyChain -------------------
+dnl Mac OS soecufuc features -------------------
 
-AC_ARG_ENABLE(keychain,
-  AS_HELP_STRING([--disable-keychain], 
-  [Disable use of Mac OS KeyChain for auth credentials]),
-  [enable_keychain=$enableval],[enable_keychain=yes])
-
-AC_MSG_CHECKING([for Mac OS KeyChain Services])
-
-if test "$enable_keychain" = "yes"; then
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <AvailabilityMacros.h>
-#if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_2)
-#error KeyChain API unavailable.
-#endif]], [[]])],[],[enable_keychain=no])
-fi
-
-if test "$enable_keychain" = "yes"; then
-  dnl ### Hack.  We should only need to pass the -framework options when
-  dnl linking libsvn_subr, since it is the only library that uses Keychain.
-  dnl
-  dnl Unfortunately, libtool 1.5.x doesn't track transitive dependencies for
-  dnl OS X frameworks like it does for normal libraries, so we need to
-  dnl explicitly pass the option to all the users of libsvn_subr to allow
-  dnl static builds to link successfully.
-  dnl
-  dnl This does mean that all executables we link will be linked directly
-  dnl to these frameworks - even when building shared libraries - but that
-  dnl shouldn't cause any problems.
-  LIBS="$LIBS -framework Security"
-  LIBS="$LIBS -framework CoreFoundation"
-  LIBS="$LIBS -framework CoreServices"
-  AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
-  AC_MSG_RESULT([yes])
-else
-  AC_MSG_RESULT([no])
-fi
-
+SVN_LIB_MACOS_PLIST
+SVN_LIB_MACOS_KEYCHAIN
 
 dnl APR_HAS_DSO -------------------
 
