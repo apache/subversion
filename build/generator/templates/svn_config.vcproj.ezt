@@ -33,7 +33,7 @@
 			Name="[configs]|[platforms]"
 			OutputDirectory="."
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\..\$(ConfigurationName)"
+			IntermediateDirectory="..\..\..\[configs]"
 			ConfigurationType="10"
 			UseOfMFC="0"
 			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
