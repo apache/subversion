@@ -279,10 +279,8 @@ svn_auth_get_platform_specific_master_passphrase_providers(
       /* KWallet */
       if (apr_strnatcmp(password_store, "kwallet") == 0)
         {
-#if 0
           SVN_ERR(get_provider(&provider, "kwallet", pool));
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
-#endif
           continue;
         }
 
