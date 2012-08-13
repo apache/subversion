@@ -15,6 +15,19 @@ Status of 1.7.6:
 Candidate changes:
 ==================
 
+ * r1242759, r1242770, r1242794
+   Fix various issues with GNOME and KDE keyring providers, especially
+   as regards how their interact with --non-interactive mode.  Fixes
+   issues #4110 ("kwallet not used with --non-interactive") and #4112
+   ("gnome keyring --non-interactive fail with password on disk").
+   Justification:
+     Fixes user-reported problem which significantly limits
+     usabilility in certain environments.
+   Branch:
+     
+   Votes:
+     +0: cmpilato   
+
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
