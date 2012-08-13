@@ -40,6 +40,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_version.h"
+#include "svn_base64.h"
 
 #include "private/svn_auth_private.h"
 
@@ -483,7 +484,8 @@ kwallet_master_passphrase_first_creds(void **credentials,
   if (done && passphrase)
     {
       svn_auth_cred_master_passphrase_t *creds;
-      creds = apr_pcalloc(pool, sizeof(*creds));
+      creds = (svn_auth_cred_master_passphrase_t *)apr_pcalloc(pool,
+                                                               sizeof(*creds));
       creds->passphrase = 
         svn_base64_decode_string(svn_string_create(passphrase, pool), pool);
       *credentials = creds;
@@ -502,7 +504,8 @@ kwallet_master_passphrase_save_creds(svn_boolean_t *saved,
                                      const char *realmstring,
                                      apr_pool_t *pool)
 {
-  svn_auth_cred_master_passphrase_t *creds = credentials;
+  svn_auth_cred_master_passphrase_t *creds
+    = (svn_auth_cred_master_passphrase_t *)credentials;
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
