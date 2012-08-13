@@ -33,7 +33,7 @@
 			Name="[configs]|[platforms]"
 			OutputDirectory="."
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\..\$(ConfigurationName)"
+			IntermediateDirectory="..\..\..\[configs]"
 			ConfigurationType="10"
 			UseOfMFC="0"
 			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
@@ -62,14 +62,14 @@
 			</FileConfiguration>
 [end][end]		</File>
 		<File
-			RelativePath="..\..\subversion\svn_private_config.hw">
+			RelativePath="..\..\..\subversion\svn_private_config.hw">
 [for platforms][for configs]			<FileConfiguration
 				Name="[configs]|[platforms]">
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
 					CommandLine="&quot;[svn_python]&quot; &quot;$(SolutionDir)\build\transform_config_hw.py&quot; [platforms] &quot;$(InputPath)&quot; &quot;$(IntDir)\svn_private_config.h&quot;"
-					Outputs="$(IntDir)subversion\svn_private_config.h"/>
+					Outputs="$(IntDir)\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
 [for sql]		<File
