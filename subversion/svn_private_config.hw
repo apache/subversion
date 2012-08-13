@@ -31,7 +31,6 @@
 
 
 /* Define to a Windows-specific equivalent of config.guess output */
-/* ### Replace CPU type and Windows version during build script generation */
 #define SVN_BUILD_HOST "x86-microsoft-windows"
 
 /* The minimal version of Berkeley DB we want */

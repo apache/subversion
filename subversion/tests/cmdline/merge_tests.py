@@ -6541,7 +6541,7 @@ def avoid_reflected_revs(sbox):
   bfile2_content = "This is bfile2\n"
 
   # We'll consider A as the trunk and A_COPY as the feature branch
-  # Create a tfile1 in A
+  # r3 - Create a tfile1 in A
   svntest.main.file_write(tfile1_path, tfile1_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'add', tfile1_path)
   expected_output = wc.State(wc_dir, {'A/tfile1' : Item(verb='Adding')})
@@ -6549,7 +6549,7 @@ def avoid_reflected_revs(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Create a bfile1 in A_COPY
+  # r4 - Create a bfile1 in A_COPY
   svntest.main.file_write(bfile1_path, bfile1_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'add', bfile1_path)
   expected_output = wc.State(wc_dir, {'A_COPY/bfile1' : Item(verb='Adding')})
@@ -6557,7 +6557,7 @@ def avoid_reflected_revs(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Create one more file in A
+  # r5 - Create one more file in A
   svntest.main.file_write(tfile2_path, tfile2_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'add', tfile2_path)
   expected_output = wc.State(wc_dir, {'A/tfile2' : Item(verb='Adding')})
@@ -6634,7 +6634,6 @@ def avoid_reflected_revs(sbox):
                                        None, A_COPY_path,
                                        '--allow-mixed-revisions')
 
-  # Sync up with the trunk ie., A
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(wc_dir, {
     'A_COPY'        : Item(verb='Sending'),
@@ -6675,7 +6674,6 @@ def avoid_reflected_revs(sbox):
                                        None, A_COPY_path,
                                        '--allow-mixed-revisions')
 
-
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(wc_dir, {
     'A_COPY'        : Item(verb='Sending'),
@@ -6684,7 +6682,7 @@ def avoid_reflected_revs(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, None, wc_dir)
 
-  # Add bfile2 to A_COPY
+  # r8 - Add bfile2 to A_COPY
   svntest.main.file_write(bfile2_path, bfile2_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'add', bfile2_path)
   expected_output = wc.State(wc_dir, {'A_COPY/bfile2' : Item(verb='Adding')})
@@ -6700,7 +6698,6 @@ def avoid_reflected_revs(sbox):
 
   # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   expected_output = wc.State(A_path, {
-    ''       : Item(status='C '),
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
     })
@@ -6710,7 +6707,7 @@ def avoid_reflected_revs(sbox):
   expected_elision_output = wc.State(A_path, {
     })
   expected_status = wc.State(A_path, {
-    ''          : Item(status='CM', wc_rev=6),
+    ''          : Item(status=' M', wc_rev=6),
     'bfile2'    : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'    : Item(status='A ', wc_rev='-', copied='+'),
     'tfile2'    : Item(status='  ', wc_rev=6),
@@ -11063,7 +11060,6 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issues(3138,3067,4217)
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
@@ -11194,13 +11190,12 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
                                      H_COPY_path)
 
   # H_COPY needs r6-9 applied while H_COPY/nu needs only 6,8-9.
-  # This means r6 will be done as a separate editor drive targeted
-  # on H_COPY.  But r6 was only the copy of A/D/H to H_COPY and
-  # so is a no-op and there will no notification for r6.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[6,9]], ['U    ' + os.path.join(H_COPY_path, "psi") + '\n',
+      [[7,9],  # Merge notification
+       [6,9]], # Mergeinfo notification
+               ['U    ' + os.path.join(H_COPY_path, "psi") + '\n',
                 'D    ' + os.path.join(H_COPY_path, "nu") + '\n',
                 ' U   ' + H_COPY_path + '\n',]),
     [], 'merge', sbox.repo_url + '/A/D/H', H_COPY_path, '--force')

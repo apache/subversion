@@ -2049,9 +2049,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help3(os, "svnlook",
+  SVN_ERR(svn_opt_print_help4(os, "svnlook",
                               opt_state ? opt_state->version : FALSE,
                               opt_state ? opt_state->quiet : FALSE,
+                              opt_state ? opt_state->verbose : FALSE,
                               version_footer->data,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
@@ -2447,7 +2448,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnlook__version,  /* must accept its own option */
-                   'q',
+                   'q', 'v',
                   } };
 
               subcommand = &pseudo_cmd;
