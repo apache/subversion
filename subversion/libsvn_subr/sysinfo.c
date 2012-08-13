@@ -49,7 +49,7 @@
 #include <sys/utsname.h>
 #endif
 
-#if SVN_HAVE_MACOS_PLIST
+#ifdef SVN_HAVE_MACOS_PLIST
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
@@ -63,7 +63,7 @@ static const char * win32_release_name(apr_pool_t *pool);
 static const char * win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
 
-#if SVN_HAVE_MACOS_PLIST
+#ifdef SVN_HAVE_MACOS_PLIST
 static const char *macos_release_name(apr_pool_t *pool);
 #endif  /* SVN_HAVE_MACOS_PLIST */
 
@@ -86,7 +86,7 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_release_name(pool);
-#elif SVN_HAVE_MACOS_PLIST
+#elif defined(SVN_HAVE_MACOS_PLIST)
   return macos_release_name(pool);
 #else
   return NULL;
@@ -473,7 +473,7 @@ win32_shared_libs(apr_pool_t *pool)
 }
 #endif /* WIN32 */
 
-#if SVN_HAVE_MACOS_PLIST
+#ifdef SVN_HAVE_MACOS_PLIST
 /* Load the SystemVersion.plist or ServerVersion.plist file into a
    property list. Set SERVER to TRUE if the file read was
    ServerVersion.plist. */
