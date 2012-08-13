@@ -453,3 +453,86 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider
   *provider = po;
 }
 }
+
+
+
+/*-----------------------------------------------------------------------*/
+/* KWallet master passphrase provider.                                   */
+/*-----------------------------------------------------------------------*/
+
+/* Get cached encrypted credentials from the ssl client cert password
+   provider's cache. */
+static svn_error_t *
+kwallet_master_passphrase_first_creds(void **credentials,
+                                      void **iter_baton,
+                                      void *provider_baton,
+                                      apr_hash_t *parameters,
+                                      const char *realmstring,
+                                      apr_pool_t *pool)
+{
+  svn_boolean_t done;
+  const char *passphrase;
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+
+  *credentials = NULL;
+
+  SVN_ERR(kwallet_password_get(&done, &passphrase, NULL, realmstring,
+                               NULL, parameters, non_interactive, pool));
+  if (done && passphrase)
+    {
+      svn_auth_cred_master_passphrase_t *creds;
+      creds = apr_pcalloc(pool, sizeof(*creds));
+      creds->passphrase = 
+        svn_base64_decode_string(svn_string_create(passphrase, pool), pool);
+      *credentials = creds;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Save encrypted credentials to the ssl client cert password provider's
+   cache. */
+static svn_error_t *
+kwallet_master_passphrase_save_creds(svn_boolean_t *saved,
+                                     void *credentials,
+                                     void *provider_baton,
+                                     apr_hash_t *parameters,
+                                     const char *realmstring,
+                                     apr_pool_t *pool)
+{
+  svn_auth_cred_master_passphrase_t *creds = credentials;
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
+                                               SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                               APR_HASH_KEY_STRING) != NULL;
+  const svn_string_t *encoded_passphrase =
+    svn_base64_encode_string2(creds->passphrase, FALSE, pool);
+
+  SVN_ERR(kwallet_password_set(saved, NULL, realmstring, NULL,
+                               encoded_passphrase->data,
+                               parameters, non_interactive, pool));
+  return SVN_NO_ERROR;
+}
+
+static const svn_auth_provider_t kwallet_master_passphrase_provider = {
+  SVN_AUTH_CRED_MASTER_PASSPHRASE,
+  kwallet_master_passphrase_first_creds,
+  NULL,
+  kwallet_master_passphrase_save_creds
+};
+
+/* Public API */
+extern "C" {
+void
+svn_auth_get_kwallet_master_passphrase_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po =
+    static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
+
+  po->vtable = &kwallet_master_passphrase_provider;
+  *provider = po;
+}
+}
