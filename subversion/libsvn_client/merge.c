@@ -3519,7 +3519,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
 
    SOURCE is cascaded from the argument of the same name in
    do_directory_merge().  TARGET is the merge target.  RA_SESSION is the
-   session for the younger of SOURCE->url1@rev1 and SOURCE->url2@rev2.
+   session for the younger of SOURCE->loc1 and SOURCE->loc2.
 
    Adjust the subtrees in CHILDREN_WITH_MERGEINFO so that we don't
    later try to describe invalid paths in drive_merge_report_editor().
@@ -3596,8 +3596,8 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
          described by SOURCE can potentially be merged to CHILD.
 
          But if CHILD is a subtree we don't have the same guarantees about
-         SOURCE as we do for the merge target.  SOURCE->url1@rev1 and/or
-         SOURCE->url2@rev2 might not exist.
+         SOURCE as we do for the merge target.  SOURCE->loc1 and/or
+         SOURCE->loc2 might not exist.
 
          If one or both doesn't exist, then adjust CHILD->REMAINING_RANGES
          such that we don't later try to describe invalid subtrees in
@@ -4121,8 +4121,8 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    ancestor - see 'THE CHILDREN_WITH_MERGEINFO ARRAY'.  TARGET_MERGEINFO is
    the working mergeinfo on CHILD.
 
-   RA_SESSION is the session for the younger of SOURCE->url1@rev1 and
-   SOURCE->url2@rev2.
+   RA_SESSION is the session for the younger of SOURCE->loc1 and
+   SOURCE->loc2.
 
    If the function needs to consider CHILD->IMPLICIT_MERGEINFO and
    CHILD_INHERITS_IMPLICIT is true, then set CHILD->IMPLICIT_MERGEINFO to the
@@ -4510,13 +4510,13 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       return SVN_NO_ERROR;
     }
 
-  /* If, in the merge source's history, there was a copy from a older
-     revision, then SOURCE->url2 won't exist at some range M:N, where
-     source->rev1 < M < N < source->rev2. The rules of 'MERGEINFO MERGE
-     SOURCE NORMALIZATION' allow this, but we must ignore these gaps when
-     calculating what ranges remain to be merged from SOURCE. If we don't
-     and try to merge any part of SOURCE->url2@M:N we would break the
-     editor since no part of that actually exists.  See
+  /* If, in the merge source's history, there was a copy from an older
+     revision, then SOURCE->loc2->url won't exist at some range M:N, where
+     SOURCE->loc1->rev < M < N < SOURCE->loc2->rev. The rules of 'MERGEINFO
+     MERGE SOURCE NORMALIZATION' allow this, but we must ignore these gaps
+     when calculating what ranges remain to be merged from SOURCE. If we
+     don't and try to merge any part of SOURCE->loc2->url@M:N we would
+     break the editor since no part of that actually exists.  See
      http://svn.haxx.se/dev/archive-2008-11/0618.shtml.
 
      Find the gaps in the merge target's history, if any.  Eventually
@@ -5050,8 +5050,8 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    URL in the repository of SOURCE; they may be temporarily reparented within
    this function.
 
-   If SOURCE->ancestral is set, then SOURCE->url1@rev1 must be a
-   historical ancestor of SOURCE->url2@rev2, or vice-versa (see
+   If SOURCE->ancestral is set, then SOURCE->loc1 must be a
+   historical ancestor of SOURCE->loc2, or vice-versa (see
    `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
    SOURCE in this case).
 */
@@ -5130,7 +5130,7 @@ drive_merge_report_editor(const char *target_abspath,
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess1_url,
                                             merge_b->ra_session1,
                                             source->loc1->url, scratch_pool));
-  /* Temporarily point our second RA session to SOURCE->url1, too.  We use
+  /* Temporarily point our second RA session to SOURCE->loc1->url, too.  We use
      this to request individual file contents. */
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
                                             merge_b->ra_session2,
@@ -6402,7 +6402,7 @@ remove_noop_merge_ranges(svn_rangelist_t **operative_ranges_p,
 /*** Merge Source Normalization ***/
 
 /* qsort-compatible sort routine, rating merge_source_t * objects to
-   be in descending (youngest-to-oldest) order based on their ->rev1
+   be in descending (youngest-to-oldest) order based on their ->loc1->rev
    component. */
 static int
 compare_merge_source_ts(const void *a,
@@ -6880,8 +6880,8 @@ subrange_source(const merge_source_t *source,
    and the value is the new mergeinfo for that path.  Allocate additions
    to RESULT_CATALOG in pool which RESULT_CATALOG was created in.
 
-   Note: MERGE_B->RA_SESSION1 must be associated with SOURCE->url1 and
-   MERGE_B->RA_SESSION2 with SOURCE->url2.
+   Note: MERGE_B->RA_SESSION1 must be associated with SOURCE->loc1->url and
+   MERGE_B->RA_SESSION2 with SOURCE->loc2->url.
 */
 static svn_error_t *
 do_file_merge(svn_mergeinfo_catalog_t result_catalog,
@@ -8405,7 +8405,7 @@ log_noop_revs(void *baton,
 
    SOURCE is cascaded from the argument of the same name in
    do_directory_merge().  TARGET is the merge target.  RA_SESSION is the
-   session for SOURCE->url2@rev2.
+   session for SOURCE->loc2.
 
    Find all the ranges required by subtrees in
    CHILDREN_WITH_MERGEINFO that are *not* required by
@@ -8563,7 +8563,7 @@ remove_noop_subtree_ranges(const merge_source_t *source,
 
    MERGE_B describes the merge being performed.  As this function is for a
    mergeinfo-aware merge, SOURCE->ancestral should be TRUE, and
-   SOURCE->url1@rev1 must be a historical ancestor of SOURCE->url2@rev2, or
+   SOURCE->loc1 must be a historical ancestor of SOURCE->loc2, or
    vice-versa (see `MERGEINFO MERGE SOURCE NORMALIZATION' for more
    requirements around SOURCE).
 
@@ -9264,8 +9264,8 @@ do_merge(apr_hash_t **modified_subtrees,
    merge (unless this is record-only), followed by record-only merges
    to represent the changed mergeinfo.
 
-   The merge is between SOURCE->url1@rev1 (in URL1_RA_SESSION1) and
-   SOURCE->url2@rev2 (in URL2_RA_SESSION2); YCA is their youngest
+   The diff to be merged is between SOURCE->loc1 (in URL1_RA_SESSION1)
+   and SOURCE->loc2 (in URL2_RA_SESSION2); YCA is their youngest
    common ancestor.
    SAME_REPOS must be true if and only if the source URLs are in the same
    repository as the target working copy.  Other arguments are as in
