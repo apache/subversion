@@ -7096,11 +7096,10 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                        r, &header_sent, iterpool);
             }
 
-          /* Ignore if temporary file not found. It may have been renamed. */
-          /* (This is where we complain about missing Lisp, or better yet,
-             Python...) */
-          SVN_ERR(svn_io_remove_file2(tmpfile1, TRUE, iterpool));
-          SVN_ERR(svn_io_remove_file2(tmpfile2, TRUE, iterpool));
+          /* Remove the temporary files. Ignore if not found: they may
+           * have been renamed. */
+          SVN_ERR(svn_io_remove_file2(tmpfile1, TRUE /*ignore*/, iterpool));
+          SVN_ERR(svn_io_remove_file2(tmpfile2, TRUE /*ignore*/, iterpool));
 
           if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))
