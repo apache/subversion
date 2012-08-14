@@ -5421,6 +5421,7 @@ single_file_merge_get_file(const char **filename,
 {
   svn_stream_t *stream;
   const char *old_sess_url;
+  svn_error_t *err;
 
   SVN_ERR(svn_stream_open_unique(&stream, filename,
                                  svn_dirent_dirname(wc_target, pool),
@@ -5428,9 +5429,10 @@ single_file_merge_get_file(const char **filename,
 
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, location->url,
                                             pool));
-  SVN_ERR(svn_ra_get_file(ra_session, "", location->rev,
-                          stream, NULL, props, pool));
-  SVN_ERR(svn_ra_reparent(ra_session, old_sess_url, pool));
+  err = svn_ra_get_file(ra_session, "", location->rev,
+                        stream, NULL, props, pool);
+  SVN_ERR(svn_error_compose_create(
+            err, svn_ra_reparent(ra_session, old_sess_url, pool)));
 
   return svn_stream_close(stream);
 }
@@ -6979,15 +6981,18 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
       if (source->ancestral && (remaining_ranges->nelts > 1))
         {
           const char *old_sess_url;
+          svn_error_t *err;
+
           SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url,
                                                     merge_b->ra_session1,
                                                     primary_src->url,
                                                     iterpool));
-          SVN_ERR(remove_noop_merge_ranges(&ranges_to_merge,
-                                           merge_b->ra_session1,
-                                           remaining_ranges, scratch_pool));
-          SVN_ERR(svn_ra_reparent(merge_b->ra_session1, old_sess_url,
-                                  iterpool));
+          err = remove_noop_merge_ranges(&ranges_to_merge,
+                                         merge_b->ra_session1,
+                                         remaining_ranges, scratch_pool);
+          SVN_ERR(svn_error_compose_create(
+                    err, svn_ra_reparent(merge_b->ra_session1, old_sess_url,
+                                         iterpool)));
         }
 
       for (i = 0; i < ranges_to_merge->nelts; i++)
@@ -10088,9 +10093,7 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
                        svn_merge_range_t *))->end;
       log_find_operative_baton_t log_baton;
       const char *old_session_url;
-
-      SVN_ERR(svn_client__ensure_ra_session_url(
-                &old_session_url, ra_session, target_loc->url, scratch_pool));
+      svn_error_t *err;
 
       log_baton.merged_catalog = merged_catalog;
       log_baton.unmerged_catalog = true_unmerged_catalog;
@@ -10100,12 +10103,14 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
         = svn_client__pathrev_fspath(target_loc, scratch_pool);
       log_baton.result_pool = result_pool;
 
-      SVN_ERR(get_log(ra_session, "", youngest_rev, oldest_rev,
-                      TRUE, /* discover_changed_paths */
-                      log_find_operative_revs, &log_baton,
-                      scratch_pool));
-
-      SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
+      SVN_ERR(svn_client__ensure_ra_session_url(
+                &old_session_url, ra_session, target_loc->url, scratch_pool));
+      err = get_log(ra_session, "", youngest_rev, oldest_rev,
+                    TRUE, /* discover_changed_paths */
+                    log_find_operative_revs, &log_baton,
+                    scratch_pool);
+      SVN_ERR(svn_error_compose_create(
+                err, svn_ra_reparent(ra_session, old_session_url, scratch_pool)));
     }
 
   return SVN_NO_ERROR;
