@@ -267,8 +267,8 @@ create_iprops_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
-/* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the MERGEINFO hash with the results.  */
+/* Request a inherited-props-report from the URL attached to RA_SESSION,
+   and fill the IPROPS array hash with the results.  */
 svn_error_t *
 svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_array_header_t **iprops,
@@ -277,24 +277,20 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
-  int status_code;
 
   iprops_context_t *iprops_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url;
-  const char *target_url;
+  const char *req_url;
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&path,
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url,
                                       NULL /* latest_revnum */,
                                       session,
                                       NULL /* conn */,
                                       NULL /* url */,
                                       revision,
                                       pool, pool));
-
-  target_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   iprops_ctx = apr_pcalloc(pool, sizeof(*iprops_ctx));
   iprops_ctx->done = FALSE;
@@ -312,12 +308,13 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = target_url;
+  handler->path = req_url;
   handler->conn = session->conns[0];
   handler->session = session;
   handler->body_delegate = create_iprops_body;
   handler->body_delegate_baton = iprops_ctx;
   handler->body_type = "text/xml";
+  handler->handler_pool = pool;
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
@@ -335,7 +332,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session, pool);
 
-  err2 = svn_ra_serf__error_on_status(status_code, handler->path,
+  err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
                                       handler->location);
   if (err2)
     {
