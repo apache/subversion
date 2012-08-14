@@ -8019,7 +8019,9 @@ def merge_to_sparse_directories(sbox):
 def merge_old_and_new_revs_from_renamed_dir(sbox):
   "merge -rold(before rename):head renamed dir"
 
-  ## See http://svn.haxx.se/dev/archive-2007-09/0706.shtml ##
+  # See the email on dev@ from Paul Burba, 2007-09-27, "RE: svn commit:
+  # r26803 - [...]", <http://svn.haxx.se/dev/archive-2007-09/0706.shtml> or
+  # <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=927127>.
 
   # Create a WC with a single branch
   sbox.build()
