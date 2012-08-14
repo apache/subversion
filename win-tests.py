@@ -81,6 +81,7 @@ def _usage_exit():
   print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
+  print("  --ssl-cert             : Path to SSL server certificate to trust.")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
@@ -131,7 +132,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
-                        'log-to-stdout', 'mode-filter=', 'milestone-filter='])
+                        'log-to-stdout', 'mode-filter=', 'milestone-filter=',
+                        'ssl-cert='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -163,6 +165,7 @@ log_to_stdout = None
 mode_filter=None
 tests_to_run = []
 log_level = None
+ssl_cert = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -230,6 +233,8 @@ for opt, val in opts:
     log_to_stdout = 1
   elif opt == '--log-level':
     log_level = val
+  elif opt == '--ssl-cert':
+    ssl_cert = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -742,7 +747,7 @@ if not test_javahl:
                              fsfs_sharding, fsfs_packing,
                              list_tests, svn_bin, mode_filter,
                              milestone_filter,
-                             set_log_level=log_level)
+                             set_log_level=log_level, ssl_cert=ssl_cert)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
