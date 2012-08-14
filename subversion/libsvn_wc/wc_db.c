@@ -10280,7 +10280,8 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    propertis. If LOCAL_ABSPATH's rev (REV) is valid, set its revision.  If
    SET_REPOS_RELPATH is TRUE set its repository relative path to REPOS_RELPATH
    (and make sure its REPOS_ID is still valid).  If IPROPS is not NULL set its
-   inherited properties to IPROPS.
+   inherited properties to IPROPS, it IPROPS is NULL then clear any the iprops
+   cache for the base node.
  */
 static svn_error_t *
 db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
@@ -10322,16 +10323,14 @@ db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  if (iprops)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_IPROP));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                wcroot->wc_id,
-                                local_relpath));
-      SVN_ERR(svn_sqlite__bind_iprops(stmt, 3, iprops, scratch_pool));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+    /* Set or clear iprops. */
+    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                      STMT_UPDATE_IPROP));
+    SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                              wcroot->wc_id,
+                              local_relpath));
+    SVN_ERR(svn_sqlite__bind_iprops(stmt, 3, iprops, scratch_pool));
+    SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
