@@ -483,9 +483,9 @@ kwallet_master_passphrase_first_creds(void **credentials,
                                NULL, parameters, non_interactive, pool));
   if (done && passphrase)
     {
-      svn_auth_cred_master_passphrase_t *creds;
-      creds = (svn_auth_cred_master_passphrase_t *)apr_pcalloc(pool,
-                                                               sizeof(*creds));
+      svn_auth_cred_master_passphrase_t *creds
+        = static_cast<svn_auth_cred_master_passphrase_t *>(
+                                           apr_pcalloc(pool, sizeof(*creds)));
       creds->passphrase = 
         svn_base64_decode_string(svn_string_create(passphrase, pool), pool);
       *credentials = creds;
@@ -505,7 +505,7 @@ kwallet_master_passphrase_save_creds(svn_boolean_t *saved,
                                      apr_pool_t *pool)
 {
   svn_auth_cred_master_passphrase_t *creds
-    = (svn_auth_cred_master_passphrase_t *)credentials;
+    = static_cast<svn_auth_cred_master_passphrase_t *>(credentials);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
