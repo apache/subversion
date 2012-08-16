@@ -608,10 +608,8 @@ def replace_symlink_with_dir(sbox):
   expected_output = svntest.wc.State(wc_dir, {
   })
 
-  if svntest.main.is_posix_os():
-    error_re_string = '.*E145001: Entry.*has unexpectedly changed special.*'
-  else:
-    error_re_string = None
+  error_re_string = 'E145001: (Entry|Node).*has.*changed (special|kind)'
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, error_re_string, wc_dir)
 
@@ -950,6 +948,32 @@ def replace_symlinks(sbox):
       os.chmod(wc(p), 0775)
       sbox.simple_add(p)
   sbox.simple_commit() # r2
+  sbox.simple_update()
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({
+    'A/D/Y'         : Item(status='  ', wc_rev=2),
+    'A/D/G/Z'       : Item(status='  ', wc_rev=2),
+    'A/D/G/rho.sh'  : Item(status='  ', wc_rev=2),
+    'A/D/Hx'        : Item(status='  ', wc_rev=2),
+    'A/D/Hx/Z'      : Item(status='  ', wc_rev=2),
+    'A/D/Hx/chi'    : Item(status='  ', wc_rev=2),
+    'A/D/Hx/psi.sh' : Item(status='  ', wc_rev=2),
+    'A/D/H/psi.sh'  : Item(status='  ', wc_rev=2),
+    'A/D/H/Z'       : Item(status='  ', wc_rev=2),
+    'A/D/Gx'        : Item(status='  ', wc_rev=2),
+    'A/D/Gx/Z'      : Item(status='  ', wc_rev=2),
+    'A/D/Gx/pi'     : Item(status='  ', wc_rev=2),
+    'A/D/Gx/rho.sh' : Item(status='  ', wc_rev=2),
+    'A/D/gamma.sh'  : Item(status='  ', wc_rev=2),
+    'A/B/E/beta.sh' : Item(status='  ', wc_rev=2),
+    'Ax'            : Item(status='  ', wc_rev=2),
+    'Ax/mu'         : Item(status='  ', wc_rev=2),
+    'Ax/mu.sh'      : Item(status='  ', wc_rev=2),
+    'A/mu.sh'       : Item(status='  ', wc_rev=2),
+    'iota.sh'       : Item(status='  ', wc_rev=2),
+    })
+  expected_status_r2 = expected_status
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r2)
 
   # Failing git-svn test: 'new symlink is added to a file that was
   # also just made executable', i.e., in the same revision.
@@ -1013,14 +1037,38 @@ def replace_symlinks(sbox):
   ### TODO Replace a normal {file, exec, dir, dir} with a symlink to
   ### {dir, dir, file, exec}.  And the same symlink-to-normal.
 
-  ### Commit fails as of r1226697 with either "svn: E145001: Entry
-  ### '.../A/D/Gx/Z' has unexpectedly changed special status" or "svn:
-  ### E155010: The node '.../Ax/mu' was not found".
-  sbox.simple_commit() # r3
+  expected_status.tweak('A/D/G/pi',
+                        'A/D/G/rho.sh',
+                        'A/D/H/psi.sh',
+                        'A/D/H/chi',
+                        'A/mu',
+                        'A/mu.sh',
+                        status='RM')
+  expected_status.tweak('A/B/E/beta.sh',
+                        'A/B/E/alpha',
+                        status=' M')
+  expected_status.tweak('Ax/mu',
+                        'Ax/mu.sh',
+                        status='MM')
+  expected_status.add({
+      'A/B/E/sym-alpha'   : Item(status='A ', wc_rev=0),
+      'A/B/E/sym-beta.sh' : Item(status='A ', wc_rev=0),
+      })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-  # Try updating from HEAD-1 to HEAD.
-  run_svn(None, 'up', '-r2', sbox.wc_dir)
+  sbox.simple_commit() # r3
   sbox.simple_update()
+
+  expected_status.tweak(status='  ', wc_rev=3)
+  expected_status_r3 = expected_status
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r3)
+
+  # Try updating from HEAD-1 to HEAD.  This is currently XFAIL as the
+  # update to HEAD-1 produces a tree conflict.
+  run_svn(None, 'up', '-r2', sbox.wc_dir)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r2)
+  sbox.simple_update()
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r3)
 
 
 @Issue(4102)

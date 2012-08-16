@@ -65,7 +65,7 @@ typedef struct svn_client__merge_path_t
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
      may be empty but should never be NULL unless ABSENT is true. */
-  apr_array_header_t *remaining_ranges;
+  svn_rangelist_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
                                            on ABSPATH prior to a merge.
@@ -300,7 +300,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
    If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
    TRUE if the natural history includes revision 0, else to FALSE.
 
-   RA_SESSION is an open RA session to the repository in which URL lives;
+   RA_SESSION is an open RA session to the repository of PATHREV;
    it may be temporarily reparented by this function.
 */
 svn_error_t *

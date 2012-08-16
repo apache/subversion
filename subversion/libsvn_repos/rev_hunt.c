@@ -155,7 +155,7 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
                              apr_pool_t *pool)
 {
   apr_hash_t *revprops;
-  
+
   svn_fs_t *fs = svn_fs_root_fs(root);
 
   /* ### It might be simpler just to declare that revision
@@ -1291,7 +1291,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
                hi = apr_hash_next(hi))
             {
               apr_pool_t *iterpool3;
-              apr_array_header_t *rangelist;
+              svn_rangelist_t *rangelist;
               const char *path;
               int j;
 

@@ -1219,7 +1219,32 @@ typedef enum svn_wc_notify_action_t
 
   /** The operation skipped the path because it was conflicted.
    * @since New in 1.7. */
-  svn_wc_notify_skip_conflicted
+  svn_wc_notify_skip_conflicted,
+
+  /** Just the lock on a file was removed during update.
+   * @since New in 1.8. */
+  svn_wc_notify_update_broken_lock,
+
+  /** Operation failed because a node is obstructed.
+   * @since New in 1.8. */
+  svn_wc_notify_failed_obstruction,
+
+  /** Conflict resolver is starting.
+   * This can be used by clients to detect when to display conflict summary
+   * information, for example.
+   * @since New in 1.8. */
+  svn_wc_notify_conflict_resolver_starting,
+
+  /** Conflict resolver is done.
+   * This can be used by clients to detect when to display conflict summary
+   * information, for example.
+   * @since New in 1.8. */
+  svn_wc_notify_conflict_resolver_done,
+
+  /** The current operation left local changes of something that was deleted
+   * The changes are available on (and below) the notified path
+   * @since New in 1.8. */
+  svn_wc_notify_left_local_modifications
 
 } svn_wc_notify_action_t;
 
@@ -1569,6 +1594,8 @@ typedef enum svn_wc_conflict_reason_t
   /** Object is moved away. @since New in 1.8. */
   svn_wc_conflict_reason_moved_away,
   /** Object is moved away and was edited post-move. @since New in 1.8. */
+  /* ### Do we really need this. The edit state is on a different node,
+         which might just change while the tree conflict exists? */
   svn_wc_conflict_reason_moved_away_and_edited,
   /** Object is moved here. @since New in 1.8. */
   svn_wc_conflict_reason_moved_here
@@ -1634,13 +1661,16 @@ typedef struct svn_wc_conflict_version_t
   svn_revnum_t peg_rev;
 
   /** path within repos; must not start with '/' */
+   /* ### should have been called repos_relpath, but we can't change this. */
   const char *path_in_repos;
-  /* @todo We may decide to add the repository UUID, to handle conflicts
-   * properly during a repository move. */
   /** @} */
 
   /** Info about this node */
   svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+
+  /** UUID of the repository
+   * @since New in 1.8. */
+  const char *repos_uuid;
 
   /* @todo Add metadata about a local copy of the node, if and when
    * we store one. */
@@ -1655,11 +1685,26 @@ typedef struct svn_wc_conflict_version_t
  *
  * Set the @c repos_url field of the created struct to @a repos_url, the
  * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
- * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
+ * @a peg_rev and the @c node_kind to @c node_kind. Make only shallow
  * copies of the pointer arguments.
  *
- * @since New in 1.6.
+ * @since New in 1.8.
  */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create2(const char *repos_root_url,
+                                const char *repos_uuid,
+                                const char *repos_relpath,
+                                svn_revnum_t revision,
+                                svn_node_kind_t kind,
+                                apr_pool_t *result_pool);
+
+/** Similar to svn_wc_conflict_version_create2(), but doesn't set all
+ * required values.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
                                const char *path_in_repos,
@@ -1689,9 +1734,9 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
- * svn_wc_create_conflict_description_text2() or
- * svn_wc_create_conflict_description_prop2() or
- * svn_wc_create_conflict_description_tree2() instead.
+ * svn_wc_conflict_description_create_text2() or
+ * svn_wc_conflict_description_create_prop2() or
+ * svn_wc_conflict_description_create_tree2() instead.
  *
  * @since New in 1.7.
  */
@@ -2011,7 +2056,10 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_mine_full,       /**< own version */
   svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
   svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /**< merged version */
+  svn_wc_conflict_choose_merged,          /**< merged version */
+
+  /* @since New in 1.8. */
+  svn_wc_conflict_choose_unspecified      /**< undecided */
 
 } svn_wc_conflict_choice_t;
 
@@ -2616,16 +2664,14 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * with regard to the base revision, else set @a *modified_p to zero.
  * @a local_abspath is the absolute path to the file.
  *
- * If @a force_comparison is @c TRUE, this function will not allow
- * early return mechanisms that avoid actual content comparison.
- * Instead, if there is a text base, a full byte-by-byte comparison
- * will be done, and the entry checksum verified as well.  (This means
- * that if the text base is much longer than the working file, every
- * byte of the text base will still be examined.)
+ * This function uses some heuristics to avoid byte-by-byte comparisons
+ * against the base text (eg. file size and its modification time).
  *
  * If @a local_abspath does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error #SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * @a unused is ignored.
  *
  * @since New in 1.7.
  */
@@ -2633,7 +2679,7 @@ svn_error_t *
 svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
-                        svn_boolean_t force_comparison,
+                        svn_boolean_t unused,
                         apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_text_modified_p2(), but with a relative path and
@@ -4520,7 +4566,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
  * by code like that of "svn cp URL@rev path" @a copyfrom_url and
- * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
+ * @a copyfrom_rev MUST BE the url and revision of @a local_abspath
  * in the separate working copy.
  *
  * 2a) If the node was not versioned before it will be scheduled as a local
@@ -5852,23 +5898,6 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
  * @{
  */
 
-/* A word about the implementation of working copy property storage:
- *
- * Since properties are key/val pairs, you'd think we store them in
- * some sort of Berkeley DB-ish format, and even store pending changes
- * to them that way too.
- *
- * However, we already have libsvn_subr/hashdump.c working, and it
- * uses a human-readable format.  That will be very handy when we're
- * debugging, and presumably we will not be dealing with any huge
- * properties or property lists initially.  Therefore, we will
- * continue to use hashdump as the internal mechanism for storing and
- * reading from property lists, but note that the interface here is
- * _not_ dependent on that.  We can swap in a DB-based implementation
- * at any time and users of this library will never know the
- * difference.
- */
-
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
  * @a local_abspath.  Allocate the table, names, and values in
@@ -6588,7 +6617,7 @@ typedef enum svn_wc_merge_outcome_t
  * receive the changes, then translated back again.
  *
  * If @a target_abspath is absent, or present but not under version
- * control, then set @a *merge_outcome to #svn_wc_merge_no_merge and
+ * control, then set @a *merge_content_outcome to #svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.
@@ -6606,8 +6635,16 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * The outcome of the merge is returned in @a *merge_outcome. If there
- * is a conflict and @a dry_run is @c FALSE, then attempt to call @a
+ * If @a merge_props_state is non-NULL @a propchanges is merged before
+ * merging the text. (If @a merge_props_outcome is NULL, no property changes
+*  are merged and @a prop_changes is only used to determine the merge result)
+ * The result of the property merge is stored in @a *merge_props_state. If
+ * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
+ * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
+ * callback cannot resolve the conflict, then a property conflict is installed.
+ *
+ * The outcome of the text merge is returned in @a *merge_text_outcome. If
+ * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the
  * conflict callback cannot resolve the conflict, then:
  *
@@ -6642,8 +6679,39 @@ typedef enum svn_wc_merge_outcome_t
  *
  * Use @a scratch_pool for any temporary allocation.
  *
+ * @since New in 1.8.
+ */ /* ### BH: Two kinds of outcome is not how it should be */
+svn_error_t *
+svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_state,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge4() but doesn't allow property changes. Instead of
+ * handling this in a single operation, a separate call to svn_wc_merge_props3()
+ * before calling svn_wc_merge4() is needed
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_context_t *wc_ctx,
@@ -6664,6 +6732,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
+
 
 /** Similar to svn_wc_merge4() but takes relative paths and an access
  * baton. It doesn't support a cancel function or tracking origin version

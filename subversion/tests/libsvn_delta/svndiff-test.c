@@ -75,10 +75,11 @@ main(int argc, char **argv)
   if (argc == 4)
     version = atoi(argv[3]);
 
-  svn_txdelta(&txdelta_stream,
-              svn_stream_from_aprfile(source_file, pool),
-              svn_stream_from_aprfile(target_file, pool),
-              pool);
+  svn_txdelta2(&txdelta_stream,
+               svn_stream_from_aprfile(source_file, pool),
+               svn_stream_from_aprfile(target_file, pool),
+               FALSE,
+               pool);
 
   err = svn_stream_for_stdout(&stdout_stream, pool);
   if (err)

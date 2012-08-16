@@ -1566,7 +1566,12 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           svn_node_kind_t entry_kind = svn_node_none;
           svn_filesize_t entry_size = 0;
           svn_boolean_t has_props = FALSE;
-          svn_revnum_t created_rev = 0; /* ### SVN_INVALID_REVNUM  */
+          /* If 'created rev' was not requested, send 0.  We can't use
+           * SVN_INVALID_REVNUM as the tuple field is not optional.
+           * See the email thread on dev@, 2012-03-28, subject
+           * "buildbot failure in ASF Buildbot on svn-slik-w2k3-x64-ra",
+           * <http://svn.haxx.se/dev/archive-2012-03/0655.shtml>. */
+          svn_revnum_t created_rev = 0;
           const char *cdate = NULL;
           const char *last_author = NULL;
 
@@ -1602,7 +1607,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               /* created_rev, last_author, time */
               SVN_CMD_ERR(svn_repos_get_committed_info(&created_rev,
                                                        &cdate,
-                                                       &last_author, 
+                                                       &last_author,
                                                        root,
                                                        file_path,
                                                        subpool));
@@ -2037,9 +2042,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__log(full_paths, start_rev, end_rev,
-                                   limit, send_changed_paths, strict_node,
-                                   include_merged_revisions, revprops,
-                                   pool)));
+                                   (int) limit, send_changed_paths,
+                                   strict_node, include_merged_revisions,
+                                   revprops, pool)));
 
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
@@ -2923,7 +2928,7 @@ repos_path_valid(const char *path)
          consisting of just dots and spaces.  Win32 functions treat
          paths such as ".. " and "......." inconsistently.  Make sure
          no one can escape out of the root. */
-      if (path - s >= 2 && strspn(s, ". ") == path - s)
+      if (path - s >= 2 && strspn(s, ". ") == (size_t)(path - s))
         return FALSE;
 #else  /* ! WIN32 */
       if (path - s == 2 && s[0] == '.' && s[1] == '.')
@@ -3249,6 +3254,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
   apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, params->cache_revprops ? "1" : "0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */

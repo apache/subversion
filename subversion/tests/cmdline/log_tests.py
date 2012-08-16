@@ -391,25 +391,16 @@ def merge_history_repos(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
-  # Merge branches/c to trunk, which produces a conflict - r17
+  # Merge branches/c to trunk - r17
   #
   # Mergeinfo changes on /trunk:
   #    Merged /branches/c:r5-16
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
                        os.path.join('..', branch_c) + '@HEAD')
-  svntest.main.file_write(os.path.join('A', 'mu'),
-                          "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.",
-                          "wb")
-  # Resolve conflicts, and commit
-  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
-                                           os.path.join('A', 'xi'),
-                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Merge branches/c to trunk, " +
-                       "resolving a conflict in 'mu'.",
+                       "Merge branches/c to trunk.",
                        '--username', svntest.main.wc_author2)
   os.chdir('..')
 
@@ -2218,7 +2209,6 @@ def log_xml_old(sbox):
 
 
 @Issue(4153)
-@XFail(svntest.main.is_ra_type_dav)
 def log_diff_moved(sbox):
   "log --diff on moved file"
 
@@ -2234,7 +2224,7 @@ def log_diff_moved(sbox):
   mu_at_1 = sbox.repo_url + '/A/mu@1'
   mu3_at_3 = sbox.repo_url + '/A/mu3@3'
 
-  r1diff = [make_diff_header('A/mu', 'revision 0', 'revision 1')
+  r1diff = [make_diff_header('mu', 'revision 0', 'revision 1')
             + ["@@ -0,0 +1 @@\n",
                "+This is the file 'mu'.\n"]]
 
@@ -2290,6 +2280,55 @@ def log_diff_moved(sbox):
   compare_diff_output(r2diff, log_chain[1]['diff_lines'])
   compare_diff_output(r1diff, log_chain[2]['diff_lines'])
 
+
+#----------------------------------------------------------------------
+def log_search(sbox):
+  "'svn log --search'"
+
+  guarantee_repos_and_wc(sbox)
+
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--search',
+                             'for revision [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+  # case-insensitive search
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--isearch',
+                             'FOR REVISION [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_sensitive_log_with_search(sbox):
+  "test 'svn log -g --search'"
+
+  merge_history_repos(sbox)
+
+  TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
+
+  # Run log -g on a non-copying revision that adds mergeinfo,
+  # and perform a search that only matches the merged revision
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r6',
+                                                              '--search',
+                                                              'upsilon',
+                                                              TRUNK_path)
+
+  # Parse and check output. The only revision should be r4 (the merge rev).
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    4 : [6],
+  }
+  check_merge_results(log_chain, expected_merges)
+
+
 ########################################################################
 # Run the tests
 
@@ -2333,6 +2372,8 @@ test_list = [ None,
               log_diff,
               log_xml_old,
               log_diff_moved,
+              log_search,
+              merge_sensitive_log_with_search,
              ]
 
 if __name__ == '__main__':

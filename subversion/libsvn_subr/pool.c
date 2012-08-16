@@ -53,6 +53,7 @@ abort_on_pool_failure(int retcode)
      And we don't have any of it... */
   printf("Out of memory - terminating application.\n");
   abort();
+  return 0; /* not reached */
 }
 
 
@@ -107,7 +108,7 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
 
   /* create the allocator and limit it's internal free list to keep
    * memory usage in check */
-  
+
   if (apr_allocator_create(&allocator))
     abort_on_pool_failure(EXIT_FAILURE);
 
@@ -124,7 +125,7 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
 
   /* By default, allocators are *not* thread-safe. We must provide a mutex
    * if we want thread-safety for that mutex. */
- 
+
 #if APR_HAS_THREADS
   if (thread_safe)
     {
@@ -136,6 +137,6 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
 
   /* better safe than sorry */
   SVN_ERR_ASSERT_NO_RETURN(allocator != NULL);
-  
+
   return allocator;
 }

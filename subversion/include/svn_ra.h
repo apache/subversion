@@ -120,6 +120,19 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
                                                           const char *name,
                                                           apr_pool_t *pool);
 
+/** This is a function type which allows the RA layer to fetch the
+ * cached pristine file contents whose checksum is @a checksum, if
+ * any.  @a *contents will be a read stream containing those contents
+ * if they are found; NULL otherwise.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_ra_get_wc_contents_func_t)(void *baton,
+                                 svn_stream_t **contents,
+                                 const svn_checksum_t *checksum,
+                                 apr_pool_t *pool);
+
 
 /** A function type for retrieving the youngest revision from a repos. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
@@ -136,6 +149,7 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
 typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
                                                         const char **name,
                                                         apr_pool_t *pool);
+
 
 
 /**
@@ -516,6 +530,11 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_ra_get_client_string_func_t get_client_string;
 
+  /** Working copy file content fetching function.
+   * @since New in 1.8.
+   */
+  svn_ra_get_wc_contents_func_t get_wc_contents;
+
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
@@ -594,6 +613,17 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * corrected_url is NULL, return an #SVN_ERR_RA_SESSION_URL_MISMATCH
  * error.  Allocate all returned items in @a pool.
  *
+ * The @a repos_URL need not point to the root of the repository: subject
+ * to authorization, it may point to any path within the repository, even
+ * a path at which no node exists in the repository.  The session will
+ * remember this URL as its "session URL" (also called "session root URL"),
+ * until changed by svn_ra_reparent().  Many RA functions take or return
+ * paths that are relative to the session URL.
+ *
+ * If a @a corrected_url is returned, it will point to the same path
+ * within the new repository root URL that @a repos_URL pointed to within
+ * the old repository root URL.
+ *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
  *
@@ -602,7 +632,10 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @a config is a hash mapping <tt>const char *</tt> keys to
  * @c svn_config_t * values.  For example, the @c svn_config_t for the
- * "~/.subversion/config" file is under the key "config".
+ * "~/.subversion/config" file is under the key "config".  @a config may
+ * be NULL.  This function examines some config settings under the
+ * "servers" key (if present) before loading the required RA module, and
+ * the RA module may also examine any config settings.
  *
  * All RA requests require a session; they will continue to
  * use @a pool for memory allocation.
@@ -680,7 +713,7 @@ svn_ra_reparent(svn_ra_session_t *ra_session,
                 const char *url,
                 apr_pool_t *pool);
 
-/** Set @a *url to the repository URL to which @a ra_session was
+/** Set @a *url to the session URL -- the URL to which @a ra_session was
  * opened or most recently reparented.
  *
  * @since New in 1.5.
@@ -691,8 +724,8 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 
-/** Convert @a url into a path relative to the URL at which @a ra_session
- * is parented, setting @a *rel_path to that value.  If @a url is not
+/** Convert @a url into a path relative to the session URL of @a ra_session,
+ * setting @a *rel_path to that value.  If @a url is not
  * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
  *
  * The returned path is uri decoded to allow using it with the ra or other
@@ -2008,7 +2041,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the RA library, (like "ra_neon" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_serf" or "ra_local") */
   const char *name;
 
   /** Short doc string printed out by `svn --version` */
@@ -2279,7 +2312,7 @@ typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
 
 /* Public RA implementations. */
 
-/** Initialize libsvn_ra_neon.
+/** Initialize libsvn_ra_serf.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 SVN_DEPRECATED

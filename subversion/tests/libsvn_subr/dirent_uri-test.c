@@ -670,6 +670,7 @@ test_dirent_canonicalize(apr_pool_t *pool)
     { "foo/../",              "foo/.." },
     { "foo/../.",             "foo/.." },
     { "foo//.//bar",          "foo/bar" },
+    { "//foo",                "/foo" },
     { "///foo",               "/foo" },
     { "/.//./.foo",           "/.foo" },
     { ".///.foo",             ".foo" },
@@ -743,6 +744,7 @@ test_relpath_canonicalize(apr_pool_t *pool)
     { "foo/../",              "foo/.." },
     { "foo/../.",             "foo/.." },
     { "foo//.//bar",          "foo/bar" },
+    { "//foo",                "foo" },
     { "///foo",               "foo" },
     { "/.//./.foo",           ".foo" },
     { ".///.foo",             ".foo" },
@@ -882,6 +884,8 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "https://SERVER:80/",    "https://server:80" },
     { "svn://server:80",       "svn://server:80" },
     { "svn://SERVER:443/",     "svn://server:443" },
+    { "file:///C%7C/temp/REPOS", "file:///C%7C/temp/REPOS" },
+    { "file:///C|/temp/REPOS", "file:///C%7C/temp/REPOS" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -917,6 +921,7 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "foo/../",                         NULL },
     { "foo/../.",                        NULL },
     { "foo//.//bar",                     NULL },
+    { "//foo",                           NULL },
     { "///foo",                          NULL },
     { "/.//./.foo",                      NULL },
     { ".///.foo",                        NULL },
@@ -1004,6 +1009,7 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "foo/../",               FALSE },
     { "foo/../.",              FALSE },
     { "foo//.//bar",           FALSE },
+    { "//foo",                 FALSE },
     { "///foo",                FALSE },
     { "/.//./.foo",            FALSE },
     { ".///.foo",              FALSE },
@@ -1104,6 +1110,7 @@ test_relpath_is_canonical(apr_pool_t *pool)
     { "foo/../",               FALSE },
     { "foo/../.",              FALSE },
     { "foo//.//bar",           FALSE },
+    { "//foo",                 FALSE },
     { "///foo",                FALSE },
     { "/.//./.foo",            FALSE },
     { ".///.foo",              FALSE },
@@ -2017,14 +2024,33 @@ test_dirent_condense_targets(apr_pool_t *pool)
       const char* common;
       apr_array_header_t *hdr = apr_array_make(pool, 8, sizeof(const char*));
       apr_array_header_t *condensed;
+      svn_boolean_t skip = FALSE;
 
       for (j = 0; j < COUNT_OF(tests[i].paths); j++)
         {
           if (tests[i].paths[j] != NULL)
-            APR_ARRAY_PUSH(hdr, const char*) = tests[i].paths[j];
+            {
+              APR_ARRAY_PUSH(hdr, const char*) = tests[i].paths[j];
+#ifdef SVN_USE_DOS_PATHS
+              /* For tests that are referencing a D: drive, specifically test
+                 if such a drive exists on the system.  If not, skip the test
+                 (svn_dirent_condense_targets will fail, because
+                 apr_filepath_merge will produce an APR_EBADPATH error). */
+              if (strncmp(tests[i].paths[j], "D:", 2) == 0
+                  && GetDriveType("D:\\") == DRIVE_NO_ROOT_DIR)
+                {
+                  /* There is no D: drive, skip this. */
+                  skip = TRUE;
+                  break;
+                }
+#endif
+            }
           else
             break;
         }
+
+      if (skip)
+        continue;
 
       SVN_ERR(svn_dirent_condense_targets(&common, &condensed, hdr,
                                           FALSE, pool, pool));

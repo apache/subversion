@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import sys, re, os, stat, subprocess
+import sys, re, os, stat, subprocess, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -365,7 +367,7 @@ def update_conflict_props(sbox):
                                         None, None, 1)
 
   if len(extra_files) != 0:
-    print("didn't get expected conflict files")
+    logger.warn("didn't get expected conflict files")
     raise svntest.verify.SVNUnexpectedOutput
 
   # Resolve the conflicts
@@ -776,9 +778,9 @@ def copy_inherits_special_props(sbox):
 
   expected_stdout = [orig_mime_type + '\n']
   if actual_stdout != expected_stdout:
-    print("svn pg svn:mime-type output does not match expected.")
-    print("Expected standard output:  %s\n" % expected_stdout)
-    print("Actual standard output:  %s\n" % actual_stdout)
+    logger.warn("svn pg svn:mime-type output does not match expected.")
+    logger.warn("Expected standard output:  %s\n", expected_stdout)
+    logger.warn("Actual standard output:  %s\n", actual_stdout)
     raise svntest.verify.SVNUnexpectedOutput
 
   # Check the svn:executable value.
@@ -789,9 +791,9 @@ def copy_inherits_special_props(sbox):
 
     expected_stdout = ['*\n']
     if actual_stdout != expected_stdout:
-      print("svn pg svn:executable output does not match expected.")
-      print("Expected standard output:  %s\n" % expected_stdout)
-      print("Actual standard output:  %s\n" % actual_stdout)
+      logger.warn("svn pg svn:executable output does not match expected.")
+      logger.warn("Expected standard output:  %s\n", expected_stdout)
+      logger.warn("Actual standard output:  %s\n", actual_stdout)
       raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
@@ -1038,8 +1040,8 @@ def binary_props(sbox):
 # expected_out, and that errput is empty.
 def verify_output(expected_out, output, errput):
   if errput != []:
-    print('Error: stderr:')
-    print(errput)
+    logger.warn('Error: stderr:')
+    logger.warn(errput)
     raise svntest.Failure
   output.sort()
   ln = 0
@@ -1048,8 +1050,8 @@ def verify_output(expected_out, output, errput):
       continue
     if ((line.find(expected_out[ln]) == -1) or
         (line != '' and expected_out[ln] == '')):
-      print('Error: expected keywords:  %s' % expected_out)
-      print('       actual full output: %s' % output)
+      logger.warn('Error: expected keywords:  %s', expected_out)
+      logger.warn('       actual full output: %s', output)
       raise svntest.Failure
     ln = ln + 1
   if ln != len(expected_out):
@@ -1738,11 +1740,9 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  # serf/neon/mod_dav_svn splits the "svn: hook failed" line
-  expected_error = svntest.verify.RegexOutput([
-    '(svn: E165001: |)post-revprop-change hook failed',
-    error_msg + "\n",
-  ], match_all = False)
+  # serf/neon/mod_dav_svn give SVN_ERR_RA_DAV_REQUEST_FAILED
+  # file/svn give SVN_ERR_REPOS_HOOK_FAILURE
+  expected_error = 'svn: (E175002|E165001).*post-revprop-change hook failed'
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
@@ -1984,7 +1984,7 @@ def prop_reject_grind(sbox):
       if match:
         # The last line in the list is always an empty string.
         if msg_lines[i + 1] == "":
-          #print("found message %i in file at line %i" % (n, j))
+          #logger.info("found message %i in file at line %i" % (n, j))
           break
         i += 1
       else:
@@ -2268,7 +2268,7 @@ def propget_redirection(sbox):
 
   # Run propget -vR svn:mergeinfo, redirecting the stdout to a file.
   arglist = [svntest.main.svn_binary, 'propget', SVN_PROP_MERGEINFO, '-vR',
-             wc_dir]
+             '--config-dir', svntest.main.default_config_dir, wc_dir]
   redir_file = open(redirect_file, 'wb')
   pg_proc = subprocess.Popen(arglist, stdout=redir_file)
   pg_proc.wait()
@@ -2466,7 +2466,7 @@ def file_matching_dir_prop_reject(sbox):
                                         extra_files,
                                         None, None, True, '-r', '2', wc_dir)
   if len(extra_files) != 0:
-    print("didn't get expected conflict files")
+    logger.warn("didn't get expected conflict files")
     raise svntest.verify.SVNUnexpectedOutput
 
   # Revert and update to check that conflict files are removed

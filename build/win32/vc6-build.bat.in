@@ -56,7 +56,6 @@ if not exist src-%DIR% goto svnerr
 if not exist zlib goto zliberr
 if not exist zlib\zlibstat.lib goto zlibstaterr
 if not exist src-%DIR%\db4-win32 goto bdberr
-if not exist src-%DIR%\neon goto neonerr
 if not exist gettext goto gettexterr
 goto allok
 
@@ -83,9 +82,6 @@ echo Please copy zlib\static32\zlibstat.lib to zlib\zlibstat.lib
 goto end
 :bdberr
 echo Unable to find Berekely DB
-goto end
-:neonerr
-echo Unable to find neon
 goto end
 :gettexterr
 echo Unable to find gettext
@@ -137,6 +133,7 @@ copy src-%DIR%\Release\subversion\svnlook\svnlook.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnserve\svnserve.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnversion\svnversion.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnrdump\svnrdump.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svnmucc\svnmucc.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\mod_authz_svn\mod_authz_svn.so svn-win32-%VER%\httpd
 copy src-%DIR%\Release\subversion\mod_dav_svn\mod_dav_svn.so svn-win32-%VER%\httpd
 copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"

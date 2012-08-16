@@ -144,9 +144,33 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
+/* Get the repository location of the base node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_base().
+ *
+ * Set *BASE_P to the location that this node was checked out at or last
+ * updated/switched to, regardless of any uncommitted changes (delete,
+ * replace and/or copy-here/move-here).
+ *
+ * If there is no base node at LOCAL_ABSPATH (such as when there is a
+ * locally added/copied/moved-here node that is not part of a replace),
+ * set *BASE_P to NULL.
+ */
+svn_error_t *
+svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
+                             const char *wc_abspath,
+                             svn_wc_context_t *wc_ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/* Get the original location of the WC node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_origin().
+ *
+ * Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
  * is a local copy, give the copy-from location.  If the node is locally
- * added or deleted, set *ORIGIN_P to NULL. */
+ * added or deleted, set *ORIGIN_P to NULL.
+ */
 svn_error_t *
 svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                const char *wc_abspath,
@@ -154,16 +178,13 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* A macro to mark sections of code that belong to the 'symmetric merge'
- * feature while it's still new. */
-#ifdef SVN_DEBUG
-#define SVN_WITH_SYMMETRIC_MERGE
-#endif
-
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 
 /* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
+typedef struct svn_client__symmetric_merge_t
+{
+  svn_client__pathrev_t *yca, *base, *mid, *right;
+  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
+} svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
  * branch into a target branch.  The information is the locations of the
@@ -189,9 +210,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
  *
  * Merge according to MERGE into the WC at TARGET_WCPATH.
  *
- * The other parameters are as in svn_client_merge4().  IGNORE_ANCESTRY
- * only controls the diffing of files, it doesn't prevent mergeinfo from
- * being used.
+ * The other parameters are as in svn_client_merge4().
  *
  * ### TODO: There's little point in this function being the only way the
  * caller can use the result of svn_client__find_symmetric_merge().  The
@@ -205,7 +224,6 @@ svn_error_t *
 svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const char *target_wcpath,
                                svn_depth_t depth,
-                               svn_boolean_t ignore_ancestry,
                                svn_boolean_t force,
                                svn_boolean_t record_only,
                                svn_boolean_t dry_run,
@@ -213,7 +231,6 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool);
 
-#endif /* SVN_WITH_SYMMETRIC_MERGE */
 
 #ifdef __cplusplus
 }

@@ -147,7 +147,8 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_LOG_FILE        264
 #define SVNSERVE_OPT_CACHE_TXDELTAS  265
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
-#define SVNSERVE_OPT_SINGLE_CONN     267
+#define SVNSERVE_OPT_CACHE_REVPROPS  267
+#define SVNSERVE_OPT_SINGLE_CONN     268
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -166,11 +167,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port\n"
+     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port\n"
+     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -178,9 +179,13 @@ static const apr_getopt_option_t svnserve__options[] =
 #ifdef WIN32
      N_("listen hostname or IP address\n"
         "                             "
+        "By default svnserve listens on all addresses.\n"
+        "                             "
         "[mode: daemon, service, listen-once]")},
 #else
      N_("listen hostname or IP address\n"
+        "                             "
+        "By default svnserve listens on all addresses.\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -220,6 +225,14 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("enable or disable caching of file contents\n"
         "                             "
         "Default is yes.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-revprops", SVNSERVE_OPT_CACHE_REVPROPS, 1,
+     N_("enable or disable caching of revision properties.\n"
+        "                             "
+        "Consult the documentation before activating this.\n"
+        "                             "
+        "Default is no.\n"
         "                             "
         "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -314,7 +327,8 @@ static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help3(NULL, "svnserve", TRUE, quiet, version_footer->data,
+  return svn_opt_print_help4(NULL, "svnserve", TRUE, quiet, FALSE,
+                             version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -398,8 +412,8 @@ check_lib_versions(void)
       { "svn_ra_svn", svn_ra_svn_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -482,6 +496,7 @@ int main(int argc, const char *argv[])
   params.memory_cache_size = (apr_uint64_t)-1;
   params.cache_fulltexts = TRUE;
   params.cache_txdeltas = FALSE;
+  params.cache_revprops = FALSE;
 
   while (1)
     {
@@ -622,6 +637,11 @@ int main(int argc, const char *argv[])
 
         case SVNSERVE_OPT_CACHE_FULLTEXTS:
           params.cache_fulltexts
+             = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
+        case SVNSERVE_OPT_CACHE_REVPROPS:
+          params.cache_revprops
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 

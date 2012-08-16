@@ -15,44 +15,49 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import division, with_statement
 
-import collections
 import datetime
 import logging
+import re
 import sqlite3
+import unicodedata
 
 
 class Error(Exception):
     def __init__(self, msg, *args, **kwargs):
-        opcode = kwargs.pop("action", None)
-        if opcode is not None:
-            msg = Dirent._opname(opcode) + msg
+        action = kwargs.pop("action", None)
+        if action is not None:
+            msg = "%s %s" % (NodeRev._opname(action), msg)
         super(Error, self).__init__(msg, *args, **kwargs)
 
 
-class SQL(object):
+class SQLclass(object):
     """Named index of SQL schema definitions and statements.
 
     Parses "schema.sql" and creates a class-level attribute for each
     script and statement in that file.
     """
 
-    @classmethod
-    def _load_statements(cls):
+    def __init__(self):
         import cStringIO
         import pkgutil
         import re
 
         comment_rx = re.compile(r"\s*--.*$")
-        header_rx = re.compile(r"^---(STATEMENT|SCRIPT)"
+        header_rx = re.compile(r"^---(?P<kind>STATEMENT|SCRIPT)"
                                r"\s+(?P<name>[_A-Z]+)$")
 
+        kind = None
         name = None
         content = None
 
         def record_current_statement():
             if name is not None:
-                setattr(cls, name, content.getvalue())
+                if kind == "SCRIPT":
+                    self.__record_script(name, content.getvalue())
+                else:
+                    self.__record_statement(name, content.getvalue())
 
         schema = cStringIO.StringIO(pkgutil.get_data(__name__, "schema.sql"))
         for line in schema:
@@ -63,6 +68,7 @@ class SQL(object):
             header = header_rx.match(line)
             if header:
                 record_current_statement()
+                kind = header.group("kind")
                 name = header.group("name")
                 content = cStringIO.StringIO()
                 continue
@@ -75,159 +81,554 @@ class SQL(object):
                 content.write(line)
                 content.write("\n")
         record_current_statement()
-SQL._load_statements()
 
+    class __statement(object):
+        __slots__ = ("execute", "query")
+        def __init__(self, sql, query):
+            self.execute = sql._execute
+            self.query = query
 
-class SQLobject(object):
-    """Base for ORM abstractions."""
+        def __call__(self, cursor, **kwargs):
+            if len(kwargs):
+                return self.execute(cursor, self.query, kwargs)
+            return self.execute(cursor, self.query)
 
-    __slots__ = ()
-    def __init__(self, **kwargs):
-        for name, val in kwargs.items():
-            setattr(self, name, val)
-        for name in self.__slots__:
-            if not hasattr(self, name):
-                setattr(self, name, None)
+    def __record_statement(self, name, statement):
+        setattr(self, name, self.__statement(self, statement))
 
-    def _put(self, cursor):
-        raise NotImplementedError("SQLobject._insert")
+    class __script(object):
+        __slots__ = ("execute", "query")
+        def __init__(self, sql, query):
+            self.execute = sql._executescript
+            self.query = query
 
-    @classmethod
-    def _get(self, cursor, pkey):
-        raise NotImplementedError("SQLobject._insert")
+        def __call__(self, cursor):
+            return self.execute(cursor, self.query)
 
-    @classmethod
-    def _from_row(cls, row):
-        if row is not None:
-            return cls(**dict((col, row[col]) for col in row.keys()))
-        return None
+    def __record_script(self, name, script):
+        setattr(self, name, self.__script(self, script))
 
     LOGLEVEL = (logging.NOTSET + logging.DEBUG) // 2
     if logging.getLevelName(LOGLEVEL) == 'Level %s' % LOGLEVEL:
         logging.addLevelName(LOGLEVEL, 'SQL')
 
-    @classmethod
-    def _log(cls, *args, **kwargs):
-        return logging.log(cls.LOGLEVEL, *args, **kwargs)
+    def _log(self, *args, **kwargs):
+        return logging.log(self.LOGLEVEL, *args, **kwargs)
 
-    @classmethod
-    def _execute(cls, cursor, statement, parameters=None):
+    __stmt_param_rx = re.compile(r':([a-z]+)')
+    def _execute(self, cursor, statement, parameters=None):
         if parameters is not None:
-            fmt = statement.replace("%", "%%").replace("?", "%r")
-            cls._log("EXECUTE: " + fmt, *parameters)
+            fmt = statement.replace("%", "%%")
+            fmt = self.__stmt_param_rx.sub(r'%(\1)r', fmt)
+            self._log("EXECUTE: " + fmt, parameters)
             return cursor.execute(statement, parameters)
         else:
-            cls._log("EXECUTE: %s", statement)
+            self._log("EXECUTE: %s", statement)
             return cursor.execute(statement)
 
+    def _executescript(self, cursor, script):
+        self._log("EXECUTE: %s", script)
+        return cursor.executescript(script)
+SQL = SQLclass()
 
-class Revent(SQLobject):
-    """O/R mapping for the "revision" table."""
 
-    __slots__ = ("version", "created", "author", "log")
+class SQLobject(dict):
+    """Base for ORM abstractions."""
+
+    def __init__(self, **kwargs):
+        super(SQLobject, self).__init__(**kwargs)
+        for name in self._columns:
+            super(SQLobject, self).setdefault(name, None)
+
+    def __getattr__(self, name):
+        return self.__getitem__(name)
+
+    def __setattr__(self, name, value):
+        return self.__setitem__(name, value)
+
+    def __delattr__(self, name):
+        return self.__delitem__(name)
+
+    def _put(self, _cursor):
+        self._put_statement(_cursor, **self)
+        if self.id is None:
+            self.id = _cursor.lastrowid
+        else:
+            assert self.id == _cursor.lastrowid
+
+    @classmethod
+    def _get(self, _cursor, pkey):
+        self._get_statement(_cursor, id=pkey)
+        return cls._from_row(_cursor.fetchone())
+
+    @classmethod
+    def _from_row(cls, row):
+        if row is not None:
+            return cls(**row)
+        return None
+
+    def _clone(self):
+        return self.__class__(**self)
+
+
+class Txn(SQLobject):
+    """O/R mapping for the "txn" table."""
+
+    _columns = ("id", "treeid", "revision", "created", "author", "state")
+    _put_statement = SQL.TXN_INSERT
+    _get_statement = SQL.TXN_GET
+
+    # state
+    TRANSIENT = "T"
+    PERMANENT = "P"
+    DEAD = "D"
+
+    def __init__(self, **kwargs):
+        super(Txn, self).__init__(**kwargs)
+        if self.state is None:
+            self.state = self.TRANSIENT
+
+    def __str__(self):
+        return "%d/%d %c %s" % (self.revision, self.treeid,
+                                self.state, self.created)
+
+    @property
+    def _committed(self):
+        return self.state == self.PERMANENT
+
+    @property
+    def _uncommitted(self):
+        return self.state == self.TRANSIENT
+
+    @property
+    def _dead(self):
+        return self.state == self.DEAD
+
+    @staticmethod
+    def _now():
+        now = datetime.datetime.utcnow()
+        return (now.strftime("%Y%m%dT%H%M%S.%%03dZ")
+                % ((now.microsecond + 500) // 1000))
 
     def _put(self, cursor):
         if self.created is None:
-            now = datetime.datetime.utcnow()
-            self.created = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        self._execute(cursor, SQL.INSERT_REVISION_RECORD,
-                      [self.version, self.created, self.author, self.log])
+            self.created = self._now()
+        super(Txn, self)._put(cursor)
+        if self.treeid is None:
+            SQL.TXN_UPDATE_INITIAL_TREEID(cursor, id = self.id)
+            self.treeid = self.id
 
     @classmethod
-    def _get(cls, cursor, pkey):
-        cursor.execute(SQL.GET_REVENT_BY_VERSION, [pkey])
+    def _find_newest(cls, cursor):
+        SQL.TXN_FIND_NEWEST(cursor)
         return cls._from_row(cursor.fetchone())
 
+    @classmethod
+    def _find_by_revision(cls, cursor, revision):
+        SQL.TXN_FIND_BY_REVISION(cursor, revision = revision)
+        return cls._from_row(cursor.fetchone())
 
-class Strent(SQLobject):
-    """O/R mapping for the "strindex" table."""
+    @classmethod
+    def _find_by_revision_timestamp(cls, cursor, revision, created):
+        SQL.TXN_FIND_BY_REVISION_AND_TIMESTAMP(
+            cursor, revision = revision, created = creted)
+        return cls._from_row(cursor.fetchone())
 
-    __slots__ = ("strid", "content")
+    def _commit(self, cursor, revision):
+        assert self._uncommitted
+        now = self._now()
+        SQL.TXN_COMMIT(cursor, id = self.id,
+                       revision = revision, created = now)
+        self.revision = revision
+        self.created = now
+        self.state = self.PERMANENT
+
+    def _abort(self, cursor):
+        assert self._uncommitted
+        SQL.TXN_ABORT(cursor, id = self.id)
+        self.state = self.DEAD
+
+    def _cleanup(self, cursor):
+        assert self._dead
+        SQL.TXN_CLEANUP(cursor, id = self.id)
+
+
+class Branch(SQLobject):
+    """O/R mapping for the "branch" table."""
+
+    _columns = ("id", "treeid", "nodeid", "origin", "state")
+    _put_statement = SQL.BRANCH_INSERT
+    _get_statement = SQL.BRANCH_GET
+
+    # state
+    TRANSIENT = "T"
+    PERMANENT = "P"
+
+    def __init__(self, **kwargs):
+        super(Branch, self).__init__(**kwargs)
+        if self.state is None:
+            self.state = self.TRANSIENT
 
     def _put(self, cursor):
-        self._execute(cursor, SQL.INSERT_STRINDEX_RECORD, [self.content])
-        self.strid = cursor.lastrowid
+        super(Branch, self)._put(cursor)
+        if self.nodeid is None:
+            SQL.BRANCH_UPDATE_INITIAL_NODEID(cursor, id = self.id)
+            self.nodeid = self.id
 
     @classmethod
-    def _get(cls, cursor, pkey):
-        cls._execute(cursor, SQL.GET_STRENT_BY_STRID, [pkey])
-        return cls._from_row(cursor.fetchone())
+    def _update_treeid(cls, cursor, new_txn, old_txn):
+        SQL.BRANCH_UPDATE_TREEID(cursor,
+                                 new_treeid = new_txn.treeid,
+                                 old_treeid = old_txn.treeid)
 
     @classmethod
-    def _find(cls, cursor, content):
-        cls._execute(cursor, SQL.GET_STRENT_BY_CONTENT, [content])
-        return cls._from_row(cursor.fetchone())
+    def _history(cls, cursor, nodeid):
+        SQL.BRANCH_HISTORY(cursor, nodeid = nodeid)
+        for row in cursor:
+            yield cls._from_row(row)
+
+    @classmethod
+    def _commit(cls, cursor, txn):
+        SQL.BRANCH_COMMIT(cursor, treeid = txn.treeid)
+
+    @classmethod
+    def _cleanup(cls, cursor, txn):
+        SQL.BRANCH_CLEANUP(cursor, treeid = txn.treeid)
 
 
-class Dirent(SQLobject):
-    """O/R mapping for a virtual non-materialized view representing
-    a join of the "dirindex" and "strindex" tables."""
+class NodeRev(SQLobject):
+    """O/R mapping for the noderev/string/nodeview table."""
 
-    __slots__ = ("rowid", "origin", "pathid", "version",
-                 "kind", "opcode", "subtree",
-                 "abspath")
+    _columns = ("id", "treeid", "nodeid", "origin", "parent", "branch",
+                "nameid", "name", "denameid", "dename",
+                "kind", "opcode", "state")
+    _put_statement = SQL.NODEREV_INSERT
+    _get_statement = SQL.NODEVIEW_GET
 
-    # Kinds
+    # kind
     DIR = "D"
     FILE = "F"
 
-    # Opcodes
+    # opcode
     ADD = "A"
     REPLACE = "R"
     MODIFY = "M"
     DELETE = "D"
     RENAME = "N"
+    BRANCH = "B"
+    LAZY = "L"
+    BREPLACE = "X"
+    LAZY_BREPLACE = "Z"
+
+    # state
+    TRANSIENT = "T"
+    PERMANENT = "P"
+
+    def __init__(self, **kwargs):
+        super(NodeRev, self).__init__(**kwargs)
+        if self.state is None:
+            self.state = self.TRANSIENT
+
+    def __str__(self):
+        return "%d %c %s%s" % (self.treeid, self.opcode, self.name,
+                               self._isdir and '/' or '')
 
     # Opcode names
     __opnames = {ADD: "add",
                  REPLACE: "replace",
                  MODIFY: "modify",
                  DELETE: "delete",
-                 RENAME: "rename"}
+                 RENAME: "rename",
+                 BRANCH: "branch",
+                 LAZY: "branch",
+                 BREPLACE: "branch/replace",
+                 LAZY_BREPLACE: "branch/replace"}
 
     @classmethod
-    def _opname(cls, opcode):
+    def _opname(cls, change):
         return cls.__opnames.get(opcode)
 
     @property
     def _deleted(self):
         return (self.opcode == self.DELETE)
 
-    def __str__(self):
-        return "%d %c%c%c %c %s" % (
-            self.version,
-            self.subtree and "(" or " ",
-            self.opcode,
-            self.subtree and ")" or " ",
-            self.kind, self.abspath)
+    @property
+    def _lazy(self):
+        return (self.opcode in (self.LAZY, self.LAZY_BREPLACE))
+
+    @property
+    def _transient(self):
+        return (self.state == self.TRANSIENT)
+
+    @property
+    def _isdir(self):
+        return (self.kind == self.DIR)
+
+    @staticmethod
+    def __stringid(cursor, val):
+        SQL.STRING_FIND(cursor, val = val)
+        row = cursor.fetchone()
+        if row is not None:
+            return row['id']
+        SQL.STRING_INSERT(cursor, val = val)
+        return cursor.lastrowid
 
     def _put(self, cursor):
-        strent = Strent._find(cursor, self.abspath)
-        if strent is None:
-            strent = Strent(content = self.abspath)
-            strent._put(cursor)
-        self._execute(cursor, SQL.INSERT_DIRINDEX_RECORD,
-                      [self.origin, strent.strid, self.version,
-                       self.kind, self.opcode,self.subtree])
-        self.rowid = cursor.lastrowid
-        self.pathid = strent.strid
+        if self.nameid is None:
+            assert self.name is not None
+            self.nameid = self.__stringid(cursor, self.name)
+        if self.denameid is None:
+            if self.dename == self.name:
+                self.denameid = self.nameid
+            else:
+                assert self.dename is not None
+                self.denameid = self.__stringid(cursor, self.dename)
+        super(NodeRev, self)._put(cursor)
 
     @classmethod
-    def _get(cls, cursor, pkey):
-        cls._execute(cursor, SQL.GET_DIRENT_BY_ROWID, [pkey])
+    def _update_treeid(cls, cursor, new_txn, old_txn):
+        SQL.NODEREV_UPDATE_TREEID(cursor,
+                                  new_treeid = new_txn.treeid,
+                                  old_treeid = old_txn.treeid)
+
+    def _delazify(self, cursor):
+        assert self._lazy and self._isdir
+        opcode = self.opcode == self.LAZY and self.BRANCH or self.BREPLACE
+        SQL.NODEREV_UPDATE_OPCODE(cursor, id = self.id, opcode = opcode)
+        self.opcode = opcode
+
+    @classmethod
+    def _commit(cls, cursor, txn):
+        SQL.NODEREV_COMMIT(cursor, treeid = txn.treeid)
+
+    @classmethod
+    def _cleanup(cls, cursor, txn):
+        SQL.NODEREV_CLEANUP(cursor, treeid = txn.treeid)
+
+    @classmethod
+    def __find(cls, cursor, parent, name, txn):
+        if txn.state != txn.PERMANENT:
+            if parent is None:
+                finder = SQL.NODEVIEW_FIND_TRANSIENT_ROOT
+            else:
+                finder = SQL.NODEVIEW_FIND_TRANSIENT_BY_NAME
+        else:
+            if parent is None:
+                finder = SQL.NODEVIEW_FIND_ROOT
+            else:
+                finder = SQL.NODEVIEW_FIND_BY_NAME
+        finder(cursor, name = name, parent = parent, treeid = txn.treeid)
         return cls._from_row(cursor.fetchone())
 
     @classmethod
-    def _find(cls, cursor, abspath, version):
-        cls._execute(cursor,
-                     SQL.GET_DIRENT_BY_ABSPATH_AND_VERSION,
-                     [abspath, version])
-        return cls._from_row(cursor.fetchone())
+    def _find(cls, cursor, parent, name, txn):
+        return cls.__find(cursor, parent, cls.__normtext(name), txn)
+
+    @classmethod
+    def _commonprefix(cls, *args):
+        args = [arg.split('/') for arg in args]
+        prefix = []
+        arglen = min(len(parts) for parts in args)
+        while arglen > 0:
+            same = set(cls.__normtext(parts[0]) for parts in args)
+            if len(same) > 1:
+                break
+            for parts in args:
+                del parts[0]
+            prefix.append(same.pop())
+            arglen -= 1
+        return '/'.join(prefix), ['/'.join(parts) for parts in args]
+
+    @classmethod
+    def _lookup(cls, cursor, track, relpath, txn):
+        if track is None or track.path is None:
+            # Lookup from root
+            track = Track()
+            parent = cls.__find(cursor, None, "", txn)
+            if not relpath:
+                track.close(parent)
+                return track
+            track.append(parent)
+        else:
+            assert track.found
+            track = Track(track)
+            if not relpath:
+                track.close()
+                return track
+            parent = track.noderev
+        parts = cls.__normtext(relpath).split("/")
+        for name in parts[:-1]:
+            if not parent._isdir:
+                raise Error("ENOTDIR: " + track.path)
+            while parent._lazy:
+                parent = cls._get(cursor, id = parent.origin)
+            node = cls.__find(cursor, parent.branch, name, txn)
+            if node is None:
+                raise Error("ENODIR: " +  track.path + '/' + name)
+            parent = node
+            track.append(parent)
+        while parent._lazy:
+            parent = cls._get(cursor, id = parent.origin)
+        track.close(cls.__find(cursor, parent.branch, parts[-1], txn))
+        return track
+
+    def _count_successors(self, cursor):
+        SQL.NODEREV_COUNT_SUCCESSORS(cursor, origin = self.id)
+        return int(cursor.fetchone()[0])
+
+    def _listdir(self, cursor, txn):
+        assert self._isdir
+        if txn.state != txn.PERMANENT:
+            lister = SQL.NODEVIEW_LIST_TRANSIENT_DIRECTORY
+        else:
+            lister = SQL.NODEVIEW_LIST_DIRECTORY
+        lister(cursor, parent = self.id, treeid = txn.treeid)
+        for row in cursor:
+            yield self._from_row(row)
+
+    def _bubbledown(self, cursor, txn):
+        assert txn._uncommitted
+        assert self._lazy and self._isdir and self.origin is not None
+        originmap = dict()
+        origin = self
+        while origin._lazy:
+            origin = self._get(cursor, id = origin.origin)
+        for node in origin._listdir(cursor, txn):
+            newnode = node._branch(cursor, self, txn)
+            originmap[newnode.origin] == newnode
+        self._delazify(cursor)
+        return originmap
+
+    def _branch(self, cursor, parent, txn, replaced=False):
+        assert txn._uncommitted
+        branch = Branch(treeid = txn.treeid,
+                        nodeid = self.nodeid,
+                        origin = self.branch)
+        branch._put(cursor)
+        if self._isdir:
+            opcode = replaced and self.LAZY_BREPLACE or self.LAZY
+        else:
+            opcode = replaced and self.BREPLACE or self.BRANCH
+        node = self._revise(opcode, txn)
+        node.parent = parent.id
+        node.branch = branch.id
+        node._put(cursor)
+        return node
+
+    def _revise(self, opcode, txn):
+        assert txn._uncommitted
+        noderev = NodeRev._clone(self)
+        noderev.treeid = txn.treeid
+        noderev.opcode = opcode
+
+    __readonly = frozenset(("name",))
+    def __setitem__(self, key, value):
+        if key in self.__readonly:
+            raise Error("NodeRev.%s is read-only" % key)
+        if key == "dename":
+            name = self.__normtext(value)
+            value = self.__text(value)
+            super(NodeRev, self).__setitem__("name", name)
+        super(NodeRev, self).__setitem__(key, value)
+
+    def __getitem__(self, key):
+        if key == "dename":
+            dename = super(NodeRev, self).__getitem__(key)
+            if dename is not None:
+                return dename
+            key = "name"
+        return super(NodeRev, self).__getitem__(key)
+
+    @classmethod
+    def __text(cls, name):
+        if not isinstance(name, unicode):
+            return name.decode("UTF-8")
+        return name
+
+    @classmethod
+    def __normtext(cls, name):
+        return unicodedata.normalize('NFC', cls.__text(name))
+
+
+class Track(object):
+    __slots__ = ("nodelist", "noderev", "lazy")
+    def __init__(self, other=None):
+        if other is None:
+            self.nodelist = list()
+            self.noderev = None
+            self.lazy = None
+        else:
+            self.nodelist = list(other.nodelist)
+            self.noderev = other.noderev
+            self.lazy = other.lazy
+
+    def __str__(self):
+        return "%c%c %r" % (
+            self.found and self.noderev.kind or '-',
+            self.lazy is not None and 'L' or '-',
+            self.path)
+
+    @property
+    def found(self):
+        return (self.noderev is not None)
+
+    @property
+    def parent(self):
+        if self.noderev is not None:
+            index = len(self.nodelist) - 2;
+        else:
+            index = len(self.nodelist) - 1;
+        if index >= 0:
+            return self.nodelist[index]
+        return None
+
+    @property
+    def path(self):
+        if len(self.nodelist):
+            return '/'.join(n.name for n in self.nodelist[1:])
+        return None
+
+    @property
+    def open(self):
+        return not isinstance(self.nodelust, tuple)
+
+    def append(self, noderev):
+        if self.lazy is None and noderev._lazy:
+            self.lazy = len(self.nodelist)
+        self.nodelist.append(noderev)
+
+    def close(self, noderev=None):
+        if noderev is not None:
+            self.append(noderev)
+            self.noderev = noderev
+        self.nodelist = tuple(self.nodelist)
+
+    def bubbledown(self, cursor, txn):
+        if self.lazy is None:
+            return
+        closed = not self.open
+        if closed:
+            self.nodelist = list(self.nodelist)
+        tracklen = len(self.nodelist)
+        index = self.lazy
+        node = self.nodelist[index]
+        originmap = node._bubbledown(cursor, txn)
+        while index < tracklen:
+            node = originmap[self.nodelist[index].id]
+            self.nodelist[index] = node
+            if node._isdir:
+                originmap = node._bubbledown(cursor, txn)
+            else:
+                originmap = None
+            index += 1
+        self.lazy = None
+        if closed:
+            self.close()
 
 
 class Index(object):
     def __init__(self, database):
-        self.conn = sqlite3.connect(database, isolation_level = "IMMEDIATE")
+        self.conn = sqlite3.connect(database, isolation_level = "DEFERRED")
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self.cursor.execute("PRAGMA page_size = 4096")
@@ -236,337 +637,194 @@ class Index(object):
         self.cursor.execute("PRAGMA case_sensitive_like = ON")
         self.cursor.execute("PRAGMA encoding = 'UTF-8'")
 
-    @staticmethod
-    def normpath(abspath):
-        return abspath.rstrip("/")
-
-    @staticmethod
-    def subtree_pattern(abspath):
-        return (abspath.rstrip("/")
-                .replace("#", "##")
-                .replace("%", "#%")
-                .replace("_", "#_")) + "/%"
-
     def initialize(self):
         try:
-            SQLobject._log("%s", SQL.CREATE_SCHEMA)
-            self.cursor.executescript(SQL.CREATE_SCHEMA)
+            SQL.CREATE_SCHEMA(self.cursor)
+            SQL._execute(
+                self.cursor,
+                "UPDATE txn SET created = :created WHERE id = 0",
+                {"created": Txn._now()})
             self.commit()
-        finally:
+        except:
             self.rollback()
+            raise
+
+    def begin(self):
+        SQL._execute(self.cursor, "BEGIN")
 
     def commit(self):
-        SQLobject._log("COMMIT")
-        return self.conn.commit()
+        SQL._log("COMMIT")
+        self.conn.commit()
 
     def rollback(self):
-        SQLobject._log("ROLLBACK")
-        return self.conn.rollback()
+        SQL._log("ROLLBACK")
+        self.conn.rollback()
 
     def close(self):
         self.rollback()
-        SQLobject._log("CLOSE")
-        return self.conn.close()
+        SQL._log("CLOSE")
+        self.conn.close()
 
-    def get_revision(self, version):
-        return Revent._get(self.cursor, version)
+    def get_txn(self, revision=None):
+        if revision is None:
+            return Txn._find_newest(self.cursor)
+        return Txn._find_by_revision(self.cursor, revision)
 
-    def new_revision(self, version, created=None, author=None, log=None):
-        revent = Revent(version = version,
-                        created = created,
-                        author = author,
-                        log = log)
-        revent._put(self.cursor)
-        return revent
+    def new_txn(self, revision, created=None, author=None, base_txn = None):
+        assert base_txn is None or base_txn.revision == revision
+        txn = Txn(revision = revision, created = created, author = author,
+                  treeid = base_txn is not None and base_txn.treeid or None)
+        txn._put(self.cursor)
+        return txn
 
-    def insert(self, dirent):
-        assert isinstance(dirent, Dirent)
-        dirent._put(self.cursor)
-        return dirent
+    def commit_txn(self, txn, revision):
+        txn._commit(self.cursor, revision)
+        NodeRev._commit(self.cursor, txn)
+        Branch._commit(self.cursor, txn)
 
-    def lookup(self, abspath, version):
-        SQLobject._execute(
-            self.cursor,
-            SQL.LOOKUP_ABSPATH_AT_REVISION,
-            [abspath, version])
-        row = self.cursor.fetchone()
-        if row is not None:
-            dirent = Dirent._from_row(row)
-            if not dirent._deleted:
-                return dirent
-        return None
+    def abort_txn(self, txn):
+        txn._abort(self.cursor)
+        NodeRev._cleanup(self.cursor, txn)
+        Branch._cleanup(self.cursor, txn)
+        txn._cleanup(self.cursor)
 
-    def subtree(self, abspath, version):
-        SQLobject._execute(
-            self.cursor,
-            SQL.LIST_SUBTREE_AT_REVISION,
-            [version, self.subtree_pattern(abspath)])
-        for row in self.cursor:
-            yield Dirent._from_row(row)
+    def listdir(self, txn, noderev):
+        # FIXME: Query seems OK but no results returned?
+        return noderev._listdir(self.conn.cursor(), txn)
 
-    def predecessor(self, dirent):
-        assert isinstance(dirent, Dirent)
-        if dirent.origin is None:
-            return None
-        return Dirent._get(self.cursor, dirent.origin)
+    def lookup(self, txn, track=None, relpath=""):
+        return NodeRev._lookup(self.cursor, track, relpath, txn)
 
-    def successors(self, dirent):
-        assert isinstance(dirent, Dirent)
-        SQLobject._execute(
-            self.cursor,
-            SQL.LIST_DIRENT_SUCCESSORS,
-            [dirent.rowid])
-        for row in self.cursor:
-            yield Dirent._from_row(row)
+    def __add(self, txn, track, name, kind, opcode, origintrack=None):
+        assert kind in (NodeRev.FILE, NodeRev.DIR)
+        assert opcode in (NodeRev.ADD, NodeRev.REPLACE)
+        if not txn._uncommitted:
+            raise Error("EREADONLY: txn " + str(txn))
+        if not track.found:
+            raise Error("ENOENT: " +  track.path)
+        if not track.noderev._isdir:
+            raise Error("ENOTDIR: " +  track.path)
 
+        parent = track.noderev
+        oldnode = NodeRev._find(self.cursor, parent.id, name, txn)
+        if opcode == NodeRev.ADD and oldnode is not None:
+            raise Error("EEXIST: " +  track.path + '/' + name)
 
-class Revision(object):
-    def __init__(self, index, version,
-                 created=None, author=None, log=None):
-        self.index = index
-        self.version = version
-        self.revent = index.get_revision(version)
-        self.__created = created
-        self.__author = author
-        self.__log = log
-        self.__context = None
-        index.rollback()
-
-    class __Context(object):
-        def __init__(self, version, connection):
-            self.version = version
-            self.conn = connection
-            self.cursor = connection.cursor()
-            SQLobject._execute(self.cursor, SQL.CREATE_TRANSACTION_CONTEXT)
-
-        def clear(self):
-            SQLobject._execute(self.cursor, SQL.REMOVE_TRANSACTION_CONTEXT)
-
-        def __iter__(self):
-            SQLobject._execute(self.cursor, SQL.LIST_TRANSACTION_RECORDS)
-            for row in self.cursor:
-                dirent = Dirent._from_row(row)
-                dirent.version = self.version
-                yield dirent
-
-        def lookup(self, abspath):
-            SQLobject._execute(self.cursor,
-                               SQL.GET_TRANSACTION_RECORD,
-                               [abspath])
-            row = self.cursor.fetchone()
-            if row is not None:
-                dirent = Dirent._from_row(row)
-                dirent.version = self.version
-                return dirent
-            return None
-
-        def remove(self, abspath, purge=False):
-            target = self.lookup(abspath)
-            if not target:
-                raise Error("txn context: remove nonexistent " + abspath)
-            logging.debug("txn context: remove %s", abspath)
-            SQLobject._execute(self.cursor,
-                               SQL.REMOVE_TRANSACTION_RECORD,
-                               [abspath])
-            if purge:
-                logging.debug("txn context: purge %s/*", abspath)
-                SQLobject._execute(self.cursor,
-                                   SQL.REMOVE_TRANSACTION_SUBTREE,
-                                   [Index.subtree_pattern(abspath)])
-
-        def record(self, dirent, replace=False, purge=False):
-            target = self.lookup(dirent.abspath)
-            if target is not None:
-                if not replace:
-                    raise Error("txn context: record existing "
-                                + dirent.abspath)
-                elif not target.subtree:
-                    raise Error("txn context: replace conflict "
-                                + dirent.abspath)
-                self.remove(target.abspath, purge and target.kind == Dirent.DIR)
-            SQLobject._execute(self.cursor,
-                               SQL.INSERT_TRANSACTION_RECORD,
-                               [dirent.origin, dirent.abspath,
-                                dirent.kind, dirent.opcode, dirent.subtree])
-
-    def __enter__(self):
-        if self.revent is not None:
-            raise Error("revision is read-only")
-        self.__context = self.__Context(self.version, self.index.conn)
-        SQLobject._execute(self.index.cursor, "BEGIN")
-        self.revent = self.index.new_revision(
-            self.version, self.__created, self.__author, self.__log)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        try:
-            if exc_type is None:
-                for dirent in self.__context:
-                    self.index.insert(dirent)
-                    logging.debug("insert: %s", dirent)
-                self.index.commit()
-            else:
-                self.index.rollback()
-        except:
-            self.index.rollback()
-            raise
-        finally:
-            self.__context.clear()
-            self.__context = None
-
-    def __record(self, dirent, replace=False, purge=False):
-        self.__context.record(dirent, replace, purge)
-        logging.debug("record: %s", dirent)
-
-    def __check_writable(self, opcode):
-        if self.__context is None:
-            raise Error(" requires a transaction", action=opcode)
-
-    def __check_not_root(self, abspath, opcode):
-        if abspath.rstrip("/") == "":
-            raise Error(" not allowed on /", action=opcode)
-
-    def __find_target(self, abspath, opcode):
-        target = self.__context.lookup(abspath)
-        if target is not None:
-            if not target.subtree:
-                raise Error(" overrides explicit " + abspath, action=opcode)
-            return target, target.origin
-        target = self.index.lookup(abspath, self.version - 1)
-        if target is None:
-            raise Error(" target does not exist: " + abspath, action=opcode)
-        return target, target.rowid
-
-    def lookup(self, abspath):
-        try:
-            return self.index.lookup(self.index.normpath(abspath),
-                                     self.version)
-        finally:
-            if self.__context is None:
-                self.index.rollback()
-
-    def __add(self, opcode, abspath, kind, frompath, fromver):
-        origin = None
-        if frompath is not None:
-            frompath = self.index.normpath(frompath)
-            fromver = int(fromver)
-            origin = self.index.lookup(frompath, fromver)
-            if origin is None:
-                raise Error(" source does not exist: " + frompath, action=opcode)
+        if origintrack is not None:
+            # Treat add as copy
+            if not origintrack.found:
+                raise Error("ENOENT: (origin) " +  origintrack.path)
+            origin = origintrack.noderev
             if origin.kind != kind:
-                raise Error(" changes the source object kind", action=opcode)
-            origin = origin.rowid
-        dirent = Dirent(origin = origin,
-                        abspath = abspath,
-                        version = self.version,
-                        kind = kind,
-                        opcode = opcode,
-                        subtree = 0)
-        self.__record(dirent,
-                      replace=(opcode == Dirent.REPLACE),
-                      purge=(opcode == Dirent.REPLACE))
-        if frompath is not None and dirent.kind == Dirent.DIR:
-            prefix = dirent.abspath
-            offset = len(frompath)
-            for source in list(self.index.subtree(frompath, fromver)):
-                abspath = prefix + source.abspath[offset:]
-                self.__record(Dirent(origin = source.rowid,
-                                     abspath = abspath,
-                                     version = self.version,
-                                     kind = source.kind,
-                                     opcode = opcode,
-                                     subtree = 1))
+                raise Error("ENOTSAME: origin %c -> copy %c"
+                            % (origin.kind, kind))
+            ### Rename detection heuristics here ...
+            rename = False
+        else:
+            origin = None
+            rename = False
 
-    def add(self, abspath, kind, frompath=None, fromver=None):
-        opcode = Dirent.ADD
-        abspath = self.index.normpath(abspath)
-        self.__check_writable(opcode)
-        self.__check_not_root(abspath, opcode)
-        return self.__add(opcode, abspath, kind, frompath, fromver)
+        if rename:
+            raise NotImplementedError("Rename detection heuristics")
 
-    def replace(self, abspath, kind, frompath=None, fromver=None):
-        opcode = Dirent.REPLACE
-        abspath = self.index.normpath(abspath)
-        self.__check_writable(opcode)
-        self.__check_not_root(abspath, opcode)
-        self.__find_target(abspath, opcode)
-        return self.__add(opcode, abspath, kind, frompath, fromver)
+        track = Track(track)
+        track.bubbledown(self.cursor, txn)
+        if oldnode:
+            if parent.id != track.noderev.id:
+                # Bubbledown changed the track
+                parent = track.noderev
+                oldnode = NodeRev._find(self.cursor, parent.id, name, txn)
+                assert oldnode is not None
+            tombstone = oldnode._revise(oldnode.DELETE, txn)
+            tombstone.parent = parent.id
+            tombstone._put(self.cursor)
+        parent = track.noderev
+        if origin is not None:
+            newnode = origin._branch(self.cursor, parent.id, txn,
+                                     replaced = (oldnode is not None))
+        else:
+            branch = Branch(treeid = txn.treeid)
+            branch._put(self.cursor)
+            newnode = NodeRev(treeid = txn.treeid,
+                              nodeid = branch.nodeid,
+                              branch = branch.id,
+                              parent = parent.id,
+                              kind = kind,
+                              opcode = opcode)
+            newnode.dename = name
+            newnode._put(self.cursor)
+        track.close(newnode)
+        return track
 
-    def modify(self, abspath):
-        opcode = Dirent.MODIFY
-        abspath = self.index.normpath(abspath)
-        self.__check_writable(opcode)
-        target, origin = self.__find_target(abspath, opcode)
-        dirent = Dirent(origin = origin,
-                        abspath = abspath,
-                        version = self.version,
-                        kind = target.kind,
-                        opcode = opcode,
-                        subtree = 0)
-        self.__record(dirent, replace=True)
+    def add(self, txn, track, name, kind, origintrack=None):
+        return self.__add(txn, track, name, kind, NodeRev.ADD, origintrack)
 
-    def delete(self, abspath):
-        opcode = Dirent.DELETE
-        abspath = self.index.normpath(abspath)
-        self.__check_writable(opcode)
-        self.__check_not_root(abspath, opcode)
-        target, origin = self.__find_target(abspath, opcode)
-        dirent = Dirent(origin = origin,
-                        abspath = abspath,
-                        version = self.version,
-                        kind = target.kind,
-                        opcode = opcode,
-                        subtree = 0)
-        self.__record(dirent, replace=True, purge=True)
-        if target.version < self.version and dirent.kind == Dirent.DIR:
-            for source in self.index.subtree(abspath, self.version - 1):
-                self.__record(Dirent(origin = source.rowid,
-                                     abspath = source.abspath,
-                                     version = self.version,
-                                     kind = source.kind,
-                                     opcode = opcode,
-                                     subtree = 1))
+    def replace(self, txn, track, name, kind, origintrack=None):
+        return self.__add(txn, track, name, kind, NodeRev.REPLACE, origintrack)
+
+#    def modify(self, txn, track):
+#        if not txn._uncommitted
+#            raise Error("EREADONLY: txn " + str(txn))
+#        if not track.found:
+#            raise Error("ENOENT: " +  track.path)
+
+
+
+class Tree(object):
+    def __init__(self, index):
+        self.index = index
+        self.context = None
+        index.rollback()
 
 
 def simpletest(database):
     ix = Index(database)
     ix.initialize()
-    with Revision(ix, 1) as rev:
-        rev.add(u'/A', Dirent.DIR)
-        rev.add(u'/A/B', Dirent.DIR)
-        rev.add(u'/A/B/c', Dirent.FILE)
-    with Revision(ix, 2) as rev:
-        rev.add(u'/A/B/d', Dirent.FILE)
-    with Revision(ix, 3) as rev:
-        rev.add(u'/X', Dirent.DIR, u'/A', 1)
-        rev.add(u'/X/B/d', Dirent.FILE, u'/A/B/d', 2)
-    with Revision(ix, 4) as rev:
-        # rev.rename(u'/X/B/d', u'/X/B/x')
-        rev.delete(u'/X/B/d')
-        rev.add(u'/X/B/x', Dirent.FILE, u'/X/B/d', 3)
-    with Revision(ix, 5) as rev:
-        rev.delete(u'/A')
 
-    for r in (0, 1, 2, 3, 4, 5):
-        print "Revision: %d" % r
-        for dirent in list(ix.subtree('/', r)):
-            origin = ix.predecessor(dirent)
-            if origin is None:
-                print "   " + str(dirent)
-            else:
-                print "   %-17s  <- %s" % (dirent, origin)
+    try:
+        print "Lookup root"
+        tx = ix.get_txn()
+        print "transaction:", tx
+        root = ix.lookup(tx)
+        print "root track:", root
+        print "root noderev", root.noderev
 
-    dirent = ix.lookup('/A/B/c', 4)
-    print "/A/B/c@4 -> %s@%d" % (dirent.abspath, dirent.version)
-    for succ in ix.successors(dirent):
-        print "%11s %s %s@%d" % (
-            "", succ._deleted and "x_x" or "-->",
-            succ.abspath, succ.version)
+        print "Add A/foo"
+        tx = ix.new_txn(0)
+        print "transaction:", tx
+        parent = ix.add(tx, root, "A", NodeRev.DIR)
+        print "A track:", parent
+        print "A noderev", parent.noderev
 
-    ix.close()
+        node = ix.add(tx, parent, "foo", NodeRev.FILE)
+        print "foo track:", node
+        print "foo noderev", node.noderev
+        ix.commit_txn(tx, 1)
+        ix.commit()
+
+        print "List contents"
+        tx = ix.get_txn()
+        print "transaction:", tx
+        root = ix.lookup(tx)
+        print str(root.noderev)
+        for n1 in ix.listdir(tx, root.noderev):
+            print " ", str(n1)
+            if n1._isdir:
+                for n2 in ix.listdir(tx, n1):
+                    print "   ", str(n2)
+
+        print "Lookup A"
+        track = ix.lookup(tx, None, "A")
+        print str(track.noderev)
+
+        print "Lookup A/foo"
+        track = ix.lookup(tx, None, "A/foo")
+        print str(track.noderev)
+    finally:
+        ix.close()
 
 def loggedsimpletest(database):
     import sys
-    logging.basicConfig(level=logging.DEBUG, #SQLobject.LOGLEVEL,
+    logging.basicConfig(level=SQL.LOGLEVEL,
                         stream=sys.stderr)
     simpletest(database)

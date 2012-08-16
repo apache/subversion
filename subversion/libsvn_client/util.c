@@ -169,66 +169,32 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
 }
 
 svn_error_t *
-svn_client__path_relative_to_root(const char **rel_path,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *abspath_or_url,
-                                  const char *repos_root,
-                                  svn_boolean_t include_leading_slash,
-                                  svn_ra_session_t *ra_session,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
+                             const char *wc_abspath,
+                             svn_wc_context_t *wc_ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
-  const char *repos_relpath;
+  const char *relpath;
 
-  /* If we have a WC path... */
-  if (! svn_path_is_url(abspath_or_url))
-    {
-      /* ... query it directly. */
-      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
-                                             wc_ctx,
-                                             abspath_or_url,
-                                             result_pool,
-                                             scratch_pool));
+  *base_p = apr_palloc(result_pool, sizeof(**base_p));
 
-      SVN_ERR_ASSERT(repos_relpath != NULL);
-    }
-  else if (repos_root != NULL)
+  SVN_ERR(svn_wc__node_get_base(&(*base_p)->rev,
+                                &relpath,
+                                &(*base_p)->repos_root_url,
+                                &(*base_p)->repos_uuid,
+                                wc_ctx, wc_abspath,
+                                result_pool, scratch_pool));
+  if ((*base_p)->repos_root_url && relpath)
     {
-      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
-                                            result_pool);
-      if (!repos_relpath)
-        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                 _("URL '%s' is not a child of repository "
-                                   "root URL '%s'"),
-                                 abspath_or_url, repos_root);
+      (*base_p)->url = svn_path_url_add_component2(
+                           (*base_p)->repos_root_url, relpath, result_pool);
     }
   else
     {
-      svn_error_t *err;
-
-      SVN_ERR_ASSERT(ra_session != NULL);
-
-      /* Ask the RA layer to create a relative path for us */
-      err = svn_ra_get_path_relative_to_root(ra_session, &repos_relpath,
-                                             abspath_or_url, scratch_pool);
-
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-            return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, err,
-                                     _("URL '%s' is not inside repository"),
-                                     abspath_or_url);
-
-          return svn_error_trace(err);
-        }
+      *base_p = NULL;
     }
-
-  if (include_leading_slash)
-    *rel_path = apr_pstrcat(result_pool, "/", repos_relpath, NULL);
-  else
-    *rel_path = repos_relpath;
-
-   return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -296,17 +262,6 @@ svn_client_get_repos_root(const char **repos_root,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool)
-{
-  return svn_error_trace(err);
-}
-
-
 const svn_opt_revision_t *
 svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
                                     const char *path_or_url)
@@ -365,36 +320,8 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 struct shim_callbacks_baton
 {
   svn_wc_context_t *wc_ctx;
-  const char *anchor_abspath;
+  apr_hash_t *relpath_map;
 };
-
-static svn_error_t *
-rationalize_shim_path(const char **local_abspath,
-                      struct shim_callbacks_baton *scb,
-                      const char *path,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL */
-      const char *wcroot_abspath;
-      const char *wcroot_url;
-      const char *relpath;
-
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
-                                  scb->anchor_abspath,
-                                  scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
-                                   scratch_pool, scratch_pool));
-      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
-      *local_abspath = svn_dirent_join(wcroot_abspath, relpath, result_pool);
-    }
-  else
-    *local_abspath = svn_dirent_join(scb->anchor_abspath, path, result_pool);
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 fetch_props_func(apr_hash_t **props,
@@ -407,16 +334,12 @@ fetch_props_func(apr_hash_t **props,
   struct shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *props = apr_hash_make(result_pool);
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
                                     result_pool, scratch_pool));
@@ -438,16 +361,12 @@ fetch_kind_func(svn_kind_t *kind,
   svn_node_kind_t node_kind;
   const char *local_abspath;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *kind = svn_kind_unknown;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
@@ -470,16 +389,12 @@ fetch_base_func(const char **filename,
   svn_stream_t *temp_stream;
   svn_error_t *err;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *filename = NULL;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
@@ -504,7 +419,7 @@ fetch_base_func(const char **filename,
 
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
-                               const char *anchor_abspath,
+                               apr_hash_t *relpath_map,
                                apr_pool_t *result_pool)
 {
   svn_delta_shim_callbacks_t *callbacks =
@@ -512,7 +427,10 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
   struct shim_callbacks_baton *scb = apr_pcalloc(result_pool, sizeof(*scb));
 
   scb->wc_ctx = wc_ctx;
-  scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
+  if (relpath_map)
+    scb->relpath_map = relpath_map;
+  else
+    scb->relpath_map = apr_hash_make(result_pool);
 
   callbacks->fetch_props_func = fetch_props_func;
   callbacks->fetch_kind_func = fetch_kind_func;

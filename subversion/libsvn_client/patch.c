@@ -47,6 +47,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -1019,6 +1020,7 @@ readline(target_content_t *content,
 {
   svn_stringbuf_t *line_raw;
   const char *eol_str;
+  svn_linenum_t max_line = (svn_linenum_t)content->lines->nelts + 1;
 
   if (content->eof || content->readline == NULL)
     {
@@ -1026,8 +1028,8 @@ readline(target_content_t *content,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_ASSERT(content->current_line <= content->lines->nelts + 1);
-  if (content->current_line == content->lines->nelts + 1)
+  SVN_ERR_ASSERT(content->current_line <= max_line);
+  if (content->current_line == max_line)
     {
       apr_off_t offset;
 
@@ -1072,7 +1074,7 @@ seek_to_line(target_content_t *content, svn_linenum_t line,
   saved_line = content->current_line;
   saved_eof = content->eof;
 
-  if (line <= content->lines->nelts)
+  if (line <= (svn_linenum_t)content->lines->nelts)
     {
       apr_off_t offset;
 

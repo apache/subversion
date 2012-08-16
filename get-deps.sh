@@ -25,10 +25,9 @@
 
 APR=apr-1.4.6
 APR_UTIL=apr-util-1.4.1
-NEON=neon-0.29.6
 SERF=serf-1.0.1
-ZLIB=zlib-1.2.6
-SQLITE_VERSION=3.7.10
+ZLIB=zlib-1.2.7
+SQLITE_VERSION=3.7.12
 SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
 
 HTTPD=httpd-2.2.22
@@ -49,35 +48,27 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | neon | serf | zlib | sqlite ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite ] ..."
     exit $1
 }
 
 # getters
 get_apr() {
     cd $TEMPDIR
-    $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
-    $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    test -d $BASEDIR/apr      || $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
+    test -d $BASEDIR/apr-util || $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     cd $BASEDIR
 
-    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
+    test -d $BASEDIR/apr      || bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
+    test -d $BASEDIR/apr-util || bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
 
-    mv $APR apr
-    mv $APR_UTIL apr-util
-}
-
-get_neon() {
-    cd $TEMPDIR
-    $HTTP_FETCH http://webdav.org/neon/$NEON.tar.gz
-    cd $BASEDIR
-
-    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
-
-    mv $NEON neon
+    test -d $BASEDIR/apr      || mv $APR apr
+    test -d $BASEDIR/apr-util || mv $APR_UTIL apr-util
 }
 
 get_serf() {
+    test -d $BASEDIR/serf && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
     cd $BASEDIR
@@ -88,6 +79,8 @@ get_serf() {
 }
 
 get_zlib() {
+    test -d $BASEDIR/zlib && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
     cd $BASEDIR
@@ -98,6 +91,8 @@ get_zlib() {
 }
 
 get_sqlite() {
+    test -d $BASEDIR/sqlite-amalgamation && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
     cd $BASEDIR
@@ -124,7 +119,6 @@ get_deps() {
       done
     else
       get_apr
-      get_neon
       get_serf
       get_zlib
       get_sqlite

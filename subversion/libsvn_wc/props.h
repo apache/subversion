@@ -91,32 +91,24 @@ svn_wc__internal_propget(const svn_string_t **value,
    into the .prej file later. Modify base properties unconditionally,
    if BASE_MERGE is TRUE, they do not generate conficts.
 
-   TODO ### LEFT_VERSION and RIGHT_VERSION ...
-
    TODO ### DRY_RUN ...
-
-   TODO ### CONFLICT_FUNC/CONFLICT_BATON ...
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
 svn_error_t *
-svn_wc__merge_props(svn_skel_t **work_items,
+svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,
                     apr_hash_t **new_pristine_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_kind_t kind,
-                    const svn_wc_conflict_version_t *left_version,
-                    const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
                     apr_hash_t *pristine_props,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
-                    svn_wc_conflict_resolver_func2_t conflict_func,
-                    void *conflict_baton,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *result_pool,
@@ -151,13 +143,6 @@ svn_wc__get_actual_props(apr_hash_t **props,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__create_prejfile(const char **tmp_prejfile_abspath,

@@ -49,6 +49,7 @@
 #include "private/svn_opt_private.h"
 
 #include "opt.h"
+#include "sysinfo.h"
 #include "svn_private_config.h"
 
 
@@ -1041,6 +1042,20 @@ svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
   /* Auto-escape some ASCII characters. */
   target = svn_path_uri_autoescape(target, pool);
 
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
+  /* Allow using file:///C:\users\me/repos on Windows, like we did in 1.6 */
+  if (strchr(target, SVN_PATH_LOCAL_SEPARATOR))
+    {
+      char *p = apr_pstrdup(pool, target);
+      target = p;
+
+      /* Convert all local-style separators to the canonical ones. */
+      for (; *p != '\0'; ++p)
+        if (*p == SVN_PATH_LOCAL_SEPARATOR)
+          *p = '/';
+    }
+#endif
+
   /* Verify that no backpaths are present in the URL. */
   if (svn_path_is_backpath_present(target))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
@@ -1091,14 +1106,16 @@ svn_error_t *
 svn_opt__print_version_info(const char *pgm_name,
                             const char *footer,
                             svn_boolean_t quiet,
+                            svn_boolean_t verbose,
                             apr_pool_t *pool)
 {
   if (quiet)
     return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
-                                     "   compiled %s, %s\n\n"), pgm_name,
-                             SVN_VERSION, __DATE__, __TIME__));
+                                     "   compiled %s, %s on %s\n\n"),
+                             pgm_name, SVN_VERSION, __DATE__, __TIME__,
+                             SVN_BUILD_HOST));
   SVN_ERR(svn_cmdline_fputs(
              _("Copyright (C) 2012 The Apache Software Foundation.\n"
                "This software consists of contributions made by many "
@@ -1113,15 +1130,38 @@ svn_opt__print_version_info(const char *pgm_name,
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", footer));
     }
 
+  if (verbose)
+    {
+      const char *const host = svn_sysinfo__canonical_host(pool);
+      const char *const relname = svn_sysinfo__release_name(pool);
+      const char *const dlibs = svn_sysinfo__loaded_libs(pool);
+
+      SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
+      if (relname)
+        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"
+                                           "  - %s\n"),
+                                   host, relname));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"), host));
+
+      if (dlibs)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("* loaded shared libraries:\n"),
+                                    stdout, pool));
+          SVN_ERR(svn_cmdline_fputs(dlibs, stdout, pool));
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_opt_print_help3(apr_getopt_t *os,
+svn_opt_print_help4(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
                     svn_boolean_t quiet,
+                    svn_boolean_t verbose,
                     const char *version_footer,
                     const char *header,
                     const svn_opt_subcommand_desc2_t *cmd_table,
@@ -1147,8 +1187,8 @@ svn_opt_print_help3(apr_getopt_t *os,
         }
     }
   else if (print_version)   /* just --version */
-    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
-                                        pool));
+    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                        quiet, verbose, pool));
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help2(header,
                                 cmd_table,

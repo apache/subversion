@@ -217,7 +217,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                            &(propstring->len)));
 
-  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
   SVN_ERR(svn_stream_close(stdout_stream));
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
@@ -332,7 +332,7 @@ dump_revision_header(svn_ra_session_t *session,
   /* The properties */
   SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                            &(propstring->len)));
-  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -505,8 +505,8 @@ version(const char *progname,
                          pool);
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
-  return svn_opt_print_help3(NULL, ensure_appname(progname, pool),
-                             TRUE, quiet, version_footer->data,
+  return svn_opt_print_help4(NULL, ensure_appname(progname, pool),
+                             TRUE, quiet, FALSE, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -579,9 +579,9 @@ help_cmd(apr_getopt_t *os,
       "\n"
       "Available subcommands:\n");
 
-  return svn_opt_print_help3(os, "svnrdump", FALSE, FALSE, NULL, header,
-                             svnrdump__cmd_table, svnrdump__options, NULL,
-                             NULL, pool);
+  return svn_opt_print_help4(os, "svnrdump", FALSE, FALSE, FALSE, NULL,
+                             header, svnrdump__cmd_table, svnrdump__options,
+                             NULL, NULL, pool);
 }
 
 /* Examine the OPT_BATON's 'start_revision' and 'end_revision'

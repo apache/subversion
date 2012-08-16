@@ -61,7 +61,7 @@ def basic_reintegrate(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A/mu.  Commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath('A_COPY/mu'),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
@@ -77,7 +77,7 @@ def basic_reintegrate(sbox):
                                         None, None, None, None, None, True)
 
   # Merge from trunk to branch (ie, r3-6), using normal cherry-harvest.
-  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  A_COPY_path = sbox.ospath('A_COPY')
   expected_output = wc.State(A_COPY_path, {
     'D/H/psi'   : Item(status='U '),
     'D/G/rho'   : Item(status='U '),
@@ -172,7 +172,7 @@ def basic_reintegrate(sbox):
   # *finally*, actually run merge --reintegrate in trunk with the
   # branch URL.  This should bring in the mu change and the tauprime
   # change.
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   expected_output = wc.State(A_path, {
     'mu'           : Item(status='U '),
     })
@@ -230,7 +230,7 @@ def basic_reintegrate(sbox):
                                      sbox.repo_url + '/A_MOVED',
                                      '-m', 'Copy A to A_MOVED')
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  A_MOVED_path = os.path.join(wc_dir, "A_MOVED")
+  A_MOVED_path = sbox.ospath('A_MOVED')
   expected_output = wc.State(A_MOVED_path, {
     'mu'           : Item(status='U '),
     })
@@ -285,7 +285,7 @@ def reintegrate_with_rename(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A/mu.  Commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath('A_COPY/mu'),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
@@ -301,7 +301,7 @@ def reintegrate_with_rename(sbox):
                                         None, None, None, None, None, True)
 
   # Merge from trunk to branch (ie, r3-6), using normal cherry-harvest.
-  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  A_COPY_path = sbox.ospath('A_COPY')
   expected_output = wc.State(A_COPY_path, {
     'D/H/psi'   : Item(status='U '),
     'D/G/rho'   : Item(status='U '),
@@ -452,7 +452,7 @@ def reintegrate_with_rename(sbox):
   # *finally*, actually run merge --reintegrate in trunk with the
   # branch URL.  This should bring in the mu change and the tauprime
   # change.
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   expected_output = wc.State(A_path, {
     'mu'           : Item(status='U '),
     'D/G/tauprime' : Item(status='A '),
@@ -527,7 +527,7 @@ def reintegrate_branch_never_merged_to(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A_COPY/mu.  Commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath('A_COPY/mu'),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
@@ -570,7 +570,7 @@ def reintegrate_branch_never_merged_to(sbox):
   # *finally*, actually run merge --reintegrate in trunk with the
   # branch URL.  This should bring in the mu change and the tauprime
   # change.
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   expected_output = wc.State(A_path, {
     'mu'           : Item(status='U '),
     'D/G/tauprime' : Item(status='A '),
@@ -655,7 +655,7 @@ def reintegrate_fail_on_modified_wc(sbox):
   "merge --reintegrate should fail in modified wc"
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
@@ -671,7 +671,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
   "merge --reintegrate should fail in mixed-rev wc"
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, expected_status = set_up_branch(sbox)
   # Make and commit a change, in order to get a mixed-rev wc.
@@ -694,7 +694,7 @@ def reintegrate_fail_on_switched_wc(sbox):
   "merge --reintegrate should fail in switched wc"
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   G_path = os.path.join(A_path, "D", "G")
   switch_url = sbox.repo_url + "/A/D/H"
   expected_disk, expected_status = set_up_branch(sbox)
@@ -749,11 +749,11 @@ def reintegrate_on_shallow_wc(sbox):
   expected_disk, expected_status = set_up_branch(sbox, branch_only = True)
 
   # Some paths we'll care about
-  A_path         = os.path.join(wc_dir, "A")
-  A_D_path       = os.path.join(wc_dir, "A", "D")
-  mu_COPY_path   = os.path.join(wc_dir, "A_COPY", "mu")
-  psi_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
-  A_COPY_path    = os.path.join(wc_dir, "A_COPY")
+  A_path         = sbox.ospath('A')
+  A_D_path       = sbox.ospath('A/D')
+  mu_COPY_path   = sbox.ospath('A_COPY/mu')
+  psi_COPY_path  = sbox.ospath('A_COPY/D/H/psi')
+  A_COPY_path    = sbox.ospath('A_COPY')
 
   # r3 - Make a change on the A_COPY branch that will be
   # reintegrated back to A.
@@ -854,7 +854,7 @@ def reintegrate_fail_on_stale_source(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox)
-  A_path = os.path.join(wc_dir, "A")
+  A_path = sbox.ospath('A')
   mu_path = os.path.join(A_path, "mu")
   svntest.main.file_append(mu_path, 'some text appended to mu\n')
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
@@ -931,7 +931,7 @@ def merge_file_with_space_in_its_path(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  some_dir = os.path.join(wc_dir, "some dir")
+  some_dir = sbox.ospath('some dir')
   file1 = os.path.join(some_dir, "file1")
   file2 = os.path.join(some_dir, "file2")
 
@@ -963,36 +963,59 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   "merge --reintegrate with subtree mergeinfo"
 
   # Create a standard greek tree, branch A to A_COPY in r2, A to A_COPY_2 in
-  # r3, A to A_COPY_3 in r3, and then make some changes under A in r5-8.
+  # r3, A to A_COPY_3 in r4, and then make some changes under A in r5-8.
+  #
+  #   A_COPY_3      4---------
+  #                /
+  #   A     -1--------5-6-7-8-
+  #            \ \
+  #   A_COPY    2-\-----------
+  #                \
+  #   A_COPY_2      3---------
+
   sbox.build()
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox, False, 3)
 
   # Some paths we'll care about
-  gamma_COPY_3_path     = os.path.join(wc_dir, "A_COPY_3", "D", "gamma")
-  D_path                = os.path.join(wc_dir, "A", "D")
-  gamma_path            = os.path.join(wc_dir, "A", "D", "gamma")
-  mu_COPY_2_path        = os.path.join(wc_dir, "A_COPY_2", "mu")
-  mu_path               = os.path.join(wc_dir, "A", "mu")
-  mu_COPY_path          = os.path.join(wc_dir, "A_COPY", "mu")
-  A_COPY_path           = os.path.join(wc_dir, "A_COPY")
-  D_COPY_path           = os.path.join(wc_dir, "A_COPY")
-  beta_COPY_path        = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
-  gamma_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "gamma")
-  gamma_moved_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "gamma_moved")
-  gamma_moved_path      = os.path.join(wc_dir, "A", "D", "gamma_moved")
-  rho_COPY_path         = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  omega_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
-  psi_COPY_path         = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
-  D_COPY_path           = os.path.join(wc_dir, "A_COPY", "D")
-  alpha_COPY_path       = os.path.join(wc_dir, "A_COPY", "B", "E", "alpha")
-  A_path                = os.path.join(wc_dir, "A")
+  gamma_COPY_3_path     = sbox.ospath('A_COPY_3/D/gamma')
+  D_path                = sbox.ospath('A/D')
+  gamma_path            = sbox.ospath('A/D/gamma')
+  mu_COPY_2_path        = sbox.ospath('A_COPY_2/mu')
+  mu_path               = sbox.ospath('A/mu')
+  mu_COPY_path          = sbox.ospath('A_COPY/mu')
+  A_COPY_path           = sbox.ospath('A_COPY')
+  D_COPY_path           = sbox.ospath('A_COPY')
+  beta_COPY_path        = sbox.ospath('A_COPY/B/E/beta')
+  gamma_COPY_path       = sbox.ospath('A_COPY/D/gamma')
+  gamma_moved_COPY_path = sbox.ospath('A_COPY/D/gamma_moved')
+  gamma_moved_path      = sbox.ospath('A/D/gamma_moved')
+  rho_COPY_path         = sbox.ospath('A_COPY/D/G/rho')
+  omega_COPY_path       = sbox.ospath('A_COPY/D/H/omega')
+  psi_COPY_path         = sbox.ospath('A_COPY/D/H/psi')
+  D_COPY_path           = sbox.ospath('A_COPY/D')
+  alpha_COPY_path       = sbox.ospath('A_COPY/B/E/alpha')
+  A_path                = sbox.ospath('A')
 
   # Now set up a situation where we try to reintegrate A_COPY back to A but
   # both of these paths have subtree mergeinfo.  Iff the mergeinfo on A_COPY
   # reflects that the same revisions have been applied across all of A_COPY,
-  # then the reintegrate merge should succeed.
+  # then the reintegrate merge should succeed.  We'll try that case first.
   #
+  #   A_COPY_3       4-------[9]--
+  #                 /          \
+  #                /            \
+  #   A     -1--------5-6-7-8---10-------------------WC--
+  #            \ \              (D)         \        /reint.
+  #             \ \                    (mu)  \      /
+  #   A_COPY     2-\--------------------12---13--14------
+  #                 \                   /
+  #                  \                 /
+  #   A_COPY_2        3-------------[11]--
+  #
+  #   Key: [#] = cherry-picked revision; (foo) = merge of subtree 'foo'
+  #   Note: These diagrams show an overview and do not capture every detail.
+
   # r9 - Make a text change to A_COPY_3/D/gamma
   svntest.main.file_write(gamma_COPY_3_path, "New content")
   expected_output = wc.State(wc_dir, {'A_COPY_3/D/gamma' : Item(verb='Sending')})
@@ -1166,6 +1189,17 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # merge should fail, but should provide a helpful message as to where the
   # problems are.
   #
+  #   A_COPY_3        4-------[9]--
+  #                  /          \
+  #                 /            \          [-8]___
+  #   A     -1---------5-6-7-8---10----------------\-------WC--
+  #            \ \               (D)        \       \      /reint.
+  #             \ \                    (mu)  \       \    /
+  #   A_COPY     2-\--------------------12---13--14--15--------
+  #                 \                   /            (D)
+  #                  \                 /
+  #   A_COPY_2        3-------------[11]--
+
   # First revert the previous reintegrate merge
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '-R', wc_dir)
@@ -1233,6 +1267,18 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #
   #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
   #      of 'trunk' was previously merged to 'branch'
+  #
+  #                                       Step:   A   B    C   D    E
+  #   A_COPY_3    ---[9]--
+  #              /     \                      (D/g.->
+  #             /       \          [-8]___     D/g.m.) (D/g.m.)
+  #   A     ------------10----------------\------16-------18--------WC
+  #          \\         (D)        \       \        \        \      /reint.
+  #           \\              (mu)  \       \        \        \    /
+  #   A_COPY   -\--------------12---13--14--15-------17-------19------
+  #              \             /            (D)
+  #               \           /
+  #   A_COPY_2     --------[11]--
 
   # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
   # r874258 WC-to-WC moves won't create mergeinfo on the dest if the source
@@ -1403,11 +1449,11 @@ def multiple_reintegrates_from_the_same_branch(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Some paths we'll care about
-  A_path              = os.path.join(wc_dir, "A")
-  mu_path             = os.path.join(wc_dir, "A", "mu")
-  A_COPY_path         = os.path.join(wc_dir, "A_COPY")
-  psi_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
-  Feature_branch_path = os.path.join(wc_dir, "A_FEATURE_BRANCH")
+  A_path              = sbox.ospath('A')
+  mu_path             = sbox.ospath('A/mu')
+  A_COPY_path         = sbox.ospath('A_COPY')
+  psi_COPY_path       = sbox.ospath('A_COPY/D/H/psi')
+  Feature_branch_path = sbox.ospath('A_FEATURE_BRANCH')
   Feature_beta_path   = os.path.join(wc_dir, "A_FEATURE_BRANCH", "B", "E",
                                      "beta")
 
@@ -1457,7 +1503,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
   # r12 - Do a --record-only merge from 'A' to the feature branch so we
   # don't try to merge r11 from trunk during the next sync merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c11',
                                      '--record-only',
                                      sbox.repo_url + '/A',
                                      Feature_branch_path)
@@ -1593,11 +1639,11 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=0)
 
   # Some paths we'll care about
-  A_path       = os.path.join(wc_dir, "A")
-  A2_path      = os.path.join(wc_dir, "A2")
-  A2_B_path    = os.path.join(wc_dir, "A2", "B")
-  A2_1_path    = os.path.join(wc_dir, "A2.1")
-  A2_1_mu_path = os.path.join(wc_dir, "A2.1", "mu")
+  A_path       = sbox.ospath('A')
+  A2_path      = sbox.ospath('A2')
+  A2_B_path    = sbox.ospath('A2/B')
+  A2_1_path    = sbox.ospath('A2.1')
+  A2_1_mu_path = sbox.ospath('A2.1/mu')
 
   # r6 Copy A to A2 and then manually set some self-referential mergeinfo on
   # A2/B and A2.
@@ -1723,12 +1769,12 @@ def reintegrate_with_subtree_merges(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Some paths we'll care about
-  A_path        = os.path.join(wc_dir, "A")
-  mu_COPY_path  = os.path.join(wc_dir, "A_COPY", "mu")
-  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
-  B_COPY_path   = os.path.join(wc_dir, "A_COPY", "B")
-  rho_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  H_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H")
+  A_path        = sbox.ospath('A')
+  mu_COPY_path  = sbox.ospath('A_COPY/mu')
+  A_COPY_path   = sbox.ospath('A_COPY')
+  B_COPY_path   = sbox.ospath('A_COPY/B')
+  rho_COPY_path = sbox.ospath('A_COPY/D/G/rho')
+  H_COPY_path   = sbox.ospath('A_COPY/D/H')
 
   # r7 - Make a change on the A_COPY branch that will be
   # reintegrated back to A.
@@ -1852,13 +1898,13 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  A_path           = os.path.join(wc_dir, "A")
-  nu_path          = os.path.join(wc_dir, "A", "C", "nu")
-  mu_path          = os.path.join(wc_dir, "A", "mu")
-  A_COPY_path      = os.path.join(wc_dir, "A_COPY")
-  lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
-  A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
-  nu_COPY_2_path   = os.path.join(wc_dir, "A_COPY_2", "C", "nu")
+  A_path           = sbox.ospath('A')
+  nu_path          = sbox.ospath('A/C/nu')
+  mu_path          = sbox.ospath('A/mu')
+  A_COPY_path      = sbox.ospath('A_COPY')
+  lambda_COPY_path = sbox.ospath('A_COPY/B/lambda')
+  A_COPY_2_path    = sbox.ospath('A_COPY_2')
+  nu_COPY_2_path   = sbox.ospath('A_COPY_2/C/nu')
 
   # Branch A@1 to A_COPY and A_COPY_2 in r2 and r3 respectively.
   # Make some changes under 'A' in r4-7.
@@ -2048,10 +2094,10 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
-  mu_path          = os.path.join(wc_dir, "A", "mu")
-  A_COPY_path      = os.path.join(wc_dir, "A_COPY")
-  A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
+  lambda_COPY_path = sbox.ospath('A_COPY/B/lambda')
+  mu_path          = sbox.ospath('A/mu')
+  A_COPY_path      = sbox.ospath('A_COPY')
+  A_COPY_2_path    = sbox.ospath('A_COPY_2')
 
   # Branch A@1 to A_COPY r2
   # Branch A@1 to A_COPY_2 in r3.
@@ -2207,14 +2253,14 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   sbox.build()
   wc_dir=sbox.wc_dir
 
-  mu_path         = os.path.join(sbox.wc_dir, "A", "mu")
-  lambda_path     = os.path.join(sbox.wc_dir, "A", "B", "lambda")
-  alpha_path      = os.path.join(sbox.wc_dir, "A", "B", "E", "alpha")
-  beta_path       = os.path.join(sbox.wc_dir, "A", "B", "E", "beta")
-  A_path          = os.path.join(sbox.wc_dir, "A")
-  A_path_1        = os.path.join(sbox.wc_dir, "A@1")
-  A_COPY_path     = os.path.join(sbox.wc_dir, "A_COPY")
-  A_COPY_psi_path = os.path.join(sbox.wc_dir, "A_COPY", "D", "H", "psi")
+  mu_path         = sbox.ospath('A/mu')
+  lambda_path     = sbox.ospath('A/B/lambda')
+  alpha_path      = sbox.ospath('A/B/E/alpha')
+  beta_path       = sbox.ospath('A/B/E/beta')
+  A_path          = sbox.ospath('A')
+  A_path_1        = sbox.ospath('A@1')
+  A_COPY_path     = sbox.ospath('A_COPY')
+  A_COPY_psi_path = sbox.ospath('A_COPY/D/H/psi')
   A_COPY_url      = sbox.repo_url + "/A_COPY"
 
   # Make 2 commits under /A pushing the repo to rev3
@@ -2297,7 +2343,7 @@ def no_source_subtree_mergeinfo(sbox):
   sbox.build()
   wc_dir=sbox.wc_dir
 
-  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+  svntest.main.file_write(sbox.ospath('A/B/E/alpha'),
                           'AAA\n' +
                           'BBB\n' +
                           'CCC\n')
@@ -2306,32 +2352,32 @@ def no_source_subtree_mergeinfo(sbox):
 
   # Create branch-1
   svntest.main.run_svn(None, 'copy',
-                       os.path.join(wc_dir, 'A', 'B'),
-                       os.path.join(wc_dir, 'A', 'B1'))
+                       sbox.ospath('A/B'),
+                       sbox.ospath('A/B1'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
 
   # Create branch-1
   svntest.main.run_svn(None, 'copy',
-                       os.path.join(wc_dir, 'A', 'B'),
-                       os.path.join(wc_dir, 'A', 'B2'))
+                       sbox.ospath('A/B'),
+                       sbox.ospath('A/B2'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
 
   # Change on trunk
-  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+  svntest.main.file_write(sbox.ospath('A/B/E/alpha'),
                           'AAAxx\n' +
                           'BBB\n' +
                           'CCC\n')
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
 
   # Change on branch-1
-  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B1', 'E', 'alpha'),
+  svntest.main.file_write(sbox.ospath('A/B1/E/alpha'),
                           'AAA\n' +
                           'BBBxx\n' +
                           'CCC\n')
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
 
   # Change on branch-2
-  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha'),
+  svntest.main.file_write(sbox.ospath('A/B2/E/alpha'),
                           'AAA\n' +
                           'BBB\n' +
                           'CCCxx\n')
@@ -2339,25 +2385,25 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Merge trunk to branch-1
-  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B1'))
+  svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B1'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Reintegrate branch-1 subtree to trunk subtree
   svntest.main.run_svn(None, 'merge', '--reintegrate',
-                       '^/A/B1/E', os.path.join(wc_dir, 'A', 'B', 'E'))
+                       '^/A/B1/E', sbox.ospath('A/B/E'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Merge trunk to branch-2
-  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B2'))
+  svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Reverse merge branch-1 subtree to branch-2 subtree, this removes
   # the subtree mergeinfo from branch 2
   svntest.main.run_svn(None, 'merge', '-r8:2',
-                       '^/A/B1/E', os.path.join(wc_dir, 'A', 'B2', 'E'))
+                       '^/A/B1/E', sbox.ospath('A/B2/E'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
@@ -2366,7 +2412,7 @@ def no_source_subtree_mergeinfo(sbox):
                                      sbox.repo_url + '/A/B2/E')
 
   # Merge trunk to branch-2
-  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B2'))
+  svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
@@ -2378,14 +2424,14 @@ def no_source_subtree_mergeinfo(sbox):
   # The error message states revisions /A/B/E:3-11 are missing from
   # /A/B2/E and yet the mergeinfo on /A/B2 is /A/B:3-11 and /A/B2/E
   # has no mergeinfo.
-  expected_output = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+  expected_output = wc.State(sbox.ospath('A/B'), {
       'E'       : Item(status=' U'),
       'E/alpha' : Item(status='U '),
       })
-  expected_mergeinfo = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+  expected_mergeinfo = wc.State(sbox.ospath('A/B'), {
       '' : Item(status=' U'),
       })
-  expected_elision = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+  expected_elision = wc.State(sbox.ospath('A/B'), {
       })
   expected_disk = wc.State('', {
       ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:4-12'}),
@@ -2397,18 +2443,18 @@ def no_source_subtree_mergeinfo(sbox):
       'F'       : Item(),
       'lambda'  : Item("This is the file 'lambda'.\n"),
       })
-  expected_skip = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+  expected_skip = wc.State(sbox.ospath('A/B'), {
       })
-  svntest.actions.run_and_verify_merge(os.path.join(wc_dir, 'A', 'B'),
+  svntest.actions.run_and_verify_merge(sbox.ospath('A/B'),
                                        None, None, '^/A/B2', None,
                                        expected_output, expected_mergeinfo,
                                        expected_elision, expected_disk,
                                        None, expected_skip,
                                        None, None, None, None, None,
                                        1, 1, '--reintegrate',
-                                       os.path.join(wc_dir, 'A', 'B'))
+                                       sbox.ospath('A/B'))
   # For 1.6 testsuite use:
-  # svntest.actions.run_and_verify_merge(os.path.join(wc_dir, 'A', 'B'),
+  # svntest.actions.run_and_verify_merge(sbox.ospath('A/B'),
   #                                      None, None, '^/A/B2',
   #                                      expected_output,
   #                                      expected_disk,
@@ -2427,10 +2473,10 @@ def reintegrate_replaced_source(sbox):
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox)
 
-  A_path         = os.path.join(sbox.wc_dir, "A")
-  A_COPY_path    = os.path.join(sbox.wc_dir, "A_COPY")
-  beta_COPY_path = os.path.join(sbox.wc_dir, "A_COPY", "B", "E", "beta")
-  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")
+  A_path         = sbox.ospath('A')
+  A_COPY_path    = sbox.ospath('A_COPY')
+  beta_COPY_path = sbox.ospath('A_COPY/B/E/beta')
+  mu_COPY_path   = sbox.ospath('A_COPY/mu')
 
   # Using cherrypick merges, simulate a series of sync merges from A to
   # A_COPY with a replace of A_COPY along the way.
@@ -2601,6 +2647,46 @@ def no_op_reintegrate(sbox):
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        sbox.repo_url + '/A_COPY', A_path)
 
+#----------------------------------------------------------------------
+def renamed_branch_reintegrate(sbox):
+  """reintegrate a branch that has been renamed"""
+
+  # The idea of this test is to ensure that the reintegrate merge is able to
+  # cope when one or both of the branches have been renamed.
+  #
+  # A       -1-----3-4-5-6----------------------9--------
+  #            \              \                / reintegrate
+  # A_COPY      2--------------7--------      /
+  #                        sync        \     /
+  # RENAMED                      rename 8----------------
+
+  # TODO: Make some changes between the sync/rename/reintegrate steps so
+  #   the reintegrate merge actually has to do something.
+  # TODO: Rename the other branch as well.
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Sync merge from trunk to branch
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Rename the branch
+  sbox.simple_move('A_COPY', 'RENAMED')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate; there are no relevant changes on the branch.
+  # ### TODO: Check the result more carefully than merely that it completed.
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/RENAMED@8', A_path)
+
 ########################################################################
 # Run the tests
 
@@ -2626,6 +2712,7 @@ test_list = [ None,
               reintegrate_replaced_source,
               reintegrate_symlink_deletion,
               no_op_reintegrate,
+              renamed_branch_reintegrate,
              ]
 
 if __name__ == '__main__':

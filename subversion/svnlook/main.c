@@ -380,8 +380,8 @@ check_lib_versions(void)
       { "svn_diff",  svn_diff_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -900,8 +900,7 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         if (!val_has_eol)
           {
             const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            apr_size_t len = strlen(s);
-            SVN_ERR(svn_stream_write(out, s, &len));
+            SVN_ERR(svn_stream_puts(out, s));
           }
       }
     }
@@ -1283,6 +1282,30 @@ print_tree(svn_fs_root_t *root,
 }
 
 
+/* Set *BASE_REV to the revision on which the target root specified in
+   C is based, or to SVN_INVALID_REVNUM when C represents "revision
+   0" (because that revision isn't based on another revision). */
+static svn_error_t *
+get_base_rev(svn_revnum_t *base_rev, svnlook_ctxt_t *c, apr_pool_t *pool)
+{
+  if (c->is_revision)
+    {
+      *base_rev = c->rev_id - 1;
+    }
+  else
+    {
+      *base_rev = svn_fs_txn_base_revision(c->txn);
+
+      if (! SVN_IS_VALID_REVNUM(*base_rev))
+        return svn_error_createf
+          (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+           _("Transaction '%s' is not based on a revision; how odd"),
+           c->txn_name);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Subcommand handlers. ***/
 
@@ -1389,16 +1412,9 @@ do_dirs_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
@@ -1494,16 +1510,9 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
@@ -1522,16 +1531,9 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
-
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
@@ -2047,9 +2049,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help3(os, "svnlook",
+  SVN_ERR(svn_opt_print_help4(os, "svnlook",
                               opt_state ? opt_state->version : FALSE,
                               opt_state ? opt_state->quiet : FALSE,
+                              opt_state ? opt_state->verbose : FALSE,
                               version_footer->data,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
@@ -2445,7 +2448,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnlook__version,  /* must accept its own option */
-                   'q',
+                   'q', 'v',
                   } };
 
               subcommand = &pseudo_cmd;

@@ -1343,6 +1343,18 @@ def actual_only_node_behaviour(sbox):
   svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
                        os.path.join(wc_dir, 'A'))
 
+  # revert
+  expected_stdout = "Reverted.*foo.*"
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "revert", "-R", foo_path)
+
+  # revert the entire working copy and repeat the merge so we can test
+  # more commands
+  svntest.main.run_svn(None, "revert", "-R", wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
   # status (stat, st)
   expected_status = wc.State(foo_path, {
     '' : Item(status='! ', treeconflict='C'),
@@ -1398,7 +1410,8 @@ def update_dir_with_not_present(sbox):
   sbox.simple_rm('A/B')
 
   # We can't commit this without updating (ra_svn produces its own error)
-  run_and_verify_svn(None, None, "svn: (E155011|E160028): Dir.*B.*out of date",
+  run_and_verify_svn(None, None,
+                    "svn: (E155011|E160028|E170004): (Dir|Item).*B.*out of date",
                      'ci', '-m', '', wc_dir)
 
   # So we run update

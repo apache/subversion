@@ -214,9 +214,9 @@ class JNIUtil
  */
 
 #define SVN_JNI_NULL_PTR_EX(expr, str, ret_val) \
-  if (expr == NULL) {                           \
+  if ((expr) == NULL) {                         \
     JNIUtil::throwNullPointerException(str);    \
-    return ret_val ;                            \
+    return ret_val;                             \
   }
 
 /**
@@ -235,7 +235,7 @@ class JNIUtil
     svn_error_t *svn_jni_err__temp = (expr);            \
     if (svn_jni_err__temp != SVN_NO_ERROR) {            \
       JNIUtil::handleSVNError(svn_jni_err__temp);       \
-      return ret_val ;                                  \
+      return ret_val;                                   \
     }                                                   \
   } while (0)
 
@@ -251,7 +251,7 @@ class JNIUtil
   do                                    \
     {                                   \
       env->PopLocalFrame(NULL);         \
-      return ret_val ;                  \
+      return ret_val;                   \
     }                                   \
   while (0)
 
@@ -271,5 +271,13 @@ class JNIUtil
  * A useful macro.
  */
 #define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)
+
+#define CPPADDR_NULL_PTR(expr, ret_val)                 \
+  do {                                                  \
+    if ((expr) == NULL) {                               \
+      JNIUtil::throwError(_("bad C++ this"));           \
+      return ret_val;                                   \
+    }                                                   \
+  } while (0)
 
 #endif  // JNIUTIL_H

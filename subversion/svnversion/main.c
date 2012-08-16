@@ -37,8 +37,8 @@
 static svn_error_t *
 version(svn_boolean_t quiet, apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, quiet, NULL, NULL,
-                             NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnversion", TRUE, quiet, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -107,8 +107,8 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -179,10 +179,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'n':
@@ -201,8 +199,7 @@ main(int argc, const char *argv[])
           is_version = TRUE;
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -212,10 +209,7 @@ main(int argc, const char *argv[])
       exit(0);
     }
   if (os->ind > argc || os->ind < argc - 2)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   SVN_INT_ERR(svn_utf_cstring_to_utf8(&wc_path,
                                       (os->ind < argc) ? os->argv[os->ind]

@@ -41,7 +41,7 @@ extern "C" {
 /* Set inheritability of all ranges in RANGELIST to INHERITABLE.
    If RANGELIST is NULL do nothing. */
 void
-svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+svn_rangelist__set_inheritance(svn_rangelist_t *rangelist,
                                svn_boolean_t inheritable);
 
 /* Parse a rangelist from the string STR. Set *RANGELIST to the result,
@@ -52,7 +52,7 @@ svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
  * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
  * or combine adjacent and overlapping ranges. */
 svn_error_t *
-svn_rangelist__parse(apr_array_header_t **rangelist,
+svn_rangelist__parse(svn_rangelist_t **rangelist,
                      const char *str,
                      apr_pool_t *result_pool);
 
@@ -185,7 +185,8 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
                                    apr_pool_t *pool);
 
 /* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
-   found in the rangelists within MERGEINFO.  If MERGEINFO is NULL or empty
+   found in the rangelists within MERGEINFO.  Note that *OLDEST_REV is
+   exclusive and *YOUNGEST_REV is inclusive.  If MERGEINFO is NULL or empty
    set *YOUNGEST_REV and *OLDEST_REV to SVN_INVALID_REVNUM. */
 svn_error_t *
 svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
@@ -194,9 +195,9 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in
-   RESULT_POOL, less any rangelists that fall outside of the range
-   OLDEST_REV:YOUNGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
-   any rangelists within the range OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
+   RESULT_POOL, less any revision ranges that fall outside of the range
+   OLDEST_REV:YOUNGEST_REV (exclusive:inclusive) if INCLUDE_RANGE is true,
+   or less any ranges within OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
    is false.  If all the rangelists mapped to a given path are filtered
    then filter that path as well.  If all paths are filtered or MERGEINFO is
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash.
@@ -238,7 +239,7 @@ svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in
    RESULT_POOL. */
-apr_array_header_t *
+svn_rangelist_t *
 svn_rangelist__initialize(svn_revnum_t start,
                           svn_revnum_t end,
                           svn_boolean_t inheritable,
@@ -276,7 +277,7 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
  * RESULT_POOL. See svn_rangelist_merge2() for details of inheritability
  * etc. */
 svn_error_t *
-svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,
+svn_rangelist__merge_many(svn_rangelist_t *merged_rangelist,
                           svn_mergeinfo_t mergeinfo,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);

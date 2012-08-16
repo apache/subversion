@@ -209,7 +209,7 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
   CRYPTO_INIT(result_pool);
 
   /* Load the crypto driver.
- 
+
      ### TODO: For the sake of flexibility, should we use
      ### APU_CRYPTO_RECOMMENDED_DRIVER instead of hard coding
      ### "openssl" here?
@@ -334,12 +334,12 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
       memcpy(assembled, prefix, RANDOM_PREFIX_LEN);
       memcpy(assembled + RANDOM_PREFIX_LEN, password, password_len);
       *(assembled + RANDOM_PREFIX_LEN + password_len) = '\0';
-      memcpy(assembled + RANDOM_PREFIX_LEN + password_len + 1, 
+      memcpy(assembled + RANDOM_PREFIX_LEN + password_len + 1,
              padding, pad_len);
-    }      
-    
+    }
+
   /* Get the length that we need to allocate.  */
-  apr_err = apr_crypto_block_encrypt(NULL, &result_len, assembled, 
+  apr_err = apr_crypto_block_encrypt(NULL, &result_len, assembled,
                                      assembled_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
@@ -426,7 +426,7 @@ svn_crypto__decrypt_password(const char **plaintext,
   if (iv_len != iv->len)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Provided IV has incorrect length"));
-  
+
   apr_err = apr_crypto_block_decrypt_init(&block_ctx, &block_size,
                                           (unsigned char *)iv->data,
                                           key, scratch_pool);
@@ -648,7 +648,7 @@ svn_crypto__verify_secret(svn_boolean_t *is_valid,
   if (iv_len != iv->len)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Provided IV has incorrect length"));
-  
+
   apr_err = apr_crypto_block_decrypt_init(&block_ctx, &block_size,
                                           (unsigned char *)iv->data,
                                           key, scratch_pool);

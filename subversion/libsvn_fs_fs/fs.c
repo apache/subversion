@@ -73,7 +73,8 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      know of a better way of associating such data with the
      repository. */
 
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
+  SVN_ERR_ASSERT(fs->uuid);
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
@@ -130,7 +131,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__revision_prop,
   svn_fs_fs__revision_proplist,
   svn_fs_fs__change_rev_prop,
-  svn_fs_fs__get_uuid,
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
@@ -294,10 +294,18 @@ fs_hotcopy(svn_fs_t *src_fs,
            void *cancel_baton,
            apr_pool_t *pool)
 {
+  SVN_ERR(svn_fs__check_fs(src_fs, FALSE));
   SVN_ERR(initialize_fs_struct(src_fs));
+  SVN_ERR(svn_fs_fs__open(src_fs, src_path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(src_fs, pool));
   SVN_ERR(fs_serialized_init(src_fs, pool, pool));
+
+  SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
   SVN_ERR(initialize_fs_struct(dst_fs));
-  SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
+  /* In INCREMENTAL mode, svn_fs_fs__hotcopy() will open DST_FS.
+     Otherwise, it's not an FS yet --- possibly just an empty dir --- so
+     can't be opened.
+   */
   return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
                             incremental, cancel_func, cancel_baton, pool);
 }

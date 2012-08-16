@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import os
+import os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -47,8 +49,8 @@ def check_proplist(path, exp_out):
 
   props = svntest.tree.get_props([path]).get(path, {})
   if props != exp_out:
-    print("Expected properties: %s" % exp_out)
-    print("Actual properties:   %s" % props)
+    logger.warn("Expected properties: %s", exp_out)
+    logger.warn("Actual properties:   %s", props)
     raise svntest.Failure
 
 

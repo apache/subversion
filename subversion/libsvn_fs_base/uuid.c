@@ -48,39 +48,27 @@ txn_body_get_uuid(void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_base__get_uuid(svn_fs_t *fs,
-                      const char **uuid,
-                      apr_pool_t *pool)
+svn_fs_base__populate_uuid(svn_fs_t *fs,
+                           apr_pool_t *scratch_pool)
 {
-  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  /* Check for a cached UUID first.  Failing that, we hit the
-     database. */
-  if (bfd->uuid)
+  /* We hit the database. */
     {
-      *uuid = apr_pstrdup(pool, bfd->uuid);
-    }
-  else
-    {
+      const char *uuid;
       struct get_uuid_args args;
-      apr_pool_t *scratch_pool = svn_pool_create(pool);
 
       args.idx = 1;
-      args.uuid = uuid;
+      args.uuid = &uuid;
       SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args,
                                      FALSE, scratch_pool));
 
-      if (*uuid)
+      if (uuid)
         {
-          *uuid = apr_pstrdup(pool, *uuid);
-
           /* Toss what we find into the cache. */
-          bfd->uuid = apr_pstrdup(fs->pool, *uuid);
+          fs->uuid = apr_pstrdup(fs->pool, uuid);
         }
-
-      svn_pool_destroy(scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -109,7 +97,6 @@ svn_fs_base__set_uuid(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   struct set_uuid_args args;
-  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -122,7 +109,7 @@ svn_fs_base__set_uuid(svn_fs_t *fs,
 
   /* Toss our value into the cache. */
   if (uuid)
-    bfd->uuid = apr_pstrdup(fs->pool, uuid);
+    fs->uuid = apr_pstrdup(fs->pool, uuid);
 
   return SVN_NO_ERROR;
 }

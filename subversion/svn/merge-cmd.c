@@ -61,8 +61,14 @@ merge_reintegrate(const char *source_path_or_url,
 
   if (url1)
     {
-      svn_opt_revision_t revision1 = { svn_opt_revision_number, { rev1 } };
-      svn_opt_revision_t revision2 = { svn_opt_revision_number, { rev2 } };
+      svn_opt_revision_t revision1;
+      svn_opt_revision_t revision2;
+
+      revision1.kind = svn_opt_revision_number;
+      revision1.value.number = rev1;
+
+      revision2.kind = svn_opt_revision_number;
+      revision2.value.number = rev2;
 
       /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
        * to allow a mixed-rev WC but simply to bypass the check, as it was
@@ -98,14 +104,12 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
 /* Symmetric, merge-tracking merge, used for sync or reintegrate purposes. */
 static svn_error_t *
 symmetric_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
-                svn_boolean_t ignore_ancestry,
                 svn_boolean_t force,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
@@ -117,6 +121,7 @@ symmetric_merge(const char *source_path_or_url,
                 apr_pool_t *scratch_pool)
 {
   svn_client__symmetric_merge_t *merge;
+  svn_boolean_t reintegrate_like;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
   SVN_ERR(svn_client__find_symmetric_merge(&merge,
@@ -125,15 +130,43 @@ symmetric_merge(const char *source_path_or_url,
                                            allow_local_mods, allow_switched_subtrees,
                                            ctx, scratch_pool, scratch_pool));
 
+  reintegrate_like = (merge->mid != NULL);
+
+  if (reintegrate_like)
+    {
+      if (record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --record-only option "
+                                  "cannot be used with this kind of merge"));
+
+      if (depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --depth option "
+                                  "cannot be used with this kind of merge"));
+
+      if (force)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --force option "
+                                  "cannot be used with this kind of merge"));
+
+      if (allow_mixed_rev)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --allow-mixed-revisions option "
+                                  "cannot be used with this kind of merge"));
+    }
+
   /* Perform the 3-way merges */
   SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
-                                         ignore_ancestry, force, record_only,
+                                         force, record_only,
                                          dry_run, merge_options,
                                          ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -146,7 +179,8 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t two_sources_specified = TRUE;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *merge_err = SVN_NO_ERROR;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
@@ -364,6 +398,16 @@ svn_cl__merge(apr_getopt_t *os,
   /* More input validation. */
   if (opt_state->reintegrate)
     {
+      if (opt_state->ignore_ancestry)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--ignore-ancestry"));
+
+      if (opt_state->record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--record-only"));
+
       if (opt_state->depth != svn_depth_unknown)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                 _("--depth cannot be used with "
@@ -384,43 +428,40 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
-  if (opt_state->symmetric_merge)
+  /* Postpone conflict resolution during the merge operation.
+   * If any conflicts occur we'll run the conflict resolver later. */
+
+  /* Do a symmetric merge if just one source and no revisions. */
+  if ((! two_sources_specified)
+      && (! opt_state->reintegrate)
+      && (! opt_state->ignore_ancestry)
+      && first_range_start.kind == svn_opt_revision_unspecified
+      && first_range_end.kind == svn_opt_revision_unspecified)
     {
-      svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
-      svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
-
-      if (two_sources_specified)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("SOURCE2 can't be used with --symmetric"));
-
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
-                            opt_state->depth,
-                            opt_state->ignore_ancestry,
-                            opt_state->force,
-                            opt_state->record_only,
-                            opt_state->dry_run,
-                            opt_state->allow_mixed_rev,
-                            allow_local_mods,
-                            allow_switched_subtrees,
-                            options, ctx, pool);
+      merge_err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
+                                  opt_state->depth,
+                                  opt_state->force,
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  TRUE /*allow_local_mods*/,
+                                  TRUE /*allow_switched_subtrees*/,
+                                  options, ctx, pool);
     }
-  else
-#endif
-  if (opt_state->reintegrate)
+  else if (opt_state->reintegrate)
     {
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
-                              opt_state->dry_run, options, ctx, pool);
+      merge_err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
+                                    opt_state->dry_run, options, ctx, pool);
     }
   else if (! two_sources_specified)
     {
@@ -444,19 +485,19 @@ svn_cl__merge(apr_getopt_t *os,
                 _("Source and target must be different but related branches"));
         }
 
-      err = svn_client_merge_peg4(sourcepath1,
-                                  ranges_to_merge,
-                                  &peg_revision1,
-                                  targetpath,
-                                  opt_state->depth,
-                                  opt_state->ignore_ancestry,
-                                  opt_state->force,
-                                  opt_state->record_only,
-                                  opt_state->dry_run,
-                                  opt_state->allow_mixed_rev,
-                                  options,
-                                  ctx,
-                                  pool);
+      merge_err = svn_client_merge_peg4(sourcepath1,
+                                        ranges_to_merge,
+                                        &peg_revision1,
+                                        targetpath,
+                                        opt_state->depth,
+                                        opt_state->ignore_ancestry,
+                                        opt_state->force,
+                                        opt_state->record_only,
+                                        opt_state->dry_run,
+                                        opt_state->allow_mixed_rev,
+                                        options,
+                                        ctx,
+                                        pool);
     }
   else
     {
@@ -464,36 +505,47 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
-      err = svn_client_merge4(sourcepath1,
-                              &first_range_start,
-                              sourcepath2,
-                              &first_range_end,
-                              targetpath,
-                              opt_state->depth,
-                              opt_state->ignore_ancestry,
-                              opt_state->force,
-                              opt_state->record_only,
-                              opt_state->dry_run,
-                              opt_state->allow_mixed_rev,
-                              options,
-                              ctx,
-                              pool);
+      merge_err = svn_client_merge4(sourcepath1,
+                                    &first_range_start,
+                                    sourcepath2,
+                                    &first_range_end,
+                                    targetpath,
+                                    opt_state->depth,
+                                    opt_state->ignore_ancestry,
+                                    opt_state->force,
+                                    opt_state->record_only,
+                                    opt_state->dry_run,
+                                    opt_state->allow_mixed_rev,
+                                    options,
+                                    ctx,
+                                    pool);
     }
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+    err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (err)
+  if (!err
+      && opt_state->conflict_func
+      && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
     {
-      if(err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+      err = svn_cl__resolve_conflicts(
+              svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
+              opt_state->depth, opt_state, ctx, pool);
+    }
+
+  if (merge_err)
+    {
+      if (merge_err->apr_err ==
+          SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
         {
           err = svn_error_quick_wrap(
-            err,
+            svn_error_compose_create(merge_err, err),
             _("Merge tracking not possible, use --ignore-ancestry or\n"
               "fix invalid mergeinfo in target with 'svn propset'"));
         }
-      else if (! opt_state->reintegrate)
+      else
         {
+          err = svn_error_compose_create(merge_err, err);
           return svn_cl__may_need_force(err);
         }
     }

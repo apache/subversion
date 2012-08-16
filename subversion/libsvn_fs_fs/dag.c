@@ -749,7 +749,6 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
                       apr_pool_t *pool)
 {
   node_revision_t *parent_noderev;
-  apr_hash_t *entries;
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
   svn_fs_id_t *id;
@@ -778,11 +777,9 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
 
   subpool = svn_pool_create(pool);
 
-  /* Get a dirent hash for this directory. */
-  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, subpool));
-
-  /* Find name in the ENTRIES hash. */
-  dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  /* Search this directory for a dirent with that NAME. */
+  SVN_ERR(svn_fs_fs__rep_contents_dir_entry(&dirent, fs, parent_noderev,
+                                            name, subpool, subpool));
 
   /* If we never found ID in ENTRIES (perhaps because there are no
      ENTRIES, perhaps because ID just isn't in the existing ENTRIES
@@ -1146,7 +1143,7 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
   const svn_fs_id_t *node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, 
+  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
                                  scratch_pool, scratch_pool));
   if (! node_id)
     return svn_error_createf

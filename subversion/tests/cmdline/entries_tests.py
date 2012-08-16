@@ -33,7 +33,9 @@
 # test tries to pick up the straggly little edge cases.
 #
 
-import os
+import os, logging
+
+logger = logging.getLogger()
 
 import svntest
 
@@ -49,22 +51,22 @@ SCHEDULE_REPLACE = 3
 def validate(entry, **kw):
   for key, value in kw.items():
     if getattr(entry, key) != value:
-      print("Entry '%s' has an incorrect value for .%s" % (entry.name, key))
-      print("  Expected: %s" % value)
-      print("    Actual: %s" % getattr(entry, key))
+      logger.warn("Entry '%s' has an incorrect value for .%s", entry.name, key)
+      logger.warn("  Expected: %s", value)
+      logger.warn("    Actual: %s", getattr(entry, key))
       raise svntest.Failure
 
 
 def check_names(entries, *names):
   if entries is None:
-    print('entries-dump probably exited with a failure.')
+    logger.warn('entries-dump probably exited with a failure.')
     raise svntest.Failure
   have = set(entries.keys())
   want = set(names)
   missing = want - have
   if missing:
-    print("Entry name(s) not found: %s"
-          % ', '.join("'%s'" % name for name in missing))
+    logger.warn("Entry name(s) not found: %s",
+          ', '.join("'%s'" % name for name in missing))
     raise svntest.Failure
 
 

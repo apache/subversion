@@ -342,10 +342,13 @@ def check_dir_clean(dir):
     # Checking with -q does not show unversioned files or external
     # directories.  Though it displays a debug message for external
     # directories, after a blank line.  So, practically, the first line
-    # matters: if it's non-empty there is a modification.
+    # matters: if it's non-empty there is a modification. (Lines starting
+    # with "X" must be skipped, since they just indicate externals.)
     out = launchsvn("status -q %s" % dir)
-    if out and out[0].strip():
-        error('"%s" has local modifications; it must be clean' % dir)
+    while out and out[0].strip():
+        if not out[0].startswith("X"):
+            error('"%s" has local modifications; it must be clean' % dir)
+        out.pop(0)
 
 class PathIdentifier:
     """Abstraction for a path identifier, so that we can start talking

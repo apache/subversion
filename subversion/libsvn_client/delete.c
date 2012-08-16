@@ -47,12 +47,12 @@
 /*** Code. ***/
 
 
-/* An svn_client_status_func_t callback function for finding
+/* An svn_wc_status_func4_t callback function for finding
    status structures which are not safely deletable. */
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  const svn_client_status_t *status,
+                  const svn_wc_status3_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */
@@ -80,20 +80,19 @@ find_undeletables(void *baton,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client__can_delete(const char *path,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool)
+/* Verify that the path can be deleted without losing stuff,
+   i.e. ensure that there are no modified or unversioned resources
+   under PATH.  This is similar to checking the output of the status
+   command.  CTX is used for the client's config options.  POOL is
+   used for all temporary allocations. */
+static svn_error_t *
+can_delete_node(const char *local_abspath,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
 {
-  svn_opt_revision_t revision;
   svn_node_kind_t external_kind;
   const char *defining_abspath;
-  const char* local_abspath;
-
-  revision.kind = svn_opt_revision_unspecified;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  apr_array_header_t *ignores;
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
@@ -121,11 +120,19 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_error_trace(svn_client_status5(NULL, ctx, path, &revision,
-                                            svn_depth_infinity, FALSE,
-                                            FALSE, FALSE, FALSE, FALSE,
-                                            NULL,
+
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
+
+  return svn_error_trace(svn_wc_walk_status(ctx->wc_ctx,
+                                            local_abspath,
+                                            svn_depth_infinity,
+                                            FALSE /* get_all */,
+                                            FALSE /* no_ignore */,
+                                            FALSE /* ignore_text_mod */,
+                                            ignores,
                                             find_undeletables, NULL,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
                                             scratch_pool));
 }
 
@@ -327,7 +334,7 @@ svn_client__wc_delete(const char *path,
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
-    SVN_ERR(svn_client__can_delete(local_abspath, ctx, pool));
+    SVN_ERR(can_delete_node(local_abspath, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
@@ -363,7 +370,7 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
 
       if (!force && !keep_local)
         /* Verify that there are no "awkward" files */
-        SVN_ERR(svn_client__can_delete(local_abspath, ctx, pool));
+        SVN_ERR(can_delete_node(local_abspath, ctx, pool));
     }
 
   if (!dry_run)
@@ -459,16 +466,19 @@ svn_client_delete4(const apr_array_header_t *paths,
       /* Delete the targets from each working copy in turn. */
       for (hi = apr_hash_first(pool, wcroots); hi; hi = apr_hash_next(hi))
         {
-          const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+          const char *root_abspath;
           const apr_array_header_t *targets = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_dirent_condense_targets(&root_abspath, NULL, targets,
+                                              FALSE, iterpool, iterpool));
 
           SVN_WC__CALL_WITH_WRITE_LOCK(
             svn_client__wc_delete_many(targets, force, FALSE, keep_local,
                                        ctx->notify_func2, ctx->notify_baton2,
                                        ctx, iterpool),
-            ctx->wc_ctx, wcroot_abspath, TRUE /* lock_anchor */,
+            ctx->wc_ctx, root_abspath, TRUE /* lock_anchor */,
             iterpool);
         }
       svn_pool_destroy(iterpool);

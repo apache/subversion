@@ -122,7 +122,7 @@ svn_categorize_props(const apr_array_header_t *proplist,
       enum svn_prop_kind kind;
 
       prop = &APR_ARRAY_IDX(proplist, i, svn_prop_t);
-      kind = svn_property_kind(NULL, prop->name);
+      kind = svn_property_kind2(prop->name);
       newprop = NULL;
 
       if (kind == svn_prop_regular_kind)
@@ -305,7 +305,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
       void *prop;
 
       apr_hash_this(hi, &key, &klen, &prop);
-      apr_hash_set(new_hash, apr_pstrdup(pool, key), klen,
+      apr_hash_set(new_hash, apr_pstrmemdup(pool, key, klen), klen,
                    svn_string_dup(prop, pool));
     }
   return new_hash;

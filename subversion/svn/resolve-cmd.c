@@ -55,6 +55,8 @@ svn_cl__resolve(apr_getopt_t *os,
   int i;
   apr_pool_t *iterpool;
   svn_boolean_t had_error = FALSE;
+  svn_wc_conflict_resolver_func2_t conflict_func2;
+  void *conflict_baton2;
 
   switch (opt_state->accept_which)
     {
@@ -77,8 +79,11 @@ svn_cl__resolve(apr_getopt_t *os,
       conflict_choice = svn_wc_conflict_choose_mine_full;
       break;
     case svn_cl__accept_unspecified:
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("missing --accept option"));
+      if (opt_state->conflict_func == NULL)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("missing --accept option"));
+      conflict_choice = svn_wc_conflict_choose_unspecified;
+      break;
     default:
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("invalid 'accept' ARG"));
@@ -89,14 +94,27 @@ svn_cl__resolve(apr_getopt_t *os,
                                                       ctx, FALSE,
                                                       scratch_pool));
   if (! targets->nelts)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_empty;
+    {
+      if (opt_state->accept_which == svn_cl__accept_unspecified)
+        opt_state->depth = svn_depth_infinity;
+      else
+        opt_state->depth = svn_depth_empty;
+    }
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
+
+  /* Store old state */
+  conflict_func2 = ctx->conflict_func2;
+  conflict_baton2 = ctx->conflict_baton2;
+
+  /* Store interactive resolver */
+  ctx->conflict_func2 = opt_state->conflict_func;
+  ctx->conflict_baton2 = opt_state->conflict_baton;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -116,6 +134,10 @@ svn_cl__resolve(apr_getopt_t *os,
         }
     }
   svn_pool_destroy(iterpool);
+
+  /* Restore state */
+  ctx->conflict_func2 = conflict_func2;
+  ctx->conflict_baton2 = conflict_baton2;
 
   if (had_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
