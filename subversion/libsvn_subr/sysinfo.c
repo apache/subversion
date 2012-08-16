@@ -172,6 +172,8 @@ canonical_host_from_uname(apr_pool_t *pool)
   return apr_psprintf(pool, "%s-%s-%s%s", machine, vendor, sysname, sysver);
 }
 
+/* Generate a release name from the uname(3) info, effectively
+   returning "`uname -s` `uname -r`". */
 static const char *
 release_name_from_uname(apr_pool_t *pool)
 {
@@ -666,6 +668,9 @@ release_name_from_version(const char *osver)
   return NULL;
 }
 
+/* Construct the release name from information stored in the Mac OS X
+   "SystemVersion.plist" file (or ServerVersion.plist, for Mac Os
+   Server. */
 static const char *
 macos_release_name(apr_pool_t *pool)
 {
