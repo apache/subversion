@@ -468,7 +468,7 @@ get_master_passphrase_auth_baton(svn_auth_baton_t **mp_ab,
           &mp_providers, cfg, pool));
       svn_auth_get_master_passphrase_prompt_provider(
           &provider, svn_cmdline_auth_master_passphrase_prompt,
-          pb, 3, pool);
+          pb, 2 /* retries */, pool);
       APR_ARRAY_PUSH(mp_providers, svn_auth_provider_object_t *) = provider;
     }
   else
