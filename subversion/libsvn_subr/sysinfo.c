@@ -55,6 +55,7 @@
 
 #if HAVE_UNAME
 static const char* canonical_host_from_uname(apr_pool_t *pool);
+static const char* release_name_from_uname(apr_pool_t *pool);
 #endif
 
 #ifdef WIN32
@@ -71,10 +72,10 @@ static const char *macos_release_name(apr_pool_t *pool);
 const char *
 svn_sysinfo__canonical_host(apr_pool_t *pool)
 {
-#if HAVE_UNAME
-  return canonical_host_from_uname(pool);
-#elif defined(WIN32)
+#ifdef WIN32
   return win32_canonical_host(pool);
+#elif HAVE_UNAME
+  return canonical_host_from_uname(pool);
 #else
   return "unknown-unknown-unknown";
 #endif
@@ -86,8 +87,10 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_release_name(pool);
-#elif defined(SVN_HAVE_MACOS_PLIST)
+#elif SVN_HAVE_MACOS_PLIST
   return macos_release_name(pool);
+#elif HAVE_UNAME
+  return release_name_from_uname(pool);
 #else
   return NULL;
 #endif
@@ -144,15 +147,65 @@ canonical_host_from_uname(apr_pool_t *pool)
 
       if (0 == strcmp(sysname, "darwin"))
         vendor = "apple";
-
-      err = svn_utf_cstring_to_utf8(&tmp, info.release, pool);
-      if (err)
-        svn_error_clear(err);
+      if (0 == strcmp(sysname, "linux"))
+        sysver = "-gnu";
       else
-        sysver = tmp;
+        {
+          err = svn_utf_cstring_to_utf8(&tmp, info.release, pool);
+          if (err)
+            svn_error_clear(err);
+          else
+            {
+              apr_size_t n = strcspn(tmp, ".0123456789");
+              if (n > 0)
+                {
+                  char *ver = apr_pstrdup(pool, tmp);
+                  ver[n] = 0;
+                  sysver = ver;
+                }
+              else
+                sysver = tmp;
+            }
+        }
     }
 
   return apr_psprintf(pool, "%s-%s-%s%s", machine, vendor, sysname, sysver);
+}
+
+static const char *
+release_name_from_uname(apr_pool_t *pool)
+{
+  struct utsname info;
+  if (0 <= uname(&info))
+    {
+      svn_error_t *err;
+      const char *sysname;
+      const char *sysver;
+
+      err = svn_utf_cstring_to_utf8(&sysname, info.sysname, pool);
+      if (err)
+        {
+          sysname = NULL;
+          svn_error_clear(err);
+        }
+
+
+      err = svn_utf_cstring_to_utf8(&sysver, info.release, pool);
+      if (err)
+        {
+          sysver = NULL;
+          svn_error_clear(err);
+        }
+
+      if (sysname || sysver)
+        {
+          return apr_psprintf(pool, "%s%s%s",
+                              (sysname ? sysname : ""),
+                              (sysver ? (sysname ? " " : "") : ""),
+                              (sysver ? sysver : ""));
+        }
+    }
+  return NULL;
 }
 #endif  /* HAVE_UNAME */
 
