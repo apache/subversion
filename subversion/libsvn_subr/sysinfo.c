@@ -156,7 +156,7 @@ canonical_host_from_uname(apr_pool_t *pool)
             svn_error_clear(err);
           else
             {
-              apr_size_t n = strcspn(tmp, ".0123456789");
+              apr_size_t n = strspn(tmp, ".0123456789");
               if (n > 0)
                 {
                   char *ver = apr_pstrdup(pool, tmp);
