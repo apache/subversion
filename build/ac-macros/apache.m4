@@ -128,6 +128,7 @@ AC_ARG_WITH(apache-libexecdir,
     APACHE_LIBEXECDIR="$withval"
 ])
 
+INSTALL_APACHE_MODS=false
 if test -n "$APXS" && test "$APXS" != "no"; then
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
@@ -140,6 +141,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
 
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
+    INSTALL_APACHE_MODS=true
 
     case $host in
       *-*-cygwin*)
@@ -157,6 +159,7 @@ AC_SUBST(APXS)
 AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
+AC_SUBST(INSTALL_APACHE_MODS)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS" && test "$APXS" != "no"; then
