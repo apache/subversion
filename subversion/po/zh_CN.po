@@ -37,9 +37,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2011-12-22 17:17+0800\n"
-"PO-Revision-Date: 2011-07-22 12:55+0800\n"
+"Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
+"POT-Creation-Date: 2012-08-17 14:48+0000\n"
+"PO-Revision-Date: 2012-08-17 15:07+0000\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -2199,6 +2199,10 @@ msgid "Unknown node type in cache: '%c'"
 msgstr "缓存中有未知的节点类型：“%c”"
 
 #, c-format
+msgid "Attempted to update ancestry of non-mutable node"
+msgstr "试图更新非可变节点的祖先"
+
+#, c-format
 msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "路径 “%s”的锁文件损坏，其文件系统是 “%s”"
 
@@ -2423,6 +2427,12 @@ msgstr "无法设定目录的文本内容"
 
 msgid "Corrupt current file"
 msgstr "当前文件损坏"
+
+#, c-format
+msgid ""
+"predecessor count for the root node-revision is wrong: found (%d+%ld != %d), "
+"committing r%ld"
+msgstr "根节点版本的前任计数错误: 发现 (%d+%ld != %d), 正在提交 r%ld"
 
 msgid "Truncated protorev file detected"
 msgstr "检测到文件 protorev 被截断"
@@ -5671,10 +5681,10 @@ msgstr ""
 
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.tigris.org/\n"
+"For additional information, see http://subversion.apache.org/\n"
 msgstr ""
 "Subversion 是版本控制工具。\n"
-"欲取得详细资料，请参阅 http://subversion.tigris.org/\n"
+"欲取得详细资料，请参阅 http://subversion.apache.org/\n"
 
 msgid ""
 "The following repository access (RA) modules are available:\n"
@@ -8536,8 +8546,10 @@ msgstr "跳过缺少的合并源"
 msgid "Don't filter revision properties."
 msgstr "不过滤版本属性。"
 
-msgid "Pass contents of file ARG as additional args"
-msgstr "传递文件 ARG 的内容为额外的参数"
+msgid ""
+"Read additional prefixes, one per line, from\n"
+"                             file ARG."
+msgstr "读取附加前缀，每个一行，读自文件 ARG。"
 
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
