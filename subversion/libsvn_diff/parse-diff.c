@@ -1284,8 +1284,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       /* Run the state machine. */
       for (i = 0; i < (sizeof(transitions) / sizeof(transitions[0])); i++)
         {
-          if (line->len > strlen(transitions[i].expected_input)
-              && starts_with(line->data, transitions[i].expected_input)
+          if (starts_with(line->data, transitions[i].expected_input)
               && state == transitions[i].required_state)
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
