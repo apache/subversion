@@ -92,6 +92,8 @@ Candidate changes:
     Reverts backport of r1307177 because that caused builds to fail
     when Apache headers and libraries were not present. Trunk has a
     followup in r1374357 that reinstates the desired behaviour.
+  Votes:
+    +1: brane
 
 Veto-blocked changes:
 =====================
