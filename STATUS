@@ -83,17 +83,17 @@ Candidate changes:
      +1: brane
      +1 (only r1368662): steveking
 
-* r1374198
-  Remove mod_dontdothat from install-tools so that configurations
-  --without-apxs will not try to build it.
-  Justification:
-    Fixes regression from 1.7.5.
-  Notes:
-    Reverts backport of r1307177 because that caused builds to fail
-    when Apache headers and libraries were not present. Trunk has a
-    followup in r1374357 that reinstates the desired behaviour.
-  Votes:
-    +1: brane
+ * r1374198
+   Remove mod_dontdothat from install-tools so that configurations
+   --without-apxs will not try to build it.
+   Justification:
+     Fixes regression from 1.7.5.
+   Notes:
+     Reverts backport of r1307177 because that caused builds to fail
+     when Apache headers and libraries were not present. Trunk has a
+     followup in r1374357 that reinstates the desired behaviour.
+   Votes:
+     +1: brane
 
 Veto-blocked changes:
 =====================
