@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
+#include "private/svn_skel.h"
 
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -1108,7 +1109,26 @@ create_txn_post_body(serf_bucket_t **body_bkt,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
-  *body_bkt = SERF_BUCKET_SIMPLE_STRING("( create-txn )", alloc);
+  apr_hash_t *revprops = baton;
+  svn_skel_t *request_skel;
+  svn_stringbuf_t *skel_str;
+
+  request_skel = svn_skel__make_empty_list(pool);
+  if (revprops)
+    {
+      svn_skel_t *proplist_skel;
+
+      SVN_ERR(svn_skel__unparse_proplist(&proplist_skel, revprops, pool));
+      svn_skel__prepend(proplist_skel, request_skel);
+      svn_skel__prepend_str("create-txn-with-props", request_skel, pool);
+      skel_str = svn_skel__unparse(request_skel, pool);
+      *body_bkt = SERF_BUCKET_SIMPLE_STRING(skel_str->data, alloc);
+    }
+  else
+    {
+      *body_bkt = SERF_BUCKET_SIMPLE_STRING("( create-txn )", alloc);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1213,12 +1233,15 @@ open_root(void *edit_baton,
   proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
   apr_hash_index_t *hi;
-  const char *proppatch_target;
+  const char *proppatch_target = NULL;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
     {
       post_response_ctx_t *prc;
       const char *rel_path;
+      svn_boolean_t post_with_revprops =
+        apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
+                     APR_HASH_KEY_STRING) ? TRUE : FALSE;
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
@@ -1226,7 +1249,8 @@ open_root(void *edit_baton,
       handler->method = "POST";
       handler->body_type = SVN_SKEL_MIME_TYPE;
       handler->body_delegate = create_txn_post_body;
-      handler->body_delegate_baton = NULL;
+      handler->body_delegate_baton =
+        post_with_revprops ? ctx->revprop_table : NULL;
       handler->header_delegate = setup_post_headers;
       handler->header_delegate_baton = NULL;
       handler->path = ctx->session->me_resource;
@@ -1288,7 +1312,9 @@ open_root(void *edit_baton,
       dir->removed_props = apr_hash_make(dir->pool);
       dir->url = apr_pstrdup(dir->pool, ctx->txn_root_url);
 
-      proppatch_target = ctx->txn_url;
+      /* If we included our revprops in the POST, we need not
+         PROPPATCH them. */
+      proppatch_target = post_with_revprops ? NULL : ctx->txn_url;
     }
   else
     {
@@ -1369,44 +1395,49 @@ open_root(void *edit_baton,
       proppatch_target = ctx->baseline_url;
     }
 
-
-  /* PROPPATCH our revprops and pass them along.  */
-  proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
-  proppatch_ctx->pool = dir_pool;
-  proppatch_ctx->commit = ctx;
-  proppatch_ctx->path = proppatch_target;
-  proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
-  proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
-  proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
-
-  for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
-       hi = apr_hash_next(hi))
+  /* Unless this is NULL -- which means we don't need to PROPPATCH the
+     transaction with our revprops -- then, you know, PROPPATCH the
+     transaction with our revprops.  */
+  if (proppatch_target)
     {
-      const void *key;
-      void *val;
-      const char *name;
-      svn_string_t *value;
-      const char *ns;
+      proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
+      proppatch_ctx->pool = dir_pool;
+      proppatch_ctx->commit = ctx;
+      proppatch_ctx->path = proppatch_target;
+      proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
+      proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+      proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      value = val;
-
-      if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+      for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
+           hi = apr_hash_next(hi))
         {
-          ns = SVN_DAV_PROP_NS_SVN;
-          name += sizeof(SVN_PROP_PREFIX) - 1;
-        }
-      else
-        {
-          ns = SVN_DAV_PROP_NS_CUSTOM;
+          const void *key;
+          void *val;
+          const char *name;
+          svn_string_t *value;
+          const char *ns;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          name = key;
+          value = val;
+
+          if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+            {
+              ns = SVN_DAV_PROP_NS_SVN;
+              name += sizeof(SVN_PROP_PREFIX) - 1;
+            }
+          else
+            {
+              ns = SVN_DAV_PROP_NS_CUSTOM;
+            }
+
+          svn_ra_serf__set_prop(proppatch_ctx->changed_props,
+                                proppatch_ctx->path,
+                                ns, name, value, proppatch_ctx->pool);
         }
 
-      svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+      SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
     }
-
-  SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
 
   *root_baton = dir;
 
