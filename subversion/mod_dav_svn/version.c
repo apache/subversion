@@ -234,6 +234,8 @@ get_option(const dav_resource *resource,
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
     {
+      const char **this_post = dav_svn__posts_list;
+
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
@@ -256,6 +258,15 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
                                 dav_svn__get_vtxn_stub(r), (char *)NULL));
+
+      /* Report the supported POST types. */
+      while (*this_post)
+        {
+          apr_table_addn(r->headers_out, SVN_DAV_SUPPORTED_POSTS_HEADER,
+                         apr_pstrcat(resource->pool, *this_post,
+                                     (char *)NULL));
+          this_post++;
+        }
     }
 
   return NULL;

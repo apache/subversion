@@ -177,6 +177,13 @@ extern "C" {
  * @since New in 1.7.  */
 #define SVN_DAV_VTXN_NAME_HEADER "SVN-VTxn-Name"
 
+/** This header is used in the OPTIONS response to identify named
+ * skel-based POST request types which the server is prepared to
+ * handle.  (HTTP protocol v2 only)
+ * @since New in 1.8.   */
+#define SVN_DAV_SUPPORTED_POSTS_HEADER "SVN-Supported-Posts"
+
+
 /**
  * @name Fulltext MD5 headers
  *
