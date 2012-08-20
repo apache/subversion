@@ -14,6 +14,11 @@ Status of 1.7.6:
 
 Candidate changes:
 ==================
+ * r1374800, r1374802
+   Fix issues with applying Git patch files.
+   Justification:
+     It's a small change, and it allows applying patches that failed
+     before.
 
  * r1242759, r1242770, r1242794
    Fix various issues with GNOME and KDE keyring providers, especially
