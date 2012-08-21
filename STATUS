@@ -19,6 +19,8 @@ Candidate changes:
    Justification:
      It's a small change, and it allows applying patches that failed
      before.
+   Votes:
+     +1: steveking   
 
  * r1242759, r1242770, r1242794
    Fix various issues with GNOME and KDE keyring providers, especially
