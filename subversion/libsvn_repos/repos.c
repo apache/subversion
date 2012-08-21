@@ -453,8 +453,10 @@ PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
 "# If a log message is present, make sure it mentions an issue tracker id."  NL
 "SVNLOOK=" SVN_BINDIR "/svnlook"                                             NL
-"$SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"                                   NL
-"   grep \"[a-zA-Z0-9]\" > /dev/null || exit 1"                              NL
+"if $SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"                                NL
+"   grep \"[a-zA-Z0-9]\" > /dev/null; then \\"                               NL
+"       $SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"                            NL
+"           grep -E \"issue [0-9]+\" > /dev/null || exit 1; fi"              NL
 ""                                                                           NL
 "# All checks passed, so allow the commit to proceed."                       NL
 "exit 0"                                                                     NL;
