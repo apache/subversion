@@ -601,7 +601,8 @@ svn_fs_pack(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool));
+                                       cancel_func, cancel_baton, pool,
+                                       common_pool));
   return SVN_NO_ERROR;
 }
 

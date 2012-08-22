@@ -107,7 +107,7 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*pack_fs)(svn_fs_t *fs, const char *path,
                           svn_fs_pack_notify_t notify_func, void *notify_baton,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
-                          apr_pool_t *pool);
+                          apr_pool_t *pool, apr_pool_t *common_pool);
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
