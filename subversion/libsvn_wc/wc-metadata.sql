@@ -412,10 +412,6 @@ CREATE TABLE NODES (
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
-  /* serialized skel of this node's inherited properties. NULL if this
-     is not the BASE of a WC root node. */
-  inherited_props  BLOB,
-
   /* NULL depth means "default" (typically svn_depth_infinity) */
   /* ### depth on WORKING? seems this is a BASE-only concept. how do
      ### you do "files" on an added-directory? can't really ignore
@@ -478,6 +474,10 @@ CREATE TABLE NODES (
      ### only uses this information for deciding how to optimize
      ### anyway. */
   file_external  INTEGER,
+
+  /* serialized skel of this node's inherited properties. NULL if this
+     is not the BASE of a WC root node. */
+  inherited_props  BLOB,
 
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
@@ -779,9 +779,17 @@ PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 30 currently just contains some nice to haves that should be included
-   with the next format bump  */
+/* Format 30 adds the inherited_props column to the NODES table. */
 -- STMT_UPGRADE_TO_30
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+PRAGMA user_version = 30;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 31 currently just contains some nice to haves that should be included
+   with the next format bump  */
+-- STMT_UPGRADE_TO_31
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
 
@@ -791,9 +799,9 @@ CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
-PRAGMA user_version = 30;
+PRAGMA user_version = 31;
 
--- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
+-- STMT_UPGRADE_31_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,
   conflict_old, conflict_working, conflict_new, prop_reject, tree_conflict_data
 FROM actual_node
@@ -804,7 +812,7 @@ WHERE conflict_old IS NOT NULL
    OR tree_conflict_data IS NOT NULL
 ORDER by wc_id, local_relpath
 
--- STMT_UPGRADE_30_SET_CONFLICT
+-- STMT_UPGRADE_31_SET_CONFLICT
 UPDATE actual_node SET conflict_data = ?3, conflict_old = NULL,
   conflict_working = NULL, conflict_new = NULL, prop_reject = NULL,
   tree_conflict_data = NULL

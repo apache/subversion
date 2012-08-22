@@ -1129,6 +1129,28 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 SELECT 1 FROM nodes WHERE op_depth > 0
 LIMIT 1
 
+-- STMT_SELECT_WCROOT_NODES
+/* Select all base nodes which are the root of a WC, including
+   switched subtrees, but excluding those which map to the root
+   of the repos.
+
+   ### IPROPS: Is this query horribly inefficient?  Quite likely,
+   ### but it only runs during an upgrade, so do we care? */
+SELECT l.wc_id, l.local_relpath FROM nodes as l
+LEFT OUTER JOIN nodes as r
+ON l.wc_id = r.wc_id
+   AND l.repos_id = r.repos_id
+   AND r.local_relpath = l.parent_relpath
+WHERE (l.local_relpath == '' AND l.repos_path != '')
+   OR (l.op_depth = 0
+       AND l.local_relpath != ''
+       AND l.repos_path != ltrim(r.repos_path
+                                 || '/'
+                                 || ltrim(substr(l.local_relpath,
+                                                 length(l.parent_relpath) + 1),
+                                          '/'),
+                                 '/'))
+
 /* --------------------------------------------------------------------------
  * Complex queries for callback walks, caching results in a temporary table.
  *
