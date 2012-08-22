@@ -317,6 +317,12 @@ class TestHarness:
       print("WARNING: no failures, but '%s' exists from a previous run."
             % self.faillogfile)
 
+    # Summary.
+    if xpassed or failed_list:
+      print("SUMMARY: Some tests failed.\n")
+    else:
+      print("SUMMARY: All tests successful.\n")
+
     self._close_log()
     return failed
 

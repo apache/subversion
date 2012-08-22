@@ -715,6 +715,12 @@ const char *
 svn_repos_start_commit_hook(svn_repos_t *repos,
                             apr_pool_t *pool);
 
+/** Return the path to @a repos's init-commit hook, allocated in @a pool.
+ * @since New in 1.8 */
+const char *
+svn_repos_init_commit_hook(svn_repos_t *repos,
+                           apr_pool_t *pool);
+
 /** Return the path to @a repos's pre-commit hook, allocated in @a pool. */
 const char *
 svn_repos_pre_commit_hook(svn_repos_t *repos,

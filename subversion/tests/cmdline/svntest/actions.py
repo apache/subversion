@@ -1921,7 +1921,7 @@ def hook_failure_message(hook_name):
   if svntest.main.options.server_minor_version < 5:
     return "'%s' hook failed with error output:\n" % hook_name
   else:
-    if hook_name in ["start-commit", "pre-commit"]:
+    if hook_name in ["start-commit", "pre-commit", "init-commit"]:
       action = "Commit"
     elif hook_name == "pre-revprop-change":
       action = "Revprop change"

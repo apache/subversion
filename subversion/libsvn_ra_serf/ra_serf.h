@@ -209,6 +209,10 @@ struct svn_ra_serf__session_t {
   const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
   const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
 
+  /* Hash mapping const char * server-supported POST types to
+     disinteresting-but-non-null values. */
+  apr_hash_t *supported_posts;
+
   /*** End HTTP v2 stuff ***/
 
   svn_ra_serf__blncache_t *blncache;
