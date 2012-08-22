@@ -88,6 +88,12 @@ svn_fs_fs__del_rep_reference(svn_fs_t *fs,
                              svn_revnum_t youngest,
                              apr_pool_t *pool);
 
+/* Start a transaction to take an SQLite reserved lock that prevents
+   other writes. */
+svn_error_t *
+svn_fs_fs__lock_rep_cache(svn_fs_t *fs,
+                          apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
