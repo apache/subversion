@@ -210,6 +210,16 @@ capabilities_headers_iterator_callback(void *baton,
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
   else if (strncmp(key, "SVN", 3) == 0)
     {
+      /* If we've not yet seen any information about supported POST
+         requests, we'll initialize the list/hash with "create-txn"
+         (which we know is supported by virtue of the server speaking
+         HTTPv2 at all. */
+      if (! session->supported_posts)
+        {
+          session->supported_posts = apr_hash_make(session->pool);
+          apr_hash_set(session->supported_posts, "create-txn", 10, (void *)1);
+        }
+
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
           session->repos_root = session->session_url;
@@ -262,6 +272,21 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
           opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_SUPPORTED_POSTS_HEADER) == 0)
+        {
+          /* May contain multiple values, separated by commas. */
+          int i;
+          apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE,
+                                                       opt_ctx->pool);
+
+          for (i = 0; i < vals->nelts; i++)
+            {
+              const char *post_val = APR_ARRAY_IDX(vals, i, const char *);
+
+              apr_hash_set(session->supported_posts, post_val,
+                           APR_HASH_KEY_STRING, (void *)1);
+            }
         }
     }
 

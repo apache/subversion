@@ -4444,7 +4444,7 @@ handle_post_request(request_rec *r,
                     dav_resource *resource,
                     ap_filter_t *output)
 {
-  svn_skel_t *request_skel;
+  svn_skel_t *request_skel, *post_skel;
   int status;
   apr_pool_t *pool = resource->pool;
 
@@ -4461,16 +4461,23 @@ handle_post_request(request_rec *r,
     return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
                               "Unable to identify skel POST request flavor.");
 
-  if (svn_skel__matches_atom(request_skel->children, "create-txn"))
+  post_skel = request_skel->children;
+
+  /* NOTE: If you add POST handlers here, you'll want to advertise
+     that the server supports them, too.  See version.c:get_option(). */
+
+  if (svn_skel__matches_atom(post_skel, "create-txn"))
     {
       return dav_svn__post_create_txn(resource, request_skel, output);
     }
-  else
+  else if (svn_skel__matches_atom(post_skel, "create-txn-with-props"))
     {
-      return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
-                                "Unsupported skel POST request flavor.");
+      return dav_svn__post_create_txn_with_props(resource,
+                                                 request_skel, output);
     }
-  /* NOTREACHED */
+
+  return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
+                            "Unsupported skel POST request flavor.");
 }
 
 int dav_svn__method_post(request_rec *r)

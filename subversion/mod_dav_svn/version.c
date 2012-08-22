@@ -235,6 +235,16 @@ get_option(const dav_resource *resource,
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
     {
+      /* The list of Subversion's custom POSTs.  You'll want to keep
+         this in sync with the handling of these suckers in
+         handle_post_request().  */
+      static const char * posts_list[] = {
+        "create-txn",
+        "create-txn-with-props",
+        NULL
+      };
+      const char **this_post = posts_list;
+
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
@@ -257,6 +267,15 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
                                 dav_svn__get_vtxn_stub(r), (char *)NULL));
+
+      /* Report the supported POST types. */
+      while (*this_post)
+        {
+          apr_table_addn(r->headers_out, SVN_DAV_SUPPORTED_POSTS_HEADER,
+                         apr_pstrcat(resource->pool, *this_post,
+                                     (char *)NULL));
+          this_post++;
+        }
     }
 
   return NULL;
@@ -399,7 +418,7 @@ dav_svn__checkout(dav_resource *resource,
           shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
 
           derr = dav_svn__create_txn(resource->info->repos, &shared_txn_name,
-                                     resource->info->r->pool);
+                                     NULL, resource->info->r->pool);
           if (derr) return derr;
 
           derr = dav_svn__store_activity(resource->info->repos,
@@ -1143,7 +1162,8 @@ make_activity(dav_resource *resource)
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
 
-  err = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
+  err = dav_svn__create_txn(resource->info->repos, &txn_name, 
+                            NULL, resource->pool);
   if (err != NULL)
     return err;
 

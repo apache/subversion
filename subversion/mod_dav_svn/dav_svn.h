@@ -420,10 +420,17 @@ const char *dav_svn__get_vtxn_root_stub(request_rec *r);
 /*** activity.c ***/
 
 /* Create a new transaction based on HEAD in REPOS, setting *PTXN_NAME
-   to the name of that transaction.  Use POOL for allocations. */
+   to the name of that transaction.  REVPROPS is an optional hash of
+   const char * property names and const svn_string_t * values which
+   will be set as transactions properties on the transaction this
+   function creates.  Use POOL for allocations.
+
+   NOTE:  This function will overwrite the svn:author property, if
+   any, found in REVPROPS.  */
 dav_error *
 dav_svn__create_txn(const dav_svn_repos *repos,
                     const char **ptxn_name,
+                    apr_hash_t *revprops,
                     apr_pool_t *pool);
 
 /* If it exists, abort the transaction named TXN_NAME from REPOS.  Use
@@ -675,20 +682,15 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
 
 /*** posts/ ***/
 
-/* The list of Subversion's custom POSTs. */
-/* ### TODO:  Populate this list and transmit its contents in the
-   ### OPTIONS response.
-static const char * dav_svn__posts_list[] = {
-  "create-txn",
-  NULL
-};
-*/
-
 /* The various POST handlers, defined in posts/, and used by repos.c.  */
 dav_error *
 dav_svn__post_create_txn(const dav_resource *resource,
                          svn_skel_t *request_skel,
                          ap_filter_t *output);
+dav_error *
+dav_svn__post_create_txn_with_props(const dav_resource *resource,
+                                    svn_skel_t *request_skel,
+                                    ap_filter_t *output);
 
 /*** authz.c ***/
 
