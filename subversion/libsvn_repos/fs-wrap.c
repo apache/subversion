@@ -83,23 +83,29 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
                                    apr_hash_t *revprop_table,
                                    apr_pool_t *pool)
 {
-  svn_string_t *author = apr_hash_get(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                                      APR_HASH_KEY_STRING);
   apr_array_header_t *revprops;
+  const char *txn_name;
+  svn_string_t *author = apr_hash_get(revprop_table,
+                                      SVN_PROP_REVISION_AUTHOR,
+                                      APR_HASH_KEY_STRING);
 
-  /* Run start-commit hooks. */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
-                                        repos->client_capabilities, pool));
-
-  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
+  /* Begin the transaction, ask for the fs to do on-the-fly lock checks.
+     We fetch its name, too, so the start-commit hook can use it.  */
   SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
                             SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR(svn_fs_txn_name(&txn_name, *txn_p, pool));
 
   /* We pass the revision properties to the filesystem by adding them
      as properties on the txn.  Later, when we commit the txn, these
      properties will be copied into the newly created revision. */
   revprops = svn_prop_hash_to_array(revprop_table, pool);
-  return svn_repos_fs_change_txn_props(*txn_p, revprops, pool);
+  SVN_ERR(svn_repos_fs_change_txn_props(*txn_p, revprops, pool));
+
+  /* Run start-commit hooks. */
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        repos->client_capabilities, txn_name,
+                                        pool));
+  return SVN_NO_ERROR;
 }
 
 

@@ -311,16 +311,17 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 ""                                                                           NL
 "# START-COMMIT HOOK"                                                        NL
 "#"                                                                          NL
-"# The start-commit hook is invoked before a Subversion txn is created"      NL
-"# in the process of doing a commit.  Subversion runs this hook"             NL
-"# by invoking a program (script, executable, binary, etc.) named"           NL
-"# '"SCRIPT_NAME"' (for which this file is a template)"                      NL
-"# with the following ordered arguments:"                                    NL
+"# The start-commit hook is invoked immediately after a Subversion txn is"   NL
+"# created and populated with initial revprops in the process of doing a"    NL
+"# commit. Subversion runs this hook by invoking a program (script, "        NL
+"# executable, binary, etc.) named '"SCRIPT_NAME"' (for which this file"     NL
+"# is a template) with the following ordered arguments:"                     NL
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the authenticated user attempting to commit)"         NL
 "#   [3] CAPABILITIES (a colon-separated list of capabilities reported"      NL
 "#                     by the client; see note below)"                       NL
+"#   [4] TXN-NAME     (the name of the commit txn just created)"             NL
 "#"                                                                          NL
 "# Note: The CAPABILITIES parameter is new in Subversion 1.5, and 1.5"       NL
 "# clients will typically report at least the \""                            \
@@ -351,6 +352,10 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# On a Windows system, you should name the hook program"                    NL
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
+"# "                                                                         NL
+"# COMPATIBILITY NOTE:  Prior to Subversion 1.8, the start-commit hook was"  NL
+"# invoked before the commit txn was even created, and it did not accept"    NL
+"# the TXN-NAME argument at all."                                            NL
 "# "                                                                         NL
 HOOKS_ENVIRONMENT_TEXT
 "# "                                                                         NL
