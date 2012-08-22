@@ -111,13 +111,6 @@ svn_repos_start_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
-svn_repos_init_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_INIT_COMMIT, pool);
-}
-
-
-const char *
 svn_repos_pre_commit_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_COMMIT, pool);
@@ -381,93 +374,6 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end start-commit hook */
-
-  /* Init-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_init_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
-#define SCRIPT_NAME SVN_REPOS__HOOK_INIT_COMMIT
-
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
-"# INIT-COMMIT HOOK"                                                         NL
-"#"                                                                          NL
-"# The init-commit hook is invoked immediate after a Subversion commit txn"  NL
-"# is created and initialized.  Subversion runs this hook by invoking a"     NL
-"# program (script, executable, binary, etc.) named '"SCRIPT_NAME"' (for"    NL
-"# which this file is a template), with the following ordered arguments:"    NL
-"#"                                                                          NL
-"#   [1] REPOS-PATH   (the path to this repository)"                         NL
-"#   [2] TXN-NAME     (the name of the commit txn just created)"             NL
-"#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
-"# If the hook program exits with success, the commit txn remains active;"   NL
-"# but if it exits with failure (non-zero), the txn is aborted, no commit"   NL
-"# takes place, and STDERR is returned to the client.   The hook"            NL
-"# program can use the 'svnlook' utility to help it examine the txn."        NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"#   ***  NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN, EXCEPT  ***"       NL
-"#   ***  FOR REVISION PROPERTIES (like svn:log or svn:author).   ***"       NL
-"#"                                                                          NL
-"#   This is why we recommend using the read-only 'svnlook' utility."        NL
-"#   In the future, Subversion may enforce the rule that pre-commit"         NL
-"#   hooks should not modify the versioned data in txns, or else come"       NL
-"#   up with a mechanism to make it safe to do so (by informing the"         NL
-"#   committing client of the changes).  However, right now neither"         NL
-"#   mechanism is implemented, so hook writers just have to be careful."     NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-"# WARNING: The degree of txn \"initialization\" may differ depending on"    NL
-"# how the commit process is being driven.  For example, some older"         NL
-"# Subversion clients (notably pre-1.7 clients committing over HTTP) will"   NL
-"# not have yet attached some metadata -- such as the commit log message --" NL
-"# to the txn by the time this hook runs.  Hook authors should therefore"    NL
-"# not assume that a txn which lacks a log message at this stage of the  "   NL
-"# commit will necessarily still lack a log message by the time the commit"  NL
-"# completes."                                                               NL
-"#"                                                                          NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
-"REPOS=\"$1\""                                                               NL
-"TXN=\"$2\""                                                                 NL
-""                                                                           NL
-"# If a log message is present, make sure it mentions an issue tracker id."  NL
-"SVNLOOK=" SVN_BINDIR "/svnlook"                                             NL
-"if $SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"                                NL
-"   grep \"[a-zA-Z0-9]\" > /dev/null; then \\"                               NL
-"       $SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"                            NL
-"           grep -E \"issue [0-9]+\" > /dev/null || exit 1; fi"              NL
-""                                                                           NL
-"# All checks passed, so allow the commit to proceed."                       NL
-"exit 0"                                                                     NL;
-
-#undef SCRIPT_NAME
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating init-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end init-commit hook */
-
 
   /* Pre-commit hook. */
   {
