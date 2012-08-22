@@ -1690,6 +1690,47 @@ svn_repos_recover4(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* For BDB we fall back on BDB's repos layer lock which means that the
+   repository is unreadable while frozen.
+
+   For FSFS we delegate to the FS layer which uses the FSFS write-lock
+   and an SQLite reserved lock which means the repository is readable
+   while frozen. */
+svn_error_t *
+svn_repos_freeze(const char *path,
+                 svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+
+  /* Using a subpool as the only way to unlock the repos lock used by
+     BDB is to clear the pool used to take the lock. */
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(get_repos(&repos, path,
+                    TRUE  /* exclusive */,
+                    FALSE /* non-blocking */,
+                    FALSE /* open-fs */,
+                    NULL, subpool));
+
+  if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    {
+      svn_error_t *err = freeze_body(baton, subpool);
+      svn_pool_destroy(subpool);
+      return err;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+      SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), freeze_body, baton, subpool));
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
                                    const char *path,
                                    svn_boolean_t only_unused,

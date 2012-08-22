@@ -624,6 +624,17 @@ svn_fs_recover(const char *path,
                                          pool));
 }
 
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool)
+{
+  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* --- Berkeley-specific functions --- */
 
