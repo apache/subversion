@@ -240,20 +240,28 @@ switch_internal(svn_revnum_t *result_rev,
          we need an iprop cache. */ 
       if (!wc_root)
         {
-          const char *switch_parent_url =
-            svn_uri_dirname(switch_loc->url, pool);
+          /* We know we are switching a subtree to something other than the
+             repos root, but if we are unswitching that subtree we don't
+             need an iprops cache. */
           const char *target_parent_url;
+          const char *unswitched_url;
 
+          /* Calculate the URL LOCAL_ABSPATH would have if it was unswitched
+             relative to its parent. */
           SVN_ERR(svn_wc__node_get_url(&target_parent_url, ctx->wc_ctx,
                                        svn_dirent_dirname(local_abspath,
                                                           pool),
                                        pool, pool));
+          unswitched_url = svn_path_url_add_component2(
+            target_parent_url,
+            svn_dirent_basename(local_abspath, pool),
+            pool);
 
-
-          /* We know we are switching a subtree to something other than the
-             repos root, but if we are unswitching that subtree we don't
-             need an iprops cache. */
-          if (strcmp(switch_parent_url, target_parent_url) == 0)
+          /* If LOCAL_ABSPATH will be unswitched relative to its parent, then
+             it doesn't need an iprop cache.  Note: It doesn't matter if
+             LOCAL_ABSPATH is withing a switched subtree, only if it's the
+             *root* of a switched subtree.*/
+          if (strcmp(unswitched_url, switch_loc->url) == 0)
             needs_iprop_cache = FALSE;
       }
 
@@ -263,7 +271,7 @@ switch_internal(svn_revnum_t *result_rev,
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", switch_loc->rev, pool));
           apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
-                       inherited_props);      
+                       inherited_props);
         }
     }
 
