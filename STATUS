@@ -102,6 +102,19 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1375052
+   Don't complain about unknown password stores listed in the
+   password-stores runtime configuration area -- simply ignore them.
+   Justification:
+     The runtime configuration must necessarily be compatible -- that
+     is, at least functional -- across many versions of Subversion.
+     Prior to this change, though, adding "gpg-agent" to the
+     password-stores list so I can use that feature with my trunk
+     client would cause my 1.7.x client to choke.
+   Votes:
+     +1: cmpilato
+     +0: rhuijben
+
  * r1375089
    Print "All tests successful" at the end of 'make check'.
    Justification:
