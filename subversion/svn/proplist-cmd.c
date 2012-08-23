@@ -138,25 +138,30 @@ proplist_receiver(void *baton,
   if (inherited_props)
     {
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       for (i = 0; i < inherited_props->nelts; i++)
         {
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          svn_pool_clear(iterpool);
+
           if (!opt_state->quiet)
             {
               if (svn_path_is_url(iprop->path_or_url))
                 SVN_ERR(svn_cmdline_printf(
-                  pool, _("Properties inherited from '%s':\n"),
+                  iterpool, _("Properties inherited from '%s':\n"),
                   iprop->path_or_url));
               else
                 SVN_ERR(svn_cmdline_printf(
-                  pool, _("Properties inherited from '%s':\n"),
-                  svn_dirent_local_style(iprop->path_or_url, pool)));
+                  iterpool, _("Properties inherited from '%s':\n"),
+                  svn_dirent_local_style(iprop->path_or_url, iterpool)));
             }
 
           SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,
-                                          (! opt_state->verbose), pool));
+                                          (! opt_state->verbose), iterpool));
+          svn_pool_destroy(iterpool);
         }
     }
 

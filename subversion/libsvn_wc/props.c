@@ -2368,6 +2368,7 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
   apr_array_header_t *cached_iprops = NULL;
   const char *parent_abspath = local_abspath;
   svn_boolean_t is_wc_root = FALSE;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(inherited_props);
   *inherited_props = apr_array_make(result_pool, 1,
@@ -2382,16 +2383,17 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
     {
       apr_hash_t *actual_props;
 
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_wc_is_wc_root2(&is_wc_root, wc_ctx, parent_abspath,
-                                 scratch_pool));
+                                 iterpool));
       if (is_wc_root)
         {
           const char *child_repos_relpath;
 
           SVN_ERR(svn_wc__node_get_repos_relpath(&child_repos_relpath,
                                                  wc_ctx, parent_abspath,
-                                                 scratch_pool,
-                                                 scratch_pool));
+                                                 iterpool, iterpool));
 
           /* If the WC root is also the root of the repository then by
              definition there are no inheritable properties to be had,
@@ -2408,10 +2410,10 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                                                     wc_ctx->db,
                                                     parent_abspath,
                                                     scratch_pool,
-                                                    scratch_pool));
+                                                    iterpool));
               if (cached_iprops)
                 {
-                  *cached_iprops_found = TRUE;          
+                  *cached_iprops_found = TRUE;
                 }          
             }
         }
@@ -2422,12 +2424,12 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
         {
           SVN_ERR(svn_wc__db_read_props(&actual_props, wc_ctx->db,
                                         parent_abspath, result_pool,
-                                        scratch_pool));
+                                        iterpool));
           if (actual_props)
             {
               /* If we only want PROPNAME filter out any other properties. */
               if (propname)
-                filter_unwanted_props(actual_props, propname, scratch_pool);
+                filter_unwanted_props(actual_props, propname, iterpool);
 
               if (apr_hash_count(actual_props))
                 {
@@ -2473,6 +2475,7 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

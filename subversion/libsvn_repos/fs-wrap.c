@@ -728,9 +728,10 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
 {
   svn_fs_root_t *root;
   int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (!SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR(svn_fs_youngest_rev(&revision, repos->fs, scratch_pool));
+    SVN_ERR(svn_fs_youngest_rev(&revision, repos->fs, iterpool));
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, revision, scratch_pool));
   SVN_ERR(svn_fs_node_proplist2(NULL, inherited_props, root, path,
                                 result_pool, scratch_pool));
@@ -742,7 +743,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
 
       if (authz_read_func)
         SVN_ERR(authz_read_func(&allowed, root, iprop->path_or_url,
-                                authz_read_baton, scratch_pool));
+                                authz_read_baton, iterpool));
       if (!allowed)
         {
           svn_sort__array_delete(*inherited_props, i, 1);
@@ -750,6 +751,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

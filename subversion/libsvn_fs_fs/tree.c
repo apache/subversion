@@ -1037,13 +1037,15 @@ fs_node_proplist(apr_hash_t **table_p,
     {
       const char *parent_path = path;
       apr_hash_t *parent_properties;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       *inherited_props = apr_array_make(result_pool, 1,
                                         sizeof(svn_prop_inherited_item_t *));
       while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
         {
-          parent_path = svn_fspath__dirname(parent_path, scratch_pool);
-          SVN_ERR(get_dag(&node, root, parent_path, scratch_pool));
+          svn_pool_clear(iterpool);
+          parent_path = svn_fspath__dirname(parent_path, iterpool);
+          SVN_ERR(get_dag(&node, root, parent_path, iterpool));
           SVN_ERR(svn_fs_fs__dag_get_proplist(&parent_properties, node,
                                               result_pool));
           if (parent_properties && apr_hash_count(parent_properties))
@@ -1057,6 +1059,7 @@ fs_node_proplist(apr_hash_t **table_p,
               svn_sort__array_insert(&i_props, *inherited_props, 0);
             }
         }
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;

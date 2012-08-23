@@ -2943,44 +2943,50 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   svn_fs_root_t *root;
   apr_array_header_t *inherited_props;
   int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, iterpool, "c(?r)", &path, &rev));
 
   full_path = svn_fspath__join(b->fs_path->data,
-                               svn_relpath_canonicalize(path, pool), pool);
+                               svn_relpath_canonicalize(path, iterpool),
+                               pool);
 
   /* Check authorizations */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
+  SVN_ERR(must_have_access(conn, iterpool, b, svn_authz_read,
                            full_path, FALSE));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
   SVN_ERR(log_command(b, conn, pool, "%s",
-                      svn_log__get_inherited_props(full_path, rev, pool)));
+                      svn_log__get_inherited_props(full_path, rev,
+                                                   iterpool)));
 
   /* Fetch the properties and a stream for the contents. */
-  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, iterpool));
   SVN_CMD_ERR(get_props(NULL, &inherited_props, b, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "w(!", "success"));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(?!"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(?!"));
+
   for (i = 0; i < inherited_props->nelts; i++)
     {
       svn_prop_inherited_item_t *iprop =
         APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
 
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(c(!",
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(c(!",
                                      iprop->path_or_url));
-      SVN_ERR(svn_ra_svn_write_proplist(conn, pool, iprop->prop_hash));
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))!",
+      SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, iprop->prop_hash));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))!",
                                      iprop->path_or_url));
     }  
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))"));
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
