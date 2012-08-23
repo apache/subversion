@@ -3691,6 +3691,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
             return svn_error_trace(err);
 
           svn_error_clear(err);
+          *proplist_p = NULL; /* in case read_non_packed_revprop changed it */
         }
     }
 
