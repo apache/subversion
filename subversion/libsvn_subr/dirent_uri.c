@@ -1401,7 +1401,7 @@ svn_dirent_skip_ancestor(const char *parent_dirent,
   apr_size_t len = strlen(parent_dirent);
   apr_size_t root_len;
 
-  if (0 != memcmp(parent_dirent, child_dirent, len))
+  if (0 != strncmp(parent_dirent, child_dirent, len))
     return NULL; /* parent_dirent is no ancestor of child_dirent */
 
   if (child_dirent[len] == 0)
@@ -1459,7 +1459,7 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
   if (len == 0)
     return child_relpath;
 
-  if (0 != memcmp(parent_relpath, child_relpath, len))
+  if (0 != strncmp(parent_relpath, child_relpath, len))
     return NULL; /* parent_relpath is no ancestor of child_relpath */
 
   if (child_relpath[len] == 0)
@@ -1482,7 +1482,7 @@ uri_skip_ancestor(const char *parent_uri,
   assert(svn_uri_is_canonical(parent_uri, NULL));
   assert(svn_uri_is_canonical(child_uri, NULL));
 
-  if (0 != memcmp(parent_uri, child_uri, len))
+  if (0 != strncmp(parent_uri, child_uri, len))
     return NULL; /* parent_uri is no ancestor of child_uri */
 
   if (child_uri[len] == 0)
