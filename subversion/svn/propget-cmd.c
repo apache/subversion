@@ -217,19 +217,19 @@ print_single_prop(svn_string_t *propval,
    PROPS is a hash mapping (const char *) path to (svn_string_t) property
    value.  INHERITED_PROPS is a depth-first ordered array of
    svn_prop_inherited_item_t * structures.
-   
+
    PROPS may be an empty hash, but is never null.  INHERITED_PROPS may be
    null.
-   
+
    If IS_URL is true, all paths in PROPS are URLs, else all paths are local
    paths.
-   
+
    PNAME_UTF8 is the property name of all the properties.
-   
+
    If PRINT_FILENAMES is true, print the item's path before each property.
-   
+
    If OMIT_NEWLINE is true, don't add a newline at the end of each property.
-   
+
    If LIKE_PROPLIST is true, print everything in a more verbose format
    like "svn proplist -v" does. */
 static svn_error_t *
