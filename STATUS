@@ -109,6 +109,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1376414
+   Fix a memory read bug.
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: philip, stsp
+
 Veto-blocked changes:
 =====================
 
