@@ -107,17 +107,18 @@ Candidate changes:
    Justification:
      Users ask whether "XFAIL > 0" is a problem.
    Votes:
-     +1: danielsh
-
- * r1376414
-   Fix a memory read bug.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, stsp
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1376414
+   Fix a memory read bug.
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: philip, stsp, rhuijben
+
