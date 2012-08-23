@@ -111,6 +111,8 @@ Candidate changes:
      Prior to this change, though, adding "gpg-agent" to the
      password-stores list so I can use that feature with my trunk
      client would cause my 1.7.x client to choke.
+   Branch:
+     ^/subversion/branches/1.7.x-r1375052
    Votes:
      +1: cmpilato
      +0: rhuijben
