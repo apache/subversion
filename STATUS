@@ -70,13 +70,6 @@ Candidate changes:
      +1: brane
      +1 (only r1368662): steveking
 
- * r1376414
-   Fix a memory read bug.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, stsp
-
 Veto-blocked changes:
 =====================
 
