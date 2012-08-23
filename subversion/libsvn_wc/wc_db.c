@@ -9362,7 +9362,7 @@ get_children_with_cached_iprops(apr_hash_t *iprop_paths,
   else /* Default to svn_depth_infinity. */
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_INODES_RECURSIVE));  
+                                        STMT_SELECT_INODES_RECURSIVE));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -9386,6 +9386,7 @@ get_children_with_cached_iprops(apr_hash_t *iprop_paths,
     {
       const apr_array_header_t *rel_children;
       int i;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
                                                        db, local_abspath,
@@ -9393,16 +9394,19 @@ get_children_with_cached_iprops(apr_hash_t *iprop_paths,
                                                        scratch_pool));
       for (i = 0; i < rel_children->nelts; i++)
         {
-          const char *child_abspath = svn_dirent_join(
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+          child_abspath = svn_dirent_join(
             local_abspath, APR_ARRAY_IDX(rel_children, i, const char *),
-            scratch_pool);
+            iterpool);
 
           if (depth == svn_depth_files)
             {
               svn_kind_t child_kind;
 
               SVN_ERR(svn_wc__db_read_kind(&child_kind, db, child_abspath,
-                                           FALSE, FALSE, scratch_pool));
+                                           FALSE, FALSE, iterpool));
               if (child_kind != svn_kind_file)
                 continue;
             }
@@ -9411,8 +9415,10 @@ get_children_with_cached_iprops(apr_hash_t *iprop_paths,
                                                   svn_depth_empty,
                                                   child_abspath, db,
                                                   result_pool,
-                                                  scratch_pool));
+                                                  iterpool));
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
