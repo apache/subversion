@@ -719,6 +719,44 @@ proppatch_walker(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Possible add the lock-token "If:" precondition header to HEADERS if
+   an examination of COMMIT_CTX and RELPATH indicates that this is the
+   right thing to do.
+
+   Generally speaking, if the client provided a lock token for
+   RELPATH, it's the right thing to do.  There is a notable instance
+   where this is not the case, however.  If the file at RELPATH was
+   explicitly deleted in this commit already, then mod_dav removed its
+   lock token when it fielded the DELETE request, so we don't want to
+   set the lock precondition again.  (See
+   http://subversion.tigris.org/issues/show_bug.cgi?id=3674 for details.)
+*/
+static svn_error_t *
+maybe_set_lock_token_header(serf_bucket_t *headers,
+                            commit_context_t *commit_ctx,
+                            const char *relpath,
+                            apr_pool_t *pool)
+{
+  const char *token;
+
+  if (! (relpath && commit->lock_tokens))
+    return SVN_NO_ERROR;
+
+  if (! apr_hash_get(commit->deleted_entries, relpath, APR_HASH_KEY_STRING))
+    {
+      token = apr_hash_get(commit->lock_tokens, relpath, APR_HASH_KEY_STRING);
+      if (token)
+        {
+          const char *token_header;
+
+          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
+          serf_bucket_headers_set(headers, "If", token_header);
+        }
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 setup_proppatch_headers(serf_bucket_t *headers,
                         void *baton,
@@ -733,22 +771,8 @@ setup_proppatch_headers(serf_bucket_t *headers,
                                            proppatch->base_revision));
     }
 
-  if (proppatch->relpath && proppatch->commit->lock_tokens)
-    {
-      const char *token;
-
-      token = apr_hash_get(proppatch->commit->lock_tokens, proppatch->relpath,
-                           APR_HASH_KEY_STRING);
-
-      if (token)
-        {
-          const char *token_header;
-
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
-
-          serf_bucket_headers_set(headers, "If", token_header);
-        }
-    }
+  SVN_ERR(maybe_set_lock_token_header(headers, proppatch->commit,
+                                      proppatch->relpath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -951,22 +975,8 @@ setup_put_headers(serf_bucket_t *headers,
                               ctx->result_checksum);
     }
 
-  if (ctx->commit->lock_tokens)
-    {
-      const char *token;
-
-      token = apr_hash_get(ctx->commit->lock_tokens, ctx->relpath,
-                           APR_HASH_KEY_STRING);
-
-      if (token)
-        {
-          const char *token_header;
-
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
-
-          serf_bucket_headers_set(headers, "If", token_header);
-        }
-    }
+  SVN_ERR(maybe_set_lock_token_header(headers, ctx->commit,
+                                      ctx->relpath, pool));
 
   return APR_SUCCESS;
 }
