@@ -739,12 +739,14 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
 {
   const char *token;
 
-  if (! (relpath && commit->lock_tokens))
+  if (! (relpath && commit_ctx->lock_tokens))
     return SVN_NO_ERROR;
 
-  if (! apr_hash_get(commit->deleted_entries, relpath, APR_HASH_KEY_STRING))
+  if (! apr_hash_get(commit_ctx->deleted_entries, relpath,
+                     APR_HASH_KEY_STRING))
     {
-      token = apr_hash_get(commit->lock_tokens, relpath, APR_HASH_KEY_STRING);
+      token = apr_hash_get(commit_ctx->lock_tokens, relpath,
+                           APR_HASH_KEY_STRING);
       if (token)
         {
           const char *token_header;
