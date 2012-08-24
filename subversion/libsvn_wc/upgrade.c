@@ -1501,63 +1501,25 @@ bump_to_30(void *baton,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt, *stmt_mark_switch_roots;
-  svn_boolean_t have_row;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_array_header_t *empty_iprops = apr_array_make(
-    scratch_pool, 0, sizeof(svn_prop_inherited_item_t *));
-
-  /* Add the inherited_props column to NODES. */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_30));
-
-  /* Set inherited_props to an empty array for the roots of all
-     switched subtrees in the WC.  This allows subsequent updates
-     to recognize these roots as needing an iprops cache. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_WCROOT_NODES));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt_mark_switch_roots, sdb,
-                                    STMT_UPDATE_IPROP));
-  while (have_row)
-    {
-      const char *switched_relpath = svn_sqlite__column_text(stmt, 1, NULL);
-      apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
-
-      SVN_ERR(svn_sqlite__bindf(stmt_mark_switch_roots, "is", wc_id,
-                                switched_relpath));
-      SVN_ERR(svn_sqlite__bind_iprops(stmt_mark_switch_roots, 3,
-                                      empty_iprops, iterpool));
-      SVN_ERR(svn_sqlite__step_done(stmt_mark_switch_roots));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-bump_to_31(void *baton,
-           svn_sqlite__db_t *sdb,
-           apr_pool_t *scratch_pool)
-{
   struct bump_baton *bb = baton;
   svn_boolean_t have_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_sqlite__stmt_t *stmt;
   svn_sqlite__stmt_t *stmt_store;
+  svn_sqlite__stmt_t *stmt_mark_switch_roots;
   svn_wc__db_t *db; /* Read only temp db */
   const char *wri_abspath = bb->wcroot_abspath;
+  apr_array_header_t *empty_iprops = apr_array_make(
+    scratch_pool, 0, sizeof(svn_prop_inherited_item_t *));
 
   SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
-                                    STMT_UPGRADE_31_SET_CONFLICT));
+                                    STMT_UPGRADE_30_SET_CONFLICT));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPGRADE_31_SELECT_CONFLICT_SEPARATE));
+                                    STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   while (have_row)
@@ -1597,9 +1559,35 @@ bump_to_31(void *baton,
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
+
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_31));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_30));
+ 
+  /* Set inherited_props to an empty array for the roots of all
+     switched subtrees in the WC.  This allows subsequent updates
+     to recognize these roots as needing an iprops cache. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_WCROOT_NODES));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_mark_switch_roots, sdb,
+                                    STMT_UPDATE_IPROP));
+  while (have_row)
+    {
+      const char *switched_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+      apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
+
+      SVN_ERR(svn_sqlite__bindf(stmt_mark_switch_roots, "is", wc_id,
+                                switched_relpath));
+      SVN_ERR(svn_sqlite__bind_iprops(stmt_mark_switch_roots, 3,
+                                      empty_iprops, iterpool));
+      SVN_ERR(svn_sqlite__step_done(stmt_mark_switch_roots));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   SVN_ERR(svn_wc__db_close(db));
   return SVN_NO_ERROR;
 }
@@ -1882,14 +1870,6 @@ svn_wc__upgrade_sdb(int *result_format,
                                              scratch_pool));
         *result_format = 30;
         /* FALLTHROUGH  */
-
-#if SVN_WC__VERSION >= 31
-      case 30:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_31, &bb,
-                                             scratch_pool));
-        *result_format = 31;
-        /* FALLTHROUGH  */
-#endif
       /* ### future bumps go here.  */
 #if 0
       case XXX-1:
