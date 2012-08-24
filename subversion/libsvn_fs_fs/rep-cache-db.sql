@@ -57,3 +57,11 @@ FROM rep_cache
 -- STMT_DEL_REPS_YOUNGER_THAN_REV
 DELETE FROM rep_cache
 WHERE revision > ?1
+
+/* An INSERT takes an SQLite reserved lock that prevents other writes
+   but doesn't block reads.  The incomplete transaction means that no
+   permanent change is made to the database and the transaction is
+   removed when the database is closed.  */
+-- STMT_LOCK_REP
+BEGIN TRANSACTION;
+INSERT INTO rep_cache VALUES ('dummy', 0, 0, 0, 0)

@@ -44,7 +44,6 @@
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
@@ -230,7 +229,7 @@ find_descendents_in_cache(void *baton,
   struct fdic_baton *b = baton;
   const char *item_path = key;
 
-  if (svn_dirent_is_ancestor(b->path, item_path))
+  if (svn_fspath__skip_ancestor(b->path, item_path))
     APR_ARRAY_PUSH(b->list, const char *) = apr_pstrdup(b->pool, item_path);
 
   return SVN_NO_ERROR;

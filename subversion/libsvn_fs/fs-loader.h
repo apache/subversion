@@ -202,6 +202,9 @@ typedef struct fs_vtable_t
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*freeze)(svn_fs_t *fs,
+                         svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+                         void *baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));

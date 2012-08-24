@@ -2940,47 +2940,7 @@ def commit_moved_dir_with_nested_mod_in_subdir(sbox):
               'Last Changed Rev'  : '2',
              }
   svntest.actions.run_and_verify_info([expected], E_copied)
-
-#----------------------------------------------------------------------
-def init_commit_hook_test(sbox):
-  "init-commit hook failure case testing"
-
-  sbox.build()
-
-  # Get paths to the working copy and repository
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  # Create a hook that outputs a message to stderr and returns exit code 1
-  # Include a non-XML-safe message as history shows there've been
-  # problems with such in hooks (see issue #3553).
-  error_msg = "Text with <angle brackets> & ampersand"
-  svntest.actions.create_failing_hook(repo_dir, "init-commit", error_msg)
-
-  # Modify iota just so there is something to commit.
-  iota_path = sbox.ospath('iota')
-  svntest.main.file_append(iota_path, "More stuff in iota")
-
-  # Commit, expect error code 1
-  exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(
-    1, 'ci', '--quiet', '-m', 'log msg', wc_dir)
-
-  # No stdout expected
-  svntest.verify.compare_and_display_lines('Init-commit hook test',
-                                           'STDOUT', [], actual_stdout)
-
-  # Compare only the last two lines of stderr since the preceding ones
-  # contain source code file and line numbers.
-  if len(actual_stderr) > 2:
-    actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: E165001: " +
-                        svntest.actions.hook_failure_message('init-commit'),
-                      error_msg + "\n",
-                    ]
-  svntest.verify.compare_and_display_lines('Init-commit hook test',
-                                           'STDERR',
-                                           expected_stderr, actual_stderr)
-
+  
   
 ########################################################################
 # Run the tests
@@ -3053,7 +3013,6 @@ test_list = [ None,
               commit_add_subadd,
               commit_danglers,
               commit_moved_dir_with_nested_mod_in_subdir,
-              init_commit_hook_test,
              ]
 
 if __name__ == '__main__':

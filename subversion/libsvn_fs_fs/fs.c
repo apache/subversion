@@ -38,6 +38,7 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
+#include "rep-cache.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -123,6 +124,46 @@ fs_set_errcall(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+struct fs_freeze_baton_t {
+  svn_fs_t *fs;
+  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
+  void *baton;
+};
+
+static svn_error_t *
+fs_freeze_body(void *baton,
+               apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t *b = baton;
+  svn_boolean_t exists;
+
+  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, b->fs, pool));
+  if (exists)
+    SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
+
+  SVN_ERR(b->freeze_body(b->baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_freeze(svn_fs_t *fs,
+          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+          void *baton,
+          apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t b;
+
+  b.fs = fs;
+  b.freeze_body = freeze_body;
+  b.baton = baton;
+
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
@@ -143,6 +184,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
+  fs_freeze,
   fs_set_errcall
 };
 
