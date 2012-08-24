@@ -3681,8 +3681,19 @@ get_revision_proplist(apr_hash_t **proplist_p,
    * non-packed shard.  If that fails, we will fall through to packed
    * shard reads. */
   if (!is_packed_revprop(fs, rev))
-    SVN_ERR(read_non_packed_revprop(proplist_p, fs, rev, generation,
-                                    pool));
+    {
+      svn_error_t *err = read_non_packed_revprop(proplist_p, fs, rev,
+                                                 generation, pool);
+      if (err)
+        {
+          if (!APR_STATUS_IS_ENOENT(err->apr_err)
+              || ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          *proplist_p = NULL; /* in case read_non_packed_revprop changed it */
+        }
+    }
 
   /* if revprop packing is available and we have not read the revprops, yet,
    * try reading them from a packed shard.  If that fails, REV is most

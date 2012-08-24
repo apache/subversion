@@ -150,6 +150,7 @@ static svn_opt_subcommand_t
   subcommand_create,
   subcommand_deltify,
   subcommand_dump,
+  subcommand_freeze,
   subcommand_help,
   subcommand_hotcopy,
   subcommand_load,
@@ -335,6 +336,11 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "case, the second and subsequent revisions, if any, describe only paths\n"
     "changed in those revisions.)\n"),
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
+
+  {"freeze", subcommand_freeze, {0}, N_
+   ("usage: svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n\n"
+    "Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"),
+   {0} },
 
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -965,6 +971,66 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              opt_state->incremental, opt_state->use_deltas,
                              !opt_state->quiet ? repos_notify_handler : NULL,
                              progress_stream, check_cancel, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+struct freeze_baton_t {
+  const char *command;
+  const char **args;
+  int status;
+};
+
+static svn_error_t *
+freeze_body(void *baton,
+            apr_pool_t *pool)
+{
+  struct freeze_baton_t *b = baton;
+  apr_status_t apr_err;
+  apr_file_t *infile, *outfile, *errfile;
+
+  apr_err = apr_file_open_stdin(&infile, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stdin");
+  apr_err = apr_file_open_stdout(&outfile, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stdout");
+  apr_err = apr_file_open_stderr(&errfile, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stderr");
+
+  SVN_ERR(svn_io_run_cmd(NULL, b->command, b->args, &b->status,
+                         NULL, TRUE,
+                         infile, outfile, errfile, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+  int i;
+  struct freeze_baton_t b;
+
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (!args->nelts)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                            _("No program provided"));
+
+  b.command = APR_ARRAY_IDX(args, 0, const char *);
+  b.args = apr_palloc(pool, sizeof(char *) * args->nelts + 1);
+  for (i = 0; i < args->nelts; ++i)
+    b.args[i] = APR_ARRAY_IDX(args, i, const char *);
+  b.args[args->nelts] = NULL;
+
+  SVN_ERR(svn_repos_freeze(opt_state->repository_path, freeze_body, &b, pool));
+
+  /* Make any non-zero status visible to the user. */
+  if (b.status)
+    exit(b.status);
 
   return SVN_NO_ERROR;
 }

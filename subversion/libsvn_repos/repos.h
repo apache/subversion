@@ -70,7 +70,6 @@ extern "C" {
 
 /* In the repository hooks directory, look for these files. */
 #define SVN_REPOS__HOOK_START_COMMIT    "start-commit"
-#define SVN_REPOS__HOOK_INIT_COMMIT     "init-commit"
 #define SVN_REPOS__HOOK_PRE_COMMIT      "pre-commit"
 #define SVN_REPOS__HOOK_POST_COMMIT     "post-commit"
 #define SVN_REPOS__HOOK_READ_SENTINEL   "read-sentinels"
@@ -154,24 +153,20 @@ struct svn_repos_t
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
    USER is the authenticated name of the user starting the commit.
+
    CAPABILITIES is a list of 'const char *' capability names (using
    SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
    there is no guarantee the client is telling the truth: the hook
-   should not make security assumptions based on the capabilities. */
+   should not make security assumptions based on the capabilities.
+
+   TXN_NAME is the name of the commit transaction that's just been
+   created. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
                               const apr_array_header_t *capabilities,
+                              const char *txn_name,
                               apr_pool_t *pool);
-
-/* Run the init-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
-
-   TXN_NAME is the name of the transaction that is being committed.  */
-svn_error_t *
-svn_repos__hooks_init_commit(svn_repos_t *repos,
-                             const char *txn_name,
-                             apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.

@@ -1334,12 +1334,8 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
 
-  /* Okay... some access is allowed. Let's run the start-commit hook.  */
   author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
                         APR_HASH_KEY_STRING);
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
-                                        repos->client_capabilities,
-                                        scratch_pool));
 
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
@@ -1356,6 +1352,11 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
 
   /* The TXN has been created. Go ahead and apply all revision properties.  */
   SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
+
+  /* Okay... some access is allowed. Let's run the start-commit hook.  */
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        repos->client_capabilities,
+                                        eb->txn_name, scratch_pool));
 
   /* Wrap the FS editor within our editor.  */
   SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,

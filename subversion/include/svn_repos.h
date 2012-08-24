@@ -653,6 +653,20 @@ svn_error_t *
 svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
+/**
+ * Take an exclusive lock on @a path to prevent commits and then
+ * invoke @a freeze_body passing @a baton.  The repository may be
+ * readable by Subversion while frozen, or it may be unreadable,
+ * depending on which FS backend the repository uses.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_freeze(const char *path,
+                 svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+                 void *baton,
+                 apr_pool_t *pool);
+
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
  * returning log file paths relative to the root of the repository.
  *
@@ -714,12 +728,6 @@ svn_repos_hook_dir(svn_repos_t *repos,
 const char *
 svn_repos_start_commit_hook(svn_repos_t *repos,
                             apr_pool_t *pool);
-
-/** Return the path to @a repos's init-commit hook, allocated in @a pool.
- * @since New in 1.8 */
-const char *
-svn_repos_init_commit_hook(svn_repos_t *repos,
-                           apr_pool_t *pool);
 
 /** Return the path to @a repos's pre-commit hook, allocated in @a pool. */
 const char *

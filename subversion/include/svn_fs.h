@@ -402,6 +402,24 @@ svn_fs_recover(const char *path,
                apr_pool_t *pool);
 
 
+/**
+ * Take an exclusive lock on @a fs to prevent commits and then invoke
+ * @a freeze_body passing @a baton.
+ *
+ * @note The BDB backend doesn't implement this feature so most
+ * callers should not call this function directly but should use the
+ * higher level #svn_repos_freeze instead.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool);
+              
+
+
 /** Subversion filesystems based on Berkeley DB.
  *
  * The following functions are specific to Berkeley DB filesystems.
