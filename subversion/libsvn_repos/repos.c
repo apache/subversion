@@ -330,6 +330,11 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
   "(the order is undefined)."                                                NL
 "#"                                                                          NL
+"# Note: The TXN-NAME parameter is new in Subversion 1.8.  Prior to version" NL
+"# 1.8, the start-commit hook was invoked before the commit txn was even"    NL
+"# created, so the ability to inspect the commit txn and its metadata from"  NL
+"# within the start-commit hook was not possible."                           NL
+"# "                                                                         NL
 "# The list is self-reported by the client.  Therefore, you should not"      NL
 "# make security assumptions based on the capabilities list, nor should"     NL
 "# you assume that clients reliably report every capability they have."      NL
@@ -352,10 +357,6 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# On a Windows system, you should name the hook program"                    NL
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-"# COMPATIBILITY NOTE:  Prior to Subversion 1.8, the start-commit hook was"  NL
-"# invoked before the commit txn was even created, and it did not accept"    NL
-"# the TXN-NAME argument at all."                                            NL
 "# "                                                                         NL
 HOOKS_ENVIRONMENT_TEXT
 "# "                                                                         NL
