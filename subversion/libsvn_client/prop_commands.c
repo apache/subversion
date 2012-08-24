@@ -912,13 +912,9 @@ svn_client_propget5(apr_hash_t **props,
         return svn_error_trace(err);
 
       if (inherited_props && local_iprops)
-        {
-          svn_boolean_t cached_iprops_found;
-
-          SVN_ERR(svn_wc__get_iprops(inherited_props, &cached_iprops_found,
-                                     ctx->wc_ctx, target, propname,
-                                     scratch_pool, scratch_pool));
-        }
+        SVN_ERR(svn_wc__get_iprops(inherited_props, ctx->wc_ctx,
+                                   target, propname,
+                                   scratch_pool, scratch_pool));
 
       SVN_ERR(get_prop_from_wc(props, propname, target,
                                pristine, kind,
@@ -1348,43 +1344,9 @@ svn_client_proplist4(const char *path_or_url,
       if (get_target_inherited_props && local_iprops)
         {
           apr_array_header_t *iprops;
-          svn_boolean_t cached_iprops_found;
 
-          SVN_ERR(svn_wc__get_iprops(&iprops, &cached_iprops_found,
-                                     ctx->wc_ctx, local_abspath,
+          SVN_ERR(svn_wc__get_iprops(&iprops, ctx->wc_ctx, local_abspath,
                                      NULL, scratch_pool, scratch_pool));
-
-          /* If the cached inherited properties were not found, then ask the
-             repository for them. */
-          if (!cached_iprops_found)
-            {
-              svn_ra_session_t *ra_session;
-              svn_node_kind_t kind;
-              svn_client__pathrev_t *pathrev;
-              apr_array_header_t *remote_iprops;
-              int i;
-
-              /* Get an RA session for this URL. */
-              SVN_ERR(svn_client__ra_session_from_path2(&ra_session,
-                                                        &pathrev,
-                                                        path_or_url,
-                                                        NULL, peg_revision,
-                                                        revision, ctx,
-                                                        scratch_pool));
-
-              SVN_ERR(svn_ra_check_path(ra_session, "", pathrev->rev, &kind,
-                                        scratch_pool));
-              SVN_ERR(svn_ra_get_inherited_props(ra_session, &remote_iprops,
-                                                 "", pathrev->rev,
-                                                 result_pool));
-              for (i = remote_iprops->nelts - 1; i >= 0; i--)
-                {
-                  svn_prop_inherited_item_t *remote_iprop =
-                    APR_ARRAY_IDX(remote_iprops, i, svn_prop_inherited_item_t *);
-                  svn_sort__array_insert(&remote_iprop, iprops, 0);
-                }
-            }
-
           SVN_ERR(call_receiver(path_or_url, NULL, iprops, receiver,
                                 receiver_baton, scratch_pool));
         }

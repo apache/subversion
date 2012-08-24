@@ -2357,7 +2357,6 @@ filter_unwanted_props(apr_hash_t *prop_hash,
 
 svn_error_t *
 svn_wc__get_iprops(apr_array_header_t **inherited_props,
-                   svn_boolean_t *cached_iprops_found,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
                    const char *propname,
@@ -2373,9 +2372,6 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
   SVN_ERR_ASSERT(inherited_props);
   *inherited_props = apr_array_make(result_pool, 1,
                                     sizeof(svn_prop_inherited_item_t *));
-
-  /* Our starting assumption. */
-  *cached_iprops_found = FALSE;
 
   /* Walk up to the root of the WC looking for inherited properties.  When we
      reach the WC root also check for cached inherited properties. */
@@ -2396,14 +2392,8 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                                                  iterpool, iterpool));
 
           /* If the WC root is also the root of the repository then by
-             definition there are no inheritable properties to be had,
-             but we still consider the question "did we definitively find
-             any iprops to be found?" answered in the affirmative. */
-          if (child_repos_relpath[0] == '\0')
-            {
-              *cached_iprops_found = TRUE;
-            }
-          else
+             definition there are no inheritable properties to be had. */
+          if (child_repos_relpath[0] != '\0')
             {
               /* Grab the cached inherited properties for the WC root. */
               SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops,
@@ -2411,10 +2401,6 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                                                     parent_abspath,
                                                     scratch_pool,
                                                     iterpool));
-              if (cached_iprops)
-                {
-                  *cached_iprops_found = TRUE;
-                }          
             }
         }
 

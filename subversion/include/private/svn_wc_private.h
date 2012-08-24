@@ -891,17 +891,13 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
  * inherited by @a local_abspath from the ACTUAL tree above
  * @a local_abspath (looking through to the WORKING or BASE tree as
  * required), up to and including the root of the working copy and
- * any cached inherited properties inherited by the root.  If any
- * cached inherited properties are found or a working copy parent
- * representing the repository root is reached, then set
- * @a *cached_iprops_found to TRUE, set it to FALSE otherwise.
+ * any cached inherited properties inherited by the root.
  *
  * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  */
 svn_error_t *
 svn_wc__get_iprops(apr_array_header_t **inherited_props,
-                   svn_boolean_t *cached_iprops_found,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
                    const char *propname,
