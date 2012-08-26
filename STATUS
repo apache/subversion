@@ -122,7 +122,7 @@ Candidate changes:
    Justification:
      Users ask whether "XFAIL > 0" is a problem.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh, rhuijben, brane
 
 Veto-blocked changes:
 =====================
