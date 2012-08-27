@@ -768,7 +768,7 @@ upgrade_authz_func_wrapper(svn_boolean_t *allowed,
   /* Callers shouldn't be asking about write permission via this
      interface. */
   SVN_ERR_ASSERT(required && (required < svn_repos_access_readwrite));
-  SVN_ERR_ASSERT(b->authz_callback);
+  SVN_ERR_ASSERT(b->authz_func);
 
   return svn_error_trace(b->authz_func(allowed, root, path,
                                        b->authz_func_baton, scratch_pool));
@@ -784,6 +784,8 @@ svn_repos__upgrade_authz_func(svn_repos_access_func_t *access_func,
 {
   svn_repos__upgrade_authz_baton_t *new_baton =
     apr_pcalloc(pool, sizeof(*new_baton));
+
+  SVN_ERR_ASSERT(authz_read_func);
 
   new_baton->authz_func = authz_read_func;
   new_baton->authz_func_baton = authz_baton;
@@ -832,6 +834,8 @@ svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
 {
   svn_repos__upgrade_authz_baton_t *new_baton =
     apr_pcalloc(pool, sizeof(*new_baton));
+
+  SVN_ERR_ASSERT(authz_callback);
 
   new_baton->authz_callback = authz_callback;
   new_baton->authz_callback_baton = authz_baton;

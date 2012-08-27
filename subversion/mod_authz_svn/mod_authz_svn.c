@@ -582,6 +582,83 @@ log_access_verdict(LOG_ARGS_SIGNATURE,
  * "mod_dav_svn/authz.c" .
  */
 static int
+subreq_bypass2(request_rec *r,
+               const char *repos_path,
+               const char *repos_name,
+               int list_only)
+{
+  svn_error_t *svn_err = NULL;
+  svn_authz_t *access_conf = NULL;
+  authz_svn_config_rec *conf = NULL;
+  svn_boolean_t authz_access_granted = FALSE;
+  char errbuf[256];
+  const char *username_to_authorize;
+
+  conf = ap_get_module_config(r->per_dir_config,
+                              &authz_svn_module);
+  username_to_authorize = get_username_to_authorize(r, conf);
+
+  /* If configured properly, this should never be true, but just in case. */
+  if (!conf->anonymous
+      || (! (conf->access_file || conf->repo_relative_access_file)))
+    {
+      log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+      return HTTP_FORBIDDEN;
+    }
+
+  /* Retrieve authorization file */
+  access_conf = get_access_conf(r, conf);
+  if (access_conf == NULL)
+    return HTTP_FORBIDDEN;
+
+  /* Perform authz access control.
+   * See similarly labeled comment in req_check_access.
+   */
+  if (repos_path)
+    {
+      svn_err = svn_repos_authz_check_access2(access_conf, repos_name,
+                                              repos_path,
+                                              username_to_authorize,
+                                              list_only ?
+                                                svn_repos_access_list :
+                                                svn_repos_access_read,
+                                              svn_depth_empty,
+                                              &authz_access_granted,
+                                              r->pool);
+      if (svn_err)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                        /* If it is an error code that APR can make
+                           sense of, then show it, otherwise, pass
+                           zero to avoid putting "APR does not
+                           understand this error code" in the error
+                           log. */
+                        ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                          svn_err->apr_err < APR_OS_START_CANONERR) ?
+                         0 : svn_err->apr_err),
+                        r, "Failed to perform access control: %s",
+                        svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
+          svn_error_clear(svn_err);
+          return HTTP_FORBIDDEN;
+        }
+      if (!authz_access_granted)
+        {
+          log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+          return HTTP_FORBIDDEN;
+        }
+    }
+
+  log_access_verdict(APLOG_MARK, r, 1, repos_path, NULL);
+
+  return OK;
+}
+
+/*
+ * This function is used as a provider to allow mod_dav_svn to bypass the
+ * generation of an apache request when checking GET access from
+ * "mod_dav_svn/authz.c" .
+ */
+static int
 subreq_bypass(request_rec *r,
               const char *repos_path,
               const char *repos_name)
@@ -799,6 +876,12 @@ register_hooks(apr_pool_t *p)
                        AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
                        AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER,
                        (void*)subreq_bypass);
+
+  ap_register_provider(p,
+                       AUTHZ_SVN__SUBREQ_BYPASS2_PROV_GRP,
+                       AUTHZ_SVN__SUBREQ_BYPASS2_PROV_NAME,
+                       AUTHZ_SVN__SUBREQ_BYPASS2_PROV_VER,
+                       (void*)subreq_bypass2);
 }
 
 module AP_MODULE_DECLARE_DATA authz_svn_module =

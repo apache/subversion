@@ -322,7 +322,7 @@ svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */
-authz_svn__subreq_bypass_func_t dav_svn__get_pathauthz_bypass(request_rec *r);
+authz_svn__subreq_bypass_func2_t dav_svn__get_pathauthz_bypass(request_rec *r);
 
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */
@@ -700,17 +700,20 @@ typedef struct dav_svn__authz_read_baton
 
 
 /* Return TRUE iff the current user (as determined by Apache's
-   authentication system) has permission to read PATH in REPOS at REV
-   (where an invalid REV means "HEAD").  This will invoke any authz
-   modules loaded into Apache unless this Subversion location has been
-   configured to bypass those in favor of a direct lookup in the
-   Subversion authz subsystem.  Use POOL for any temporary allocation.
+   authentication system) has the REQUIRED access level on PATH (to
+   DEPTH) in REPOS at REV (where an invalid REV means "HEAD").  This
+   will invoke any authz modules loaded into Apache unless this
+   Subversion location has been configured to bypass those in favor of
+   a direct lookup in the Subversion authz subsystem.  Use POOL for
+   any temporary allocation.
 */
 svn_boolean_t
 dav_svn__allow_read(request_rec *r,
                     const dav_svn_repos *repos,
                     const char *path,
                     svn_revnum_t rev,
+                    svn_repos_access_t required,
+                    svn_depth_t depth,
                     apr_pool_t *pool);
 
 /* Return TRUE iff the current user (as determined by Apache's

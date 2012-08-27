@@ -236,12 +236,13 @@ svn_repos_begin_report2(void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
-  svn_repos_access_func_t access_func;
-  void *access_baton;
+  svn_repos_access_func_t access_func = NULL;
+  void *access_baton = NULL;
 
-  SVN_ERR(svn_repos__upgrade_authz_func(&access_func, &access_baton,
-                                        authz_read_func, authz_read_baton,
-                                        pool));
+  if (authz_read_func)
+    SVN_ERR(svn_repos__upgrade_authz_func(&access_func, &access_baton,
+                                          authz_read_func, authz_read_baton,
+                                          pool));
   return svn_repos_begin_report3(report_baton, revnum, repos, fs_base,
                                  s_operand, switch_path, text_deltas,
                                  depth, ignore_ancestry, send_copyfrom_args,

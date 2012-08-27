@@ -3445,8 +3445,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                                name, entry_pool);
               if (! dav_svn__allow_read(resource->info->r,
                                         resource->info->repos,
-                                        repos_relpath,
-                                        dir_rev,
+                                        repos_relpath, dir_rev,
+                                        svn_repos_access_list,
                                         entry_pool))
                 continue;
             }

@@ -668,6 +668,51 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_fs_dir_entries(apr_hash_t **entries,
+                         svn_fs_root_t *root,
+                         const char *path,
+                         svn_repos_access_func_t access_func,
+                         void *access_baton,
+                         svn_repos_access_t required,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *tmp_entries;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_dir_entries(&tmp_entries, root, path, pool));
+
+  *entries = apr_hash_make(pool);
+
+  if (! access_func)
+    {
+      *entries = tmp_entries;
+      return SVN_NO_ERROR;
+    }
+
+  for (hi = apr_hash_first(pool, tmp_entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_boolean_t allowed;
+
+      apr_hash_this(hi, &key, &keylen, &val);
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(access_func(&allowed, root, this_path, required,
+                          svn_depth_empty, access_baton, iterpool));
+
+      if (allowed)
+        apr_hash_set(entries, key, keylen, val);
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 struct pack_notify_baton
 {
   svn_repos_notify_func_t notify_func;

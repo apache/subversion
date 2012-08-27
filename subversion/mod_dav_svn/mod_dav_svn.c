@@ -107,7 +107,7 @@ typedef struct dir_conf_t {
 extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 /* The authz_svn provider for bypassing path authz. */
-static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
+static authz_svn__subreq_bypass_func2_t pathauthz_bypass_func = NULL;
 
 /* The compression level we will pass to svn_txdelta_to_svndiff3()
  * for wire-compression */
@@ -360,9 +360,9 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
       if (pathauthz_bypass_func == NULL)
         {
           pathauthz_bypass_func =
-            ap_lookup_provider(AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
-                               AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
-                               AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
+            ap_lookup_provider(AUTHZ_SVN__SUBREQ_BYPASS2_PROV_GRP,
+                               AUTHZ_SVN__SUBREQ_BYPASS2_PROV_NAME,
+                               AUTHZ_SVN__SUBREQ_BYPASS2_PROV_VER);
         }
     }
   else if (apr_strnatcasecmp("on", arg1) == 0)
@@ -807,9 +807,10 @@ dav_svn__get_pathauthz_flag(request_rec *r)
   return conf->path_authz_method != CONF_PATHAUTHZ_OFF;
 }
 
+
 /* Function pointer if we should use the bypass directly to mod_authz_svn.
  * NULL otherwise. */
-authz_svn__subreq_bypass_func_t
+authz_svn__subreq_bypass_func2_t
 dav_svn__get_pathauthz_bypass(request_rec *r)
 {
   dir_conf_t *conf;

@@ -39,6 +39,7 @@ dav_svn__allow_read(request_rec *r,
                     const dav_svn_repos *repos,
                     const char *path,
                     svn_revnum_t rev,
+                    svn_repos_access_t required,
                     apr_pool_t *pool)
 {
   const char *uri;
@@ -46,6 +47,7 @@ dav_svn__allow_read(request_rec *r,
   enum dav_svn__build_what uri_type;
   svn_boolean_t allowed = FALSE;
   authz_svn__subreq_bypass_func_t allow_read_bypass = NULL;
+  int list_only = (required < svn_repos_access_read) ? 1 : 0;
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
      then this whole callback does nothing. */
@@ -67,17 +69,28 @@ dav_svn__allow_read(request_rec *r,
   allow_read_bypass = dav_svn__get_pathauthz_bypass(r);
   if (allow_read_bypass != NULL)
     {
-      if (allow_read_bypass(r, path, repos->repo_basename) == OK)
+      if (allow_read_bypass(r, path, repos->repo_basename, list_only) == OK)
         return TRUE;
       else
         return FALSE;
     }
+
+  /* Our ultimate goal here is to create a Version Resource (VR) url,
+     which is a url that represents a path within a revision.  We then
+     send a subrequest to apache, so that any installed authz modules
+     can allow/disallow the path.
+
+     ### That means that we're assuming that any installed authz
+     module is *only* paying attention to revision-paths, not paths in
+     uncommitted transactions.  Someday we need to widen our horizons. */
 
   /* If no revnum is specified, assume HEAD. */
   if (SVN_IS_VALID_REVNUM(rev))
     uri_type = DAV_SVN__BUILD_URI_VERSION;
   else
     uri_type = DAV_SVN__BUILD_URI_PUBLIC;
+
+  /* ### FIXME:  How do we handle LIST_ONLY=1 here?  CGI parameters? */
 
   /* Build a Version Resource uri representing (rev, path). */
   uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
@@ -96,38 +109,13 @@ dav_svn__allow_read(request_rec *r,
   return allowed;
 }
 
-
-/* This function implements 'svn_repos_authz_func_t', specifically
-   for read authorization.
-
-   Convert incoming ROOT and PATH into a version-resource URI and
-   perform a GET subrequest on it.  This will invoke any authz modules
-   loaded into apache.  Set *ALLOWED to TRUE if the subrequest
-   succeeds, FALSE otherwise.
-
-   BATON must be a pointer to a dav_svn__authz_read_baton.
-   Use POOL for for any temporary allocation.
-*/
 static svn_error_t *
-authz_read(svn_boolean_t *allowed,
-           svn_fs_root_t *root,
-           const char *path,
-           void *baton,
-           apr_pool_t *pool)
+get_authz_fspath_and_rev(const char **fspath,
+                         svn_revnum_t *revision,
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
 {
-  dav_svn__authz_read_baton *arb = baton;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
-  const char *revpath = NULL;
-
-  /* Our ultimate goal here is to create a Version Resource (VR) url,
-     which is a url that represents a path within a revision.  We then
-     send a subrequest to apache, so that any installed authz modules
-     can allow/disallow the path.
-
-     ### That means that we're assuming that any installed authz
-     module is *only* paying attention to revision-paths, not paths in
-     uncommitted transactions.  Someday we need to widen our horizons. */
-
   if (svn_fs_is_txn_root(root))
     {
       /* This means svn_repos_dir_delta2 is comparing two txn trees,
@@ -148,12 +136,12 @@ authz_read(svn_boolean_t *allowed,
       while (! (svn_path_is_empty(path_s->data)
                 || svn_fspath__is_root(path_s->data, path_s->len)))
         {
-          SVN_ERR(svn_fs_copied_from(&rev, &revpath, root,
+          SVN_ERR(svn_fs_copied_from(revision, fspath, root,
                                      path_s->data, pool));
 
-          if (SVN_IS_VALID_REVNUM(rev) && revpath)
+          if (SVN_IS_VALID_REVNUM(*revision) && *fspath)
             {
-              revpath = svn_fspath__join(revpath, lopped_path, pool);
+              *fspath = svn_fspath__join(*fspath, lopped_path, pool);
               break;
             }
 
@@ -166,42 +154,75 @@ authz_read(svn_boolean_t *allowed,
 
       /* If no copy produced this path, its path in the original
          revision is the same as its path in this txn. */
-      if ((rev == SVN_INVALID_REVNUM) && (revpath == NULL))
+      if ((*revision == SVN_INVALID_REVNUM) && (*fspath == NULL))
         {
-          rev = svn_fs_txn_root_base_revision(root);
-          revpath = path;
+          *fspath = path;
+          *revision = svn_fs_txn_root_base_revision(root);
         }
     }
   else  /* revision root */
     {
-      rev = svn_fs_revision_root_revision(root);
-      revpath = path;
+      *fspath = path;
+      *revision = svn_fs_revision_root_revision(root);
     }
-
-  /* We have a (rev, path) pair to check authorization on. */
-  *allowed = dav_svn__allow_read(arb->r, arb->repos, revpath, rev, pool);
 
   return SVN_NO_ERROR;
 }
 
+/* This function implements 'svn_repos_access_func_t', specifically
+   for read authorization.
 
-svn_repos_authz_func_t
-dav_svn__authz_read_func(dav_svn__authz_read_baton *baton)
+   Convert incoming ROOT and PATH into a version-resource URI and
+   perform a GET subrequest on it.  This will invoke any authz modules
+   loaded into apache.  Set *ALLOWED to TRUE if the subrequest
+   succeeds, FALSE otherwise.
+
+   BATON must be a pointer to a dav_svn__authz_read_baton.
+   Use POOL for for any temporary allocation.
+*/
+static svn_error_t *
+access_func(svn_boolean_t *allowed,
+            svn_fs_root_t *root,
+            const char *path,
+            svn_repos_access_t required,
+            svn_depth_t depth,
+            void *baton,
+            apr_pool_t *scratch_pool)
+{
+  dav_svn__authz_read_baton *arb = baton;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  const char *revpath = NULL;
+
+  SVN_ERR_ASSERT(required < svn_repos_access_readwrite);
+  SVN_ERR_ASSERT(depth == svn_depth_empty);
+
+  SVN_ERR(get_authz_fspath_and_rev(&revpath, &rev, root, path,
+                                   scratch_pool));
+  *allowed = dav_svn__allow_read(arb->r, arb->repos, revpath, rev,
+                                 required, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_repos_access_func_t
+dav_svn__access_func(dav_svn__access_baton *baton)
 {
   /* Easy out: If the admin has explicitly set 'SVNPathAuthz Off',
      then we don't need to do any authorization checks. */
   if (! dav_svn__get_pathauthz_flag(baton->r))
     return NULL;
 
-  return authz_read;
+  return access_func;
 }
 
 
 svn_boolean_t
 dav_svn__allow_read_resource(const dav_resource *resource,
                              svn_revnum_t rev,
+                             svn_repos_access_t required,
                              apr_pool_t *pool)
 {
   return dav_svn__allow_read(resource->info->r, resource->info->repos,
-                             resource->info->repos_path, rev, pool);
+                             resource->info->repos_path, rev, 
+                             required, svn_depth_empty, pool);
 }
