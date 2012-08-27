@@ -321,6 +321,49 @@ checkout_node(const char **working_url,
 }
 
 
+/* This is a wrapper around checkout_node() (which see for
+   documentation) which simply retries the CHECKOUT request when it
+   fails due to an SVN_ERR_APMOD_BAD_BASELINE error return from the
+   server.
+
+   See http://subversion.tigris.org/issues/show_bug.cgi?id=4127 for
+   details.
+*/
+static svn_error_t *
+retry_checkout_node(const char **working_url,
+                    const commit_context_t *commit_ctx,
+                    const char *node_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  int retry_count = 5; /* Magic, arbitrary number. */
+
+  do
+    {
+      svn_error_clear(err);
+
+      err = checkout_node(working_url, commit_ctx, node_url,
+                          result_pool, scratch_pool);
+
+      /* There's a small chance of a race condition here if Apache is
+         experiencing heavy commit concurrency or if the network has
+         long latency.  It's possible that the value of HEAD changed
+         between the time we fetched the latest baseline and the time
+         we try to CHECKOUT that baseline.  If that happens, Apache
+         will throw us a BAD_BASELINE error (deltaV says you can only
+         checkout the latest baseline).  We just ignore that specific
+         error and retry a few times, asking for the latest baseline
+         again. */
+      if (err && (err->apr_err != SVN_ERR_APMOD_BAD_BASELINE))
+        return err;
+    }
+  while (err && retry_count--);
+
+  return err;
+}
+
+
 static svn_error_t *
 checkout_dir(dir_context_t *dir,
              apr_pool_t *scratch_pool)
@@ -366,8 +409,8 @@ checkout_dir(dir_context_t *dir,
     }
 
   /* Checkout our directory into the activity URL now. */
-  err = checkout_node(working, dir->commit, checkout_url,
-                      dir->pool, scratch_pool);
+  err = retry_checkout_node(working, dir->commit, checkout_url,
+                            dir->pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
@@ -504,8 +547,8 @@ checkout_file(file_context_t *file,
                           NULL, scratch_pool, scratch_pool));
 
   /* Checkout our file into the activity URL now. */
-  err = checkout_node(&file->working_url, file->commit, checkout_url,
-                      file->pool, scratch_pool);
+  err = retry_checkout_node(&file->working_url, file->commit, checkout_url,
+                            file->pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
