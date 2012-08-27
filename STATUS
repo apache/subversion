@@ -122,10 +122,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1375089
-   Print "All tests successful" at the end of 'make check'.
-   Justification:
-     Users ask whether "XFAIL > 0" is a problem.
-   Votes:
-     +1: danielsh, rhuijben, brane
