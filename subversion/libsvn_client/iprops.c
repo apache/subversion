@@ -161,7 +161,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                 }
 
               SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                                 "", revision, result_pool));
+                                                 "", revision, result_pool,
+                                                 scratch_pool));
 
               if (old_session_url)
                 SVN_ERR(svn_ra_reparent(ra_session, old_session_url,

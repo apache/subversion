@@ -274,7 +274,8 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_array_header_t **iprops,
                                  const char *path,
                                  svn_revnum_t revision,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err, *err2;
 
@@ -290,22 +291,22 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                       NULL /* conn */,
                                       NULL /* url */,
                                       revision,
-                                      pool, pool));
+                                      result_pool, scratch_pool));
 
-  iprops_ctx = apr_pcalloc(pool, sizeof(*iprops_ctx));
+  iprops_ctx = apr_pcalloc(scratch_pool, sizeof(*iprops_ctx));
   iprops_ctx->done = FALSE;
   iprops_ctx->repos_root_url = session->repos_root_str;
-  iprops_ctx->pool = pool;
-  iprops_ctx->curr_path = svn_stringbuf_create_empty(pool);
-  iprops_ctx->curr_propname = svn_stringbuf_create_empty(pool);
-  iprops_ctx->curr_propval = svn_stringbuf_create_empty(pool);
+  iprops_ctx->pool = result_pool;
+  iprops_ctx->curr_path = svn_stringbuf_create_empty(scratch_pool);
+  iprops_ctx->curr_propname = svn_stringbuf_create_empty(scratch_pool);
+  iprops_ctx->curr_propval = svn_stringbuf_create_empty(scratch_pool);
   iprops_ctx->curr_iprop = NULL;
-  iprops_ctx->iprops = apr_array_make(pool, 1,
+  iprops_ctx->iprops = apr_array_make(result_pool, 1,
                                        sizeof(svn_prop_inherited_item_t *));
   iprops_ctx->path = path;
   iprops_ctx->revision = revision;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler = apr_pcalloc(scratch_pool, sizeof(*handler));
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -314,11 +315,11 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler->body_delegate = create_iprops_body;
   handler->body_delegate_baton = iprops_ctx;
   handler->body_type = "text/xml";
-  handler->handler_pool = pool;
+  handler->handler_pool = scratch_pool;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+  parser_ctx = apr_pcalloc(scratch_pool, sizeof(*parser_ctx));
 
-  parser_ctx->pool = pool;
+  parser_ctx->pool = scratch_pool;
   parser_ctx->user_data = iprops_ctx;
   parser_ctx->start = start_element;
   parser_ctx->end = end_element;
@@ -330,7 +331,8 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session, pool);
+  err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session,
+                                      scratch_pool);
 
   err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
                                       handler->location);

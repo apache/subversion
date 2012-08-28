@@ -179,7 +179,7 @@ static svn_error_t *compat_get_file(void *session_baton,
                                     apr_pool_t *pool)
 {
   return VTBL.get_file(session_baton, path, revision, stream, fetched_rev,
-                       props, NULL, pool);
+                       props, NULL, pool, pool);
 }
 
 static svn_error_t *compat_get_dir(void *session_baton,
@@ -191,7 +191,7 @@ static svn_error_t *compat_get_dir(void *session_baton,
                                    apr_pool_t *pool)
 {
   return VTBL.get_dir(session_baton, dirents, fetched_rev, props,
-                      NULL, path, revision, SVN_DIRENT_ALL, pool);
+                      NULL, path, revision, SVN_DIRENT_ALL, pool, pool);
 }
 
 /** Reporter compat code. **/
