@@ -1503,6 +1503,115 @@ def iprops_shallow_operative_depths(sbox):
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('mu'), expected_iprops, expected_explicit_props)
 
+#----------------------------------------------------------------------
+# Inherited property caching by directory externals.
+def iprops_with_directory_externals(sbox):
+  "iprop caching works with directory externals"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a second repository with the original greek tree
+  repo_dir = sbox.repo_dir
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
+                                     other_wc_dir)
+
+  # Create a root property on the first WC.
+  sbox.simple_propset('Prime-Root-Prop', 'Root-Prop-Val1', '.')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add a root property',
+                       wc_dir)
+
+  # Create a root property on the "other" WC.
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', 'Other-Root-Prop',
+                                     'Root-Prop-Val-from-other', other_wc_dir)
+  svntest.main.run_svn(None, 'commit', '-m', 'Add a root property',
+                       other_wc_dir)
+
+  # Switch the root of the first WC to a repository non-root, it will
+  # now have cached iprops from the first repos.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/B',
+                       wc_dir, '--ignore-ancestry')
+
+  # Create an external in the first WC that points to a location in the
+  # "other" WC.
+  sbox.simple_propset('svn:externals',
+                      other_repo_url + '/A/D/G X-Other-Repos',
+                      'E')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add external point to other WC',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Create an external in the first WC that points to a location in the
+  # same WC.
+  sbox.simple_propset('svn:externals',
+                      sbox.repo_url + '/A/D/H X-Same-Repos',
+                      'F')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Add external pointing to same repos',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Check the properties inherited by the external from the same repository.
+  # It should inherit the props from the root of the same repository.
+  expected_iprops = {
+    sbox.repo_url : {'Prime-Root-Prop' : 'Root-Prop-Val1'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('F/X-Same-Repos'), expected_iprops, expected_explicit_props)
+
+  # Check the properties inherited by the external from the "other"
+  # repository.  It should inherit from the root of the other repos,
+  # despite being located in the first repository's WC.
+  expected_iprops = {
+    other_repo_url : {'Other-Root-Prop' : 'Root-Prop-Val-from-other'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('E/X-Other-Repos'), expected_iprops, expected_explicit_props)
+
+#----------------------------------------------------------------------
+# Inherited property caching by file externals.
+@XFail()
+def iprops_with_file_externals(sbox):
+  "iprop caching works with file externals"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a root property.
+  sbox.simple_propset('Prime-Root-Prop', 'Root-Prop-Val1', '.')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add a root property',
+                       wc_dir)
+
+  # Create a "branch" property on 'A/D'.
+  sbox.simple_propset('Prime-Branch-Prop', 'Branch-Prop-Val1', 'A/D')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add a branch property',
+                       wc_dir)
+
+  # Create a file external in the first WC that points to a location in the
+  # same WC.
+  sbox.simple_propset('svn:externals',
+                      sbox.repo_url + '/A/D/H/psi file-external',
+                      'A/B/E')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Add a file external', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Check the properties inherited by the external file.  It should
+  # inherit the property from ^/ and ^/A/D.
+  #
+  # Currently this fails because the file external inherits *nothing*.
+  expected_iprops = {
+    sbox.repo_url          : {'Prime-Root-Prop'   : 'Root-Prop-Val1'},
+    sbox.repo_url + '/A/D' : {'Prime-Branch-Prop' : 'Branch-Prop-Val1'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/E/file-external'), expected_iprops,
+    expected_explicit_props)
+
 ########################################################################
 # Run the tests
 
@@ -1514,6 +1623,8 @@ test_list = [ None,
               iprops_pegged_wc_targets,
               iprops_pegged_url_targets,
               iprops_shallow_operative_depths,
+              iprops_with_directory_externals,
+              iprops_with_file_externals,
             ]
 
 if __name__ == '__main__':
