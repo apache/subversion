@@ -321,6 +321,49 @@ checkout_node(const char **working_url,
 }
 
 
+/* This is a wrapper around checkout_node() (which see for
+   documentation) which simply retries the CHECKOUT request when it
+   fails due to an SVN_ERR_APMOD_BAD_BASELINE error return from the
+   server.
+
+   See http://subversion.tigris.org/issues/show_bug.cgi?id=4127 for
+   details.
+*/
+static svn_error_t *
+retry_checkout_node(const char **working_url,
+                    const commit_context_t *commit_ctx,
+                    const char *node_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  int retry_count = 5; /* Magic, arbitrary number. */
+
+  do
+    {
+      svn_error_clear(err);
+
+      err = checkout_node(working_url, commit_ctx, node_url,
+                          result_pool, scratch_pool);
+
+      /* There's a small chance of a race condition here if Apache is
+         experiencing heavy commit concurrency or if the network has
+         long latency.  It's possible that the value of HEAD changed
+         between the time we fetched the latest baseline and the time
+         we try to CHECKOUT that baseline.  If that happens, Apache
+         will throw us a BAD_BASELINE error (deltaV says you can only
+         checkout the latest baseline).  We just ignore that specific
+         error and retry a few times, asking for the latest baseline
+         again. */
+      if (err && (err->apr_err != SVN_ERR_APMOD_BAD_BASELINE))
+        return err;
+    }
+  while (err && retry_count--);
+
+  return err;
+}
+
+
 static svn_error_t *
 checkout_dir(dir_context_t *dir,
              apr_pool_t *scratch_pool)
@@ -366,8 +409,8 @@ checkout_dir(dir_context_t *dir,
     }
 
   /* Checkout our directory into the activity URL now. */
-  err = checkout_node(working, dir->commit, checkout_url,
-                      dir->pool, scratch_pool);
+  err = retry_checkout_node(working, dir->commit, checkout_url,
+                            dir->pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
@@ -504,8 +547,8 @@ checkout_file(file_context_t *file,
                           NULL, scratch_pool, scratch_pool));
 
   /* Checkout our file into the activity URL now. */
-  err = checkout_node(&file->working_url, file->commit, checkout_url,
-                      file->pool, scratch_pool);
+  err = retry_checkout_node(&file->working_url, file->commit, checkout_url,
+                            file->pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
@@ -719,6 +762,46 @@ proppatch_walker(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Possible add the lock-token "If:" precondition header to HEADERS if
+   an examination of COMMIT_CTX and RELPATH indicates that this is the
+   right thing to do.
+
+   Generally speaking, if the client provided a lock token for
+   RELPATH, it's the right thing to do.  There is a notable instance
+   where this is not the case, however.  If the file at RELPATH was
+   explicitly deleted in this commit already, then mod_dav removed its
+   lock token when it fielded the DELETE request, so we don't want to
+   set the lock precondition again.  (See
+   http://subversion.tigris.org/issues/show_bug.cgi?id=3674 for details.)
+*/
+static svn_error_t *
+maybe_set_lock_token_header(serf_bucket_t *headers,
+                            commit_context_t *commit_ctx,
+                            const char *relpath,
+                            apr_pool_t *pool)
+{
+  const char *token;
+
+  if (! (relpath && commit_ctx->lock_tokens))
+    return SVN_NO_ERROR;
+
+  if (! apr_hash_get(commit_ctx->deleted_entries, relpath,
+                     APR_HASH_KEY_STRING))
+    {
+      token = apr_hash_get(commit_ctx->lock_tokens, relpath,
+                           APR_HASH_KEY_STRING);
+      if (token)
+        {
+          const char *token_header;
+
+          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
+          serf_bucket_headers_set(headers, "If", token_header);
+        }
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 setup_proppatch_headers(serf_bucket_t *headers,
                         void *baton,
@@ -733,22 +816,8 @@ setup_proppatch_headers(serf_bucket_t *headers,
                                            proppatch->base_revision));
     }
 
-  if (proppatch->relpath && proppatch->commit->lock_tokens)
-    {
-      const char *token;
-
-      token = apr_hash_get(proppatch->commit->lock_tokens, proppatch->relpath,
-                           APR_HASH_KEY_STRING);
-
-      if (token)
-        {
-          const char *token_header;
-
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
-
-          serf_bucket_headers_set(headers, "If", token_header);
-        }
-    }
+  SVN_ERR(maybe_set_lock_token_header(headers, proppatch->commit,
+                                      proppatch->relpath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -951,22 +1020,8 @@ setup_put_headers(serf_bucket_t *headers,
                               ctx->result_checksum);
     }
 
-  if (ctx->commit->lock_tokens)
-    {
-      const char *token;
-
-      token = apr_hash_get(ctx->commit->lock_tokens, ctx->relpath,
-                           APR_HASH_KEY_STRING);
-
-      if (token)
-        {
-          const char *token_header;
-
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
-
-          serf_bucket_headers_set(headers, "If", token_header);
-        }
-    }
+  SVN_ERR(maybe_set_lock_token_header(headers, ctx->commit,
+                                      ctx->relpath, pool));
 
   return APR_SUCCESS;
 }

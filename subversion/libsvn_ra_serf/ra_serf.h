@@ -89,7 +89,9 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
-/** Max. number of connctions we'll open to the server. */
+/** Max. number of connctions we'll open to the server. 
+ *  Note: minimum 2 connections are required for ra_serf to function correctly!
+ */
 #define MAX_NR_OF_CONNS 4
 
 /*
