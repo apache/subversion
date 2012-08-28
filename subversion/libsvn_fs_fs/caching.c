@@ -429,6 +429,19 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
 
+  /* initialize node change list cache, if caching has been enabled */
+  SVN_ERR(create_cache(&(ffd->changes_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_changes,
+                       svn_fs_fs__deserialize_changes,
+                       sizeof(svn_revnum_t),
+                       apr_pstrcat(pool, prefix, "CHANGES", (char *)NULL),
+                       fs->pool));
+
+  SVN_ERR(init_callbacks(ffd->changes_cache, fs, no_handler, pool));
+
   return SVN_NO_ERROR;
 }
 
