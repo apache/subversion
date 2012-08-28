@@ -5748,7 +5748,7 @@ read_change(change_t **change_p,
   return SVN_NO_ERROR;
 }
 
-/* Fetch all the changed path entries from FILE and store then in
+/* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
    *data.  Store a hash of paths to copyfrom "REV PATH" strings in
    COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
@@ -5757,22 +5757,22 @@ read_change(change_t **change_p,
    remove children of replaced or deleted directories.  Do all
    allocations in POOL. */
 static svn_error_t *
-fetch_all_changes(apr_hash_t *changed_paths,
-                  apr_hash_t *copyfrom_cache,
-                  apr_file_t *file,
-                  svn_boolean_t prefolded,
-                  apr_pool_t *pool)
+process_changes(apr_hash_t *changed_paths,
+                apr_hash_t *copyfrom_cache,
+                apr_array_header_t *changes,
+                svn_boolean_t prefolded,
+                apr_pool_t *pool)
 {
-  change_t *change;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
 
   /* Read in the changes one by one, folding them into our local hash
      as necessary. */
 
-  SVN_ERR(read_change(&change, file, iterpool));
-
-  while (change)
+  for (i = 0; i < changes->nelts; ++i)
     {
+      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      
       SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
 
       /* Now, if our change was a deletion or replacement, we have to
@@ -5826,12 +5826,33 @@ fetch_all_changes(apr_hash_t *changed_paths,
 
       /* Clear the per-iteration subpool. */
       svn_pool_clear(iterpool);
-
-      SVN_ERR(read_change(&change, file, iterpool));
     }
 
   /* Destroy the per-iteration subpool. */
   svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch all the changes from FILE and store them in *CHANGES.  Do all
+   allocations in POOL. */
+static svn_error_t *
+read_all_changes(apr_array_header_t **changes,
+                 apr_file_t *file,
+                 apr_pool_t *pool)
+{
+  change_t *change;
+
+  /* pre-allocate enough room for most change lists
+     (will be auto-expanded as necessary) */
+  *changes = apr_array_make(pool, 30, sizeof(change_t *));
+  
+  SVN_ERR(read_change(&change, file, pool));
+  while (change)
+    {
+      APR_ARRAY_PUSH(*changes, change_t*) = change;
+      SVN_ERR(read_change(&change, file, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5844,11 +5865,15 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
 {
   apr_file_t *file;
   apr_hash_t *changed_paths = apr_hash_make(pool);
+  apr_array_header_t *changes;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(fetch_all_changes(changed_paths, NULL, file, FALSE, pool));
+  SVN_ERR(read_all_changes(&changes, file, scratch_pool));
+  SVN_ERR(process_changes(changed_paths, NULL, changes, FALSE, pool));
+  svn_pool_destroy(scratch_pool);
 
   SVN_ERR(svn_io_file_close(file, pool));
 
@@ -5857,17 +5882,29 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
-                         svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_hash_t *copyfrom_cache,
-                         apr_pool_t *pool)
+/* Fetch the list of change in revision REV in FS and return it in *CHANGES.
+ * Allocate the result in POOL.
+ */
+static svn_error_t *
+get_changes(apr_array_header_t **changes,
+            svn_fs_t *fs,
+            svn_revnum_t rev,
+            apr_pool_t *pool)
 {
   apr_off_t changes_offset;
-  apr_hash_t *changed_paths;
   apr_file_t *revision_file;
+  svn_boolean_t found;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
+  /* try cache lookup first */
+
+  SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+                         &rev, pool));
+  if (found)
+    return SVN_NO_ERROR;
+
+  /* read changes from revision file */
+  
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
@@ -5876,14 +5913,36 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
                                   rev, pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
+  SVN_ERR(read_all_changes(changes, revision_file, pool));
+  
+  SVN_ERR(svn_io_file_close(revision_file, pool));
+
+  /* cache for future reference */
+  
+  SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
+                         svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_hash_t *copyfrom_cache,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *changed_paths;
+  apr_array_header_t *changes;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+  SVN_ERR(get_changes(&changes, fs, rev, scratch_pool));
 
   changed_paths = apr_hash_make(pool);
 
-  SVN_ERR(fetch_all_changes(changed_paths, copyfrom_cache, revision_file,
-                            TRUE, pool));
-
-  /* Close the revision file. */
-  SVN_ERR(svn_io_file_close(revision_file, pool));
+  SVN_ERR(process_changes(changed_paths, copyfrom_cache, changes,
+                          TRUE, pool));
+  svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;
 
