@@ -49,7 +49,6 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
                                     ap_filter_t *output)
 {
-  /* ### IPROPS TODO: Authz   */
   svn_error_t *serr;
   dav_error *derr = NULL;
   apr_xml_elem *child;
