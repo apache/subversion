@@ -161,8 +161,8 @@ proplist_receiver(void *baton,
 
           SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,
                                           (! opt_state->verbose), iterpool));
-          svn_pool_destroy(iterpool);
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (prop_hash && apr_hash_count(prop_hash))
