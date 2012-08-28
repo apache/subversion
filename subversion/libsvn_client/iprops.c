@@ -40,55 +40,6 @@
 
 /*** Code. ***/
 
-/* Determine if ABSPATH needs an inherited property cache (i.e. it is a WC
-   root that is not also the repository root or it is switched).  If it does,
-   then set *NEEDS_CACHE to true, set it to false otherwise. */
-static svn_error_t *
-need_to_cache_iprops(svn_boolean_t *needs_cache,
-                     const char *abspath,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *scratch_pool)
-{
-  svn_boolean_t is_wc_root;
-  svn_error_t *err;
-
-  /* Our starting assumption. */
-  *needs_cache = FALSE;
-
-  err = svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx, abspath,
-                           scratch_pool);
-
-  /* ABSPATH can't need a cache if it doesn't exist. */
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          is_wc_root = FALSE;
-        }
-      else
-        {
-          return svn_error_trace(err);
-        }
-    }
-
-  if (is_wc_root)
-    {
-      const char *child_repos_relpath;
-
-      /* We want to cache the inherited properties for WC roots, unless that
-         root points to the root of the repository, then there in nowhere to
-         inherit properties from. */
-      SVN_ERR(svn_wc__node_get_repos_relpath(&child_repos_relpath,
-                                             ctx->wc_ctx, abspath,
-                                             scratch_pool, scratch_pool));
-      if (child_repos_relpath[0] != '\0')
-        *needs_cache = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   const char *local_abspath,
@@ -129,50 +80,41 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
            hi = apr_hash_next(hi))
         {
           const char *child_abspath = svn__apr_hash_index_key(hi);
-          svn_boolean_t needs_cached_iprops;
+          const char *url;
+          apr_array_header_t *inherited_props;
 
           svn_pool_clear(iterpool);
-
-          SVN_ERR(need_to_cache_iprops(&needs_cached_iprops, child_abspath,
-                                       ctx, iterpool));
-
-          if (needs_cached_iprops)
+          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child_abspath,
+                                       iterpool, iterpool));
+          if (ra_session)
             {
-              const char *url;
-              apr_array_header_t *inherited_props;
-
-              SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child_abspath,
-                                           iterpool, iterpool));
-              if (ra_session)
-                {
-                  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
-                                                            ra_session,
-                                                            url,
-                                                            scratch_pool));
-                }
-              else
-                {
-                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                               NULL, url,
-                                                               NULL, NULL,
-                                                               FALSE, TRUE,
-                                                               ctx,
-                                                               scratch_pool));
-                }
-
-              SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                                 "", revision, result_pool,
-                                                 scratch_pool));
-
-              if (old_session_url)
-                SVN_ERR(svn_ra_reparent(ra_session, old_session_url,
-                                        iterpool));
-
-              apr_hash_set(*wcroot_iprops,
-                           apr_pstrdup(result_pool, child_abspath),
-                           APR_HASH_KEY_STRING,
-                           inherited_props);
+              SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                        ra_session,
+                                                        url,
+                                                        scratch_pool));
             }
+          else
+            {
+              SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                           NULL, url,
+                                                           NULL, NULL,
+                                                           FALSE, TRUE,
+                                                           ctx,
+                                                           scratch_pool));
+            }
+
+          SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
+                                             "", revision, result_pool,
+                                             scratch_pool));
+
+          if (old_session_url)
+            SVN_ERR(svn_ra_reparent(ra_session, old_session_url,
+                                    iterpool));
+
+          apr_hash_set(*wcroot_iprops,
+                       apr_pstrdup(result_pool, child_abspath),
+                       APR_HASH_KEY_STRING,
+                       inherited_props);
         }
 
       svn_pool_destroy(iterpool);
