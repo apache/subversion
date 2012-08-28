@@ -428,7 +428,7 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_file(session, path, revision, stream,
-                                   fetched_rev, props, NULL, pool);
+                                   fetched_rev, props, NULL, pool, pool);
 }
 
 svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
@@ -441,7 +441,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props, NULL,
-                                  path, revision, SVN_DIRENT_ALL, pool);
+                                  path, revision, SVN_DIRENT_ALL, pool, pool);
 }
 
 svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
@@ -455,5 +455,5 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props, NULL,
-                                  path, revision, dirent_fields, pool);
+                                  path, revision, dirent_fields, pool, pool);
 }

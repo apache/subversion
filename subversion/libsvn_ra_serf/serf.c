@@ -929,7 +929,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      const char *rel_path,
                      svn_revnum_t peg_rev,
                      apr_uint32_t dirent_fields,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *path;
@@ -940,7 +941,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component2(path, rel_path, pool);
+      path = svn_path_url_add_component2(path, rel_path, scratch_pool);
     }
 
   /* If the user specified a peg revision other than HEAD, we have to fetch
@@ -951,7 +952,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__get_stable_url(&path, fetched_rev,
                                           session, NULL /* conn */,
                                           path, revision,
-                                          pool, pool));
+                                          scratch_pool, scratch_pool));
       revision = SVN_INVALID_REVNUM;
     }
   /* REVISION is always SVN_INVALID_REVNUM  */
@@ -971,8 +972,9 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                           path, SVN_INVALID_REVNUM, "1",
                                           get_dirent_props(dirent_fields,
-                                                           session, pool),
-                                          pool, pool));
+                                                           session,
+                                                           scratch_pool),
+                                          result_pool, scratch_pool));
 
       /* Check if the path is really a directory. */
       rtype = svn_ra_serf__get_prop(props, path, "DAV:", "resourcetype");
@@ -984,15 +986,15 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
        * We're going to return the 2nd one back to the caller as it
        * will have the basenames it expects.
        */
-      dirent_walk.full_paths = apr_hash_make(pool);
-      dirent_walk.base_paths = apr_hash_make(pool);
-      dirent_walk.orig_path = svn_urlpath__canonicalize(path, pool);
+      dirent_walk.full_paths = apr_hash_make(scratch_pool);
+      dirent_walk.base_paths = apr_hash_make(result_pool);
+      dirent_walk.orig_path = svn_urlpath__canonicalize(path, scratch_pool);
       dirent_walk.supports_deadprop_count = svn_tristate_unknown;
-      dirent_walk.result_pool = pool;
+      dirent_walk.result_pool = result_pool;
 
       SVN_ERR(svn_ra_serf__walk_all_paths(props, SVN_INVALID_REVNUM,
                                           path_dirent_walker, &dirent_walk,
-                                          pool));
+                                          scratch_pool));
 
       if (dirent_walk.supports_deadprop_count == svn_tristate_false
           && session->supports_deadprop_count == svn_tristate_unknown
@@ -1005,15 +1007,16 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                               session->conns[0],
                                               path, SVN_INVALID_REVNUM, "1",
                                               get_dirent_props(dirent_fields,
-                                                               session, pool),
-                                              pool, pool));
+                                                               session,
+                                                               scratch_pool),
+                                              scratch_pool, scratch_pool));
 
-          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, pool));
-          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, pool));
+          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, scratch_pool));
+          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, scratch_pool));
 
           SVN_ERR(svn_ra_serf__walk_all_paths(props, SVN_INVALID_REVNUM,
                                               path_dirent_walker,
-                                              &dirent_walk, pool));
+                                              &dirent_walk, scratch_pool));
         }
 
       *dirents = dirent_walk.base_paths;
@@ -1030,14 +1033,15 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__fetch_node_props(&props, session->conns[0],
                                             path, SVN_INVALID_REVNUM,
                                             all_props,
-                                            pool, pool));
+                                            result_pool, scratch_pool));
 
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory(props));
 
       /* ### flatten_props() does not copy PROPVALUE, but fetch_node_props()
-         ### put them into POOL, so we're okay.  */
-      SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, pool, pool));
+         ### put them into RESULT_POOL, so we're okay.  */
+      SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, result_pool,
+                                         scratch_pool));
     }
 
   if (inherited_props)
@@ -1046,15 +1050,18 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_iprops,
                                           SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                          pool));
+                                          scratch_pool));
       if (!supports_iprops)
         {
           *inherited_props = NULL;
         }
       else
         {
-          SVN_ERR(svn_ra_serf__get_inherited_props(ra_session, inherited_props,
-                                                   rel_path, peg_rev, pool));
+          SVN_ERR(svn_ra_serf__get_inherited_props(ra_session,
+                                                   inherited_props,
+                                                   rel_path, peg_rev,
+                                                   result_pool,
+                                                   scratch_pool));
         }
     }
 

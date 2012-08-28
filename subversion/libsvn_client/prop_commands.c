@@ -642,14 +642,14 @@ remote_propget(apr_hash_t *props,
                               props ? &prop_hash : NULL,
                               inherited_props,
                               target_relative, revnum, SVN_DIRENT_KIND,
-                              scratch_pool));
+                              scratch_pool, scratch_pool));
     }
   else if (kind == svn_node_file)
     {
       SVN_ERR(svn_ra_get_file2(ra_session, target_relative, revnum,
                                NULL, NULL,
                                props ? &prop_hash : NULL,
-                               inherited_props, scratch_pool));
+                               inherited_props, scratch_pool, scratch_pool));
     }
   else if (kind == svn_node_none)
     {
@@ -1120,6 +1120,9 @@ remote_proplist(const char *target_prefix,
     svn_path_url_add_component2(target_prefix, target_relative, scratch_pool);
   apr_array_header_t *inherited_props;
 
+  /* Note that we pass only the SCRATCH_POOL to svn_ra_get[dir*|file*] because
+     we'll be filtering out non-regular properties from PROP_HASH before we
+     return. */
   if (kind == svn_node_dir)
     {
       SVN_ERR(svn_ra_get_dir3(
@@ -1129,7 +1132,7 @@ remote_proplist(const char *target_prefix,
         get_explicit_props ? &prop_hash : NULL,
         get_target_inherited_props ? &inherited_props : NULL,
         target_relative, revnum,
-        SVN_DIRENT_KIND, scratch_pool));
+        SVN_DIRENT_KIND, scratch_pool, scratch_pool));
     }
   else if (kind == svn_node_file)
     {
@@ -1138,7 +1141,7 @@ remote_proplist(const char *target_prefix,
         NULL, NULL,
         get_explicit_props ? &prop_hash : NULL,
         get_target_inherited_props ? &inherited_props : NULL,
-        scratch_pool));
+        scratch_pool, scratch_pool));
     }
   else
     {
@@ -1160,7 +1163,8 @@ remote_proplist(const char *target_prefix,
     {
       /* Filter out non-regular properties, since the RA layer returns all
          kinds.  Copy regular properties keys/vals from the prop_hash
-         allocated in SCRATCH_POOL to the "final" hash allocated in POOL. */
+         allocated in SCRATCH_POOL to the "final" hash allocated in
+         RESULT_POOL. */
       final_hash = apr_hash_make(result_pool);
       for (hi = apr_hash_first(scratch_pool, prop_hash);
            hi;

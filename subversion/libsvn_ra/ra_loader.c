@@ -748,28 +748,28 @@ get_inherited_props(svn_ra_session_t *session,
                     const char *path,
                     svn_revnum_t revision,
                     apr_array_header_t **inherited_props,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   const char *repos_root_url;
   const char *session_url;
   const char *parent_url;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   *inherited_props =
-    apr_array_make(pool, 1, sizeof(svn_prop_inherited_item_t *));
+    apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
 
   /* Walk to the root of the repository getting inherited
      props for PATH. */
-  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, subpool));
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, subpool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
   parent_url = session_url;
 
   while (strcmp(repos_root_url, parent_url))
     {
       apr_hash_index_t *hi;
       apr_hash_t *parent_props;
-      apr_hash_t *final_hash = apr_hash_make(pool);
+      apr_hash_t *final_hash = apr_hash_make(result_pool);
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -778,7 +778,7 @@ get_inherited_props(svn_ra_session_t *session,
       err = session->vtable->get_dir(session, NULL, NULL,
                                      &parent_props, NULL, "",
                                      revision, SVN_DIRENT_ALL,
-                                     iterpool);
+                                     iterpool, iterpool);
 
       /* If the user doesn't have read access to a parent path then
          skip, but allow them to inherit from further up. */
@@ -795,7 +795,7 @@ get_inherited_props(svn_ra_session_t *session,
             }
         }
 
-      for (hi = apr_hash_first(subpool, parent_props);
+      for (hi = apr_hash_first(scratch_pool, parent_props);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -805,8 +805,8 @@ get_inherited_props(svn_ra_session_t *session,
 
           if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
             {
-              name = apr_pstrdup(pool, name);
-              value = svn_string_dup(value, pool);
+              name = apr_pstrdup(result_pool, name);
+              value = svn_string_dup(value, result_pool);
               apr_hash_set(final_hash, name, klen, value);
             }
         }
@@ -814,18 +814,17 @@ get_inherited_props(svn_ra_session_t *session,
       if (apr_hash_count(final_hash))
         {
           svn_prop_inherited_item_t *new_iprop =
-            apr_palloc(pool, sizeof(*new_iprop));
-          new_iprop->path_or_url = apr_pstrdup(pool, parent_url);
+            apr_palloc(result_pool, sizeof(*new_iprop));
+          new_iprop->path_or_url = apr_pstrdup(result_pool, parent_url);
           new_iprop->prop_hash = final_hash;
           svn_sort__array_insert(&new_iprop, *inherited_props, 0);
         }
     }
 
   /* Reparent session back to original URL. */
-  SVN_ERR(svn_ra_reparent(session, session_url, subpool));
+  SVN_ERR(svn_ra_reparent(session, session_url, scratch_pool));
 
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -836,7 +835,8 @@ svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
                               svn_revnum_t *fetched_rev,
                               apr_hash_t **props,
                               apr_array_header_t **inherited_props,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(*path != '/');
 
@@ -847,26 +847,30 @@ svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
       /* We want inherited props too, can the server deliver? */
       SVN_ERR(svn_ra_has_capability(session, &gets_iprops,
                                     SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                    pool));
+                                    scratch_pool));
       if (gets_iprops)
         {
           SVN_ERR(session->vtable->get_file(session, path, revision, stream,
                                             fetched_rev, props,
-                                            inherited_props, pool));
+                                            inherited_props, result_pool,
+                                            scratch_pool));
         }
       else
         {
           /* Get the explicit props on PATH. */
           SVN_ERR(session->vtable->get_file(session, path, revision, stream,
-                                            fetched_rev, props, NULL, pool));
+                                            fetched_rev, props, NULL,
+                                            result_pool, scratch_pool));
           SVN_ERR(get_inherited_props(session, path, revision,
-                                      inherited_props, pool));
+                                      inherited_props, result_pool,
+                                      scratch_pool));
         }
     }
   else
     {
       SVN_ERR(session->vtable->get_file(session, path, revision, stream,
-                                        fetched_rev, props, NULL, pool));
+                                        fetched_rev, props, NULL, result_pool,
+                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -881,7 +885,8 @@ svn_ra_get_dir3(svn_ra_session_t *session,
                 const char *path,
                 svn_revnum_t revision,
                 apr_uint32_t dirent_fields,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(*path != '/');
 
@@ -892,28 +897,31 @@ svn_ra_get_dir3(svn_ra_session_t *session,
       /* We want inherited props too, can the server deliver? */
       SVN_ERR(svn_ra_has_capability(session, &gets_iprops,
                                     SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                    pool));
+                                    scratch_pool));
       if (gets_iprops)
         {
           SVN_ERR(session->vtable->get_dir(session, dirents, fetched_rev, props,
                                            inherited_props, path, revision,
-                                           dirent_fields, pool));
+                                           dirent_fields, result_pool,
+                                           scratch_pool));
         }
       else
         {
           /* Get the explicit props on PATH. */
           SVN_ERR(session->vtable->get_dir(session, dirents, fetched_rev,
                                            props, NULL, path, revision,
-                                           dirent_fields, pool));
+                                           dirent_fields, result_pool,
+                                           scratch_pool));
           SVN_ERR(get_inherited_props(session, path, revision,
-                                      inherited_props, pool));
+                                      inherited_props, result_pool,
+                                      scratch_pool));
         }
     }
   else
     {
       return session->vtable->get_dir(session, dirents, fetched_rev, props,
                                       NULL, path, revision, dirent_fields,
-                                      pool);
+                                      result_pool, scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1418,7 +1426,8 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_array_header_t **iprops,
                            const char *path,
                            svn_revnum_t revision,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t iprop_capable;
 
@@ -1426,17 +1435,16 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
   SVN_ERR_ASSERT(*path != '/');
 
   SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
-                                SVN_RA_CAPABILITY_INHERITED_PROPS, pool));
+                                SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                scratch_pool));
 
   if (iprop_capable)
-    return svn_error_trace(session->vtable->get_inherited_props(session,
-                                                                iprops,
-                                                                path,
-                                                                revision,
-                                                                pool));
+    return svn_error_trace(session->vtable->get_inherited_props(
+      session, iprops, path, revision, result_pool, scratch_pool));
   /* Fallback for legacy servers. */
   return svn_error_trace(get_inherited_props(session, path, revision,
-                                             iprops, pool));
+                                             iprops, result_pool,
+                                             scratch_pool));
 }
 
 svn_error_t *

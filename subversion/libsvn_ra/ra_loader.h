@@ -118,7 +118,8 @@ typedef struct svn_ra__vtable_t {
                            svn_revnum_t *fetched_rev,
                            apr_hash_t **props,
                            apr_array_header_t **inherited_props,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
   /* See svn_ra_get_dir3(). */
   svn_error_t *(*get_dir)(svn_ra_session_t *session,
                           apr_hash_t **dirents,
@@ -128,7 +129,8 @@ typedef struct svn_ra__vtable_t {
                           const char *path,
                           svn_revnum_t revision,
                           apr_uint32_t dirent_fields,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
   /* See svn_ra_get_mergeinfo(). */
   svn_error_t *(*get_mergeinfo)(svn_ra_session_t *session,
                                 svn_mergeinfo_catalog_t *mergeinfo,
@@ -306,7 +308,8 @@ typedef struct svn_ra__vtable_t {
                                       apr_array_header_t **iprops,
                                       const char *path,
                                       svn_revnum_t revision,
-                                      apr_pool_t *pool);
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
   /* See svn_ra__get_commit_ev2()  */
   svn_error_t *(*get_commit_ev2)(
     svn_editor_t **editor,

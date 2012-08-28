@@ -1538,7 +1538,8 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
                       apr_array_header_t **inherited_props,
-                      apr_pool_t *pool);
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.change_rev_prop(). */
 svn_error_t *
@@ -1657,7 +1658,8 @@ svn_error_t * svn_ra_serf__get_inherited_props(svn_ra_session_t *session,
                                                apr_array_header_t **iprops,
                                                const char *path,
                                                svn_revnum_t revision,
-                                               apr_pool_t *pool);
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.get_repos_root(). */
 svn_error_t *

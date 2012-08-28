@@ -995,15 +995,16 @@ svn_ra_get_file2(svn_ra_session_t *session,
                  svn_revnum_t *fetched_rev,
                  apr_hash_t **props,
                  apr_array_header_t **inherited_props,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
 /**
  * Similar to @c svn_ra_get_file2, but does not support the retrieval of
  * inherited properties.
  *
- * @since New in 1.8.
+ * @since New in 1.2.
  *
- * @deprecated Provided for compatibility with the 1.2 API.
+ * @deprecated Provided for compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -1062,7 +1063,8 @@ svn_ra_get_dir3(svn_ra_session_t *session,
                 const char *path,
                 svn_revnum_t revision,
                 apr_uint32_t dirent_fields,
-                apr_pool_t *pool);
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
 
 /**
  * Similar to @c svn_ra_get_dir3, but does not support the retrieval of
@@ -1991,6 +1993,9 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * inheritable properties are found, then set @a *inherited_props to
  * an empty array.
  *
+ * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * for temporary allocations.
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -1998,7 +2003,8 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_array_header_t **inherited_props,
                            const char *path,
                            svn_revnum_t revision,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /**
  * @defgroup Capabilities Dynamically query the server's capabilities.
