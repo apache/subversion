@@ -2353,6 +2353,7 @@ finish_report(void *report_baton,
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
+  apr_short_interval_time_t waittime_left = sess->timeout;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
@@ -2435,7 +2436,9 @@ finish_report(void *report_baton,
          and what items are allocated within.  */
       iterpool_inner = svn_pool_create(iterpool);
 
-      status = serf_context_run(sess->context, sess->timeout, iterpool_inner);
+      status = serf_context_run(sess->context,
+                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
+                                iterpool_inner);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
@@ -2445,12 +2448,29 @@ finish_report(void *report_baton,
           err = handler->server_error->error;
         }
 
+      /* If the context duration timeout is up, we'll subtract that
+         duration from the total time alloted for such things.  If
+         there's no time left, we fail with a message indicating that
+         the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          err = SVN_NO_ERROR;
+          status = 0;
+
+          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                      _("Connection timed out"));
+            }
+        }
+      else
+        {
+          waittime_left = sess->timeout;
         }
 
       SVN_ERR(err);
