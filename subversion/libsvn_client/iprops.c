@@ -88,10 +88,12 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                        iterpool, iterpool));
           if (ra_session)
             {
-              SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
-                                                        ra_session,
-                                                        url,
-                                                        scratch_pool));
+              if (old_session_url)
+                SVN_ERR(svn_ra_reparent(ra_session, url, scratch_pool));
+              else
+                SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                          ra_session, url,
+                                                          scratch_pool));
             }
           else
             {
@@ -106,17 +108,15 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", revision, result_pool,
                                              scratch_pool));
-
-          if (old_session_url)
-            SVN_ERR(svn_ra_reparent(ra_session, old_session_url,
-                                    iterpool));
-
           apr_hash_set(*wcroot_iprops,
                        apr_pstrdup(result_pool, child_abspath),
                        APR_HASH_KEY_STRING,
                        inherited_props);
         }
 
+      if (old_session_url)
+        SVN_ERR(svn_ra_reparent(ra_session, old_session_url,
+                                iterpool));
       svn_pool_destroy(iterpool);
     }
 
