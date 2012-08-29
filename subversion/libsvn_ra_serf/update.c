@@ -358,6 +358,9 @@ struct report_context_t {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
+  /* Did we get a complete (non-truncated) report? */
+  svn_boolean_t report_completed;
+
   /* The XML parser context for the REPORT response.  */
   svn_ra_serf__xml_parser_t *parser_ctx;
 };
@@ -1862,8 +1865,15 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
   if (state == NONE)
     {
-      /* nothing to close yet. */
-      return SVN_NO_ERROR;
+      if (strcmp(name.name, "update-report") == 0)
+        {
+          ctx->report_completed = TRUE;
+        }
+      else
+        {
+          /* nothing to close yet. */
+          return SVN_NO_ERROR;
+        }
     }
 
   if (((state == OPEN_DIR && (strcmp(name.name, "open-directory") == 0)) ||
@@ -2627,7 +2637,12 @@ finish_report(void *report_baton,
       SVN_ERR(close_all_dirs(report->root_dir));
     }
 
-  err = report->update_editor->close_edit(report->update_baton, iterpool);
+  /* If we got a complete report, close the edit.  Otherwise, abort it. */
+  if (report->report_completed)
+    err = report->update_editor->close_edit(report->update_baton, iterpool);
+  else
+    err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                           _("Missing update-report close tag"));
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
