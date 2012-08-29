@@ -5898,10 +5898,13 @@ get_changes(apr_array_header_t **changes,
 
   /* try cache lookup first */
 
-  SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
-                         &rev, pool));
-  if (found)
-    return SVN_NO_ERROR;
+  if (ffd->changes_cache)
+    {
+      SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+                             &rev, pool));
+      if (found)
+        return SVN_NO_ERROR;
+    }
 
   /* read changes from revision file */
   
@@ -5919,7 +5922,8 @@ get_changes(apr_array_header_t **changes,
 
   /* cache for future reference */
   
-  SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
+  if (ffd->changes_cache)
+    SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
 
   return SVN_NO_ERROR;
 }
