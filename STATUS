@@ -80,7 +80,7 @@ Candidate changes:
 
  * r1088602
    Fix regression introduced in r1104127. That revision introduced a bug where
-   a URI may end-up being double-encoded, breaking commits via write-through
+   a URI may end up being double-encoded, breaking commits via write-through
    proxies in certain circumstances.
    Justification:
      This regression has been fixed in 1.7.x and trunk but not in 1.6.x.
