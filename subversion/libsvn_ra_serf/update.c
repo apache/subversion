@@ -1219,9 +1219,9 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
   if (!info->url)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                        _("The OPTIONS response did not include the "
-                          "requested checked-in value"));
+      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                              _("The REPORT or PROPFIND response did not "
+                                "include the requested checked-in value"));
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
@@ -1896,9 +1896,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (!checked_in_url &&
           (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props))
         {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested checked-in value"));
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
         }
 
       info->dir->url = checked_in_url;
