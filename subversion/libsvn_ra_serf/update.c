@@ -313,6 +313,10 @@ struct report_context_t {
   /* Do we want the server to send copyfrom args or not? */
   svn_boolean_t send_copyfrom_args;
 
+  /* Is the server including properties inline for newly added
+     files/dirs? */
+  svn_boolean_t add_props_included;
+
   /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
 
@@ -1391,7 +1395,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (state == NONE && strcmp(name.name, "target-revision") == 0)
+  if (state == NONE && strcmp(name.name, "update-report") == 0)
+    {
+      const char *val = svn_xml_get_attr_value("inline-props", attrs);
+      if (val && (strcmp(val, "true") == 0))
+        ctx->add_props_included = TRUE;
+    }
+  else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
@@ -1531,7 +1541,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
       dir->base_rev = info->base_rev;
-      dir->fetch_props = TRUE;
+
+      /* If the server isn't included properties for added items,
+         we'll need to fetch them ourselves. */
+      if (! ctx->add_props_included)
+        dir->fetch_props = TRUE;
 
       dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
                                             dir->base_name, dir->pool);
@@ -1588,8 +1602,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, ADD_FILE);
 
       info->base_rev = SVN_INVALID_REVNUM;
-      info->fetch_props = TRUE;
       info->fetch_file = TRUE;
+
+      /* If the server isn't included properties for added items,
+         we'll need to fetch them ourselves. */
+      if (! ctx->add_props_included)
+        info->fetch_props = TRUE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
@@ -1906,7 +1924,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       /* At this point, we should have the checked-in href.
        * If needed, create the PROPFIND to retrieve the dir's properties.
        */
-      if (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props)
+      if (info->dir->fetch_props)
         {
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
@@ -2784,6 +2802,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
     {
       make_simple_xml_tag(&buf, "S:recursive", "no", scratch_pool);
     }
+
+  /* Subversion 1.8+ servers can be told to send properties for newly
+     added items inline even when doing a skelta response. */
+  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 
