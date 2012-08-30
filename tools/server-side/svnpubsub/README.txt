@@ -18,8 +18,11 @@ TODO:
 
 Installation instructions:
 
-1. Set up an svnpubsub daemon.
-   [TODO details]
+1. Set up an svnpubsub service.
+
+   There are init scripts for several OSes in the rc.d/ directory; add them
+   to your OS boot process in the usual way for your OS.  (For example, via
+   rc.conf(5) or update-rc.d(8).)
 
 2. Run "commit-hook.py $REPOS $REV" from your post-commit hook.
 
