@@ -20,6 +20,9 @@ Installation instructions:
 
 1. Set up an svnpubsub service.
 
+   This directory should be checked out to /usr/local/svnpubsub (or /opt/svnpubsub
+   on Debian).
+
    There are init scripts for several OSes in the rc.d/ directory; add them
    to your OS boot process in the usual way for your OS.  (For example, via
    rc.conf(5) or update-rc.d(8).)
