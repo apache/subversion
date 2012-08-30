@@ -40,3 +40,9 @@ Installation instructions:
 
    (eg svnwcsub.py, svnpubsub/client.py,
        'curl -i http://${hostname}:2069/commits/json')
+
+
+Other notes:
+
+- svnwcsub.py will create a file called ".revision" in the root of the working
+  copy it updates.  That file will contain `svn info | sed -ne s/^URL:.//p`.
