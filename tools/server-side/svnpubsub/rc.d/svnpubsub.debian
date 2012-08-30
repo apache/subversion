@@ -19,7 +19,7 @@ svnpubsub_pidfile=${svnpubsub_pidfile-"/var/run/svnpubsub.pid"}
 pidfile="${svnpubsub_pidfile}"
 
 TWSITD_CMD="/usr/bin/twistd -y /opt/svnpubsub/svnpubsub.tac \
-            --logfile=/var/bwlog/svnpubsub/svnpubsub.log \
+            --logfile=/var/log/svnpubsub/svnpubsub.log \
             --pidfile=${pidfile} \
             --uid=${svnpubsub_user} --gid=${svnpubsub_user} \
             -r${svnpubsub_reactor}"
