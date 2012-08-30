@@ -252,6 +252,7 @@ class BackgroundWorker(threading.Thread):
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
+        open(os.path.join(wc.path, '.revision'), 'w').write(info['Revision'])
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."
