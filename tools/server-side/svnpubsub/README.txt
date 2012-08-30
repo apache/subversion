@@ -45,4 +45,5 @@ Installation instructions:
 Other notes:
 
 - svnwcsub.py will create a file called ".revision" in the root of the working
-  copy it updates.  That file will contain `svn info | sed -ne s/^URL:.//p`.
+  copy it updates.  That file will contain
+  `svn info ./ | sed -ne s/^Revision:.//p`.
