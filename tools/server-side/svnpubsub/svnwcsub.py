@@ -29,6 +29,7 @@
 # See svnwcsub.conf for more information on its contents.
 #
 
+import errno
 import subprocess
 import threading
 import sys
@@ -252,7 +253,15 @@ class BackgroundWorker(threading.Thread):
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
-        open(os.path.join(wc.path, '.revision'), 'w').write(info['Revision'])
+
+        ### update the .revision file
+        dotrevision = os.path.join(wc.path, '.revision') 
+        try:
+            os.unlink(dotrevision)
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        open(dotrevision, 'w').write(info['Revision'])
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."
