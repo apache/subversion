@@ -14,3 +14,23 @@ TODO:
 - add support for SIGHUP to reread the config and reinitialize working copies
 - joes will write documentation for svnpubsub as these items become fulfilled
 - make LOGLEVEL configurable
+
+
+Installation instructions:
+
+1. Set up an svnpubsub daemon.
+   [TODO details]
+
+2. Run "commit-hook.py $REPOS $REV" from your post-commit hook.
+
+   (As of 1.7, these are the same ordered arguments the post-commmit hook
+   itself receives, so you can just symlink commit-hook.py as hooks/post-commit
+   hook if you don't need any other hooks to run in the server process.  (This
+   isn't as insane as it sounds --- post-commit email hooks could also feed of
+   svnpubsub, and thus not be run within the committing server thread, but on
+   any other process or box that listens to the svnpubsub stream!))
+
+3. Set up svnpubsub clients.
+
+   (eg svnwcsub.py, svnpubsub/client.py,
+       'curl -i http://${hostname}:2069/commits/json')
