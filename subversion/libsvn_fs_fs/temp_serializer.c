@@ -1079,3 +1079,135 @@ svn_fs_fs__replace_dir_entry(void **data,
 
   return SVN_NO_ERROR;
 }
+
+/* Utility function to serialize change CHANGE_P in the given serialization
+ * CONTEXT.
+ */
+static void
+serialize_change(svn_temp_serializer__context_t *context,
+                 change_t * const *change_p)
+{
+  const change_t * change = *change_p;
+  if (change == NULL)
+    return;
+
+  /* serialize the change struct itself */
+  svn_temp_serializer__push(context,
+                            (const void * const *)change_p,
+                            sizeof(*change));
+
+  /* serialize sub-structures */
+  svn_fs_fs__id_serialize(context, &change->noderev_id);
+
+  svn_temp_serializer__add_string(context, &change->path);
+  svn_temp_serializer__add_string(context, &change->copyfrom_path);
+
+  /* return to the caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+/* Utility function to serialize the CHANGE_P within the given
+ * serialization CONTEXT.
+ */
+static void
+deserialize_change(void *buffer, change_t **change_p)
+{
+  change_t * change;
+
+  /* fix-up of the pointer to the struct in question */
+  svn_temp_deserializer__resolve(buffer, (void **)change_p);
+
+  change = *change_p;
+  if (change == NULL)
+    return;
+
+  /* fix-up of sub-structures */
+  svn_fs_fs__id_deserialize(change, (svn_fs_id_t **)&change->noderev_id);
+
+  svn_temp_deserializer__resolve(change, (void **)&change->path);
+  svn_temp_deserializer__resolve(change, (void **)&change->copyfrom_path);
+}
+
+/* Auxiliary structure representing the content of a change_t array.
+   This structure is much easier to (de-)serialize than an APR array.
+ */
+typedef struct changes_data_t
+{
+  /* number of entries in the array */
+  int count;
+
+  /* reference to the changes */
+  change_t **changes;
+} changes_data_t;
+
+svn_error_t *
+svn_fs_fs__serialize_changes(void **data,
+                             apr_size_t *data_len,
+                             void *in,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *array = in;
+  changes_data_t changes;
+  svn_temp_serializer__context_t *context;
+  svn_stringbuf_t *serialized;
+  int i;
+
+  /* initialize our auxiliary data structure */
+  changes.count = array->nelts;
+  changes.changes = apr_palloc(pool, sizeof(change_t*) * changes.count);
+
+  /* populate it with the array elements */
+  for (i = 0; i < changes.count; ++i)
+    changes.changes[i] = APR_ARRAY_IDX(array, i, change_t*);
+
+  /* serialize it and all its elements */
+  context = svn_temp_serializer__init(&changes,
+                                      sizeof(changes),
+                                      changes.count * 100,
+                                      pool);
+
+  svn_temp_serializer__push(context,
+                            (const void * const *)&changes.changes,
+                            changes.count * sizeof(change_t*));
+
+  for (i = 0; i < changes.count; ++i)
+    serialize_change(context, &changes.changes[i]);
+
+  svn_temp_serializer__pop(context);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_changes(void **out,
+                               void *data,
+                               apr_size_t data_len,
+                               apr_pool_t *pool)
+{
+  int i;
+  changes_data_t *changes = (changes_data_t *)data;
+  apr_array_header_t *array = apr_array_make(pool, changes->count,
+                                             sizeof(change_t *));
+
+  /* de-serialize our auxiliary data structure */
+  svn_temp_deserializer__resolve(changes, (void**)&changes->changes);
+
+  /* de-serialize each entry and add it to the array */
+  for (i = 0; i < changes->count; ++i)
+    {
+      deserialize_change((void*)changes->changes,
+                         (change_t **)&changes->changes[i]);
+      APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
+    }
+
+  /* done */
+  *out = array;
+
+  return SVN_NO_ERROR;
+}

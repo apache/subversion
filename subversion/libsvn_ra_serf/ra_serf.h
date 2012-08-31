@@ -62,6 +62,10 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+/** Wait duration (in microseconds) used in calls to serf_context_run() */
+#define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
+
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
