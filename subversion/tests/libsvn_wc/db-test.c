@@ -1406,6 +1406,7 @@ test_externals_store(apr_pool_t *pool)
                                        "not-a-uuid",
                                        12,
                                        props,
+                                       NULL,
                                        10,
                                        987654,
                                        "somebody",

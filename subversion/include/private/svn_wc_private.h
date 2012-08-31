@@ -55,7 +55,14 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          apr_pool_t *scratch_pool);
 
 /* Like svn_wc_get_update_editorX and svn_wc_get_status_editorX, but only
-   allows updating a file external LOCAL_ABSPATH */
+   allows updating a file external LOCAL_ABSPATH.
+
+   Since this only deals with files, the WCROOT_IPROPS argument in
+   svn_wc_get_update_editorX and svn_wc_get_status_editorX (hashes mapping
+   const char * absolute working copy paths, which are working copy roots, to
+   depth-first ordered arrays of svn_prop_inherited_item_t * structures) is
+   simply IPROPS here, a depth-first ordered arrays of
+   svn_prop_inherited_item_t * structs. */
 svn_error_t *
 svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  void **edit_baton,
@@ -66,6 +73,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *url,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
+                                 apr_array_header_t *iprops,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,

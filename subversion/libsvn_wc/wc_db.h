@@ -1041,6 +1041,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              svn_revnum_t revision,
 
                              const apr_hash_t *props,
+                             apr_array_header_t *iprops,
 
                              svn_revnum_t changed_rev,
                              apr_time_t changed_date,
