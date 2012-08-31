@@ -125,6 +125,13 @@ Candidate changes:
    Votes:
      +1: philip, brane
 
+ * r1174342
+   Fix issue 4016, make status descend into dir externals after upgrade.
+   Justification:
+     Status doesn't work properly after upgrade.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
