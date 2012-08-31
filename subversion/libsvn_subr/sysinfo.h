@@ -44,6 +44,13 @@ const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
  */
 const char *svn_sysinfo__release_name(apr_pool_t *pool);
 
+/* Return a description of the link-time and run-time versions of
+ * dependent libraries.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__linked_libs(apr_pool_t *pool);
+
 /* Return a string containing a list of shared libraries loaded by the
  * running process, including their versions where applicable, or NULL
  * if the information is not available.

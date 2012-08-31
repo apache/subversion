@@ -1134,6 +1134,7 @@ svn_opt__print_version_info(const char *pgm_name,
     {
       const char *const host = svn_sysinfo__canonical_host(pool);
       const char *const relname = svn_sysinfo__release_name(pool);
+      const char *const slibs = svn_sysinfo__linked_libs(pool);
       const char *const dlibs = svn_sysinfo__loaded_libs(pool);
 
       SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
@@ -1143,6 +1144,13 @@ svn_opt__print_version_info(const char *pgm_name,
                                    host, relname));
       else
         SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"), host));
+
+      if (slibs)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("* linked dependencies:\n"),
+                                    stdout, pool));
+          SVN_ERR(svn_cmdline_fputs(slibs, stdout, pool));
+        }
 
       if (dlibs)
         {
