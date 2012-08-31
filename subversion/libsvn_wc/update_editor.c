@@ -1474,7 +1474,6 @@ check_tree_conflict(svn_skel_t **pconflict,
   if (reason == svn_wc_conflict_reason_edited
       || reason == svn_wc_conflict_reason_deleted
       || reason == svn_wc_conflict_reason_moved_away
-      || reason == svn_wc_conflict_reason_moved_away_and_edited
       || reason == svn_wc_conflict_reason_replaced)
     /* When the node existed before (it was locally deleted, replaced or
      * edited), then 'update' cannot add it "again". So it can only send
@@ -1730,7 +1729,6 @@ delete_entry(const char *path,
         }
       else if (reason == svn_wc_conflict_reason_deleted
                || reason == svn_wc_conflict_reason_moved_away
-               || reason == svn_wc_conflict_reason_moved_away_and_edited
                || reason == svn_wc_conflict_reason_replaced)
         {
           /* The item does not exist locally because it was already shadowed.
@@ -2264,7 +2262,6 @@ open_directory(const char *path,
                                                   db->pool, db->pool));
       SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
                      || reason == svn_wc_conflict_reason_moved_away
-                     || reason == svn_wc_conflict_reason_moved_away_and_edited
                      || reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
@@ -3309,7 +3306,6 @@ open_file(const char *path,
                                                   fb->pool, fb->pool));
       SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
                      || reason == svn_wc_conflict_reason_moved_away
-                     || reason == svn_wc_conflict_reason_moved_away_and_edited
                      || reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
