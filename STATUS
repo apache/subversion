@@ -123,7 +123,7 @@ Candidate changes:
      Keyring library fails to load at runtime and it's hard for the user
      to work out why.
    Votes:
-     +1: philip
+     +1: philip, brane
 
 Veto-blocked changes:
 =====================
