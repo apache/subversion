@@ -132,6 +132,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1365592
+   Fix issue 4224, file externals don't update with old mod_dav_svn
+   Justification:
+     Backward compatibility using 1.7 clients with old servers.
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
