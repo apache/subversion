@@ -37,6 +37,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Because the SQLite code can be inlined into libsvn_subre/sqlite.c,
+   we define accessors to its compile-time and run-time version
+   numbers here. */
+
+/* Return the value that SQLITE_VERSION had at compile time. */
+const char *svn_sqlite__compiled_version(void);
+
+/* Return the value of sqlite3_libversion() at run time. */
+const char *svn_sqlite__runtime_version(void);
+
+
 typedef struct svn_sqlite__db_t svn_sqlite__db_t;
 typedef struct svn_sqlite__stmt_t svn_sqlite__stmt_t;
 typedef struct svn_sqlite__context_t svn_sqlite__context_t;

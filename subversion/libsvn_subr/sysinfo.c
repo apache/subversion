@@ -37,10 +37,14 @@
 #include <apr_pools.h>
 #include <apr_file_info.h>
 #include <apr_strings.h>
+#include <apr_version.h>
+#include <apu_version.h>
 
 #include "svn_ctype.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+
+#include "private/svn_sqlite.h"
 
 #include "sysinfo.h"
 #include "svn_private_config.h"
@@ -96,6 +100,28 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 #endif
 }
 
+const char *
+svn_sysinfo__linked_libs(apr_pool_t *pool)
+{
+  const char *apr_ver =
+    apr_psprintf(pool, "APR %s (compiled with %s)",
+                 apr_version_string(), APR_VERSION_STRING);
+  const char *apr_util_ver =
+    apr_psprintf(pool, "APR-Util %s (compiled with %s)",
+                 apu_version_string(), APU_VERSION_STRING);
+  const char *sqlite_ver =
+#ifdef SVN_SQLITE_INLINE
+    apr_psprintf(pool, "SQLite %s (amalgamated)",
+                 svn_sqlite__runtime_version());
+#else
+    apr_psprintf(pool, "SQLite %s (compiled with %s)",
+                 svn_sqlite__runtime_version(),
+                 svn_sqlite__compiled_version());
+#endif
+
+    return apr_psprintf(pool, "  - %s\n  - %s\n  - %s\n",
+                        apr_ver, apr_util_ver, sqlite_ver);
+}
 
 const char *
 svn_sysinfo__loaded_libs(apr_pool_t *pool)

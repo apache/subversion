@@ -707,7 +707,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-
+  apr_short_interval_time_t waittime_left = sess->timeout;
+  
   assert(sess->pending_error == SVN_NO_ERROR);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -722,17 +723,36 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
       if (sess->cancel_func)
         SVN_ERR((*sess->cancel_func)(sess->cancel_baton));
 
-      status = serf_context_run(sess->context, sess->timeout, iterpool);
+      status = serf_context_run(sess->context,
+                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
+                                iterpool);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
 
+      /* If the context duration timeout is up, we'll subtract that
+         duration from the total time alloted for such things.  If
+         there's no time left, we fail with a message indicating that
+         the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          err = SVN_NO_ERROR;
+          status = 0;
+
+          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                      _("Connection timed out"));
+            }
+        }
+      else
+        {
+          waittime_left = sess->timeout;
         }
 
       SVN_ERR(err);

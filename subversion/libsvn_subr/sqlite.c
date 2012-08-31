@@ -54,6 +54,20 @@
 #error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
 
+const char *
+svn_sqlite__compiled_version(void)
+{
+  static const char sqlite_version[] = SQLITE_VERSION;
+  return sqlite_version;
+}
+
+const char *
+svn_sqlite__runtime_version(void)
+{
+  return sqlite3_libversion();
+}
+
+
 INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
 
 
