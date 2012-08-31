@@ -1574,7 +1574,6 @@ def iprops_with_directory_externals(sbox):
 
 #----------------------------------------------------------------------
 # Inherited property caching by file externals.
-@XFail()
 def iprops_with_file_externals(sbox):
   "iprop caching works with file externals"
 
@@ -1591,23 +1590,54 @@ def iprops_with_file_externals(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Add a branch property',
                        wc_dir)
 
-  # Create a file external in the first WC that points to a location in the
-  # same WC.
+  # Create two file externals, one pegged to a fixed revision.
   sbox.simple_propset('svn:externals',
                       sbox.repo_url + '/A/D/H/psi file-external',
                       'A/B/E')
+  sbox.simple_propset('svn:externals',
+                      sbox.repo_url + '/A/D/H/psi@4 file-external-pegged',
+                      'A/B/F')
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Add a file external', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # Check the properties inherited by the external file.  It should
-  # inherit the property from ^/ and ^/A/D.
-  #
-  # Currently this fails because the file external inherits *nothing*.
+  # Check the properties inherited by the external files.  Both should
+  # inherit the properties from ^/ and ^/A/D.
   expected_iprops = {
     sbox.repo_url          : {'Prime-Root-Prop'   : 'Root-Prop-Val1'},
     sbox.repo_url + '/A/D' : {'Prime-Branch-Prop' : 'Branch-Prop-Val1'}}
   expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/E/file-external'), expected_iprops,
+    expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/F/file-external-pegged'), expected_iprops,
+    expected_explicit_props)
+
+  # Modify the "branch" property on 'A/D'.
+  sbox.simple_propset('Prime-Branch-Prop', 'Branch-Prop-Val2', 'A/D')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add a branch property',
+                       wc_dir)
+
+  # There should be no change in the external file's
+  # inherited properties until...
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/E/file-external'), expected_iprops,
+    expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/F/file-external-pegged'), expected_iprops,
+    expected_explicit_props)
+
+  # ...We update the external:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  # The pegged file external's iprops should remain unchanged.
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/F/file-external-pegged'), expected_iprops,
+    expected_explicit_props)
+  # But the other's should be updated.
+  expected_iprops = {
+    sbox.repo_url          : {'Prime-Root-Prop'   : 'Root-Prop-Val1'},
+    sbox.repo_url + '/A/D' : {'Prime-Branch-Prop' : 'Branch-Prop-Val2'}}
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('A/B/E/file-external'), expected_iprops,
     expected_explicit_props)

@@ -254,6 +254,7 @@ typedef struct insert_external_baton_t {
 
   /* for file and symlink externals */
   const apr_hash_t *props;
+  apr_array_header_t *iprops;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -2986,6 +2987,7 @@ insert_external_node(void *baton,
       ibb.revision        = ieb->revision;
 
       ibb.props           = ieb->props;
+      ibb.iprops          = ieb->iprops;
       ibb.changed_rev     = ieb->changed_rev;
       ibb.changed_date    = ieb->changed_date;
       ibb.changed_author  = ieb->changed_author;
@@ -3050,6 +3052,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              svn_revnum_t revision,
 
                              const apr_hash_t *props,
+                             apr_array_header_t *iprops,
 
                              svn_revnum_t changed_rev,
                              apr_time_t changed_date,
@@ -3104,6 +3107,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
   ieb.revision = revision;
 
   ieb.props = props;
+  ieb.iprops = iprops;
 
   ieb.changed_rev = changed_rev;
   ieb.changed_date = changed_date;

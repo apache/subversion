@@ -1532,14 +1532,14 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND local_relpath = ?2
   AND op_depth = 0
-  AND inherited_props not null
+  AND (inherited_props not null)
 
 -- STMT_SELECT_INODES_RECURSIVE
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
-  AND inherited_props not null
+  AND (inherited_props not null)
 
 /* ------------------------------------------------------------------------- */
 
