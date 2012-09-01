@@ -1102,32 +1102,35 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_opt__print_version_info(const char *pgm_name,
-                            const char *footer,
-                            svn_boolean_t quiet,
-                            svn_boolean_t verbose,
-                            apr_pool_t *pool)
-{
-  if (quiet)
-    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
-  SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
-                                     "   compiled %s, %s on %s\n\n"),
-                             pgm_name, SVN_VERSION, __DATE__, __TIME__,
-                             SVN_BUILD_HOST));
-  SVN_ERR(svn_cmdline_fputs(
-             _("Copyright (C) 2012 The Apache Software Foundation.\n"
-               "This software consists of contributions made by many "
-               "people; see the NOTICE\n"
-               "file for more information.\n"
-               "Subversion is open source software, see "
-               "http://subversion.apache.org/\n\n"),
-             stdout, pool));
+const char *
+svn_opt__get_version_info(const char *pgm_name,
+                          const char *footer,
+                          svn_boolean_t quiet,
+                          svn_boolean_t verbose,
+                          apr_pool_t *pool)
+{
+  char *info;
+
+  if (quiet)
+    return apr_psprintf(pool, "%s\n", SVN_VER_NUMBER);
+
+  info = apr_psprintf(pool, _("%s, version %s\n"
+                              "   compiled %s, %s on %s\n\n"),
+                      pgm_name, SVN_VERSION, __DATE__, __TIME__,
+                      SVN_BUILD_HOST);
+  info = apr_pstrcat(pool, info,
+                     _("Copyright (C) 2012 The Apache Software Foundation.\n"
+                       "This software consists of contributions made by many "
+                       "people; see the NOTICE\n"
+                       "file for more information.\n"
+                       "Subversion is open source software, see "
+                       "http://subversion.apache.org/\n\n"),
+                     NULL);
 
   if (footer)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", footer));
+      info = apr_pstrcat(pool, info, footer, "\n", NULL);
     }
 
   if (verbose)
@@ -1137,32 +1140,31 @@ svn_opt__print_version_info(const char *pgm_name,
       const char *const slibs = svn_sysinfo__linked_libs(pool);
       const char *const dlibs = svn_sysinfo__loaded_libs(pool);
 
-      SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
+      info = apr_pstrcat(pool, info, _("System information:\n\n"), NULL);
       if (relname)
-        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"
-                                           "  - %s\n"),
-                                   host, relname));
+        info = apr_psprintf(pool, _("%s* running on %s\n"
+                                    "  - %s\n"),
+                            info, host, relname);
       else
-        SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"), host));
+        info = apr_psprintf(pool, _("%s* running on %s\n"), info, host);
 
       if (slibs)
         {
-          SVN_ERR(svn_cmdline_fputs(_("* linked dependencies:\n"),
-                                    stdout, pool));
-          SVN_ERR(svn_cmdline_fputs(slibs, stdout, pool));
+          info = apr_pstrcat(pool, info,
+                             _("* linked dependencies:\n"),
+                             slibs, NULL);
         }
 
       if (dlibs)
         {
-          SVN_ERR(svn_cmdline_fputs(_("* loaded shared libraries:\n"),
-                                    stdout, pool));
-          SVN_ERR(svn_cmdline_fputs(dlibs, stdout, pool));
+          info = apr_pstrcat(pool, info,
+                             _("* loaded shared libraries:\n"),
+                             dlibs, NULL);
         }
     }
 
-  return SVN_NO_ERROR;
+  return info;
 }
-
 
 svn_error_t *
 svn_opt_print_help4(apr_getopt_t *os,
@@ -1195,8 +1197,11 @@ svn_opt_print_help4(apr_getopt_t *os,
         }
     }
   else if (print_version)   /* just --version */
-    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
-                                        quiet, verbose, pool));
+    {
+      const char *info = svn_opt__get_version_info(pgm_name, version_footer,
+                                                   quiet, verbose, pool);
+      SVN_ERR(svn_cmdline_fputs(info, stdout, pool));
+    }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help2(header,
                                 cmd_table,
