@@ -14,6 +14,7 @@ Status of 1.7.7:
 
 Candidate changes:
 ==================
+
  * r1374800, r1374802
    Fix issues with applying Git patch files.
    Justification:
@@ -101,6 +102,10 @@ Candidate changes:
      followup in r1374357 that reinstates the desired behaviour.
    Votes:
      +1: brane
+     =0: danielsh (does this move mod_dontdothat to 'make install'?
+                   perhaps we should special case it (new "dontdothat" value
+		   for the build.conf install=... attribute) for the stable
+                   branch?)
 
  * r1375052
    Don't complain about unknown password stores listed in the
@@ -114,7 +119,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1375052
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
      +0: rhuijben
 
  * r1378847
@@ -124,6 +129,7 @@ Candidate changes:
      to work out why.
    Votes:
      +1: philip, brane
+     +0: danielsh
 
  * r1174342
    Fix issue 4016, make status descend into dir externals after upgrade.
