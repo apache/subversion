@@ -1,0 +1,34 @@
+Notes on building and testing the branch.
+
+svn co https://svn.apache.org/repos/asf/subversion/branches/compressed-pristines compressed-pristines
+cd compressed-pristines
+
+./get-deps.sh
+cd apr/; ./buildconf; cd ..
+cd apr-util/; ./buildconf; cd ..
+cd apr-util/xml/expat/; ./buildconf.sh; cd ../../..
+./autogen.sh
+
+
+./configure --disable-mod-activation --without-gssapi --without-apxs --without-berkeley-db --without-serf --without-swig --without-ctypesgen --without-kwallet --without-gnome-keyring --disable-javahl --disable-keychain -C
+
+make mkdir-init external-all fsmod-lib ramod-lib lib bin
+
+make check TESTS="`echo subversion/tests/cmdline/{basic_tests.py,merge_tests.py}`"
+
+Notes from Daniel Shahaf:
+
+Faster builds:
+- export CONFIG_SHELL=/bin/sh (minimal sh preferred)
+- out-of-tree build (i.e., run 'configure' in an empty dir), with the build tree in a tmpfs
+- disable unneeded components (eg, swig, bdb) when they're not needed
+- pass '-q' to configure, '-s' to make
+- pass '-C' to configure
+- pass '-j' or '-j[number]' to make
+- use cpuset(1)/taskset(1) to bind make to N-1 CPUs
+
+Faster checks:
+- PARALLEL=1
+- CLEANUP="" (and rm -rf svn-test-work/ before the build)
+- put svn-test-work/ in a tmpfs
+- SET_LOG_LEVEL=WARN (or ERROR)
