@@ -9,6 +9,8 @@ TODO:
 
   * create an sqlite db (pristine.db)     [STARTED]
   * insert pristines in pristine.db       []
+  * restore pristines from pristine.db    []
   * pass pristines via zlib               []
   * discriminate pristines by size        []
   * added cp-specific tests               []
+  * add upgrade support code              []
