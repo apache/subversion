@@ -32,3 +32,12 @@ Faster checks:
 - CLEANUP="" (and rm -rf svn-test-work/ before the build)
 - put svn-test-work/ in a tmpfs
 - SET_LOG_LEVEL=WARN (or ERROR)
+
+
+Large repositories for testing:
+
+GCC: svn://gcc.gnu.org/svn/gcc/trunk  (svn://gcc.gnu.org/svn/gcc/branches)
+SVN: http://svn.apache.org/repos/asf/subversion/trunk/ (http://svn.apache.org/repos/asf/subversion/branches/)
+WebKit: http://svn.webkit.org/repository/webkit/trunk (http://svn.webkit.org/repository/webkit/branches/)
+OO: https://svn.apache.org/repos/asf/incubator/ooo/trunk
+WP: http://core.svn.wordpress.org/trunk/
