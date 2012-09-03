@@ -38,7 +38,6 @@
 #include "svn_private_config.h"
 
 #include <glib.h>
-#include <dbus/dbus.h>
 #include <gnome-keyring.h>
 
 
