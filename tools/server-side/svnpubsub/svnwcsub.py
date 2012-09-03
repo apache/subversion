@@ -258,7 +258,7 @@ class BackgroundWorker(threading.Thread):
         dotrevision = os.path.join(wc.path, '.revision') 
         try:
             os.unlink(dotrevision)
-        except IOError, e:
+        except OSError, e:
             if e.errno != errno.ENOENT:
                 raise
         open(dotrevision, 'w').write(info['Revision'])
