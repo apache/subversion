@@ -87,7 +87,7 @@ main(int argc, const char **argv)
                                            pool);
       if (!err)
         printf("%s\n",
-               write_access ? "rw" : read_access ? "r" : "no",
+               write_access ? "rw" : read_access ? "r" : "no"
                );
     }
 
