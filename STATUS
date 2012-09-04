@@ -93,7 +93,7 @@ Candidate changes:
      The revision also edited the dav-mirror-autocheck.sh script which
      does not exist in 1.6.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
 Veto-blocked changes:
 =====================
