@@ -28,9 +28,11 @@
  *
  */
 
+#include "svn_cmdline.h"
+#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_repos.h"
-#include "svn_cmdline.h"
+#include "svn_utf.h"
 
 static int
 usage(const char *argv0)
@@ -57,13 +59,15 @@ main(int argc, const char **argv)
   if (argc != 2 && argc != 4 && argc != 5)
     return usage(argv[0]);
 
-  authz_file = argv[1];
-
   /* Initialize the app.  Send all error messages to 'stderr'.  */
   if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
     return 2;
 
   pool = svn_pool_create(NULL);
+
+  /* Grab AUTHZ_FILE from argv. */
+  SVN_INT_ERR(svn_utf_cstring_to_utf8(&authz_file, argv[1], pool));
+  authz_file = svn_dirent_internal_style(authz_file, pool);
 
   /* Read the access file and validate it. */
   err = svn_repos_authz_read(&authz, authz_file, TRUE, pool);
