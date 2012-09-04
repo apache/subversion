@@ -58,15 +58,15 @@
 #endif
 
 #if HAVE_UNAME
-static const char* canonical_host_from_uname(apr_pool_t *pool);
+static const char *canonical_host_from_uname(apr_pool_t *pool);
 # ifndef SVN_HAVE_MACOS_PLIST
-static const char* release_name_from_uname(apr_pool_t *pool);
+static const char *release_name_from_uname(apr_pool_t *pool);
 # endif
 #endif
 
 #ifdef WIN32
-static const char * win32_canonical_host(apr_pool_t *pool);
-static const char * win32_release_name(apr_pool_t *pool);
+static const char *win32_canonical_host(apr_pool_t *pool);
+static const char *win32_release_name(apr_pool_t *pool);
 static const apr_array_header_t *win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
 
