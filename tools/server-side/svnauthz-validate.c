@@ -66,8 +66,9 @@ main(int argc, const char **argv)
 
   if (!err && (argc == 4 || argc == 5))
     {
-      const char *user = argv[2], *path = argv[3];
-      const char *repos = argc == 5 ? argv[4] : "";
+      const char *user = argv[2];
+      const char *path = argv[3];
+      const char *repos = (argc == 5 ? argv[4] : "");
       svn_boolean_t read_access, write_access;
 
       if (path[0] != '/')
