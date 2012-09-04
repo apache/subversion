@@ -59,13 +59,15 @@
 
 #if HAVE_UNAME
 static const char* canonical_host_from_uname(apr_pool_t *pool);
+# ifndef SVN_HAVE_MACOS_PLIST
 static const char* release_name_from_uname(apr_pool_t *pool);
+# endif
 #endif
 
 #ifdef WIN32
 static const char * win32_canonical_host(apr_pool_t *pool);
 static const char * win32_release_name(apr_pool_t *pool);
-static const char * win32_shared_libs(apr_pool_t *pool);
+static const apr_array_header_t *win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
 
 #ifdef SVN_HAVE_MACOS_PLIST
@@ -100,30 +102,35 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 #endif
 }
 
-const char *
+const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
-  const char *apr_ver =
-    apr_psprintf(pool, "APR %s (compiled with %s)",
-                 apr_version_string(), APR_VERSION_STRING);
-  const char *apr_util_ver =
-    apr_psprintf(pool, "APR-Util %s (compiled with %s)",
-                 apu_version_string(), APU_VERSION_STRING);
-  const char *sqlite_ver =
+  svn_sysinfo__linked_lib_t *lib;
+  apr_array_header_t *array = apr_array_make(pool, 3, sizeof(*lib));
+
+  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib->name = "APR";
+  lib->compiled_version = APR_VERSION_STRING;
+  lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+
+  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib->name = "APR-Util";
+  lib->compiled_version = APU_VERSION_STRING;
+  lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+
+  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib->name = "SQLite";
+  lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
-    apr_psprintf(pool, "SQLite %s (amalgamated)",
-                 svn_sqlite__runtime_version());
+  lib->runtime_version = NULL;
 #else
-    apr_psprintf(pool, "SQLite %s (compiled with %s)",
-                 svn_sqlite__runtime_version(),
-                 svn_sqlite__compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
 
-    return apr_psprintf(pool, "  - %s\n  - %s\n  - %s\n",
-                        apr_ver, apr_util_ver, sqlite_ver);
+  return array;
 }
 
-const char *
+const apr_array_header_t *
 svn_sysinfo__loaded_libs(apr_pool_t *pool)
 {
 #ifdef WIN32
@@ -198,6 +205,7 @@ canonical_host_from_uname(apr_pool_t *pool)
   return apr_psprintf(pool, "%s-%s-%s%s", machine, vendor, sysname, sysver);
 }
 
+# if !SVN_HAVE_MACOS_PLIST
 /* Generate a release name from the uname(3) info, effectively
    returning "`uname -s` `uname -r`". */
 static const char *
@@ -235,6 +243,7 @@ release_name_from_uname(apr_pool_t *pool)
     }
   return NULL;
 }
+# endif  /* !SVN_HAVE_MACOS_PLIST */
 #endif  /* HAVE_UNAME */
 
 
@@ -513,12 +522,12 @@ file_version_number(const wchar_t *filename, apr_pool_t *pool)
 }
 
 /* List the shared libraries loaded by the current process. */
-static const char *
+static const apr_array_header_t *
 win32_shared_libs(apr_pool_t *pool)
 {
+  apr_array_header_t *array = NULL;
   wchar_t buffer[MAX_PATH + 1];
   HMODULE *handles = enum_loaded_modules(pool);
-  char *libinfo = "";
   HMODULE *module;
 
   for (module = handles; module && *module; ++module)
@@ -532,25 +541,27 @@ win32_shared_libs(apr_pool_t *pool)
           filename = wcs_to_utf8(buffer, pool);
           if (filename)
             {
+              svn_sysinfo__loaded_lib_t *lib;
               char *truename;
+
               if (0 == apr_filepath_merge(&truename, "", filename,
                                           APR_FILEPATH_NATIVE
                                           | APR_FILEPATH_TRUENAME,
                                           pool))
                 filename = truename;
-              if (version)
-                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
-                                      "   (", version, ")\n", NULL);
-              else
-                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
-                                      "\n", NULL);
+
+              if (!array)
+                {
+                  array = apr_array_make(pool, 32, sizeof(*lib));
+                }
+              lib = &APR_ARRAY_PUSH(array, svn_sysinfo__loaded_lib_t);
+              lib->name = filename;
+              lib->version = version;
             }
         }
     }
 
-  if (*libinfo)
-    return libinfo;
-  return NULL;
+  return array;
 }
 #endif /* WIN32 */
 
