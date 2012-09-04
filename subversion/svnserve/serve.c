@@ -2944,24 +2944,6 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
-/* Callback which receives hook environment variables from the hook
- * environment configuration section,
- * An implementation of svn_config_enumerator2_t. */
-static svn_boolean_t
-hooks_env_conf_cb(const char *name,
-                  const char *value,
-                  void *baton,
-                  apr_pool_t *pool)
-{
-  apr_hash_t *hooks_env = baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get(hooks_env);
-
-  apr_hash_set(hooks_env, apr_pstrdup(hash_pool, name),
-               APR_HASH_KEY_STRING, apr_pstrdup(hash_pool, value));
-
-  return TRUE;
-}
-
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B.  Set B->repos's client
@@ -2974,7 +2956,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                const apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root, *fs_path;
+  const char *path, *full_path, *repos_root, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -3052,16 +3034,12 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                  "No access allowed to this repository",
                                  b, conn, pool);
 
-  /* If a hook environment has been configured, set it up. */
-  if (svn_config_has_section(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV))
-    {
-      apr_hash_t *hooks_env = apr_hash_make(pool);
-
-      svn_config_enumerate2(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV,
-                            hooks_env_conf_cb, hooks_env, pool);
-
-      svn_repos_hooks_setenv(b->repos, hooks_env);
-    }
+  /* Configure hook script environment variables. */
+  svn_config_get(b->cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
+  if (hooks_env)
+    hooks_env = svn_dirent_internal_style(hooks_env, pool);
+  svn_repos_hooks_setenv(b->repos, hooks_env, pool, pool);
 
   return SVN_NO_ERROR;
 }
