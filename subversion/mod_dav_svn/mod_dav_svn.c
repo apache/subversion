@@ -1106,7 +1106,7 @@ static const command_rec cmds[] =
                 ACCESS_CONF|RSRC_CONF,
                 "Sets the path to the configuration file for the environment "
                 "of hook scripts. If not absolute, the path is relative to "
-                "the repostiory's conf directory (by default the hooks-env "
+                "the repository's conf directory (by default the hooks-env "
                 "file in the repository is used)."),
   { NULL }
 };
