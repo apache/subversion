@@ -23,7 +23,7 @@ Candidate changes:
    Votes:
      +1: steveking   
 
- * r1242759, r1242770, r1242794
+ * r1242759, r1242770, r1242794, r1380175
    Fix various issues with GNOME and KDE keyring providers, especially
    as regards how their interact with --non-interactive mode.  Fixes
    issues #4110 ("kwallet not used with --non-interactive") and #4112
@@ -34,7 +34,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1242759  
    Votes:
-     +0: cmpilato   
+     +1: philip
+     +0: cmpilato (not r1380175)
 
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
@@ -151,14 +152,14 @@ Candidate changes:
    Justification:
      Implement api properly.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1380697
    Fix duplicated Index: lines in 'svn diff' output with external diff tool.
    Justification:
      Obvious bug. User complained and submitted patch.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
 Veto-blocked changes:
 =====================
