@@ -39,7 +39,7 @@ usage(const char *argv0)
 {
   printf("Usage:  %s FILE [USER PATH [REPOS_NAME]]\n\n", argv0);
   printf("Loads the authz file at FILE and validates its syntax.\n"
-         "Optionally reports the access available to USER for PATH in\n"
+         "Optionally prints the access available to USER for PATH in\n"
          "repository REPOS_NAME.\n"
          "Returns:\n"
          "    0   when syntax is OK.\n"
