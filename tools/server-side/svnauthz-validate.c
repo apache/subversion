@@ -33,9 +33,9 @@
 #include "svn_cmdline.h"
 
 static int
-usage()
+usage(argv0)
 {
-  printf("Usage:  %s FILE [USER PATH [REPOS_NAME]]\n\n", argv[0]);
+  printf("Usage:  %s FILE [USER PATH [REPOS_NAME]]\n\n", argv0);
   printf("Loads the authz file at FILE and validates its syntax.\n"
          "Optionally reports the access available to USER for PATH in\n"
          "repository REPOS_NAME.\n"
@@ -55,7 +55,7 @@ main(int argc, const char **argv)
   const char *authz_file;
 
   if (argc != 2 && argc != 4 && argc != 5)
-    return usage();
+    return usage(argv[0]);
 
   authz_file = argv[1];
 
