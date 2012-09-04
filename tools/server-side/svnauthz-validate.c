@@ -33,7 +33,7 @@
 #include "svn_cmdline.h"
 
 static int
-usage(argv0)
+usage(const char *argv0)
 {
   printf("Usage:  %s FILE [USER PATH [REPOS_NAME]]\n\n", argv0);
   printf("Loads the authz file at FILE and validates its syntax.\n"
