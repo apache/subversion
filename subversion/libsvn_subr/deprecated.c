@@ -605,9 +605,9 @@ svn_opt_print_help(apr_getopt_t *os,
     }
   else if (print_version)   /* just --version */
     {
-      const char *info = svn_opt__get_version_info(pgm_name, version_footer,
-                                                   quiet, FALSE, pool);
-      SVN_ERR(svn_cmdline_fputs(info, stdout, pool));
+      SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                          svn_opt__get_version_info(pool),
+                                          quiet, FALSE, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help(header,

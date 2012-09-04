@@ -24,25 +24,58 @@
 #ifndef SVN_LIBSVN_SUBR_OPT_H
 #define SVN_LIBSVN_SUBR_OPT_H
 
+#include <apr_tables.h>
 #include "svn_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return a string containing version info for PGM_NAME.  If QUIET is
+
+/* This structure stores the available information about the version,
+ * build and runtime environment of the Subversion client libraries.
+ */
+typedef struct svn_opt__version_info_t svn_opt__version_info_t;
+struct svn_opt__version_info_t
+{
+  const char *version_number;   /* version number */
+  const char *version_string;   /* version string */
+  const char *build_date;       /* compilation date */
+  const char *build_time;       /* compilation time */
+  const char *build_host;       /* nuild canonical host name */
+  const char *copyright;        /* vopyright notice */
+  const char *runtime_host;     /* runtime canonical host name */
+  const char *runtime_osname;   /* running OS release name */
+
+  /* Array svn_sysinfo__linked_lib_t describing dependent libraries */
+  const apr_array_header_t *linked_libs;
+
+  /* Array of svn_sysinfo__loaded_lib_t describing loaded shared libraries */
+  const apr_array_header_t *loaded_libs;
+};
+
+
+/* Return version information for the running program, allocated from POOL.
+ *
+ * Use POOL for temporary allocations.
+ */
+const svn_opt__version_info_t *
+svn_opt__get_version_info(apr_pool_t *pool);
+
+/* Print version version info for PGM_NAME to the console.  If QUIET is
  * true, print in brief.  Else if QUIET is not true, print the version
  * more verbosely, and if FOOTER is non-null, print it following the
  * version information. If VERBOSE is true, print running system info.
  *
  * Use POOL for temporary allocations.
  */
-const char *
-svn_opt__get_version_info(const char *pgm_name,
-                          const char *footer,
-                          svn_boolean_t quiet,
-                          svn_boolean_t verbose,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_opt__print_version_info(const char *pgm_name,
+                            const char *footer,
+                            const svn_opt__version_info_t *info,
+                            svn_boolean_t quiet,
+                            svn_boolean_t verbose,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
