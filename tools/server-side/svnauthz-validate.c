@@ -86,12 +86,9 @@ main(int argc, const char **argv)
                                            svn_authz_read, &read_access,
                                            pool);
       if (!err)
-        printf("user '%s' has %s access to '%s'%s%s\n",
-               user,
+        printf("%s\n",
                write_access ? "rw" : read_access ? "r" : "no",
-               path,
-               repos[0] ? "in repository " : "",
-               repos);
+               );
     }
 
   svn_pool_destroy(pool);
