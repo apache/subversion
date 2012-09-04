@@ -131,12 +131,12 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
 /** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_FORCE_USERNAME_CASE       "force-username-case"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_HOOKS_ENV                 "hooks-env"
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
-/** @since New in 1.8. */
-#define SVN_CONFIG_SECTION_HOOKS_ENV            "hooks-env"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

@@ -215,6 +215,7 @@ run_hook_cmd(svn_string_t **result,
   svn_error_t *err;
   apr_proc_t cmd_proc = {0};
   apr_pool_t *cmd_pool;
+  apr_hash_t *hook_env = NULL;
 
   if (result)
     {
@@ -234,8 +235,19 @@ run_hook_cmd(svn_string_t **result,
    * destroy in order to clean up the stderr pipe opened for the process. */
   cmd_pool = svn_pool_create(pool);
 
+  /* Check if a custom environment is defined for this hook, or else
+   * whether a default environment is defined. */
+  if (hooks_env)
+    {
+      hook_env = apr_hash_get(hooks_env, name, APR_HASH_KEY_STRING);
+      if (hook_env == NULL)
+        hook_env = apr_hash_get(hooks_env,
+                                SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION,
+                                APR_HASH_KEY_STRING);
+    }
+    
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
-                          env_from_env_hash(hooks_env, pool, pool),
+                          env_from_env_hash(hook_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
                           null_handle, TRUE, NULL, cmd_pool);
   if (!err)
