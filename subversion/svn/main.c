@@ -504,8 +504,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "history.\n"
      "usage: copy SRC[@REV]... DST\n"
      "\n"
-     "When copying multiple sources, they will be added as children of DST,\n"
-     "which must be a directory.\n"
+     "  When copying multiple sources, they will be added as children of DST,\n"
+     "  which must be a directory.\n"
      "\n"
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
@@ -514,11 +514,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> URL:  complete server-side copy;  used to branch and tag\n"
      "  All the SRCs must be of the same type.\n"
      "\n"
-     "WARNING: For compatibility with previous versions of Subversion,\n"
-     "copies performed using two working copy paths (WC -> WC) will not\n"
-     "contact the repository.  As such, they may not, by default, be able\n"
-     "to propagate merge tracking information from the source of the copy\n"
-     "to the destination.\n"),
+     "  WARNING: For compatibility with previous versions of Subversion,\n"
+     "  copies performed using two working copy paths (WC -> WC) will not\n"
+     "  contact the repository.  As such, they may not, by default, be able\n"
+     "  to propagate merge tracking information from the source of the copy\n"
+     "  to the destination.\n"),
     {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
@@ -1084,8 +1084,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Move and/or rename something in working copy or repository.\n"
      "usage: move SRC... DST\n"
      "\n"
-     "When moving multiple sources, they will be added as children of DST,\n"
-     "which must be a directory.\n"
+     "  When moving multiple sources, they will be added as children of DST,\n"
+     "  which must be a directory.\n"
      "\n"
      "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
      "  Note:  the --revision option has no use and is deprecated.\n"
@@ -1162,7 +1162,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"
-     "See 'svn help propset' for more on setting properties.\n"),
+     "  See 'svn help propset' for more on setting properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
