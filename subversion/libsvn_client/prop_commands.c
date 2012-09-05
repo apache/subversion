@@ -838,7 +838,6 @@ get_prop_from_wc(apr_hash_t **props,
 }
 
 /* Note: this implementation is very similar to svn_client_proplist. */
-/* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
                     apr_array_header_t **inherited_props,
@@ -1014,7 +1013,10 @@ svn_client_propget5(apr_hash_t **props,
 
           SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind,
                                     scratch_pool));
-          *props = apr_hash_make(result_pool);
+
+          if (!local_explicit_props)
+            *props = apr_hash_make(result_pool);
+
           SVN_ERR(remote_propget(!local_explicit_props ? *props : NULL,
                                  !local_iprops ? inherited_props : NULL,
                                  propname, loc->url, "",
@@ -1284,8 +1286,277 @@ recursive_proplist_receiver(void *baton,
                                              scratch_pool));
 }
 
+/* Helper for svn_client_proplist4 when retrieving properties and/or
+   inherited properties from the repository.  Except as noted below,
+   all arguments are as per svn_client_proplist4.
+   
+   GET_EXPLICIT_PROPS controls if explicit props are retrieved. */
+static svn_error_t *
+get_remote_props(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t get_explicit_props,
+                 svn_boolean_t get_target_inherited_props,
+                 svn_proplist_receiver2_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_node_kind_t kind;
+  svn_opt_revision_t new_operative_rev;
+  svn_opt_revision_t new_peg_rev;
+  svn_client__pathrev_t *loc;
+
+  /* Peg or operative revisions may be WC specific for
+     PATH_OR_URL's explicit props, but still require us to
+     contact the repository for the inherited properties. */
+  if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind)
+      || SVN_CLIENT__REVKIND_NEEDS_WC(revision->kind))
+    {
+      svn_revnum_t origin_rev;
+      const char *repos_relpath;
+      const char *repos_root_url;
+      const char *repos_uuid;
+      const char *local_abspath;
+      const char *copy_root_abspath;
+      svn_boolean_t is_copy;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
+                                      scratch_pool));
+
+      if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
+        {
+          SVN_ERR(svn_wc__node_get_origin(&is_copy,
+                                          &origin_rev,
+                                          &repos_relpath,
+                                          &repos_root_url,
+                                          &repos_uuid,
+                                          &copy_root_abspath,
+                                          ctx->wc_ctx,
+                                          local_abspath,
+                                          FALSE, /* scan_deleted */
+                                          result_pool,
+                                          scratch_pool));
+          if (repos_relpath)
+            {
+              path_or_url =
+                svn_path_url_add_component2(repos_root_url,
+                                            repos_relpath,
+                                            scratch_pool);
+              if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
+                {
+                  svn_revnum_t resolved_peg_rev;
+
+                  SVN_ERR(svn_client__get_revision_number(&resolved_peg_rev,
+                                                          NULL, ctx->wc_ctx,
+                                                          local_abspath, NULL,
+                                                          peg_revision,
+                                                          scratch_pool));
+                  new_peg_rev.kind = svn_opt_revision_number;
+                  new_peg_rev.value.number = resolved_peg_rev;
+                  peg_revision = &new_peg_rev;
+                }
+
+              if (SVN_CLIENT__REVKIND_NEEDS_WC(revision->kind))
+                {
+                  svn_revnum_t resolved_operative_rev;
+
+                  SVN_ERR(svn_client__get_revision_number(
+                    &resolved_operative_rev,
+                    NULL, ctx->wc_ctx,
+                    local_abspath, NULL,
+                    revision,
+                    scratch_pool));
+                  new_operative_rev.kind = svn_opt_revision_number;
+                  new_operative_rev.value.number = resolved_operative_rev;
+                  revision = &new_operative_rev;
+                }
+            }
+          else
+            {
+                  /* PATH_OR_URL doesn't exist in the repository, so there are
+                     obviously not inherited props to be found there. If we
+                     aren't looking for explicit props then we're done. */
+                  if (!get_explicit_props)
+                    return SVN_NO_ERROR;
+            }
+        }
+    }
+
+  /* Get an RA session for this URL. */
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            path_or_url, NULL,
+                                            peg_revision,
+                                            revision, ctx,
+                                            result_pool));
+
+  SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind,
+                            result_pool));
+
+  SVN_ERR(remote_proplist(loc->url, "", kind, loc->rev, ra_session,
+                          get_explicit_props,
+                          get_target_inherited_props,
+                          depth, receiver, receiver_baton,
+                          result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Helper for svn_client_proplist4 when retrieving properties and
+   possibly inherited properties from the WC.  All arguments are as
+   per svn_client_proplist4. */
+static svn_error_t *
+get_local_props(const char *path_or_url,
+                const svn_opt_revision_t *revision,
+                svn_depth_t depth,
+                const apr_array_header_t *changelists,
+                svn_boolean_t get_target_inherited_props,
+                svn_proplist_receiver2_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_boolean_t pristine;
+  svn_node_kind_t kind;
+  apr_hash_t *changelist_hash = NULL;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
+                                  scratch_pool));
+
+  pristine = ((revision->kind == svn_opt_revision_committed)
+              || (revision->kind == svn_opt_revision_base));
+
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+
+  if (kind == svn_node_unknown || kind == svn_node_none)
+    {
+      /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
+         for this function. */
+      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                               _("'%s' is not under version control"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+
+  if (get_target_inherited_props)
+    {
+      apr_array_header_t *iprops;
+
+      SVN_ERR(svn_wc__get_iprops(&iprops, ctx->wc_ctx, local_abspath,
+                                 NULL, scratch_pool, scratch_pool));
+      SVN_ERR(call_receiver(path_or_url, NULL, iprops, receiver,
+                            receiver_baton, scratch_pool));
+    }
+
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
+                                       changelists, scratch_pool));
+
+  /* Fetch, recursively or not. */
+  if (kind == svn_node_dir)
+    {
+      struct recursive_proplist_receiver_baton rb;
+
+      rb.wc_ctx = ctx->wc_ctx;
+      rb.wrapped_receiver = receiver;
+      rb.wrapped_receiver_baton = receiver_baton;
+
+      if (strcmp(path_or_url, local_abspath) != 0)
+        {
+          rb.anchor = path_or_url;
+          rb.anchor_abspath = local_abspath;
+        }
+      else
+        {
+          rb.anchor = NULL;
+          rb.anchor_abspath = NULL;
+        }
+
+      SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
+                                          depth, pristine, changelists,
+                                          recursive_proplist_receiver, &rb,
+                                          ctx->cancel_func,
+                                          ctx->cancel_baton, result_pool));
+    }
+  else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
+                                    changelist_hash, scratch_pool))
+    {
+      apr_hash_t *hash;
+
+      SVN_ERR(pristine_or_working_props(&hash, ctx->wc_ctx, local_abspath,
+                                        pristine, result_pool,
+                                        scratch_pool));
+      SVN_ERR(call_receiver(path_or_url, hash, NULL,
+                            receiver, receiver_baton, scratch_pool));
+
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_proplist4(const char *path_or_url,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     const apr_array_header_t *changelists,
+                     svn_boolean_t get_target_inherited_props,
+                     svn_proplist_receiver2_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_boolean_t local_explicit_props;
+  svn_boolean_t local_iprops;
+
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                        path_or_url);
+  revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_empty;
+
+  /* Are explicit props available locally? */
+  local_explicit_props =
+    (! svn_path_is_url(path_or_url)
+     && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
+     && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
+
+  /* If we want iprops are they avaiable locally? */
+  local_iprops =
+    (get_target_inherited_props /* We want iprops */
+     && local_explicit_props /* No local explicit props means no local iprops. */
+     && (peg_revision->kind == svn_opt_revision_working
+         || peg_revision->kind == svn_opt_revision_unspecified )
+     && (revision->kind == svn_opt_revision_working
+         || revision->kind == svn_opt_revision_unspecified ));
+
+  if ((get_target_inherited_props && !local_iprops)
+      || !local_explicit_props)
+    {
+      SVN_ERR(get_remote_props(path_or_url, peg_revision, revision, depth,
+                               !local_explicit_props, !local_iprops,
+                               receiver, receiver_baton, ctx, result_pool,
+                               scratch_pool));
+    }
+
+  if (local_explicit_props)
+    {
+      SVN_ERR(get_local_props(path_or_url, revision, depth, changelists,
+                              local_iprops, receiver, receiver_baton, ctx,
+                              result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_proplist4OLD(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_depth_t depth,
