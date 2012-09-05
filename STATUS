@@ -145,20 +145,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1375052
-   Don't complain about unknown password stores listed in the
-   password-stores runtime configuration area -- simply ignore them.
-   Justification:
-     The runtime configuration must necessarily be compatible -- that
-     is, at least functional -- across many versions of Subversion.
-     Prior to this change, though, adding "gpg-agent" to the
-     password-stores list so I can use that feature with my trunk
-     client would cause my 1.7.x client to choke.
-   Branch:
-     ^/subversion/branches/1.7.x-r1375052
-   Votes:
-     +1: cmpilato, danielsh, rhuijben
-
  * r1380697
    Fix duplicated Index: lines in 'svn diff' output with external diff tool.
    Justification:
