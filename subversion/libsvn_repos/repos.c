@@ -34,6 +34,7 @@
 #include "svn_repos.h"
 #include "svn_hash.h"
 #include "svn_version.h"
+#include "svn_config.h"
 
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
@@ -164,13 +165,6 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_REVPROP_CHANGE,
                        pool);
-}
-
-void
-svn_repos_hooks_setenv(svn_repos_t *repos,
-                       apr_hash_t *hooks_env)
-{
-  repos->hooks_env = hooks_env;
 }
 
 static svn_error_t *
@@ -1041,6 +1035,13 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### \"none\" (to compare usernames as-is without case conversion, which"    NL
 "### is the default behavior)."                                              NL
 "# force-username-case = none"                                               NL
+"### The hooks-env options specifies a path to the hook script environment " NL
+"### configuration file. This option overrides the per-repository default"   NL
+"### and can be used to configure the hook script environment for multiple " NL
+"### repositories in a single file, if an absolute path is specified."       NL
+"### Unless you specify an absolute path, the file's location is relative"   NL
+"### to the directory containing this file."                                 NL
+"# hooks-env = " SVN_REPOS__CONF_HOOKS_ENV                                   NL
 ""                                                                           NL
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL
@@ -1055,17 +1056,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### to the effective key length for encryption (e.g. 128 means 128-bit"     NL
 "### encryption). The values below are the defaults."                        NL
 "# min-encryption = 0"                                                       NL
-"# max-encryption = 256"                                                     NL
-""                                                                           NL
-"[hooks-env]"                                                                NL
-"### Options in this section define environment variables for use by"        NL
-"### hook scripts run by svnserve."                                          NL
-#ifdef WIN32
-"# PATH = C:\\Program Files\\Subversion\\bin"                                NL
-#else
-"# PATH = /bin:/sbin:/usr/bin:/usr/sbin"                                     NL
-#endif
-"# LC_CTYPE = en_US.UTF-8"                                                   NL;
+"# max-encryption = 256"                                                     NL;
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
                                  svnserve_conf_contents, pool),
@@ -1132,6 +1123,129 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
               _("Creating authz file"));
   }
 
+  {
+    static const char * const hooks_env_contents =
+"### This file is an example hook script environment configuration file."    NL
+"### Hook scripts run in an empty environment by default."                   NL
+"### As shown below each section defines environment variables for a"        NL
+"### particular hook script. The [default] section defines environment"      NL
+"### variables for all hook scripts, unless overridden by a hook-specific"   NL
+"### section."                                                               NL
+""                                                                           NL
+"### This example configures a UTF-8 locale for all hook scripts, so that "  NL
+"### special characters, such as umlauts, may be printed to stderr."         NL
+"### If UTF-8 is used with a mod_dav_svn server, the SVNUseUTF8 option must" NL
+"### also be set to 'yes' in httpd.conf."                                    NL
+"### With svnserve, the LANG environment variable of the svnserve process"   NL
+"### must be set to the same value as given here."                           NL
+"[default]"                                                                  NL
+"# LANG = en_US.UTF-8"                                                       NL
+""                                                                           NL
+"### This sets the PATH environment variable for the pre-commit hook."       NL
+"# [pre-commit]"                                                             NL
+"# PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                 NL;
+
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_HOOKS_ENV,
+                                                 pool),
+                                 hooks_env_contents, pool),
+              _("Creating hooks-env file"));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton for parse_hooks_env_option. */
+struct parse_hooks_env_option_baton {
+  /* The name of the section being parsed. If not the default section,
+   * the section name should match the name of a hook to which the
+   * options apply. */
+  const char *section;
+  apr_hash_t *hooks_env;
+} parse_hooks_env_option_baton;
+
+/* An implementation of svn_config_enumerator2_t.
+ * Set environment variable NAME to value VALUE in the environment for
+ * all hooks (in case the current section is the default section),
+ * or the hook with the name corresponding to the current section's name. */
+static svn_boolean_t
+parse_hooks_env_option(const char *name, const char *value,
+                       void *baton, apr_pool_t *pool)
+{
+  struct parse_hooks_env_option_baton *bo = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
+  apr_hash_t *hook_env;
+  
+  hook_env = apr_hash_get(bo->hooks_env, bo->section, APR_HASH_KEY_STRING);
+  if (hook_env == NULL)
+    {
+      hook_env = apr_hash_make(result_pool);
+      apr_hash_set(bo->hooks_env, apr_pstrdup(result_pool, bo->section),
+                   APR_HASH_KEY_STRING, hook_env);
+    }
+  apr_hash_set(hook_env, apr_pstrdup(result_pool, name),
+               APR_HASH_KEY_STRING, apr_pstrdup(result_pool, value));
+
+  return TRUE;
+}
+
+struct parse_hooks_env_section_baton {
+  svn_config_t *cfg;
+  apr_hash_t *hooks_env;
+} parse_hooks_env_section_baton;
+
+/* An implementation of svn_config_section_enumerator2_t. */
+static svn_boolean_t
+parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
+{
+  struct parse_hooks_env_section_baton *b = baton;
+  struct parse_hooks_env_option_baton bo;
+
+  bo.section = name;
+  bo.hooks_env = b->hooks_env;
+
+  (void)svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
+
+  return TRUE;
+}
+
+/* Parse the hooks env file for this repository. */
+static svn_error_t *
+parse_hooks_env(svn_repos_t *repos,
+                const char *local_abspath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_config_t *cfg;
+  int n;
+  struct parse_hooks_env_section_baton b;
+
+  SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
+  b.cfg = cfg;
+  b.hooks_env = apr_hash_make(result_pool);
+  n = svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
+                                     scratch_pool);
+  if (n > 0)
+    repos->hooks_env = b.hooks_env;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_hooks_setenv(svn_repos_t *repos,
+                       const char *hooks_env_path,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  if (hooks_env_path == NULL)
+    hooks_env_path = svn_dirent_join(repos->conf_path,
+                                     SVN_REPOS__CONF_HOOKS_ENV, scratch_pool);
+  else if (!svn_dirent_is_absolute(hooks_env_path))
+    hooks_env_path = svn_dirent_join(repos->conf_path, hooks_env_path,
+                                     scratch_pool);
+
+  SVN_ERR(parse_hooks_env(repos, hooks_env_path, result_pool, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1151,6 +1265,7 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   repos->hook_path = svn_dirent_join(path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_dirent_join(path, SVN_REPOS__LOCK_DIR, pool);
   repos->repository_capabilities = apr_hash_make(pool);
+  repos->hooks_env = NULL;
 
   return repos;
 }

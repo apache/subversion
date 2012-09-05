@@ -25,10 +25,12 @@
 #define SVN_LIBSVN_SUBR_SYSINFO_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
 
 /* Return a canonical name similar to the output of config.guess,
  * identifying the running system.
@@ -44,20 +46,39 @@ const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
  */
 const char *svn_sysinfo__release_name(apr_pool_t *pool);
 
-/* Return a description of the link-time and run-time versions of
- * dependent libraries.
- *
- * All allocations are done in POOL.
- */
-const char *svn_sysinfo__linked_libs(apr_pool_t *pool);
+/* Describes a linked dependency library */
+typedef struct svn_sysinfo__linked_lib_t svn_sysinfo__linked_lib_t;
+struct svn_sysinfo__linked_lib_t
+{
+  const char *name;             /* library name */
+  const char *compiled_version; /* compile-time version string */
+  const char *runtime_version;  /* run-time version string (optional) */
+};
 
-/* Return a string containing a list of shared libraries loaded by the
- * running process, including their versions where applicable, or NULL
- * if the information is not available.
+/* Return an array of svn_sysinfo__linked_lib_t of descriptions of the
+ * link-time and run-time versions of dependent libraries, or NULL of
+ * the info is not available.
  *
  * All allocations are done in POOL.
  */
-const char *svn_sysinfo__loaded_libs(apr_pool_t *pool);
+const apr_array_header_t *svn_sysinfo__linked_libs(apr_pool_t *pool);
+
+/* Describes a loaded shared library */
+typedef struct svn_sysinfo__loaded_lib_t svn_sysinfo__loaded_lib_t;
+struct svn_sysinfo__loaded_lib_t
+{
+  const char *name;             /* library name */
+  const char *version;          /* library version (optional) */
+};
+
+/* Return an array of svn_sysinfo__loaded_lib_t of descriptions of
+ * shared libraries loaded by the running process, including their
+ * versions where applicable, or NULL if the information is not
+ * available.
+ *
+ * All allocations are done in POOL.
+ */
+const apr_array_header_t *svn_sysinfo__loaded_libs(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

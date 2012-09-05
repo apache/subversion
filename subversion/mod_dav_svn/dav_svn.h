@@ -389,7 +389,7 @@ const char *dav_svn__get_root_dir(request_rec *r);
 int dav_svn__get_compression_level(void);
 
 /* Return the hook script environment parsed from the configuration. */
-apr_hash_t *dav_svn__get_hooks_env(request_rec *r);
+const char *dav_svn__get_hooks_env(request_rec *r);
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
     returned to the client in our OPTIONS response.  They all depend

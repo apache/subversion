@@ -2217,8 +2217,9 @@ get_resource(request_rec *r,
                                          HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
-      /* Configure the hooks environment, if not empty. */
-      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r));
+      /* Configure hook script environment variables. */
+      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
+                             r->connection->pool, r->pool);
     }
 
   /* cache the filesystem object */
