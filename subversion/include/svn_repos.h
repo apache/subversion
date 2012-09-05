@@ -778,16 +778,25 @@ const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
 
-/** Set the environment that @a repos's hooks will inherit to @a hooks_env,
- * a hash table where keys and values represent names and values of environment
- * variables. @a hooks_env must live at least as long as @a repos.
+/** Set the environment that @a repos's hooks will inherit.
+ * The environment is specified in a file at @a hooks_env_path.
+ * If @a hooks_env_path is @c NULL, the file is searched at its
+ * default location in the repository. If @a hooks_env_path is
+ * not absolute, it specifies a path relative to the parent of
+ * the file's default location in the repository.
  *
- * If this function is not called, hooks will run in an empty environment.
+ * The @a result_pool should be the same pool that @a repos was allocated in.
+ * The @a scratch_pool is used for temporary allocations.
+ *
+ * If this function is not called, or if the file does not list any
+ * environment variables, hooks will run in an empty environment.
  *
  * @since New in 1.8. */
-void
+svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
-                       apr_hash_t *hooks_env);
+                       const char *hooks_env_path,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /** @} */
 

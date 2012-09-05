@@ -862,6 +862,8 @@ endif
 		> $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched
 	mv $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched \
 		$(CYRUS_SASL_SRCDIR)/lib/dlopen.c
+	# Fix a weird autotools error about missing cmulocal dir
+	(cd $(CYRUS_SASL_SRCDIR)/saslauthd/ && ln -sf ../cmulocal)
 	touch $@
 
 # configure cyrus-sasl

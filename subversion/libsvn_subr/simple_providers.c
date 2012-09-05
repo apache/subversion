@@ -475,6 +475,10 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
   /* Save credentials to disk. */
   err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
                                    realmstring, config_dir, pool);
+  if (err)
+    *saved = FALSE;
+
+  /* ### return error? */
   svn_error_clear(err);
 
   return SVN_NO_ERROR;
