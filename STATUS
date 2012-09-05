@@ -144,10 +144,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1380697
-   Fix duplicated Index: lines in 'svn diff' output with external diff tool.
-   Justification:
-     Obvious bug. User complained and submitted patch.
-   Votes:
-     +1: stsp, philip, rhuijben
