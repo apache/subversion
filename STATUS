@@ -91,12 +91,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1306111
-   Handle NULL dates in libsvn_ra_svn.
-   Justification:
-     Avoids segfault.
-   Branch:
-     ^/subversion/branches/1.6.x-r1306111
-   Votes:
-     +1: danielsh, stsp, philip
