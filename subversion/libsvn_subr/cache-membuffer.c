@@ -1168,13 +1168,8 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
       && cache->max_entry_size >= size
       && ensure_data_insertable(cache, size))
     {
-      /* Remove old data for this key, if that exists.
-       * Get an unused entry for the key and and initialize it with
-       * the serialized item's (future) posion within data buffer.
-       */
-      entry_t *entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = size;
-      entry->offset = cache->current_data;
+      /* first, look for a previous entry for the given key */
+      entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -1185,14 +1180,32 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
 #endif
 
+      /* if there is an old version of that entry and the new data fits into
+       * the old spot, just re-use that space. */
+      if (entry && entry->size >= size)
+        {
+          entry->size = size;
+        }
+      else
+        {
+          /* Remove old data for this key, if that exists.
+           * Get an unused entry for the key and and initialize it with
+           * the serialized item's (future) posion within data buffer.
+           */
+          entry = find_entry(cache, group_index, to_find, TRUE);
+          entry->size = size;
+          entry->offset = cache->current_data;
+
+          /* Link the entry properly.
+           */
+          insert_entry(cache, entry);
+        }
+
       /* Copy the serialized item data into the cache.
        */
       if (size)
         memcpy(cache->data + entry->offset, buffer, size);
 
-      /* Link the entry properly.
-       */
-      insert_entry(cache, entry);
       cache->total_writes++;
     }
   else
