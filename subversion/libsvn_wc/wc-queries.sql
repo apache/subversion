@@ -1516,17 +1516,20 @@ WHERE wc_id == ?1
 
 /* Queries for cached inherited properties. */
 
+/* Select the inherited properties of a single base node. */
 -- STMT_SELECT_IPROPS
 SELECT inherited_props FROM nodes
 WHERE wc_id = ?1
   AND local_relpath = ?2
-  AND op_depth = ?3
+  AND op_depth = 0
 
+/* Update the inherited properties of a single base node. */
 -- STMT_UPDATE_IPROP
 UPDATE nodes
 SET inherited_props = ?3
 WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
 
+/* Select a single path if its base node has cached inherited properties. */
 -- STMT_SELECT_INODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
@@ -1534,6 +1537,8 @@ WHERE wc_id = ?1
   AND op_depth = 0
   AND (inherited_props not null)
 
+/* Select all paths whose base nodes at or below a given path, which
+   have cached inherited properties. */
 -- STMT_SELECT_INODES_RECURSIVE
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
