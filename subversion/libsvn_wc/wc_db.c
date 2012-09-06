@@ -9315,8 +9315,7 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_IPROPS));
       SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                                0));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (!have_row)
