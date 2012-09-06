@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: UTF-8
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -72,6 +73,22 @@ def svn_info(svnbin, env, path):
         info[line[:idx]] = line[idx+1:].strip()
     return info
 
+try:
+    import glob
+    glob.iglob
+    def is_emptydir(path):
+        # ### If the directory contains only dotfile children, this will readdir()
+        # ### the entire directory.  But os.readdir() is not exposed to us...
+        for x in glob.iglob('%s/*' % path):
+            return False
+        for x in glob.iglob('%s/.*' % path):
+            return False
+        return True
+except (ImportError, AttributeError):
+    # Python ≤2.4
+    def is_emptydir(path):
+        # This will read the entire directory list to memory.
+        return not os.listdir(path)
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
@@ -107,7 +124,7 @@ class WorkingCopy(object):
 
     def _get_match(self, svnbin, env):
         ### quick little hack to auto-checkout missing working copies
-        if not os.path.isdir(self.path):
+        if not os.path.isdir(self.path) or is_emptydir(self.path):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
             subprocess.check_call([svnbin, 'co', '-q',
                                    '--non-interactive',
