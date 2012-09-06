@@ -1540,7 +1540,8 @@ svn_client_proplist4(const char *path_or_url,
       || !local_explicit_props)
     {
       SVN_ERR(get_remote_props(path_or_url, peg_revision, revision, depth,
-                               !local_explicit_props, !local_iprops,
+                               !local_explicit_props,
+                               (get_target_inherited_props && !local_iprops),
                                receiver, receiver_baton, ctx, result_pool,
                                scratch_pool));
     }
