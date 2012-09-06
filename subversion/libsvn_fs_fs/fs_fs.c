@@ -2284,6 +2284,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
+                                  svn_fs_fs__id_txn_id(id) != NULL,
                                   pool));
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
@@ -2293,6 +2294,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev_p,
                         svn_stream_t *stream,
+                        svn_boolean_t allow_for_txn_roots,
                         apr_pool_t *pool)
 {
   apr_hash_t *headers;
@@ -2423,7 +2425,9 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get whether this is a fresh txn root. */
-  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  value = allow_for_txn_roots
+        ? apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING)
+        : NULL;
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
