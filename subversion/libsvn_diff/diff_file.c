@@ -340,30 +340,17 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 /* Quickly determine whether there is a eol char in CHUNK.
  * (mainly copy-n-paste from eol.c#svn_eol__find_eol_start).
  */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-#if APR_SIZEOF_VOIDP == 8
-#  define LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
-#  define BIT_7_SET       0x8080808080808080
-#  define R_MASK          0x0a0a0a0a0a0a0a0a
-#  define N_MASK          0x0d0d0d0d0d0d0d0d
-#else
-#  define LOWER_7BITS_SET 0x7f7f7f7f
-#  define BIT_7_SET       0x80808080
-#  define R_MASK          0x0a0a0a0a
-#  define N_MASK          0x0d0d0d0d
-#endif
-#endif
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
 static svn_boolean_t contains_eol(apr_uintptr_t chunk)
 {
-  apr_uintptr_t r_test = chunk ^ R_MASK;
-  apr_uintptr_t n_test = chunk ^ N_MASK;
+  apr_uintptr_t r_test = chunk ^ SVN__R_MASK;
+  apr_uintptr_t n_test = chunk ^ SVN__N_MASK;
 
-  r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
-  n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
+  r_test |= (r_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
+  n_test |= (n_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
 
-  return (r_test & n_test & BIT_7_SET) != BIT_7_SET;
+  return (r_test & n_test & SVN__BIT_7_SET) != SVN__BIT_7_SET;
 }
 #endif
 
