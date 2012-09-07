@@ -18,11 +18,12 @@ Candidate changes:
  * r1138975, r1138977
    Add a sanity check to get-deps.sh.
    Justification:
-     Prevent a false impression as to which version of a dependency will be used.
+     Prevent a false impression as to which version of a dependency will be
+     used.
    Notes:
-     r1138975 is the change.  r1138977 reverts accidentally-committed local changes.
-     Note that r1138977 replaces the bogusly-committed files rather than merges
-     into them.
+     r1138975 is the change.  r1138977 reverts accidentally-committed local
+     changes.  Note that r1138977 replaces the bogusly-committed files rather
+     than merges into them.
    Votes:
      +1: danielsh
 
