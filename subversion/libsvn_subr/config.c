@@ -981,9 +981,6 @@ svn_config_dup(svn_config_t **cfgp,
                svn_config_t *src,
                apr_pool_t *pool)
 {
-  const void *ckey = NULL;
-  void *cval = NULL;
-  apr_ssize_t ckeyLength = 0;
   apr_hash_index_t *sectidx;
   apr_hash_index_t *optidx;
 
@@ -1063,7 +1060,7 @@ svn_config_copy_config(apr_hash_t **cfg_hash,
                  ckeyLength, destconfig);
   }
 
-  return retval;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t*
