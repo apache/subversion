@@ -3453,7 +3453,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
       eol = strchr(buf, '\n');
       if (eol)
         {
-          apr_off_t offset = (eol + 1 - buf) - bytes_read;
+          apr_off_t offset = (eol + 1 - buf) - (apr_off_t)bytes_read;
           
           *eol = 0;
           *limit = total_read + (eol - buf);
