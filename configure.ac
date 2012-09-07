@@ -479,8 +479,9 @@ if test "$svn_lib_sasl" = "yes"; then
             [Defined if Cyrus SASL v2 is present on the system])
 fi
 
-dnl Mac OS soecufuc features -------------------
+dnl Mac OS specific features -------------------
 
+SVN_LIB_MACHO_ITERATE
 SVN_LIB_MACOS_PLIST
 SVN_LIB_MACOS_KEYCHAIN
 
