@@ -526,6 +526,13 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
+      svn_boolean_t ssl_client_cert_file_prompt;
+
+      SVN_ERR(svn_config_get_bool(cfg, &ssl_client_cert_file_prompt,
+                                  SVN_CONFIG_SECTION_AUTH,
+                                  SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT,
+                                  FALSE));
+
       /* Two basic prompt providers: username/password, and just username. */
       svn_auth_get_simple_prompt_provider(&provider,
                                           svn_cmdline_auth_simple_prompt,
@@ -539,19 +546,23 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
          2, /* retry limit */ pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      /* Three ssl prompt providers, for server-certs, client-certs,
-         and client-cert-passphrases.  */
+      /* SSL prompt providers: server-certs and client-cert-passphrases.  */
       svn_auth_get_ssl_server_trust_prompt_provider
         (&provider, svn_cmdline_auth_ssl_server_trust_prompt, pb, pool);
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-      svn_auth_get_ssl_client_cert_prompt_provider
-        (&provider, svn_cmdline_auth_ssl_client_cert_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_ssl_client_cert_pw_prompt_provider
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* If configuration allows, add a provider for client-cert path
+         prompting, too. */
+      if (ssl_client_cert_file_prompt)
+        {
+          svn_auth_get_ssl_client_cert_prompt_provider
+            (&provider, svn_cmdline_auth_ssl_client_cert_prompt, pb, 2, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        }
     }
   else if (trust_server_cert)
     {
