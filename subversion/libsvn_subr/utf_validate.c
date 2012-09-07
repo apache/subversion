@@ -250,11 +250,12 @@ static const char machine [9][14] = {
    FSM_ERROR},        /* 0xf5-0xff */
 };
 
-/* Scan MAX_LEN bytes in *DATA for non-ASCII chars. Return the position
- * of the first non-ASCII char or DATA + MAX_LEN if all were ASCII.
+/* Scan MAX_LEN bytes in *DATA for chars that are not in the octet
+ * category 0 (FSM_START).  Return the position of the first such char
+ * or DATA + MAX_LEN if all were cat 0.
  */
 static const char *
-first_non_ascii_char(const char *data, apr_size_t max_len)
+first_non_fsm_start_char(const char *data, apr_size_t max_len)
 {
 #if !SVN_UNALIGNED_ACCESS_IS_OK
 
@@ -269,8 +270,8 @@ first_non_ascii_char(const char *data, apr_size_t max_len)
       max_len -= len;
 
       for (; len > 0; ++data, --len)
-          if (*data < 0)
-            return data;
+        if (*data < 0 || *data >= 0x80)
+          return data;
     }
     
 #endif
@@ -283,17 +284,18 @@ first_non_ascii_char(const char *data, apr_size_t max_len)
 
   /* The remaining odd bytes will be examined the naive way: */
   for (; max_len > 0; ++data, --max_len)
-    if (*data < 0)
+    if (*data < 0 || *data >= 0x80)
       return data;
 
   return data;
 }
 
-/* Scan the C string in *DATA for non-ASCII chars. Return the position
- * of either the first non-ASCII char or the terminating NUL.
+/* Scan the C string in *DATA for chars that are not in the octet
+ * category 0 (FSM_START).  Return the position of either the such
+ * char or of the terminating NUL.
  */
 static const char *
-first_non_ascii_char_cstring(const char *data)
+first_non_fsm_start_char_cstring(const char *data)
 {
   /* We need to make sure that BUF is properly aligned for chunky data
    * access because we don't know the string's length. Unaligned chunk
@@ -301,7 +303,7 @@ first_non_ascii_char_cstring(const char *data)
    * segfault.
    */
   for (; (apr_uintptr_t)data & (sizeof(apr_uintptr_t)-1); ++data)
-    if (*data <= 0)
+    if (*data <= 0 || *data >= 0x80)
       return data;
 
   /* Scan the input one machine word at a time. */
@@ -320,7 +322,7 @@ first_non_ascii_char_cstring(const char *data)
 
   /* The remaining odd bytes will be examined the naive way: */
   for (; ; ++data)
-    if (*data <= 0)
+    if (*data <= 0 || *data >= 0x80)
       return data;
 
   return data;
@@ -329,7 +331,7 @@ first_non_ascii_char_cstring(const char *data)
 const char *
 svn_utf__last_valid(const char *data, apr_size_t len)
 {
-  const char *start = first_non_ascii_char(data, len);
+  const char *start = first_non_fsm_start_char(data, len);
   const char *end = data + len;
   int state = FSM_START;
 
@@ -349,7 +351,7 @@ svn_boolean_t
 svn_utf__cstring_is_valid(const char *data)
 {
   int state = FSM_START;
-  data = first_non_ascii_char_cstring(data);
+  data = first_non_fsm_start_char_cstring(data);
 
   while (*data)
     {
@@ -365,7 +367,7 @@ svn_utf__is_valid(const char *data, apr_size_t len)
 {
   const char *end = data + len;
   int state = FSM_START;
-  data = first_non_ascii_char(data, len);
+  data = first_non_fsm_start_char(data, len);
 
   while (data < end)
     {
@@ -379,7 +381,7 @@ svn_utf__is_valid(const char *data, apr_size_t len)
 const char *
 svn_utf__last_valid2(const char *data, apr_size_t len)
 {
-  const char *start = first_non_ascii_char(data, len);
+  const char *start = first_non_fsm_start_char(data, len);
   const char *end = data + len;
   int state = FSM_START;
 
