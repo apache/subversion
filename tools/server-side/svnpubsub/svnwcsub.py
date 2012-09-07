@@ -149,7 +149,8 @@ class BigDoEverythingClasss(object):
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
-        self.worker = BackgroundWorker(self.svnbin, self.env)
+        self.hook = config.get_value('hook')
+        self.worker = BackgroundWorker(self.svnbin, self.env, self.hook)
         self.watch = [ ]
 
         self.hostports = [ ]
@@ -168,7 +169,7 @@ class BigDoEverythingClasss(object):
         # Add it to our watchers, and trigger an svn update.
         logging.info("Watching WC at %s <-> %s" % (wc.path, wc.url))
         self.watch.append(wc)
-        self.worker.add_work(OP_UPDATE, wc)
+        self.worker.add_work(OP_BOOT, wc)
 
     def _normalize_path(self, path):
         if path[0] != '/':
@@ -200,11 +201,12 @@ class BigDoEverythingClasss(object):
 
 # Start logging warnings if the work backlog reaches this many items
 BACKLOG_TOO_HIGH = 20
+OP_BOOT = 'boot'
 OP_UPDATE = 'update'
 OP_CLEANUP = 'cleanup'
 
 class BackgroundWorker(threading.Thread):
-    def __init__(self, svnbin, env):
+    def __init__(self, svnbin, env, hook):
         threading.Thread.__init__(self)
 
         # The main thread/process should not wait for this thread to exit.
@@ -213,6 +215,7 @@ class BackgroundWorker(threading.Thread):
 
         self.svnbin = svnbin
         self.env = env
+        self.hook = hook
         self.q = Queue.Queue()
 
         self.has_started = False
@@ -227,6 +230,8 @@ class BackgroundWorker(threading.Thread):
             try:
                 if operation == OP_UPDATE:
                     self._update(wc)
+                if operation == OP_BOOT:
+                    self._update(wc, boot=True)
                 elif operation == OP_CLEANUP:
                     self._cleanup(wc)
                 else:
@@ -246,7 +251,7 @@ class BackgroundWorker(threading.Thread):
 
         self.q.put((operation, wc))
 
-    def _update(self, wc):
+    def _update(self, wc, boot=False):
         "Update the specified working copy."
 
         # For giggles, let's clean up the working copy in case something
@@ -279,6 +284,12 @@ class BackgroundWorker(threading.Thread):
             if e.errno != errno.ENOENT:
                 raise
         open(dotrevision, 'w').write(info['Revision'])
+
+        ## Run the hook
+        if self.hook:
+            args = [self.hook, ['post-update', 'boot'][boot],
+                    wc.path, info['Revision'], wc.url]
+            subprocess.check_call(args, env=self.env)
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."
