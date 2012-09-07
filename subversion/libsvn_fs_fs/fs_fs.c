@@ -5070,7 +5070,9 @@ get_dir_contents(apr_hash_t *entries,
        * parse it byte-by-byte.
        */
       apr_pool_t *text_pool = svn_pool_create(pool);
-      apr_size_t len = noderev->data_rep->expanded_size;
+      apr_size_t len = noderev->data_rep->expanded_size
+                     ? noderev->data_rep->expanded_size
+                     : noderev->data_rep->size;
       svn_stringbuf_t *text = svn_stringbuf_create_ensure(len, text_pool);
       text->len = len;
 
