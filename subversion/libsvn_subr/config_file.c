@@ -1034,6 +1034,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# kwallet-svn-application-name-with-pid = yes"                      NL
 #endif
         "###"                                                                NL
+        "### Set ssl-client-cert-file-prompt to 'yes' to cause the client"   NL
+        "### to prompt for a path to a client cert file when the server"     NL
+        "### requests a client cert but no client cert file is found in the" NL
+        "### expected place (see the 'ssl-client-cert-file' option in the"   NL
+        "### 'servers' configuration file). Defaults to 'no'."               NL
+        "# ssl-client-cert-file-prompt = no"                                 NL
+        "###"                                                                NL
         "### The rest of the [auth] section in this file has been deprecated."
                                                                              NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
