@@ -97,6 +97,7 @@ Candidate changes:
      r1339164 fixed a theoretical use of uninitialized memory.
    Votes:
      +1: philip
+     +0: danielsh (maybe add r1339154 to this group too?)
 
 Veto-blocked changes:
 =====================
