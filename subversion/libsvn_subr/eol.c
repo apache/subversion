@@ -32,18 +32,6 @@
 
 /* Machine-word-sized masks used in svn_eol__find_eol_start.
  */
-#if APR_SIZEOF_VOIDP == 8
-#  define LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
-#  define BIT_7_SET       0x8080808080808080
-#  define R_MASK          0x0a0a0a0a0a0a0a0a
-#  define N_MASK          0x0d0d0d0d0d0d0d0d
-#else
-#  define LOWER_7BITS_SET 0x7f7f7f7f
-#  define BIT_7_SET       0x80808080
-#  define R_MASK          0x0a0a0a0a
-#  define N_MASK          0x0d0d0d0d
-#endif
-
 char *
 svn_eol__find_eol_start(char *buf, apr_size_t len)
 {
@@ -69,19 +57,19 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
     /* This is a variant of the well-known strlen test: */
     apr_uintptr_t chunk = *(const apr_uintptr_t *)buf;
 
-    /* A byte in R_TEST is \0, iff it was \r in *BUF.
-     * Similarly, N_TEST is an indicator for \n. */
-    apr_uintptr_t r_test = chunk ^ R_MASK;
-    apr_uintptr_t n_test = chunk ^ N_MASK;
+    /* A byte in SVN__R_TEST is \0, iff it was \r in *BUF.
+     * Similarly, SVN__N_TEST is an indicator for \n. */
+    apr_uintptr_t r_test = chunk ^ SVN__R_MASK;
+    apr_uintptr_t n_test = chunk ^ SVN__N_MASK;
 
-    /* A byte in R_TEST can by < 0x80, iff it has been \0 before
-     * (i.e. \r in *BUF). Dito for N_TEST. */
-    r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
-    n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
+    /* A byte in SVN__R_TEST can by < 0x80, iff it has been \0 before
+     * (i.e. \r in *BUF). Dito for SVN__N_TEST. */
+    r_test |= (r_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
+    n_test |= (n_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
 
     /* Check whether at least one of the words contains a byte <0x80
      * (if one is detected, there was a \r or \n in CHUNK). */
-    if ((r_test & n_test & BIT_7_SET) != BIT_7_SET)
+    if ((r_test & n_test & SVN__BIT_7_SET) != SVN__BIT_7_SET)
       break;
   }
 

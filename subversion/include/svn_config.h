@@ -92,6 +92,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
 #define SVN_CONFIG_OPTION_KWALLET_WALLET            "kwallet-wallet"
 #define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT "ssl-client-cert-file-prompt"
 /* The majority of options of the "auth" section
  * has been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
@@ -625,6 +627,26 @@ svn_config_get_user_config_path(const char **path,
                                 const char *config_dir,
                                 const char *fname,
                                 apr_pool_t *pool);
+
+/** Create a deep copy of the config object @a src and return
+ * it in @a cfgp, allocating the memory in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_dup(svn_config_t **cfgp,
+               svn_config_t *src,
+               apr_pool_t *pool);
+
+/** Create a deep copy of the config hash @a src_hash and return
+ * it in @a cfg_hash, allocating the memory in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_copy_config(apr_hash_t **cfg_hash,
+                       apr_hash_t *src_hash,
+                       apr_pool_t *pool);
 
 /** @} */
 

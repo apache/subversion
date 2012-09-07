@@ -51,7 +51,9 @@ typedef struct source_stack_t
   /* offset within the target buffer to where the structure got copied */
   apr_size_t target_offset;
 
-  /* parent stack entry. Will be NULL for the root entry. */
+  /* parent stack entry. Will be NULL for the root entry.
+   * Items in the svn_temp_serializer__context_t recycler will use this
+   * to link to the next unused item. */
   struct source_stack_t *upper;
 } source_stack_t;
 
@@ -70,6 +72,9 @@ struct svn_temp_serializer__context_t
    * process has been finished. However, it is not necessarily NULL when
    * the application end serialization. */
   source_stack_t *source;
+
+  /* unused stack elements will be put here for later reuse. */
+  source_stack_t *recycler;
 };
 
 /* Make sure the serialized data len is a multiple of the default alignment,
@@ -110,6 +115,7 @@ svn_temp_serializer__init(const void *source_struct,
   svn_temp_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
   context->pool = pool;
   context->buffer = svn_stringbuf_create_ensure(init_size, pool);
+  context->recycler = NULL;
 
   /* If a source struct has been given, make it the root struct. */
   if (source_struct)
@@ -168,6 +174,9 @@ svn_temp_serializer__init_append(void *buffer,
   context->source->target_offset = (char *)source_struct - (char *)buffer;
   context->source->upper = NULL;
 
+  /* initialize the RECYCLER */
+  context->recycler = NULL;
+
   /* done */
   return context;
 }
@@ -219,9 +228,16 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
                           apr_size_t struct_size)
 {
   const void *source = *source_struct;
+  source_stack_t *new;
 
-  /* create a new entry for the structure stack */
-  source_stack_t *new = apr_palloc(context->pool, sizeof(*new));
+  /* recycle an old entry or create a new one for the structure stack */
+  if (context->recycler)
+    {
+      new = context->recycler;
+      context->recycler = new->upper;
+    }
+  else
+    new = apr_palloc(context->pool, sizeof(*new));
 
   /* the serialized structure must be properly aligned */
   if (source)
@@ -250,11 +266,17 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
 void
 svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 {
+  source_stack_t *old = context->source;
+  
   /* we may pop the original struct but not further */
   assert(context->source);
 
   /* one level up the structure stack */
   context->source = context->source->upper;
+
+  /* put the old stack element into the recycler for later reuse */
+  old->upper = context->recycler;
+  context->recycler = old;
 }
 
 /* Serialize a string referenced from the current structure within the

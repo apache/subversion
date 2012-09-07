@@ -939,7 +939,7 @@ svn_utf_cstring_from_utf8(const char **dest,
   xlate_handle_node_t *node;
   svn_error_t *err;
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
@@ -960,7 +960,7 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   const char *convset_key = get_xlate_key(topage, SVN_APR_UTF8_CHARSET,
                                           pool);
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_xlate_handle_node(&node, topage, SVN_APR_UTF8_CHARSET,
                                 convset_key, pool));

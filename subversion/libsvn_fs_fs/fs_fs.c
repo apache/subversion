@@ -2284,6 +2284,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
+                                  svn_fs_fs__id_txn_id(id) != NULL,
                                   pool));
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
@@ -2293,6 +2294,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev_p,
                         svn_stream_t *stream,
+                        svn_boolean_t allow_for_txn_roots,
                         apr_pool_t *pool)
 {
   apr_hash_t *headers;
@@ -2423,7 +2425,9 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get whether this is a fresh txn root. */
-  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  value = allow_for_txn_roots
+        ? apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING)
+        : NULL;
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
@@ -4199,6 +4203,8 @@ struct rep_state
 static svn_error_t *
 create_rep_state_body(struct rep_state **rep_state,
                       struct rep_args **rep_args,
+                      apr_file_t **file_hint,
+                      svn_revnum_t *rev_hint,
                       representation_t *rep,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
@@ -4208,7 +4214,43 @@ create_rep_state_body(struct rep_state **rep_state,
   struct rep_args *ra;
   unsigned char buf[4];
 
-  SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
+  /* If the hint is
+   * - given,
+   * - refers to a packed revision,
+   * - as does the rep we want to read, and
+   * - refers to the same pack file as the rep
+   * ...
+   */
+  if (   file_hint && rev_hint && *file_hint
+      && *rev_hint < ffd->min_unpacked_rev
+      && rep->revision < ffd->min_unpacked_rev
+      && (   (*rev_hint / ffd->max_files_per_dir)
+          == (rep->revision / ffd->max_files_per_dir)))
+    {
+      /* ... we can re-use the same, already open file object
+       */
+      apr_off_t offset;
+      SVN_ERR(get_packed_offset(&offset, fs, rep->revision, pool));
+
+      offset += rep->offset;
+      SVN_ERR(svn_io_file_seek(*file_hint, APR_SET, &offset, pool));
+
+      rs->file = *file_hint;
+    }
+  else
+    {
+      /* otherwise, create a new file object
+       */
+      SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
+    }
+
+  /* remember the current file, if suggested by the caller */
+  if (file_hint)
+    *file_hint = rs->file;
+  if (rev_hint)
+    *rev_hint = rep->revision;
+
+  /* continue constructing RS and RA */
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
 
@@ -4240,15 +4282,25 @@ create_rep_state_body(struct rep_state **rep_state,
 
 /* Read the rep args for REP in filesystem FS and create a rep_state
    for reading the representation.  Return the rep_state in *REP_STATE
-   and the rep args in *REP_ARGS, both allocated in POOL. */
+   and the rep args in *REP_ARGS, both allocated in POOL.
+
+   When reading multiple reps, i.e. a skip delta chain, you may provide
+   non-NULL FILE_HINT and REV_HINT.  The function will use these variables
+   to store the previous call results and tries to re-use them.  This may
+   result in significant savings in I/O for packed files.
+ */
 static svn_error_t *
 create_rep_state(struct rep_state **rep_state,
                  struct rep_args **rep_args,
+                 apr_file_t **file_hint,
+                 svn_revnum_t *rev_hint,
                  representation_t *rep,
                  svn_fs_t *fs,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = create_rep_state_body(rep_state, rep_args, rep, fs, pool);
+  svn_error_t *err = create_rep_state_body(rep_state, rep_args,
+                                           file_hint, rev_hint,
+                                           rep, fs, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
@@ -4515,13 +4567,16 @@ build_rep_list(apr_array_header_t **list,
   struct rep_state *rs;
   struct rep_args *rep_args;
   svn_boolean_t is_cached = FALSE;
+  apr_file_t *last_file = NULL;
+  svn_revnum_t last_revision;
 
   *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
   rep = *first_rep;
 
   while (1)
     {
-      SVN_ERR(create_rep_state(&rs, &rep_args, &rep, fs, pool));
+      SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
+                               &last_revision, &rep, fs, pool));
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
         {
@@ -4612,6 +4667,10 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   apr_off_t old_offset;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
+
+  /* RS->FILE may be shared between RS instances -> make sure we point
+   * to the right data. */
+  SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
@@ -4999,8 +5058,8 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       struct rep_args *rep_args;
 
       /* Read target's base rep if any. */
-      SVN_ERR(create_rep_state(&rep_state, &rep_args, target->data_rep,
-                               fs, pool));
+      SVN_ERR(create_rep_state(&rep_state, &rep_args, NULL, NULL,
+                               target->data_rep, fs, pool));
       /* If that matches source, then use this delta as is. */
       if (rep_args->is_delta
           && (rep_args->is_delta_vs_empty
@@ -5061,10 +5120,27 @@ get_dir_contents(apr_hash_t *entries,
     }
   else if (noderev->data_rep)
     {
+      /* use a temporary pool for temp objects.
+       * Also undeltify content before parsing it. Otherwise, we could only
+       * parse it byte-by-byte.
+       */
+      apr_pool_t *text_pool = svn_pool_create(pool);
+      apr_size_t len = noderev->data_rep->expanded_size
+                     ? noderev->data_rep->expanded_size
+                     : noderev->data_rep->size;
+      svn_stringbuf_t *text = svn_stringbuf_create_ensure(len, text_pool);
+      text->len = len;
+
       /* The representation is immutable.  Read it normally. */
-      SVN_ERR(read_representation(&contents, fs, noderev->data_rep, pool));
-      SVN_ERR(svn_hash_read2(entries, contents, SVN_HASH_TERMINATOR, pool));
+      SVN_ERR(read_representation(&contents, fs, noderev->data_rep, text_pool));
+      SVN_ERR(svn_stream_read(contents, text->data, &text->len));
       SVN_ERR(svn_stream_close(contents));
+
+      /* de-serialize hash */
+      contents = svn_stream_from_stringbuf(text, text_pool);
+      SVN_ERR(svn_hash_read2(entries, contents, SVN_HASH_TERMINATOR, pool));
+
+      svn_pool_destroy(text_pool);
     }
 
   return SVN_NO_ERROR;
@@ -9768,7 +9844,7 @@ verify_walker(representation_t *rep,
   struct rep_args *rep_args;
 
   /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_args, rep, fs, scratch_pool));
+  SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs, scratch_pool));
 
   return SVN_NO_ERROR;
 }
