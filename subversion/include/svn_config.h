@@ -626,6 +626,26 @@ svn_config_get_user_config_path(const char **path,
                                 const char *fname,
                                 apr_pool_t *pool);
 
+/** Create a deep copy of the config object @a src and return
+ * it in @a cfgp, allocating the memory in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_dup(svn_config_t **cfgp,
+               svn_config_t *src,
+               apr_pool_t *pool);
+
+/** Create a deep copy of the config hash @a src_hash and return
+ * it in @a cfg_hash, allocating the memory in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_copy_config(apr_hash_t **cfg_hash,
+                       apr_hash_t *src_hash,
+                       apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus
