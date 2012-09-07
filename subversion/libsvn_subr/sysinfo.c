@@ -61,6 +61,11 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#ifdef SVN_HAVE_MACHO_ITERATE
+#include <mach-o/dyld.h>
+#include <mach-o/loader.h>
+#endif
+
 #if HAVE_UNAME
 static const char *canonical_host_from_uname(apr_pool_t *pool);
 # ifndef SVN_HAVE_MACOS_PLIST
@@ -76,7 +81,12 @@ static const apr_array_header_t *win32_shared_libs(apr_pool_t *pool);
 
 #ifdef SVN_HAVE_MACOS_PLIST
 static const char *macos_release_name(apr_pool_t *pool);
-#endif  /* SVN_HAVE_MACOS_PLIST */
+#endif
+
+#ifdef SVN_HAVE_MACHO_ITERATE
+static const apr_array_header_t *macos_shared_libs(apr_pool_t *pool);
+#endif
+
 
 #if LINUX
 static const char *linux_release_name(apr_pool_t *pool);
@@ -144,6 +154,8 @@ svn_sysinfo__loaded_libs(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_shared_libs(pool);
+#elif defined(SVN_HAVE_MACHO_ITERATE)
+  return macos_shared_libs(pool);
 #else
   return NULL;
 #endif
@@ -841,6 +853,7 @@ win32_shared_libs(apr_pool_t *pool)
 }
 #endif /* WIN32 */
 
+
 #ifdef SVN_HAVE_MACOS_PLIST
 /* Load the SystemVersion.plist or ServerVersion.plist file into a
    property list. Set SERVER to TRUE if the file read was
@@ -1024,3 +1037,93 @@ macos_release_name(apr_pool_t *pool)
   return NULL;
 }
 #endif  /* SVN_HAVE_MACOS_PLIST */
+
+#ifdef SVN_HAVE_MACHO_ITERATE
+/* List the shared libraries loaded by the current process.
+   Ignore frameworks and system libraries, they're just clutter. */
+static const apr_array_header_t *
+macos_shared_libs(apr_pool_t *pool)
+{
+  static const char slb_prefix[] = "/usr/lib/system/";
+  static const char fwk_prefix[] = "/System/Library/Frameworks/";
+  static const char pfk_prefix[] = "/System/Library/PrivateFrameworks/";
+
+  const int slb_prefix_len = strlen(slb_prefix);
+  const int fwk_prefix_len = strlen(fwk_prefix);
+  const int pfk_prefix_len = strlen(pfk_prefix);
+
+  apr_array_header_t *result = NULL;
+  apr_array_header_t *dylibs = NULL;
+
+  uint32_t i;
+  for (i = 0;; ++i)
+    {
+      const struct mach_header *header = _dyld_get_image_header(i);
+      const char *filename = _dyld_get_image_name(i);
+      const char *version;
+      char *truename;
+      svn_sysinfo__loaded_lib_t *lib;
+
+      if (!(header && filename))
+        break;
+
+      switch (header->cputype)
+        {
+        case CPU_TYPE_I386:      version = _("Intel"); break;
+        case CPU_TYPE_X86_64:    version = _("Intel 64-bit"); break;
+        case CPU_TYPE_POWERPC:   version = _("PowerPC"); break;
+        case CPU_TYPE_POWERPC64: version = _("PowerPC 64-bit"); break;
+        default:
+          version = NULL;
+        }
+
+      if (0 == apr_filepath_merge(&truename, "", filename,
+                                  APR_FILEPATH_NATIVE
+                                  | APR_FILEPATH_TRUENAME,
+                                  pool))
+        filename = truename;
+      else
+        filename = apr_pstrdup(pool, filename);
+
+      if (0 == strncmp(filename, slb_prefix, slb_prefix_len)
+          || 0 == strncmp(filename, fwk_prefix, fwk_prefix_len)
+          || 0 == strncmp(filename, pfk_prefix, pfk_prefix_len))
+        {
+          /* Ignore frameworks and system libraries. */
+          continue;
+        }
+
+      if (header->filetype == MH_EXECUTE)
+        {
+          /* Make sure the program filename is first in the list */
+          if (!result)
+            {
+              result = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(result, svn_sysinfo__loaded_lib_t);
+        }
+      else
+        {
+          if (!dylibs)
+            {
+              dylibs = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(dylibs, svn_sysinfo__loaded_lib_t);
+        }
+
+      lib->name = filename;
+      lib->version = version;
+    }
+
+  /* Gather results into one array. */
+  if (dylibs)
+    {
+      if (result)
+        apr_array_cat(result, dylibs);
+      else
+        result = dylibs;
+    }
+
+  return result;
+}
+#endif  /* SVN_HAVE_MACHO_ITERATE */
