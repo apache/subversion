@@ -94,13 +94,11 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          apr_pool_t *pool);
 
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
-   allocated in POOL. If ALLOW_FOR_TXN_ROOTS is FALSE, the is-fresh-txn-root
-   flag will be ignored. */
+   allocated in POOL. */
 /* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
-                        svn_boolean_t allow_for_txn_roots,
                         apr_pool_t *pool);
 
 
