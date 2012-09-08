@@ -2286,7 +2286,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                                            pool),
                                   pool));
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  if (svn_fs_fs__id_txn_id(id) != NULL)
+  if (svn_fs_fs__id_txn_id(id) == NULL)
     (*noderev_p)->is_fresh_txn_root = FALSE;
 
 
