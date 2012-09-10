@@ -26,6 +26,7 @@
 #include "svn_error.h"
 #include "svn_version.h"
 
+#include "sysinfo.h"
 #include "svn_private_config.h"
 
 const svn_version_t *
@@ -95,4 +96,34 @@ svn_ver_check_list(const svn_version_t *my_version,
     }
 
   return err;
+}
+
+
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool)
+{
+  svn_version_extended_t *info = apr_pcalloc(pool, sizeof(*info));
+
+  info->version_number = SVN_VER_NUMBER;
+  info->version_string =  SVN_VERSION;
+  info->build_date = __DATE__;
+  info->build_time = __TIME__;
+  info->build_host = SVN_BUILD_HOST;
+  info->copyright = apr_pstrdup
+    (pool, _("Copyright (C) 2012 The Apache Software Foundation.\n"
+             "This software consists of contributions made by many people;\n"
+             "see the NOTICE file for more information.\n"
+             "Subversion is open source software, see "
+             "http://subversion.apache.org/\n"));
+
+  if (verbose)
+    {
+      info->runtime_host = svn_sysinfo__canonical_host(pool);
+      info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->linked_libs = svn_sysinfo__linked_libs(pool);
+      info->loaded_libs = svn_sysinfo__loaded_libs(pool);
+    }
+
+  return info;
 }
