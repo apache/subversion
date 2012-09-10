@@ -4285,7 +4285,8 @@ create_rep_state_body(struct rep_state **rep_state,
    and the rep args in *REP_ARGS, both allocated in POOL.
 
    When reading multiple reps, i.e. a skip delta chain, you may provide
-   non-NULL FILE_HINT and REV_HINT.  The function will use these variables
+   non-NULL FILE_HINT and REV_HINT.  (If FILE_HINT is not NULL, in the first
+   call it should be a pointer to NULL.)  The function will use these variables
    to store the previous call results and tries to re-use them.  This may
    result in significant savings in I/O for packed files.
  */
