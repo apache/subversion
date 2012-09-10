@@ -351,7 +351,7 @@ svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info);
 
 /**
  * Dependent library information.
- * Describes the name and versions of * known dependencies
+ * Describes the name and versions of known dependencies
  * used by libsvn_subr.
  *
  * @since New in 1.8.
