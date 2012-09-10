@@ -262,30 +262,92 @@ svn_subr_version(void);
  *
  * @since New in 1.8.
  */
-typedef struct svn_version_extended_t
-{
-  const char *version_number;   /**< Version number */
-  const char *version_string;   /**< Version string */
-  const char *build_date;       /**< Compilation date */
-  const char *build_time;       /**< Compilation time */
-  const char *build_host;       /**< Build canonical host name */
-  const char *copyright;        /**< Copyright notice (localized) */
-  const char *runtime_host;     /**< Runtime canonical host name */
-  const char *runtime_osname;   /**< Running OS release name */
+typedef struct svn_version_extended_t svn_version_extended_t;
 
-  /**
-   * Array of svn_version_linked_lib_t describing dependent libraries.
-   */
-  const apr_array_header_t *linked_libs;
+/**
+ * Return version information for the running program.  If @a verbose
+ * is true, collect extra information that may be expensive to
+ * retrieve (for example, the OS release name, list of shared
+ * libraries, etc.).  Use @a pool for all allocations.
+ *
+ * @since New in 1.8.
+ */
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool);
 
-  /**
-   * Array of svn_version_loaded_lib_t describing loaded shared libraries.
-   *
-   * On Mac OS X, the loaded frameworks, private frameworks and
-   * system libraries will not be listed here.
-   */
-  const apr_array_header_t *loaded_libs;
-} svn_version_extended_t;
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The date when the libsvn_subr library was compiled, in the
+ * format defined by the C standard macro @c __DATE__.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_date(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The time when the libsvn_subr library was compiled, in the
+ * format defined by the C standard macro @c __TIME__.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_time(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The canonical host triplet (arch-vendor-osname) of the
+ * system where libsvn_subr was compiled.
+ *
+ * @note On Unix-like systems (includng Mac OS X), this string is the
+ * same as the output of the config.guess script.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_host(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The localized copyright notice.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_copyright(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The canonical host triplet (arch-vendor-osname) of the
+ * system where the current process is running.
+ *
+ * @note This string may not be the same as the output of config.guess
+ * on the same system.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_runtime_host(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The "commercial" release name of the running operating
+ * system, if available.  Not to be confused with, e.g., the output of
+ * "uname -v" or "uname -r".  The returned value may be @c NULL.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info);
 
 /**
  * Dependent library information.
@@ -294,12 +356,24 @@ typedef struct svn_version_extended_t
  *
  * @since New in 1.8.
  */
-typedef struct svn_version_linked_lib_t
+typedef struct svn_version_ext_linked_lib_t
 {
   const char *name;             /**< Library name */
   const char *compiled_version; /**< Compile-time version string */
   const char *runtime_version;  /**< Run-time version string (optional) */
-} svn_version_linked_lib_t;
+} svn_version_ext_linked_lib_t;
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @eturns Array of svn_version_ext_linked_lib_t describing dependent
+ * libraries.  The returned value may be @c NULL.
+ *
+ * @since New in 1.8.
+ */
+const apr_array_header_t *
+svn_version_ext_linked_libs(const svn_version_extended_t *ext_info);
+
 
 /**
  * Loaded shared library information.
@@ -308,22 +382,26 @@ typedef struct svn_version_linked_lib_t
  *
  * @since New in 1.8.
  */
-typedef struct svn_version_loaded_lib_t
+typedef struct svn_version_ext_loaded_lib_t
 {
   const char *name;             /**< Library name */
   const char *version;          /**< Library version (optional) */
-} svn_version_loaded_lib_t;
+} svn_version_ext_loaded_lib_t;
+
 
 /**
- * Return version information for the running program, If @a verbose
- * is true, collect extra information about the runtime system (this
- * can be an expensive operation). Use @a pool for all allocations.
+ * Accessor for svn_version_extended_t.
+ *
+ * @return Array of svn_version_ext_loaded_lib_t describing loaded
+ * shared libraries.  The returned value may be @c NULL.
+ *
+ * @note On Mac OS X, the loaded frameworks, private frameworks and
+ * system libraries will not be listed.
  *
  * @since New in 1.8.
  */
-const svn_version_extended_t *
-svn_version_extended(svn_boolean_t verbose,
-                     apr_pool_t *pool);
+const apr_array_header_t *
+svn_version_ext_loaded_libs(const svn_version_extended_t *ext_info);
 
 
 #ifdef __cplusplus
