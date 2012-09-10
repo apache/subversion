@@ -274,18 +274,23 @@ typedef struct svn_version_extended_t
   const char *runtime_osname;   /**< Running OS release name */
 
   /**
-   * Array svn_version_linked_lib_t describing dependent libraries.
+   * Array of svn_version_linked_lib_t describing dependent libraries.
    */
   const apr_array_header_t *linked_libs;
 
   /**
    * Array of svn_version_loaded_lib_t describing loaded shared libraries.
+   *
+   * On Mac OS X, the loaded frameworks, private frameworks and
+   * system libraries will not be listed here.
    */
   const apr_array_header_t *loaded_libs;
 } svn_version_extended_t;
 
 /**
  * Dependent library information.
+ * Describes the name and versions of * known dependencies
+ * used by libsvn_subr.
  *
  * @since New in 1.8.
  */
@@ -298,6 +303,8 @@ typedef struct svn_version_linked_lib_t
 
 /**
  * Loaded shared library information.
+ * Describes the name and, where available, version of the shared libraries
+ * loaded by the running program.
  *
  * @since New in 1.8.
  */
