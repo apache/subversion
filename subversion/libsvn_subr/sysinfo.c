@@ -89,7 +89,7 @@ static const apr_array_header_t *macos_shared_libs(apr_pool_t *pool);
 #endif
 
 
-#if LINUX
+#if __linux__
 static const char *linux_release_name(apr_pool_t *pool);
 #endif
 
@@ -113,7 +113,7 @@ svn_sysinfo__release_name(apr_pool_t *pool)
   return win32_release_name(pool);
 #elif defined(SVN_HAVE_MACOS_PLIST)
   return macos_release_name(pool);
-#elif LINUX
+#elif __linux__
   return linux_release_name(pool);
 #elif HAVE_UNAME
   return release_name_from_uname(pool);
@@ -269,7 +269,7 @@ release_name_from_uname(apr_pool_t *pool)
 #endif  /* HAVE_UNAME */
 
 
-#if LINUX
+#if __linux__
 /* Split a stringbuf into a key/value pair.
    Return the key, leaving the striped value in the stringbuf. */
 static const char *
@@ -533,7 +533,7 @@ linux_release_name(apr_pool_t *pool)
 
   return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
 }
-#endif /* LINUX */
+#endif /* __linux__ */
 
 
 #ifdef WIN32
