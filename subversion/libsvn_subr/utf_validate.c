@@ -58,6 +58,7 @@
 
 #include "private/svn_utf_private.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 
 /* Lookup table to categorise each octet in the string. */
 static const char octet_category[256] = {
