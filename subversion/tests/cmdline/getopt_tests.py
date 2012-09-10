@@ -95,13 +95,42 @@ rep_lines_res = [
                   'Subversion command-line client, version X.Y.Z.'),
                 ]
 
+# This is a trigger pattern that selects the secondary set of
+# delete/replace patterns
+switch_res_line = 'System information:'
+
+# This is a list of lines to delete after having seen switch_res_line.
+switched_del_lines_res = [
+                          # In svn --version --verbose, dependent libs loaded
+                          # shared libs are optional.
+                          re.compile(r'^\* (loaded|linked)'),
+                          # In svn --version --verbose, remove everything from
+                          # the extended lists
+                          re.compile(r'^  - '),
+                         ]
+
+# This is a list of lines to search and replace text on after having
+# seen switch_res_line.
+switched_rep_lines_res = [
+                          # We don't care about the actual canonical host
+                          (re.compile('^\* running on'), '* running on'),
+                         ]
+
 def process_lines(lines):
   "delete lines that should not be compared and search and replace the rest"
   output = [ ]
+  del_res = del_lines_res
+  rep_res = rep_lines_res
+
   for line in lines:
+    if line.startswith(switch_res_line):
+      del_res = switched_del_lines_res
+      rep_res = switched_rep_lines_res
+      continue
+
     # Skip these lines from the output list.
     delete_line = 0
-    for delete_re in del_lines_res:
+    for delete_re in del_res:
       if delete_re.match(line):
         delete_line = 1
         break
@@ -109,7 +138,7 @@ def process_lines(lines):
       continue
 
     # Search and replace text on the rest.
-    for replace_re, replace_str in rep_lines_res:
+    for replace_re, replace_str in rep_res:
       line = replace_re.sub(replace_str, line)
 
     output.append(line)
@@ -179,6 +208,10 @@ def getopt__version__quiet(sbox):
   "run svn --version --quiet"
   run_one_test(sbox, 'svn--version--quiet', '--version', '--quiet')
 
+def getopt__version__verbose(sbox):
+  "run svn --version --verbose"
+  run_one_test(sbox, 'svn--version--verbose', '--version', '--verbose')
+
 def getopt__help(sbox):
   "run svn --help"
   run_one_test(sbox, 'svn--help', '--help')
@@ -204,6 +237,7 @@ test_list = [ None,
               getopt_no_args,
               getopt__version,
               getopt__version__quiet,
+              getopt__version__verbose,
               getopt__help,
               getopt_help,
               getopt_help_bogus_cmd,

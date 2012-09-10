@@ -34,6 +34,7 @@
 #ifndef APR_STRINGIFY
 #include <apr_general.h>
 #endif
+#include <apr_tables.h>
 
 #include "svn_types.h"
 
@@ -254,6 +255,68 @@ typedef const svn_version_t *(*svn_version_func_t)(void);
  */
 const svn_version_t *
 svn_subr_version(void);
+
+
+/**
+ * Extended version infomation, including info about the running system.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_extended_t
+{
+  const char *version_number;   /**< Version number */
+  const char *version_string;   /**< Version string */
+  const char *build_date;       /**< Compilation date */
+  const char *build_time;       /**< Compilation time */
+  const char *build_host;       /**< Build canonical host name */
+  const char *copyright;        /**< Copyright notice (localized) */
+  const char *runtime_host;     /**< Runtime canonical host name */
+  const char *runtime_osname;   /**< Running OS release name */
+
+  /**
+   * Array svn_version_linked_lib_t describing dependent libraries.
+   */
+  const apr_array_header_t *linked_libs;
+
+  /**
+   * Array of svn_version_loaded_lib_t describing loaded shared libraries.
+   */
+  const apr_array_header_t *loaded_libs;
+} svn_version_extended_t;
+
+/**
+ * Dependent library information.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_linked_lib_t
+{
+  const char *name;             /**< Library name */
+  const char *compiled_version; /**< Compile-time version string */
+  const char *runtime_version;  /**< Run-time version string (optional) */
+} svn_version_linked_lib_t;
+
+/**
+ * Loaded shared library information.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_loaded_lib_t
+{
+  const char *name;             /**< Library name */
+  const char *version;          /**< Library version (optional) */
+} svn_version_loaded_lib_t;
+
+/**
+ * Return version information for the running program, If @a verbose
+ * is true, collect extra information about the runtime system (this
+ * can be an expensive operation). Use @a pool for all allocations.
+ *
+ * @since New in 1.8.
+ */
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool);
 
 
 #ifdef __cplusplus

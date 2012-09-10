@@ -47,6 +47,7 @@
 #include "svn_io.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "private/svn_sqlite.h"
 
@@ -124,20 +125,20 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
-  svn_sysinfo__linked_lib_t *lib;
+  svn_version_linked_lib_t *lib;
   apr_array_header_t *array = apr_array_make(pool, 3, sizeof(*lib));
 
-  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib = &APR_ARRAY_PUSH(array, svn_version_linked_lib_t);
   lib->name = "APR";
   lib->compiled_version = APR_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apr_version_string());
 
-  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib = &APR_ARRAY_PUSH(array, svn_version_linked_lib_t);
   lib->name = "APR-Util";
   lib->compiled_version = APU_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apu_version_string());
 
-  lib = &APR_ARRAY_PUSH(array, svn_sysinfo__linked_lib_t);
+  lib = &APR_ARRAY_PUSH(array, svn_version_linked_lib_t);
   lib->name = "SQLite";
   lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
@@ -829,7 +830,7 @@ win32_shared_libs(apr_pool_t *pool)
           filename = wcs_to_utf8(buffer, pool);
           if (filename)
             {
-              svn_sysinfo__loaded_lib_t *lib;
+              svn_version_loaded_lib_t *lib;
               char *truename;
 
               if (0 == apr_filepath_merge(&truename, "", filename,
@@ -842,7 +843,7 @@ win32_shared_libs(apr_pool_t *pool)
                 {
                   array = apr_array_make(pool, 32, sizeof(*lib));
                 }
-              lib = &APR_ARRAY_PUSH(array, svn_sysinfo__loaded_lib_t);
+              lib = &APR_ARRAY_PUSH(array, svn_version_loaded_lib_t);
               lib->name = filename;
               lib->version = version;
             }
@@ -1062,7 +1063,7 @@ macos_shared_libs(apr_pool_t *pool)
       const char *filename = _dyld_get_image_name(i);
       const char *version;
       char *truename;
-      svn_sysinfo__loaded_lib_t *lib;
+      svn_version_loaded_lib_t *lib;
 
       if (!(header && filename))
         break;
@@ -1100,7 +1101,7 @@ macos_shared_libs(apr_pool_t *pool)
             {
               result = apr_array_make(pool, 32, sizeof(*lib));
             }
-          lib = &APR_ARRAY_PUSH(result, svn_sysinfo__loaded_lib_t);
+          lib = &APR_ARRAY_PUSH(result, svn_version_loaded_lib_t);
         }
       else
         {
@@ -1108,7 +1109,7 @@ macos_shared_libs(apr_pool_t *pool)
             {
               dylibs = apr_array_make(pool, 32, sizeof(*lib));
             }
-          lib = &APR_ARRAY_PUSH(dylibs, svn_sysinfo__loaded_lib_t);
+          lib = &APR_ARRAY_PUSH(dylibs, svn_version_loaded_lib_t);
         }
 
       lib->name = filename;
