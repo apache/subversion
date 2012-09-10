@@ -1116,9 +1116,8 @@ svn_opt__get_version_info(svn_boolean_t verbose,
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
     (pool, _("Copyright (C) 2012 The Apache Software Foundation.\n"
-             "This software consists of contributions made by many "
-             "people; see the NOTICE\n"
-             "file for more information.\n"
+             "This software consists of contributions made by many people;\n"
+             "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
              "http://subversion.apache.org/\n"));
 
