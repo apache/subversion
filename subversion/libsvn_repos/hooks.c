@@ -269,7 +269,7 @@ run_hook_cmd(svn_string_t **result,
     return svn_error_wrap_apr
       (apr_err, _("Error closing read end of stderr pipe"));
 
-  if (result)
+  if (!err && result)
     {
       svn_stringbuf_t *native_stdout;
       SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, read_outhandle, pool));
@@ -280,7 +280,7 @@ run_hook_cmd(svn_string_t **result,
 
       *result = svn_string_create_from_buf(native_stdout, pool);
     }
-  else
+  else if (!result)
     {
       apr_err = apr_file_close(null_handle);
       if (!err && apr_err)
