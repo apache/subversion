@@ -276,15 +276,6 @@ class BackgroundWorker(threading.Thread):
         info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
 
-        ### update the .revision file
-        dotrevision = os.path.join(wc.path, '.revision') 
-        try:
-            os.unlink(dotrevision)
-        except OSError, e:
-            if e.errno != errno.ENOENT:
-                raise
-        open(dotrevision, 'w').write(info['Revision'])
-
         ## Run the hook
         if self.hook:
             args = [self.hook, ['post-update', 'boot'][boot],
