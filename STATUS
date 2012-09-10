@@ -64,7 +64,7 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1338810, r1339164, r1339154
+ * r1338810, r1339164
    Fix issue #4184 ("partial svnsync drops properties when converting
    copies to adds").
    Justification:
