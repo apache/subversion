@@ -55,12 +55,15 @@ struct svn_opt__version_info_t
 };
 
 
-/* Return version information for the running program, allocated from POOL.
+/* Return version information for the running program, allocated from
+ * POOL.  If VERBOSE is true, collect extra information about the
+ * runtime system. This can be expensive.
  *
  * Use POOL for temporary allocations.
  */
 const svn_opt__version_info_t *
-svn_opt__get_version_info(apr_pool_t *pool);
+svn_opt__get_version_info(svn_boolean_t verbose,
+                          apr_pool_t *pool);
 
 /* Print version version info for PGM_NAME to the console.  If QUIET is
  * true, print in brief.  Else if QUIET is not true, print the version

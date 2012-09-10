@@ -1104,7 +1104,8 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
 
 
 const svn_opt__version_info_t *
-svn_opt__get_version_info(apr_pool_t *pool)
+svn_opt__get_version_info(svn_boolean_t verbose,
+                          apr_pool_t *pool)
 {
   svn_opt__version_info_t *info = apr_pcalloc(pool, sizeof(*info));
 
@@ -1120,10 +1121,14 @@ svn_opt__get_version_info(apr_pool_t *pool)
              "file for more information.\n"
              "Subversion is open source software, see "
              "http://subversion.apache.org/\n"));
-  info->runtime_host = svn_sysinfo__canonical_host(pool);
-  info->runtime_osname = svn_sysinfo__release_name(pool);
-  info->linked_libs = svn_sysinfo__linked_libs(pool);
-  info->loaded_libs = svn_sysinfo__loaded_libs(pool);
+
+  if (verbose)
+    {
+      info->runtime_host = svn_sysinfo__canonical_host(pool);
+      info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->linked_libs = svn_sysinfo__linked_libs(pool);
+      info->loaded_libs = svn_sysinfo__loaded_libs(pool);
+    }
 
   return info;
 }
@@ -1245,7 +1250,8 @@ svn_opt_print_help4(apr_getopt_t *os,
   else if (print_version)   /* just --version */
     {
       SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
-                                          svn_opt__get_version_info(pool),
+                                          svn_opt__get_version_info(verbose,
+                                                                    pool),
                                           quiet, verbose, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */

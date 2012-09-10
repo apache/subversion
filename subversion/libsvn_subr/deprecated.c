@@ -606,7 +606,8 @@ svn_opt_print_help(apr_getopt_t *os,
   else if (print_version)   /* just --version */
     {
       SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
-                                          svn_opt__get_version_info(pool),
+                                          svn_opt__get_version_info(FALSE,
+                                                                    pool),
                                           quiet, FALSE, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
