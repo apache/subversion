@@ -1111,14 +1111,15 @@ svn_opt__print_version_info(const char *pgm_name,
                             apr_pool_t *pool)
 {
   if (quiet)
-    return svn_cmdline_printf(pool, "%s\n", info->version_number);
+    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s on %s\n\n"),
-                             pgm_name, info->version_string,
-                             info->build_date, info->build_time,
-                             info->build_host));
-  SVN_ERR(svn_cmdline_printf(pool, "%s\n", info->copyright));
+                             pgm_name, SVN_VERSION,
+                             svn_version_ext_build_date(info),
+                             svn_version_ext_build_time(info),
+                             svn_version_ext_build_host(info)));
+  SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
 
   if (footer)
     {
@@ -1127,26 +1128,28 @@ svn_opt__print_version_info(const char *pgm_name,
 
   if (verbose)
     {
+      const apr_array_header_t *libs;
+
       SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
       SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"),
-                                 info->runtime_host));
-      if (info->runtime_osname)
+                                 svn_version_ext_runtime_host(info)));
+      if (svn_version_ext_runtime_osname(info))
         {
           SVN_ERR(svn_cmdline_printf(pool, _("  - %s\n"),
-                                     info->runtime_osname));
+                                     svn_version_ext_runtime_osname(info)));
         }
 
-      if (info->linked_libs && info->linked_libs->nelts)
+      libs = svn_version_ext_linked_libs(info);
+      if (libs && libs->nelts)
         {
-          const svn_version_linked_lib_t *lib;
+          const svn_version_ext_linked_lib_t *lib;
           int i;
 
           SVN_ERR(svn_cmdline_fputs(_("* linked dependencies:\n"),
                                     stdout, pool));
-          for (i = 0; i < info->linked_libs->nelts; ++i)
+          for (i = 0; i < libs->nelts; ++i)
             {
-              lib = &APR_ARRAY_IDX(info->linked_libs, i,
-                                   svn_version_linked_lib_t);
+              lib = &APR_ARRAY_IDX(libs, i, svn_version_ext_linked_lib_t);
               if (lib->runtime_version)
                 SVN_ERR(svn_cmdline_printf(pool,
                                            "  - %s %s (compiled with %s)\n",
@@ -1161,17 +1164,17 @@ svn_opt__print_version_info(const char *pgm_name,
             }
         }
 
-      if (info->loaded_libs && info->loaded_libs->nelts)
+      libs = svn_version_ext_loaded_libs(info);
+      if (libs && libs->nelts)
         {
-          const svn_version_loaded_lib_t *lib;
+          const svn_version_ext_loaded_lib_t *lib;
           int i;
 
           SVN_ERR(svn_cmdline_fputs(_("* loaded shared libraries:\n"),
                                     stdout, pool));
-          for (i = 0; i < info->loaded_libs->nelts; ++i)
+          for (i = 0; i < libs->nelts; ++i)
             {
-              lib = &APR_ARRAY_IDX(info->loaded_libs, i,
-                                   svn_version_loaded_lib_t);
+              lib = &APR_ARRAY_IDX(libs, i, svn_version_ext_loaded_lib_t);
               if (lib->version)
                 SVN_ERR(svn_cmdline_printf(pool,
                                            "  - %s   (%s)\n",
