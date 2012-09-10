@@ -64,23 +64,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1088602
-   Fix regression introduced in r1104127. That revision introduced a bug where
-   a URI may end up being double-encoded, breaking commits via write-through
-   proxies in certain circumstances.
-   Justification:
-     This regression has been fixed in 1.7.x and trunk but not in 1.6.x.
-     It first appeared in Subversion-1.6.17.
-     Evidence of this bug has been reported privately by an elego customer
-     who also provided a reproduction recipe based on private data which
-     won't be disclosed.
-   Notes:
-     To avoid a tree-conflict run a subtree merge to mod_dav_svn/mirror.c.
-     The revision also edited the dav-mirror-autocheck.sh script which
-     does not exist in 1.6.
-   Votes:
-     +1: stsp, philip, cmpilato
-
  * r1338810, r1339164, r1339154
    Fix issue #4184 ("partial svnsync drops properties when converting
    copies to adds").

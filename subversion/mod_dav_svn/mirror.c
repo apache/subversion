@@ -224,7 +224,6 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
                                                dav_svn__get_root_dir(r),
                                                start_foo, NULL),
                                    r);
-        new_uri = svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
