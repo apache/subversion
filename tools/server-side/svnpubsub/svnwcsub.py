@@ -278,7 +278,10 @@ class BackgroundWorker(threading.Thread):
 
         ## Run the hook
         if self.hook:
-            args = [self.hook, ['post-update', 'boot'][boot],
+            hook_mode = ['post-update', 'boot'][boot]
+            logging.info('running hook: %s at revision %s due to %s',
+                         wc.path, info['Revision'], hook_mode)
+            args = [self.hook, mode, hook_mode,
                     wc.path, info['Revision'], wc.url]
             subprocess.check_call(args, env=self.env)
 
