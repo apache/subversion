@@ -113,7 +113,7 @@ switched_del_lines_res = [
 # seen switch_res_line.
 switched_rep_lines_res = [
                           # We don't care about the actual canonical host
-                          (re.compile('^\* running on'), '* running on'),
+                          (re.compile('^\* running on.*$'), '* running on'),
                          ]
 
 def process_lines(lines):
