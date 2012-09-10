@@ -96,7 +96,7 @@ Candidate changes:
      r1338810 taught the code to send properties for demoted copies.
      r1339164 fixed a theoretical use of uninitialized memory.
    Votes:
-     +1: philip
+     +1: philip, stsp
      +0: danielsh (maybe add r1339154 to this group too?)
 
 Veto-blocked changes:
