@@ -1198,13 +1198,6 @@ def iprops_pegged_url_targets(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Paths of note.
-  #C_path = sbox.ospath('A/C')
-  #D_path = sbox.ospath('A/D')
-  #G_path = sbox.ospath('A/D/G')
-  alpha_path = sbox.ospath('A/B/E/alpha')
-  #replaced_alpha_path = sbox.ospath('A/D/G/E/alpha')
-
   # r2 - Set some root properties and some properties on A/D.
   sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r2', '.')
   sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r2', '.')
