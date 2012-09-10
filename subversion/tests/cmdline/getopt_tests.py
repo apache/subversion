@@ -126,7 +126,6 @@ def process_lines(lines):
     if line.startswith(switch_res_line):
       del_res = switched_del_lines_res
       rep_res = switched_rep_lines_res
-      continue
 
     # Skip these lines from the output list.
     delete_line = 0
