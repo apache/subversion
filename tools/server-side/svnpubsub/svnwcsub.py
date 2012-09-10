@@ -281,7 +281,7 @@ class BackgroundWorker(threading.Thread):
             hook_mode = ['post-update', 'boot'][boot]
             logging.info('running hook: %s at revision %s due to %s',
                          wc.path, info['Revision'], hook_mode)
-            args = [self.hook, mode, hook_mode,
+            args = [self.hook, hook_mode,
                     wc.path, info['Revision'], wc.url]
             subprocess.check_call(args, env=self.env)
 
