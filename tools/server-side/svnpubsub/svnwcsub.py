@@ -228,9 +228,11 @@ class BackgroundWorker(threading.Thread):
             # This will block until something arrives
             operation, wc = self.q.get()
             try:
-                if operation == OP_UPDATE:
+                if False:
+                    pass
+                elif operation == OP_UPDATE:
                     self._update(wc)
-                if operation == OP_BOOT:
+                elif operation == OP_BOOT:
                     self._update(wc, boot=True)
                 elif operation == OP_CLEANUP:
                     self._cleanup(wc)
