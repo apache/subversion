@@ -37,6 +37,8 @@ usage: 1. log [PATH][@REV]
       ?      matches any single character
       *      matches a sequence of arbitrary characters
       [...]  matches any of the characters listed inside the brackets
+  If multiple --search options are provided, a log message is shown if
+  it matches any of the provided search patterns.
   If --limit is used in combination with --search, --limit restricts the
   number of log messages searched, rather than restricting the output
   to a particular number of matching log messages.
