@@ -781,38 +781,13 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   item=\"modified\"\n",
-              "   revision=\"1\">\n",
-              "<commit\n",
-              "   revision=\"1\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              time_str,
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-              "<against\n",
-              "   revision=\"1\"/>\n",
-              "</target>\n",
-              "</status>\n",
-             ]
+  expected_entries = {file_path : {'wcprops' : 'none',
+                                   'wcitem' : 'modified',
+                                   'wcrev' : '1',
+                                   'crev' : '1',
+                                   'author' : svntest.main.wc_author}}
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                                'status',
-                                                                file_path,
-                                                                '--xml', '-u')
-
-  for i in range(0, len(output)):
-    if output[i] != template[i]:
-      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
-      raise svntest.Failure
+  svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
 #----------------------------------------------------------------------
 
@@ -1049,53 +1024,23 @@ def status_update_with_incoming_props(sbox):
   else:
     raise svntest.Failure
 
-  xout = ["<?xml version=\"1.0\"?>\n",
-          "<status>\n",
-          "<target\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<entry\n",
-          "   path=\"%s\">\n" % (A_path),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<entry\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<against\n",
-          "   revision=\"2\"/>\n",
-          "</target>\n",
-          "</status>\n",]
+  expected_entries ={wc_dir : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     A_path : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     }
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, xout, [],
-                                                                'status',
-                                                                wc_dir,
-                                                                '--xml', '-uN')
+  svntest.actions.run_and_verify_status_xml(expected_entries, wc_dir, '-uN')
 
 # more incoming prop updates.
 def status_update_verbose_with_incoming_props(sbox):
