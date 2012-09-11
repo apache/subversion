@@ -1063,7 +1063,7 @@ svn__ui64toa(char * dest, apr_uint64_t number)
       target -= 8;
     }
 
-  /* Now, the number fits into 32 bits, but is larger than 1 */
+  /* Now, the number fits into 32 bits, but may still be larger than 99 */
   reduced = (apr_uint32_t)(number);
   while (reduced >= 100)
     {
