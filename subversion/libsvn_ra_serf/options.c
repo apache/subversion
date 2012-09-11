@@ -332,7 +332,8 @@ capabilities_headers_iterator_callback(void *baton,
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
           orc->session->repos_root = orc->session->session_url;
-          orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
+          orc->session->repos_root.path =
+            (char *)svn_fspath__canonicalize(val, orc->session->pool);
           orc->session->repos_root_str =
             svn_urlpath__canonicalize(
                 apr_uri_unparse(orc->session->pool,
