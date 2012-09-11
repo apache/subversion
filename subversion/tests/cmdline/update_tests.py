@@ -2849,19 +2849,17 @@ def mergeinfo_update_elision(sbox):
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
   # Make a branch A/B_COPY
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
+  expected_stdout =  svntest.verify.UnorderedOutput([
+     "A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "alpha") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "beta") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "F") + "\n",
      "Checked out revision 1.\n",
-     "A         " + B_COPY_path + "\n"],
-    [],
-    'copy',
-    sbox.repo_url + "/A/B",
-    B_COPY_path)
+     "A         " + B_COPY_path + "\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+                                     sbox.repo_url + "/A/B", B_COPY_path)
 
   expected_output = wc.State(wc_dir, {'A/B_COPY' : Item(verb='Adding')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)

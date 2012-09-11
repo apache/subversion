@@ -902,13 +902,21 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   if dry_run and out != out_dry:
     # Due to the way ra_serf works, it's possible that the dry-run and
     # real merge operations did the same thing, but the output came in
-    # a different order.  Let's see if maybe that's the case.
+    # a different order.  Let's see if maybe that's the case by comparing
+    # the outputs as unordered sets rather than as lists.
     #
-    # NOTE:  Would be nice to limit this dance to serf tests only, but...
-    out_copy = out[:]
-    out_dry_copy = out_dry[:]
-    out_copy.sort()
-    out_dry_copy.sort()
+    # This now happens for other RA layers with modern APR because the
+    # hash order now varies.
+    #
+    # The different orders of the real and dry-run merges may cause
+    # the "Merging rX through rY into" lines to be duplicated a
+    # different number of times in the two outputs.  The list-set
+    # conversion removes duplicates so these differences are ignored.
+    # It also removes "U some/path" duplicate lines.  Perhaps we
+    # should avoid that?
+    out_copy = set(out[:])
+    out_dry_copy = set(out_dry[:])
+
     if out_copy != out_dry_copy:
       print("=============================================================")
       print("Merge outputs differ")
