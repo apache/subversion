@@ -307,6 +307,44 @@ void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
                          const char *cstr);
 
+/** Read @a count bytes from @a bytes and insert them into @a str at
+ * position @a pos and following.  The resulting string will be
+ * @c count+str->len bytes long.  If @c pos is larger or equal to the
+ * number of bytes currently used in @a str,  simply append @a bytes.
+ *
+ * Reallocs if necessary. @a str is affected, nothing else is.
+ *
+ * @note The inserted string may be a sub-range if @a str.
+ */
+void
+svn_stringbuf_insert(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     const char *bytes,
+                     apr_size_t count);
+
+/** Removes @a count bytes from @a str, starting at position @a pos.
+ * If that range exceeds the current string data,  @a str gets truncated
+ * at @a pos.  If the latter is larger or equal to @c str->pos, this will
+ * be a no-op.  Otherwise, the resulting string will be @c str->len-count
+ * bytes long.
+ */
+void
+svn_stringbuf_remove(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     apr_size_t count);
+
+/** Faster but functionally equivalent to the following sequence:
+ * @code
+      svn_stringbuf_remove(str, pos, old_count);
+      svn_stringbuf_insert(str, pos, bytes, new_count);
+ */
+void
+svn_stringbuf_replace(svn_stringbuf_t *str,
+                      apr_size_t pos,
+                      apr_size_t old_count,
+                      const char *bytes,
+                      apr_size_t new_count);
+
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool);
