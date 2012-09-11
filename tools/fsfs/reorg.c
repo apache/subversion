@@ -252,7 +252,7 @@ set_cached_content(content_cache_t *cache,
           cache->insert_count = 0;
         }
       else
-        apr_hash_clear(cache->hash);
+        cache->hash = apr_hash_make(cache->hash_pool);
 
       cache->total_size = 0;
     }
