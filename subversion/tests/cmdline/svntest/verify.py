@@ -387,7 +387,7 @@ class DumpParser:
     return m.group(1)
 
   def parse_blank(self, required=True):
-    if self.lines[self.current] != '\n':  # Windows?
+    if self.lines[self.current] != '\n':  # Works on Windows
       if required:
         raise SVNDumpParseError("expected blank at line %d\n%s"
                                 % (self.current, self.lines[self.current]))

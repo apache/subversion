@@ -1164,6 +1164,8 @@ def repos_lock_with_info(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
+@Issue(4126)
+@Skip(svntest.main.is_ra_type_dav_serf) # Issue 4126 unpredictable result
 def unlock_already_unlocked_files(sbox):
   "(un)lock set of files, one already (un)locked"
 
