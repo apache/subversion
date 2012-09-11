@@ -690,6 +690,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      ?      matches any single character\n"
      "      *      matches a sequence of arbitrary characters\n"
      "      [...]  matches any of the characters listed inside the brackets\n"
+     "  If multiple --search options are provided, a log message is shown if\n"
+     "  it matches any of the provided search patterns.\n"
      "  If --limit is used in combination with --search, --limit restricts the\n"
      "  number of log messages searched, rather than restricting the output\n"
      "  to a particular number of matching log messages.\n"
@@ -1579,6 +1581,23 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
+/* Add a --search or --isearch argument to OPT_STATE. */
+static void
+add_search_pattern(svn_cl__opt_state_t *opt_state,
+                   const char *pattern,
+                   svn_boolean_t case_insensitive,
+                   apr_pool_t *result_pool)
+{
+  svn_cl__search_pattern_t p;
+
+  if (opt_state->search_patterns == NULL)
+    opt_state->search_patterns = apr_array_make(
+                                   result_pool, 1,
+                                   sizeof(svn_cl__search_pattern_t));
+  p.pattern = pattern;
+  p.case_insensitive = case_insensitive;
+  APR_ARRAY_PUSH(opt_state->search_patterns, svn_cl__search_pattern_t) = p;
+}
 
 
 /*** Main. ***/
@@ -2130,11 +2149,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.properties_only = TRUE;
         break;
       case opt_search:
-        opt_state.search_pattern = opt_arg;
+        add_search_pattern(&opt_state, opt_arg, FALSE, pool);
         break;
       case opt_isearch:
-        opt_state.search_pattern = opt_arg;
-        opt_state.case_insensitive_search = TRUE;
+        add_search_pattern(&opt_state, opt_arg, TRUE, pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
