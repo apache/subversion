@@ -179,7 +179,7 @@ or another dump file."""
   else:
     exp_master_dumpfile_contents = master_dumpfile_contents
 
-  svntest.verify.compare_and_display_lines(
+  svntest.verify.compare_dump_files(
     "Dump files", "DUMP", exp_master_dumpfile_contents, dest_dump)
 
 
