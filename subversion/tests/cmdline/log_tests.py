@@ -2314,6 +2314,33 @@ def log_search(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [7, 6, 3])
 
+  # combined pattern search
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--verbose',
+                             '--search', 'for revision 8',
+                             '--search-and', 'test the code',
+                             '--search', 'for revision 7',
+                             '--search-and', 'this won\'t match ',
+                             '--search', 'psi',
+                             '--search-and', 'multiple lines',
+                             '--search-and', 'revision 6') # don't match r4
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [8, 6])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--verbose',
+                             '--search', 'for revision 8',
+                             '--search-and', 'this won\'t match ',
+                             '--search', 'for revision 7',
+                             '--search', 'psi',
+                             '--search-and', 'multiple lines',
+                             '--search-and', 'revision 4') # don't match r6
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 4])
+
+
 @SkipUnless(server_has_mergeinfo)
 def merge_sensitive_log_with_search(sbox):
   "test 'svn log -g --search'"

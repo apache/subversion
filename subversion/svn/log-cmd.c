@@ -219,14 +219,27 @@ match_search_patterns(apr_array_header_t *search_patterns,
 
   for (i = 0; i < search_patterns->nelts; i++)
     {
-      svn_cl__search_pattern_t p;
+      apr_array_header_t *pattern_group;
+      int j;
 
-      svn_pool_clear(iterpool);
-      
-      p = APR_ARRAY_IDX(search_patterns, i, svn_cl__search_pattern_t);
-      match = match_search_pattern(p.pattern, author, date,
-                                   message, changed_paths,
-                                   p.case_insensitive, iterpool);
+      pattern_group = APR_ARRAY_IDX(search_patterns, i, apr_array_header_t *);
+
+      /* All patterns within the group must match. */
+      for (j = 0; j < pattern_group->nelts; j++)
+        {
+          svn_cl__search_pattern_t p;
+
+          svn_pool_clear(iterpool);
+          
+          p = APR_ARRAY_IDX(pattern_group, j, svn_cl__search_pattern_t);
+          match = match_search_pattern(p.pattern, author, date,
+                                       message, changed_paths,
+                                       p.case_insensitive, iterpool);
+          if (!match)
+            break;
+        }
+
+      match = (match && j == pattern_group->nelts);
       if (match)
         break;
     }
