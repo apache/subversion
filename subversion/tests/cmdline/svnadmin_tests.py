@@ -351,8 +351,9 @@ def hotcopy_dot(sbox):
   exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
                                                           backup_dir,
                                                           '--quiet')
-  if origerr or backerr or origout != backout:
+  if origerr or backerr:
     raise svntest.Failure
+  svntest.verify.compare_dump_files("Dump files", "DUMP", origout, backout)
 
 #----------------------------------------------------------------------
 
