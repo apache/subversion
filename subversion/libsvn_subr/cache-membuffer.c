@@ -576,7 +576,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
             /* remove the first entry -> insertion may start at pos 0, now */
             cache->current_data = 0;
           }
-          else
+        else
           {
             /* insertion may start right behind the previous entry */
             entry_t *previous = get_entry(cache, entry->previous);
@@ -658,6 +658,11 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
       else
         cache->first = idx;
     }
+
+  /* The current insertion position must never point outside our
+   * data buffer.
+   */
+  assert(cache->current_data <= cache->data_size);
 }
 
 /* Map a KEY of 16 bytes to the CACHE and group that shall contain the
@@ -857,6 +862,11 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
    */
   cache->current_data = entry->offset + size;
   cache->next = entry->next;
+
+  /* The current insertion position must never point outside our
+   * data buffer.
+   */
+  assert(cache->current_data <= cache->data_size);
 }
 
 /* If necessary, enlarge the insertion window until it is at least
@@ -898,7 +908,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end - cache->current_data >= size)
+      if (end >= size + cache->current_data)
         return TRUE;
 
       /* Don't be too eager to cache data. Smaller items will fit into
@@ -1055,8 +1065,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
   /* limit the data size to what we can address.
    * Note that this cannot overflow since all values are of size_t.
+   * Also, make it a multiple of the item placement granularity to
+   * prevent subtle overflows.
    */
-  data_size = total_size - directory_size;
+  data_size = ALIGN_VALUE(total_size - directory_size + 1) - ITEM_ALIGNMENT;
 
   /* For cache sizes > 4TB, individual cache segments will be larger
    * than 16GB allowing for >4GB entries.  But caching chunks larger
@@ -1190,7 +1202,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
         {
           /* Remove old data for this key, if that exists.
            * Get an unused entry for the key and and initialize it with
-           * the serialized item's (future) posion within data buffer.
+           * the serialized item's (future) position within data buffer.
            */
           entry = find_entry(cache, group_index, to_find, TRUE);
           entry->size = size;
