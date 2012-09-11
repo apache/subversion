@@ -1164,8 +1164,6 @@ def repos_lock_with_info(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-@Issue(4126)
-@Skip(svntest.main.is_ra_type_dav_serf) # Issue 4126 unpredictable result
 def unlock_already_unlocked_files(sbox):
   "(un)lock set of files, one already (un)locked"
 
@@ -1464,7 +1462,9 @@ test_list = [ None,
               SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
-              unlock_already_unlocked_files,
+              # Issue 4126 unpredictable result
+              Skip(unlock_already_unlocked_files,
+                   svntest.main.is_ra_type_dav_serf),
               info_moved_path,
               ls_url_encoded,
               XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
