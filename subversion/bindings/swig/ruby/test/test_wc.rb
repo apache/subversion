@@ -731,14 +731,15 @@ EOE
             :file_changed_prop_name => prop_name,
             :file_changed_prop_value => prop_value,
           }
-          expected_props, actual_result = yield(property_info, callbacks.result)
+          sorted_result = callbacks.result.sort_by {|r| r.first.to_s}
+          expected_props, actual_result = yield(property_info, sorted_result)
           dir_changed_props, file_changed_props, empty_changed_props = expected_props
           assert_equal([
                         [:dir_props_changed, @wc_path, dir_changed_props],
-                        [:file_changed, path1, file_changed_props],
                         [:file_added, path2, empty_changed_props],
+                        [:file_changed, path1, file_changed_props],
                        ],
-                       callbacks.result)
+                       sorted_result)
         end
       end
     end
