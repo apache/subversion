@@ -366,7 +366,7 @@ typedef struct svn_version_ext_linked_lib_t
 /**
  * Accessor for svn_version_extended_t.
  *
- * @eturns Array of svn_version_ext_linked_lib_t describing dependent
+ * @return Array of svn_version_ext_linked_lib_t describing dependent
  * libraries.  The returned value may be @c NULL.
  *
  * @since New in 1.8.
