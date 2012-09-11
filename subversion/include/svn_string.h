@@ -335,8 +335,9 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
 
 /** Faster but functionally equivalent to the following sequence:
  * @code
-      svn_stringbuf_remove(str, pos, old_count);
-      svn_stringbuf_insert(str, pos, bytes, new_count);
+ *   svn_stringbuf_remove(str, pos, old_count);
+ *   svn_stringbuf_insert(str, pos, bytes, new_count);
+ * @endcode
  */
 void
 svn_stringbuf_replace(svn_stringbuf_t *str,
