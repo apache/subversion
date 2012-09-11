@@ -1449,6 +1449,13 @@ svn-check-svn: svn-check-prepare-ramdisk
 svn-check-bindings: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb \
 	svn-check-javahl
 
+# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
+# libpthread into executables that aren't linked to libpthread.
+ifeq ($(UNAME),OpenBSD)
+LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
+endif
+
+
 RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	^svn_cv_ruby_sitedir_archsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2):$(SVN_PREFIX)/lib/ruby/site_ruby$(shell \
@@ -1458,6 +1465,7 @@ svn-check-swig-pl:
 	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			$(LIB_PTHREAD_HACK) \
 			make check-swig-pl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.pl; \
 	fi
@@ -1475,6 +1483,7 @@ svn-check-swig-rb:
 		env RUBYLIB=$(RUBYLIB) \
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		PATH=$(SVN_PREFIX)/bin:$$PATH \
+		$(LIB_PTHREAD_HACK) \
 			make check-swig-rb 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.rb
 
