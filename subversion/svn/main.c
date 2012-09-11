@@ -131,6 +131,8 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_search,
   opt_isearch,
+  opt_search_and,
+  opt_isearch_and,
 } svn_cl__longopt_t;
 
 
@@ -375,10 +377,20 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
   {"search", opt_search, 1,
-                       N_("use ARG as search pattern (glob syntax)")},
+                       N_("use ARG as search pattern (glob syntax)\n"
+                       "                             "
+                       "Multiple search patterns match independently.")},
 
   {"isearch", opt_isearch, 1,
                        N_("like --search, but case-insensitive")}, 
+
+  {"search-and", opt_search_and, 1,
+                       N_("combine ARG with any previous search pattern\n"
+                       "                             "
+                       "Combined search patterns match unitedly.")},
+
+  {"isearch-and", opt_isearch_and, 1,
+                       N_("like --search-and, but case-insensitive")}, 
 
   /* Long-opt Aliases
    *
@@ -691,7 +703,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      *      matches a sequence of arbitrary characters\n"
      "      [...]  matches any of the characters listed inside the brackets\n"
      "  If multiple --search options are provided, a log message is shown if\n"
-     "  it matches any of the provided search patterns.\n"
+     "  it matches any of the provided search patterns. If the --search-and\n"
+     "  option is used, that option's argument is combined with the pattern\n"
+     "  from any previous --search or --search-and option, and a log message\n"
+     "  is shown only if it matches any of the combined search patterns.\n"
      "  If --limit is used in combination with --search, --limit restricts the\n"
      "  number of log messages searched, rather than restricting the output\n"
      "  to a particular number of matching log messages.\n"
@@ -724,7 +739,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x', opt_search,
-     opt_isearch},
+     opt_search_and, opt_isearch, opt_isearch_and},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1581,22 +1596,52 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
-/* Add a --search or --isearch argument to OPT_STATE. */
+/* Add a --search or --isearch argument to OPT_STATE.
+ * These options start a new search pattern group. */
 static void
-add_search_pattern(svn_cl__opt_state_t *opt_state,
-                   const char *pattern,
-                   svn_boolean_t case_insensitive,
-                   apr_pool_t *result_pool)
+add_search_pattern_group(svn_cl__opt_state_t *opt_state,
+                         const char *pattern,
+                         svn_boolean_t case_insensitive,
+                         apr_pool_t *result_pool)
 {
   svn_cl__search_pattern_t p;
+  apr_array_header_t *group = NULL;
 
   if (opt_state->search_patterns == NULL)
-    opt_state->search_patterns = apr_array_make(
-                                   result_pool, 1,
-                                   sizeof(svn_cl__search_pattern_t));
+    opt_state->search_patterns = apr_array_make(result_pool, 1,
+                                                sizeof(apr_array_header_t *));
+
+  group = apr_array_make(result_pool, 1, sizeof(svn_cl__search_pattern_t));
   p.pattern = pattern;
   p.case_insensitive = case_insensitive;
-  APR_ARRAY_PUSH(opt_state->search_patterns, svn_cl__search_pattern_t) = p;
+  APR_ARRAY_PUSH(group, svn_cl__search_pattern_t) = p;
+  APR_ARRAY_PUSH(opt_state->search_patterns, apr_array_header_t *) = group;
+}
+
+/* Add a --search-and or --isearch-and argument to OPT_STATE.
+ * These patterns are added to an existing pattern group, if any. */
+static void
+add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
+                                   const char *pattern,
+                                   svn_boolean_t case_insensitive,
+                                   apr_pool_t *result_pool)
+{
+  svn_cl__search_pattern_t p;
+  apr_array_header_t *group;
+
+  if (opt_state->search_patterns == NULL)
+    {
+      add_search_pattern_group(opt_state, pattern, case_insensitive,
+                               result_pool);
+      return;
+    }
+
+  group = APR_ARRAY_IDX(opt_state->search_patterns,
+                        opt_state->search_patterns->nelts - 1,
+                        apr_array_header_t *);
+  p.pattern = pattern;
+  p.case_insensitive = case_insensitive;
+  APR_ARRAY_PUSH(group, svn_cl__search_pattern_t) = p;
 }
 
 
@@ -2149,10 +2194,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.properties_only = TRUE;
         break;
       case opt_search:
-        add_search_pattern(&opt_state, opt_arg, FALSE, pool);
+        add_search_pattern_group(&opt_state, opt_arg, FALSE, pool);
         break;
       case opt_isearch:
-        add_search_pattern(&opt_state, opt_arg, TRUE, pool);
+        add_search_pattern_group(&opt_state, opt_arg, TRUE, pool);
+        break;
+      case opt_search_and:
+        add_search_pattern_to_latest_group(&opt_state, opt_arg, FALSE, pool);
+      case opt_isearch_and:
+        add_search_pattern_to_latest_group(&opt_state, opt_arg, TRUE, pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
