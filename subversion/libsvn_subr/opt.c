@@ -49,7 +49,6 @@
 #include "private/svn_opt_private.h"
 
 #include "opt.h"
-#include "sysinfo.h"
 #include "svn_private_config.h"
 
 
@@ -1103,49 +1102,24 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
 }
 
 
-const svn_opt__version_info_t *
-svn_opt__get_version_info(apr_pool_t *pool)
-{
-  svn_opt__version_info_t *info = apr_pcalloc(pool, sizeof(*info));
-
-  info->version_number = SVN_VER_NUMBER;
-  info->version_string =  SVN_VERSION;
-  info->build_date = __DATE__;
-  info->build_time = __TIME__;
-  info->build_host = SVN_BUILD_HOST;
-  info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2012 The Apache Software Foundation.\n"
-             "This software consists of contributions made by many "
-             "people; see the NOTICE\n"
-             "file for more information.\n"
-             "Subversion is open source software, see "
-             "http://subversion.apache.org/\n"));
-  info->runtime_host = svn_sysinfo__canonical_host(pool);
-  info->runtime_osname = svn_sysinfo__release_name(pool);
-  info->linked_libs = svn_sysinfo__linked_libs(pool);
-  info->loaded_libs = svn_sysinfo__loaded_libs(pool);
-
-  return info;
-}
-
-
 svn_error_t *
 svn_opt__print_version_info(const char *pgm_name,
                             const char *footer,
-                            const svn_opt__version_info_t *info,
+                            const svn_version_extended_t *info,
                             svn_boolean_t quiet,
                             svn_boolean_t verbose,
                             apr_pool_t *pool)
 {
   if (quiet)
-    return svn_cmdline_printf(pool, "%s\n", info->version_number);
+    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s on %s\n\n"),
-                             pgm_name, info->version_string,
-                             info->build_date, info->build_time,
-                             info->build_host));
-  SVN_ERR(svn_cmdline_printf(pool, "%s\n", info->copyright));
+                             pgm_name, SVN_VERSION,
+                             svn_version_ext_build_date(info),
+                             svn_version_ext_build_time(info),
+                             svn_version_ext_build_host(info)));
+  SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
 
   if (footer)
     {
@@ -1154,26 +1128,28 @@ svn_opt__print_version_info(const char *pgm_name,
 
   if (verbose)
     {
+      const apr_array_header_t *libs;
+
       SVN_ERR(svn_cmdline_fputs(_("System information:\n\n"), stdout, pool));
       SVN_ERR(svn_cmdline_printf(pool, _("* running on %s\n"),
-                                 info->runtime_host));
-      if (info->runtime_osname)
+                                 svn_version_ext_runtime_host(info)));
+      if (svn_version_ext_runtime_osname(info))
         {
           SVN_ERR(svn_cmdline_printf(pool, _("  - %s\n"),
-                                     info->runtime_osname));
+                                     svn_version_ext_runtime_osname(info)));
         }
 
-      if (info->linked_libs && info->linked_libs->nelts)
+      libs = svn_version_ext_linked_libs(info);
+      if (libs && libs->nelts)
         {
-          const svn_sysinfo__linked_lib_t *lib;
+          const svn_version_ext_linked_lib_t *lib;
           int i;
 
           SVN_ERR(svn_cmdline_fputs(_("* linked dependencies:\n"),
                                     stdout, pool));
-          for (i = 0; i < info->linked_libs->nelts; ++i)
+          for (i = 0; i < libs->nelts; ++i)
             {
-              lib = &APR_ARRAY_IDX(info->linked_libs, i,
-                                   svn_sysinfo__linked_lib_t);
+              lib = &APR_ARRAY_IDX(libs, i, svn_version_ext_linked_lib_t);
               if (lib->runtime_version)
                 SVN_ERR(svn_cmdline_printf(pool,
                                            "  - %s %s (compiled with %s)\n",
@@ -1188,17 +1164,17 @@ svn_opt__print_version_info(const char *pgm_name,
             }
         }
 
-      if (info->loaded_libs && info->loaded_libs->nelts)
+      libs = svn_version_ext_loaded_libs(info);
+      if (libs && libs->nelts)
         {
-          const svn_sysinfo__loaded_lib_t *lib;
+          const svn_version_ext_loaded_lib_t *lib;
           int i;
 
           SVN_ERR(svn_cmdline_fputs(_("* loaded shared libraries:\n"),
                                     stdout, pool));
-          for (i = 0; i < info->loaded_libs->nelts; ++i)
+          for (i = 0; i < libs->nelts; ++i)
             {
-              lib = &APR_ARRAY_IDX(info->loaded_libs, i,
-                                   svn_sysinfo__loaded_lib_t);
+              lib = &APR_ARRAY_IDX(libs, i, svn_version_ext_loaded_lib_t);
               if (lib->version)
                 SVN_ERR(svn_cmdline_printf(pool,
                                            "  - %s   (%s)\n",
@@ -1245,7 +1221,7 @@ svn_opt_print_help4(apr_getopt_t *os,
   else if (print_version)   /* just --version */
     {
       SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
-                                          svn_opt__get_version_info(pool),
+                                          svn_version_extended(verbose, pool),
                                           quiet, verbose, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */

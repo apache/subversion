@@ -2284,8 +2284,11 @@ get_node_revision_body(node_revision_t **noderev_p,
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
-                                  svn_fs_fs__id_txn_id(id) != NULL,
                                   pool));
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  if (svn_fs_fs__id_txn_id(id) == NULL)
+    (*noderev_p)->is_fresh_txn_root = FALSE;
+
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
   return set_cached_node_revision_body(*noderev_p, fs, id, pool);
@@ -2294,7 +2297,6 @@ get_node_revision_body(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev_p,
                         svn_stream_t *stream,
-                        svn_boolean_t allow_for_txn_roots,
                         apr_pool_t *pool)
 {
   apr_hash_t *headers;
@@ -2425,9 +2427,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get whether this is a fresh txn root. */
-  value = allow_for_txn_roots
-        ? apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING)
-        : NULL;
+  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
@@ -4285,7 +4285,8 @@ create_rep_state_body(struct rep_state **rep_state,
    and the rep args in *REP_ARGS, both allocated in POOL.
 
    When reading multiple reps, i.e. a skip delta chain, you may provide
-   non-NULL FILE_HINT and REV_HINT.  The function will use these variables
+   non-NULL FILE_HINT and REV_HINT.  (If FILE_HINT is not NULL, in the first
+   call it should be a pointer to NULL.)  The function will use these variables
    to store the previous call results and tries to re-use them.  This may
    result in significant savings in I/O for packed files.
  */
@@ -6782,11 +6783,14 @@ rep_write_contents(void *baton,
 
 /* Given a node-revision NODEREV in filesystem FS, return the
    representation in *REP to use as the base for a text representation
-   delta.  Perform temporary allocations in *POOL. */
+   delta if PROPS is FALSE.  If PROPS has been set, a suitable props
+   base representation will be returned.  Perform temporary allocations
+   in *POOL. */
 static svn_error_t *
 choose_delta_base(representation_t **rep,
                   svn_fs_t *fs,
                   node_revision_t *noderev,
+                  svn_boolean_t props,
                   apr_pool_t *pool)
 {
   int count;
@@ -6835,7 +6839,8 @@ choose_delta_base(representation_t **rep,
     SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
                                          base->predecessor_id, pool));
 
-  *rep = base->data_rep;
+  /* return a suitable base representation */
+  *rep = props ? base->prop_rep : base->data_rep;
 
   return SVN_NO_ERROR;
 }
@@ -6882,7 +6887,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   SVN_ERR(get_file_offset(&b->rep_offset, file, b->pool));
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, b->pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->pool));
   SVN_ERR(read_representation(&source, fs, base_rep, b->pool));
 
   /* Write out the rep header. */
@@ -7301,7 +7306,8 @@ write_hash_rep(representation_t *rep,
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be found,
    we will truncate the one just written from the file and return the existing
-   rep.  Perform temporary allocations in POOL. */
+   rep.  If PROPS is set, assume that we want to a props representation as
+   the base for our delta.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
                      apr_file_t *file,
@@ -7309,6 +7315,7 @@ write_hash_delta_rep(representation_t *rep,
                      svn_fs_t *fs,
                      node_revision_t *noderev,
                      apr_hash_t *reps_hash,
+                     svn_boolean_t props,
                      apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
@@ -7329,7 +7336,7 @@ write_hash_delta_rep(representation_t *rep,
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, props, pool));
   SVN_ERR(read_representation(&source, fs, base_rep, pool));
 
   SVN_ERR(get_file_offset(&rep->offset, file, pool));
@@ -7564,7 +7571,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           if (ffd->deltify_directories)
             SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
                                          str_entries, fs, noderev, NULL,
-                                         pool));
+                                         FALSE, pool));
           else
             SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
                                    fs, NULL, pool));
@@ -7603,7 +7610,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       if (ffd->deltify_properties)
         SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
                                      proplist, fs, noderev, reps_hash,
-                                     pool));
+                                     TRUE, pool));
       else
         SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
                                fs, reps_hash, pool));
