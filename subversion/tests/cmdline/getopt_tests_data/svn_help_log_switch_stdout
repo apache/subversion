@@ -116,9 +116,7 @@ Valid options:
                                 -p (--show-c-function):
                                    Show C function name in diff output.
   --search ARG             : use ARG as search pattern (glob syntax)
-                             Multiple search patterns match independently.
   --search-and ARG         : combine ARG with the previous search pattern
-                             Combined search patterns match unitedly.
   --isearch ARG            : like --search, but case-insensitive
   --isearch-and ARG        : like --search-and, but case-insensitive
 
