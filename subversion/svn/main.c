@@ -385,7 +385,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("like --search, but case-insensitive")}, 
 
   {"search-and", opt_search_and, 1,
-                       N_("combine ARG with any previous search pattern\n"
+                       N_("combine ARG with the previous search pattern\n"
                        "                             "
                        "Combined search patterns match unitedly.")},
 
@@ -705,8 +705,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If multiple --search options are provided, a log message is shown if\n"
      "  it matches any of the provided search patterns. If the --search-and\n"
      "  option is used, that option's argument is combined with the pattern\n"
-     "  from any previous --search or --search-and option, and a log message\n"
-     "  is shown only if it matches any of the combined search patterns.\n"
+     "  from the previous --search or --search-and option, and a log message\n"
+     "  is shown only if it matches the combined search pattern.\n"
      "  If --limit is used in combination with --search, --limit restricts the\n"
      "  number of log messages searched, rather than restricting the output\n"
      "  to a particular number of matching log messages.\n"
