@@ -32,7 +32,8 @@ usage: 1. log [PATH][@REV]
 
   If the --search option is used, log messages are displayed only if the
   provided search pattern matches any of the author, date, log message
-  text, or, if the --verbose option is also provided, a changed path.
+  text (unless --quiet is used), or, if the --verbose option is also
+  provided, a changed path.
   The search pattern may include "glob syntax" wildcards:
       ?      matches any single character
       *      matches a sequence of arbitrary characters
