@@ -31,9 +31,9 @@ usage: 1. log [PATH][@REV]
   and limits the scope of the displayed diff to the specified depth.
 
   If the --search option is used, log messages are displayed only if the
-  provided search pattern matches the author, date, log message text,
-  or, if the --verbose option is also provided, a changed path.
-  The search pattern may include glob syntax wildcards:
+  provided search pattern matches any of the author, date, log message
+  text, or, if the --verbose option is also provided, a changed path.
+  The search pattern may include "glob syntax" wildcards:
       ?      matches any single character
       *      matches a sequence of arbitrary characters
       [abc]  matches any of the characters listed inside the brackets
