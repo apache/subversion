@@ -16,7 +16,7 @@ svnwcsub_user=${svnwcsub_user-"svnwc"}
 svnwcsub_group=${svnwcsub_group-"svnwc"}
 svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub.pid"}
 svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
-svnwcsub_logfile=${svnwcsub_logfile-"/var/bwlog/svnwcsub/svnwcsub.log"}
+svnwcsub_logfile=${svnwcsub_logfile-"/var/log/svnwcsub/svnwcsub.log"}
 pidfile="${svnwcsub_pidfile}"
 
 SVNWCSUB_CMD="/opt/svnpubsub/svnwcsub.py \
@@ -24,6 +24,7 @@ SVNWCSUB_CMD="/opt/svnpubsub/svnwcsub.py \
               --logfile=${svnwcsub_logfile} \
               --pidfile=${pidfile} \
               --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              --umask=002 \
               ${svnwcsub_config} "
 
 RETVAL=0

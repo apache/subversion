@@ -36,11 +36,20 @@
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_info.h>
+#include <apr_signal.h>
 #include <apr_strings.h>
+#include <apr_thread_proc.h>
+#include <apr_version.h>
+#include <apu_version.h>
 
 #include "svn_ctype.h"
 #include "svn_error.h"
+#include "svn_io.h"
+#include "svn_string.h"
 #include "svn_utf.h"
+#include "svn_version.h"
+
+#include "private/svn_sqlite.h"
 
 #include "sysinfo.h"
 #include "svn_private_config.h"
@@ -49,32 +58,48 @@
 #include <sys/utsname.h>
 #endif
 
-#if SVN_HAVE_MACOS_PLIST
+#ifdef SVN_HAVE_MACOS_PLIST
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#ifdef SVN_HAVE_MACHO_ITERATE
+#include <mach-o/dyld.h>
+#include <mach-o/loader.h>
+#endif
+
 #if HAVE_UNAME
-static const char* canonical_host_from_uname(apr_pool_t *pool);
+static const char *canonical_host_from_uname(apr_pool_t *pool);
+# ifndef SVN_HAVE_MACOS_PLIST
+static const char *release_name_from_uname(apr_pool_t *pool);
+# endif
 #endif
 
 #ifdef WIN32
-static const char * win32_canonical_host(apr_pool_t *pool);
-static const char * win32_release_name(apr_pool_t *pool);
-static const char * win32_shared_libs(apr_pool_t *pool);
+static const char *win32_canonical_host(apr_pool_t *pool);
+static const char *win32_release_name(apr_pool_t *pool);
+static const apr_array_header_t *win32_shared_libs(apr_pool_t *pool);
 #endif /* WIN32 */
 
-#if SVN_HAVE_MACOS_PLIST
+#ifdef SVN_HAVE_MACOS_PLIST
 static const char *macos_release_name(apr_pool_t *pool);
-#endif  /* SVN_HAVE_MACOS_PLIST */
+#endif
 
+#ifdef SVN_HAVE_MACHO_ITERATE
+static const apr_array_header_t *macos_shared_libs(apr_pool_t *pool);
+#endif
+
+
+#if __linux__
+static const char *linux_release_name(apr_pool_t *pool);
+#endif
 
 const char *
 svn_sysinfo__canonical_host(apr_pool_t *pool)
 {
-#if HAVE_UNAME
-  return canonical_host_from_uname(pool);
-#elif defined(WIN32)
+#ifdef WIN32
   return win32_canonical_host(pool);
+#elif HAVE_UNAME
+  return canonical_host_from_uname(pool);
 #else
   return "unknown-unknown-unknown";
 #endif
@@ -86,19 +111,52 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_release_name(pool);
-#elif SVN_HAVE_MACOS_PLIST
+#elif defined(SVN_HAVE_MACOS_PLIST)
   return macos_release_name(pool);
+#elif __linux__
+  return linux_release_name(pool);
+#elif HAVE_UNAME
+  return release_name_from_uname(pool);
 #else
   return NULL;
 #endif
 }
 
+const apr_array_header_t *
+svn_sysinfo__linked_libs(apr_pool_t *pool)
+{
+  svn_version_ext_linked_lib_t *lib;
+  apr_array_header_t *array = apr_array_make(pool, 3, sizeof(*lib));
 
-const char *
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "APR";
+  lib->compiled_version = APR_VERSION_STRING;
+  lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "APR-Util";
+  lib->compiled_version = APU_VERSION_STRING;
+  lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "SQLite";
+  lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
+#ifdef SVN_SQLITE_INLINE
+  lib->runtime_version = NULL;
+#else
+  lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
+#endif
+
+  return array;
+}
+
+const apr_array_header_t *
 svn_sysinfo__loaded_libs(apr_pool_t *pool)
 {
 #ifdef WIN32
   return win32_shared_libs(pool);
+#elif defined(SVN_HAVE_MACHO_ITERATE)
+  return macos_shared_libs(pool);
 #else
   return NULL;
 #endif
@@ -144,17 +202,338 @@ canonical_host_from_uname(apr_pool_t *pool)
 
       if (0 == strcmp(sysname, "darwin"))
         vendor = "apple";
-
-      err = svn_utf_cstring_to_utf8(&tmp, info.release, pool);
-      if (err)
-        svn_error_clear(err);
+      if (0 == strcmp(sysname, "linux"))
+        sysver = "-gnu";
       else
-        sysver = tmp;
+        {
+          err = svn_utf_cstring_to_utf8(&tmp, info.release, pool);
+          if (err)
+            svn_error_clear(err);
+          else
+            {
+              apr_size_t n = strspn(tmp, ".0123456789");
+              if (n > 0)
+                {
+                  char *ver = apr_pstrdup(pool, tmp);
+                  ver[n] = 0;
+                  sysver = ver;
+                }
+              else
+                sysver = tmp;
+            }
+        }
     }
 
   return apr_psprintf(pool, "%s-%s-%s%s", machine, vendor, sysname, sysver);
 }
+
+# ifndef SVN_HAVE_MACOS_PLIST
+/* Generate a release name from the uname(3) info, effectively
+   returning "`uname -s` `uname -r`". */
+static const char *
+release_name_from_uname(apr_pool_t *pool)
+{
+  struct utsname info;
+  if (0 <= uname(&info))
+    {
+      svn_error_t *err;
+      const char *sysname;
+      const char *sysver;
+
+      err = svn_utf_cstring_to_utf8(&sysname, info.sysname, pool);
+      if (err)
+        {
+          sysname = NULL;
+          svn_error_clear(err);
+        }
+
+
+      err = svn_utf_cstring_to_utf8(&sysver, info.release, pool);
+      if (err)
+        {
+          sysver = NULL;
+          svn_error_clear(err);
+        }
+
+      if (sysname || sysver)
+        {
+          return apr_psprintf(pool, "%s%s%s",
+                              (sysname ? sysname : ""),
+                              (sysver ? (sysname ? " " : "") : ""),
+                              (sysver ? sysver : ""));
+        }
+    }
+  return NULL;
+}
+# endif  /* !SVN_HAVE_MACOS_PLIST */
 #endif  /* HAVE_UNAME */
+
+
+#if __linux__
+/* Split a stringbuf into a key/value pair.
+   Return the key, leaving the striped value in the stringbuf. */
+static const char *
+stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
+{
+  char *key;
+  char *end;
+
+  end = strchr(buffer->data, delim);
+  if (!end)
+    return NULL;
+
+  svn_stringbuf_strip_whitespace(buffer);
+  key = buffer->data;
+  end = strchr(key, delim);
+  *end = '\0';
+  buffer->len = 1 + end - key;
+  buffer->data = end + 1;
+  svn_stringbuf_strip_whitespace(buffer);
+
+  return key;
+}
+
+/* Parse `/usr/bin/lsb_rlease --all` */
+static const char *
+lsb_release(apr_pool_t *pool)
+{
+  static const char *const args[3] =
+    {
+      "/usr/bin/lsb_release",
+      "--all",
+      NULL
+    };
+
+  const char *distributor = NULL;
+  const char *description = NULL;
+  const char *release = NULL;
+  const char *codename = NULL;
+
+  apr_proc_t lsbproc;
+  svn_stream_t *lsbinfo;
+  svn_error_t *err;
+
+  /* Run /usr/bin/lsb_release --all < /dev/null 2>/dev/null */
+  {
+    apr_file_t *stdin_handle;
+    apr_file_t *stdout_handle;
+
+    err = svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
+                           APR_READ, APR_OS_DEFAULT, pool);
+    if (!err)
+      err = svn_io_file_open(&stdout_handle, SVN_NULL_DEVICE_NAME,
+                             APR_WRITE, APR_OS_DEFAULT, pool);
+    if (!err)
+      err = svn_io_start_cmd3(&lsbproc, NULL, args[0], args, NULL, FALSE,
+                              FALSE, stdin_handle,
+                              TRUE, NULL,
+                              FALSE, stdout_handle,
+                              pool);
+    if (err)
+      {
+        svn_error_clear(err);
+        return NULL;
+      }
+  }
+
+  /* Parse the output and try to populate the  */
+  lsbinfo = svn_stream_from_aprfile2(lsbproc.out, TRUE, pool);
+  if (lsbinfo)
+    {
+      for (;;)
+        {
+          svn_boolean_t eof = FALSE;
+          svn_stringbuf_t *line;
+          const char *key;
+
+          err = svn_stream_readline(lsbinfo, &line, "\n", &eof, pool);
+          if (err || eof)
+            break;
+
+          key = stringbuf_split_key(line, ':');
+          if (!key)
+            continue;
+
+          if (0 == svn_cstring_casecmp(key, "Distributor ID"))
+            distributor = line->data;
+          else if (0 == svn_cstring_casecmp(key, "Description"))
+            description = line->data;
+          else if (0 == svn_cstring_casecmp(key, "Release"))
+            release = line->data;
+          else if (0 == svn_cstring_casecmp(key, "Codename"))
+            codename = line->data;
+        }
+      svn_stream_close(lsbinfo);
+      if (err)
+        {
+          svn_error_clear(err);
+          apr_proc_kill(&lsbproc, SIGKILL);
+          return NULL;
+        }
+    }
+
+  /* Reap the child process */
+  err = svn_io_wait_for_cmd(&lsbproc, "", NULL, NULL, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  if (description)
+    return apr_psprintf(pool, "%s%s%s%s", description,
+                        (codename ? " (" : ""),
+                        (codename ? codename : ""),
+                        (codename ? ")" : ""));
+  if (distributor)
+    return apr_psprintf(pool, "%s%s%s%s%s%s", distributor,
+                        (release ? " " : ""),
+                        (release ? release : ""),
+                        (codename ? " (" : ""),
+                        (codename ? codename : ""),
+                        (codename ? ")" : ""));
+
+  return NULL;
+}
+
+/* Read the whole contents of a file. */
+static svn_stringbuf_t *
+read_file_contents(const char *filename, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_stringbuf_t *buffer;
+
+  err = svn_stringbuf_from_file2(&buffer, filename, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  return buffer;
+}
+
+/* Strip everything but the first line from a stringbuf. */
+static void
+stringbuf_first_line_only(svn_stringbuf_t *buffer)
+{
+  char *eol = strchr(buffer->data, '\n');
+  if (eol)
+    {
+      *eol = '\0';
+      buffer->len = 1 + eol - buffer->data;
+    }
+  svn_stringbuf_strip_whitespace(buffer);
+}
+
+/* Look at /etc/redhat_release to detect RHEL/Fedora/CentOS. */
+static const char *
+redhat_release(apr_pool_t *pool)
+{
+  svn_stringbuf_t *buffer = read_file_contents("/etc/redhat-release", pool);
+  if (buffer)
+    {
+      stringbuf_first_line_only(buffer);
+      return buffer->data;
+    }
+  return NULL;
+}
+
+/* Look at /etc/SuSE-release to detect non-LSB SuSE. */
+static const char *
+suse_release(apr_pool_t *pool)
+{
+  const char *release = NULL;
+  const char *codename = NULL;
+
+  svn_stringbuf_t *buffer = read_file_contents("/etc/SuSE-release", pool);
+  svn_stringbuf_t *line;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  svn_error_t *err;
+  if (!buffer)
+      return NULL;
+
+  stream = svn_stream_from_stringbuf(buffer, pool);
+  err = svn_stream_readline(stream, &line, "\n", &eof, pool);
+  if (err || eof)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  svn_stringbuf_strip_whitespace(line);
+  release = line->data;
+
+  for (;;)
+    {
+      const char *key;
+
+      err = svn_stream_readline(stream, &line, "\n", &eof, pool);
+      if (err || eof)
+        {
+          svn_error_clear(err);
+          break;
+        }
+
+      key = stringbuf_split_key(line, '=');
+      if (!key)
+        continue;
+
+      if (0 == strncmp(key, "CODENAME", 8))
+        codename = line->data;
+    }
+
+  return apr_psprintf(pool, "%s%s%s%s",
+                      release,
+                      (codename ? " (" : ""),
+                      (codename ? codename : ""),
+                      (codename ? ")" : ""));
+}
+
+/* Look at /etc/debian_version to detect non-LSB Debian. */
+static const char *
+debian_release(apr_pool_t *pool)
+{
+  svn_stringbuf_t *buffer = read_file_contents("/etc/debian_version", pool);
+  if (!buffer)
+      return NULL;
+
+  stringbuf_first_line_only(buffer);
+  return apr_pstrcat(pool, "Debian ", buffer->data, NULL);
+}
+
+/* Try to find the Linux distribution name, or return info from uname. */
+static const char *
+linux_release_name(apr_pool_t *pool)
+{
+  const char *uname_release = release_name_from_uname(pool);
+
+  /* Try anything that has /usr/bin/lsb_release.
+     Covers, for example, Debian, Ubuntu and SuSE.  */
+  const char *release_name = lsb_release(pool);
+
+  /* Try RHEL/Fedora/CentOS */
+  if (!release_name)
+    release_name = redhat_release(pool);
+
+  /* Try Non-LSB SuSE */
+  if (!release_name)
+    release_name = suse_release(pool);
+
+  /* Try non-LSB Debian */
+  if (!release_name)
+    release_name = debian_release(pool);
+
+  if (!release_name)
+    return uname_release;
+
+  if (!uname_release)
+    return release_name;
+
+  return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
+}
+#endif /* __linux__ */
 
 
 #ifdef WIN32
@@ -432,12 +811,12 @@ file_version_number(const wchar_t *filename, apr_pool_t *pool)
 }
 
 /* List the shared libraries loaded by the current process. */
-static const char *
+static const apr_array_header_t *
 win32_shared_libs(apr_pool_t *pool)
 {
+  apr_array_header_t *array = NULL;
   wchar_t buffer[MAX_PATH + 1];
   HMODULE *handles = enum_loaded_modules(pool);
-  char *libinfo = "";
   HMODULE *module;
 
   for (module = handles; module && *module; ++module)
@@ -451,29 +830,32 @@ win32_shared_libs(apr_pool_t *pool)
           filename = wcs_to_utf8(buffer, pool);
           if (filename)
             {
+              svn_version_ext_loaded_lib_t *lib;
               char *truename;
+
               if (0 == apr_filepath_merge(&truename, "", filename,
                                           APR_FILEPATH_NATIVE
                                           | APR_FILEPATH_TRUENAME,
                                           pool))
                 filename = truename;
-              if (version)
-                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
-                                      "   (", version, ")\n", NULL);
-              else
-                libinfo = apr_pstrcat(pool, libinfo, "  - ", filename,
-                                      "\n", NULL);
+
+              if (!array)
+                {
+                  array = apr_array_make(pool, 32, sizeof(*lib));
+                }
+              lib = &APR_ARRAY_PUSH(array, svn_version_ext_loaded_lib_t);
+              lib->name = filename;
+              lib->version = version;
             }
         }
     }
 
-  if (*libinfo)
-    return libinfo;
-  return NULL;
+  return array;
 }
 #endif /* WIN32 */
 
-#if SVN_HAVE_MACOS_PLIST
+
+#ifdef SVN_HAVE_MACOS_PLIST
 /* Load the SystemVersion.plist or ServerVersion.plist file into a
    property list. Set SERVER to TRUE if the file read was
    ServerVersion.plist. */
@@ -613,6 +995,9 @@ release_name_from_version(const char *osver)
   return NULL;
 }
 
+/* Construct the release name from information stored in the Mac OS X
+   "SystemVersion.plist" file (or ServerVersion.plist, for Mac Os
+   Server. */
 static const char *
 macos_release_name(apr_pool_t *pool)
 {
@@ -653,3 +1038,93 @@ macos_release_name(apr_pool_t *pool)
   return NULL;
 }
 #endif  /* SVN_HAVE_MACOS_PLIST */
+
+#ifdef SVN_HAVE_MACHO_ITERATE
+/* List the shared libraries loaded by the current process.
+   Ignore frameworks and system libraries, they're just clutter. */
+static const apr_array_header_t *
+macos_shared_libs(apr_pool_t *pool)
+{
+  static const char slb_prefix[] = "/usr/lib/system/";
+  static const char fwk_prefix[] = "/System/Library/Frameworks/";
+  static const char pfk_prefix[] = "/System/Library/PrivateFrameworks/";
+
+  const int slb_prefix_len = strlen(slb_prefix);
+  const int fwk_prefix_len = strlen(fwk_prefix);
+  const int pfk_prefix_len = strlen(pfk_prefix);
+
+  apr_array_header_t *result = NULL;
+  apr_array_header_t *dylibs = NULL;
+
+  uint32_t i;
+  for (i = 0;; ++i)
+    {
+      const struct mach_header *header = _dyld_get_image_header(i);
+      const char *filename = _dyld_get_image_name(i);
+      const char *version;
+      char *truename;
+      svn_version_ext_loaded_lib_t *lib;
+
+      if (!(header && filename))
+        break;
+
+      switch (header->cputype)
+        {
+        case CPU_TYPE_I386:      version = _("Intel"); break;
+        case CPU_TYPE_X86_64:    version = _("Intel 64-bit"); break;
+        case CPU_TYPE_POWERPC:   version = _("PowerPC"); break;
+        case CPU_TYPE_POWERPC64: version = _("PowerPC 64-bit"); break;
+        default:
+          version = NULL;
+        }
+
+      if (0 == apr_filepath_merge(&truename, "", filename,
+                                  APR_FILEPATH_NATIVE
+                                  | APR_FILEPATH_TRUENAME,
+                                  pool))
+        filename = truename;
+      else
+        filename = apr_pstrdup(pool, filename);
+
+      if (0 == strncmp(filename, slb_prefix, slb_prefix_len)
+          || 0 == strncmp(filename, fwk_prefix, fwk_prefix_len)
+          || 0 == strncmp(filename, pfk_prefix, pfk_prefix_len))
+        {
+          /* Ignore frameworks and system libraries. */
+          continue;
+        }
+
+      if (header->filetype == MH_EXECUTE)
+        {
+          /* Make sure the program filename is first in the list */
+          if (!result)
+            {
+              result = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(result, svn_version_ext_loaded_lib_t);
+        }
+      else
+        {
+          if (!dylibs)
+            {
+              dylibs = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(dylibs, svn_version_ext_loaded_lib_t);
+        }
+
+      lib->name = filename;
+      lib->version = version;
+    }
+
+  /* Gather results into one array. */
+  if (dylibs)
+    {
+      if (result)
+        apr_array_cat(result, dylibs);
+      else
+        result = dylibs;
+    }
+
+  return result;
+}
+#endif  /* SVN_HAVE_MACHO_ITERATE */

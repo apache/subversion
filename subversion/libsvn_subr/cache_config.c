@@ -118,7 +118,7 @@ svn_cache__get_global_membuffer_cache(void)
       err = svn_cache__membuffer_cache_create(
           &new_cache,
           (apr_size_t)cache_size,
-          (apr_size_t)(cache_size / 16),
+          (apr_size_t)(cache_size / 10),
           ! svn_cache_config_get()->single_threaded,
           pool);
 

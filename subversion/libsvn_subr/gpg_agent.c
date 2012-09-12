@@ -110,6 +110,10 @@ receive_from_gpg_agent(int sd, char *buf, size_t n)
   int recvd;
   char c;
 
+  /* Clear existing buffer concent before reading response. */
+  if (n > 0)
+    *buf = '\0';
+
   /* Require the message to fit into the buffer and be terminated
    * with a newline. */
   while (i < n)

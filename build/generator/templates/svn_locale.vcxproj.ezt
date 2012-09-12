@@ -32,7 +32,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
-    <ConfigurationType>Utility</ConfigurationType>
+    <ConfigurationType>Makefile</ConfigurationType>
     <CLRSupport>false</CLRSupport>
     <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>

@@ -485,6 +485,10 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
                                           SVN_AUTH_CRED_SIMPLE,
                                           realmstring, creds_hash, pool);
     }
+  if (err)
+    *saved = FALSE;
+
+  /* ### return error? */
   svn_error_clear(err);
 
   return SVN_NO_ERROR;

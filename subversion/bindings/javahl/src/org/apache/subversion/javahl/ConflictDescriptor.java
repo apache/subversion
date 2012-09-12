@@ -250,7 +250,19 @@ public class ConflictDescriptor
         /**
          * Object is already replaced.
          */
-        replaced;
+        replaced,
+
+        /**
+         * Object is moved away.
+         * @since 1.8
+         */
+        moved_away,
+
+        /**
+         * Object is moved here.
+         * @since 1.8
+         */
+        moved_here;
     }
 
     public enum Operation

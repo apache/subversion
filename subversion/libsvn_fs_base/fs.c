@@ -471,6 +471,14 @@ bdb_write_config(svn_fs_t *fs)
   return svn_io_file_close(dbconfig_file, fs->pool);
 }
 
+static svn_error_t *
+base_bdb_freeze(svn_fs_t *fs,
+                svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+                void *baton,
+                apr_pool_t *pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
 
 
 /* Creating a new filesystem */
@@ -492,6 +500,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
+  base_bdb_freeze,
   base_bdb_set_errcall,
 };
 
@@ -911,7 +920,8 @@ base_bdb_pack(svn_fs_t *fs,
               void *notify_baton,
               svn_cancel_func_t cancel,
               void *cancel_baton,
-              apr_pool_t *pool)
+              apr_pool_t *pool,
+              apr_pool_t *common_pool)
 {
   /* Packing is currently a no op for BDB. */
   return SVN_NO_ERROR;

@@ -601,7 +601,8 @@ svn_fs_pack(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool));
+                                       cancel_func, cancel_baton, pool,
+                                       common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -621,6 +622,17 @@ svn_fs_recover(const char *path,
                                                     common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
+}
+
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool)
+{
+  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

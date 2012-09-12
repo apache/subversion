@@ -96,7 +96,7 @@ typedef struct dir_conf_t {
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
-  apr_hash_t *hooks_env;             /* environment for hook scripts */
+  const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
 
 
@@ -550,43 +550,9 @@ SVNUseUTF8_cmd(cmd_parms *cmd, void *config, int arg)
 static const char *
 SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  apr_array_header_t *var;
+  dir_conf_t *conf = config;
 
-  var = svn_cstring_split(arg1, "=", TRUE, cmd->pool);
-  if (var && var->nelts >= 2)
-    {
-      dir_conf_t *conf = config;
-      const char *name;
-      const char *val;
-
-      if (! conf->hooks_env)
-        conf->hooks_env = apr_hash_make(cmd->pool);
-
-      name = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                         APR_ARRAY_IDX(var, 0, const char *));
-
-      /* Special case for values which contain '='. */
-      if (var->nelts > 2)
-        {
-          svn_stringbuf_t *buf;
-          int i;
-
-          buf = svn_stringbuf_create(APR_ARRAY_IDX(var, 1, const char *),
-                                     cmd->pool);
-          for (i = 2; i < var->nelts; i++)
-            {
-              svn_stringbuf_appendbyte(buf, '=');
-              svn_stringbuf_appendcstr(buf, APR_ARRAY_IDX(var, i, const char *));
-            }
-
-          val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env), buf->data);
-        }
-      else
-        val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                          APR_ARRAY_IDX(var, 1, const char *));
-
-      apr_hash_set(conf->hooks_env, name, APR_HASH_KEY_STRING, val);
-    }
+  conf->hooks_env = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -878,7 +844,7 @@ dav_svn__get_compression_level(void)
   return svn__compression_level;
 }
 
-apr_hash_t *
+const char *
 dav_svn__get_hooks_env(request_rec *r)
 {
   dir_conf_t *conf;
@@ -1136,10 +1102,12 @@ static const command_rec cmds[] =
                "use UTF-8 as native character encoding (default is ASCII)."),
 
   /* per directory/location */
-  AP_INIT_ITERATE("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
-                  ACCESS_CONF|RSRC_CONF,
-                  "Set the environment of hook scripts via any number of "
-                  "VAR=VAL arguments (the default hook environment is empty)."),
+  AP_INIT_TAKE1("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
+                ACCESS_CONF|RSRC_CONF,
+                "Sets the path to the configuration file for the environment "
+                "of hook scripts. If not absolute, the path is relative to "
+                "the repository's conf directory (by default the hooks-env "
+                "file in the repository is used)."),
   { NULL }
 };
 

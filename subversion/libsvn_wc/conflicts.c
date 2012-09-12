@@ -511,9 +511,6 @@ static const svn_token_map_t local_change_map[] =
   { "replaced",         svn_wc_conflict_reason_replaced },
   { "moved-away",       svn_wc_conflict_reason_moved_away },
   { "moved-here",       svn_wc_conflict_reason_moved_here },
-  /* ### Do we really need this. The edit state is on a different node,
-         which might just change while the tree conflict exists? */
-  { "moved-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
   { NULL }
 };
 

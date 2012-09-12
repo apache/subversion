@@ -39,7 +39,6 @@
 #include "svn_private_config.h"
 
 #include <glib.h>
-#include <dbus/dbus.h>
 #include <gnome-keyring.h>
 
 
@@ -429,12 +428,14 @@ simple_gnome_keyring_save_creds(svn_boolean_t *saved,
                                           pool);
 }
 
+#if GLIB_CHECK_VERSION(2,6,0)
 static void
 log_noop(const gchar *log_domain, GLogLevelFlags log_level,
          const gchar *message, gpointer user_data)
 {
   /* do nothing */
 }
+#endif
 
 static void
 init_gnome_keyring(void)
@@ -450,7 +451,9 @@ init_gnome_keyring(void)
      suppress stderr spam for not only libgnome-keyring, but for
      anything else the app is linked to that uses glib logging and
      doesn't specify a log_domain. */
+#if GLIB_CHECK_VERSION(2,6,0)
   g_log_set_default_handler(log_noop, NULL);
+#endif
 }
 
 static const svn_auth_provider_t gnome_keyring_simple_provider = {

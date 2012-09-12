@@ -78,7 +78,6 @@ const svn_token_map_t svn_wc__conflict_reason_map[] =
   { "replaced",    svn_wc_conflict_reason_replaced },
   { "unversioned", svn_wc_conflict_reason_unversioned },
   { "moved-away", svn_wc_conflict_reason_moved_away },
-  { "moved-away-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
   { "moved-here", svn_wc_conflict_reason_moved_here },
   { NULL }
 };
