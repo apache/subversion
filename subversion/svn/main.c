@@ -695,7 +695,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The search pattern may include glob syntax wildcards:\n"
      "      ?      matches any single character\n"
      "      *      matches a sequence of arbitrary characters\n"
-     "      [...]  matches any of the characters listed inside the brackets\n"
+     "      [abc]  matches any of the characters listed inside the brackets\n"
      "  If multiple --search options are provided, a log message is shown if\n"
      "  it matches any of the provided search patterns. If the --search-and\n"
      "  option is used, that option's argument is combined with the pattern\n"
