@@ -1541,33 +1541,29 @@ def mergeinfo_switch_elision(sbox):
   beta_path     = os.path.join(wc_dir, "A", "B", "E", "beta")
 
   # Make branches A/B_COPY_1 and A/B_COPY_2
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["A    " + os.path.join(wc_dir, "A", "B_COPY_1", "lambda") + "\n",
+  expected_stdout = svntest.verify.UnorderedOutput([
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "lambda") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E", "alpha") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E", "beta") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "F") + "\n",
      "Checked out revision 1.\n",
-     "A         " + B_COPY_1_path + "\n"],
-    [],
-    'copy',
-    sbox.repo_url + "/A/B",
-    B_COPY_1_path)
+     "A         " + B_COPY_1_path + "\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+                                     sbox.repo_url + "/A/B", B_COPY_1_path)
 
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["A    " + os.path.join(wc_dir, "A", "B_COPY_2", "lambda") + "\n",
+  expected_stdout = svntest.verify.UnorderedOutput([
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "lambda") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E", "alpha") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E", "beta") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "F") + "\n",
      "Checked out revision 1.\n",
-     "A         " + B_COPY_2_path + "\n"],
-    [],
-    'copy',
-    sbox.repo_url + "/A/B",
-    B_COPY_2_path)
+     "A         " + B_COPY_2_path + "\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+                                     sbox.repo_url + "/A/B", B_COPY_2_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/B_COPY_1' : Item(verb='Adding'),

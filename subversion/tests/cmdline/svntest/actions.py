@@ -448,7 +448,8 @@ class LogEntry:
       self.revprops = revprops
 
   def assert_changed_paths(self, changed_paths):
-    """Not implemented, so just raises svntest.Failure.
+    """Assert that changed_paths is the same as this entry's changed_paths
+    Raises svntest.Failure if not.
     """
     raise Failure('NOT IMPLEMENTED')
 
@@ -902,13 +903,21 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   if dry_run and out != out_dry:
     # Due to the way ra_serf works, it's possible that the dry-run and
     # real merge operations did the same thing, but the output came in
-    # a different order.  Let's see if maybe that's the case.
+    # a different order.  Let's see if maybe that's the case by comparing
+    # the outputs as unordered sets rather than as lists.
     #
-    # NOTE:  Would be nice to limit this dance to serf tests only, but...
-    out_copy = out[:]
-    out_dry_copy = out_dry[:]
-    out_copy.sort()
-    out_dry_copy.sort()
+    # This now happens for other RA layers with modern APR because the
+    # hash order now varies.
+    #
+    # The different orders of the real and dry-run merges may cause
+    # the "Merging rX through rY into" lines to be duplicated a
+    # different number of times in the two outputs.  The list-set
+    # conversion removes duplicates so these differences are ignored.
+    # It also removes "U some/path" duplicate lines.  Perhaps we
+    # should avoid that?
+    out_copy = set(out[:])
+    out_dry_copy = set(out_dry[:])
+
     if out_copy != out_dry_copy:
       print("=============================================================")
       print("Merge outputs differ")
@@ -1192,6 +1201,56 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree,
     print("ACTUAL UNQUIET STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
+
+def run_and_verify_status_xml(expected_entries = [],
+                              *args):
+  """ Run 'status --xml' with arguments *ARGS.  If successful the output
+  is parsed into an XML document and will be verified by comparing against
+  EXPECTED_ENTRIES.
+  """
+
+  exit_code, output, errput = run_and_verify_svn(None, None, [],
+                                                 'status', '--xml', *args)
+
+  if len(errput) > 0:
+    raise Failure
+
+  doc = parseString(''.join(output))
+  entries = doc.getElementsByTagName('entry')
+
+  def getText(nodelist):
+    rc = []
+    for node in nodelist:
+        if node.nodeType == node.TEXT_NODE:
+            rc.append(node.data)
+    return ''.join(rc)
+
+  actual_entries = {}
+  for entry in entries:
+    wcstatus = entry.getElementsByTagName('wc-status')[0]
+    commit = entry.getElementsByTagName('commit')
+    author = entry.getElementsByTagName('author')
+    rstatus = entry.getElementsByTagName('repos-status')
+
+    actual_entry = {'wcprops' : wcstatus.getAttribute('props'),
+                    'wcitem' : wcstatus.getAttribute('item'),
+                    }
+    if wcstatus.hasAttribute('revision'):
+      actual_entry['wcrev'] = wcstatus.getAttribute('revision')
+    if (commit):
+      actual_entry['crev'] = commit[0].getAttribute('revision')
+    if (author):
+      actual_entry['author'] = getText(author[0].childNodes)
+    if (rstatus):
+      actual_entry['rprops'] = rstatus[0].getAttribute('props')
+      actual_entry['ritem'] = rstatus[0].getAttribute('item')
+
+    actual_entries[entry.getAttribute('path')] = actual_entry
+
+  if expected_entries != actual_entries:
+    raise Failure('\n' + '\n'.join(difflib.ndiff(
+          pprint.pformat(expected_entries).splitlines(),
+          pprint.pformat(actual_entries).splitlines())))
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,
