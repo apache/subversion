@@ -68,7 +68,7 @@ Candidate changes:
      listings in dump files in alphabetical order, and this test does
      not parse dump files and sort properties for comparison.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
