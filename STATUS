@@ -148,13 +148,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1383483
+ * r1365519, r1383029, r1383483
    Fix assertions in ra_serf triggered when communicating with a
    repository hosted at the server root URL.
    Justification:
      Assertions tell us that stuff is wrong.  Very wrong.
+   Notes:
+     r1365519: renames variables; dups a string into the session pool
+     r1383029: fixes svn_ra_serf__reparent to avoid NULL url.path
+     r1383483: fixes a couple of other NULL url.path instances
    Branch:
-     ^/subversion/branches/1.7.x-r1383483
+     ^/subversion/branches/1.7.x-serf-server-root-segfaults
    Votes:
      +1: cmpilato
 
