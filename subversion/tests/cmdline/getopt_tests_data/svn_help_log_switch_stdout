@@ -40,8 +40,8 @@ usage: 1. log [PATH][@REV]
   If multiple --search options are provided, a log message is shown if
   it matches any of the provided search patterns. If the --search-and
   option is used, that option's argument is combined with the pattern
-  from any previous --search or --search-and option, and a log message
-  is shown only if it matches any of the combined search patterns.
+  from the previous --search or --search-and option, and a log message
+  is shown only if it matches the combined search pattern.
   If --limit is used in combination with --search, --limit restricts the
   number of log messages searched, rather than restricting the output
   to a particular number of matching log messages.
@@ -117,7 +117,7 @@ Valid options:
                                    Show C function name in diff output.
   --search ARG             : use ARG as search pattern (glob syntax)
                              Multiple search patterns match independently.
-  --search-and ARG         : combine ARG with any previous search pattern
+  --search-and ARG         : combine ARG with the previous search pattern
                              Combined search patterns match unitedly.
   --isearch ARG            : like --search, but case-insensitive
   --isearch-and ARG        : like --search-and, but case-insensitive
