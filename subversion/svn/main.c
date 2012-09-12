@@ -377,17 +377,11 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
   {"search", opt_search, 1,
-                       N_("use ARG as search pattern (glob syntax)\n"
-                       "                             "
-                       "Multiple search patterns match independently.")},
-
+                       N_("use ARG as search pattern (glob syntax)")},
   {"isearch", opt_isearch, 1,
                        N_("like --search, but case-insensitive")}, 
-
   {"search-and", opt_search_and, 1,
-                       N_("combine ARG with the previous search pattern\n"
-                       "                             "
-                       "Combined search patterns match unitedly.")},
+                       N_("combine ARG with the previous search pattern")},
 
   {"isearch-and", opt_isearch_and, 1,
                        N_("like --search-and, but case-insensitive")}, 
