@@ -230,7 +230,7 @@ class BackgroundWorker(threading.Thread):
             try:
                 if operation == OP_UPDATE:
                     self._update(wc)
-                if operation == OP_BOOT:
+                elif operation == OP_BOOT:
                     self._update(wc, boot=True)
                 elif operation == OP_CLEANUP:
                     self._cleanup(wc)
@@ -276,18 +276,12 @@ class BackgroundWorker(threading.Thread):
         info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
 
-        ### update the .revision file
-        dotrevision = os.path.join(wc.path, '.revision') 
-        try:
-            os.unlink(dotrevision)
-        except OSError, e:
-            if e.errno != errno.ENOENT:
-                raise
-        open(dotrevision, 'w').write(info['Revision'])
-
         ## Run the hook
         if self.hook:
-            args = [self.hook, ['post-update', 'boot'][boot],
+            hook_mode = ['post-update', 'boot'][boot]
+            logging.info('running hook: %s at revision %s due to %s',
+                         wc.path, info['Revision'], hook_mode)
+            args = [self.hook, hook_mode,
                     wc.path, info['Revision'], wc.url]
             subprocess.check_call(args, env=self.env)
 

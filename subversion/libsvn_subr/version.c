@@ -26,6 +26,7 @@
 #include "svn_error.h"
 #include "svn_version.h"
 
+#include "sysinfo.h"
 #include "svn_private_config.h"
 
 const svn_version_t *
@@ -95,4 +96,100 @@ svn_ver_check_list(const svn_version_t *my_version,
     }
 
   return err;
+}
+
+
+struct svn_version_extended_t
+{
+  const char *build_date;       /* Compilation date */
+  const char *build_time;       /* Compilation time */
+  const char *build_host;       /* Build canonical host name */
+  const char *copyright;        /* Copyright notice (localized) */
+  const char *runtime_host;     /* Runtime canonical host name */
+  const char *runtime_osname;   /* Running OS release name */
+
+  /* Array of svn_version_ext_linked_lib_t describing dependent
+     libraries. */
+  const apr_array_header_t *linked_libs;
+
+  /* Array of svn_version_ext_loaded_lib_t describing loaded shared
+     libraries. */
+  const apr_array_header_t *loaded_libs;
+};
+
+
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool)
+{
+  svn_version_extended_t *info = apr_pcalloc(pool, sizeof(*info));
+
+  info->build_date = __DATE__;
+  info->build_time = __TIME__;
+  info->build_host = SVN_BUILD_HOST;
+  info->copyright = apr_pstrdup
+    (pool, _("Copyright (C) 2012 The Apache Software Foundation.\n"
+             "This software consists of contributions made by many people;\n"
+             "see the NOTICE file for more information.\n"
+             "Subversion is open source software, see "
+             "http://subversion.apache.org/\n"));
+
+  if (verbose)
+    {
+      info->runtime_host = svn_sysinfo__canonical_host(pool);
+      info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->linked_libs = svn_sysinfo__linked_libs(pool);
+      info->loaded_libs = svn_sysinfo__loaded_libs(pool);
+    }
+
+  return info;
+}
+
+
+const char *
+svn_version_ext_build_date(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_date;
+}
+
+const char *
+svn_version_ext_build_time(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_time;
+}
+
+const char *
+svn_version_ext_build_host(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_host;
+}
+
+const char *
+svn_version_ext_copyright(const svn_version_extended_t *ext_info)
+{
+  return ext_info->copyright;
+}
+
+const char *
+svn_version_ext_runtime_host(const svn_version_extended_t *ext_info)
+{
+  return ext_info->runtime_host;
+}
+
+const char *
+svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info)
+{
+  return ext_info->runtime_osname;
+}
+
+const apr_array_header_t *
+svn_version_ext_linked_libs(const svn_version_extended_t *ext_info)
+{
+  return ext_info->linked_libs;
+}
+
+const apr_array_header_t *
+svn_version_ext_loaded_libs(const svn_version_extended_t *ext_info)
+{
+  return ext_info->loaded_libs;
 }

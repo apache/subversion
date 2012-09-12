@@ -21,14 +21,12 @@
 #
 set -e
 
-# NOTE: Before bumping the default APR dependency the 1.6.x test suite
-# should be adjusted to cope with hash ordering changes from APR 1.4.6.
-APR=apr-1.4.5
+APR=apr-1.4.6
 APR_UTIL=apr-util-1.4.1
 NEON=neon-0.29.6
 SERF=serf-0.3.1
-ZLIB=zlib-1.2.6
-SQLITE_VERSION=3071100
+ZLIB=zlib-1.2.7
+SQLITE_VERSION=3071400
 SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
 HTTPD=httpd-2.2.22

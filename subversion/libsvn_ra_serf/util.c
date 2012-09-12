@@ -2232,7 +2232,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
 
       /* Now recreate the root_url. */
       session->repos_root = session->session_url;
-      session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
+      session->repos_root.path =
+        (char *)svn_fspath__canonicalize(url_buf->data, session->pool);
       session->repos_root_str =
         svn_urlpath__canonicalize(apr_uri_unparse(session->pool,
                                                   &session->repos_root, 0),

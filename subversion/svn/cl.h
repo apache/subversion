@@ -108,6 +108,12 @@ typedef enum svn_cl__accept_t
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word);
 
+/* --search and --isearch option values */
+typedef struct svn_cl__search_pattern_t {
+  const char *pattern; /* glob syntax */
+  svn_boolean_t case_insensitive;
+} svn_cl__search_pattern_t;
+
 
 /*** Mergeinfo flavors. ***/
 
@@ -237,8 +243,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   svn_boolean_t show_inherited_props; /* get inherited properties */
-  const char *search_pattern;     /* pattern argument for --search */
-  svn_boolean_t case_insensitive_search; /* perform case-insensitive search */
+  apr_array_header_t* search_patterns; /* pattern arguments for --search */
 
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;

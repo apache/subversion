@@ -31,12 +31,18 @@ usage: 1. log [PATH][@REV]
   and limits the scope of the displayed diff to the specified depth.
 
   If the --search option is used, log messages are displayed only if the
-  provided search pattern matches the author, date, log message text,
-  or, if the --verbose option is also provided, a changed path.
-  The search pattern may include glob syntax wildcards:
+  provided search pattern matches any of the author, date, log message
+  text (unless --quiet is used), or, if the --verbose option is also
+  provided, a changed path.
+  The search pattern may include "glob syntax" wildcards:
       ?      matches any single character
       *      matches a sequence of arbitrary characters
-      [...]  matches any of the characters listed inside the brackets
+      [abc]  matches any of the characters listed inside the brackets
+  If multiple --search options are provided, a log message is shown if
+  it matches any of the provided search patterns. If the --search-and
+  option is used, that option's argument is combined with the pattern
+  from the previous --search or --search-and option, and a log message
+  is shown only if it matches the combined search pattern.
   If --limit is used in combination with --search, --limit restricts the
   number of log messages searched, rather than restricting the output
   to a particular number of matching log messages.
@@ -111,7 +117,9 @@ Valid options:
                                 -p (--show-c-function):
                                    Show C function name in diff output.
   --search ARG             : use ARG as search pattern (glob syntax)
+  --search-and ARG         : combine ARG with the previous search pattern
   --isearch ARG            : like --search, but case-insensitive
+  --isearch-and ARG        : like --search-and, but case-insensitive
 
 Global options:
   --username ARG           : specify a username ARG
