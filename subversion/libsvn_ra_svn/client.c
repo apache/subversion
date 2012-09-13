@@ -1034,7 +1034,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+  SVN_ERR(ra_svn_get_repos_root(session, &repos_root_url, scratch_pool));
 
   *inherited_props = apr_array_make(
     result_pool, iproplist->nelts, sizeof(svn_prop_inherited_item_t *));
