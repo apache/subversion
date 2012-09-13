@@ -753,7 +753,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "       3. merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
 "          (the '2-URL' merge)\n"
 "\n"
-"  1. This form, with with one source path and no revision range, is called\n"
+"  1. This form, with one source path and no revision range, is called\n"
 "     an 'automatic' merge:\n"
 "\n"
 "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
