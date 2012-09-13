@@ -225,7 +225,7 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
    Use RESULT_POOL for all allocations. */
 svn_error_t *
 svn_skel__unparse_iproplist(svn_skel_t **skel_p,
-                            apr_array_header_t *inherited_props,
+                            const apr_array_header_t *inherited_props,
                             apr_pool_t *result_pool);
 
 #ifdef __cplusplus
