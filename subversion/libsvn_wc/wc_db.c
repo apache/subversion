@@ -9336,7 +9336,7 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 }
 
 /* Recursive body of svn_wc__db_get_children_with_cached_iprops. */
-svn_error_t *
+static svn_error_t *
 get_children_with_cached_iprops(apr_hash_t *iprop_paths,
                                 svn_depth_t depth,
                                 const char *local_abspath,
