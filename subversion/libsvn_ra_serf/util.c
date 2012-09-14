@@ -2418,9 +2418,8 @@ expat_response_handler(serf_request_t *request,
       XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
     }
 
-  /* ### should we bail on anything < 200 or >= 300 ??
-     ### actually: < 200 should really be handled by the core.  */
-  if (ectx->handler->sline.code == 404)
+  /* ### TODO: sline.com < 200 should really be handled by the core */
+  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
     {
       /* By deferring to expect_empty_body(), it will make a choice on
          how to handle the body. Whatever the decision, the core handler
