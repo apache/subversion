@@ -1564,33 +1564,11 @@ svn_fs_node_prop(svn_string_t **value_p,
                  apr_pool_t *pool);
 
 
-/** If @a table_p is not null, then set @a *table_p to the entire property
- * list of @a path in @a root.  The resulting table maps
+/** Set @a *table_p to the entire property list of @a path in @a root,
+ * as an APR hash table allocated in @a pool.  The resulting table maps
  * property names to pointers to #svn_string_t objects containing the
  * property value.
- *
- * If @a inherited_values is not @c NULL, then set @a *inherited_values to
- * a depth-first ordered array of #svn_prop_inherited_item_t * structures
- * (the path_or_url members of which are relative filesystem paths)
- * representing the properties inherited by @a path.  If @a inherited_values
- * is not @c NULL and no properties are inherited, then set
- * @a *inherited_values to an empty array.
- *
- * @since New in 1.8.
  */
-svn_error_t *
-svn_fs_node_proplist2(apr_hash_t **table_p,
-                      apr_array_header_t **inherited_props,
-                      svn_fs_root_t *root,
-                      const char *path,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
-
-/**
- * Similar to svn_fs_node_proplist2 but doesn't support the retrieval of
- * the properties inherited by @a path and doesn't use a scratch pool.
- *
- * @deprecated Provided for backward compatibility with the 1.8 API. */
 svn_error_t *
 svn_fs_node_proplist(apr_hash_t **table_p,
                      svn_fs_root_t *root,

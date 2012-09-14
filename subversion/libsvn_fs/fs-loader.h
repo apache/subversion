@@ -274,11 +274,8 @@ typedef struct root_vtable_t
   svn_error_t *(*node_prop)(svn_string_t **value_p, svn_fs_root_t *root,
                             const char *path, const char *propname,
                             apr_pool_t *pool);
-  svn_error_t *(*node_proplist)(apr_hash_t **table_p,
-                                apr_array_header_t **inherited_props,
-                                svn_fs_root_t *root,
-                                const char *path, apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+  svn_error_t *(*node_proplist)(apr_hash_t **table_p, svn_fs_root_t *root,
+                                const char *path, apr_pool_t *pool);
   svn_error_t *(*change_node_prop)(svn_fs_root_t *root, const char *path,
                                    const char *name,
                                    const svn_string_t *value,

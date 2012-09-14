@@ -1023,25 +1023,11 @@ svn_fs_node_prop(svn_string_t **value_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_node_proplist2(apr_hash_t **table_p,
-                      apr_array_header_t **inherited_props,
-                      svn_fs_root_t *root,
-                      const char *path,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(root->vtable->node_proplist(table_p, inherited_props,
-                                                     root, path,
-                                                     result_pool, scratch_pool));
-}
-
-
-svn_error_t *
 svn_fs_node_proplist(apr_hash_t **table_p, svn_fs_root_t *root,
                      const char *path, apr_pool_t *pool)
 {
-  return svn_error_trace(root->vtable->node_proplist(table_p, NULL, root,
-                                                     path, pool, pool));
+  return svn_error_trace(root->vtable->node_proplist(table_p, root, path,
+                                                     pool));
 }
 
 svn_error_t *
