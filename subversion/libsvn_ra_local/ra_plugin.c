@@ -1057,15 +1057,11 @@ get_node_props(apr_hash_t **props,
   /* Turn FS-path keys into URLs. */
   if (inherited_props)
     {
-      svn_revnum_t revision;
       int i;
 
-      revision = svn_fs_revision_root_revision(root);
-      SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props,
-                                               sess->repos, path,
-                                               revision, NULL, NULL,
-                                               result_pool,
-                                               scratch_pool));
+      SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
+                                               NULL, NULL,
+                                               result_pool, scratch_pool));
 
       for (i = 0; i < (*inherited_props)->nelts; i++)
         {
