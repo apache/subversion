@@ -100,22 +100,15 @@ Valid options:
   --diff                   : produce diff output
   --diff-cmd ARG           : use ARG as diff command
   --internal-diff          : override diff-cmd specified in config file
-  -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
-                             external diff program, ARG is simply passed along
-                             to the program. But when Subversion is using its
-                             default internal diff implementation, or when
-                             Subversion is displaying blame annotations, ARG
-                             could be any of the following:
-                                -u (--unified):
-                                   Output 3 lines of unified context.
-                                -b (--ignore-space-change):
-                                   Ignore changes in the amount of white space.
-                                -w (--ignore-all-space):
-                                   Ignore all white space.
-                                --ignore-eol-style:
-                                   Ignore changes in EOL style.
-                                -p (--show-c-function):
-                                   Show C function name in diff output.
+  -x [--extensions] ARG    : Specify differencing options for external diff or
+                             internal diff or blame. Default: '-u'. Options are
+                             separated by spaces. Internal diff and blame take:
+                               -u, --unified: Show 3 lines of unified context
+                               -b, --ignore-space-change: Ignore changes in
+                                 amount of white space
+                               -w, --ignore-all-space: Ignore all white space
+                               --ignore-eol-style: Ignore changes in EOL style
+                               -p, --show-c-function: Show C function name
   --search ARG             : use ARG as search pattern (glob syntax)
   --search-and ARG         : combine ARG with the previous search pattern
   --isearch ARG            : like --search, but case-insensitive
