@@ -3244,12 +3244,10 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
 /**
  * Set @a *inherited_values to a depth-first ordered array of
- * #svn_prop_inherited_item_t * structures (the path_or_url members of which
- * are relative filesystem paths)  representing the properties inherited by
- * @a path at @a revision in @a repos.  If no properties are inherited, then
- * set @a *inherited_values to an empty array.
- *
- * If @a revision is #SVN_INVALID_REVNUM, it defaults to youngest.
+ * #svn_prop_inherited_item_t * structures (the path_or_url members of
+ * which are relative filesystem paths) representing the properties
+ * inherited by @a path in @a root.  If no properties are inherited,
+ * then set @a *inherited_values to an empty array.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
@@ -3263,9 +3261,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  */
 svn_error_t *
 svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
-                                 svn_repos_t *repos,
+                                 svn_fs_root_t *root,
                                  const char *path,
-                                 svn_revnum_t revision,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,

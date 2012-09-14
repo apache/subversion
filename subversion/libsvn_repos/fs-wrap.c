@@ -720,25 +720,19 @@ svn_repos_fs_pack2(svn_repos_t *repos,
 
 svn_error_t *
 svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
-                                 svn_repos_t *repos,
+                                 svn_fs_root_t *root,
                                  const char *path,
-                                 svn_revnum_t revision,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_fs_root_t *root;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *inherited_props;
   const char *parent_path = path;
 
-  if (!SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR(svn_fs_youngest_rev(&revision, repos->fs, iterpool));
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, revision, scratch_pool));
-
   inherited_props = apr_array_make(result_pool, 1,
-                                    sizeof(svn_prop_inherited_item_t *));
+                                   sizeof(svn_prop_inherited_item_t *));
   while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
     {
       svn_boolean_t allowed = TRUE;
