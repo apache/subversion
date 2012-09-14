@@ -914,7 +914,8 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
          skip, but allow them to inherit from further up. */
       if (err)
         {
-          if (err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
+          if ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
+              || (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN))
             {
               svn_error_clear(err);
               continue;
