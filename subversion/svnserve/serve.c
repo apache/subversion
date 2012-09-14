@@ -979,12 +979,7 @@ get_props(apr_hash_t **props,
       svn_revnum_t crev;
       const char *cdate, *cauthor, *uuid;
 
-      /* Yes, we could grab the inherited properties here too, but while we
-         already know the user has read access to PATH, we don't know that
-         the same holds true for PATH's parents, so we call
-         svn_repos_fs_get_inherited_props below, which performs the necessary
-         authz checks. */
-      SVN_ERR(svn_fs_node_proplist2(props, NULL, root, path, pool, pool));
+      SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
 
       /* Hardcode the values for the committed revision, date, and author. */
       SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
@@ -1008,10 +1003,11 @@ get_props(apr_hash_t **props,
 
   /* Get any inherited properties the user is authorized to. */
   if (iprops)
-    SVN_ERR(svn_repos_fs_get_inherited_props(
-      iprops, b->repos, path,
-      svn_fs_revision_root_revision(root),
-      authz_check_access_cb_func(b), b, pool, pool));
+    {
+      SVN_ERR(svn_repos_fs_get_inherited_props(
+                  iprops, b->repos, path, svn_fs_revision_root_revision(root),
+                  authz_check_access_cb_func(b), b, pool, pool));
+    }
 
   return SVN_NO_ERROR;
 }
