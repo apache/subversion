@@ -738,95 +738,6 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                             lock_tokens, keep_locks, pool);
 }
 
-/* Helper for svn_ra_get_file2 and svn_ra_get_dir3 when those APIs need to
-   find PATH's inherited properties on a legacy server that doesn't have the
-   SVN_RA_CAPABILITY_INHERITED_PROPS capability.
-
-   All arguments are as per the two aforementioned APIs. */
-static svn_error_t*
-get_inherited_props(svn_ra_session_t *session,
-                    const char *path,
-                    svn_revnum_t revision,
-                    apr_array_header_t **inherited_props,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  const char *repos_root_url;
-  const char *session_url;
-  const char *parent_url;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  *inherited_props =
-    apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
-
-  /* Walk to the root of the repository getting inherited
-     props for PATH. */
-  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
-  parent_url = session_url;
-
-  while (strcmp(repos_root_url, parent_url))
-    {
-      apr_hash_index_t *hi;
-      apr_hash_t *parent_props;
-      apr_hash_t *final_hash = apr_hash_make(result_pool);
-      svn_error_t *err;
-
-      svn_pool_clear(iterpool);
-      parent_url = svn_uri_dirname(parent_url, iterpool);
-      SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
-      err = session->vtable->get_dir(session, NULL, NULL,
-                                     &parent_props, NULL, "",
-                                     revision, SVN_DIRENT_ALL,
-                                     iterpool, iterpool);
-
-      /* If the user doesn't have read access to a parent path then
-         skip, but allow them to inherit from further up. */
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
-            {
-              svn_error_clear(err);
-              continue;
-            }
-          else
-            {
-              return svn_error_trace(err);
-            }
-        }
-
-      for (hi = apr_hash_first(scratch_pool, parent_props);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *name = svn__apr_hash_index_key(hi);
-          apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-          svn_string_t *value = svn__apr_hash_index_val(hi);
-
-          if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
-            {
-              name = apr_pstrdup(result_pool, name);
-              value = svn_string_dup(value, result_pool);
-              apr_hash_set(final_hash, name, klen, value);
-            }
-        }
-
-      if (apr_hash_count(final_hash))
-        {
-          svn_prop_inherited_item_t *new_iprop =
-            apr_palloc(result_pool, sizeof(*new_iprop));
-          new_iprop->path_or_url = apr_pstrdup(result_pool, parent_url);
-          new_iprop->prop_hash = final_hash;
-          svn_sort__array_insert(&new_iprop, *inherited_props, 0);
-        }
-    }
-
-  /* Reparent session back to original URL. */
-  SVN_ERR(svn_ra_reparent(session, session_url, scratch_pool));
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
                               const char *path,
@@ -861,9 +772,9 @@ svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
           SVN_ERR(session->vtable->get_file(session, path, revision, stream,
                                             fetched_rev, props, NULL,
                                             result_pool, scratch_pool));
-          SVN_ERR(get_inherited_props(session, path, revision,
-                                      inherited_props, result_pool,
-                                      scratch_pool));
+          SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision,
+                                                   inherited_props,
+                                                   result_pool, scratch_pool));
         }
     }
   else
@@ -912,9 +823,9 @@ svn_ra_get_dir3(svn_ra_session_t *session,
                                            props, NULL, path, revision,
                                            dirent_fields, result_pool,
                                            scratch_pool));
-          SVN_ERR(get_inherited_props(session, path, revision,
-                                      inherited_props, result_pool,
-                                      scratch_pool));
+          SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision,
+                                                   inherited_props,
+                                                   result_pool, scratch_pool));
         }
     }
   else
@@ -1439,12 +1350,19 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                                 scratch_pool));
 
   if (iprop_capable)
-    return svn_error_trace(session->vtable->get_inherited_props(
-      session, iprops, path, revision, result_pool, scratch_pool));
-  /* Fallback for legacy servers. */
-  return svn_error_trace(get_inherited_props(session, path, revision,
-                                             iprops, result_pool,
-                                             scratch_pool));
+    {
+      SVN_ERR(session->vtable->get_inherited_props(session, iprops, path,
+                                                   revision, result_pool,
+                                                   scratch_pool));
+    }
+  else
+    {
+      /* Fallback for legacy servers. */
+      SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision, iprops,
+                                               result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

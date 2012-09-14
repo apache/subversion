@@ -483,6 +483,21 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  apr_pool_t *pool);
 
 
+/**
+ * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * need to find PATH's inherited properties on a legacy server that
+ * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
+ *
+ * All arguments are as per the two aforementioned APIs.
+ */
+svn_error_t *
+svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_array_header_t **inherited_props,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
 /* Utility function to provide a shim between a returned Ev2 and an RA
    provider's Ev1-based commit editor.
 
