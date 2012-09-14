@@ -187,37 +187,23 @@ const apr_getopt_option_t svn_cl__options[] =
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
   {"extensions",    'x', 1,
-                    N_("Default: '-u'. When Subversion is invoking an\n"
+                    N_("Specify differencing options for external diff or\n"
                        "                             "
-                       "external diff program, ARG is simply passed along\n"
+                       "internal diff or blame. Default: '-u'. Options are\n"
                        "                             "
-                       "to the program. But when Subversion is using its\n"
+                       "separated by spaces. Internal diff and blame take:\n"
                        "                             "
-                       "default internal diff implementation, or when\n"
+                       "  -u, --unified: Show 3 lines of unified context\n"
                        "                             "
-                       "Subversion is displaying blame annotations, ARG\n"
+                       "  -b, --ignore-space-change: Ignore changes in\n"
                        "                             "
-                       "could be any of the following:\n"
+                       "    amount of white space\n"
                        "                             "
-                       "   -u (--unified):\n"
+                       "  -w, --ignore-all-space: Ignore all white space\n"
                        "                             "
-                       "      Output 3 lines of unified context.\n"
+                       "  --ignore-eol-style: Ignore changes in EOL style\n"
                        "                             "
-                       "   -b (--ignore-space-change):\n"
-                       "                             "
-                       "      Ignore changes in the amount of white space.\n"
-                       "                             "
-                       "   -w (--ignore-all-space):\n"
-                       "                             "
-                       "      Ignore all white space.\n"
-                       "                             "
-                       "   --ignore-eol-style:\n"
-                       "                             "
-                       "      Ignore changes in EOL style.\n"
-                       "                             "
-                       "   -p (--show-c-function):\n"
-                       "                             "
-                       "      Show C function name in diff output.")},
+                       "  -p, --show-c-function: Show C function name")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
