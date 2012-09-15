@@ -371,7 +371,7 @@ init_adm(svn_wc__db_t *db,
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
-  /* Create the SDB. */
+  /* Create the SDB and PDB. */
   SVN_ERR(svn_wc__db_init(db, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
                           initial_rev, depth,

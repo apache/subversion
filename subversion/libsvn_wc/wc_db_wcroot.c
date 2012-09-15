@@ -166,16 +166,31 @@ static apr_status_t
 close_wcroot(void *data)
 {
   svn_wc__db_wcroot_t *wcroot = data;
-  svn_error_t *err;
+  svn_error_t *err_sdb, *err_pdb;
 
   SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
-
-  err = svn_sqlite__close(wcroot->sdb);
+  err_sdb = svn_sqlite__close(wcroot->sdb);
   wcroot->sdb = NULL;
-  if (err)
+
+  if (wcroot->pdb != NULL)
     {
-      apr_status_t result = err->apr_err;
-      svn_error_clear(err);
+      /*FIXME: Should remove this when CP is complete. */
+      SVN_ERR_ASSERT_NO_RETURN(wcroot->pdb != NULL);
+      err_pdb = svn_sqlite__close(wcroot->pdb);
+      wcroot->pdb = NULL;
+ 
+      if (err_pdb)
+        {
+          apr_status_t result = err_pdb->apr_err;
+          svn_error_clear(err_pdb);
+          return result;
+        }
+    }
+
+  if (err_sdb)
+    {
+      apr_status_t result = err_sdb->apr_err;
+      svn_error_clear(err_sdb);
       return result;
     }
 
@@ -301,6 +316,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
 
   (*wcroot)->abspath = wcroot_abspath;
   (*wcroot)->sdb = sdb;
+  (*wcroot)->pdb = NULL;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
   /* 8 concurrent locks is probably more than a typical wc_ng based svn client

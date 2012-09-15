@@ -1443,15 +1443,17 @@ create_pristine_db(svn_sqlite__db_t **pdb,
   int i;
 
   /* TODO: Sqlite statements must be auto-generated from an SQL file. */
-  /* Temporarily hardcoded here.
+  /* Temporarily hardcoded here. */
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the PDB will continue to
    * refer to it over its lifetime. */
   my_statements = apr_palloc(result_pool, 6 * sizeof(const char *));
   i = 0;
+  /* Move to pristine-queries.sql and update gen-make.py. */
   my_statements[i++] = "PRAGMA encoding = 'UTF-8'; PRAGMA page_size = 1024;";
-  my_statements[i++] = "CREATE TABLE pristine (digest CHAR(40) PRIMARY KEY, data BLOB)";
-  my_statements[i++] = "INSERT INTO pristine (digest, data) VALUES (?, ?)";
+  my_statements[i++] = "CREATE TABLE pristine (digest TEXT NOT NULL PRIMARY KEY, data BLOB)";
+  my_statements[i++] = "INSERT INTO pristine (digest, data) VALUES (?1, ?2)";
+  my_statements[i++] = "SELECT data FROM pristine where data = ?1";
   my_statements[i] = NULL;
 
   SVN_ERR(svn_wc__db_util_open_db(pdb, dir_abspath, pdb_fname,

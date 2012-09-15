@@ -85,6 +85,9 @@ typedef struct svn_wc__db_wcroot_t {
      this wcroot.  */
   svn_sqlite__db_t *sdb;
 
+  /* The SQLite database containing the pristine files. */
+  svn_sqlite__db_t *pdb;
+
   /* The WCROOT.id for this directory (and all its children).  */
   apr_int64_t wc_id;
 
