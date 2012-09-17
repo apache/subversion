@@ -290,15 +290,12 @@ password_get_gnome_keyring(svn_boolean_t *done,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  char *default_keyring = NULL;
   GnomeKeyringResult result;
   GList *items;
 
   *done = FALSE;
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
-
-  default_keyring = get_default_keyring_name(pool);
 
   if (! apr_hash_get(parameters,
                      "gnome-keyring-opening-failed",
@@ -338,8 +335,6 @@ password_get_gnome_keyring(svn_boolean_t *done,
                    "");
     }
 
-  free(default_keyring);
-
   return SVN_NO_ERROR;
 }
 
@@ -355,15 +350,12 @@ password_set_gnome_keyring(svn_boolean_t *done,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  char *default_keyring = NULL;
   GnomeKeyringResult result;
   guint32 item_id;
 
   *done = FALSE;
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
-
-  default_keyring = get_default_keyring_name(pool);
 
   if (! apr_hash_get(parameters,
                      "gnome-keyring-opening-failed",
@@ -386,8 +378,6 @@ password_set_gnome_keyring(svn_boolean_t *done,
                    APR_HASH_KEY_STRING,
                    "");
     }
-
-  free(default_keyring);
 
   *done = (result == GNOME_KEYRING_RESULT_OK);
   return SVN_NO_ERROR;
