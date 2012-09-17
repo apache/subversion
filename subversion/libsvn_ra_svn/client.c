@@ -1087,34 +1087,27 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
                                     apr_hash_t **props,
-                                    apr_array_header_t **inherited_props,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
+                                    apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *proplist;
-  apr_array_header_t *iproplist;
   const char *expected_digest;
   svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, scratch_pool, "get-file", "c(?r)bbb",
-                               path, rev, (props != NULL), (stream != NULL),
-                               (inherited_props != NULL)));
-  SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, "(?c)rl?l",
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bb", path,
+                               rev, (props != NULL), (stream != NULL)));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl",
                                        &expected_digest,
-                                       &rev, &proplist, &iproplist));
+                                       &rev, &proplist));
 
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
-    SVN_ERR(svn_ra_svn_parse_proplist(proplist, result_pool, props));
-  if (inherited_props)
-    SVN_ERR(parse_iproplist(inherited_props, iproplist, session, result_pool,
-                            scratch_pool));
+    SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
 
   /* We're done if the contents weren't wanted. */
   if (!stream)
@@ -1123,12 +1116,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (expected_digest)
     {
       SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
-                                     expected_digest, scratch_pool));
-      checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+                                     expected_digest, pool));
+      checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
     }
 
   /* Read the file's contents. */
-  iterpool = svn_pool_create(scratch_pool);
+  iterpool = svn_pool_create(pool);
   while (1)
     {
       svn_ra_svn_item_t *item;
@@ -1150,15 +1143,15 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, ""));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   if (expected_checksum)
     {
       svn_checksum_t *checksum;
 
-      SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, scratch_pool));
+      SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, pool));
       if (!svn_checksum_match(checksum, expected_checksum))
-        return svn_checksum_mismatch_err(expected_checksum, checksum, scratch_pool,
+        return svn_checksum_mismatch_err(expected_checksum, checksum, pool,
                                          _("Checksum mismatch for '%s'"),
                                          path);
     }
@@ -1170,61 +1163,48 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                    apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
-                                   apr_array_header_t **inherited_props,
                                    const char *path,
                                    svn_revnum_t rev,
                                    apr_uint32_t dirent_fields,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
+                                   apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *proplist, *dirlist, *iproplist;
+  apr_array_header_t *proplist, *dirlist;
   int i;
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, scratch_pool, "w(c(?r)bb(!", "get-dir",
-                                 path, rev, (props != NULL),
-                                 (dirents != NULL)));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
+                                 rev, (props != NULL), (dirents != NULL)));
   if (dirent_fields & SVN_DIRENT_KIND)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_KIND));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_KIND));
   if (dirent_fields & SVN_DIRENT_SIZE)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_SIZE));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_SIZE));
   if (dirent_fields & SVN_DIRENT_HAS_PROPS)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_HAS_PROPS));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_HAS_PROPS));
   if (dirent_fields & SVN_DIRENT_CREATED_REV)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_CREATED_REV));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_CREATED_REV));
   if (dirent_fields & SVN_DIRENT_TIME)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_TIME));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
   if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
-    SVN_ERR(svn_ra_svn_write_word(conn, scratch_pool,
-                                  SVN_RA_SVN_DIRENT_LAST_AUTHOR));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, scratch_pool, "!)b)",
-                                 (inherited_props != NULL)));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
-  SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, "rll?l", &rev,
-                                       &proplist, &dirlist, &iproplist));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
+                                       &dirlist));
 
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
-    SVN_ERR(svn_ra_svn_parse_proplist(proplist, result_pool, props));
-  if (inherited_props)
-    SVN_ERR(parse_iproplist(inherited_props, iproplist, session, result_pool,
-                            scratch_pool));
+    SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
 
   /* We're done if dirents aren't wanted. */
   if (!dirents)
     return SVN_NO_ERROR;
 
   /* Interpret the directory list. */
-  *dirents = apr_hash_make(result_pool);
+  *dirents = apr_hash_make(pool);
   for (i = 0; i < dirlist->nelts; i++)
     {
       const char *name, *kind, *cdate, *cauthor;
@@ -1237,12 +1217,11 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Dirlist element not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, scratch_pool,
-                                     "cwnbr(?c)(?c)",
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
-      name = svn_relpath_canonicalize(name, result_pool);
-      dirent = apr_palloc(result_pool, sizeof(*dirent));
+      name = svn_relpath_canonicalize(name, pool);
+      dirent = apr_palloc(pool, sizeof(*dirent));
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
       dirent->has_props = has_props;
@@ -1258,7 +1237,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       if (cdate == NULL)
         dirent->time = 0;
       else
-        SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, result_pool));
+        SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
       dirent->last_author = cauthor;
       apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
     }

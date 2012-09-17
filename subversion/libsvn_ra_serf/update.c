@@ -2973,13 +2973,11 @@ try_get_wc_contents(svn_boolean_t *found_p,
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
-                      svn_revnum_t peg_rev,
+                      svn_revnum_t revision,
                       svn_stream_t *stream,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
-                      apr_array_header_t **inherited_props,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
+                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__connection_t *conn;
@@ -2987,15 +2985,13 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   apr_hash_t *fetch_props;
   svn_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
-  svn_revnum_t revision = peg_rev;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
 
   /* Fetch properties. */
 
-  fetch_url = svn_path_url_add_component2(session->session_url.path, path,
-                                          scratch_pool);
+  fetch_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
   /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
    *
@@ -3007,7 +3003,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__get_stable_url(&fetch_url, fetched_rev,
                                           session, conn,
                                           fetch_url, revision,
-                                          scratch_pool, scratch_pool));
+                                          pool, pool));
       revision = SVN_INVALID_REVNUM;
     }
   /* REVISION is always SVN_INVALID_REVNUM  */
@@ -3029,7 +3025,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
                                         SVN_INVALID_REVNUM,
                                         which_props,
-                                        result_pool, scratch_pool));
+                                        pool, pool));
 
   /* Verify that resource type is not collection. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
@@ -3043,16 +3039,15 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (props)
     {
       /* ### flatten_props() does not copy PROPVALUE, but fetch_node_props()
-         ### put them into RESULT_POOL, so we're okay.  */
+         ### put them into POOL, so we're okay.  */
       SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props,
-                                         result_pool, scratch_pool));
+                                         pool, pool));
     }
 
   if (stream)
     {
       svn_boolean_t found;
-      SVN_ERR(try_get_wc_contents(&found, session, fetch_props, stream,
-                                  scratch_pool));
+      SVN_ERR(try_get_wc_contents(&found, session, fetch_props, stream, pool));
 
       /* No contents found in the WC, let's fetch from server. */
       if (!found)
@@ -3061,17 +3056,16 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           svn_ra_serf__handler_t *handler;
 
           /* Create the fetch context. */
-          stream_ctx = apr_pcalloc(scratch_pool, sizeof(*stream_ctx));
+          stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
           stream_ctx->target_stream = stream;
           stream_ctx->sess = session;
           stream_ctx->conn = conn;
-          stream_ctx->info = apr_pcalloc(scratch_pool,
-                                         sizeof(*stream_ctx->info));
+          stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
           stream_ctx->info->name = fetch_url;
 
-          handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+          handler = apr_pcalloc(pool, sizeof(*handler));
 
-          handler->handler_pool = scratch_pool;
+          handler->handler_pool = pool;
           handler->method = "GET";
           handler->path = fetch_url;
           handler->conn = conn;
@@ -3090,27 +3084,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
           svn_ra_serf__request_create(handler);
 
-          SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session,
-                                                scratch_pool));
-        }
-    }
-
-  if (inherited_props)
-    {
-      svn_boolean_t supports_iprops;
-
-      SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_iprops,
-                                          SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                          scratch_pool));
-      if (!supports_iprops)
-        {
-          *inherited_props = NULL;
-        }
-      else
-        {
-          SVN_ERR(svn_ra_serf__get_inherited_props(ra_session, inherited_props,
-                                                   path, peg_rev, result_pool,
-                                                   scratch_pool));
+          SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
         }
     }
 
