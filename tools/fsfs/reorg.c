@@ -38,6 +38,7 @@
 #include "svn_hash.h"
 
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #ifndef _
 #define _(x) x
@@ -82,6 +83,7 @@ typedef struct location_t
 typedef struct direntry_t
 {
   const char *name;
+  apr_size_t name_len;
   noderev_t *node;
 } direntry_t;
 
@@ -148,6 +150,41 @@ typedef struct content_cache_t
   apr_size_t insert_count;
 } content_cache_t;
 
+typedef struct dir_cache_entry_t
+{
+  svn_revnum_t revision;
+  apr_off_t offset;
+  
+  apr_hash_t *hash;
+} dir_cache_entry_t;
+
+typedef struct dir_cache_t
+{
+  dir_cache_entry_t *entries;
+
+  apr_pool_t *pool1;
+  apr_pool_t *pool2;
+  apr_size_t entry_count;
+  apr_size_t insert_count;
+} dir_cache_t;
+
+typedef struct window_cache_entry_t
+{
+  svn_revnum_t revision;
+  apr_off_t offset;
+
+  svn_stringbuf_t *window;
+} window_cache_entry_t;
+
+typedef struct window_cache_t
+{
+  window_cache_entry_t *entries;
+
+  apr_pool_t *pool;
+  apr_size_t entry_count;
+  apr_size_t insert_count;
+} window_cache_t;
+
 typedef struct fs_fs_t
 {
   const char *path;
@@ -163,6 +200,8 @@ typedef struct fs_fs_t
 
   representation_t *null_base;
   content_cache_t *cache;
+  dir_cache_t *dir_cache;
+  window_cache_t *window_cache;
 } fs_fs_t;
 
 static const char *
@@ -217,7 +256,7 @@ create_content_cache(apr_pool_t *pool,
 
   result->pool = pool;
   result->hash_pool = svn_pool_create(pool);
-  result->hash = apr_hash_make(result->hash_pool);
+  result->hash = svn_hash__make(result->hash_pool);
   result->limit = limit;
   result->total_size = 0;
   result->insert_count = 0;
@@ -248,11 +287,11 @@ set_cached_content(content_cache_t *cache,
       if (cache->insert_count > 10000)
         {
           svn_pool_clear(cache->hash_pool);
-          cache->hash = apr_hash_make(cache->hash_pool);
+          cache->hash = svn_hash__make(cache->hash_pool);
           cache->insert_count = 0;
         }
       else
-        cache->hash = apr_hash_make(cache->hash_pool);
+        cache->hash = svn_hash__make(cache->hash_pool);
 
       cache->total_size = 0;
     }
@@ -309,6 +348,146 @@ get_content(svn_string_t **data,
   *data = get_cached_content(fs->cache, revision);
 
   return SVN_NO_ERROR;
+}
+
+static dir_cache_t *
+create_dir_cache(apr_pool_t *pool,
+                 apr_size_t entry_count)
+{
+  dir_cache_t *result = apr_pcalloc(pool, sizeof(*result));
+
+  result->pool1 = svn_pool_create(pool);
+  result->pool2 = svn_pool_create(pool);
+  result->entry_count = entry_count;
+  result->insert_count = 0;
+  result->entries = apr_pcalloc(pool, sizeof(*result->entries) * entry_count);
+
+  return result;
+}
+
+static apr_size_t
+get_dir_cache_index(fs_fs_t *fs,
+                    svn_revnum_t revision,
+                    apr_off_t offset)
+{
+  return (revision + offset * 0xd1f3da69) % fs->dir_cache->entry_count;
+}
+
+static apr_pool_t *
+get_cached_dir_pool(fs_fs_t *fs)
+{
+  return fs->dir_cache->pool1;
+}
+
+static apr_hash_t *
+get_cached_dir(fs_fs_t *fs,
+               representation_t *representation)
+{
+  svn_revnum_t revision = representation->revision->revision;
+  apr_off_t offset = representation->original.offset;
+
+  apr_size_t index = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
+  
+  return entry->offset == offset && entry->revision == revision
+    ? entry->hash
+    : NULL;
+}
+
+static void
+set_cached_dir(fs_fs_t *fs,
+               representation_t *representation,
+               apr_hash_t *hash)
+{
+  svn_revnum_t revision = representation->revision->revision;
+  apr_off_t offset = representation->original.offset;
+
+  apr_size_t index = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
+
+  fs->dir_cache->insert_count += apr_hash_count(hash);
+  if (fs->dir_cache->insert_count >= fs->dir_cache->entry_count * 100)
+    {
+      apr_pool_t *pool;
+
+      svn_pool_clear(fs->dir_cache->pool2);
+      memset(fs->dir_cache->entries,
+             0,
+             sizeof(*fs->dir_cache->entries) * fs->dir_cache->entry_count);
+      fs->dir_cache->insert_count = 0;
+
+      pool = fs->dir_cache->pool2;
+      fs->dir_cache->pool2 = fs->dir_cache->pool1;
+      fs->dir_cache->pool1 = pool;
+    }
+
+  entry->hash = hash;
+  entry->offset = offset;
+  entry->revision = revision;
+}
+
+static window_cache_t *
+create_window_cache(apr_pool_t *pool,
+                    apr_size_t entry_count)
+{
+  window_cache_t *result = apr_pcalloc(pool, sizeof(*result));
+
+  result->pool = svn_pool_create(pool);
+  result->entry_count = entry_count;
+  result->insert_count = 0;
+  result->entries = apr_pcalloc(pool, sizeof(*result->entries) * entry_count);
+
+  return result;
+}
+
+static apr_size_t
+get_window_cache_index(fs_fs_t *fs,
+                       svn_revnum_t revision,
+                       apr_off_t offset)
+{
+  return (revision + offset * 0xd1f3da69) % fs->window_cache->entry_count;
+}
+
+static svn_stringbuf_t *
+get_cached_window(fs_fs_t *fs,
+                  representation_t *representation,
+                  apr_pool_t *pool)
+{
+  svn_revnum_t revision = representation->revision->revision;
+  apr_off_t offset = representation->original.offset;
+
+  apr_size_t index = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[index];
+
+  return entry->offset == offset && entry->revision == revision
+    ? svn_stringbuf_dup(entry->window, pool)
+    : NULL;
+}
+
+static void
+set_cached_window(fs_fs_t *fs,
+                  representation_t *representation,
+                  svn_stringbuf_t *window)
+{
+  svn_revnum_t revision = representation->revision->revision;
+  apr_off_t offset = representation->original.offset;
+
+  apr_size_t index = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[index];
+
+  fs->window_cache->insert_count += window->len;
+  if (fs->window_cache->insert_count >= fs->window_cache->entry_count * 10000)
+    {
+      svn_pool_clear(fs->window_cache->pool);
+      memset(fs->window_cache->entries,
+             0,
+             sizeof(*fs->window_cache->entries) * fs->window_cache->entry_count);
+      fs->window_cache->insert_count = 0;
+    }
+
+  entry->window = svn_stringbuf_dup(window, fs->window_cache->pool);
+  entry->offset = offset;
+  entry->revision = revision;
 }
 
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
@@ -515,7 +694,7 @@ fs_open(fs_fs_t **fs, const char *path, apr_pool_t *pool)
                       &(*fs)->max_files_per_dir,
                       svn_dirent_join(path, "db/format", pool),
                       pool));
-  if ((*fs)->format != 4)
+  if (((*fs)->format != 4) && ((*fs)->format != 6))
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
     
   SVN_ERR(read_number(&(*fs)->min_unpacked_rev,
@@ -557,6 +736,7 @@ parse_revnode_pos(revision_info_t **revision_info,
   *offset_pos = 0;
   SVN_ERR(svn_cstring_atoi(&revision, revision_pos + 1));
   SVN_ERR(svn_cstring_atoi64(offset, offset_pos + 1));
+  *offset_pos = '/';
 
   if (revision - fs->start_revision > fs->revisions->nelts)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
@@ -819,6 +999,10 @@ get_combined_window(svn_stringbuf_t **content,
 
   if (representation->is_plain)
     return read_plain(content, fs, representation, pool);
+
+  *content = get_cached_window(fs, representation, pool);
+  if (*content)
+    return SVN_NO_ERROR;
   
   SVN_ERR(read_windows(&windows, fs, representation, sub_pool));
   if (representation->delta_base && representation->delta_base->revision)
@@ -850,6 +1034,7 @@ get_combined_window(svn_stringbuf_t **content,
   svn_pool_destroy(iter_pool);
   svn_pool_destroy(sub_pool);
   
+  set_cached_window(fs, representation, result);
   *content = result;
   return SVN_NO_ERROR;
 }
@@ -893,22 +1078,30 @@ static svn_error_t *
 read_dir(apr_hash_t **hash,
          fs_fs_t *fs,
          representation_t *representation,
-         apr_pool_t *pool,
          apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *text;
-  apr_pool_t *text_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *text_pool;
   svn_stream_t *stream;
+  apr_pool_t *pool;
 
-  *hash = apr_hash_make(pool);
-  if (representation == NULL)
+  *hash = get_cached_dir(fs, representation);
+  if (*hash)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_combined_window(&text, fs, representation, text_pool));
-  stream = svn_stream_from_stringbuf(text, text_pool);
-  SVN_ERR(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool));
-  svn_pool_destroy(text_pool);
+  pool = get_cached_dir_pool(fs);
+  *hash = svn_hash__make(pool);
+  if (representation != NULL)
+    {
+      text_pool = svn_pool_create(scratch_pool);
+      SVN_ERR(get_combined_window(&text, fs, representation, text_pool));
+      stream = svn_stream_from_stringbuf(text, text_pool);
+      SVN_ERR(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool));
+      svn_pool_destroy(text_pool);
+    }
 
+  set_cached_dir(fs, representation, *hash);
+  
   return SVN_NO_ERROR;
 }
 
@@ -922,8 +1115,7 @@ parse_dir(fs_fs_t *fs,
   apr_hash_t *hash;
   apr_hash_index_t *hi;
   apr_pool_t *iter_pool = svn_pool_create(scratch_pool);
-  apr_pool_t *hash_pool = svn_pool_create(scratch_pool);
-  apr_hash_t *base_dir = apr_hash_make(scratch_pool);
+  apr_hash_t *base_dir = svn_hash__make(scratch_pool);
 
   if (representation == NULL)
     return SVN_NO_ERROR;
@@ -936,11 +1128,11 @@ parse_dir(fs_fs_t *fs,
       for (i = 0; i < dir->nelts; ++i)
         {
           direntry_t *entry = APR_ARRAY_IDX(dir, i, direntry_t *);
-          apr_hash_set(base_dir, entry->name, APR_HASH_KEY_STRING, entry);
+          apr_hash_set(base_dir, entry->name, entry->name_len, entry);
         }
     }
 
-  SVN_ERR(read_dir(&hash, fs, representation, hash_pool, scratch_pool));
+  SVN_ERR(read_dir(&hash, fs, representation, scratch_pool));
 
   representation->dir = apr_pcalloc(pool, sizeof(*representation->dir));
   representation->dir->entries
@@ -953,8 +1145,9 @@ parse_dir(fs_fs_t *fs,
       svn_string_t *str_val = svn__apr_hash_index_val(hi);
       apr_off_t offset;
       revision_info_t *revision_info;
+      apr_size_t name_len = strlen(name);
       direntry_t *entry = base_dir
-                        ? apr_hash_get(base_dir, name, APR_HASH_KEY_STRING)
+                        ? apr_hash_get(base_dir, name, name_len)
                         : NULL;
 
       SVN_ERR(parse_revnode_pos(&revision_info, &offset, fs, str_val));
@@ -965,6 +1158,7 @@ parse_dir(fs_fs_t *fs,
           || entry->node->original.offset != offset)
         {
           direntry_t *new_entry = apr_pcalloc(pool, sizeof(*entry));
+          new_entry->name_len = name_len;
           if (entry)
             new_entry->name = entry->name;
           else
@@ -979,7 +1173,6 @@ parse_dir(fs_fs_t *fs,
       svn_pool_clear(iter_pool);
     }
 
-  svn_pool_destroy(hash_pool);
   svn_pool_destroy(iter_pool);
   return SVN_NO_ERROR;
 }
@@ -1061,6 +1254,12 @@ read_noderev(noderev_t **noderev,
   return SVN_NO_ERROR;
 }
 
+static void print_progress(svn_revnum_t revision)
+{
+  printf("%8ld", revision);
+  fflush(stdout);
+}
+
 static svn_error_t *
 read_pack_file(fs_fs_t *fs,
                svn_revnum_t base,
@@ -1126,7 +1325,7 @@ read_pack_file(fs_fs_t *fs,
       svn_pool_clear(iter_pool);
     }
 
-  printf("%8ld", base);
+  print_progress(base);
   apr_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
@@ -1208,6 +1407,14 @@ read_revisions(fs_fs_t **fs,
                     (apr_allocator_owner_get
                          (svn_pool_create_allocator(FALSE)),
                           limit * 1024 * 1024);
+  (*fs)->dir_cache = create_dir_cache
+                    (apr_allocator_owner_get
+                         (svn_pool_create_allocator(FALSE)),
+                          100000);
+  (*fs)->window_cache = create_window_cache
+                    (apr_allocator_owner_get
+                         (svn_pool_create_allocator(FALSE)),
+                          10000);
 
   for ( revision = start_revision
       ; revision < (*fs)->min_unpacked_rev
@@ -1363,8 +1570,8 @@ add_representation_recursively(fs_fs_t *fs,
       svn_stringbuf_t *content;
 
       get_combined_window(&content, fs, representation, text_pool);
-      representation->target.size = content->len + 13;
-      *current_pos += representation->target.size;
+      representation->target.size = content->len;
+      *current_pos += representation->target.size + 13;
 
       svn_pool_destroy(text_pool);
     }
@@ -1496,6 +1703,9 @@ reorder_revisions(fs_fs_t *fs,
           noderev_t *node = APR_ARRAY_IDX(info->node_revs, k, noderev_t*);
           SVN_ERR(add_noderev_recursively(fs, node, pool));
         }
+
+      if (info->revision % 1000 == 0)
+        print_progress(info->revision);
     }
 
   /* pack file tails */
@@ -1510,9 +1720,293 @@ reorder_revisions(fs_fs_t *fs,
 }
 
 static svn_error_t *
+get_fragment_content(svn_string_t **content,
+                     fs_fs_t *fs,
+                     fragment_t *fragment,
+                     apr_pool_t *pool);
+
+static svn_error_t *
+update_noderevs(fs_fs_t *fs,
+                revision_pack_t *pack,
+                apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *itempool = svn_pool_create(pool);
+
+  for (i = 0; i < pack->fragments->nelts; ++i)
+    {
+      fragment_t *fragment = &APR_ARRAY_IDX(pack->fragments, i, fragment_t);
+      if (fragment->kind == dir_fragment)
+        {
+          svn_string_t *content;
+
+          SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
+          svn_pool_clear(itempool);
+        }
+    }
+
+  svn_pool_destroy(itempool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_content_length(apr_size_t *length,
+                   fs_fs_t *fs,
+                   fragment_t *fragment,
+                   svn_boolean_t add_padding,
+                   apr_pool_t *pool)
+{
+  svn_string_t *content;
+
+  SVN_ERR(get_fragment_content(&content, fs, fragment, pool));
+  if (add_padding)
+    switch (fragment->kind)
+      {
+        case dir_fragment:
+          *length = content->len + 16;
+          break;
+        case noderep_fragment:
+          *length = content->len + 3;
+          break;
+        default:
+          *length = content->len;
+          break;
+      }
+  else
+    *length = content->len;
+    
+  return SVN_NO_ERROR;
+}
+
+static void
+move_fragment(fragment_t *fragment,
+              apr_size_t new_position)
+{
+  revision_info_t *info;
+  representation_t *representation;
+  noderev_t *node;
+  
+  fragment->position = new_position; 
+
+  switch (fragment->kind)
+    {
+      case header_fragment:
+        info = fragment->data;
+        info->target.offset = new_position;
+        break;
+
+      case changes_fragment:
+        info = fragment->data;
+        info->target.changes = new_position - info->target.offset;
+        break;
+
+      case property_fragment:
+      case file_fragment:
+      case dir_fragment:
+        representation = fragment->data;
+        representation->target.offset = new_position;
+        break;
+
+      case noderep_fragment:
+        node = fragment->data;
+        node->target.offset = new_position;
+        break;
+    }
+}
+
+static svn_error_t *
 pack_revisions(fs_fs_t *fs,
+               revision_pack_t *pack,
                apr_pool_t *pool)
 {
+  int i;
+  fragment_t *fragment, *next;
+  svn_boolean_t needed_to_expand;
+  revision_info_t *info;
+  apr_size_t current_pos, len, old_len;
+
+  apr_pool_t *itempool = svn_pool_create(pool);
+
+  SVN_ERR(update_noderevs(fs, pack, pool));
+
+  current_pos = pack->info->nelts > 1 ? 64 : 0;
+  for (i = 0; i + 1 < pack->fragments->nelts; ++i)
+    {
+      fragment = &APR_ARRAY_IDX(pack->fragments, i, fragment_t);
+      SVN_ERR(get_content_length(&len, fs, fragment, TRUE, itempool));
+      move_fragment(fragment, current_pos);
+      current_pos += len;
+
+      svn_pool_clear(itempool);
+    }
+
+  fragment = &APR_ARRAY_IDX(pack->fragments, pack->fragments->nelts-1, fragment_t);
+  fragment->position = current_pos;
+
+  do
+    {
+      needed_to_expand = FALSE;
+      current_pos = pack->info->nelts > 1 ? 64 : 0;
+
+      for (i = 0; i + 1 < pack->fragments->nelts; ++i)
+        {
+          fragment = &APR_ARRAY_IDX(pack->fragments, i, fragment_t);
+          next = &APR_ARRAY_IDX(pack->fragments, i + 1, fragment_t);
+          old_len = next->position - fragment->position;
+
+          SVN_ERR(get_content_length(&len, fs, fragment, FALSE, itempool));
+
+          if (len > old_len)
+            {
+              len = (apr_size_t)(len * 1.1) + 10;
+              needed_to_expand = TRUE;
+            }
+          else
+            len = old_len;
+
+          if (i == pack->info->nelts - 1)
+            {
+              info = APR_ARRAY_IDX(pack->info, pack->info->nelts - 1, revision_info_t*);
+              info->target.offset = current_pos;
+            }
+
+          move_fragment(fragment, current_pos);
+          current_pos += len;
+
+          svn_pool_clear(itempool);
+        }
+
+      fragment = &APR_ARRAY_IDX(pack->fragments, pack->fragments->nelts-1, fragment_t);
+      fragment->position = current_pos;
+
+      SVN_ERR(get_content_length(&len, fs, fragment, FALSE, itempool));
+      current_pos += len;
+
+      for (i = 0; i < pack->info->nelts; ++i)
+        {
+          info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
+          info->target.end = current_pos;
+        }
+    }
+  while (needed_to_expand);
+  
+  svn_pool_destroy(itempool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_revisions(fs_fs_t *fs,
+                revision_pack_t *pack,
+                apr_pool_t *pool)
+{
+  int i;
+  fragment_t *fragment = NULL;
+  svn_string_t *content;
+
+  apr_pool_t *itempool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  apr_file_t *file;
+  apr_size_t current_pos = 0;
+  svn_stringbuf_t *null_buffer = svn_stringbuf_create_empty(iterpool);
+
+  const char *dir = apr_psprintf(iterpool, "%s/new/%ld%s",
+                                  fs->path, pack->base / 1000,
+                                  pack->info->nelts > 1 ? ".pack" : "");
+  SVN_ERR(svn_io_make_dir_recursively(dir, pool));
+  SVN_ERR(svn_io_file_open(&file,
+                            pack->info->nelts > 1
+                              ? apr_psprintf(iterpool, "%s/pack", dir)
+                              : apr_psprintf(iterpool, "%s/%ld", dir, pack->base),
+                            APR_WRITE | APR_CREATE | APR_BUFFERED,
+                            APR_OS_DEFAULT,
+                            iterpool));
+
+  for (i = 0; i < pack->fragments->nelts; ++i)
+    {
+      apr_size_t padding;
+      fragment = &APR_ARRAY_IDX(pack->fragments, i, fragment_t);
+      SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
+
+      SVN_ERR_ASSERT(fragment->position >= current_pos);
+      if (   fragment->kind == header_fragment
+          && i+1 < pack->fragments->nelts)
+        padding = APR_ARRAY_IDX(pack->fragments, i+1, fragment_t).position -
+                  content->len - current_pos;
+      else
+        padding = fragment->position - current_pos;
+
+      if (padding)
+        {
+          while (null_buffer->len < padding)
+            svn_stringbuf_appendbyte(null_buffer, 0);
+
+          SVN_ERR(svn_io_file_write_full(file,
+                                          null_buffer->data,
+                                          padding,
+                                          NULL,
+                                          itempool));
+          current_pos += padding;
+        }
+
+      SVN_ERR(svn_io_file_write_full(file,
+                                      content->data,
+                                      content->len,
+                                      NULL,
+                                      itempool));
+      current_pos += content->len;
+
+      svn_pool_clear(itempool);
+    }
+
+  apr_file_close(file);
+
+  if (pack->info->nelts > 1)
+    {
+      svn_stream_t *stream;
+      SVN_ERR(svn_io_file_open(&file,
+                                apr_psprintf(iterpool, "%s/manifest", dir),
+                                APR_WRITE | APR_CREATE | APR_BUFFERED,
+                                APR_OS_DEFAULT,
+                                iterpool));
+      stream = svn_stream_from_aprfile2(file, FALSE, iterpool);
+
+      for (i = 0; i < pack->info->nelts; ++i)
+        {
+          revision_info_t *info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
+          svn_stream_printf(stream, itempool, "%ld\n", info->target.offset);
+          svn_pool_clear(itempool);
+        }
+    }
+
+  svn_pool_destroy(itempool);
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+pack_and_write_revisions(fs_fs_t *fs,
+                         apr_pool_t *pool)
+{
+  int i;
+
+  SVN_ERR(svn_io_make_dir_recursively(apr_psprintf(pool, "%s/new",
+                                                   fs->path),
+                                      pool));
+
+  for (i = 0; i < fs->packs->nelts; ++i)
+    {
+      revision_pack_t *pack = APR_ARRAY_IDX(fs->packs, i, revision_pack_t*);
+      if (pack->base % fs->max_files_per_dir == 0)
+        print_progress(pack->base);
+
+      SVN_ERR(pack_revisions(fs, pack, pool));
+      SVN_ERR(write_revisions(fs, pack, pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1530,22 +2024,27 @@ get_updated_dir(svn_string_t **content,
   svn_stream_t *stream;
   svn_stringbuf_t *result;
   
-  SVN_ERR(read_dir(&hash, fs, representation, hash_pool, scratch_pool));
+  SVN_ERR(read_dir(&hash, fs, representation, scratch_pool));
+  hash = apr_hash_copy(hash_pool, hash);
   for (i = 0; i < dir->nelts; ++i)
     {
+      char buffer[256];
       svn_string_t *new_val;
+      apr_size_t pos;
       direntry_t *entry = APR_ARRAY_IDX(dir, i, direntry_t *);
-      svn_string_t *str_val = apr_hash_get(hash, entry->name,
-                                           APR_HASH_KEY_STRING);
+      svn_string_t *str_val = apr_hash_get(hash, entry->name, entry->name_len);
       if (str_val == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Dir entry '%s' not found"), entry->name);
 
-      strchr((char *)str_val->data, '/')[1] = 0;
-      new_val = svn_string_createf(hash_pool, "%s%ld", str_val->data,
-                                   entry->node->target.offset - entry->node->revision->target.offset);
+      SVN_ERR_ASSERT(str_val->len < sizeof(buffer));
+      
+      memcpy(buffer, str_val->data, str_val->len+1);
+      pos = strchr(buffer, '/') - buffer + 1;
+      pos += svn__ui64toa(buffer + pos, entry->node->target.offset - entry->node->revision->target.offset);
+      new_val = svn_string_ncreate(buffer, pos, hash_pool);
 
-      apr_hash_set(hash, entry->name, APR_HASH_KEY_STRING, new_val);
+      apr_hash_set(hash, entry->name, entry->name_len, new_val);
     }
 
   result = svn_stringbuf_create_ensure(representation->target.size, pool);
@@ -1744,7 +2243,8 @@ get_fragment_content(svn_string_t **content,
               header = svn_stringbuf_createf(pool,
                                              "DELTA %ld %ld %ld\n",
                                              representation->delta_base->revision->revision,
-                                             representation->delta_base->target.offset - representation->delta_base->revision->target.offset,
+                                             representation->delta_base->target.offset
+                                             - representation->delta_base->revision->target.offset,
                                              representation->delta_base->target.size);
         else
           header = svn_stringbuf_create("PLAIN\n", pool);
@@ -1829,146 +2329,6 @@ get_fragment_content(svn_string_t **content,
     }
 
   SVN_ERR_ASSERT(0);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_dir_reps(fs_fs_t *fs,
-                apr_pool_t *pool)
-{
-  int i, k;
-  fragment_t *fragment;
-  svn_string_t *content;
-
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_pool_t *itempool = svn_pool_create(pool);
-  
-  for (i = 0; i < fs->packs->nelts; ++i)
-    {
-      revision_pack_t *pack = APR_ARRAY_IDX(fs->packs, i, revision_pack_t*);
-      for (k = 0; k < pack->fragments->nelts; ++k)
-        {
-          fragment = &APR_ARRAY_IDX(pack->fragments, k, fragment_t);
-/*          if (fragment->kind == dir_fragment) */
-            SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
-
-          svn_pool_clear(itempool);
-        }
-
-      svn_pool_clear(iterpool);
-    }
-
-  svn_pool_destroy(itempool);
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-write_revisions(fs_fs_t *fs,
-                apr_pool_t *pool)
-{
-  int i, k;
-  fragment_t *fragment;
-  svn_string_t *content;
-
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_pool_t *itempool = svn_pool_create(pool);
-
-  SVN_ERR(update_dir_reps(fs, pool));
-
-  SVN_ERR(svn_io_make_dir_recursively(apr_psprintf(iterpool, "%s/new",
-                                                   fs->path),
-                                      pool));
-  
-  for (i = 0; i < fs->packs->nelts; ++i)
-    {
-      apr_file_t *file;
-      apr_size_t current_pos = 0;
-      svn_stringbuf_t *null_buffer = svn_stringbuf_create_empty(iterpool);
-
-      revision_pack_t *pack = APR_ARRAY_IDX(fs->packs, i, revision_pack_t*);
-
-      const char *dir = apr_psprintf(iterpool, "%s/new/%ld%s",
-                                     fs->path, pack->base / 1000,
-                                     pack->info->nelts > 1 ? ".pack" : "");
-      SVN_ERR(svn_io_make_dir_recursively(dir, pool));
-      SVN_ERR(svn_io_file_open(&file,
-                               pack->info->nelts > 1
-                                 ? apr_psprintf(iterpool, "%s/pack", dir)
-                                 : apr_psprintf(iterpool, "%s/%ld", dir, pack->base),
-                               APR_WRITE | APR_CREATE | APR_BUFFERED,
-                               APR_OS_DEFAULT,
-                               iterpool));
-
-      for (k = 0; k < pack->fragments->nelts; ++k)
-        {
-          apr_size_t padding;
-          
-          fragment = &APR_ARRAY_IDX(pack->fragments, k, fragment_t);
-          SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
-
-          SVN_ERR_ASSERT(fragment->position >= current_pos);
-          if (   fragment->kind == header_fragment
-              && k+1 < pack->fragments->nelts)
-            padding = APR_ARRAY_IDX(pack->fragments, k+1, fragment_t).position -
-                      content->len - current_pos;
-          else
-            padding = fragment->position - current_pos;
-          
-          if (padding)
-            {
-              while (null_buffer->len < padding)
-                svn_stringbuf_appendbyte(null_buffer, 0);
-
-              SVN_ERR(svn_io_file_write_full(file,
-                                             null_buffer->data,
-                                             padding,
-                                             NULL,
-                                             itempool));
-              current_pos += padding;
-            }
-
-          SVN_ERR(svn_io_file_write_full(file,
-                                         content->data,
-                                         content->len,
-                                         NULL,
-                                         itempool));
-          current_pos += content->len;
-
-          svn_pool_clear(itempool);
-        }
-
-      apr_file_close(file);
-      
-      if (pack->info->nelts > 1)
-        {
-          svn_stream_t *stream;
-          SVN_ERR(svn_io_file_open(&file,
-                                   apr_psprintf(iterpool, "%s/manifest", dir),
-                                   APR_WRITE | APR_CREATE | APR_BUFFERED,
-                                   APR_OS_DEFAULT,
-                                   iterpool));
-          stream = svn_stream_from_aprfile2(file, FALSE, iterpool);
-          
-          for (k = 0; k < pack->info->nelts; ++k)
-            {
-              revision_info_t *info = APR_ARRAY_IDX(pack->info, k, revision_info_t*);
-              svn_stream_printf(stream, itempool, "%ld\n", info->target.offset);
-              svn_pool_clear(itempool);
-            }
-        }
-
-
-      if (pack->info->nelts > 1)
-        printf("%8ld", pack->base);
-
-      svn_pool_clear(iterpool);
-    }
-
-  svn_pool_destroy(itempool);
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -2064,31 +2424,25 @@ int main(int argc, const char *argv[])
   repo_path = argv[1];
   start_revision = (long)rev;
 
-  printf("\nPrepare repository\n");
+  printf("\nPreparing repository\n");
   svn_err = prepare_repo(repo_path, pool);
 
   if (!svn_err)
     {
-      printf("\nRead repository\n");
+      printf("\nReading revisions\n");
       svn_err = read_revisions(&fs, repo_path, start_revision, 4000, pool);
     }
   
   if (!svn_err)
     {
-      printf("\nReorder revisions\n");
+      printf("\nReordering revision content\n");
       svn_err = reorder_revisions(fs, pool);
     }
     
   if (!svn_err)
     {
-      printf("\nPack revisions\n");
-      svn_err = pack_revisions(fs, pool);
-    }
-
-  if (!svn_err)
-    {
-      printf("\nWrite new revs data\n");
-      svn_err = write_revisions(fs, pool);
+      printf("\nPacking and writing revisions\n");
+      svn_err = pack_and_write_revisions(fs, pool);
     }
 
   if (!svn_err)

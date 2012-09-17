@@ -2418,7 +2418,7 @@ expat_response_handler(serf_request_t *request,
       XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
     }
 
-  /* ### TODO: sline.com < 200 should really be handled by the core */
+  /* ### TODO: sline.code < 200 should really be handled by the core */
   if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
     {
       /* By deferring to expect_empty_body(), it will make a choice on
