@@ -587,17 +587,16 @@ if test "$with_gnome_keyring" != "no"; then
             SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
           else
             AC_MSG_RESULT([no])
-            AC_MSG_ERROR([cannot find GNOME Keyring])
           fi
         else
           AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+          AC_MSG_WARN([cannot find GLib and GNOME Keyring .pc files. GNOME Keyring disabled.])
         fi
       else
-        AC_MSG_ERROR([cannot find pkg-config])
+        AC_MSG_WARN([cannot find pkg-config. GNOME Keyring disabled.])
       fi
     else
-      AC_MSG_ERROR([APR does not have support for DSOs])
+      AC_MSG_WARN([APR does not have support for DSOs. GNOME Keyring disabled.])
     fi
   else
     AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
