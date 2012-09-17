@@ -906,9 +906,9 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
       parent_url = svn_uri_dirname(parent_url, iterpool);
       SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
       err = session->vtable->get_dir(session, NULL, NULL,
-                                     &parent_props, NULL, "",
+                                     &parent_props, "",
                                      revision, SVN_DIRENT_ALL,
-                                     iterpool, iterpool);
+                                     iterpool);
 
       /* If the user doesn't have read access to a parent path then
          skip, but allow them to inherit from further up. */

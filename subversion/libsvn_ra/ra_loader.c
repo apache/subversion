@@ -738,104 +738,31 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                             lock_tokens, keep_locks, pool);
 }
 
-
-svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
-                              const char *path,
-                              svn_revnum_t revision,
-                              svn_stream_t *stream,
-                              svn_revnum_t *fetched_rev,
-                              apr_hash_t **props,
-                              apr_array_header_t **inherited_props,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
+svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t revision,
+                             svn_stream_t *stream,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(*path != '/');
-
-  if (inherited_props)
-    {
-      svn_boolean_t gets_iprops;
-
-      /* We want inherited props too, can the server deliver? */
-      SVN_ERR(svn_ra_has_capability(session, &gets_iprops,
-                                    SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                    scratch_pool));
-      if (gets_iprops)
-        {
-          SVN_ERR(session->vtable->get_file(session, path, revision, stream,
-                                            fetched_rev, props,
-                                            inherited_props, result_pool,
-                                            scratch_pool));
-        }
-      else
-        {
-          /* Get the explicit props on PATH. */
-          SVN_ERR(session->vtable->get_file(session, path, revision, stream,
-                                            fetched_rev, props, NULL,
-                                            result_pool, scratch_pool));
-          SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision,
-                                                   inherited_props,
-                                                   result_pool, scratch_pool));
-        }
-    }
-  else
-    {
-      SVN_ERR(session->vtable->get_file(session, path, revision, stream,
-                                        fetched_rev, props, NULL, result_pool,
-                                        scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
+  return session->vtable->get_file(session, path, revision, stream,
+                                   fetched_rev, props, pool);
 }
 
-svn_error_t *
-svn_ra_get_dir3(svn_ra_session_t *session,
-                apr_hash_t **dirents,
-                svn_revnum_t *fetched_rev,
-                apr_hash_t **props,
-                apr_array_header_t **inherited_props,
-                const char *path,
-                svn_revnum_t revision,
-                apr_uint32_t dirent_fields,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
+                             apr_hash_t **dirents,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
+                             apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(*path != '/');
-
-  if (inherited_props)
-    {
-      svn_boolean_t gets_iprops;
-
-      /* We want inherited props too, can the server deliver? */
-      SVN_ERR(svn_ra_has_capability(session, &gets_iprops,
-                                    SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                    scratch_pool));
-      if (gets_iprops)
-        {
-          SVN_ERR(session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                           inherited_props, path, revision,
-                                           dirent_fields, result_pool,
-                                           scratch_pool));
-        }
-      else
-        {
-          /* Get the explicit props on PATH. */
-          SVN_ERR(session->vtable->get_dir(session, dirents, fetched_rev,
-                                           props, NULL, path, revision,
-                                           dirent_fields, result_pool,
-                                           scratch_pool));
-          SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision,
-                                                   inherited_props,
-                                                   result_pool, scratch_pool));
-        }
-    }
-  else
-    {
-      return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                      NULL, path, revision, dirent_fields,
-                                      result_pool, scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, dirent_fields, pool);
 }
 
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
