@@ -137,9 +137,9 @@ callback_default_keyring(GnomeKeyringResult result,
   return;
 }
 
-/* Returns the default keyring name. */
+/* Returns the default keyring name, allocated in RESULT_POOL. */
 static char*
-get_default_keyring_name(apr_pool_t *pool)
+get_default_keyring_name(apr_pool_t *result_pool)
 {
   char *def = NULL;
   struct gnome_keyring_baton key_info;
@@ -158,7 +158,7 @@ get_default_keyring_name(apr_pool_t *pool)
       return NULL;
     }
 
-  def = strdup(key_info.keyring_name);
+  def = apr_pstrdup(result_pool, key_info.keyring_name);
   callback_destroy_data_keyring(&key_info);
 
   return def;
