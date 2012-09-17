@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
+#include <apr_strings.h>
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
