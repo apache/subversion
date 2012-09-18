@@ -162,6 +162,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1387226
+   Fix issue 4231, mod_dav_svn assert with SVNAutoVersioning and <Location />
+   Justification:
+     It's an assert.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
