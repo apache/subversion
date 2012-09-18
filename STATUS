@@ -21,7 +21,7 @@ Candidate changes:
      It's a small change, and it allows applying patches that failed
      before.
    Votes:
-     +1: steveking
+     +1: steveking, rhuijben
 
  * r1242759, r1242770, r1242794, r1380175
    Fix various issues with GNOME and KDE keyring providers, especially
@@ -160,14 +160,14 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-serf-server-root-segfaults
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r1387226
    Fix issue 4231, mod_dav_svn assert with SVNAutoVersioning and <Location />
    Justification:
      It's an assert.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
