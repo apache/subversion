@@ -1046,7 +1046,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                                  svn_boolean_t keep_last_origpath_on_truepath_collision,
                                  apr_pool_t *pool);
 
-/*
+/**
  * Similar to svn_client_args_to_target_array2() but with
  * @a keep_last_origpath_on_truepath_collision always set to FALSE.
  *
