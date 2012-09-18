@@ -1564,6 +1564,7 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
+  svn_sqlite__db_t *pdb;
   const char *root_abspath;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
@@ -2129,7 +2130,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
 
   /* Create an empty sqlite database for this directory and store it in DB. */
-  SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
+  SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb, &data.pdb,
                                    &data.repos_id, &data.wc_id,
                                    db, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,

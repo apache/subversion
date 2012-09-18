@@ -2682,6 +2682,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
    Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         svn_sqlite__db_t **pdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
                          svn_wc__db_t *wc_db,

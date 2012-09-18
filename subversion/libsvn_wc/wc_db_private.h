@@ -119,6 +119,7 @@ svn_error_t *
 svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              const char *wcroot_abspath,
                              svn_sqlite__db_t *sdb,
+                             svn_sqlite__db_t *pdb,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t auto_upgrade,

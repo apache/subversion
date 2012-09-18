@@ -1424,7 +1424,7 @@ does_node_exist(svn_boolean_t *exists,
 
 /*
  * ** COMPRESSED PRISTINE **
- * TODO: moved into separate file.
+ * TODO: Move into separate file.
  */
 
 /* Create a pristine sqlite database at DIR_ABSPATH/PDB_FNAME and
@@ -1613,7 +1613,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* Create the WCROOT for this directory.  */
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
                         apr_pstrdup(db->state_pool, local_abspath),
-                        sdb, wc_id, FORMAT_FROM_SDB,
+                        sdb, pdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
                         FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
@@ -11553,6 +11553,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         svn_sqlite__db_t **pdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
                          svn_wc__db_t *wc_db,
@@ -11568,10 +11569,14 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
                     wc_db->state_pool, scratch_pool));
 
+  /* Create the PDB. */
+  SVN_ERR(create_pristine_db(pdb, dir_abspath, repos_root_url,
+                    PDB_FILE, wc_db->state_pool, scratch_pool));
+
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
                                        apr_pstrdup(wc_db->state_pool,
                                                    dir_abspath),
-                                       *sdb, *wc_id, FORMAT_FROM_SDB,
+                                       *sdb, *pdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
                                        FALSE /* enforce_empty_wq */,
                                        wc_db->state_pool, scratch_pool));

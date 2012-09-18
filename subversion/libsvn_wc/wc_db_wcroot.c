@@ -36,6 +36,7 @@
 
 /* ### Same values as wc_db.c */
 #define SDB_FILE  "wc.db"
+#define PDB_FILE  "pristine.db"
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
@@ -172,21 +173,16 @@ close_wcroot(void *data)
   err_sdb = svn_sqlite__close(wcroot->sdb);
   wcroot->sdb = NULL;
 
-  if (wcroot->pdb != NULL)
-    {
-      /*FIXME: Should remove this when CP is complete. */
-      SVN_ERR_ASSERT_NO_RETURN(wcroot->pdb != NULL);
-      err_pdb = svn_sqlite__close(wcroot->pdb);
-      wcroot->pdb = NULL;
- 
-      if (err_pdb)
-        {
-          apr_status_t result = err_pdb->apr_err;
-          svn_error_clear(err_pdb);
-          return result;
-        }
-    }
+  err_pdb = svn_sqlite__close(wcroot->pdb);
+  wcroot->pdb = NULL;
 
+  if (err_pdb)
+    {
+      apr_status_t result = err_pdb->apr_err;
+      svn_error_clear(err_pdb);
+      return result;
+    }
+  
   if (err_sdb)
     {
       apr_status_t result = err_sdb->apr_err;
@@ -251,6 +247,7 @@ svn_error_t *
 svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              const char *wcroot_abspath,
                              svn_sqlite__db_t *sdb,
+                             svn_sqlite__db_t *pdb,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t auto_upgrade,
@@ -316,7 +313,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
 
   (*wcroot)->abspath = wcroot_abspath;
   (*wcroot)->sdb = sdb;
-  (*wcroot)->pdb = NULL;
+  (*wcroot)->pdb = pdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
   /* 8 concurrent locks is probably more than a typical wc_ng based svn client
@@ -385,6 +382,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   svn_wc__db_wcroot_t *found_wcroot = NULL;
   const char *scan_abspath;
   svn_sqlite__db_t *sdb;
+  svn_sqlite__db_t *pdb;
   svn_boolean_t moved_upwards = FALSE;
   svn_boolean_t always_check = FALSE;
   int wc_format = 0;
@@ -507,7 +505,14 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
               SVN_ERR(svn_sqlite__exec_statements(sdb,
                                                   STMT_VERIFICATION_TRIGGERS));
 #endif
-              break;
+              /* Open the Pristine DB. */
+              err = svn_wc__db_util_open_db(&pdb, local_abspath, PDB_FILE,
+                                            svn_sqlite__mode_readwrite, NULL,
+                                            db->state_pool, scratch_pool);
+              if (err == NULL)
+                {
+                  break;
+                }
             }
           if (err->apr_err != SVN_ERR_SQLITE_ERROR
               && !APR_STATUS_IS_ENOENT(err->apr_err))
@@ -617,7 +622,7 @@ try_symlink_as_dir:
 
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            sdb, wc_id, FORMAT_FROM_SDB,
+                            sdb, pdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
     }
@@ -626,7 +631,7 @@ try_symlink_as_dir:
       /* We found a wc-1 working copy directory.  */
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            NULL, UNKNOWN_WC_ID, wc_format,
+                            NULL, NULL, UNKNOWN_WC_ID, wc_format,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
     }
