@@ -1151,7 +1151,6 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
-GNOME_KEYRING_FLAG=--with-gnome-keyring=yes
 JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
@@ -1160,7 +1159,6 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
-GNOME_KEYRING_FLAG=--with-gnome-keyring=yes
 JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
@@ -1170,7 +1168,6 @@ MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
-GNOME_KEYRING_FLAG=
 JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
@@ -1178,7 +1175,6 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
-GNOME_KEYRING_FLAG=--with-gnome-keyring=yes
 JAVAHL_CHECK_TARGET=check-all-javahl
 endif
 
@@ -1212,7 +1208,6 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--with-apr="$(PREFIX)/apr" \
 			--with-apr-util="$(PREFIX)/apr" \
 			$(NEON_FLAG) \
-			$(GNOME_KEYRING_FLAG) \
 			$(SVN_WITH_HTTPD) \
 			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
