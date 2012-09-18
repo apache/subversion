@@ -591,12 +591,15 @@ if test "$with_gnome_keyring" != "no"; then
         else
           AC_MSG_RESULT([no])
           AC_MSG_WARN([cannot find GLib and GNOME Keyring .pc files. GNOME Keyring disabled.])
+          with_gnome_keyring=no
         fi
       else
         AC_MSG_WARN([cannot find pkg-config. GNOME Keyring disabled.])
+        with_gnome_keyring=no
       fi
     else
       AC_MSG_WARN([APR does not have support for DSOs. GNOME Keyring disabled.])
+      with_gnome_keyring=no
     fi
   else
     AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
