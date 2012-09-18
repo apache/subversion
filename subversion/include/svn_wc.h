@@ -828,7 +828,7 @@ svn_error_t *
 svn_wc_external_item2_create(svn_wc_external_item2_t **item,
                              apr_pool_t *pool);
 
-/* Same as svn_wc_external_item2_create() except the pointer to the new
+/** Same as svn_wc_external_item2_create() except the pointer to the new
  * empty item is 'const' which is stupid since the next thing you need to do
  * is fill in its fields.
  *
@@ -3725,7 +3725,7 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   const char *moved_to_abspath;
 
-  /* TRUE iff the item is a file brought in by an svn:externals definition.
+  /** TRUE iff the item is a file brought in by an svn:externals definition.
    * @since New in 1.8. */
   svn_boolean_t file_external;
 
@@ -7857,7 +7857,9 @@ typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
                                                    apr_pool_t *pool);
 
 
-/* @since New in 1.7.
+/**
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
