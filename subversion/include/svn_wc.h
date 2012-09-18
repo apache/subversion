@@ -1142,7 +1142,7 @@ typedef enum svn_wc_notify_action_t
   /** The mergeinfo on path was updated.  @since New in 1.7. */
   svn_wc_notify_merge_record_info,
 
-  /** An working copy directory was upgraded to the latest format
+  /** A working copy directory was upgraded to the latest format.
    * @since New in 1.7. */
   svn_wc_notify_upgraded_path,
 
@@ -1950,7 +1950,7 @@ svn_wc_conflict_description_create_text(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field
- * to #svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and
+ * to #svn_wc_conflict_kind_property, the @c node_kind to @a node_kind, and
  * the @c property_name to @a property_name.
  *
  * @note: It is the caller's responsibility to set the other required fields
@@ -7058,7 +7058,7 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
  *
  * For each directory converted, @a notify_func will be called with
- * in @a notify_baton action #svn_wc_notify_upgrade_path and as path
+ * in @a notify_baton action #svn_wc_notify_upgraded_path and as path
  * the path of the upgraded directory. @a notify_func may be @c NULL
  * if this notification is not needed.
  *
