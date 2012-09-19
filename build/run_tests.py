@@ -383,14 +383,13 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed):
+      if not self.log:
+        return
       dots = (completed * dot_count) / total
       if dots > dot_count:
         dots = dot_count
-
       dots_to_write = dots - self.dots_written
-      if self.log:
-        os.write(sys.stdout.fileno(), '.' * dots_to_write)
-
+      os.write(sys.stdout.fileno(), '.' * dots_to_write)
       self.dots_written = dots
 
     tests_completed = 0
@@ -494,14 +493,13 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed, total):
+      if not self.log:
+        return
       dots = (completed * dot_count) / total
       if dots > dot_count:
         dots = dot_count
-
       dots_to_write = dots - self.dots_written
-      if self.log:
-        os.write(old_stdout, '.' * dots_to_write)
-
+      os.write(old_stdout, '.' * dots_to_write)
       self.dots_written = dots
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
