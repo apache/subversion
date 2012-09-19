@@ -537,14 +537,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
                      apr_pool_t *scratch_pool)
 {
   const char *answer;
-  char *prompt;
-  svn_boolean_t diff_allowed = FALSE;
-  /* Have they done something that might have affected the merged
-     file (so that we need to save a .edited copy)? */
-  svn_boolean_t performed_edit = FALSE;
-  /* Have they done *something* (edit, look at diff, etc) to
-     give them a rational basis for choosing (r)esolved? */
-  svn_boolean_t knows_something = FALSE;
+  const char *prompt;
+  svn_stringbuf_t *prop_reject;
+  apr_pool_t *iterpool;
 
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_property);
 
@@ -556,97 +551,41 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
                                 b->path_prefix, desc->local_abspath,
                                 scratch_pool)));
 
-  if ((!desc->my_abspath && desc->their_abspath)
-      || (desc->my_abspath && !desc->their_abspath))
+  /* ### Currently, the only useful information in a prop conflict
+   * ### description is the .prej file path, which, possibly due to
+   * ### deceitful interference from outer space, is stored in the
+   * ### 'their_abspath' field of the description.
+   * ### This needs to be fixed so we can present better options here. */
+  if (desc->their_abspath)
     {
-      /* One agent wants to change the property, one wants to
-         delete it.  This is not something we can diff, so we
-         just tell the user. */
-      svn_stringbuf_t *myval = NULL, *theirval = NULL;
-
-      if (desc->my_abspath)
-        {
-          SVN_ERR(svn_stringbuf_from_file2(&myval, desc->my_abspath,
-                                           scratch_pool));
-          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                _("They want to delete the property, "
-                  "you want to change the value to '%s'.\n"),
-                  myval->data));
-        }
-      else
-        {
-          SVN_ERR(svn_stringbuf_from_file2(&theirval,
-                                           desc->their_abspath,
-                                           scratch_pool));
-          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                _("They want to change the property value to '%s', "
-                  "you want to delete the property.\n"),
-                   theirval->data));
-        }
+      /* ### The library dumps an svn_string_t into a temp file, and
+       * ### we read it back from the file into an svn_stringbuf_t here.
+       * ### That's rather silly. We should be passed svn_string_t's
+       * ### containing the old/mine/theirs values instead. */
+      SVN_ERR(svn_stringbuf_from_file2(&prop_reject,
+                                       desc->their_abspath,
+                                       scratch_pool));
+      /* Print reject file contents. */
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                  "%s\n", prop_reject->data));
+    }
+  else
+    {
+      /* Nothing much we can do without a prej file... */
+      result->choice = svn_wc_conflict_choose_postpone;
+      return SVN_NO_ERROR;
     }
 
-  /* Diffing can happen between base and merged, to show conflict
-     markers to the user (this is the typical 3-way merge
-     scenario), or if no base is available, we can show a diff
-     between mine and theirs. */
-  if ((desc->merged_file && desc->base_abspath)
-      || (!desc->base_abspath && desc->my_abspath && desc->their_abspath))
-    diff_allowed = TRUE;
-
+  iterpool = svn_pool_create(scratch_pool);
   while (TRUE)
     {
-      svn_pool_clear(scratch_pool);
+      svn_pool_clear(iterpool);
 
-      prompt = apr_pstrdup(scratch_pool, _("Select: (p) postpone"));
+      prompt = _("Select: (p) postpone, (mf) mine-full, (tf) theirs-full: ");
 
-      if (diff_allowed)
-        {
-          prompt = apr_pstrcat(scratch_pool, prompt,
-                               _(", (df) diff-full, (e) edit"),
-                               (char *)NULL);
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, iterpool));
 
-          if (knows_something)
-            prompt = apr_pstrcat(scratch_pool, prompt, _(", (r) resolved"),
-                                 (char *)NULL);
-        }
-      else
-        {
-          if (knows_something)
-            prompt = apr_pstrcat(scratch_pool, prompt, _(", (r) resolved"),
-                                 (char *)NULL);
-          prompt = apr_pstrcat(scratch_pool, prompt,
-                               _(",\n        "
-                                 "(mf) mine-full, (tf) theirs-full"),
-                               (char *)NULL);
-        }
-
-      prompt = apr_pstrcat(scratch_pool, prompt, ",\n        ", (char *)NULL);
-      prompt = apr_pstrcat(scratch_pool, prompt,
-                           _("(s) show all options: "),
-                           (char *)NULL);
-
-      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, scratch_pool));
-
-      if (strcmp(answer, "s") == 0)
-        {
-          /* These are used in svn_cl__accept_from_word(). */
-          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-          _("\n"
-            "  (e)  edit             - change merged file in an editor\n"
-            "  (df) diff-full        - show all changes made to merged "
-                                      "file\n"
-            "  (r)  resolved         - accept merged version of file\n"
-            "\n"
-            "  (mf) mine-full        - accept my version of entire file "
-                                      "(even non-conflicts)\n"
-            "  (tf) theirs-full      - accept their version of entire "
-                                      "file (same)\n"
-            "\n"
-            "  (p)  postpone         - mark the conflict to be "
-                                      "resolved later\n"
-            "  (s)  show all         - show this list\n\n")));
-        }
-      else if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
+      if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
         {
           /* Do nothing, let property be marked conflicted. */
           result->choice = svn_wc_conflict_choose_postpone;
@@ -655,51 +594,15 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(answer, "mf") == 0 || strcmp(answer, ":-)") == 0)
         {
           result->choice = svn_wc_conflict_choose_mine_full;
-          if (performed_edit)
-            result->save_merged = TRUE;
           break;
         }
       else if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
         {
           result->choice = svn_wc_conflict_choose_theirs_full;
-          if (performed_edit)
-            result->save_merged = TRUE;
           break;
         }
-      else if (strcmp(answer, "df") == 0)
-        {
-          if (! diff_allowed)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                             _("Invalid option; there's no "
-                                "merged version to diff.\n\n")));
-              continue;
-            }
-
-          SVN_ERR(show_diff(desc, scratch_pool));
-          knows_something = TRUE;
-        }
-      else if (strcmp(answer, "e") == 0 || strcmp(answer, ":-E") == 0)
-        {
-          SVN_ERR(open_editor(&performed_edit, desc, b, scratch_pool));
-          if (performed_edit)
-            knows_something = TRUE;
-        }
-      else if (strcmp(answer, "r") == 0)
-        {
-          /* We only allow the user accept the merged version of
-             the file if they've edited it, or at least looked at
-             the diff. */
-          if (knows_something)
-            {
-              result->choice = svn_wc_conflict_choose_merged;
-              break;
-            }
-          else
-            SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                        _("Invalid option.\n\n")));
-        }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
