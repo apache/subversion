@@ -484,10 +484,10 @@ class TestHarness:
       sys.stdout.flush()
       sys.stderr.flush()
       self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
-      os.dup2(self.log.fileno(), 1)
-      os.dup2(self.log.fileno(), 2)
+      old_stdout = os.dup(sys.stdout.fileno())
+      old_stderr = os.dup(sys.stderr.fileno())
+      os.dup2(self.log.fileno(), sys.stdout.fileno())
+      os.dup2(self.log.fileno(), sys.stderr.fileno())
 
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
@@ -531,8 +531,8 @@ class TestHarness:
     if self.log:
       sys.stdout.flush()
       sys.stderr.flush()
-      os.dup2(old_stdout, 1)
-      os.dup2(old_stderr, 2)
+      os.dup2(old_stdout, sys.stdout.fileno())
+      os.dup2(old_stderr, sys.stderr.fileno())
       os.close(old_stdout)
       os.close(old_stderr)
 
