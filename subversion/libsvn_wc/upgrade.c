@@ -1380,7 +1380,11 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
                                        apr_pool_t *scratch_pool)
 {
   svn_skel_t *conflict_data = NULL;
+  const char *wcroot_abspath;
   
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
+                                scratch_pool, scratch_pool));
+
   if (conflict_old || conflict_new || conflict_wrk)
     {
       const char *old_abspath = NULL;
@@ -1390,19 +1394,16 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
       conflict_data = svn_wc__conflict_skel_create(result_pool);
 
       if (conflict_old)
-        SVN_ERR(svn_wc__db_from_relpath(&old_abspath, db, wri_abspath,
-                                        conflict_old,
-                                        scratch_pool, scratch_pool));
+        old_abspath = svn_dirent_join(wcroot_abspath, conflict_old,
+                                      scratch_pool);
 
       if (conflict_new)
-        SVN_ERR(svn_wc__db_from_relpath(&new_abspath, db, wri_abspath,
-                                        conflict_new,
-                                        scratch_pool, scratch_pool));
+        new_abspath = svn_dirent_join(wcroot_abspath, conflict_new,
+                                      scratch_pool);
 
       if (conflict_wrk)
-        SVN_ERR(svn_wc__db_from_relpath(&wrk_abspath, db, wri_abspath,
-                                        conflict_wrk,
-                                        scratch_pool, scratch_pool));
+        wrk_abspath = svn_dirent_join(wcroot_abspath, conflict_wrk,
+                                      scratch_pool);
 
       SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_data,
                                                       db, wri_abspath,
@@ -1420,9 +1421,7 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
       if (!conflict_data)
         conflict_data = svn_wc__conflict_skel_create(result_pool);
 
-      SVN_ERR(svn_wc__db_from_relpath(&prej_abspath, db, wri_abspath,
-                                      prej_file,
-                                      scratch_pool, scratch_pool));
+      prej_abspath = svn_dirent_join(wcroot_abspath, prej_file, scratch_pool);
 
       SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_data,
                                                       db, wri_abspath,
@@ -1445,9 +1444,8 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
       tc_skel = svn_skel__parse(tree_conflict_data, tree_conflict_len,
                                 scratch_pool);
 
-      SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
-                                      local_relpath,
-                                      scratch_pool, scratch_pool));
+      local_abspath = svn_dirent_join(wcroot_abspath, local_relpath,
+                                      scratch_pool);
 
       SVN_ERR(svn_wc__deserialize_conflict(&tc, tc_skel,
                                            svn_dirent_dirname(local_abspath,
