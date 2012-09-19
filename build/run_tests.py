@@ -383,7 +383,7 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed):
-      if not self.log:
+      if not self.log or self.dots_written >= dot_count:
         return
       dots = (completed * dot_count) / total
       if dots > dot_count:
@@ -493,7 +493,7 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed, total):
-      if not self.log:
+      if not self.log or self.dots_written >= dot_count:
         return
       dots = (completed * dot_count) / total
       if dots > dot_count:
