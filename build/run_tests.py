@@ -384,6 +384,8 @@ class TestHarness:
     self.dots_written = 0
     def progress_func(completed):
       dots = (completed * dot_count) / total
+      if dots > dot_count:
+        dots = dot_count
 
       dots_to_write = dots - self.dots_written
       if self.log:
@@ -493,6 +495,8 @@ class TestHarness:
     self.dots_written = 0
     def progress_func(completed, total):
       dots = (completed * dot_count) / total
+      if dots > dot_count:
+        dots = dot_count
 
       dots_to_write = dots - self.dots_written
       if self.log:
