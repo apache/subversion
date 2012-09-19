@@ -879,7 +879,7 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
-  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'server-excluded')
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -917,7 +917,7 @@ LIMIT 1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = 0 AND presence = 'absent'
+  AND op_depth = 0 AND presence = 'server-excluded'
 LIMIT 1
 
 /* Select all excluded nodes. Not valid on the WC-root */
@@ -926,7 +926,7 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
-  AND (presence = 'absent' OR presence = 'excluded')
+  AND (presence = 'server-excluded' OR presence = 'excluded')
 
 /* Creates a copy from one top level NODE to a different location */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM
@@ -1309,7 +1309,7 @@ WHERE wc_id = ?1
   AND op_depth = (SELECT MAX(s.op_depth) FROM nodes AS s
                   WHERE s.wc_id = ?1
                     AND s.local_relpath = n.local_relpath)
-  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'server-excluded')
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
@@ -1339,7 +1339,7 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
-  AND (presence IN ('absent', 'excluded')
+  AND (presence IN ('server-excluded', 'excluded')
         OR depth NOT IN ('infinity', 'unknown'))
   AND file_external IS NULL
 LIMIT 1
