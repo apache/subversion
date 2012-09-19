@@ -3383,7 +3383,7 @@ test_copy_of_deleted(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__sandbox_create(&b, "copy_of_deleted", opts, pool));
   SVN_ERR(add_and_commit_greek_tree(&b));
 
-  /* Recreate the test scenario from copy_tests.py copy_wc_url_with_absent */
+  /* Recreate the test scenario from copy_tests.py copy_wc_url_with_server_excluded */
 
   /* Delete A/B */
   SVN_ERR(wc_delete(&b, "A/B"));
@@ -3673,21 +3673,21 @@ copy_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 static svn_error_t *
-copy_wc_wc_absent(const svn_test_opts_t *opts, apr_pool_t *pool)
+copy_wc_wc_server_excluded(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
   nodes_row_t before[] = {
     {0, "",      "normal",  1, ""},
     {0, "A",     "normal",  1, "A"},
     {0, "A/B",   "normal",  1, "A/B"},
-    {0, "A/B/E", "absent",  1, "A/B/E"},
+    {0, "A/B/E", "server-excluded",  1, "A/B/E"},
     {0}
   };
   nodes_row_t after[] = {
     {0, "",      "normal",  1, ""},
     {0, "A",     "normal",      1, "A"},
     {0, "A/B",   "normal",      1, "A/B"},
-    {0, "A/B/E", "absent",      1, "A/B/E"},
+    {0, "A/B/E", "server-excluded",      1, "A/B/E"},
     {1, "X",     "normal",      1, "A"},
     {1, "X/B",   "normal",      1, "A/B"},
     {1, "X/B/E", "incomplete",  1, "A/B/E"},
@@ -3695,7 +3695,7 @@ copy_wc_wc_absent(const svn_test_opts_t *opts, apr_pool_t *pool)
   };
   svn_error_t *err;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "copy_wc_wc_absent", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_wc_wc_server_excluded", opts, pool));
   SVN_ERR(insert_dirs(&b, before));
   SVN_ERR(check_db_rows(&b, "", before));
   SVN_ERR(disk_mkdir(&b, "A"));
@@ -5054,8 +5054,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "revert_file_externals"),
     SVN_TEST_OPTS_PASS(copy_file_externals,
                        "copy_file_externals"),
-    SVN_TEST_OPTS_PASS(copy_wc_wc_absent,
-                       "test_wc_wc_copy_absent"),
+    SVN_TEST_OPTS_PASS(copy_wc_wc_server_excluded,
+                       "test_wc_wc_copy_server_excluded"),
     SVN_TEST_OPTS_PASS(incomplete_switch,
                        "incomplete_switch (issue 4040)"),
     SVN_TEST_OPTS_PASS(nested_moves_child_first,

@@ -106,7 +106,7 @@ static const char * const TESTING_DATA = (
   "  null, null, 'symlink', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'C', 0, '', 1, 'C', null, 'absent',"
+  "  1, 'C', 0, '', 1, 'C', null, 'server-excluded',"
   "  null, null, 'unknown', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("

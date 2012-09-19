@@ -293,9 +293,7 @@ static const svn_token_map_t kind_map[] = {
    of all the status values. */
 static const svn_token_map_t presence_map[] = {
   { "normal", svn_wc__db_status_normal },
-  /* ### "absent" is the former name of the "server-excluded" presence.
-   * ### We should change it to "server-excluded" with a format bump. */
-  { "absent", svn_wc__db_status_server_excluded },
+  { "server-excluded", svn_wc__db_status_server_excluded },
   { "excluded", svn_wc__db_status_excluded },
   { "not-present", svn_wc__db_status_not_present },
   { "incomplete", svn_wc__db_status_incomplete },

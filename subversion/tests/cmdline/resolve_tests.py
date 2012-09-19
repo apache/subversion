@@ -106,7 +106,6 @@ def automatic_conflict_resolution(sbox):
 # Test for issue #3707 'property conflicts not handled correctly by
 # svn resolve'.
 @Issue(3707)
-@XFail()
 def prop_conflict_resolution(sbox):
   "resolving prop conflicts"
 
