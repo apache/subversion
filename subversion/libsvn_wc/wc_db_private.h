@@ -127,6 +127,13 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Creates a Pristine DB. */
+svn_error_t *
+create_pristine_db(svn_sqlite__db_t **pdb,
+          const char *dir_abspath,
+          const char *pdb_fname,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool);
 
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (WCROOT) to
    use and the RELPATH within that wcroot.

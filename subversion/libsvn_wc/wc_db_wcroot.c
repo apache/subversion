@@ -505,10 +505,9 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
               SVN_ERR(svn_sqlite__exec_statements(sdb,
                                                   STMT_VERIFICATION_TRIGGERS));
 #endif
-              /* Open the Pristine DB. */
-              err = svn_wc__db_util_open_db(&pdb, local_abspath, PDB_FILE,
-                                            svn_sqlite__mode_readwrite, NULL,
-                                            db->state_pool, scratch_pool);
+              /* Open/Create the Pristine DB. */
+              create_pristine_db(&pdb, local_abspath, PDB_FILE,
+                                 db->state_pool, scratch_pool);
               if (err == NULL)
                 {
                   break;

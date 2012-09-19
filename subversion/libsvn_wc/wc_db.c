@@ -1430,10 +1430,9 @@ does_node_exist(svn_boolean_t *exists,
 /* Create a pristine sqlite database at DIR_ABSPATH/PDB_FNAME and
    initializes it.  Return the DB connection
    in *PDB. */
-static svn_error_t *
+svn_error_t *
 create_pristine_db(svn_sqlite__db_t **pdb,
           const char *dir_abspath,
-          const char *repos_root_url,
           const char *pdb_fname,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
@@ -1607,8 +1606,8 @@ svn_wc__db_init(svn_wc__db_t *db,
                     db->state_pool, scratch_pool));
 
   /* Create the PDB. */
-  SVN_ERR(create_pristine_db(&pdb, local_abspath, repos_root_url,
-                    PDB_FILE, db->state_pool, scratch_pool));
+  SVN_ERR(create_pristine_db(&pdb, local_abspath, PDB_FILE,
+                             db->state_pool, scratch_pool));
 
   /* Create the WCROOT for this directory.  */
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
@@ -11570,8 +11569,8 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                     wc_db->state_pool, scratch_pool));
 
   /* Create the PDB. */
-  SVN_ERR(create_pristine_db(pdb, dir_abspath, repos_root_url,
-                    PDB_FILE, wc_db->state_pool, scratch_pool));
+  SVN_ERR(create_pristine_db(pdb, dir_abspath, PDB_FILE,
+                             wc_db->state_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
                                        apr_pstrdup(wc_db->state_pool,
