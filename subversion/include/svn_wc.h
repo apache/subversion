@@ -7844,7 +7844,8 @@ svn_wc_set_changelist(const char *path,
 
 
 /**
- * The callback type used by svn_client_get_changelists().
+ * The callback type used by svn_wc_get_changelists() and
+ * svn_client_get_changelists().
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
@@ -7858,6 +7859,7 @@ typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
 
 
 /**
+ * ### TODO: Doc string, please.
  *
  * @since New in 1.7.
  */
