@@ -293,6 +293,89 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_txdelta_send_contents(const unsigned char *contents,
+                          apr_size_t len,
+                          void *diff_baton,
+                          apr_pool_t *pool)
+{
+  struct encoder_baton *eb = diff_baton;
+
+  /* frequently reused buffers */
+  svn_stringbuf_t *header = svn_stringbuf_create_empty(eb->pool);
+  svn_stringbuf_t *compressed_temp = svn_stringbuf_create_empty(eb->pool);
+  unsigned char ibuf[MAX_INSTRUCTION_LEN];
+
+  /* Write the stream header.  */
+  char svnver[4] = {'S','V','N','\0'};
+  apr_size_t ver_len = 4;
+  svnver[3] = eb->version;
+  SVN_ERR(svn_stream_write(eb->output, svnver, &ver_len));
+
+  /* send CONTENT as a series of max-sized windows */
+  while (len > 0)
+    {
+      const char *processed_chunk;
+      apr_size_t processed_size;
+
+      apr_size_t ip_len;
+      apr_size_t chunk_size = len < SVN_DELTA_WINDOW_SIZE
+                            ? len
+                            : SVN_DELTA_WINDOW_SIZE;
+
+      /* Encode the action code (svn_txdelta_new) and length.  */
+      if (chunk_size < (1 << 6))
+        {
+          ibuf[0] = chunk_size + (0x2 << 6);
+          ip_len = 1;
+        }
+      else
+        {
+          ibuf[0] = (0x2 << 6);
+          ip_len = encode_int(ibuf + 1, chunk_size) - ibuf;
+        }
+
+      /* Encode the delta window header (empty source view).  */
+      header->len = 0;
+      svn_stringbuf_appendbyte(header, '\0');   /* source view offset */
+      svn_stringbuf_appendbyte(header, '\0');   /* source view length */
+      append_encoded_int(header, chunk_size);   /* target view length */
+      svn_stringbuf_appendbyte(header, (char)ip_len);
+
+      /* compress the window content if required */
+      if (eb->version == 1)
+        {
+          compressed_temp->len = 0;
+          SVN_ERR(zlib_encode((const char*)contents, chunk_size,
+                              compressed_temp, eb->compression_level));
+          processed_chunk = compressed_temp->data;
+          processed_size = compressed_temp->len;
+        }
+      else
+        {
+          processed_chunk = (const char*)contents;
+          processed_size = chunk_size;
+        }
+      append_encoded_int(header, processed_size);
+
+      /* Write out the window.  */
+      SVN_ERR(svn_stream_write(eb->output, header->data, &header->len));
+      if (ip_len)
+        SVN_ERR(svn_stream_write(eb->output, (const char *)ibuf, &ip_len));
+      if (processed_size)
+        SVN_ERR(svn_stream_write(eb->output, processed_chunk, &processed_size));
+
+      /* next chunk */
+      contents += chunk_size;
+      len -= chunk_size;
+    }
+
+  /* We're done; clean up.
+   */
+  svn_pool_destroy(eb->pool);
+  return svn_stream_close(eb->output);
+}
+
 void
 svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         void **handler_baton,
