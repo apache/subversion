@@ -5387,6 +5387,7 @@ static root_vtable_t root_vtable = {
   base_file_length,
   base_file_checksum,
   base_file_contents,
+  NULL,
   base_make_file,
   base_apply_textdelta,
   base_apply_text,

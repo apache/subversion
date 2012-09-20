@@ -1975,6 +1975,44 @@ svn_fs_file_contents(svn_stream_t **contents,
                      const char *path,
                      apr_pool_t *pool);
 
+/**
+ * Callback function type that gets presented with a immutable non-NULL
+ * @a content of @a len bytes.  Further parameters may be passed through
+ * in @a baton.
+ *
+ * Allocations must be made in @a pool.
+ *
+ * @since New in 1.9
+ */
+typedef svn_error_t *
+(*svn_fs_process_content_func_t)(const unsigned char *content,
+                                 apr_size_t len,
+                                 void *baton,
+                                 apr_pool_t *pool);
+
+/** Attempts to efficiently provide the contents of the file @a path in
+ * @a root.  If that succeeds, @a *success will be set to #TRUE and the
+ * contents will be passed to the the @a processor along with the given
+ * @a baton.  Allocations take place in @a pool.
+ *
+ * This function is intended to support zero copy data processing.  It may
+ * not be implemented for all data backends or not applicable for certain
+ * content.  In that case, @a *success will always be #FALSE.  Also, this
+ * is a best-effort function which means there is no guarantee that e.g.
+ * @a processor gets called at for any content.
+ *
+ * @note @a processor is expected to be relatively short function with
+ * at most O(content size) runtime.
+ * 
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_fs_try_process_file_content(svn_boolean_t *success,
+                                svn_fs_root_t *root,
+                                const char *path,
+                                svn_fs_process_content_func_t processor,
+                                void* baton,
+                                apr_pool_t *pool);
 
 /** Create a new file named @a path in @a root.  The file's initial contents
  * are the empty string, and it has no properties.  @a root must be the

@@ -947,6 +947,24 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 
 svn_error_t *
+svn_fs_fs__dag_try_process_file_content(svn_boolean_t *success,
+                                        dag_node_t *node,
+                                        svn_fs_process_content_func_t processor,
+                                        void* baton,
+                                        apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* Go get fresh node-revisions for the nodes. */
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  return svn_fs_fs__try_process_file_content(success, node->fs,
+                                             noderev,
+                                             processor, baton, pool);
+}
+
+
+svn_error_t *
 svn_fs_fs__dag_file_length(svn_filesize_t *length,
                            dag_node_t *file,
                            apr_pool_t *pool)

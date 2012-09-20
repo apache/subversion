@@ -306,6 +306,12 @@ typedef struct root_vtable_t
   svn_error_t *(*file_contents)(svn_stream_t **contents,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
+  svn_error_t *(*try_process_file_content)(svn_boolean_t *success,
+                                           svn_fs_root_t *target_root,
+                                           const char *target_path,
+                                           svn_fs_process_content_func_t processor,
+                                           void* baton,
+                                           apr_pool_t *pool);
   svn_error_t *(*make_file)(svn_fs_root_t *root, const char *path,
                             apr_pool_t *pool);
   svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *contents_p,

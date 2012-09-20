@@ -5095,6 +5095,70 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   return SVN_NO_ERROR;
 }
 
+/* Baton for cache_access_wrapper. Wraps the original parameters of
+ * svn_fs_fs__try_process_file_content().
+ */
+typedef struct cache_access_wrapper_baton_t
+{
+  svn_fs_process_content_func_t func;
+  void* baton;
+} cache_access_wrapper_baton_t;
+
+/* Wrapper to translate between svn_fs_process_content_func_t and
+ * svn_cache__partial_getter_func_t.
+ */
+static svn_error_t *
+cache_access_wrapper(void **out,
+                     const void *data,
+                     apr_size_t data_len,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  cache_access_wrapper_baton_t *wrapper_baton = baton;
+
+  SVN_ERR(wrapper_baton->func((const unsigned char *)data,
+                              data_len,
+                              wrapper_baton->baton,
+                              pool));
+  
+  /* non-NULL value to signal the calling cache that all went well */
+  *out = baton;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__try_process_file_content(svn_boolean_t *success,
+                                    svn_fs_t *fs,
+                                    node_revision_t *noderev,
+                                    svn_fs_process_content_func_t processor,
+                                    void* baton,
+                                    apr_pool_t *pool)
+{
+  representation_t *rep = noderev->data_rep;
+  if (rep)
+    {
+      fs_fs_data_t *ffd = fs->fsap_data;
+      const char *fulltext_key = svn_fs_fs__combine_two_numbers(rep->revision,
+                                                                rep->offset,
+                                                                pool);
+
+      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
+        {
+          cache_access_wrapper_baton_t wrapper_baton = {processor, baton};
+          void *dummy = NULL;
+
+          return svn_cache__get_partial(&dummy, success,
+                                        ffd->fulltext_cache, &fulltext_key,
+                                        cache_access_wrapper, &wrapper_baton,
+                                        pool);
+        }
+    }
+
+  *success = FALSE;
+  return SVN_NO_ERROR;
+}
 
 /* Fetch the contents of a directory into ENTRIES.  Values are stored
    as filename to string mappings; further conversion is necessary to
