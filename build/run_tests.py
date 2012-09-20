@@ -45,7 +45,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 SVN_VER_MINOR = 8
 
-import os, re, subprocess, sys, imp
+import os, re, subprocess, sys, imp, threading
 from datetime import datetime
 
 import getopt
@@ -490,17 +490,23 @@ class TestHarness:
       os.dup2(self.log.fileno(), sys.stdout.fileno())
       os.dup2(self.log.fileno(), sys.stderr.fileno())
 
-    # This has to be class-scoped for use in the progress_func()
+    # These have to be class-scoped for use in the progress_func()
     self.dots_written = 0
+    self.progress_lock = threading.Lock()
     def progress_func(completed, total):
-      if not self.log or self.dots_written >= dot_count:
+      """Report test suite progress. Can be called from multiple threads
+         in parallel mode."""
+      if not self.log:
         return
       dots = (completed * dot_count) / total
       if dots > dot_count:
         dots = dot_count
-      dots_to_write = dots - self.dots_written
-      os.write(old_stdout, '.' * dots_to_write)
-      self.dots_written = dots
+      self.progress_lock.acquire()
+      if self.dots_written < dot_count:
+        dots_to_write = dots - self.dots_written
+        self.dots_written = dots
+        os.write(old_stdout, '.' * dots_to_write)
+      self.progress_lock.release()
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
 
