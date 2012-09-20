@@ -222,11 +222,13 @@ class BackgroundWorker(threading.Thread):
 
     def run(self):
         while True:
-            if self.q.qsize() > BACKLOG_TOO_HIGH:
-                logging.warn('worker backlog is at %d', self.q.qsize())
-
             # This will block until something arrives
             operation, wc = self.q.get()
+
+            # Warn if the queue is too long.
+            if operation != OP_BOOT and self.q.qsize() > BACKLOG_TOO_HIGH:
+                logging.warn('worker backlog is at %d', self.q.qsize())
+
             try:
                 if operation == OP_UPDATE:
                     self._update(wc)
