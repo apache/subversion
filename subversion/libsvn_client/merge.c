@@ -11195,7 +11195,7 @@ open_source_and_target(source_and_target_t **source_and_target,
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
             source_path_or_url, NULL, source_peg_revision, source_peg_revision,
-            ctx, result_pool));
+            ctx, session_pool));
 
   *source_and_target = s_t;
   return SVN_NO_ERROR;
