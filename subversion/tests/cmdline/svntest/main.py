@@ -1232,7 +1232,6 @@ class TestSpawningThread(threading.Thread):
   def __init__(self, queue, progress_func, tests_total):
     threading.Thread.__init__(self)
     self.queue = queue
-    self.lock = threading.Lock()
     self.results = []
     self.progress_func = progress_func
     self.tests_total = tests_total
@@ -1240,21 +1239,16 @@ class TestSpawningThread(threading.Thread):
   def run(self):
     while True:
       try:
-        self.lock.acquire()
         next_index = self.queue.get_nowait()
       except queue.Empty:
         return
-      finally:
-        self.lock.release()
 
       self.run_one(next_index)
 
       # signal progress
       if self.progress_func:
-        self.lock.acquire()
         self.progress_func(self.tests_total - self.queue.qsize(),
                            self.tests_total)
-        self.lock.release()
 
   def run_one(self, index):
     command = os.path.abspath(sys.argv[0])
