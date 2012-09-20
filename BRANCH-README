@@ -1,0 +1,15 @@
+This branch will receive a number of patches that boost
+svn:// single-threaded throughput from about 5Gb/s to
+10Gb/s for typical source code, i.e. becomes capable of
+saturating a 10Gb connection.
+
+Bottlenecks to address:
+
+* frequent cancellation checks (intense OS interaction)
+* in-memory copies (membuffer cache -> empty deltification
+  -> output buffer -> network stack)
+* various CPU-heavy tasks
+
+The patches have been written quite some time ago and I
+want them off my disk. OTOH, release 1.8 shall not be
+endangered.
