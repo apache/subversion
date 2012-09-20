@@ -609,7 +609,7 @@ typedef struct zero_copy_baton_t
   svn_boolean_t zero_copy_succeeded;
 } zero_copy_baton_t;
 
-/* Implement svn_fs_process_content_func_t.  If LEN is smaller than the
+/* Implement svn_fs_process_contents_func_t.  If LEN is smaller than the
  * limit given in *BATON, send the CONTENTS as an delta windows to the
  * handler given in BATON and set the ZERO_COPY_SUCCEEDED flag in that
  * BATON.  Otherwise, reset it to FALSE.
@@ -700,10 +700,10 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
             {
               zero_copy_baton_t baton = {b->zero_copy_limit, dbaton, FALSE};
               svn_boolean_t called = FALSE;
-              SVN_ERR(svn_fs_try_process_file_content(&called,
-                                                      b->t_root, t_path,
-                                                      send_zero_copy_delta,
-                                                      &baton, pool));
+              SVN_ERR(svn_fs_try_process_file_contents(&called,
+                                                       b->t_root, t_path,
+                                                       send_zero_copy_delta,
+                                                       &baton, pool));
 
               /* data has been available and small enough,
                  i.e. been processed? */

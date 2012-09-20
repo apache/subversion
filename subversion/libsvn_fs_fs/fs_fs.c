@@ -5100,11 +5100,11 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
  */
 typedef struct cache_access_wrapper_baton_t
 {
-  svn_fs_process_content_func_t func;
+  svn_fs_process_contents_func_t func;
   void* baton;
 } cache_access_wrapper_baton_t;
 
-/* Wrapper to translate between svn_fs_process_content_func_t and
+/* Wrapper to translate between svn_fs_process_contents_func_t and
  * svn_cache__partial_getter_func_t.
  */
 static svn_error_t *
@@ -5128,12 +5128,12 @@ cache_access_wrapper(void **out,
 }
 
 svn_error_t *
-svn_fs_fs__try_process_file_content(svn_boolean_t *success,
-                                    svn_fs_t *fs,
-                                    node_revision_t *noderev,
-                                    svn_fs_process_content_func_t processor,
-                                    void* baton,
-                                    apr_pool_t *pool)
+svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
+                                     svn_fs_t *fs,
+                                     node_revision_t *noderev,
+                                     svn_fs_process_contents_func_t processor,
+                                     void* baton,
+                                     apr_pool_t *pool)
 {
   representation_t *rep = noderev->data_rep;
   if (rep)

@@ -157,12 +157,12 @@ svn_error_t *svn_fs_fs__get_contents(svn_stream_t **contents,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__try_process_file_content(svn_boolean_t *success,
-                                    svn_fs_t *fs,
-                                    node_revision_t *noderev,
-                                    svn_fs_process_content_func_t processor,
-                                    void* baton,
-                                    apr_pool_t *pool);
+svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
+                                     svn_fs_t *fs,
+                                     node_revision_t *noderev,
+                                     svn_fs_process_contents_func_t processor,
+                                     void* baton,
+                                     apr_pool_t *pool);
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
    the contents of the file TARGET, allocated in POOL.

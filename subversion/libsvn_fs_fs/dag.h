@@ -410,11 +410,11 @@ svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__dag_try_process_file_content(svn_boolean_t *success,
-                                        dag_node_t *node,
-                                        svn_fs_process_content_func_t processor,
-                                        void* baton,
-                                        apr_pool_t *pool);
+svn_fs_fs__dag_try_process_file_contents(svn_boolean_t *success,
+                                         dag_node_t *node,
+                                         svn_fs_process_contents_func_t processor,
+                                         void* baton,
+                                         apr_pool_t *pool);
 
 
 /* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into

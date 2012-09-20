@@ -1204,21 +1204,21 @@ svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_try_process_file_content(svn_boolean_t *success,
-                                svn_fs_root_t *root,
-                                const char *path,
-                                svn_fs_process_content_func_t processor,
-                                void* baton,
-                                apr_pool_t *pool)
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool)
 {
   /* if the FS doesn't implement this function, report a "failed" attempt */
-  if (root->vtable->try_process_file_content == NULL)
+  if (root->vtable->try_process_file_contents == NULL)
     {
       *success = FALSE;
       return SVN_NO_ERROR;
     }
 
-  return svn_error_trace(root->vtable->try_process_file_content(
+  return svn_error_trace(root->vtable->try_process_file_contents(
                          success,
                          root, path,
                          processor, baton, pool));

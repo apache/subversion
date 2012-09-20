@@ -1977,7 +1977,7 @@ svn_fs_file_contents(svn_stream_t **contents,
 
 /**
  * Callback function type that gets presented with a immutable non-NULL
- * @a content of @a len bytes.  Further parameters may be passed through
+ * @a contents of @a len bytes.  Further parameters may be passed through
  * in @a baton.
  *
  * Allocations must be made in @a pool.
@@ -1985,10 +1985,10 @@ svn_fs_file_contents(svn_stream_t **contents,
  * @since New in 1.9
  */
 typedef svn_error_t *
-(*svn_fs_process_content_func_t)(const unsigned char *content,
-                                 apr_size_t len,
-                                 void *baton,
-                                 apr_pool_t *pool);
+(*svn_fs_process_contents_func_t)(const unsigned char *contents,
+                                  apr_size_t len,
+                                  void *baton,
+                                  apr_pool_t *pool);
 
 /** Attempts to efficiently provide the contents of the file @a path in
  * @a root.  If that succeeds, @a *success will be set to #TRUE and the
@@ -2007,12 +2007,12 @@ typedef svn_error_t *
  * @since New in 1.9
  */
 svn_error_t *
-svn_fs_try_process_file_content(svn_boolean_t *success,
-                                svn_fs_root_t *root,
-                                const char *path,
-                                svn_fs_process_content_func_t processor,
-                                void* baton,
-                                apr_pool_t *pool);
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool);
 
 /** Create a new file named @a path in @a root.  The file's initial contents
  * are the empty string, and it has no properties.  @a root must be the
