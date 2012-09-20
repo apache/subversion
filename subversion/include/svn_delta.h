@@ -453,8 +453,7 @@ svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
 
 
 /** Send the @a contents of length @a len as a txdelta against an empty
- * source directly to the stream inside @a baton.  That baton is the one
- * returned by svn_txdelta_to_svndiff3.
+ * source directly to window-handler @a handler/@a handler_baton.
  *
  * All temporary allocation is performed in @a pool.
  *
@@ -463,7 +462,8 @@ svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
 svn_error_t *
 svn_txdelta_send_contents(const unsigned char *contents,
                           apr_size_t len,
-                          void *diff_baton,
+                          svn_txdelta_window_handler_t handler,
+                          void *handler_baton,
                           apr_pool_t *pool);
 
 /** Prepare to apply a text delta.  @a source is a readable generic stream
