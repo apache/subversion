@@ -173,7 +173,21 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
  * Specify the desired network data compression level (zlib) from
  * 0 (no compression) to 9 (best but slowest).
  *
+ * @since New in 1.9.
+ */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_pool_t *pool);
+
+/** Similar to svn_ra_svn_create_conn3() but disables the zero copy code
+ * path.
+ *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
@@ -182,7 +196,7 @@ svn_ra_svn_create_conn2(apr_socket_t *sock,
                         int compression_level,
                         apr_pool_t *pool);
 
-/** Similar to svn_ra_svn_create_conn2() but uses default
+/** Similar to svn_ra_svn_create_conn2() but uses the default
  * compression level (#SVN_DELTA_COMPRESSION_LEVEL_DEFAULT) for network
  * transmissions.
  *
@@ -218,6 +232,13 @@ svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
+
+/** Return the zero-copy data block limit to use for network transmissions
+ *
+ * @since New in 1.9.
+ */
+apr_size_t
+svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */

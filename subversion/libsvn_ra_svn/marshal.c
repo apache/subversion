@@ -56,10 +56,11 @@
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *in_file,
                                            apr_file_t *out_file,
                                            int compression_level,
+                                           apr_size_t zero_copy_limit,
                                            apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
@@ -77,6 +78,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->compression_level = compression_level;
+  conn->zero_copy_limit = zero_copy_limit;
   conn->pool = pool;
 
   if (sock != NULL)
@@ -96,14 +98,25 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
   return conn;
 }
 
+svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_pool_t *pool)
+{
+  return svn_ra_svn_create_conn3(sock, in_file, out_file,
+                                 compression_level, 0, pool);
+}
+
 /* backward-compatible implementation using the default compression level */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool)
 {
-  return svn_ra_svn_create_conn2(sock, in_file, out_file,
-                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
+  return svn_ra_svn_create_conn3(sock, in_file, out_file,
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
+                                 pool);
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
@@ -144,6 +157,12 @@ int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn)
 {
   return conn->compression_level;
+}
+
+apr_size_t
+svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn)
+{
+  return conn->zero_copy_limit;
 }
 
 const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn)

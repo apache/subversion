@@ -149,6 +149,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
+#define SVNSERVE_OPT_ZERO_COPY_LIMIT 269
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -233,6 +234,16 @@ static const apr_getopt_option_t svnserve__options[] =
         "Consult the documentation before activating this.\n"
         "                             "
         "Default is no.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"zero-copy-limit", SVNSERVE_OPT_ZERO_COPY_LIMIT, 1,
+     N_("send files smaller than this directly from the\n"
+        "                             "
+        "caches to the network stack.\n"
+        "                             "
+        "Consult the documentation before activating this.\n"
+        "                             "
+        "Default is 0 (optimization disabled).\n"
         "                             "
         "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -497,6 +508,7 @@ int main(int argc, const char *argv[])
   params.cache_fulltexts = TRUE;
   params.cache_txdeltas = FALSE;
   params.cache_revprops = FALSE;
+  params.zero_copy_limit = 0;
 
   while (1)
     {
@@ -645,6 +657,10 @@ int main(int argc, const char *argv[])
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
+        case SVNSERVE_OPT_ZERO_COPY_LIMIT:
+          params.zero_copy_limit = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+          break;
+
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
           if (run_mode != run_mode_service)
@@ -755,8 +771,9 @@ int main(int argc, const char *argv[])
        * the pool cleanup handlers that call sasl_dispose() (connection_pool)
        * and sasl_done() (pool) are run in the right order. See issue #3664. */
       connection_pool = svn_pool_create(pool);
-      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
+      conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
                                      params.compression_level,
+                                     params.zero_copy_limit,
                                      connection_pool);
       svn_error_clear(serve(conn, &params, connection_pool));
       exit(0);
@@ -988,8 +1005,9 @@ int main(int argc, const char *argv[])
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
 
-      conn = svn_ra_svn_create_conn2(usock, NULL, NULL,
+      conn = svn_ra_svn_create_conn3(usock, NULL, NULL,
                                      params.compression_level,
+                                     params.zero_copy_limit,
                                      connection_pool);
 
       if (run_mode == run_mode_listen_once)

@@ -128,6 +128,9 @@ typedef struct serve_params_t {
      Defaults to SVN_DELTA_COMPRESSION_LEVEL_DEFAULT. */
   int compression_level;
 
+  /* Item size up to which we use the zero-copy code path to transmit
+     them over the network.  0 disables that code path. */
+  apr_size_t zero_copy_limit;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
