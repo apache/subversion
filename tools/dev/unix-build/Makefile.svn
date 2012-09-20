@@ -1408,11 +1408,18 @@ start-svnserve: $(SVN_OBJDIR)/.compiled
 stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
 
+# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
+# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
+# aren't linked to libpthread.
+ifeq ($(UNAME),OpenBSD)
+LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
+endif
+
 define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
-    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
         make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
@@ -1458,13 +1465,6 @@ svn-check-svn: svn-check-prepare-ramdisk
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
 svn-check-bindings: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb \
 	svn-check-javahl
-
-# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
-# libpthread into executables that aren't linked to libpthread.
-ifeq ($(UNAME),OpenBSD)
-LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
-endif
-
 
 RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	^svn_cv_ruby_sitedir_archsuffix $(svn_builddir)/config.log | \
