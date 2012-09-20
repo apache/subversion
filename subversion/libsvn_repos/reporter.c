@@ -102,13 +102,15 @@ typedef struct revision_info_t
    driven by the client as it describes its working copy revisions. */
 typedef struct report_baton_t
 {
-  /* Parameters remembered from svn_repos_begin_report2 */
+  /* Parameters remembered from svn_repos_begin_report3 */
   svn_repos_t *repos;
   const char *fs_base;         /* fspath corresponding to wc anchor */
   const char *s_operand;       /* anchor-relative wc target (may be empty) */
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
+  apr_size_t zero_copy_limit;  /* Max item size that will be sent using
+                                  the zero-copy code path. */
 
   /* If the client requested a specific depth, record it here; if the
      client did not, then this is svn_depth_unknown, and the depth of
@@ -592,6 +594,53 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be passed into send_zero_copy_delta.
+ */
+typedef struct zero_copy_baton_t
+{
+  /* don't process data larger than this limit */
+  apr_size_t zero_copy_limit;
+
+  /* window handler and baton to send the data to */
+  svn_txdelta_window_handler_t dhandler;
+  void *dbaton;
+
+  /* return value: will be set to TRUE, if the data was processed. */
+  svn_boolean_t zero_copy_succeeded;
+} zero_copy_baton_t;
+
+/* Implement svn_fs_process_content_func_t.  If LEN is smaller than the
+ * limit given in *BATON, send the CONTENTS as an delta windows to the
+ * handler given in BATON and set the ZERO_COPY_SUCCEEDED flag in that
+ * BATON.  Otherwise, reset it to FALSE.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+send_zero_copy_delta(const unsigned char *contents,
+                     apr_size_t len,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  zero_copy_baton_t *zero_copy_baton = baton;
+
+  /* if the item is too large, the caller must revert to traditional
+     streaming code. */
+  if (len > zero_copy_baton->zero_copy_limit)
+    {
+      zero_copy_baton->zero_copy_succeeded = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_txdelta_send_contents(contents, len,
+                                    zero_copy_baton->dhandler,
+                                    zero_copy_baton->dbaton, pool));
+
+  /* all fine now */
+  zero_copy_baton->zero_copy_succeeded = FALSE;
+  return SVN_NO_ERROR;
+}
+
+
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in S_REV/S_PATH to those in B->t_root/T_PATH,
    possibly using LOCK_TOKEN to determine if the client's lock on the file
@@ -645,6 +694,23 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
     {
       if (b->text_deltas)
         {
+          /* if we send deltas against empty streams, we may use our
+             zero-copy code. */
+          if (b->zero_copy_limit > 0 && s_path == NULL)
+            {
+              zero_copy_baton_t baton = {b->zero_copy_limit, dbaton, FALSE};
+              svn_boolean_t called = FALSE;
+              SVN_ERR(svn_fs_try_process_file_content(&called,
+                                                      b->t_root, t_path,
+                                                      send_zero_copy_delta,
+                                                      &baton, pool));
+
+              /* data has been available and small enough,
+                 i.e. been processed? */
+              if (called && baton.zero_copy_succeeded)
+                return SVN_NO_ERROR;
+            }
+
           SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
                                                b->t_root, t_path, pool));
           SVN_ERR(svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool));
@@ -1463,7 +1529,7 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_repos_begin_report2(void **report_baton,
+svn_repos_begin_report3(void **report_baton,
                         svn_revnum_t revnum,
                         svn_repos_t *repos,
                         const char *fs_base,
@@ -1477,6 +1543,7 @@ svn_repos_begin_report2(void **report_baton,
                         void *edit_baton,
                         svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
+                        apr_size_t zero_copy_limit,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
@@ -1495,6 +1562,7 @@ svn_repos_begin_report2(void **report_baton,
   b->t_path = switch_path ? svn_fspath__canonicalize(switch_path, pool)
                           : svn_fspath__join(b->fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
+  b->zero_copy_limit = zero_copy_limit;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
   b->send_copyfrom_args = send_copyfrom_args;
