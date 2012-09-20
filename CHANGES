@@ -49,7 +49,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix inconsistent handling of log revs without changed paths (issue #3694)
 
   - Bindings:
-    *
+    * star-imports in swig-py only import 'svn_*' symbols (r1303375)
 
 
 Version 1.7.6
