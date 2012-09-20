@@ -963,6 +963,12 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
 
+ifeq ($(THREADING),yes)
+THREADSAFE_FLAG=--enable-pthread
+else
+THREADSAFE_FLAG=--disable-pthread
+endif
+
 # configure ruby
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
@@ -970,7 +976,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
-		--disable-pthread
+		$(THREADSAFE_FLAG)
 	touch $@
 
 # compile ruby
