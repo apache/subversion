@@ -5117,7 +5117,7 @@ cache_access_wrapper(void **out,
   cache_access_wrapper_baton_t *wrapper_baton = baton;
 
   SVN_ERR(wrapper_baton->func((const unsigned char *)data,
-                              data_len,
+                              data_len - 1, /* cache adds terminating 0 */
                               wrapper_baton->baton,
                               pool));
   
