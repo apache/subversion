@@ -226,9 +226,9 @@ class BackgroundWorker(threading.Thread):
             operation, wc = self.q.get()
 
             # Warn if the queue is too long.
-	    # (Note: the other thread might have added entries to self.q
-	    # after the .get() and before the .qsize().)
-	    qsize = self.q.qsize()+1
+            # (Note: the other thread might have added entries to self.q
+            # after the .get() and before the .qsize().)
+            qsize = self.q.qsize()+1
             if operation != OP_BOOT and qsize > BACKLOG_TOO_HIGH:
                 logging.warn('worker backlog is at %d', qsize)
 
