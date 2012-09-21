@@ -636,7 +636,7 @@ send_zero_copy_delta(const unsigned char *contents,
                                     zero_copy_baton->dbaton, pool));
 
   /* all fine now */
-  zero_copy_baton->zero_copy_succeeded = FALSE;
+  zero_copy_baton->zero_copy_succeeded = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -698,7 +698,10 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
              zero-copy code. */
           if (b->zero_copy_limit > 0 && s_path == NULL)
             {
-              zero_copy_baton_t baton = {b->zero_copy_limit, dbaton, FALSE};
+              zero_copy_baton_t baton = { b->zero_copy_limit
+                                        , dhandler
+                                        , dbaton
+                                        , FALSE};
               svn_boolean_t called = FALSE;
               SVN_ERR(svn_fs_try_process_file_contents(&called,
                                                        b->t_root, t_path,

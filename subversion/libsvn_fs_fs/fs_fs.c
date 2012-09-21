@@ -5150,7 +5150,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
           void *dummy = NULL;
 
           return svn_cache__get_partial(&dummy, success,
-                                        ffd->fulltext_cache, &fulltext_key,
+                                        ffd->fulltext_cache, fulltext_key,
                                         cache_access_wrapper, &wrapper_baton,
                                         pool);
         }
