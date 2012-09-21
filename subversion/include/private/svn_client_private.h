@@ -180,11 +180,7 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 
 
 /* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t
-{
-  svn_client__pathrev_t *yca, *base, *mid, *right;
-  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
-} svn_client__symmetric_merge_t;
+typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
  * branch into a target branch.  The information is the locations of the
@@ -230,6 +226,17 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const apr_array_header_t *merge_options,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool);
+
+/* Return TRUE iff the symmetric merge represented by MERGE is going to be
+ * a reintegrate-like merge: that is, merging in the opposite direction
+ * from the last full merge.
+ *
+ * This function exists because the merge is NOT really symmetric and the
+ * client can be more friendly if it knows something about the differences.
+ */
+svn_boolean_t
+svn_client__symmetric_merge_is_reintegrate_like(
+        const svn_client__symmetric_merge_t *merge);
 
 
 #ifdef __cplusplus
