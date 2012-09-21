@@ -186,13 +186,59 @@ zlib_encode(const char *data,
 }
 
 static svn_error_t *
+send_simple_insertion_window(svn_txdelta_window_t *window,
+                             svn_stream_t *output)
+{
+  unsigned char header[5 * MAX_ENCODED_INT_LEN];
+  unsigned char ibuf[MAX_INSTRUCTION_LEN];
+  unsigned char *header_current;
+  apr_size_t header_len;
+  apr_size_t ip_len;
+  apr_size_t len = window->new_data->len;
+
+  /* there is only one target copy op. It must span the whole window */
+  assert(window->ops[0].action_code == svn_txdelta_new);
+  assert(window->ops[0].length == window->tview_len);
+  assert(window->ops[0].offset == 0);
+
+  /* Encode the action code and length.  */
+  if (window->tview_len >> 6 == 0)
+    {
+      ibuf[0] = window->tview_len + (0x2 << 6);
+      ip_len = 1;
+    }
+  else
+    {
+      ibuf[0] = (0x2 << 6);
+      ip_len = encode_int(ibuf + 1, window->tview_len) - ibuf;
+    }
+
+  /* Encode the header.  */
+  header[0] = 0;  /* source offset == 0 */
+  header[1] = 0;  /* source length == 0 */
+  header_current = encode_int(&header[2], window->tview_len);
+  header_current[0] = (unsigned char)ip_len;  /* 1 instruction */
+  header_current = encode_int(&header_current[1], len);
+  header_len = header_current - header;
+
+  /* Write out the window.  */
+  SVN_ERR(svn_stream_write(output, (const char *)header, &header_len));
+  if (ip_len)
+    SVN_ERR(svn_stream_write(output, (const char *)ibuf, &ip_len));
+  if (len)
+    SVN_ERR(svn_stream_write(output, window->new_data->data, &len));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
-  apr_pool_t *pool = svn_pool_create(eb->pool);
-  svn_stringbuf_t *instructions = svn_stringbuf_create_empty(pool);
-  svn_stringbuf_t *i1 = svn_stringbuf_create_empty(pool);
-  svn_stringbuf_t *header = svn_stringbuf_create_empty(pool);
+  apr_pool_t *pool;
+  svn_stringbuf_t *instructions;
+  svn_stringbuf_t *i1;
+  svn_stringbuf_t *header;
   const svn_string_t *newdata;
   unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
@@ -228,6 +274,16 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
       return svn_stream_close(output);
     }
+
+  /* use specialized code if there is no source */
+  if (window->src_ops == 0 && window->num_ops == 1 && eb->version == 0)
+    return svn_error_trace(send_simple_insertion_window(window, eb->output));
+
+  /* create the necessary data buffers */
+  pool = svn_pool_create(eb->pool);
+  instructions = svn_stringbuf_create_empty(pool);
+  i1 = svn_stringbuf_create_empty(pool);
+  header = svn_stringbuf_create_empty(pool);
 
   /* Encode the instructions.  */
   for (op = window->ops; op < window->ops + window->num_ops; op++)
