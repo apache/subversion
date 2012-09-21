@@ -6596,25 +6596,20 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   if (!rep || !rep->txn_id)
     {
       const char *unique_suffix;
+      apr_hash_t *entries;
 
-      {
-        apr_hash_t *entries;
+      /* Before we can modify the directory, we need to dump its old
+         contents into a mutable representation file. */
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
+                                          subpool));
+      SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
+      SVN_ERR(svn_io_file_open(&file, filename,
+                               APR_WRITE | APR_CREATE | APR_BUFFERED,
+                               APR_OS_DEFAULT, pool));
+      out = svn_stream_from_aprfile2(file, TRUE, pool);
+      SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
 
-        svn_pool_clear(subpool);
-
-        /* Before we can modify the directory, we need to dump its old
-           contents into a mutable representation file. */
-        SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
-                                            subpool));
-        SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
-        SVN_ERR(svn_io_file_open(&file, filename,
-                                 APR_WRITE | APR_CREATE | APR_BUFFERED,
-                                 APR_OS_DEFAULT, pool));
-        out = svn_stream_from_aprfile2(file, TRUE, pool);
-        SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
-
-        svn_pool_clear(subpool);
-      }
+      svn_pool_clear(subpool);
 
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
@@ -6635,7 +6630,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* if we have a directory cache for this transaction, update it */
-  svn_pool_clear(subpool);
   if (ffd->txn_dir_cache)
     {
       /* build parameters: (name, new entry) pair */
