@@ -198,8 +198,15 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
- * Specify the desired network data compression level (zlib) from
- * 0 (no compression) to 9 (best but slowest).
+ * @a compression_level specifies the desired network data compression
+ * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ *
+ * To reduce the overhead of checking for cancellation requests from the
+ * data receiver, set @a error_check_interval to some non-zero value.
+ * It defines the number of bytes that must have been sent since the last
+ * check before the next check will be made.
+ *
+ * Allocate the result in @a pool.
  *
  * @since New in 1.9.
  */
@@ -208,10 +215,11 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *out_file,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
                                            apr_pool_t *pool);
 
 /** Similar to svn_ra_svn_create_conn3() but disables the zero copy code
- * path.
+ * path and sets the error checking interval to 0.
  *
  * @since New in 1.7.
  *

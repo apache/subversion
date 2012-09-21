@@ -131,6 +131,10 @@ typedef struct serve_params_t {
   /* Item size up to which we use the zero-copy code path to transmit
      them over the network.  0 disables that code path. */
   apr_size_t zero_copy_limit;
+
+  /* Amount of data to send between checks for cancellation requests
+     coming in from the client. */
+  apr_size_t error_check_interval;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

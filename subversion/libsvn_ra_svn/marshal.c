@@ -61,6 +61,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *out_file,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
                                            apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
@@ -74,6 +75,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
+  conn->written_since_error_check = 0;
+  conn->error_check_interval = error_check_interval;
+  conn->may_check_for_error = error_check_interval == 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
@@ -105,7 +109,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
                                            apr_pool_t *pool)
 {
   return svn_ra_svn_create_conn3(sock, in_file, out_file,
-                                 compression_level, 0, pool);
+                                 compression_level, 0, 0, pool);
 }
 
 /* backward-compatible implementation using the default compression level */
@@ -115,7 +119,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_pool_t *pool)
 {
   return svn_ra_svn_create_conn3(sock, in_file, out_file,
-                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0, 0,
                                  pool);
 }
 
@@ -241,6 +245,10 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 -1, cb->progress_baton, subpool);
         }
     }
+
+  conn->written_since_error_check += len;
+  conn->may_check_for_error
+    = conn->written_since_error_check >= conn->error_check_interval;
 
   if (subpool)
     svn_pool_destroy(subpool);

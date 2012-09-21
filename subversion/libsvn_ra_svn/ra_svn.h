@@ -75,20 +75,39 @@ struct svn_ra_svn_conn_st {
   apr_socket_t *sock;
   svn_boolean_t encrypted;
 #endif
+
+  /* I/O buffers */
   char read_buf[SVN_RA_SVN__READBUF_SIZE];
   char *read_ptr;
   char *read_end;
   char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
   apr_size_t write_pos;
+
+  /* abortion check control */
+  apr_size_t written_since_error_check;
+  apr_size_t error_check_interval;
+  svn_boolean_t may_check_for_error;
+
+  /* repository info */
   const char *uuid;
   const char *repos_root;
+
+  /* TX block notification target */
   ra_svn_block_handler_t block_handler;
   void *block_baton;
+
+  /* server settings */
   apr_hash_t *capabilities;
   int compression_level;
   apr_size_t zero_copy_limit;
+
+  /* who's on the other side of the connection? */
   char *remote_ip;
+
+  /* EV2 support*/
   svn_delta_shim_callbacks_t *shim_callbacks;
+
+  /* our pool */
   apr_pool_t *pool;
 };
 

@@ -456,7 +456,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 
   conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
-                                 pool);
+                                 0, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(err);
@@ -525,7 +525,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn3(NULL, proc->out, proc->in,
                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                  0, pool);
+                                  0, 0, pool);
   err = svn_ra_svn_skip_leading_garbage(*conn, pool);
   if (err)
     return svn_error_quick_wrap(
@@ -596,7 +596,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn3(sock, NULL, NULL,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                     0, pool);
+                                     0, 0, pool);
     }
 
   /* Make sure we set conn->session before reading from it,

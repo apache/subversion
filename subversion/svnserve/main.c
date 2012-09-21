@@ -150,6 +150,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
 #define SVNSERVE_OPT_ZERO_COPY_LIMIT 269
+#define SVNSERVE_OPT_ERROR_CHECK_INTERVAL 270
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -246,6 +247,12 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is 0 (optimization disabled).\n"
         "                             "
         "[used for FSFS repositories only]")},
+    {"error-check-interval", SVNSERVE_OPT_ERROR_CHECK_INTERVAL, 1,
+     N_("minimum amount of bytes to send between checks\n"
+        "                             "
+        "for cancellation requests from clients.\n"
+        "                             "
+        "Default is 4096.")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -509,6 +516,7 @@ int main(int argc, const char *argv[])
   params.cache_txdeltas = FALSE;
   params.cache_revprops = FALSE;
   params.zero_copy_limit = 0;
+  params.error_check_interval = 4096;
 
   while (1)
     {
@@ -661,6 +669,10 @@ int main(int argc, const char *argv[])
           params.zero_copy_limit = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
 
+        case SVNSERVE_OPT_ERROR_CHECK_INTERVAL:
+          params.error_check_interval = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+          break;
+
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
           if (run_mode != run_mode_service)
@@ -774,6 +786,7 @@ int main(int argc, const char *argv[])
       conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
                                      params.compression_level,
                                      params.zero_copy_limit,
+                                     params.error_check_interval,
                                      connection_pool);
       svn_error_clear(serve(conn, &params, connection_pool));
       exit(0);
@@ -1008,6 +1021,7 @@ int main(int argc, const char *argv[])
       conn = svn_ra_svn_create_conn3(usock, NULL, NULL,
                                      params.compression_level,
                                      params.zero_copy_limit,
+                                     params.error_check_interval,
                                      connection_pool);
 
       if (run_mode == run_mode_listen_once)
