@@ -220,6 +220,14 @@ typedef struct fs_fs_shared_data_t
 /* Data structure for the 1st level DAG node cache. */
 typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
 
+/* Key type for all caches that use revision + offset / counter as key. */
+typedef struct pair_cache_key_t
+{
+  svn_revnum_t revision;
+
+  apr_int64_t second;
+} pair_cache_key_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t

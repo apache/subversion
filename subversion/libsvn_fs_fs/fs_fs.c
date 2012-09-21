@@ -3366,12 +3366,10 @@ parse_revprop(apr_hash_t **properties,
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
   if (has_revprop_cache(fs, pool))
     {
-      const char *key;
+      pair_cache_key_t key = {revision, generation};
       fs_fs_data_t *ffd = fs->fsap_data;
 
-      key = svn_fs_fs__combine_two_numbers(revision, generation,
-                                           scratch_pool);
-      SVN_ERR(svn_cache__set(ffd->revprop_cache, key, *properties,
+      SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
                              scratch_pool));
     }
 
@@ -3670,13 +3668,13 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      const char *key;
+      pair_cache_key_t key = { rev, 0};
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
-      key = svn_fs_fs__combine_two_numbers(rev, generation, pool);
+      key.second = generation;
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                             ffd->revprop_cache, key, pool));
+                             ffd->revprop_cache, &key, pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
@@ -4364,7 +4362,7 @@ struct rep_read_baton
 
   /* The key for the fulltext cache for this rep, if there is a
      fulltext cache. */
-  const char *fulltext_cache_key;
+  pair_cache_key_t fulltext_cache_key;
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
@@ -4621,7 +4619,7 @@ static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
                    representation_t *rep,
-                   const char *fulltext_cache_key,
+                   pair_cache_key_t fulltext_cache_key,
                    apr_pool_t *pool)
 {
   struct rep_read_baton *b;
@@ -4640,7 +4638,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
 
-  if (fulltext_cache_key)
+  if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
     b->current_fulltext = svn_stringbuf_create_ensure
                             ((apr_size_t)b->len,
                              b->filehandle_pool);
@@ -4935,7 +4933,7 @@ rep_read_contents(void *baton,
   if (rb->off == rb->len && rb->current_fulltext)
     {
       fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
+      SVN_ERR(svn_cache__set(ffd->fulltext_cache, &rb->fulltext_cache_key,
                              rb->current_fulltext, rb->pool));
       rb->current_fulltext = NULL;
     }
@@ -4966,7 +4964,7 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      const char *fulltext_cache_key = NULL;
+      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
@@ -4975,11 +4973,8 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_cache_key = svn_fs_fs__combine_two_numbers(rep->revision,
-                                                              rep->offset,
-                                                              pool);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, fulltext_cache_key,
+                                 ffd->fulltext_cache, &fulltext_cache_key,
                                  pool));
           if (is_cached)
             {
@@ -4987,6 +4982,8 @@ read_representation(svn_stream_t **contents_p,
               return SVN_NO_ERROR;
             }
         }
+      else
+        fulltext_cache_key.revision = SVN_INVALID_REVNUM;
 
       SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
 
@@ -5139,18 +5136,16 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      const char *fulltext_key = svn_fs_fs__combine_two_numbers(rep->revision,
-                                                                rep->offset,
-                                                                pool);
-
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           cache_access_wrapper_baton_t wrapper_baton = {processor, baton};
+          pair_cache_key_t fulltext_key = { rep->revision, rep->offset };
+                                                            
           void *dummy = NULL;
 
           return svn_cache__get_partial(&dummy, success,
-                                        ffd->fulltext_cache, fulltext_key,
+                                        ffd->fulltext_cache, &fulltext_key,
                                         cache_access_wrapper, &wrapper_baton,
                                         pool);
         }

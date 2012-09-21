@@ -352,7 +352,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
                            NULL, NULL,
-                           APR_HASH_KEY_STRING,
+                           sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "TEXT", (char *)NULL),
                            fs->pool));
     }
@@ -368,7 +368,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            svn_fs_fs__serialize_properties,
                            svn_fs_fs__deserialize_properties,
-                           APR_HASH_KEY_STRING,
+                           sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "REVPROP",
                                        (char *)NULL),
                            fs->pool));
