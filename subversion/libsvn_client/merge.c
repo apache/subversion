@@ -11443,14 +11443,23 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
                                           svn_mergeinfo_inherited,
                                           FALSE /* squelch_incapable */,
                                           scratch_pool));
-  SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(&s_t->target_mergeinfo,
-                                                NULL /* inherited */,
-                                                NULL /* from_repos */,
-                                                FALSE /* repos_only */,
-                                                svn_mergeinfo_inherited,
-                                                s_t->target_ra_session,
-                                                s_t->target->abspath,
-                                                ctx, scratch_pool));
+  if (! s_t->target->abspath)
+    SVN_ERR(svn_client__get_repos_mergeinfo(&s_t->target_mergeinfo,
+                                            s_t->target_ra_session,
+                                            s_t->target->loc.url,
+                                            s_t->target->loc.rev,
+                                            svn_mergeinfo_inherited,
+                                            FALSE /* squelch_incapable */,
+                                            scratch_pool));
+  else
+    SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(&s_t->target_mergeinfo,
+                                                  NULL /* inherited */,
+                                                  NULL /* from_repos */,
+                                                  FALSE /* repos_only */,
+                                                  svn_mergeinfo_inherited,
+                                                  s_t->target_ra_session,
+                                                  s_t->target->abspath,
+                                                  ctx, scratch_pool));
 
   /* Get the location-history of each branch. */
   s_t->source_branch.tip = s_t->source;
@@ -11497,9 +11506,51 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
 /* Details of a symmetric merge. */
 struct svn_client__symmetric_merge_t
 {
-  svn_client__pathrev_t *yca, *base, *mid, *right;
+  svn_client__pathrev_t *yca, *base, *mid, *right, *target;
   svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
 };
+
+svn_error_t *
+svn_client__find_symmetric_merge_no_wc(
+                                 svn_client__symmetric_merge_t **merge_p,
+                                 const char *source_path_or_url,
+                                 const svn_opt_revision_t *source_revision,
+                                 const char *target_path_or_url,
+                                 const svn_opt_revision_t *target_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  source_and_target_t *s_t = apr_palloc(scratch_pool, sizeof(*s_t));
+  svn_client__pathrev_t *target_loc;
+  svn_client__symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
+
+  /* Source */
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &s_t->source_ra_session, &s_t->source,
+            source_path_or_url, NULL, source_revision, source_revision,
+            ctx, result_pool));
+
+  /* Target */
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &s_t->target_ra_session, &target_loc,
+            target_path_or_url, NULL, target_revision, target_revision,
+            ctx, result_pool));
+  s_t->target = apr_palloc(scratch_pool, sizeof(*s_t->target));
+  s_t->target->kind = svn_node_none;
+  s_t->target->abspath = NULL;  /* indicate the target is not a WC */
+  s_t->target->loc = *target_loc;
+
+  SVN_ERR(find_symmetric_merge(&merge->base, &merge->mid, s_t,
+                               ctx, result_pool, scratch_pool));
+
+  merge->right = s_t->source;
+  merge->target = &s_t->target->loc;
+  merge->yca = s_t->yca;
+  *merge_p = merge;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
@@ -11742,4 +11793,24 @@ svn_client__symmetric_merge_is_reintegrate_like(
         const svn_client__symmetric_merge_t *merge)
 {
   return merge->mid != NULL;
+}
+
+svn_error_t *
+svn_client__symmetric_merge_get_locations(
+                                svn_client__pathrev_t **yca,
+                                svn_client__pathrev_t **base,
+                                svn_client__pathrev_t **right,
+                                svn_client__pathrev_t **target,
+                                const svn_client__symmetric_merge_t *merge,
+                                apr_pool_t *result_pool)
+{
+  if (yca)
+    *yca = svn_client__pathrev_dup(merge->yca, result_pool);
+  if (base)
+    *base = svn_client__pathrev_dup(merge->base, result_pool);
+  if (right)
+    *right = svn_client__pathrev_dup(merge->right, result_pool);
+  if (target)
+    *target = svn_client__pathrev_dup(merge->target, result_pool);
+  return SVN_NO_ERROR;
 }
