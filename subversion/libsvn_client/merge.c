@@ -11494,6 +11494,13 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
   return SVN_NO_ERROR;
 }
 
+/* Details of a symmetric merge. */
+struct svn_client__symmetric_merge_t
+{
+  svn_client__pathrev_t *yca, *base, *mid, *right;
+  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
+};
+
 svn_error_t *
 svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
                                  const char *source_path_or_url,
@@ -11728,4 +11735,11 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                 merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_client__symmetric_merge_is_reintegrate_like(
+        const svn_client__symmetric_merge_t *merge)
+{
+  return merge->mid != NULL;
 }
