@@ -24,6 +24,7 @@
 #include "fs_fs.h"
 #include "id.h"
 #include "dag.h"
+#include "tree.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -32,6 +33,8 @@
 
 #include "svn_private_config.h"
 #include "svn_hash.h"
+#include "svn_pools.h"
+
 #include "private/svn_debug.h"
 #include "private/svn_subr_private.h"
 
@@ -307,6 +310,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        fs->pool));
 
   SVN_ERR(init_callbacks(ffd->rev_node_cache, fs, no_handler, pool));
+
+  /* 1st level DAG node cache */
+  ffd->dag_node_cache = svn_fs_fs__create_dag_cache(svn_pool_create(pool));
 
   /* Very rough estimate: 1K per directory. */
   SVN_ERR(create_cache(&(ffd->dir_cache),
