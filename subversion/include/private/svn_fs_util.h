@@ -52,6 +52,12 @@ extern "C" {
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
+/* Return FALSE, if a svn_fs__canonicalize_abspath will return a
+   different value than PATH (despite creating a copy).
+*/
+svn_boolean_t
+svn_fs__is_canonical_abspath(const char *path);
+
 /* If EXPECT_OPEN, verify that FS refers to an open database;
    otherwise, verify that FS refers to an unopened database.  Return
    an appropriate error if the expectation fails to match the
