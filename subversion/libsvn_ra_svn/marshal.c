@@ -194,20 +194,6 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
 
 /* --- WRITE BUFFER MANAGEMENT --- */
 
-/* Write bytes into the write buffer until either the write buffer is
- * full or we reach END. */
-static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
-                                 const char *end)
-{
-  apr_ssize_t buflen, copylen;
-
-  buflen = sizeof(conn->write_buf) - conn->write_pos;
-  copylen = (buflen < end - data) ? buflen : end - data;
-  memcpy(conn->write_buf + conn->write_pos, data, copylen);
-  conn->write_pos += copylen;
-  return data + copylen;
-}
-
 /* Write data to socket or output file as appropriate. */
 static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *data, apr_size_t len)
@@ -271,17 +257,22 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   const char *end = data + len;
 
-  if (conn->write_pos > 0 && conn->write_pos + len > sizeof(conn->write_buf))
+  /* data > 4k is sent immediately */
+  if (len >= sizeof(conn->write_buf) / 4)
     {
-      /* Fill and then empty the write buffer. */
-      data = writebuf_push(conn, data, end);
-      SVN_ERR(writebuf_flush(conn, pool));
+      if (conn->write_pos > 0)
+        SVN_ERR(writebuf_flush(conn, pool));
+      return writebuf_output(conn, pool, data, len);
     }
 
-  if (end - data > (apr_ssize_t)sizeof(conn->write_buf))
-    SVN_ERR(writebuf_output(conn, pool, data, end - data));
-  else
-    writebuf_push(conn, data, end);
+  /* ensure room for the data to add */
+  if (conn->write_pos + len > sizeof(conn->write_buf))
+    SVN_ERR(writebuf_flush(conn, pool));
+
+  /* buffer the new data block as well */
+  memcpy(conn->write_buf + conn->write_pos, data, len);
+  conn->write_pos += len;
+
   return SVN_NO_ERROR;
 }
 
