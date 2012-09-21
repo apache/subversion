@@ -11159,57 +11159,6 @@ typedef struct source_and_target_t
   svn_client__pathrev_t *yca;
 } source_and_target_t;
 
-/* "Open" the source and target branches of a merge.  That means:
- *   - find out their exact repository locations (resolve WC paths and
- *     non-numeric revision numbers),
- *   - check the branches are suitably related,
- *   - establish RA session(s) to the repo,
- *   - check the WC for suitability (throw an error if unsuitable)
- *
- * Record this information and return it in a new "merge context" object.
- */
-static svn_error_t *
-open_source_and_target(source_and_target_t **source_and_target,
-                       const char *source_path_or_url,
-                       const svn_opt_revision_t *source_peg_revision,
-                       const char *target_abspath,
-                       svn_boolean_t allow_mixed_rev,
-                       svn_boolean_t allow_local_mods,
-                       svn_boolean_t allow_switched_subtrees,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *session_pool,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
-
-  /* Target */
-  SVN_ERR(open_target_wc(&s_t->target, target_abspath,
-                         allow_mixed_rev, allow_local_mods, allow_switched_subtrees,
-                         ctx, result_pool, scratch_pool));
-  SVN_ERR(svn_client_open_ra_session(&s_t->target_ra_session,
-                                     s_t->target->loc.url,
-                                     ctx, session_pool));
-
-  /* Source */
-  SVN_ERR(svn_client__ra_session_from_path2(
-            &s_t->source_ra_session, &s_t->source,
-            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
-            ctx, session_pool));
-
-  *source_and_target = s_t;
-  return SVN_NO_ERROR;
-}
-
-/* "Close" any resources that were acquired in the S_T structure. */
-static svn_error_t *
-close_source_and_target(source_and_target_t *s_t,
-                        apr_pool_t *scratch_pool)
-{
-  /* close s_t->source_/target_ra_session */
-  return SVN_NO_ERROR;
-}
-
 /* Set *INTERSECTION_P to the intersection of BRANCH_HISTORY with the
  * revision range OLDEST_REV to YOUNGEST_REV (inclusive).
  *
@@ -11558,22 +11507,30 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
                                  apr_pool_t *scratch_pool)
 {
   const char *target_abspath;
-  source_and_target_t *s_t;
+  source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
   svn_client__symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, scratch_pool));
 
-  /* Open RA sessions to the source and target trees.  We're not going
-   * to check the target WC for mixed-rev, local mods or switched
-   * subtrees yet.  After we find out what kind of merge is required,
-   * then if a reintegrate-like merge is required we'll do the stricter
-   * checks, in do_symmetric_merge_locked(). */
-  SVN_ERR(open_source_and_target(&s_t, source_path_or_url, source_revision,
-                                 target_abspath,
-                                 TRUE /*allow_mixed_rev*/,
-                                 TRUE /*allow_local_mods*/,
-                                 TRUE /*allow_switched_subtrees*/,
-                                 ctx, result_pool, result_pool, scratch_pool));
+  /* "Open" the target WC.  We're not going to check the target WC for
+   * mixed-rev, local mods or switched subtrees yet.  After we find out
+   * what kind of merge is required, then if a reintegrate-like merge is
+   * required we'll do the stricter checks, in do_symmetric_merge_locked(). */
+  SVN_ERR(open_target_wc(&s_t->target, target_abspath,
+                         TRUE /*allow_mixed_rev*/,
+                         TRUE /*allow_local_mods*/,
+                         TRUE /*allow_switched_subtrees*/,
+                         ctx, result_pool, scratch_pool));
+
+  /* Open RA sessions to the source and target trees. */
+  SVN_ERR(svn_client_open_ra_session(&s_t->target_ra_session,
+                                     s_t->target->loc.url,
+                                     ctx, result_pool));
+  /* ### check for null URL (i.e. added path) here, like in reintegrate? */
+  SVN_ERR(svn_client__ra_session_from_path2(
+            &s_t->source_ra_session, &s_t->source,
+            source_path_or_url, NULL, source_revision, source_revision,
+            ctx, result_pool));
 
   /* Check source is in same repos as target. */
   SVN_ERR(check_same_repos(s_t->source, source_path_or_url,
@@ -11590,7 +11547,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
 
   *merge_p = merge;
 
-  SVN_ERR(close_source_and_target(s_t, scratch_pool));
+  /* TODO: Close the source and target sessions here? */
 
   return SVN_NO_ERROR;
 }
