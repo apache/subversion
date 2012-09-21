@@ -1036,13 +1036,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
-     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+     "usage: 1. mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+     "       2. mergeinfo --show-revs=merged SOURCE[@REV] [TARGET[@REV]]\n"
+     "       3. mergeinfo --show-revs=eligible SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
-     "  Display information related to merges (or potential merges) between\n"
-     "  SOURCE and TARGET (default: '.').  Display the type of information\n"
-     "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"
+     "  1. Display the following information about merges between SOURCE and\n"
+     "     TARGET:\n"
+     "       the youngest common ancestor;\n"
+     "       the latest full merge in either direction, and thus the\n"
+     "         base that will be used for the next full merge.\n"
+     "  2. Print the revision numbers on SOURCE that have been merged to TARGET.\n"
+     "  3. Print the revision numbers on SOURCE that have NOT been merged to TARGET.\n"
      "\n"
+     "  The default TARGET is the current working directory ('.').\n"
      "  If --revision (-r) is provided, filter the displayed information to\n"
      "  show only that which is associated with the revisions within the\n"
      "  specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
@@ -1670,7 +1676,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
-  opt_state.show_revs = svn_cl__show_revs_merged;
+  opt_state.show_revs = svn_cl__show_revs_invalid;
 
   /* No args?  Show usage. */
   if (argc <= 1)

@@ -202,6 +202,45 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
+/* Find out what kind of symmetric merge would be needed, when the target
+ * is only known as a repository location rather than a WC.
+ *
+ * Like svn_client__find_symmetric_merge() except that SOURCE_PATH_OR_URL @
+ * SOURCE_REVISION should refer to a repository location and not a WC.
+ *
+ * ### The result, *MERGE_P, may not be suitable for passing to
+ * svn_client__do_symmetric_merge().  The target WC state would not be
+ * checked (as in the ALLOW_* flags).  We should resolve this problem:
+ * perhaps add the allow_* params here, or provide another way of setting
+ * them; and perhaps ensure __do_...() will accept the result iff given a
+ * WC that matches the stored target location.
+ */
+svn_error_t *
+svn_client__find_symmetric_merge_no_wc(
+                                 svn_client__symmetric_merge_t **merge_p,
+                                 const char *source_path_or_url,
+                                 const svn_opt_revision_t *source_revision,
+                                 const char *target_path_or_url,
+                                 const svn_opt_revision_t *target_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
+ * youngest common ancestor of the branches, the base chosen for 3-way
+ * merge, the right-hand side of the source diff, and the target WC.
+ *
+ * Any of the output pointers may be NULL if not wanted.
+ */
+svn_error_t *
+svn_client__symmetric_merge_get_locations(
+                                svn_client__pathrev_t **yca,
+                                svn_client__pathrev_t **base,
+                                svn_client__pathrev_t **right,
+                                svn_client__pathrev_t **target,
+                                const svn_client__symmetric_merge_t *merge,
+                                apr_pool_t *result_pool);
+
 /* Perform a symmetric merge.
  *
  * Merge according to MERGE into the WC at TARGET_WCPATH.
