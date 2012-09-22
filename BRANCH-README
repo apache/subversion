@@ -3,13 +3,19 @@ svn:// single-threaded throughput from about 5Gb/s to
 10Gb/s for typical source code, i.e. becomes capable of
 saturating a 10Gb connection.
 
+Http:// will speep up by almost the same absolute value,
+1 second being saved per GB of data.  Due to slow processing
+in other places, this gain will be hard to measure, though.
+
 Bottlenecks to address:
 
-* frequent cancellation checks (intense OS interaction)
+* frequent cancellation / abortion checks on the server
+  side (intense OS interaction)
 * in-memory copies (membuffer cache -> empty deltification
   -> output buffer -> network stack)
 * various CPU-heavy tasks
 
 The patches have been written quite some time ago and I
-want them off my disk. OTOH, release 1.8 shall not be
-endangered.
+want them off my disk.  OTOH, release 1.8 shall not be
+endangered.  After testing and stabilization of this branch,
+parts of it may be merged into /trunk before 1.8.
