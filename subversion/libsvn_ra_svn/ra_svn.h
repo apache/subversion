@@ -57,8 +57,9 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                void *baton);
 
 /* The size of our per-connection read and write buffers. */
-#define SVN_RA_SVN__READBUF_SIZE (4*4096)
-#define SVN_RA_SVN__WRITEBUF_SIZE (4*4096)
+#define SVN_RA_SVN__PAGE_SIZE 4096
+#define SVN_RA_SVN__READBUF_SIZE (4 * SVN_RA_SVN__PAGE_SIZE)
+#define SVN_RA_SVN__WRITEBUF_SIZE (4 * SVN_RA_SVN__PAGE_SIZE)
 
 /* Create forward reference */
 typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
@@ -66,6 +67,14 @@ typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
+
+  /* I/O buffers */
+  char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
+  char read_buf[SVN_RA_SVN__READBUF_SIZE];
+  char *read_ptr;
+  char *read_end;
+  apr_size_t write_pos;
+
   svn_ra_svn__stream_t *stream;
   svn_ra_svn__session_baton_t *session;
 #ifdef SVN_HAVE_SASL
@@ -75,13 +84,6 @@ struct svn_ra_svn_conn_st {
   apr_socket_t *sock;
   svn_boolean_t encrypted;
 #endif
-
-  /* I/O buffers */
-  char read_buf[SVN_RA_SVN__READBUF_SIZE];
-  char *read_ptr;
-  char *read_end;
-  char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
-  apr_size_t write_pos;
 
   /* abortion check control */
   apr_size_t written_since_error_check;

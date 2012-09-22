@@ -64,7 +64,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_size_t error_check_interval,
                                            apr_pool_t *pool)
 {
-  svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
+  svn_ra_svn_conn_t *conn;
+  void *mem = apr_palloc(pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
+  conn = (void*)APR_ALIGN((apr_uintptr_t)mem, SVN_RA_SVN__PAGE_SIZE);
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
 #ifdef SVN_HAVE_SASL
@@ -257,11 +259,12 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   const char *end = data + len;
 
-  /* data > 4k is sent immediately */
-  if (len >= sizeof(conn->write_buf) / 4)
+  /* data >= 8k is sent immediately */
+  if (len >= sizeof(conn->write_buf) / 2)
     {
       if (conn->write_pos > 0)
         SVN_ERR(writebuf_flush(conn, pool));
+      
       return writebuf_output(conn, pool, data, len);
     }
 
