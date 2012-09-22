@@ -283,6 +283,9 @@ typedef struct fs_fs_data_t
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
 
+  /* Node properties cache.  Maps from rep key to apr_hash_t. */
+  svn_cache__t *properties_cache;
+
   /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
      a manifest; and a manifest is a mapping from (svn_revnum_t) revision
      number offset within a shard to (apr_off_t) byte-offset in the

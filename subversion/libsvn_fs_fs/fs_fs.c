@@ -5424,11 +5424,10 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
 
-  proplist = apr_hash_make(pool);
-
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       const char *filename = path_txn_node_props(fs, noderev->id, pool);
+      proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
@@ -5436,9 +5435,31 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     }
   else if (noderev->prop_rep)
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
+      representation_t *rep = noderev->prop_rep;
+      
+      pair_cache_key_t key = { rep->revision, rep->offset };
+      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
+        {
+          svn_boolean_t is_cached;
+          SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
+                                 ffd->properties_cache, &key, pool));
+          if (is_cached)
+            return SVN_NO_ERROR;
+        }
+
+      proplist = apr_hash_make(pool);
       SVN_ERR(read_representation(&stream, fs, noderev->prop_rep, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
+      
+      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
+        SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist, pool));
+    }
+  else
+    {
+      /* return an empty prop list if the node doesn't have any props */
+      proplist = apr_hash_make(pool);
     }
 
   *proplist_p = proplist;

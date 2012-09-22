@@ -359,6 +359,27 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
 
+  /* initialize node properties cache, if that has been enabled */
+  if (cache_fulltexts)
+    {
+      SVN_ERR(create_cache(&(ffd->properties_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_properties,
+                           svn_fs_fs__deserialize_properties,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "PROP",
+                                       (char *)NULL),
+                           fs->pool));
+    }
+  else
+    {
+      ffd->properties_cache = NULL;
+    }
+
+  SVN_ERR(init_callbacks(ffd->properties_cache, fs, no_handler, pool));
+
   /* initialize revprop cache, if full-text caching has been enabled */
   if (cache_revprops)
     {
