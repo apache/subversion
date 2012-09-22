@@ -372,7 +372,6 @@ dag_node_cache_get(dag_node_t **node_p,
       cache_entry_t *bucket;
 
       auto_clear_dag_cache(&ffd->dag_node_cache);
-      lock_cache(ffd->dag_node_cache, pool);
       bucket = cache_lookup(ffd->dag_node_cache, root->rev, path);
       if (bucket->node == NULL)
         {
@@ -391,6 +390,11 @@ dag_node_cache_get(dag_node_t **node_p,
         {
           node = bucket->node;
         }
+
+      /* if we found a node, make sure it remains valid at least as long
+         as it would when allocated in POOL. */
+      if (node)
+        lock_cache(ffd->dag_node_cache, pool);
     }
   else
     {
@@ -405,32 +409,6 @@ dag_node_cache_get(dag_node_t **node_p,
           * object. */
           svn_fs_fs__dag_set_fs(node, root->fs);
         }
-    }
-
-  *node_p = node;
-
-  return SVN_NO_ERROR;
-}
-
-/* Attempt a 1st level cache lookup for for PATH from ROOT's node cache.
-   Return the result in *NODE.  If PATH is not canonical, or the node is
-   not found in the cache, set *NODE to NULL.  *NODE remains valid until
-   POOL gets cleared or destroyed. */
-static svn_error_t *
-dag_node_cache_get_non_canonical(dag_node_t **node_p,
-                                 svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool)
-{
-  dag_node_t *node = NULL;
-  if (!root->is_txn_root && *path == '/')
-    {
-      fs_fs_data_t *ffd = root->fs->fsap_data;
-
-      auto_clear_dag_cache(&ffd->dag_node_cache);
-      lock_cache(ffd->dag_node_cache, pool);
-
-      node = cache_lookup(ffd->dag_node_cache, root->rev, path)->node;
     }
 
   *node_p = node;
@@ -1066,11 +1044,13 @@ get_dag(dag_node_t **dag_node_p,
         apr_pool_t *pool)
 {
   parent_path_t *parent_path;
-  dag_node_t *node;
+  dag_node_t *node = NULL;
 
-  /* First we look for the DAG in our cache.  If we find a node, PATH
-     has been canonical. */
-  SVN_ERR(dag_node_cache_get_non_canonical(&node, root, path, pool));
+  /* First we look for the DAG in our cache
+     (if the path may be canonical). */
+  if (*path == '/')
+    SVN_ERR(dag_node_cache_get(&node, root, path, pool));
+
   if (! node)
     {
       /* Canonicalize the input PATH. */
