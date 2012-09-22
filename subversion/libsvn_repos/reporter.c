@@ -36,6 +36,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_string_private.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -137,8 +138,10 @@ typedef struct report_baton_t
 
   /* Cache for revision properties. This is used to eliminate redundant
      revprop fetching. */
-  apr_hash_t* revision_infos;
+  apr_hash_t *revision_infos;
 
+  /* This will not change. So, fetch it once and reuse it. */
+  svn_string_t *repos_uuid;
   apr_pool_t *pool;
 } report_baton_t;
 
@@ -515,7 +518,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                 void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props;
+  apr_hash_t *s_props = NULL, *t_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
@@ -525,15 +528,19 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   svn_boolean_t changed;
   const svn_prop_t *pc;
   svn_lock_t *lock;
+  apr_hash_index_t *hi;
 
   /* Fetch the created-rev and send entry props. */
   SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
   if (SVN_IS_VALID_REVNUM(crev))
     {
+      /* convert committed-rev to  string */
+      char buf[SVN_INT64_BUFFER_SIZE];
+      svn_string_t cr_str = { buf, svn__i64toa(buf, crev) };
+
       /* Transmit the committed-rev. */
-      cr_str = svn_string_createf(pool, "%ld", crev);
       SVN_ERR(change_fn(b, object,
-                        SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
+                        SVN_PROP_ENTRY_COMMITTED_REV, &cr_str, pool));
 
       SVN_ERR(get_revision_info(b, crev, &revision_info, pool));
 
@@ -548,9 +555,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                           revision_info->author, pool));
 
       /* Transmit the UUID. */
-      SVN_ERR(svn_fs_get_uuid(b->repos->fs, &uuid, pool));
       SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_UUID,
-                        svn_string_create(uuid, pool), pool));
+                        b->repos_uuid, pool));
     }
 
   /* Update lock properties. */
@@ -577,18 +583,31 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* If so, go ahead and get the source path's properties. */
       SVN_ERR(svn_fs_node_proplist(&s_props, s_root, s_path, pool));
     }
-  else
-    s_props = apr_hash_make(pool);
 
   /* Get the target path's properties */
   SVN_ERR(svn_fs_node_proplist(&t_props, b->t_root, t_path, pool));
 
-  /* Now transmit the differences. */
-  SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
-  for (i = 0; i < prop_diffs->nelts; i++)
+  if (s_props && apr_hash_count(s_props))
     {
-      pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-      SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
+      /* Now transmit the differences. */
+      SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
+      for (i = 0; i < prop_diffs->nelts; i++)
+        {
+          pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+          SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
+        }
+    }
+  else if (apr_hash_count(t_props))
+    {
+      /* So source, i.e. all new.  Transmit all target props. */
+      for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          SVN_ERR(change_fn(b, object, key, val, pool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1550,10 +1569,13 @@ svn_repos_begin_report3(void **report_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
+  const char *uuid;
 
   if (depth == svn_depth_exclude)
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
                             _("Request depth 'exclude' not supported"));
+
+  SVN_ERR(svn_fs_get_uuid(repos->fs, &uuid, pool));
 
   /* Build a reporter baton.  Copy strings in case the caller doesn't
      keep track of them. */
@@ -1579,6 +1601,7 @@ svn_repos_begin_report3(void **report_baton,
   b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
                                           1000000 /* maxsize */,
                                           pool);
+  b->repos_uuid = svn_string_create(uuid, pool);
 
   /* Hand reporter back to client. */
   *report_baton = b;
