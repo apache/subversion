@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
+#include "private/svn_pseudo_md5.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -1713,7 +1714,31 @@ combine_key(svn_membuffer_cache_t *cache,
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
-  apr_md5((unsigned char*)cache->combined_key, key, key_len);
+  if (key_len < 16)
+    {
+      apr_uint32_t data[4] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_15((apr_uint32_t *)cache->combined_key, data);
+    }
+  else if (key_len < 32)
+    {
+      apr_uint32_t data[8] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_31((apr_uint32_t *)cache->combined_key, data);
+    }
+  else if (key_len < 64)
+    {
+      apr_uint32_t data[16] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_63((apr_uint32_t *)cache->combined_key, data);
+    }
+  else
+    {
+      apr_md5((unsigned char*)cache->combined_key, key, key_len);
+    }
 
   cache->combined_key[0] ^= cache->prefix[0];
   cache->combined_key[1] ^= cache->prefix[1];
