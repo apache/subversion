@@ -1362,10 +1362,17 @@ endif
 libpath:
 	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
+#
+# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
+# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
+# aren't linked to libpthread.
+ifeq ($(UNAME),OpenBSD)
+LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
+endif
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
-HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
 		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1407,13 +1414,6 @@ start-svnserve: $(SVN_OBJDIR)/.compiled
 
 stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
-
-# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
-# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
-# aren't linked to libpthread.
-ifeq ($(UNAME),OpenBSD)
-LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
-endif
 
 define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
