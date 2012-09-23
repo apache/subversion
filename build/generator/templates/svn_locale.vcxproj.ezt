@@ -44,8 +44,8 @@
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\[configs]\mo\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\[configs]\mo\</IntDir>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\..\[configs]\mo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\..\[configs]\mo\</IntDir>
     <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_locale.bat [configs]</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_locale.bat [configs]</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c del $(OutDir)*.mo</NMakeCleanCommandLine>
