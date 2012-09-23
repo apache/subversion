@@ -2159,6 +2159,24 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
   return stream;
 }
 
+PyObject *
+svn_swig_py_convert_txdelta_op_c_array(int num_ops,
+                                       svn_txdelta_op_t *ops,
+                                       swig_type_info *op_type_info,
+                                       PyObject *parent_pool)
+{
+  PyObject *result = PyList_New(num_ops);
+  int i;
+
+  if (!result) return NULL;
+
+  for (i = 0; i < num_ops; ++i)
+      PyList_SET_ITEM(result, i,
+                      svn_swig_NewPointerObj(ops + i, op_type_info,
+                                             parent_pool, NULL));
+
+  return result;
+}
 
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
@@ -4172,20 +4190,4 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   callbacks->dir_deleted        = wc_diff_callbacks2_dir_deleted;
   callbacks->dir_props_changed  = wc_diff_callbacks2_dir_props_changed;
   return callbacks;
-}
-
-PyObject *
-svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
-                                     swig_type_info * op_type_info,
-                                     PyObject *window_pool)
-{
-  PyObject *result = PyList_New(window->num_ops);
-  int i;
-
-  for (i = 0; i < window->num_ops; ++i)
-      PyList_SET_ITEM(result, i,
-                      svn_swig_NewPointerObj(window->ops + i, op_type_info,
-                                             window_pool, NULL));
-
-  return result;
 }

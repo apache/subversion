@@ -30,10 +30,6 @@ _unprefix_names(locals(), 'svn_txdelta_', 'tx_')
 __all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
-# Force our accessor since it appears that there isn't a more civilized way
-# to make SWIG use it.
-svn_txdelta_window_t.ops = property(svn_txdelta_window_t_ops_get)
-
 class Editor:
 
   def set_target_revision(self, target_revision, pool=None):
