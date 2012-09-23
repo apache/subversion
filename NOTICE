@@ -16,3 +16,8 @@ see: build/install-sh
 This product includes software developed by Markus Kuhn under a permissive
 license, see LICENSE.
 
+This software contains code derived from the RSA Data Security
+Inc. MD5 Message-Digest Algorithm, including various
+modifications by Spyglass Inc., Carnegie Mellon University, and
+Bell Communications Research, Inc (Bellcore).
+
