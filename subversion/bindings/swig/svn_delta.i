@@ -178,8 +178,8 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 
 void _ops_get(int *num_ops, svn_txdelta_op_t **ops)
 {
-  *num_ops = $self->num_ops;
-  *ops = $self->ops;
+  *num_ops = self->num_ops;
+  *ops = self->ops;
 }
 
 %pythoncode {
