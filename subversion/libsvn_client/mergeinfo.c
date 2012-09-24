@@ -1729,7 +1729,10 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         }
     }
 
-  /* Open RA sessions to the repository for the source and target.
+  /* Fetch the location history as mergeinfo, for the source branch
+   * (between the given start and end revisions), and, if we're finding
+   * merged revisions, then also for the entire target branch.
+   *
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
   {
