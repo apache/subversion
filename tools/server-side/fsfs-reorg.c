@@ -320,6 +320,7 @@ get_content(svn_string_t **data,
   apr_file_t *file;
   revision_info_t *revision_info;
   svn_stringbuf_t *temp;
+  apr_off_t temp_offset;
   
   svn_string_t *result = get_cached_content(fs->cache, revision);
   if (result)
@@ -340,8 +341,11 @@ get_content(svn_string_t **data,
                                      scratch_pool);
   temp->len = revision_info->original.end - revision_info->original.offset;
   SVN_ERR(open_rev_or_pack_file(&file, fs, revision, scratch_pool));
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &revision_info->original.offset,
+
+  temp_offset = (apr_off_t)revision_info->original.offset;
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &temp_offset,
                            scratch_pool));
+  revision_info->original.offset = temp_offset;
   SVN_ERR(svn_io_file_read(file, temp->data, &temp->len, scratch_pool));
 
   set_cached_content(fs->cache, revision,
