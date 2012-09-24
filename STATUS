@@ -15,13 +15,14 @@ Status of 1.7.7:
 Candidate changes:
 ==================
 
- * r1374800, r1374802
+ * r1374800, r1374802, r1389364
    Fix issues with applying Git patch files.
    Justification:
      It's a small change, and it allows applying patches that failed
      before.
    Votes:
-     +1: steveking, rhuijben
+     +1: steveking, rhuijben (without r1389364)
+     +1: stsp
 
  * r1242759, r1242770, r1242794, r1380175
    Fix various issues with GNOME and KDE keyring providers, especially
