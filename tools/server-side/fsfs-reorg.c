@@ -386,8 +386,8 @@ get_cached_dir(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t i = get_dir_cache_index(fs, revision, offset);
-  dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
+  apr_size_t index = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
   
   return entry->offset == offset && entry->revision == revision
     ? entry->hash
@@ -402,8 +402,8 @@ set_cached_dir(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t i = get_dir_cache_index(fs, revision, offset);
-  dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
+  apr_size_t index = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
 
   fs->dir_cache->insert_count += apr_hash_count(hash);
   if (fs->dir_cache->insert_count >= fs->dir_cache->entry_count * 100)
@@ -456,8 +456,8 @@ get_cached_window(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t i = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[i];
+  apr_size_t index = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[index];
 
   return entry->offset == offset && entry->revision == revision
     ? svn_stringbuf_dup(entry->window, pool)
@@ -472,8 +472,8 @@ set_cached_window(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t i = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[i];
+  apr_size_t index = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[index];
 
   fs->window_cache->insert_count += window->len;
   if (fs->window_cache->insert_count >= fs->window_cache->entry_count * 10000)
@@ -1265,7 +1265,7 @@ read_pack_file(fs_fs_t *fs,
                svn_revnum_t base,
                apr_pool_t *pool)
 {
-  apr_array_header_t *manifest = NULL;
+  apr_array_header_t *manifest;
   apr_pool_t *local_pool = svn_pool_create(pool);
   apr_pool_t *iter_pool = svn_pool_create(local_pool);
   int i;
@@ -1283,7 +1283,7 @@ read_pack_file(fs_fs_t *fs,
   revisions->filesize = file_content->len;
   APR_ARRAY_PUSH(fs->packs, revision_pack_t*) = revisions;
 
-  SVN_ERR(read_manifest(&manifest, pack_folder, local_pool));
+  read_manifest(&manifest, pack_folder, local_pool);
   if (manifest->nelts != fs->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
 
@@ -2118,7 +2118,7 @@ update_id(svn_stringbuf_t *node_rev,
           const char *key,
           noderev_t *node)
 {
-  char *newline_pos = 0;
+  char *newline_pos;
   char *pos;
 
   pos = strstr(node_rev->data, key);
