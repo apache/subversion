@@ -182,7 +182,8 @@ typedef struct window_cache_t
 
   apr_pool_t *pool;
   apr_size_t entry_count;
-  apr_size_t insert_count;
+  apr_size_t capacity;
+  apr_size_t used;
 } window_cache_t;
 
 typedef struct fs_fs_t
@@ -386,8 +387,8 @@ get_cached_dir(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t index = get_dir_cache_index(fs, revision, offset);
-  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
+  apr_size_t i = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
   
   return entry->offset == offset && entry->revision == revision
     ? entry->hash
@@ -402,8 +403,8 @@ set_cached_dir(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t index = get_dir_cache_index(fs, revision, offset);
-  dir_cache_entry_t *entry = &fs->dir_cache->entries[index];
+  apr_size_t i = get_dir_cache_index(fs, revision, offset);
+  dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
 
   fs->dir_cache->insert_count += apr_hash_count(hash);
   if (fs->dir_cache->insert_count >= fs->dir_cache->entry_count * 100)
@@ -428,13 +429,15 @@ set_cached_dir(fs_fs_t *fs,
 
 static window_cache_t *
 create_window_cache(apr_pool_t *pool,
-                    apr_size_t entry_count)
+                    apr_size_t entry_count,
+                    apr_size_t capacity)
 {
   window_cache_t *result = apr_pcalloc(pool, sizeof(*result));
 
   result->pool = svn_pool_create(pool);
   result->entry_count = entry_count;
-  result->insert_count = 0;
+  result->capacity = capacity;
+  result->used = 0;
   result->entries = apr_pcalloc(pool, sizeof(*result->entries) * entry_count);
 
   return result;
@@ -456,8 +459,8 @@ get_cached_window(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t index = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[index];
+  apr_size_t i = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[i];
 
   return entry->offset == offset && entry->revision == revision
     ? svn_stringbuf_dup(entry->window, pool)
@@ -472,17 +475,17 @@ set_cached_window(fs_fs_t *fs,
   svn_revnum_t revision = representation->revision->revision;
   apr_off_t offset = representation->original.offset;
 
-  apr_size_t index = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[index];
+  apr_size_t i = get_window_cache_index(fs, revision, offset);
+  window_cache_entry_t *entry = &fs->window_cache->entries[i];
 
-  fs->window_cache->insert_count += window->len;
-  if (fs->window_cache->insert_count >= fs->window_cache->entry_count * 10000)
+  fs->window_cache->used += window->len;
+  if (fs->window_cache->used >= fs->window_cache->capacity)
     {
       svn_pool_clear(fs->window_cache->pool);
       memset(fs->window_cache->entries,
              0,
              sizeof(*fs->window_cache->entries) * fs->window_cache->entry_count);
-      fs->window_cache->insert_count = 0;
+      fs->window_cache->used = window->len;
     }
 
   entry->window = svn_stringbuf_dup(window, fs->window_cache->pool);
@@ -1265,7 +1268,7 @@ read_pack_file(fs_fs_t *fs,
                svn_revnum_t base,
                apr_pool_t *pool)
 {
-  apr_array_header_t *manifest;
+  apr_array_header_t *manifest = NULL;
   apr_pool_t *local_pool = svn_pool_create(pool);
   apr_pool_t *iter_pool = svn_pool_create(local_pool);
   int i;
@@ -1283,7 +1286,7 @@ read_pack_file(fs_fs_t *fs,
   revisions->filesize = file_content->len;
   APR_ARRAY_PUSH(fs->packs, revision_pack_t*) = revisions;
 
-  read_manifest(&manifest, pack_folder, local_pool);
+  SVN_ERR(read_manifest(&manifest, pack_folder, local_pool));
   if (manifest->nelts != fs->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
 
@@ -1386,10 +1389,22 @@ static svn_error_t *
 read_revisions(fs_fs_t **fs,
                const char *path,
                svn_revnum_t start_revision,
-               apr_size_t limit,
+               apr_size_t memsize,
                apr_pool_t *pool)
 {
   svn_revnum_t revision;
+  apr_size_t content_cache_size;
+  apr_size_t window_cache_size;
+  apr_size_t dir_cache_size;
+
+  /* determine cache sizes */
+
+  if (memsize < 100)
+    memsize = 100;
+  
+  content_cache_size = memsize * 7 / 10 > 4000 ? 4000 : memsize * 7 / 10;
+  window_cache_size = memsize * 2 / 10 * 1024 * 1024;
+  dir_cache_size = (memsize / 10) * 16000;
   
   SVN_ERR(fs_open(fs, path, pool));
 
@@ -1406,15 +1421,15 @@ read_revisions(fs_fs_t **fs,
   (*fs)->cache = create_content_cache
                     (apr_allocator_owner_get
                          (svn_pool_create_allocator(FALSE)),
-                          limit * 1024 * 1024);
+                          content_cache_size * 1024 * 1024);
   (*fs)->dir_cache = create_dir_cache
                     (apr_allocator_owner_get
                          (svn_pool_create_allocator(FALSE)),
-                          100000);
+                          dir_cache_size);
   (*fs)->window_cache = create_window_cache
                     (apr_allocator_owner_get
                          (svn_pool_create_allocator(FALSE)),
-                          10000);
+                          10000, window_cache_size);
 
   for ( revision = start_revision
       ; revision < (*fs)->min_unpacked_rev
@@ -2118,7 +2133,7 @@ update_id(svn_stringbuf_t *node_rev,
           const char *key,
           noderev_t *node)
 {
-  char *newline_pos;
+  char *newline_pos = 0;
   char *pos;
 
   pos = strstr(node_rev->data, key);
@@ -2378,10 +2393,17 @@ print_usage(svn_stream_t *ostream, const char *progname,
             apr_pool_t *pool)
 {
   svn_error_clear(svn_stream_printf(ostream, pool,
-     "Usage: %s <repo> <rev>\n"
      "\n"
-     "Optimize the repository at local path <repo> staring from "
-     "revision <rev>.\n",
+     "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+     "!!! This is an experimental tool. Don't use it on production data !!!\n"
+     "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+     "\n"
+     "Usage: %s <repo> <cachesize>\n"
+     "\n"
+     "Optimize the repository at local path <repo> staring from revision 0.\n"
+     "Use up to <cachesize> MB of memory for caching. This does not include\n"
+     "temporary representation of the repository structure, i.e. the actual\n"
+     "memory will be higher and <cachesize> be the lower limit.\n",
      progname));
 }
 
@@ -2392,7 +2414,7 @@ int main(int argc, const char *argv[])
   svn_error_t *svn_err;
   const char *repo_path = NULL;
   svn_revnum_t start_revision = 0;
-  apr_int64_t rev = 0;
+  apr_int64_t memsize = 0;
   fs_fs_t *fs;
 
   apr_initialize();
@@ -2413,7 +2435,7 @@ int main(int argc, const char *argv[])
       return 2;
     }
 
-  svn_err = svn_cstring_atoi64(&rev, argv[2]);
+  svn_err = svn_cstring_atoi64(&memsize, argv[2]);
   if (svn_err)
     {
       print_usage(ostream, argv[0], pool);
@@ -2422,15 +2444,15 @@ int main(int argc, const char *argv[])
     }
 
   repo_path = argv[1];
-  start_revision = (long)rev;
+  start_revision = 0;
 
   printf("\nPreparing repository\n");
   svn_err = prepare_repo(repo_path, pool);
 
   if (!svn_err)
     {
-      printf("\nReading revisions\n");
-      svn_err = read_revisions(&fs, repo_path, start_revision, 4000, pool);
+      printf("Reading revisions\n");
+      svn_err = read_revisions(&fs, repo_path, start_revision, memsize, pool);
     }
   
   if (!svn_err)
