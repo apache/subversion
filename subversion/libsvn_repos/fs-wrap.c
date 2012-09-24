@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_fspath.h"
 
 
 /*** Commit wrappers ***/
@@ -718,41 +719,51 @@ svn_repos_fs_pack2(svn_repos_t *repos,
 }
 
 svn_error_t *
-svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
-                                 svn_repos_t *repos,
+svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
+                                 svn_fs_root_t *root,
                                  const char *path,
-                                 svn_revnum_t revision,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_fs_root_t *root;
-  int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *inherited_props;
+  const char *parent_path = path;
 
-  if (!SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR(svn_fs_youngest_rev(&revision, repos->fs, iterpool));
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, revision, scratch_pool));
-  SVN_ERR(svn_fs_node_proplist2(NULL, inherited_props, root, path,
-                                result_pool, scratch_pool));
-  for (i = 0; i < (*inherited_props)->nelts; i++)
+  inherited_props = apr_array_make(result_pool, 1,
+                                   sizeof(svn_prop_inherited_item_t *));
+  while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
     {
       svn_boolean_t allowed = TRUE;
-      svn_prop_inherited_item_t *iprop =
-        APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
+      apr_hash_t *parent_properties;
+
+      svn_pool_clear(iterpool);
+      parent_path = svn_fspath__dirname(parent_path, iterpool);
 
       if (authz_read_func)
-        SVN_ERR(authz_read_func(&allowed, root, iprop->path_or_url,
+        SVN_ERR(authz_read_func(&allowed, root, parent_path,
                                 authz_read_baton, iterpool));
-      if (!allowed)
+      if (allowed)
         {
-          svn_sort__array_delete(*inherited_props, i, 1);
-          i--;
+          SVN_ERR(svn_fs_node_proplist(&parent_properties, root,
+                                       parent_path, result_pool));
+          if (parent_properties && apr_hash_count(parent_properties))
+            {
+              svn_prop_inherited_item_t *i_props =
+                apr_pcalloc(result_pool, sizeof(*i_props));
+              i_props->path_or_url =
+                apr_pstrdup(result_pool, parent_path + 1);
+              i_props->prop_hash = parent_properties;
+              /* Build the output array in depth-first order. */
+              svn_sort__array_insert(&i_props, inherited_props, 0);
+            }
         }
     }
 
   svn_pool_destroy(iterpool);
+
+  *inherited_props_p = inherited_props;
   return SVN_NO_ERROR;
 }
 

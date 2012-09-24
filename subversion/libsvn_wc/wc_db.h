@@ -370,7 +370,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    In the BASE tree, each node corresponds to a particular node-rev in the
    repository.  It can be a mixed-revision tree.  Each node holds either a
    copy of the node-rev as it exists in the repository (if presence =
-   'normal'), or a place-holder (if presence = 'absent' or 'excluded' or
+   'normal'), or a place-holder (if presence = 'server-excluded' or 'excluded' or
    'not-present').
 
    @{
@@ -1362,7 +1362,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* ### do we need svn_wc__db_op_copy_absent() ??  */
+/* ### do we need svn_wc__db_op_copy_server_excluded() ??  */
 
 
 /* ### add a new versioned directory. a list of children is NOT passed

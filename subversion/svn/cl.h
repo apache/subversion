@@ -108,12 +108,6 @@ typedef enum svn_cl__accept_t
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word);
 
-/* --search and --isearch option values */
-typedef struct svn_cl__search_pattern_t {
-  const char *pattern; /* glob syntax */
-  svn_boolean_t case_insensitive;
-} svn_cl__search_pattern_t;
-
 
 /*** Mergeinfo flavors. ***/
 

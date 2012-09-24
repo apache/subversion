@@ -32,7 +32,7 @@
  * the PRESENCE column in these tables has one of the following values
  * (see also the C type #svn_wc__db_status_t):
  *   "normal"
- *   "absent" -- server has declared it "absent" (ie. authz failure)
+ *   "server-excluded" -- server has declared it excluded (ie. authz failure)
  *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
@@ -367,7 +367,7 @@ CREATE TABLE NODES (
        current 'op_depth'.  This state is badly named, it should be
        something like 'deleted'.
 
-     absent: in the 'BASE' tree this is a node that is excluded by
+     server-excluded: in the 'BASE' tree this is a node that is excluded by
        authz.  The name of the node is known from the parent, but no
        other information is available.  Not valid in the 'WORKING'
        tree as there is no way to commit such a node.
@@ -779,20 +779,27 @@ PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 30 adds the inherited_props column to the NODES table. */
+/* Format 30 creates a new NODES index for move information, and a new
+   PRISTINE index for the md5_checksum column. It also activates use of
+   skel-based conflict storage -- see notes/wc-ng/conflict-storage-2.0.
+   It also renames the "absent" presence to "server-excluded". */
 -- STMT_UPGRADE_TO_30
-ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
-
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
 
 CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
 
+UPDATE nodes SET presence = "server-excluded" WHERE presence = "absent";
+
 /* Just to be sure clear out file external skels from pre 1.7.0 development
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
-PRAGMA user_version = 30;
+/* Format 31 adds the inherited_props column to the NODES table. */
+-- STMT_UPGRADE_TO_31
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+PRAGMA user_version = 31;
 
 -- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,
@@ -825,9 +832,6 @@ WHERE wc_id = ?1 and local_relpath = ?2
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* TODO: Rename the "absent" presence value to "server-excluded". wc_db.c
-   and this file have references to "absent" which still need to be changed
-   to "server-excluded". */
 /* TODO: Un-confuse *_revision column names in the EXTERNALS table to
    "-r<operative> foo@<peg>", as suggested by the patch attached to
    http://svn.haxx.se/dev/archive-2011-09/0478.shtml */

@@ -1229,10 +1229,12 @@ class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
   Receives test numbers to run from the queue, and saves results into
   the results field."""
-  def __init__(self, queue):
+  def __init__(self, queue, progress_func, tests_total):
     threading.Thread.__init__(self)
     self.queue = queue
     self.results = []
+    self.progress_func = progress_func
+    self.tests_total = tests_total
 
   def run(self):
     while True:
@@ -1242,6 +1244,11 @@ class TestSpawningThread(threading.Thread):
         return
 
       self.run_one(next_index)
+
+      # signal progress
+      if self.progress_func:
+        self.progress_func(self.tests_total - self.queue.qsize(),
+                           self.tests_total)
 
   def run_one(self, index):
     command = os.path.abspath(sys.argv[0])
@@ -1499,7 +1506,8 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for num in testnums:
       number_queue.put(num)
 
-    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    threads = [ TestSpawningThread(number_queue, progress_func,
+                                   len(testnums)) for i in range(parallel) ]
     for t in threads:
       t.start()
 
@@ -1511,10 +1519,6 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for t in threads:
       results += t.results
     results.sort()
-
-    # signal some kind of progress
-    if progress_func:
-      progress_func(len(testnums), len(testnums))
 
     # terminate the line of dots
     print("")

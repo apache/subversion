@@ -131,9 +131,7 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_show_inherited_props,
   opt_search,
-  opt_isearch,
   opt_search_and,
-  opt_isearch_and,
 } svn_cl__longopt_t;
 
 
@@ -187,37 +185,23 @@ const apr_getopt_option_t svn_cl__options[] =
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
   {"extensions",    'x', 1,
-                    N_("Default: '-u'. When Subversion is invoking an\n"
+                    N_("Specify differencing options for external diff or\n"
                        "                             "
-                       "external diff program, ARG is simply passed along\n"
+                       "internal diff or blame. Default: '-u'. Options are\n"
                        "                             "
-                       "to the program. But when Subversion is using its\n"
+                       "separated by spaces. Internal diff and blame take:\n"
                        "                             "
-                       "default internal diff implementation, or when\n"
+                       "  -u, --unified: Show 3 lines of unified context\n"
                        "                             "
-                       "Subversion is displaying blame annotations, ARG\n"
+                       "  -b, --ignore-space-change: Ignore changes in\n"
                        "                             "
-                       "could be any of the following:\n"
+                       "    amount of white space\n"
                        "                             "
-                       "   -u (--unified):\n"
+                       "  -w, --ignore-all-space: Ignore all white space\n"
                        "                             "
-                       "      Output 3 lines of unified context.\n"
+                       "  --ignore-eol-style: Ignore changes in EOL style\n"
                        "                             "
-                       "   -b (--ignore-space-change):\n"
-                       "                             "
-                       "      Ignore changes in the amount of white space.\n"
-                       "                             "
-                       "   -w (--ignore-all-space):\n"
-                       "                             "
-                       "      Ignore all white space.\n"
-                       "                             "
-                       "   --ignore-eol-style:\n"
-                       "                             "
-                       "      Ignore changes in EOL style.\n"
-                       "                             "
-                       "   -p (--show-c-function):\n"
-                       "                             "
-                       "      Show C function name in diff output.")},
+                       "  -p, --show-c-function: Show C function name")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
@@ -381,13 +365,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("retrieve target's inherited properties")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
-  {"isearch", opt_isearch, 1,
-                       N_("like --search, but case-insensitive")}, 
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
-
-  {"isearch-and", opt_isearch_and, 1,
-                       N_("like --search-and, but case-insensitive")}, 
 
   /* Long-opt Aliases
    *
@@ -737,7 +716,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x', opt_search,
-     opt_search_and, opt_isearch, opt_isearch_and},
+     opt_search_and, },
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -753,7 +732,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "       3. merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
 "          (the '2-URL' merge)\n"
 "\n"
-"  1. This form, with with one source path and no revision range, is called\n"
+"  1. This form, with one source path and no revision range, is called\n"
 "     an 'automatic' merge:\n"
 "\n"
 "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
@@ -1060,13 +1039,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
-     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+     "usage: 1. mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+     "       2. mergeinfo --show-revs=merged SOURCE[@REV] [TARGET[@REV]]\n"
+     "       3. mergeinfo --show-revs=eligible SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
-     "  Display information related to merges (or potential merges) between\n"
-     "  SOURCE and TARGET (default: '.').  Display the type of information\n"
-     "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"
+     "  1. Display the following information about merges between SOURCE and\n"
+     "     TARGET:\n"
+     "       the youngest common ancestor;\n"
+     "       the latest full merge in either direction, and thus the\n"
+     "         base that will be used for the next full merge.\n"
+     "  2. Print the revision numbers on SOURCE that have been merged to TARGET.\n"
+     "  3. Print the revision numbers on SOURCE that have NOT been merged to TARGET.\n"
      "\n"
+     "  The default TARGET is the current working directory ('.').\n"
      "  If --revision (-r) is provided, filter the displayed information to\n"
      "  show only that which is associated with the revisions within the\n"
      "  specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
@@ -1592,52 +1577,43 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
-/* Add a --search or --isearch argument to OPT_STATE.
+/* Add a --search argument to OPT_STATE.
  * These options start a new search pattern group. */
 static void
 add_search_pattern_group(svn_cl__opt_state_t *opt_state,
                          const char *pattern,
-                         svn_boolean_t case_insensitive,
                          apr_pool_t *result_pool)
 {
-  svn_cl__search_pattern_t p;
   apr_array_header_t *group = NULL;
 
   if (opt_state->search_patterns == NULL)
     opt_state->search_patterns = apr_array_make(result_pool, 1,
                                                 sizeof(apr_array_header_t *));
 
-  group = apr_array_make(result_pool, 1, sizeof(svn_cl__search_pattern_t));
-  p.pattern = pattern;
-  p.case_insensitive = case_insensitive;
-  APR_ARRAY_PUSH(group, svn_cl__search_pattern_t) = p;
+  group = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(group, const char *) = pattern;
   APR_ARRAY_PUSH(opt_state->search_patterns, apr_array_header_t *) = group;
 }
 
-/* Add a --search-and or --isearch-and argument to OPT_STATE.
+/* Add a --search-and argument to OPT_STATE.
  * These patterns are added to an existing pattern group, if any. */
 static void
 add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
                                    const char *pattern,
-                                   svn_boolean_t case_insensitive,
                                    apr_pool_t *result_pool)
 {
-  svn_cl__search_pattern_t p;
   apr_array_header_t *group;
 
   if (opt_state->search_patterns == NULL)
     {
-      add_search_pattern_group(opt_state, pattern, case_insensitive,
-                               result_pool);
+      add_search_pattern_group(opt_state, pattern, result_pool);
       return;
     }
 
   group = APR_ARRAY_IDX(opt_state->search_patterns,
                         opt_state->search_patterns->nelts - 1,
                         apr_array_header_t *);
-  p.pattern = pattern;
-  p.case_insensitive = case_insensitive;
-  APR_ARRAY_PUSH(group, svn_cl__search_pattern_t) = p;
+  APR_ARRAY_PUSH(group, const char *) = pattern;
 }
 
 
@@ -1704,7 +1680,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
-  opt_state.show_revs = svn_cl__show_revs_merged;
+  opt_state.show_revs = svn_cl__show_revs_invalid;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -2193,16 +2169,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.properties_only = TRUE;
         break;
       case opt_search:
-        add_search_pattern_group(&opt_state, opt_arg, FALSE, pool);
-        break;
-      case opt_isearch:
-        add_search_pattern_group(&opt_state, opt_arg, TRUE, pool);
+        add_search_pattern_group(&opt_state, opt_arg, pool);
         break;
       case opt_search_and:
-        add_search_pattern_to_latest_group(&opt_state, opt_arg, FALSE, pool);
-      case opt_isearch_and:
-        add_search_pattern_to_latest_group(&opt_state, opt_arg, TRUE, pool);
-        break;
+        add_search_pattern_to_latest_group(&opt_state, opt_arg, pool);
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

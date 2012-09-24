@@ -48,7 +48,6 @@
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_props.h"
-#include "svn_sorts.h"
 
 #include "fs.h"
 #include "key-gen.h"
@@ -999,67 +998,22 @@ fs_node_prop(svn_string_t **value_p,
 }
 
 
-/* If TABLE_P is not null, then set *TABLE_P to the entire property list
-   of PATH under ROOT, as an APR hash table allocated in RESULT_POOL.
-   The resulting property table maps property names to pointers to
-   svn_string_t objects containing the property value.
-
-   If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a depth-first
-   ordered array of svn_prop_inherited_item_t * structures (the path_or_url
-   members of which are relative filesystem paths), allocated in RESULT_POOL,
-   representing the properties inherited by PATH.  If INHERITED_PROPS is not
-   null and no properties are inherited, then set *INHERITED_PROPS to an
-   empty array.
- */
+/* Set *TABLE_P to the entire property list of PATH under ROOT, as an
+   APR hash table allocated in POOL.  The resulting property table
+   maps property names to pointers to svn_string_t objects containing
+   the property value. */
 static svn_error_t *
 fs_node_proplist(apr_hash_t **table_p,
-                 apr_array_header_t **inherited_props,
                  svn_fs_root_t *root,
                  const char *path,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+                 apr_pool_t *pool)
 {
   apr_hash_t *table;
   dag_node_t *node;
 
-  SVN_ERR(get_dag(&node, root, path, scratch_pool));
-
-  if (table_p)
-    {
-      SVN_ERR(svn_fs_fs__dag_get_proplist(&table, node, result_pool));
-      *table_p = table ? table : apr_hash_make(result_pool);
-    }
-
-  /* If the caller requested PATH's inherited properties, then walk from
-     PATH to the repository root to gather PATH's inherited props. */
-  if (inherited_props)
-    {
-      const char *parent_path = path;
-      apr_hash_t *parent_properties;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-      *inherited_props = apr_array_make(result_pool, 1,
-                                        sizeof(svn_prop_inherited_item_t *));
-      while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
-        {
-          svn_pool_clear(iterpool);
-          parent_path = svn_fspath__dirname(parent_path, iterpool);
-          SVN_ERR(get_dag(&node, root, parent_path, iterpool));
-          SVN_ERR(svn_fs_fs__dag_get_proplist(&parent_properties, node,
-                                              result_pool));
-          if (parent_properties && apr_hash_count(parent_properties))
-            {
-              svn_prop_inherited_item_t *i_props =
-                apr_pcalloc(result_pool, sizeof(*i_props));
-              i_props->path_or_url =
-                apr_pstrdup(result_pool, parent_path + 1);
-              i_props->prop_hash = parent_properties;
-              /* Build the output array in depth-first order. */
-              svn_sort__array_insert(&i_props, *inherited_props, 0);
-            }
-        }
-      svn_pool_destroy(iterpool);
-    }
+  SVN_ERR(get_dag(&node, root, path, pool));
+  SVN_ERR(svn_fs_fs__dag_get_proplist(&table, node, pool));
+  *table_p = table ? table : apr_hash_make(pool);
 
   return SVN_NO_ERROR;
 }
@@ -2398,7 +2352,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(tb->target_stream,
                                tb->target_string->data,
                                &len));
-      svn_stringbuf_set(tb->target_string, "");
+      svn_stringbuf_setempty(tb->target_string);
     }
 
   /* Is the window NULL?  If so, we're done. */

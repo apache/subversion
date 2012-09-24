@@ -596,7 +596,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
 
   prompt = svn_stringbuf_create(
              apr_psprintf(scratch_pool, "%s\n%s|%s\n%s",
-                          _("Conflicting section found during merge."),
+                          _("Conflicting section found during merge:"),
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
