@@ -497,6 +497,7 @@ set_cached_window(fs_fs_t *fs,
    Use POOL for temporary allocations. */
 static svn_error_t *
 read_manifest(apr_array_header_t **manifest,
+              fs_fs_t *fs,
               const char *path,
               apr_pool_t *pool)
 {
@@ -511,7 +512,7 @@ read_manifest(apr_array_header_t **manifest,
   /* While we're here, let's just read the entire manifest file into an array,
      so we can cache the entire thing. */
   iterpool = svn_pool_create(pool);
-  *manifest = apr_array_make(pool, 1000, sizeof(apr_off_t));
+  *manifest = apr_array_make(pool, fs->max_files_per_dir, sizeof(apr_off_t));
   while (1)
     {
       svn_stringbuf_t *sb;
@@ -1286,7 +1287,7 @@ read_pack_file(fs_fs_t *fs,
   revisions->filesize = file_content->len;
   APR_ARRAY_PUSH(fs->packs, revision_pack_t*) = revisions;
 
-  SVN_ERR(read_manifest(&manifest, pack_folder, local_pool));
+  SVN_ERR(read_manifest(&manifest, fs, pack_folder, local_pool));
   if (manifest->nelts != fs->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
 
@@ -1379,6 +1380,9 @@ read_revision_file(fs_fs_t *fs,
                        root_node_offset, info,
                        pool, local_pool));
   APR_ARRAY_PUSH(info->node_revs, noderev_t*) = info->root_noderev;
+
+  if (revision % fs->max_files_per_dir == 0)
+    print_progress(revision);
 
   apr_pool_destroy(local_pool);
 
@@ -1719,7 +1723,7 @@ reorder_revisions(fs_fs_t *fs,
           SVN_ERR(add_noderev_recursively(fs, node, pool));
         }
 
-      if (info->revision % 1000 == 0)
+      if (info->revision % fs->max_files_per_dir == 0)
         print_progress(info->revision);
     }
 
@@ -1928,7 +1932,7 @@ write_revisions(fs_fs_t *fs,
   svn_stringbuf_t *null_buffer = svn_stringbuf_create_empty(iterpool);
 
   const char *dir = apr_psprintf(iterpool, "%s/new/%ld%s",
-                                  fs->path, pack->base / 1000,
+                                  fs->path, pack->base / fs->max_files_per_dir,
                                   pack->info->nelts > 1 ? ".pack" : "");
   SVN_ERR(svn_io_make_dir_recursively(dir, pool));
   SVN_ERR(svn_io_file_open(&file,
