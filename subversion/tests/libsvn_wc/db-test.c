@@ -107,7 +107,7 @@ static const char * const TESTING_DATA = (
   "  null, null, 'symlink', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'C', 0, '', 1, 'C', null, 'absent',"
+  "  1, 'C', 0, '', 1, 'C', null, 'server-excluded',"
   "  null, null, 'unknown', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
@@ -459,7 +459,7 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_ASSERT(lock == NULL);
 
-  /* Test: unknown kind, absent presence. */
+  /* Test: unknown kind, server-excluded presence. */
   SVN_ERR(svn_wc__db_base_get_info(
             &status, &kind, NULL,
             NULL, NULL, NULL,
@@ -681,7 +681,7 @@ test_inserting_nodes(apr_pool_t *pool)
             NULL, NULL,
             pool));
 
-  /* Replace an incomplete node with an absent file node. */
+  /* Replace an incomplete node with an server-excluded file node. */
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
@@ -705,7 +705,7 @@ test_inserting_nodes(apr_pool_t *pool)
             NULL, NULL,
             pool));
 
-  /* Create a new absent unknown-kind node. */
+  /* Create a new server-excluded unknown-kind node. */
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,

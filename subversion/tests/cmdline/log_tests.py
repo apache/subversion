@@ -2296,9 +2296,9 @@ def log_search(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [7, 6, 3])
 
-  # case-insensitive search
+  # search is case-insensitive
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-                             None, None, [], 'log', '--isearch',
+                             None, None, [], 'log', '--search',
                              'FOR REVISION [367]')
 
   log_chain = parse_log_output(output)

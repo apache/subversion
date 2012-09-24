@@ -1986,7 +1986,8 @@ handle_response(serf_request_t *request,
 
   if (err
       && (!SERF_BUCKET_READ_ERROR(err->apr_err)
-          || APR_STATUS_IS_ECONNRESET(err->apr_err)))
+          || APR_STATUS_IS_ECONNRESET(err->apr_err)
+          || APR_STATUS_IS_ECONNABORTED(err->apr_err)))
     {
       /* These errors are special cased in serf
          ### We hope no handler returns these by accident. */

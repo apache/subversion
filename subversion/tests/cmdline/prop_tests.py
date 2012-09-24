@@ -2047,7 +2047,7 @@ def atomic_over_ra(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
 
-  # From this point on, similar to ../libsvn_fs-fs-test.c:revision_props().
+  # From this point on, similar to ../libsvn_fs/fs-test.c:revision_props().
   s1 = "violet"
   s2 = "wrong value"
 
