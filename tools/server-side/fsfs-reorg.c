@@ -2360,6 +2360,8 @@ prepare_repo(const char *path, apr_pool_t *pool)
   const char *old_path = svn_dirent_join(path, "db/old", pool);
   const char *new_path = svn_dirent_join(path, "new", pool);
   const char *revs_path = svn_dirent_join(path, "db/revs", pool);
+  const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
+  const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
   
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_dir)
@@ -2369,6 +2371,10 @@ prepare_repo(const char *path, apr_pool_t *pool)
       SVN_ERR(svn_io_file_move(old_path, revs_path, pool));
       SVN_ERR(svn_io_remove_dir2(new_path, TRUE, NULL, NULL, pool));
     }
+
+  SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(svn_io_file_move(old_rep_cache_path, rep_cache_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2381,6 +2387,8 @@ activate_new_revs(const char *path, apr_pool_t *pool)
   const char *old_path = svn_dirent_join(path, "db/old", pool);
   const char *new_path = svn_dirent_join(path, "new", pool);
   const char *revs_path = svn_dirent_join(path, "db/revs", pool);
+  const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
+  const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
 
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_none)
@@ -2388,6 +2396,10 @@ activate_new_revs(const char *path, apr_pool_t *pool)
       SVN_ERR(svn_io_file_move(revs_path, old_path, pool));
       SVN_ERR(svn_io_file_move(new_path, revs_path, pool));
     }
+
+  SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
+  if (kind == svn_node_none)
+    SVN_ERR(svn_io_file_move(rep_cache_path, old_rep_cache_path, pool));
 
   return SVN_NO_ERROR;
 }
