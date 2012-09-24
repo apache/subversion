@@ -6,8 +6,3 @@ An experimental branch to:
 2) Better understand some of the performance concerns raised regarding #1.
    See http://svn.haxx.se/dev/archive-2012-02/0207.shtml) and hopefully
    address those concerns.
-
-3) See how inheritable properties could be used to address some aspects
-   of server dictated configuration.  See
-   http://wiki.apache.org/subversion/ServerDictatedConfiguration and
-   http://svn.haxx.se/dev/archive-2012-02/0008.shtml
