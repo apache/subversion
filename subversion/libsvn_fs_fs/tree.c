@@ -1382,7 +1382,7 @@ fs_props_changed(svn_boolean_t *changed_p,
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
-  return get_dag(node, root, "", pool);
+  return get_dag(node, root, "/", pool);
 }
 
 
