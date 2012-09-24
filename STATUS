@@ -21,7 +21,7 @@ Candidate changes:
      It's a small change, and it allows applying patches that failed
      before.
    Votes:
-     +1: steveking, rhuijben (without r1389364)
+     +1 (without r1389364): steveking, rhuijben
      +1: stsp
 
  * r1242759, r1242770, r1242794, r1380175
