@@ -377,7 +377,7 @@ svn_cl__status(apr_getopt_t *os,
              ### non-changelist entries. */
           if (opt_state->xml)
             {
-              svn_stringbuf_set(buf, "");
+              svn_stringbuf_setempty(buf);
               svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                                     "changelist", "name", changelist_name,
                                     NULL);
@@ -398,7 +398,7 @@ svn_cl__status(apr_getopt_t *os,
 
           if (opt_state->xml)
             {
-              svn_stringbuf_set(buf, "");
+              svn_stringbuf_setempty(buf);
               svn_xml_make_close_tag(&buf, scratch_pool, "changelist");
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
