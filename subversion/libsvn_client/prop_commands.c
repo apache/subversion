@@ -636,20 +636,15 @@ remote_propget(apr_hash_t *props,
 
   if (kind == svn_node_dir)
     {
-      SVN_ERR(svn_ra_get_dir3(ra_session,
+      SVN_ERR(svn_ra_get_dir2(ra_session,
                               (depth >= svn_depth_files ? &dirents : NULL),
-                              NULL,
-                              props ? &prop_hash : NULL,
-                              inherited_props,
-                              target_relative, revnum, SVN_DIRENT_KIND,
-                              scratch_pool, scratch_pool));
+                              NULL, &prop_hash, target_relative, revnum,
+                              SVN_DIRENT_KIND, scratch_pool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file2(ra_session, target_relative, revnum,
-                               NULL, NULL,
-                               props ? &prop_hash : NULL,
-                               inherited_props, scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
+                              NULL, NULL, &prop_hash, scratch_pool));
     }
   else if (kind == svn_node_none)
     {
@@ -662,6 +657,15 @@ remote_propget(apr_hash_t *props,
       return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("Unknown node kind for '%s'"),
                                target_full_url);
+    }
+
+  if (inherited_props)
+    {
+      /* We will filter out all but PROPNAME later, making a final copy
+         in RESULT_POOL, so pass SCRATCH_POOL for both pools. */
+      SVN_ERR(svn_ra_get_inherited_props(ra_session, inherited_props,
+                                         target_relative, revnum,
+                                         scratch_pool, scratch_pool));
     }
 
   /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
@@ -1127,23 +1131,15 @@ remote_proplist(const char *target_prefix,
      return. */
   if (kind == svn_node_dir)
     {
-      SVN_ERR(svn_ra_get_dir3(
-        ra_session,
-        (depth > svn_depth_empty) ? &dirents : NULL,
-        NULL,
-        get_explicit_props ? &prop_hash : NULL,
-        get_target_inherited_props ? &inherited_props : NULL,
-        target_relative, revnum,
-        SVN_DIRENT_KIND, scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_get_dir2(ra_session,
+                              (depth > svn_depth_empty) ? &dirents : NULL,
+                              NULL, &prop_hash, target_relative, revnum,
+                              SVN_DIRENT_KIND, scratch_pool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file2(
-        ra_session, target_relative, revnum,
-        NULL, NULL,
-        get_explicit_props ? &prop_hash : NULL,
-        get_target_inherited_props ? &inherited_props : NULL,
-        scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
+                              NULL, NULL, &prop_hash, scratch_pool));
     }
   else
     {
@@ -1152,14 +1148,12 @@ remote_proplist(const char *target_prefix,
                                target_full_url);
     }
 
-  /* svn_ra_get_file2 and svn_ra_get_dir3 shouldn't be asking a server for
-     inherited props if the server doesn't advertise the
-     SVN_RA_CAPABILITY_INHERITED_PROPS capability, but better to check and
-     error out than segfault. */
-  if (get_target_inherited_props && inherited_props == NULL)
-    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             _("Server does not support retrieving "
-                               "inherited properties"));
+  if (get_target_inherited_props)
+    SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
+                                       target_relative, revnum,
+                                       result_pool, scratch_pool));
+  else
+    inherited_props = NULL;
 
   if (get_explicit_props)
     {
@@ -1187,13 +1181,6 @@ remote_proplist(const char *target_prefix,
             }
         }  
     }
-
-  if (get_target_inherited_props)
-    inherited_props = svn_prop_inherited_array_dup(inherited_props,
-                                                   result_pool,
-                                                   scratch_pool);
-  else
-    inherited_props = NULL;
 
   SVN_ERR(call_receiver(target_full_url, final_hash, inherited_props,
                         receiver, receiver_baton, result_pool));

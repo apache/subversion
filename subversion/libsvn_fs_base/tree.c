@@ -1244,56 +1244,21 @@ txn_body_node_proplist(void *baton, trail_t *trail)
 
 static svn_error_t *
 base_node_proplist(apr_hash_t **table_p,
-                   apr_array_header_t **inherited_props,
                    svn_fs_root_t *root,
                    const char *path,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+                   apr_pool_t *pool)
 {
   apr_hash_t *table;
   struct node_proplist_args args;
 
   args.table_p = &table;
   args.root = root;
+  args.path = path;
 
-  /* Get explicit properties if requested. */
-  if (table_p)
-    {
-      args.path = path;
-      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist, &args,
-                                     FALSE, result_pool));
-      *table_p = table;
-    }
+  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist, &args,
+                                 FALSE, pool));
 
-
-  /* If the caller requested PATH's inherited properties, then walk from
-     PATH to the repository root to gather PATH's inherited props. */
-  if (inherited_props)
-    {
-      const char *parent_path = path;
-
-      *inherited_props = apr_array_make(result_pool, 1,
-                                        sizeof(svn_prop_inherited_item_t *));
-      while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
-        {
-          parent_path = svn_fspath__dirname(parent_path, scratch_pool);
-          table = NULL;
-          args.path = parent_path;
-          SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist,
-                                         &args, FALSE, result_pool));
-          if (apr_hash_count(table))
-            {
-              svn_prop_inherited_item_t *i_props =
-                apr_pcalloc(result_pool, sizeof(*i_props));
-              i_props->path_or_url =
-                apr_pstrdup(result_pool, parent_path + 1);
-              i_props->prop_hash = table;
-              /* Build the output array in depth-first order. */
-              svn_sort__array_insert(&i_props, *inherited_props, 0);
-            }
-        }
-    }
-
+  *table_p = table;
   return SVN_NO_ERROR;
 }
 
@@ -3711,7 +3676,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(tb->target_stream,
                                tb->target_string->data,
                                &len));
-      svn_stringbuf_set(tb->target_string, "");
+      svn_stringbuf_setempty(tb->target_string);
     }
 
   /* Is the window NULL?  If so, we're done. */

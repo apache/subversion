@@ -332,6 +332,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
  * if called in a loop.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *

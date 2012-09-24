@@ -103,29 +103,6 @@ typedef struct svn_prop_inherited_item_t
 
 
 /**
- * Return a deep copy of @a inherited_prop, allocated in @a result_pool.
- * Use @a scratch_pool for temporary allocations.
- * @since New in 1.8.
- */
-svn_prop_inherited_item_t *
-svn_prop_inherited_item_dup(const svn_prop_inherited_item_t *inherited_prop,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-
-/**
- * Return a deep copy the array @a prop_array of svn_prop_inherited_item_t *
- * items in @a result_pool.  Use @a scratch_pool for temporary allocations.
- *
- * @since New in 1.8.
- */
-apr_array_header_t *
-svn_prop_inherited_array_dup(const apr_array_header_t *prop_array,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-
-/**
  * Given a hash (keys <tt>const char *</tt> and values <tt>const
  * svn_string_t</tt>) of properties, returns an array of svn_prop_t
  * items using @a pool.

@@ -110,27 +110,23 @@ typedef struct svn_ra__vtable_t {
                                     apr_hash_t *lock_tokens,
                                     svn_boolean_t keep_locks,
                                     apr_pool_t *pool);
-  /* See svn_ra_get_file2(). */
+  /* See svn_ra_get_file(). */
   svn_error_t *(*get_file)(svn_ra_session_t *session,
                            const char *path,
                            svn_revnum_t revision,
                            svn_stream_t *stream,
                            svn_revnum_t *fetched_rev,
                            apr_hash_t **props,
-                           apr_array_header_t **inherited_props,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-  /* See svn_ra_get_dir3(). */
+                           apr_pool_t *pool);
+  /* See svn_ra_get_dir2(). */
   svn_error_t *(*get_dir)(svn_ra_session_t *session,
                           apr_hash_t **dirents,
                           svn_revnum_t *fetched_rev,
                           apr_hash_t **props,
-                          apr_array_header_t **inherited_props,
                           const char *path,
                           svn_revnum_t revision,
                           apr_uint32_t dirent_fields,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+                          apr_pool_t *pool);
   /* See svn_ra_get_mergeinfo(). */
   svn_error_t *(*get_mergeinfo)(svn_ra_session_t *session,
                                 svn_mergeinfo_catalog_t *mergeinfo,
@@ -482,6 +478,21 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  svn_revnum_t *revision_deleted,
                                  apr_pool_t *pool);
 
+
+/**
+ * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * need to find PATH's inherited properties on a legacy server that
+ * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
+ *
+ * All arguments are as per the two aforementioned APIs.
+ */
+svn_error_t *
+svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_array_header_t **inherited_props,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Utility function to provide a shim between a returned Ev2 and an RA
    provider's Ev1-based commit editor.

@@ -828,7 +828,7 @@ svn_error_t *
 svn_wc_external_item2_create(svn_wc_external_item2_t **item,
                              apr_pool_t *pool);
 
-/* Same as svn_wc_external_item2_create() except the pointer to the new
+/** Same as svn_wc_external_item2_create() except the pointer to the new
  * empty item is 'const' which is stupid since the next thing you need to do
  * is fill in its fields.
  *
@@ -1142,7 +1142,7 @@ typedef enum svn_wc_notify_action_t
   /** The mergeinfo on path was updated.  @since New in 1.7. */
   svn_wc_notify_merge_record_info,
 
-  /** An working copy directory was upgraded to the latest format
+  /** A working copy directory was upgraded to the latest format.
    * @since New in 1.7. */
   svn_wc_notify_upgraded_path,
 
@@ -1950,7 +1950,7 @@ svn_wc_conflict_description_create_text(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field
- * to #svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and
+ * to #svn_wc_conflict_kind_property, the @c node_kind to @a node_kind, and
  * the @c property_name to @a property_name.
  *
  * @note: It is the caller's responsibility to set the other required fields
@@ -3725,7 +3725,7 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   const char *moved_to_abspath;
 
-  /* TRUE iff the item is a file brought in by an svn:externals definition.
+  /** TRUE iff the item is a file brought in by an svn:externals definition.
    * @since New in 1.8. */
   svn_boolean_t file_external;
 
@@ -7058,7 +7058,7 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
  *
  * For each directory converted, @a notify_func will be called with
- * in @a notify_baton action #svn_wc_notify_upgrade_path and as path
+ * in @a notify_baton action #svn_wc_notify_upgraded_path and as path
  * the path of the upgraded directory. @a notify_func may be @c NULL
  * if this notification is not needed.
  *
@@ -7844,7 +7844,8 @@ svn_wc_set_changelist(const char *path,
 
 
 /**
- * The callback type used by svn_client_get_changelists().
+ * The callback type used by svn_wc_get_changelists() and
+ * svn_client_get_changelists().
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
@@ -7857,7 +7858,10 @@ typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
                                                    apr_pool_t *pool);
 
 
-/* @since New in 1.7.
+/**
+ * ### TODO: Doc string, please.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_get_changelists(svn_wc_context_t *wc_ctx,

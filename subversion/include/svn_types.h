@@ -509,7 +509,7 @@ svn_depth_to_word(svn_depth_t depth);
 svn_depth_t
 svn_depth_from_word(const char *word);
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
+/** Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_files.
  *
  * @note New code should never need to use this, it is called only
@@ -520,7 +520,7 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_INFINITY_OR_FILES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
+/** Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_immediates.
  *
  * @note New code should never need to use this, it is called only
@@ -531,7 +531,7 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_immediates)
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
+/** Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_empty.
  *
  * @note New code should never need to use this, it is called only
@@ -542,7 +542,7 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_INFINITY_OR_EMPTY(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_empty)
 
-/* Return a recursion boolean based on @a depth.
+/** Return a recursion boolean based on @a depth.
  *
  * Although much code has been converted to use depth, some code still
  * takes a recurse boolean.  In most cases, it makes sense to treat
@@ -1261,7 +1261,7 @@ svn_location_segment_dup(const svn_location_segment_t *segment,
  */
 typedef unsigned long svn_linenum_t;
 
-/* The maximum value of an svn_linenum_t.
+/** The maximum value of an svn_linenum_t.
  *
  * @since New in 1.7.
  */
