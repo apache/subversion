@@ -161,6 +161,23 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1389499
+   Fix several test failures when running 1.7.x tests within a format 30 WC.
+   Justification:
+     Spurious test failures are bad.
+   Votes:
+     +1: stsp
+
+ * r1389851
+   Fix commit from multiple working copies nested within a parent WC.
+   Justification:
+     Prevents error when trying commit from multiple nested WCs.
+     Fixes a test failure on 1.7.x when run within a format 30 WC.
+   Branch:
+     ^/subversion/branches/1.7.x-r1389851
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
