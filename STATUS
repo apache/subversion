@@ -164,9 +164,9 @@ Candidate changes:
  * r1389499
    Fix several test failures when running 1.7.x tests within a format 30 WC.
    Justification:
-     Spurious test failures are bad.
+     Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1389851
    Fix commit from multiple working copies nested within a parent WC.
@@ -177,6 +177,13 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1389851
    Votes:
      +1: stsp
+
+ * r1387943
+   Fix unbounded memory use with SVNPathAuthz short_circuit.
+   Justification:
+     Server process may abort if memory exhausted.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
