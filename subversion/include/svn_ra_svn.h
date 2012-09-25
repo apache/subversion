@@ -182,6 +182,36 @@ typedef enum svn_ra_svn_cmd_t
   svn_ra_svn_cmd_apply_textdelta,
   svn_ra_svn_cmd_close_edit,
   svn_ra_svn_cmd_abort_edit,
+  
+  svn_ra_svn_cmd_set_path,
+  svn_ra_svn_cmd_delete_path,
+  svn_ra_svn_cmd_link_path,
+  svn_ra_svn_cmd_finish_report,
+  svn_ra_svn_cmd_abort_report,
+
+  svn_ra_svn_cmd_reparent,
+  svn_ra_svn_cmd_get_latest_rev,
+  svn_ra_svn_cmd_get_dated_rev,
+  svn_ra_svn_cmd_change_rev_prop2,
+  svn_ra_svn_cmd_change_rev_prop,
+  svn_ra_svn_cmd_rev_proplist,
+  svn_ra_svn_cmd_rev_prop,
+  svn_ra_svn_cmd_get_file,
+  svn_ra_svn_cmd_update,
+  svn_ra_svn_cmd_switch,
+  svn_ra_svn_cmd_status,
+  svn_ra_svn_cmd_diff,
+  svn_ra_svn_cmd_check_path,
+  svn_ra_svn_cmd_stat,
+  svn_ra_svn_cmd_get_file_revs,
+  svn_ra_svn_cmd_lock,
+  svn_ra_svn_cmd_unlock,
+  svn_ra_svn_cmd_get_lock,
+  svn_ra_svn_cmd_get_locks,
+  svn_ra_svn_cmd_replay,
+  svn_ra_svn_cmd_replay_range,
+  svn_ra_svn_cmd_get_deleted_rev,
+
   svn_ra_svn_cmd__last
 } svn_ra_svn_cmd_t;
 
