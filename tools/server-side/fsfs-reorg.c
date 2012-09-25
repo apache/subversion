@@ -1999,7 +1999,8 @@ write_revisions(fs_fs_t *fs,
       for (i = 0; i < pack->info->nelts; ++i)
         {
           revision_info_t *info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
-          svn_stream_printf(stream, itempool, "%ld\n", info->target.offset);
+          svn_stream_printf(stream, itempool, "%" APR_UINT64_T_FMT "\n",
+                            info->target.offset);
           svn_pool_clear(itempool);
         }
     }
@@ -2179,7 +2180,8 @@ update_text(svn_stringbuf_t *node_rev,
       char *newline_pos = strchr(val_pos, '\n');
       svn_checksum_t checksum = {representation->dir->target_md5,
                                  svn_checksum_md5};
-      const char* temp = apr_psprintf(scratch_pool, "%ld %ld %ld %ld %s",
+      const char* temp = apr_psprintf(scratch_pool, "%ld %" APR_UINT64_T_FMT " %" 
+                                      APR_UINT64_T_FMT" %" APR_SIZE_T_FMT " %s",
                                       representation->revision->revision,
                                       representation->target.offset - representation->revision->target.offset,
                                       representation->target.size,
@@ -2198,7 +2200,7 @@ update_text(svn_stringbuf_t *node_rev,
       
       val_pos = end_pos + 1;
       end_pos = strchr(strchr(val_pos, ' ') + 1, ' ');
-      temp = apr_psprintf(scratch_pool, "%ld %ld",
+      temp = apr_psprintf(scratch_pool, "%" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT,
                           representation->target.offset - representation->revision->target.offset,
                           representation->target.size);
 
@@ -2227,7 +2229,7 @@ get_fragment_content(svn_string_t **content,
       case header_fragment:
         info = fragment->data;
         *content = svn_string_createf(pool,
-                                      "\n%ld %ld\n",
+                                      "\n%" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
                                       info->root_noderev->target.offset - info->target.offset,
                                       info->target.changes);
         return SVN_NO_ERROR;
@@ -2264,7 +2266,7 @@ get_fragment_content(svn_string_t **content,
               header = svn_stringbuf_create("DELTA\n", pool);
             else
               header = svn_stringbuf_createf(pool,
-                                             "DELTA %ld %ld %ld\n",
+                                             "DELTA %ld %" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
                                              representation->delta_base->revision->revision,
                                              representation->delta_base->target.offset
                                              - representation->delta_base->revision->target.offset,
@@ -2307,7 +2309,7 @@ get_fragment_content(svn_string_t **content,
               {
                 representation_t *base_rep = representation->delta_base;
                 header = svn_stringbuf_createf(pool,
-                                               "DELTA %ld %ld %ld\n",
+                                               "DELTA %ld %" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
                                                base_rep->revision->revision,
                                                base_rep->target.offset - base_rep->revision->target.offset,
                                                base_rep->target.size);
