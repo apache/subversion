@@ -1266,9 +1266,9 @@ def run_and_verify_mergeinfo(error_re_string = None,
                              expected_output = [],
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_OUTPUT, a list of string representations of revisions
-  expected in the output.  Raise an exception if an unexpected
-  output is encountered."""
+  EXPECTED_OUTPUT, which is either a list of string representations
+  of revisions expected in the output, or a plain string.
+  Raise an exception if an unexpected output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
   mergeinfo_command.extend(args)
@@ -1281,23 +1281,36 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
-  expected_output.sort()
-  extra_out = []
-  if out != expected_output:
-    exp_hash = dict.fromkeys(expected_output)
-    for rev in out:
-      if rev in exp_hash:
-        del(exp_hash[rev])
-      else:
-        extra_out.append(rev)
-    extra_exp = list(exp_hash.keys())
-    raise Exception("Unexpected 'svn mergeinfo' output:\n"
-                    "  expected but not found: %s\n"
-                    "  found but not expected: %s"
-                    % (', '.join([str(x) for x in extra_exp]),
-                       ', '.join([str(x) for x in extra_out])))
-
+  if isinstance(expected_output, list):
+    out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
+    expected_output.sort()
+    extra_out = []
+    if out != expected_output:
+      exp_hash = dict.fromkeys(expected_output)
+      for rev in out:
+        if rev in exp_hash:
+          del(exp_hash[rev])
+        else:
+          extra_out.append(rev)
+      extra_exp = list(exp_hash.keys())
+      raise Exception("Unexpected 'svn mergeinfo' output:\n"
+                      "  expected but not found: %s\n"
+                      "  found but not expected: %s"
+                      % (', '.join([str(x) for x in extra_exp]),
+                         ', '.join([str(x) for x in extra_out])))
+  elif isinstance(expected_output, str):
+    out = "".join(out)
+    if out != expected_output:
+      raise Exception("Unexpected 'svn mergeinfo' output:\n"
+                      "  expected:\n%s\n"
+                      "  found:\n%s\n"
+                      "  diff:\n%s\n"
+                      % (expected_output, out,
+                         '\n'.join(difflib.unified_diff(
+                                     expected_output.splitlines(),
+                                     out.splitlines()))))
+  else:
+    raise Exception("expected_output has unexpected type")
 
 def run_and_verify_switch(wc_dir_name,
                           wc_target,

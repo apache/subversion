@@ -963,6 +963,12 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
 
+ifeq ($(THREADING),yes)
+THREADSAFE_FLAG=--enable-pthread
+else
+THREADSAFE_FLAG=--disable-pthread
+endif
+
 # configure ruby
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
@@ -970,7 +976,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
-		--disable-pthread
+		$(THREADSAFE_FLAG)
 	touch $@
 
 # compile ruby
@@ -1151,6 +1157,7 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
@@ -1158,6 +1165,7 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
@@ -1166,12 +1174,14 @@ MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+JAVAHL_CHECK_TARGET=check-all-javahl
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1352,10 +1362,17 @@ endif
 libpath:
 	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
+#
+# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
+# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
+# aren't linked to libpthread.
+ifeq ($(UNAME),OpenBSD)
+LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
+endif
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
-HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
 		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1402,7 +1419,7 @@ define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
-    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
         make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
@@ -1449,13 +1466,6 @@ svn-check-svn: svn-check-prepare-ramdisk
 svn-check-bindings: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb \
 	svn-check-javahl
 
-# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
-# libpthread into executables that aren't linked to libpthread.
-ifeq ($(UNAME),OpenBSD)
-LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
-endif
-
-
 RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	^svn_cv_ruby_sitedir_archsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2):$(SVN_PREFIX)/lib/ruby/site_ruby$(shell \
@@ -1491,7 +1501,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-all-javahl 2>&1) | \
+			make $(JAVAHL_CHECK_TARGET) 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

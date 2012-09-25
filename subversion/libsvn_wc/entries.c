@@ -1459,7 +1459,7 @@ insert_node(svn_sqlite__db_t *sdb,
   else if (node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
   else if (node->presence == svn_wc__db_status_server_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "absent"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "server-excluded"));
 
   if (node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));

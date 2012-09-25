@@ -1155,9 +1155,9 @@ svn_stream_write(svn_stream_t *stream,
 svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
-/** Reset a generic stream back to its origin. E.g. On a file this would be
+/** Reset a generic stream back to its origin. (E.g. On a file this would be
  * implemented as a seek to position 0).  This function returns a
- * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
  * @since New in 1.7.
@@ -2200,9 +2200,9 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
 
-/* Read a line of text from a file, up to a specified length.
+/** Read a line of text from a file, up to a specified length.
  *
- * Allocate @a *stringbuf in @a result_pool, and read into it one line 
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
  * from @a file. Reading stops either after a line-terminator was found
  * or after @a max_len bytes have been read.
  *

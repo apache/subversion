@@ -989,22 +989,17 @@ def status_ignored_dir(sbox):
 @Issue(2030)
 def status_unversioned_dir(sbox):
   "status on unversioned dir"
-  sbox.build(read_only = True, create_wc = False)
-  dir = sbox.wc_dir
-  svntest.main.safe_rmtree(sbox.wc_dir)
-  os.mkdir(dir)
+  sbox.build(read_only = True)
 
-  # Depending on whether you run the tests below a working copy
-  # or not, the error message might either be something like
-  # svn: warning: W155007: '...copies/stat_tests-19' is not a working copy
-  # or
-  # svn: warning: W155010: The node '...copies/stat_tests-19' was not found.
+  # Create two unversioned directories within the test working copy
+  path = sbox.ospath('1/2')
+  os.makedirs(path)
 
   expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
-                 os.path.basename(dir) + \
-                 "' (is not a working copy|was not found)"
+                 os.path.basename(path) + \
+                 "' was not found"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
-                                      "status", dir, dir)
+                                      "status", path)
 
 #----------------------------------------------------------------------
 

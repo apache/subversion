@@ -293,9 +293,7 @@ static const svn_token_map_t kind_map[] = {
    of all the status values. */
 static const svn_token_map_t presence_map[] = {
   { "normal", svn_wc__db_status_normal },
-  /* ### "absent" is the former name of the "server-excluded" presence.
-   * ### We should change it to "server-excluded" with a format bump. */
-  { "absent", svn_wc__db_status_server_excluded },
+  { "server-excluded", svn_wc__db_status_server_excluded },
   { "excluded", svn_wc__db_status_excluded },
   { "not-present", svn_wc__db_status_not_present },
   { "incomplete", svn_wc__db_status_incomplete },
@@ -6324,15 +6322,18 @@ revert_list_read(void *baton,
                                                   scratch_pool);
           if (conflict_data)
             {
+              const apr_array_header_t *marker_paths;
               svn_skel_t *conflicts = svn_skel__parse(conflict_data,
                                                       conflict_len,
                                                       scratch_pool);
 
-              SVN_ERR(svn_wc__conflict_read_markers(&b->marker_paths,
+              SVN_ERR(svn_wc__conflict_read_markers(&marker_paths,
                                                     b->db, wcroot->abspath,
                                                     conflicts,
                                                     b->result_pool,
                                                     scratch_pool));
+              /* De-const-ify. */
+              b->marker_paths = (apr_array_header_t *)marker_paths;
             }
 #endif
 
