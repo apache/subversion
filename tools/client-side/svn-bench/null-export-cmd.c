@@ -168,7 +168,7 @@ close_file(void *file_baton,
 
 /*** Public Interfaces ***/
 
-svn_error_t *
+static svn_error_t *
 bench_null_export(svn_revnum_t *result_rev,
                   const char *from_path_or_url,
                   svn_opt_revision_t *peg_revision,
@@ -176,6 +176,7 @@ bench_null_export(svn_revnum_t *result_rev,
                   svn_depth_t depth,
                   void *baton,
                   svn_client_ctx_t *ctx,
+                  svn_boolean_t quiet,
                   apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -223,7 +224,7 @@ bench_null_export(svn_revnum_t *result_rev,
       else if (kind == svn_node_dir)
         {
           void *edit_baton = NULL;
-          const svn_delta_editor_t *export_editor;
+          const svn_delta_editor_t *export_editor = NULL;
           const svn_ra_reporter3_t *reporter;
           void *report_baton;
 
@@ -238,8 +239,8 @@ bench_null_export(svn_revnum_t *result_rev,
           editor->change_file_prop = change_file_prop;
           editor->change_dir_prop = change_dir_prop;
 
-          export_editor = editor;
-          if (ctx->cancel_func)
+          /* for ra_svn, we don't need an editior in quiet mode */
+          if (!quiet || strncmp(loc->repos_root_url, "svn:", 4))
             SVN_ERR(svn_delta_get_cancellation_editor(ctx->cancel_func,
                                                       ctx->cancel_baton,
                                                       editor,
@@ -339,7 +340,7 @@ svn_cl__null_export(apr_getopt_t *os,
                           &(opt_state->start_revision),
                           opt_state->depth,
                           &eb,
-                          ctx, pool);
+                          ctx, opt_state->quiet, pool);
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool,

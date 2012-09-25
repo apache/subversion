@@ -929,30 +929,47 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   while (!state.done)
     {
       svn_pool_clear(subpool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
-      for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+      if (editor)
         {
-          if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
-            break;
-        }
-      if (ra_svn_edit_cmds[i].cmd)
-        err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
-      else if (strcmp(cmd, "failure") == 0)
-        {
-          /* While not really an editor command this can occur when
-             reporter->finish_report() fails before the first editor command */
-          if (aborted)
-            *aborted = TRUE;
-          err = svn_ra_svn__handle_failure_status(params, pool);
-          return svn_error_compose_create(
-                            err,
-                            editor->abort_edit(edit_baton, subpool));
+          SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
+          for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+              if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
+                break;
+
+          if (ra_svn_edit_cmds[i].cmd)
+            err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+          else if (strcmp(cmd, "failure") == 0)
+            {
+              /* While not really an editor command this can occur when
+                reporter->finish_report() fails before the first editor
+                command */
+              if (aborted)
+                *aborted = TRUE;
+              err = svn_ra_svn__handle_failure_status(params, pool);
+              return svn_error_compose_create(
+                                err,
+                                editor->abort_edit(edit_baton, subpool));
+            }
+          else
+            {
+              err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+                                      _("Unknown command '%s'"), cmd);
+              err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
+            }
         }
       else
         {
-          err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                  _("Unknown command '%s'"), cmd);
-          err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
+          const char* command = NULL;
+          SVN_ERR(svn_ra_svn__read_command_only(conn, subpool, &command));
+          if (strcmp(command, "close-edit") == 0)
+            {
+              state.done = TRUE;
+              if (aborted)
+                *aborted = FALSE;
+              err = svn_ra_svn_write_cmd_response(conn, pool, "");
+            }
+          else
+            err = NULL;
         }
 
       if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
@@ -962,7 +979,8 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
           if (!state.done)
             {
               /* Abort the edit and use non-blocking I/O to write the error. */
-              svn_error_clear(editor->abort_edit(edit_baton, subpool));
+              if (editor)
+                svn_error_clear(editor->abort_edit(edit_baton, subpool));
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
           write_err = svn_ra_svn_write_cmd_failure(

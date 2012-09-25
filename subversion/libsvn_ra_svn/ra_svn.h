@@ -189,6 +189,13 @@ svn_error_t *svn_ra_svn__stream_write(svn_ra_svn__stream_t *stream,
 svn_error_t *svn_ra_svn__stream_read(svn_ra_svn__stream_t *stream,
                                      char *data, apr_size_t *len);
 
+/* Read the command word from CONN, return it in *COMMAND and skip to the
+ * end of the command.  Allocate data in POOL.
+ */
+svn_error_t *svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
+                                           apr_pool_t *pool,
+                                           const char **command);
+
 /* Set the timeout for operations on STREAM to INTERVAL. */
 void svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
                                 apr_interval_time_t interval);
