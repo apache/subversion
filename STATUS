@@ -166,12 +166,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1378847
-   Make GNOME keyring library work with very old glib.
-   Justification:
-     Keyring library fails to load at runtime and it's hard for the user
-     to work out why.
-   Votes:
-     +1: philip, brane, stsp
-     +0: danielsh
