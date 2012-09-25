@@ -492,7 +492,7 @@ read_lock_cache(svn_membuffer_t *cache)
   return SVN_NO_ERROR;
 }
 
-/* If locking is supported for CACHE, aquire a write lock for it.
+/* If locking is supported for CACHE, acquire a write lock for it.
  */
 static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
@@ -501,8 +501,6 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
   if (cache->lock)
     {
       apr_status_t status;
-      *success = TRUE;
-
       if (cache->allow_blocking_writes)
         {
           status = apr_thread_rwlock_wrlock(cache->lock);
@@ -521,6 +519,21 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
         return svn_error_wrap_apr(status,
                                   _("Can't write-lock cache mutex"));
     }
+#endif
+  return SVN_NO_ERROR;
+}
+
+/* If locking is supported for CACHE, acquire an unconditional write lock
+ * for it.
+ */
+static svn_error_t *
+force_write_lock_cache(svn_membuffer_t *cache)
+{
+#if APR_HAS_THREADS
+  apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
+  if (status)
+    return svn_error_wrap_apr(status,
+                              _("Can't write-lock cache mutex"));
 #endif
   return SVN_NO_ERROR;
 }
@@ -556,13 +569,28 @@ do {                                        \
 
 /* If supported, guard the execution of EXPR with a write lock to cache.
  * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+ *
+ * The write lock process is complicated if we don't allow to wait for
+ * the lock: If we didn't get the lock, we may still need to remove an
+ * existing entry for the given key because that content is now stale.
+ * Once we discovered such an entry, we unconditionally do a blocking
+ * wait for the write lock.  In case no old content could be found, a
+ * failing lock attempt is simply a no-op and we exit the macro.
  */
-#define WITH_WRITE_LOCK(cache, expr)           \
-do {                                           \
-  svn_boolean_t got_lock;                      \
-  SVN_ERR(write_lock_cache(cache, &got_lock)); \
-  if (got_lock)                                \
-    SVN_ERR(unlock_cache(cache, (expr)));      \
+#define WITH_WRITE_LOCK(cache, expr)                            \
+do {                                                            \
+  svn_boolean_t got_lock = TRUE;                                \
+  SVN_ERR(write_lock_cache(cache, &got_lock));                  \
+  if (!got_lock)                                                \
+    {                                                           \
+      svn_boolean_t exists;                                     \
+      SVN_ERR(entry_exists(cache, group_index, key, &exists));  \
+      if (exists)                                               \
+        SVN_ERR(force_write_lock_cache(cache));                 \
+      else                                                      \
+        break;                                                  \
+    }                                                           \
+  SVN_ERR(unlock_cache(cache, (expr)));                         \
 } while (0)
 
 /* Resolve a dictionary entry reference, i.e. return the entry
@@ -1223,6 +1251,40 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   /* done here
    */
   *cache = c;
+  return SVN_NO_ERROR;
+}
+
+/* Look for the cache entry in group GROUP_INDEX of CACHE, identified
+ * by the hash value TO_FIND and set *FOUND accordingly.
+ *
+ * Note: This function requires the caller to serialize access.
+ * Don't call it directly, call entry_exists instead.
+ */
+static svn_error_t *
+entry_exists_internal(svn_membuffer_t *cache,
+                      apr_uint32_t group_index,
+                      entry_key_t to_find,
+                      svn_boolean_t *found)
+{
+  *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
+  return SVN_NO_ERROR;
+}
+
+/* Look for the cache entry in group GROUP_INDEX of CACHE, identified
+ * by the hash value TO_FIND and set *FOUND accordingly.
+ */
+static svn_error_t *
+entry_exists(svn_membuffer_t *cache,
+             apr_uint32_t group_index,
+             entry_key_t to_find,
+             svn_boolean_t *found)
+{
+  WITH_READ_LOCK(cache,
+                 entry_exists_internal(cache,
+                                       group_index,
+                                       to_find,
+                                       found));
+
   return SVN_NO_ERROR;
 }
 
