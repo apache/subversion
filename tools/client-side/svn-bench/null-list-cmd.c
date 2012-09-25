@@ -35,6 +35,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -146,8 +147,12 @@ svn_cl__null_list(apr_getopt_t *os,
         }
       else if (!opt_state->quiet)
         SVN_ERR(svn_cmdline_printf(pool,
-                               _("%15ld directories\n%15ld files\n%15ld locks\n"),
-                               pb.directories, pb.files, pb.locks));
+                                   _("%15s directories\n"
+                                     "%15s files\n"
+                                     "%15s locks\n"),
+                                   svn__ui64toa_sep(pb.directories, ',', pool),
+                                   svn__ui64toa_sep(pb.files, ',', pool),
+                                   svn__ui64toa_sep(pb.locks, ',', pool)));
     }
 
   svn_pool_destroy(subpool);

@@ -33,6 +33,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_string_private.h"
 
 
 /*** Code. ***/
@@ -101,16 +102,18 @@ log_entry_receiver(void *baton,
 
   if (message != NULL)
     {
-      lb->message_lines += svn_cstring_count_newlines(message) + 1;
+      int count = svn_cstring_count_newlines(message) + 1;
+      lb->message_lines += count;
       if (lb->merge_depth)
-        lb->merged_message_lines++;
+        lb->merged_message_lines += count;
     }
 
   if (log_entry->changed_paths2)
     {
-      lb->changes += apr_hash_count(log_entry->changed_paths2);
+      unsigned count = apr_hash_count(log_entry->changed_paths2);
+      lb->changes += count;
       if (lb->merge_depth)
-        lb->merged_changes++;
+        lb->merged_changes += count;
     }
 
   if (log_entry->has_children)
@@ -212,13 +215,26 @@ svn_cl__null_log(apr_getopt_t *os,
                           pool));
 
   if (!opt_state->quiet)
-    SVN_ERR(svn_cmdline_printf(pool,
-                               _("%15ld revisions, %15ld merged in %ld merges\n"
-                                 "%15ld msg lines, %15ld in merged revision\n"
-                                 "%15ld changes,   %15ld in merged revision\n"),
-                               lb.revisions, lb.merged_revs, lb.merges,
-                               lb.message_lines, lb.merged_message_lines,
-                               lb.changes, lb.merged_changes));
+    if (opt_state->use_merge_history)
+      SVN_ERR(svn_cmdline_printf(pool,
+                                _("%15s revisions, %15s merged in %s merges\n"
+                                  "%15s msg lines, %15s in merged revisions\n"
+                                  "%15s changes,   %15s in merged revisions\n"),
+                                svn__ui64toa_sep(lb.revisions, ',', pool),
+                                svn__ui64toa_sep(lb.merged_revs, ',', pool),
+                                svn__ui64toa_sep(lb.merges, ',', pool),
+                                svn__ui64toa_sep(lb.message_lines, ',', pool),
+                                svn__ui64toa_sep(lb.merged_message_lines, ',', pool),
+                                svn__ui64toa_sep(lb.changes, ',', pool),
+                                svn__ui64toa_sep(lb.merged_changes, ',', pool)));
+    else
+      SVN_ERR(svn_cmdline_printf(pool,
+                                _("%15s revisions\n"
+                                  "%15s msg lines\n"
+                                  "%15s changes\n"),
+                                svn__ui64toa_sep(lb.revisions, ',', pool),
+                                svn__ui64toa_sep(lb.message_lines, ',', pool),
+                                svn__ui64toa_sep(lb.changes, ',', pool)));
 
   return SVN_NO_ERROR;
 }

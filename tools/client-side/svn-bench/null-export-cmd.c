@@ -36,7 +36,7 @@
 
 #include "svn_private_config.h"
 #include "libsvn_client/client.h"
-
+#include "private/svn_string_private.h"
 
 /*** The export editor code. ***/
 
@@ -344,16 +344,16 @@ svn_cl__null_export(apr_getopt_t *os,
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool,
-                               _("%15ld directories\n"
-                                 "%15ld files\n"
-                                 "%15ld bytes in files\n"
-                                 "%15ld properties\n"
-                                 "%15ld bytes in properties\n"),
-                               eb.dir_count,
-                               eb.file_count,
-                               eb.byte_count,
-                               eb.prop_count,
-                               eb.prop_byte_count));
+                               _("%15s directories\n"
+                                 "%15s files\n"
+                                 "%15s bytes in files\n"
+                                 "%15s properties\n"
+                                 "%15s bytes in properties\n"),
+                               svn__ui64toa_sep(eb.dir_count, ',', pool),
+                               svn__ui64toa_sep(eb.file_count, ',', pool),
+                               svn__ui64toa_sep(eb.byte_count, ',', pool),
+                               svn__ui64toa_sep(eb.prop_count, ',', pool),
+                               svn__ui64toa_sep(eb.prop_byte_count, ',', pool)));
 
   return svn_error_trace(err);
 }

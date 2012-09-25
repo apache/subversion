@@ -147,6 +147,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name[=value] format")},
+  {"use-merge-history", 'g', 0,
+                    N_("use/display additional information from merge\n"
+                       "                             "
+                       "history")},
 
   /* Long-opt Aliases
    *
