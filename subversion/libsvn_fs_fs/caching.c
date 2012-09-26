@@ -24,6 +24,7 @@
 #include "fs_fs.h"
 #include "id.h"
 #include "dag.h"
+#include "tree.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -32,6 +33,8 @@
 
 #include "svn_private_config.h"
 #include "svn_hash.h"
+#include "svn_pools.h"
+
 #include "private/svn_debug.h"
 #include "private/svn_subr_private.h"
 
@@ -308,6 +311,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   SVN_ERR(init_callbacks(ffd->rev_node_cache, fs, no_handler, pool));
 
+  /* 1st level DAG node cache */
+  ffd->dag_node_cache = svn_fs_fs__create_dag_cache(svn_pool_create(pool));
+
   /* Very rough estimate: 1K per directory. */
   SVN_ERR(create_cache(&(ffd->dir_cache),
                        NULL,
@@ -346,12 +352,33 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
                            NULL, NULL,
-                           APR_HASH_KEY_STRING,
+                           sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "TEXT", (char *)NULL),
                            fs->pool));
     }
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
+
+  /* initialize node properties cache, if that has been enabled */
+  if (cache_fulltexts)
+    {
+      SVN_ERR(create_cache(&(ffd->properties_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_properties,
+                           svn_fs_fs__deserialize_properties,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "PROP",
+                                       (char *)NULL),
+                           fs->pool));
+    }
+  else
+    {
+      ffd->properties_cache = NULL;
+    }
+
+  SVN_ERR(init_callbacks(ffd->properties_cache, fs, no_handler, pool));
 
   /* initialize revprop cache, if full-text caching has been enabled */
   if (cache_revprops)
@@ -362,7 +389,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            svn_fs_fs__serialize_properties,
                            svn_fs_fs__deserialize_properties,
-                           APR_HASH_KEY_STRING,
+                           sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "REVPROP",
                                        (char *)NULL),
                            fs->pool));
