@@ -180,8 +180,12 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # Or that it resides in a non-standard location which we would have
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
+    # We pass --dbm-libs here since Debian has modified apu-config not
+    # to return -ldb unless --dbm-libs is passed.  This may also produce
+    # extra output beyond -ldb but since we're only filtering for -ldb
+    # it won't matter to us.
     if test -z "$SVN_DB_LIBS"; then
-      SVN_DB_LIBS=["`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
+      SVN_DB_LIBS=["`$apu_config --libs --dbm-libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
     fi
 
     CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 
