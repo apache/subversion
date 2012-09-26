@@ -190,7 +190,7 @@ Candidate changes:
    Justification:
      Fixes two test failures on 1.7.x when run within a format 30 WC.
    Notes:
-     Depends on r1389499 and r1389851 backports for passing tests.
+     Depends on r1389499 backport for passing tests.
    Branch:
      ^/subversion/branches/1.7.x-r1389878
    Votes:
