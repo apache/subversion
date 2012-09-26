@@ -331,6 +331,33 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
   return SVN_NO_ERROR;
 }
 
+/* Treat the next LEN input bytes from CONN as "read" */
+static svn_error_t *readbuf_skip(svn_ra_svn_conn_t *conn, apr_size_t len)
+{
+  apr_ssize_t buflen, copylen;
+
+  do
+  {
+    buflen = conn->read_end - conn->read_ptr;
+    copylen = (buflen < len) ? buflen : len;
+    conn->read_ptr += copylen;
+    len -= copylen;
+    if (len == 0)
+      break;
+
+    buflen = sizeof(conn->read_buf);
+    SVN_ERR(svn_ra_svn__stream_read(conn->stream, conn->read_buf, &buflen));
+    if (buflen == 0)
+      return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
+
+    conn->read_end = conn->read_buf + buflen;
+    conn->read_ptr = conn->read_buf;
+  }
+  while (len > 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* Read data from the socket into the read buffer, which must be empty. */
 static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
@@ -800,6 +827,95 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* Given the first non-whitespace character FIRST_CHAR, read the first
+ * command (word) encountered in CONN into *ITEM.  If ITEM is NULL, skip
+ * to the end of the current list.  Use POOL for allocations. */
+static svn_error_t *
+read_command_only(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                  const char **item, char first_char)
+{
+  char c = first_char;
+
+  /* Determine the item type and read it in.  Make sure that c is the
+  * first character at the end of the item so we can test to make
+  * sure it's whitespace. */
+  if (svn_ctype_isdigit(c))
+    {
+      /* It's a number or a string.  Read the number part, either way. */
+      apr_uint64_t val, prev_val=0;
+      val = c - '0';
+      while (1)
+        {
+          prev_val = val;
+          SVN_ERR(readbuf_getchar(conn, pool, &c));
+          if (!svn_ctype_isdigit(c))
+            break;
+          val = val * 10 + (c - '0');
+          if (prev_val >= (APR_UINT64_MAX / 10)) /* > maximum value? */
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Number is larger than maximum"));
+        }
+      if (c == ':')
+        {
+          /* It's a string. */
+          SVN_ERR(readbuf_skip(conn, val));
+          SVN_ERR(readbuf_getchar(conn, pool, &c));
+        }
+    }
+  else if (svn_ctype_isalpha(c))
+    {
+      /* It's a word. */
+      if (item)
+        {
+          /* This is the word we want to read */
+          
+          char *buf = apr_palloc(pool, 32);
+          apr_size_t len = 1;
+          buf[0] = c;
+
+          while (1)
+            {
+              SVN_ERR(readbuf_getchar(conn, pool, &c));
+              if (!svn_ctype_isalnum(c) && c != '-')
+                break;
+              buf[len] = c;
+              if (++len == 32)
+                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                        _("Word too long"));
+            }
+          buf[len] = 0;
+          *item = buf;
+        }
+      else
+        {
+          /* we don't need the actual word, just skip it */
+          do
+          {
+            SVN_ERR(readbuf_getchar(conn, pool, &c));
+          }
+          while (svn_ctype_isalnum(c) || c == '-');
+        }
+    }
+  else if (c == '(')
+    {
+      /* Read in the list items. */
+      while (1)
+        {
+          SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
+          if (c == ')')
+            break;
+
+          if (item && *item == NULL)
+            SVN_ERR(read_command_only(conn, pool, item, c));
+          else
+            SVN_ERR(read_command_only(conn, pool, NULL, c));
+        }
+      SVN_ERR(readbuf_getchar(conn, pool, &c));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item)
 {
@@ -947,6 +1063,18 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   va_end(ap);
   return err;
 }
+
+svn_error_t *svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
+                                           apr_pool_t *pool,
+                                           const char **command)
+{
+  char c;
+  SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
+
+  *command = NULL;
+  return read_command_only(conn, pool, command, c);
+}
+
 
 svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                                        apr_pool_t *pool,
