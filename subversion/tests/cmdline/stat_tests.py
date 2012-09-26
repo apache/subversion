@@ -2031,6 +2031,19 @@ def status_not_present(sbox):
                                      sbox.ospath('A/mu'),
                                      sbox.ospath('no-file'))
 
+# Skip this test is a .svn dir exists in the root directory
+@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name())) 
+def status_unversioned_dir(sbox):
+  "status on unversioned dir"
+  sbox.build(read_only = True, create_wc = False)
+
+  # Run svn status on "/", which we assume exists and isn't a WC.
+  # This should work on UNIX-like systems and Windows systems
+  expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
+                 "' is not a working copy"
+  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+                                      "status", "/")
+
 ########################################################################
 # Run the tests
 
@@ -2075,6 +2088,7 @@ test_list = [ None,
               wclock_status,
               modified_modulo_translation,
               status_not_present,
+              status_unversioned_dir,
              ]
 
 if __name__ == '__main__':
