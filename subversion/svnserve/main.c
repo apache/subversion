@@ -149,8 +149,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
-#define SVNSERVE_OPT_ZERO_COPY_LIMIT 269
-#define SVNSERVE_OPT_ERROR_CHECK_INTERVAL 270
+#define SVNSERVE_OPT_CLIENT_SPEED    269
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -237,22 +236,12 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is no.\n"
         "                             "
         "[used for FSFS repositories only]")},
-    {"zero-copy-limit", SVNSERVE_OPT_ZERO_COPY_LIMIT, 1,
-     N_("send files smaller than this directly from the\n"
+    {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
+     N_("assume clients are connected with this bandwidth\n"
         "                             "
-        "caches to the network stack.\n"
+        "in GB. Trades bandwidth for latency.\n"
         "                             "
-        "Consult the documentation before activating this.\n"
-        "                             "
-        "Default is 0 (optimization disabled).\n"
-        "                             "
-        "[used for FSFS repositories only]")},
-    {"error-check-interval", SVNSERVE_OPT_ERROR_CHECK_INTERVAL, 1,
-     N_("minimum amount of bytes to send between checks\n"
-        "                             "
-        "for cancellation requests from clients.\n"
-        "                             "
-        "Default is 4096.")},
+        "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -665,12 +654,16 @@ int main(int argc, const char *argv[])
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
-        case SVNSERVE_OPT_ZERO_COPY_LIMIT:
-          params.zero_copy_limit = (apr_size_t)apr_strtoi64(arg, NULL, 0);
-          break;
+        case SVNSERVE_OPT_CLIENT_SPEED:
+          {
+            apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
 
-        case SVNSERVE_OPT_ERROR_CHECK_INTERVAL:
-          params.error_check_interval = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+            /* block other clients for at most 1 ms (at full bandwidth) */
+            params.zero_copy_limit = bandwidth * 120000;
+
+            /* check for aborted connections at the same rate */
+            params.error_check_interval = bandwidth * 120000;
+          }
           break;
 
 #ifdef WIN32
