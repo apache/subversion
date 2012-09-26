@@ -205,6 +205,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1389658
+   Fix the Perl bindings building with newer versions of SWIG. 
+   Justification:
+     Convenience for users using newer verisons of SWIG.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
