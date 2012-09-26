@@ -4176,12 +4176,12 @@ check_related(const svn_test_opts_t *opts,
             int related = 0;
 
             /* Get the ID for the first path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr1.rev, pool));
-            SVN_ERR(svn_fs_node_id(&id1, rev_root, pr1.path, pool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr1.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id1, rev_root, pr1.path, subpool));
 
             /* Get the ID for the second path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr2.rev, pool));
-            SVN_ERR(svn_fs_node_id(&id2, rev_root, pr2.path, pool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr2.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id2, rev_root, pr2.path, subpool));
 
             /* <exciting> Now, run the relationship check! </exciting> */
             related = svn_fs_check_related(id1, id2) ? 1 : 0;

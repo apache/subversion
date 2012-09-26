@@ -307,7 +307,7 @@ typedef struct entry_t
    */
   entry_key_t key;
 
-  /* If NO_OFFSET, the entry is not in used. Otherwise, it is the offset
+  /* If NO_OFFSET, the entry is not in use. Otherwise, it is the offset
    * of the cached item's serialized data within the data buffer.
    */
   apr_uint64_t offset;
@@ -672,9 +672,11 @@ static apr_uint32_t
 get_group_index(svn_membuffer_t **cache,
                 entry_key_t key)
 {
-  /* select the cache segment to use */
-  *cache = &(*cache)[key[0] & ((*cache)->segment_count -1)];
-  return key[0] % (*cache)->group_count;
+  svn_membuffer_t *segment0 = *cache;
+  
+  /* select the cache segment to use. they have all the same group_count */
+  *cache = &segment0[key[0] & (segment0->segment_count -1)];
+  return key[1] % segment0->group_count;
 }
 
 /* Reduce the hit count of ENTRY and update the accumunated hit info
@@ -806,7 +808,12 @@ find_entry(svn_membuffer_t *cache,
        */
       if (entry == NULL)
         {
-          entry = &group[0];
+          /* every entry gets the same chance of being removed.
+           * Otherwise, we free the first entry, fill it and
+           * remove it again on the next occasion without considering
+           * the other entries in this group.
+           */
+          entry = &group[rand() % GROUP_SIZE];
           for (i = 1; i < GROUP_SIZE; ++i)
             if (entry->hit_count > group[i].hit_count)
               entry = &group[i];
@@ -950,22 +957,38 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
             }
           else
             {
-              /* Roll the dice and determine a threshold somewhere from 0 up
-               * to 2 times the average hit count.
-               */
-              average_hit_value = cache->hit_count / cache->used_entries;
-              threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
+              svn_boolean_t keep;
 
-              /* Drop the entry from the end of the insertion window, if it
-               * has been hit less than the threshold. Otherwise, keep it and
-               * move the insertion window one entry further.
-               */
-              if (entry->hit_count >= threshold)
+              if (cache->hit_count > cache->used_entries)
+                {
+                  /* Roll the dice and determine a threshold somewhere from 0 up
+                   * to 2 times the average hit count.
+                   */
+                  average_hit_value = cache->hit_count / cache->used_entries;
+                  threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
+
+                  keep = entry->hit_count >= threshold;
+                }
+              else
+                {
+                  /* general hit count is low. Keep everything that got hit
+                   * at all and assign some 50% survival chance to everything
+                   * else.
+                   */
+                  keep = (entry->hit_count > 0) || (rand() & 1);
+                }
+
+              /* keepers or destroyers? */
+              if (keep)
                 {
                   move_entry(cache, entry);
                 }
               else
                 {
+                 /* Drop the entry from the end of the insertion window, if it
+                  * has been hit less than the threshold. Otherwise, keep it and
+                  * move the insertion window one entry further.
+                  */
                   drop_size += entry->size;
                   drop_entry(cache, entry);
                 }
