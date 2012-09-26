@@ -331,7 +331,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *received_opts;
   int i;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
-  const char *dash_m_arg = NULL, *dash_F_arg = NULL;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
