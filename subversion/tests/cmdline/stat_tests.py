@@ -986,7 +986,6 @@ def status_ignored_dir(sbox):
 
 #----------------------------------------------------------------------
 
-@Issue(2030)
 def status_unversioned_dir_in_wc(sbox):
   "status on unversioned dir in working copy"
   sbox.build(read_only = True)
