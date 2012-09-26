@@ -258,9 +258,10 @@ static svn_error_t *ra_svn_set_path(void *baton, const char *path,
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_templated_cmd(b->conn, pool, svn_ra_svn_cmd_set_path,
-                               path, rev, start_empty, lock_token,
-                               svn_depth_to_word(depth)));
+  SVN_ERR(svn_ra_svn_write_templated_cmd(b->conn, pool,
+                                         svn_ra_svn_cmd_set_path,
+                                         path, rev, start_empty, lock_token,
+                                         svn_depth_to_word(depth)));
   return SVN_NO_ERROR;
 }
 
