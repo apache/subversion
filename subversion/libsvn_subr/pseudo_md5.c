@@ -62,7 +62,7 @@
  * pseudo_md5.c:  md5-esque hash sum calculation for short data blocks.
  *                Code taken and adapted from the APR (see licenses above).
  */
-#include "svn_checksum.h"
+#include "private/svn_pseudo_md5.h"
 
 /* Constants for MD5 calculation.
  */
