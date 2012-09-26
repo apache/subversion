@@ -182,10 +182,11 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
       # it won't matter to us.  However, --dbm-libs was added to apu-config
       # in 1.3.8 so it's possible the version we have doesn't support it
       # so fallback without it if we get an error.
-       svn_db_libs_prefiltered=["`$apu_config --libs --dbm-libs`"]
+      svn_db_libs_prefiltered=["`$apu_config --libs --dbm-libs`"]
       if test $? -ne 0; then
         svn_db_libs_prefiltered=["`$apu_config --libs`"]
       fi
+
       # Extract only the -ldb.* flag from the libs supplied by apu-config
       # Otherwise we get bit by the fact that expat might not be built yet
       # Or that it resides in a non-standard location which we would have
