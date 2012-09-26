@@ -1878,10 +1878,6 @@ def status_nested_wc_old_format(sbox):
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
 
-########################################################################
-# Run the tests
-
-
 def simple_lock(sbox, relpath):
   path = os.path.join(sbox.wc_dir, relpath)
   svntest.actions.run_and_verify_svn(None, None, [], 'lock', path)
