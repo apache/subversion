@@ -187,7 +187,7 @@ struct fs_fs_dag_cache_t
   /* fixed number of (possibly empty) cache entries */
   cache_entry_t buckets[BUCKET_COUNT];
 
-  /* pool used for all cache and node allocation */
+  /* pool used for all node allocation */
   apr_pool_t *pool;
 
   /* number of entries created from POOL since the last cleanup */
@@ -208,7 +208,7 @@ fs_fs_dag_cache_t*
 svn_fs_fs__create_dag_cache(apr_pool_t *pool)
 {
   fs_fs_dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->pool = pool;
+  result->pool = svn_pool_create(pool);
 
   return result;
 }
@@ -249,17 +249,17 @@ lock_cache(fs_fs_dag_cache_t* cache, apr_pool_t *pool)
     }
 }
 
-/* Clears and re-creates *CACHE at regular intervals
+/* Clears the CACHE at regular intervals (destroying all cached nodes)
  */
 static void
-auto_clear_dag_cache(fs_fs_dag_cache_t** cache)
+auto_clear_dag_cache(fs_fs_dag_cache_t* cache)
 {
-  if ((*cache)->lock_count == 0 && (*cache)->insertions > BUCKET_COUNT)
+  if (cache->lock_count == 0 && cache->insertions > BUCKET_COUNT)
     {
-      apr_pool_t *pool = (*cache)->pool;
-      apr_pool_clear(pool);
-      
-      *cache = svn_fs_fs__create_dag_cache(pool);
+      apr_pool_clear(cache->pool);
+
+      memset(cache->buckets, 0, sizeof(cache->buckets));
+      cache->insertions = 0;
     }
 }
 
@@ -371,7 +371,7 @@ dag_node_cache_get(dag_node_t **node_p,
       fs_fs_data_t *ffd = root->fs->fsap_data;
       cache_entry_t *bucket;
 
-      auto_clear_dag_cache(&ffd->dag_node_cache);
+      auto_clear_dag_cache(ffd->dag_node_cache);
       bucket = cache_lookup(ffd->dag_node_cache, root->rev, path);
       if (bucket->node == NULL)
         {
