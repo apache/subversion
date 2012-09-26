@@ -2650,60 +2650,53 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   ctx->auth_baton = ab;
 
-  /* Set up conflict resolution callback. */
+  /* Install the default conflict handler which postpones all conflicts
+   * and remembers the list of conflicted paths to be resolved later.
+   * This is overridden only within the 'resolve' subcommand. */
+  ctx->conflict_func = NULL;
+  ctx->conflict_baton = NULL;
+  ctx->conflict_func2 = svn_cl__conflict_func_postpone;
+  ctx->conflict_baton2 = svn_cl__get_conflict_func_postpone_baton(pool);
+
+  if (opt_state.non_interactive)
+    {
+      if (opt_state.accept_which == svn_cl__accept_edit)
+        return EXIT_ERROR(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("--accept=%s incompatible with"
+                                     " --non-interactive"),
+                                   SVN_CL__ACCEPT_EDIT));
+
+      if (opt_state.accept_which == svn_cl__accept_launch)
+        return EXIT_ERROR(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("--accept=%s incompatible with"
+                                     " --non-interactive"),
+                                   SVN_CL__ACCEPT_LAUNCH));
+
+      /* The default action when we're non-interactive is to postpone
+       * conflict resolution. */
+      if (opt_state.accept_which == svn_cl__accept_unspecified)
+        opt_state.accept_which = svn_cl__accept_postpone;
+    }
+
+  /* Check whether interactive conflict resolution is disabled by
+   * the configuration file. If no --accept option was specified
+   * we postpone all conflicts in this case. */
   SVN_INT_ERR(svn_config_get_bool(cfg_config, &interactive_conflicts,
                                   SVN_CONFIG_SECTION_MISCELLANY,
                                   SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
-                                  TRUE));  /* ### interactivity on by default.
-                                                  we can change this. */
-
-  /* The new svn behavior is to postpone everything until after the operation
-     completed */
-  ctx->conflict_func = NULL;
-  ctx->conflict_baton = NULL;
-  ctx->conflict_func2 = NULL;
-  ctx->conflict_baton2 = NULL;
-
-  if ((opt_state.accept_which == svn_cl__accept_unspecified
-       && (!interactive_conflicts || opt_state.non_interactive))
-      || opt_state.accept_which == svn_cl__accept_postpone)
+                                  TRUE));
+  if (!interactive_conflicts)
     {
-      /* If no --accept option at all and we're non-interactive, we're
-         leaving the conflicts behind, so don't need the callback.  Same if
-         the user said to postpone. */
-      opt_state.conflict_func = NULL;
-      opt_state.conflict_baton = NULL;
-    }
-  else
-    {
-      svn_cl__conflict_baton_t * conflict_baton2;
-      svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
-      pb->cancel_func = ctx->cancel_func;
-      pb->cancel_baton = ctx->cancel_baton;
+      /* Make 'svn resolve' non-interactive. */
+      if (subcommand->cmd_func == svn_cl__resolve)
+        opt_state.non_interactive = TRUE;
 
-      if (opt_state.non_interactive)
-        {
-          if (opt_state.accept_which == svn_cl__accept_edit)
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("--accept=%s incompatible with"
-                                   " --non-interactive"), SVN_CL__ACCEPT_EDIT));
-          if (opt_state.accept_which == svn_cl__accept_launch)
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("--accept=%s incompatible with"
-                                   " --non-interactive"),
-                                 SVN_CL__ACCEPT_LAUNCH));
-        }
-
-      opt_state.conflict_func = svn_cl__conflict_handler;
-      SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
-                                              opt_state.accept_which,
-                                              ctx->config,
-                                              opt_state.editor_cmd,
-                                              pb,
-                                              pool));
-      opt_state.conflict_baton = conflict_baton2;
+      /* We're not resolving conflicts interactively. If no --accept option
+       * was provided the default behaviour is to postpone all conflicts. */
+      if (opt_state.accept_which == svn_cl__accept_unspecified)
+        opt_state.accept_which = svn_cl__accept_postpone;
     }
 
   /* And now we finally run the subcommand. */
