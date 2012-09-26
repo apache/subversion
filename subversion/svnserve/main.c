@@ -237,9 +237,13 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[used for FSFS repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
-     N_("assume clients are connected with this bandwidth\n"
+     N_("Optimize throughput based on the assumption that\n"
         "                             "
-        "in GB. Trades bandwidth for latency.\n"
+        "clients can receive data with a bitrate of at\n"
+        "                             "
+        "least ARG Gbit/s.  For clients receiving data at\n"
+        "                             "
+        "less than 1Gbit/s, zero should be used.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
