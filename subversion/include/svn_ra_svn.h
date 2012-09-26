@@ -158,6 +158,64 @@ typedef struct svn_ra_svn_item_t
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
 /**
+ * List of all commands supported by the SVN:// protocol.
+ *
+ * @since New in 1.9.
+ */
+typedef enum svn_ra_svn_cmd_t
+{
+  svn_ra_svn_cmd_target_rev,
+  svn_ra_svn_cmd_open_root,
+  svn_ra_svn_cmd_delete_entry,
+  svn_ra_svn_cmd_add_dir,
+  svn_ra_svn_cmd_open_dir,
+  svn_ra_svn_cmd_change_dir_prop,
+  svn_ra_svn_cmd_close_dir,
+  svn_ra_svn_cmd_absent_dir,
+  svn_ra_svn_cmd_add_file,
+  svn_ra_svn_cmd_open_file,
+  svn_ra_svn_cmd_change_file_prop,
+  svn_ra_svn_cmd_close_file,
+  svn_ra_svn_cmd_absent_file,
+  svn_ra_svn_cmd_textdelta_chunk,
+  svn_ra_svn_cmd_textdelta_end,
+  svn_ra_svn_cmd_apply_textdelta,
+  svn_ra_svn_cmd_close_edit,
+  svn_ra_svn_cmd_abort_edit,
+  
+  svn_ra_svn_cmd_set_path,
+  svn_ra_svn_cmd_delete_path,
+  svn_ra_svn_cmd_link_path,
+  svn_ra_svn_cmd_finish_report,
+  svn_ra_svn_cmd_abort_report,
+
+  svn_ra_svn_cmd_reparent,
+  svn_ra_svn_cmd_get_latest_rev,
+  svn_ra_svn_cmd_get_dated_rev,
+  svn_ra_svn_cmd_change_rev_prop2,
+  svn_ra_svn_cmd_change_rev_prop,
+  svn_ra_svn_cmd_rev_proplist,
+  svn_ra_svn_cmd_rev_prop,
+  svn_ra_svn_cmd_get_file,
+  svn_ra_svn_cmd_update,
+  svn_ra_svn_cmd_switch,
+  svn_ra_svn_cmd_status,
+  svn_ra_svn_cmd_diff,
+  svn_ra_svn_cmd_check_path,
+  svn_ra_svn_cmd_stat,
+  svn_ra_svn_cmd_get_file_revs,
+  svn_ra_svn_cmd_lock,
+  svn_ra_svn_cmd_unlock,
+  svn_ra_svn_cmd_get_lock,
+  svn_ra_svn_cmd_get_locks,
+  svn_ra_svn_cmd_replay,
+  svn_ra_svn_cmd_replay_range,
+  svn_ra_svn_cmd_get_deleted_rev,
+
+  svn_ra_svn_cmd__last
+} svn_ra_svn_cmd_t;
+
+/**
  * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
  *
  * @note This is a private API, external consumers should not use it.
@@ -448,12 +506,25 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 
 /** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ * Use svn_ra_svn_write_templated_cmd instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
                      const char *cmdname,
                      const char *fmt, ...);
+
+/** Write a command of type @a cmd over the network connection @a conn.
+ * The parameters to be provided are command-specific.  @a pool will be
+ * used for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               svn_ra_svn_cmd_t cmd, ...);
 
 /** Write a successful command response over the network, using the
  * same format string notation as svn_ra_svn_write_tuple().  Do not use
