@@ -987,8 +987,8 @@ def status_ignored_dir(sbox):
 #----------------------------------------------------------------------
 
 @Issue(2030)
-def status_unversioned_dir(sbox):
-  "status on unversioned dir"
+def status_unversioned_dir_in_wc(sbox):
+  "status on unversioned dir in working copy"
   sbox.build(read_only = True)
 
   # Create two unversioned directories within the test working copy
@@ -2055,7 +2055,7 @@ test_list = [ None,
               missing_dir_in_anchor,
               status_in_xml,
               status_ignored_dir,
-              status_unversioned_dir,
+              status_unversioned_dir_in_wc,
               status_missing_dir,
               status_nonrecursive_update_different_cwd,
               status_add_plus_conflict,
