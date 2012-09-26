@@ -520,8 +520,6 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
-  const char *uuid;
-  svn_string_t *cr_str;
   revision_info_t* revision_info;
   svn_boolean_t changed;
   const svn_prop_t *pc;
