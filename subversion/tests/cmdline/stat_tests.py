@@ -1878,10 +1878,6 @@ def status_nested_wc_old_format(sbox):
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
 
-def simple_lock(sbox, relpath):
-  path = os.path.join(sbox.wc_dir, relpath)
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock', path)
-
 #----------------------------------------------------------------------
 # Regression test for issue #3855 "status doesn't show 'K' on a locked
 # deleted node".
@@ -1893,7 +1889,8 @@ def status_locked_deleted(sbox):
   iota_path = sbox.ospath('iota')
 
   sbox.simple_rm('iota')
-  simple_lock(sbox, 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+                                     os.path.join(sbox.wc_dir, 'iota'))
   svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
                                      'status', iota_path)
 
