@@ -521,15 +521,12 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (!err
-      && opt_state->conflict_func
-      && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
-    {
-      err = svn_cl__resolve_conflicts(
-              svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
-              opt_state->depth, opt_state, ctx, pool);
-    }
-
+  if (!err)
+    err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                              opt_state->depth,
+                                              opt_state->accept_which,
+                                              opt_state->editor_cmd,
+                                              ctx, pool);
   if (merge_err)
     {
       if (merge_err->apr_err ==
