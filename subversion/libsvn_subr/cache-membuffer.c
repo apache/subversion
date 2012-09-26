@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
+#include "private/svn_pseudo_md5.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -112,10 +113,22 @@
  */
 #define ITEM_ALIGNMENT 16
 
-/* Don't create cache segments smaller than this value unless the total
- * cache size itself is smaller.
+/* By default, don't create cache segments smaller than this value unless
+ * the total cache size itself is smaller.
  */
-#define MIN_SEGMENT_SIZE 0x2000000ull
+#define DEFAULT_MIN_SEGMENT_SIZE 0x2000000ull
+
+/* The minimum segment size we will allow for multi-segmented caches
+ */
+#define MIN_SEGMENT_SIZE 0x10000ull
+
+/* The maximum number of segments allowed. Larger numbers reduce the size
+ * of each segment, in turn reducing the max size of a cachable item.
+ * Also, each segment gets its own lock object. The actual number supported
+ * by the OS may therefore be lower and svn_cache__membuffer_cache_create
+ * may return an error.
+ */
+#define MAX_SEGMENT_COUNT 0x10000
 
 /* We don't mark the initialization status for every group but initialize
  * a number of groups at once. That will allow for a very small init flags
@@ -446,6 +459,12 @@ struct svn_membuffer_t
    * thread-safe.
    */
   apr_thread_rwlock_t *lock;
+
+  /* If set, write access will wait until they get exclusive access.
+   * Otherwise, they will become no-ops if the segment is currently
+   * read-locked.
+   */
+  svn_boolean_t allow_blocking_writes;
 #endif
 };
 
@@ -473,18 +492,48 @@ read_lock_cache(svn_membuffer_t *cache)
   return SVN_NO_ERROR;
 }
 
-/* If locking is supported for CACHE, aquire a write lock for it.
+/* If locking is supported for CACHE, acquire a write lock for it.
  */
 static svn_error_t *
-write_lock_cache(svn_membuffer_t *cache)
+write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 {
 #if APR_HAS_THREADS
   if (cache->lock)
-  {
-    apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
-    if (status)
-      return svn_error_wrap_apr(status, _("Can't write-lock cache mutex"));
-  }
+    {
+      apr_status_t status;
+      if (cache->allow_blocking_writes)
+        {
+          status = apr_thread_rwlock_wrlock(cache->lock);
+        }
+      else
+        {
+          status = apr_thread_rwlock_trywrlock(cache->lock);
+          if (APR_STATUS_IS_EBUSY(status))
+            {
+              *success = FALSE;
+              status = APR_SUCCESS;
+            }
+        }
+    
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't write-lock cache mutex"));
+    }
+#endif
+  return SVN_NO_ERROR;
+}
+
+/* If locking is supported for CACHE, acquire an unconditional write lock
+ * for it.
+ */
+static svn_error_t *
+force_write_lock_cache(svn_membuffer_t *cache)
+{
+#if APR_HAS_THREADS
+  apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
+  if (status)
+    return svn_error_wrap_apr(status,
+                              _("Can't write-lock cache mutex"));
 #endif
   return SVN_NO_ERROR;
 }
@@ -510,7 +559,7 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 }
 
 /* If supported, guard the execution of EXPR with a read lock to cache.
- * Macro has been modelled after SVN_MUTEX__WITH_LOCK.
+ * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
  */
 #define WITH_READ_LOCK(cache, expr)         \
 do {                                        \
@@ -519,12 +568,29 @@ do {                                        \
 } while (0)
 
 /* If supported, guard the execution of EXPR with a write lock to cache.
- * Macro has been modelled after SVN_MUTEX__WITH_LOCK.
+ * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+ *
+ * The write lock process is complicated if we don't allow to wait for
+ * the lock: If we didn't get the lock, we may still need to remove an
+ * existing entry for the given key because that content is now stale.
+ * Once we discovered such an entry, we unconditionally do a blocking
+ * wait for the write lock.  In case no old content could be found, a
+ * failing lock attempt is simply a no-op and we exit the macro.
  */
-#define WITH_WRITE_LOCK(cache, expr)        \
-do {                                        \
-  SVN_ERR(write_lock_cache(cache));         \
-  SVN_ERR(unlock_cache(cache, (expr)));     \
+#define WITH_WRITE_LOCK(cache, expr)                            \
+do {                                                            \
+  svn_boolean_t got_lock = TRUE;                                \
+  SVN_ERR(write_lock_cache(cache, &got_lock));                  \
+  if (!got_lock)                                                \
+    {                                                           \
+      svn_boolean_t exists;                                     \
+      SVN_ERR(entry_exists(cache, group_index, key, &exists));  \
+      if (exists)                                               \
+        SVN_ERR(force_write_lock_cache(cache));                 \
+      else                                                      \
+        break;                                                  \
+    }                                                           \
+  SVN_ERR(unlock_cache(cache, (expr)));                         \
 } while (0)
 
 /* Resolve a dictionary entry reference, i.e. return the entry
@@ -1022,26 +1088,16 @@ static void* secure_aligned_alloc(apr_pool_t *pool,
   return memory;
 }
 
-/* Create a new membuffer cache instance. If the TOTAL_SIZE of the
- * memory i too small to accomodate the DICTIONARY_SIZE, the latte
- * will be resized automatically. Also, a minumum size is assured
- * for the DICTIONARY_SIZE. THREAD_SAFE may be FALSE, if there will
- * be no concurrent acccess to the CACHE returned.
- *
- * All allocations, in particular the data buffer and dictionary will
- * be made from POOL.
- */
 svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,
+                                  apr_size_t segment_count,
                                   svn_boolean_t thread_safe,
+                                  svn_boolean_t allow_blocking_writes,
                                   apr_pool_t *pool)
 {
   svn_membuffer_t *c;
-
-  apr_uint32_t segment_count_shift = 0;
-  apr_uint32_t segment_count = 1;
 
   apr_uint32_t seg;
   apr_uint32_t group_count;
@@ -1049,29 +1105,50 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
 
-  /* Determine a reasonable number of cache segments. Segmentation is
-   * only useful for multi-threaded / multi-core servers as it reduces
-   * lock contention on these systems.
-   *
-   * But on these systems, we can assume that ample memory has been
-   * allocated to this cache. Smaller caches should not be segmented
-   * as this severely limites the maximum size of cachable items.
-   *
-   * Segments should not be smaller than 32MB and max. cachable item
-   * size should grow as fast as segmentation.
+  /* Limit the segment count
    */
-  while (((2 * MIN_SEGMENT_SIZE) << (2 * segment_count_shift)) < total_size)
-    ++segment_count_shift;
+  if (segment_count > MAX_SEGMENT_COUNT)
+    segment_count = MAX_SEGMENT_COUNT;
+  if (segment_count * MIN_SEGMENT_SIZE > total_size)
+    segment_count = total_size / MIN_SEGMENT_SIZE;
+    
+  /* The segment count must be a power of two. Round it down as necessary.
+   */
+  while ((segment_count & (segment_count-1)) != 0)
+    segment_count &= segment_count-1;
 
-  segment_count = 1 << segment_count_shift;
+  /* if the caller hasn't provided a reasonable segment count or the above
+   * limitations set it to 0, derive one from the absolute cache size
+   */
+  if (segment_count < 1)
+    {
+      /* Determine a reasonable number of cache segments. Segmentation is
+       * only useful for multi-threaded / multi-core servers as it reduces
+       * lock contention on these systems.
+       *
+       * But on these systems, we can assume that ample memory has been
+       * allocated to this cache. Smaller caches should not be segmented
+       * as this severely limits the maximum size of cachable items.
+       *
+       * Segments should not be smaller than 32MB and max. cachable item
+       * size should grow as fast as segmentation.
+       */
+
+      apr_uint32_t segment_count_shift = 0;
+      while (((2 * DEFAULT_MIN_SEGMENT_SIZE) << (2 * segment_count_shift))
+             < total_size)
+        ++segment_count_shift;
+
+      segment_count = 1 << segment_count_shift;
+    }
 
   /* allocate cache as an array of segments / cache objects */
   c = apr_palloc(pool, segment_count * sizeof(*c));
 
   /* Split total cache size into segments of equal size
    */
-  total_size >>= segment_count_shift;
-  directory_size >>= segment_count_shift;
+  total_size /= segment_count;
+  directory_size /= segment_count;
 
   /* prevent pathological conditions: ensure a certain minimum cache size
    */
@@ -1166,12 +1243,50 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           if (status)
             return svn_error_wrap_apr(status, _("Can't create cache mutex"));
         }
+
+      /* Select the behavior of write operations.
+       */
+      c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
     }
 
   /* done here
    */
   *cache = c;
+  return SVN_NO_ERROR;
+}
+
+/* Look for the cache entry in group GROUP_INDEX of CACHE, identified
+ * by the hash value TO_FIND and set *FOUND accordingly.
+ *
+ * Note: This function requires the caller to serialize access.
+ * Don't call it directly, call entry_exists instead.
+ */
+static svn_error_t *
+entry_exists_internal(svn_membuffer_t *cache,
+                      apr_uint32_t group_index,
+                      entry_key_t to_find,
+                      svn_boolean_t *found)
+{
+  *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
+  return SVN_NO_ERROR;
+}
+
+/* Look for the cache entry in group GROUP_INDEX of CACHE, identified
+ * by the hash value TO_FIND and set *FOUND accordingly.
+ */
+static svn_error_t *
+entry_exists(svn_membuffer_t *cache,
+             apr_uint32_t group_index,
+             entry_key_t to_find,
+             svn_boolean_t *found)
+{
+  WITH_READ_LOCK(cache,
+                 entry_exists_internal(cache,
+                                       group_index,
+                                       to_find,
+                                       found));
+
   return SVN_NO_ERROR;
 }
 
@@ -1715,7 +1830,31 @@ combine_key(svn_membuffer_cache_t *cache,
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
-  apr_md5((unsigned char*)cache->combined_key, key, key_len);
+  if (key_len < 16)
+    {
+      apr_uint32_t data[4] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_15((apr_uint32_t *)cache->combined_key, data);
+    }
+  else if (key_len < 32)
+    {
+      apr_uint32_t data[8] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_31((apr_uint32_t *)cache->combined_key, data);
+    }
+  else if (key_len < 64)
+    {
+      apr_uint32_t data[16] = { 0 };
+      memcpy(data, key, key_len);
+
+      svn__pseudo_md5_63((apr_uint32_t *)cache->combined_key, data);
+    }
+  else
+    {
+      apr_md5((unsigned char*)cache->combined_key, key, key_len);
+    }
 
   cache->combined_key[0] ^= cache->prefix[0];
   cache->combined_key[1] ^= cache->prefix[1];
