@@ -243,7 +243,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "least ARG Gbit/s.  For clients receiving data at\n"
         "                             "
-        "less than 1Gbit/s, zero should be used.\n"
+        "less than 1 Gbit/s, zero should be used.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
