@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 121;
+use Test::More tests => 146;
 use strict;
 
 # shut up about variables that are only used once.
@@ -258,18 +258,100 @@ is($ctx->status($wcpath, undef, sub {
                                       my ($path,$wc_status) = @_;
                                       is($path,"$wcpath/dir1",
                                          'path param to status callback is' .
-                                         'the correct path.');
+                                         ' the correct path.');
                                       isa_ok($wc_status,'_p_svn_wc_status_t',
                                              'wc_stats param is a' .
                                              ' _p_svn_wc_status_t');
+                                      is($wc_status->text_status(),
+                                         $SVN::Wc::Status::normal,
+                                         'text_status param to status' .
+                                         ' callback');
                                       is($wc_status->prop_status(),
-                                         $SVN::Wc::status_modified,
-                                         'prop_status is status_modified');
-                                      # TODO test the rest of the members
+                                         $SVN::Wc::Status::modified,
+                                         'prop_status param to status' .
+                                         ' callback');
+                                      is($wc_status->locked(), 0,
+                                         'locked param to status callback');
+                                      is($wc_status->copied(), 0,
+                                         'copied param to status callback');
+                                      is($wc_status->switched(), 0,
+                                         'switched param to status callback');
+                                      is($wc_status->repos_text_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_text_status param to status' .
+                                         ' callback');
+                                      is($wc_status->repos_prop_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_prop_status param to status' .
+                                         ' callback');
                                     },
                 1, 0, 0, 0),
    $SVN::Core::INVALID_REVNUM,
    'status returns INVALID_REVNUM when run against a working copy');
+
+# No revnum for the working copy so we should get INVALID_REVNUM
+is($ctx->status2($wcpath, undef, sub {
+                                      my ($path,$wc_status) = @_;
+                                      is($path,"$wcpath/dir1",
+                                         'path param to status2 callback');
+                                      isa_ok($wc_status,'_p_svn_wc_status2_t',
+                                             'wc_stats param to the status2' .
+                                             ' callback');
+                                      is($wc_status->text_status(),
+                                         $SVN::Wc::Status::normal,
+                                         'text_status param to status2' .
+                                         ' callback');
+                                      is($wc_status->prop_status(),
+                                         $SVN::Wc::Status::modified,
+                                         'prop_status param to status2' .
+                                         ' callback');
+                                      is($wc_status->locked(), 0,
+                                         'locked param to status2' .
+                                         ' callback');
+                                      is($wc_status->copied(), 0,
+                                         'copied param to status2' .
+                                         ' callback');
+                                      is($wc_status->switched(), 0,
+                                         'switched param to status2' .
+                                         ' callback');
+                                      is($wc_status->repos_text_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_text_status param to status2' .
+                                         ' callback');
+                                      is($wc_status->repos_prop_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_prop_status param to status2' .
+                                         ' callback');
+                                      is($wc_status->repos_lock(), undef,
+                                        'repos_lock param to status2 callback');
+                                      is($wc_status->url(),"$reposurl/dir1",
+                                        'url param to status2 callback');
+                                      is($wc_status->ood_last_cmt_rev(),
+                                         $SVN::Core::INVALID_REVNUM,
+                                         'ood_last_cmt_rev to status2' .
+                                         ' callback');
+                                      is($wc_status->ood_last_cmt_date(), 0,
+                                         'ood_last_cmt_date to status2' .
+                                         ' callback');
+                                      is($wc_status->ood_kind(),
+                                         $SVN::Node::none,
+                                         'ood_kind param to status2 callback');
+                                      is($wc_status->tree_conflict(), undef,
+                                         'tree_conflict to status2 callback');
+                                      is($wc_status->file_external(), 0,
+                                         'file_external to status2 callback');
+                                      is($wc_status->pristine_text_status(),
+                                         $SVN::Wc::Status::normal,
+                                         'pristine_text_status param to' .
+                                         ' status2 callback');
+                                      is($wc_status->pristine_prop_status(),
+                                         $SVN::Wc::Status::modified,
+                                         'pristine_prop_status param to' .
+                                         ' status2 callback');
+                                    },
+                1, 0, 0, 0, 0),
+   $SVN::Core::INVALID_REVNUM,
+   'status2 returns INVALID_REVNUM when run against a working copy');
 
 my ($ci_commit2) = $ctx->commit($wcpath,0);
 isa_ok($ci_commit2,'_p_svn_client_commit_info_t',
