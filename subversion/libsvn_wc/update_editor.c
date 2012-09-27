@@ -1404,7 +1404,18 @@ check_tree_conflict(svn_skel_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-        reason = svn_wc_conflict_reason_deleted;
+        {
+          const char *moved_to_abspath;
+
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
+                                           NULL, NULL, eb->db,
+                                           local_abspath,
+                                           scratch_pool, scratch_pool));
+          if (moved_to_abspath)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
         break;
 
       case svn_wc__db_status_incomplete:
