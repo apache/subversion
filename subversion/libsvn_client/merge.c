@@ -1607,8 +1607,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      way svn_wc_merge5() can do the merge. */
   if (wc_kind != svn_node_file || is_deleted)
     {
-      const char *moved_to_abspath;
-      svn_error_t *err;
+      svn_boolean_t moved_away;
+      svn_wc_conflict_reason_t reason;
 
       /* Maybe the node is excluded via depth filtering? */
 
@@ -1638,44 +1638,23 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       /* This is use case 4 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
        */
-      err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
-                                        ctx->wc_ctx, local_abspath,
-                                        scratch_pool, scratch_pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              svn_error_clear(err);
-              moved_to_abspath = NULL;
-            }
-          else
-            return svn_error_trace(err);
-        }
-
-      if (moved_to_abspath)
-        {
-          /* File has been moved away locally -- apply incoming
-           * changes at the new location. */
-          local_abspath = moved_to_abspath;
-        }
+      SVN_ERR(check_moved_away(&moved_away, ctx->wc_ctx,
+                               local_abspath, scratch_pool));
+      if (moved_away)
+        reason = svn_wc_conflict_reason_moved_away;
+      else if (is_deleted)
+        reason = svn_wc_conflict_reason_deleted;
       else
-        {
-          svn_wc_conflict_reason_t reason;
-
-          if (is_deleted)
-            reason = svn_wc_conflict_reason_deleted;
-          else
-            reason = svn_wc_conflict_reason_missing;
-          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                                svn_wc_conflict_action_edit, reason));
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
-          if (content_state)
-            *content_state = svn_wc_notify_state_missing;
-          if (prop_state)
-            *prop_state = svn_wc_notify_state_missing;
-          return SVN_NO_ERROR;
-        }
+        reason = svn_wc_conflict_reason_missing;
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_edit, reason));
+      if (tree_conflicted)
+        *tree_conflicted = TRUE;
+      if (content_state)
+        *content_state = svn_wc_notify_state_missing;
+      if (prop_state)
+        *prop_state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
     }
 
   /* ### TODO: Thwart attempts to merge into a path that has
