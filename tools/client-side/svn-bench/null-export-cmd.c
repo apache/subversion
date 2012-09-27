@@ -36,13 +36,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_string_private.h"
-
-/* We need this "unclean" include to get access to some private functions.
- * 
- * That seems to be acceptable as we explicitly want to bypass much of the
- * client-side computation and no-one else should have a need to do so.
- */
-#include "../../../subversion/libsvn_client/client.h"
+#include "private/svn_client_private.h"
 
 /*** The export editor code. ***/
 

@@ -217,40 +217,6 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute URL, a peg revision PEG_REVISION, and a desired revision
-   REVISION, create an RA connection to that object as it exists in
-   that revision, following copy history if necessary.  If REVISION is
-   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
-   that it is the same node in both PEG_REVISION and REVISION.  If it
-   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
-
-   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   and should only be used if PATH_OR_URL is a url
-     ### else NULL? what's it for?
-
-   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
-   for a URL or 'working' for a WC path.  If REVISION->kind is
-   'unspecified', the operative revision is the peg revision.
-
-   Store the resulting ra_session in *RA_SESSION_P.  Store the final
-   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
-   may be NULL if not wanted.
-
-   Use authentication baton cached in CTX to authenticate against the
-   repository.
-
-   Use POOL for all allocations. */
-svn_error_t *
-svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
-                                 svn_client__pathrev_t **resolved_loc_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.
    Store the previous session URL in *OLD_SESSION_URL (so that if the
@@ -1032,21 +998,6 @@ svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
-
-/* Return true if KIND is a revision kind that is dependent on the working
- * copy. Otherwise, return false. */
-#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
-  ((kind) == svn_opt_revision_base ||                                      \
-   (kind) == svn_opt_revision_previous ||                                  \
-   (kind) == svn_opt_revision_working ||                                   \
-   (kind) == svn_opt_revision_committed)                                   \
-
-/* Return true if KIND is a revision kind that the WC can supply without
- * contacting the repository. Otherwise, return false. */
-#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
-  ((kind) == svn_opt_revision_base ||                                      \
-   (kind) == svn_opt_revision_working ||                                   \
-   (kind) == svn_opt_revision_committed)
 
 /* Return REVISION unless its kind is 'unspecified' in which case return
  * a pointer to a statically allocated revision structure of kind 'head'
