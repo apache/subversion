@@ -148,13 +148,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1387943
-   Fix unbounded memory use with SVNPathAuthz short_circuit.
-   Justification:
-     Server process may abort if memory exhausted.
-   Votes:
-     +1: philip, ivan
-
  * r1389878
    Fix working copy access via symlink to WC nested within a format 30 WC.
    Justification:
@@ -173,7 +166,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1389928
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1389658
    Fix the Perl bindings building with newer versions of SWIG. 
@@ -191,14 +184,14 @@ Candidate changes:
    Notes:
      Test added by r1391022 depends on r1389499 backport to PASS in 1.8 WC.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1390965
    Avoid claiming all tests pass when most fail to run.
    Justification:
      Summary should be accurate.
    Votes:
-     +1: philip
+     +1: philip, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -234,4 +227,11 @@ Approved changes:
      Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
    Votes:
      +1: stsp, philip, cmpilato
+
+ * r1387943
+   Fix unbounded memory use with SVNPathAuthz short_circuit.
+   Justification:
+     Server process may abort if memory exhausted.
+   Votes:
+     +1: philip, ivan, cmpilato
 
