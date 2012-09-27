@@ -127,6 +127,9 @@ $module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
 
 FULLPERLRUN=$fullperlrun \$(FULLPERL)
 
+update_test_counts ::
+\tfor test_file in \$(TEST_FILES); do \$(PERL) -MTest::Count::FileMutator::ByFileType::App -e 'run()' \$\$test_file; done
+
 EOPOST
 
 }
