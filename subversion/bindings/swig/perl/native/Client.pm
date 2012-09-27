@@ -732,8 +732,12 @@ in the repository, this feature will fail.
 
 =item $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
+Similar to $ctx-E<gt>status2(), but with ignore_externals always set to FALSE, and with the status_func receiving a svn_wc_status2_t instead of a svn_wc_status_t object.
+
+=item $ctx-E<gt>status2($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $ignore_externals, $pool);
+
 Given $path to a working copy directory (or single file), call status_func()
-with a set of svn_wc_status_t objects which describe the status of $path and
+with a set of svn_wc_status2_t objects which describe the status of $path and
 its children.
 
 If $recursive is true, recurse fully, else do only immediate children.
@@ -746,17 +750,17 @@ information about out-of-dateness (with respect to $revision).  Also, will
 return the value of the actual revision against with the working copy was
 compared.  (The return will be undef if $update is not set).
 
-The function recurses into externals definitions ('svn:externals') after
-handling the main target, if any exist.  The function calls the notify callback
-with $SVN::Wc::Notify::Action::status_external action before handling each
-externals definition, and with $SVN::Wc::Notify::Action::status_completed
-after each.
+Unless ignore_externals is set, the function recurses into externals definitions
+('svn:externals') after handling the main target, if any exist.  The function
+calls the notify callback with $SVN::Wc::Notify::Action::status_external action
+before handling each externals definition, and with 
+$SVN::Wc::Notify::Action::status_completed after each.
 
 The status_func subroutine takes the following parameters:
 $path, $status
 
 $path is the pathname of the file or directory which status is being
-reported.  $status is a svn_wc_status_t object.
+reported.  $status is a svn_wc_status2_t object.
 
 The return of the status_func subroutine is ignored.
 

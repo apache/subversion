@@ -1288,6 +1288,22 @@ void svn_swig_pl_status_func(void *baton,
 
 }
 
+/* Thunked version of svn_wc_status_func2_t callback type. */
+void svn_swig_pl_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status)
+{
+  swig_type_info *statusinfo = _SWIG_TYPE("svn_wc_status2 _t *");
+
+  if (!SvOK((SV *)baton)) {
+    return;
+  }
+
+  svn_swig_pl_callback_thunk(CALL_SV, baton, NULL, "sS",
+                             path, status, statusinfo);
+
+}
+
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func(void *baton,
                                     apr_int64_t line_no,
