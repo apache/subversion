@@ -736,6 +736,10 @@ Similar to $ctx-E<gt>status2(), but with ignore_externals always set to FALSE, a
 
 =item $ctx-E<gt>status2($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $ignore_externals, $pool);
 
+Similar to $ctx-E<gt>status3(), but with the changelists passed as undef, and with recursive instead of depth.
+
+=item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $pool);
+
 Given $path to a working copy directory (or single file), call status_func()
 with a set of svn_wc_status2_t objects which describe the status of $path and
 its children.
