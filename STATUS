@@ -212,6 +212,17 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1391020, r1391022
+   Fix issue #4234, "svndumpfilter exclude --targets wants pathname to
+   start with '/'"
+   Justification:
+     Fixes inconsistent parameter processing. Paths specified on the command
+     line and via --targets file should be handled the same way.
+   Notes:
+     Test added by r1391022 depends on r1389499 backport to PASS in 1.8 WC.
+   Votes:
+     +1: stsp
+     
 Veto-blocked changes:
 =====================
 
