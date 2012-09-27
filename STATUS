@@ -138,14 +138,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1389499
-   Fix several test failures when running 1.7.x tests within a format 30 WC.
-   Justification:
-     Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
-   Votes:
-     +1: stsp, philip
-     +10000: cmpilato
-
  * r1389851
    Fix commit from multiple working copies nested within a parent WC.
    Justification:
@@ -235,4 +227,11 @@ Approved changes:
      It's an assert.
    Votes:
      +1: philip, rhuijben, cmpilato
+
+ * r1389499
+   Fix several test failures when running 1.7.x tests within a format 30 WC.
+   Justification:
+     Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
+   Votes:
+     +1: stsp, philip, cmpilato
 
