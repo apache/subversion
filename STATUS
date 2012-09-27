@@ -144,6 +144,7 @@ Candidate changes:
      Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
    Votes:
      +1: stsp, philip
+     +10000: cmpilato
 
  * r1389851
    Fix commit from multiple working copies nested within a parent WC.
