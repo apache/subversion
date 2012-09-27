@@ -138,13 +138,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1387226
-   Fix issue 4231, mod_dav_svn assert with SVNAutoVersioning and <Location />
-   Justification:
-     It's an assert.
-   Votes:
-     +1: philip, rhuijben
-
  * r1389499
    Fix several test failures when running 1.7.x tests within a format 30 WC.
    Justification:
@@ -234,4 +227,11 @@ Approved changes:
      Implement api properly.
    Votes:
      +1: rhuijben, philip, cmpilato
+
+ * r1387226
+   Fix issue 4231, mod_dav_svn assert with SVNAutoVersioning and <Location />
+   Justification:
+     It's an assert.
+   Votes:
+     +1: philip, rhuijben, cmpilato
 
