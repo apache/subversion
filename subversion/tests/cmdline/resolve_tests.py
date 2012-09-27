@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, sys, re, os, stat
 import time
 
 # Our testing module
@@ -243,6 +243,35 @@ def prop_conflict_resolution(sbox):
                                      [], # Prop deleted
                                      ['incoming-conflict\n'])
 
+@SkipUnless(svntest.main.is_posix_os)
+def auto_resolve_executable_file(sbox):
+  "resolve file with executable bit set"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Mark iota as executable
+  sbox.simple_propset("svn:executable", '*', 'iota')
+  sbox.simple_commit() # r2
+
+  # Make a change to iota in r3
+  svntest.main.file_write(sbox.ospath('iota'), "boo\n")
+  sbox.simple_commit() # r3
+
+  # Update back to r2, and tweak iota to provoke a text conflict
+  sbox.simple_update(revision=2)
+  svntest.main.file_write(sbox.ospath('iota'), "bzzt\n")
+
+  # Get permission bits of iota
+  mode = os.stat(sbox.ospath('iota'))[stat.ST_MODE]
+
+  # Update back to r3, and auto-resolve the text conflict.
+  svntest.main.run_svn(False, 'update', wc_dir, '--accept', 'theirs-full')
+
+  # permission bits of iota should be unaffected
+  if mode != os.stat(sbox.ospath('iota'))[stat.ST_MODE]:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -250,6 +279,7 @@ def prop_conflict_resolution(sbox):
 test_list = [ None,
               automatic_conflict_resolution,
               prop_conflict_resolution,
+              auto_resolve_executable_file,
              ]
 
 if __name__ == '__main__':
