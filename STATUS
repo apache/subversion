@@ -183,7 +183,7 @@ Candidate changes:
    Justification:
      Server process may abort if memory exhausted.
    Votes:
-     +1: philip
+     +1: philip, ivan
 
  * r1389878
    Fix working copy access via symlink to WC nested within a format 30 WC.
