@@ -251,7 +251,7 @@ unregister_locks(void *baton_void)
   for (lock = cache->first_lock; lock; lock = lock->next)
     apr_pool_cleanup_kill(lock->pool,
                           lock,
-                          unregister_locks);
+                          unlock_cache);
 
   return APR_SUCCESS;
 }
