@@ -881,7 +881,7 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * than or equal to the depth of the working copy, then the editor
  * operations will affect only paths at or above @a depth.
  *
- * @since New in 1.9.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_repos_begin_report3(void **report_baton,
@@ -907,7 +907,7 @@ svn_repos_begin_report3(void **report_baton,
  *
  * @since New in 1.5.
  * 
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,

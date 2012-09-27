@@ -1982,7 +1982,7 @@ svn_fs_file_contents(svn_stream_t **contents,
  *
  * Allocations must be made in @a pool.
  *
- * @since New in 1.9
+ * @since New in 1.8.
  */
 typedef svn_error_t *
 (*svn_fs_process_contents_func_t)(const unsigned char *contents,
@@ -2004,7 +2004,7 @@ typedef svn_error_t *
  * @note @a processor is expected to be relatively short function with
  * at most O(content size) runtime.
  * 
- * @since New in 1.9
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_fs_try_process_file_contents(svn_boolean_t *success,

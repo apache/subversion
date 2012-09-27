@@ -457,7 +457,7 @@ svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
  *
  * All temporary allocation is performed in @a pool.
  *
- * @since New in 1.9.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_txdelta_send_contents(const unsigned char *contents,

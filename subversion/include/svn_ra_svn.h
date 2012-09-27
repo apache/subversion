@@ -160,7 +160,7 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 /**
  * List of all commands supported by the SVN:// protocol.
  *
- * @since New in 1.9.
+ * @since New in 1.8
  */
 typedef enum svn_ra_svn_cmd_t
 {
@@ -238,7 +238,7 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
  *
  * Allocate the result in @a pool.
  *
- * @since New in 1.9.
+ * @since New in 1.8
  */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *in_file,
@@ -301,7 +301,7 @@ svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
 /** Return the zero-copy data block limit to use for network transmissions
  *
- * @since New in 1.9.
+ * @since New in 1.8.
  */
 apr_size_t
 svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn);
@@ -536,7 +536,7 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 /** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
  *
- * @deprecated Provided for backward compatibility with the 1.9 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * Use svn_ra_svn_write_templated_cmd instead.
  */
 SVN_DEPRECATED
@@ -549,6 +549,8 @@ svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
 /** Write a command of type @a cmd over the network connection @a conn.
  * The parameters to be provided are command-specific.  @a pool will be
  * used for allocations.
+ * 
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
