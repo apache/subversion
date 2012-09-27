@@ -222,7 +222,14 @@ Candidate changes:
      Test added by r1391022 depends on r1389499 backport to PASS in 1.8 WC.
    Votes:
      +1: stsp
-     
+
+ * r1390965
+   Avoid claiming all tests pass when most fail to run.
+   Justification:
+     Summary should be accurate.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
