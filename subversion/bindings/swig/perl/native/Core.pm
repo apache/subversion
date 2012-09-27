@@ -710,6 +710,59 @@ $SVN::Node::dir, $SVN::Node::unknown.
 
 =cut
 
+package SVN::Depth;
+use SVN::Base qw(Core svn_depth_);
+
+=head2 svn_depth_t - SVN::Depth
+
+An enum of the following constants:
+
+=item $SVN::Depth::unknown
+
+Depth undetermined or ignored.  In some contexts, this means the client should
+choose an appropriate default depth.  The server will generally treat it as
+$SVN::Depth::infinity.
+
+=item $SVN::Depth::exclude
+
+Exclude (i.e., don't descend into) directory D.
+
+Note: In Subversion 1.5, $SVN::Depth::exclude is B<not> supported anyhwere in
+the client-side (Wc/Client/etc) code; it is only supported as an argument to
+set_path functions in the Ra and Repos reporters.  (This will enable future
+versions of Subversion to run updates, etc, against 1.5 servers with proper
+$SVN::Depth::exclude behavior, once we get a chance to implement client side
+support for $SVN::Depth::exclude).
+
+=item $SVN::Depth::empty
+
+Just the named directory D, no entries.
+
+Updates will not pull in any files or subdirectories not already present.
+
+=item $SVN::Depth::files
+
+D + its files children, but not subdirs.
+
+Updates will pull in any files not already present, but not subdirectories.
+
+=item $SVN::Depth::immediates
+
+D + immediate children (D and its entries).
+
+Updates will pull in any files or subdirectories not already present; those
+subdirectories' this_dir entries will have depth-empty.
+
+=item $SVN::Depth::infinity
+
+D + all descendants (full recursion from D).
+
+Updates will pull in any files or subdirectories not already present; those
+subdirectories' this_dir entries will have depth-infinity.  Equivalent to the
+pre 1.5 default update behavior.
+
+=cut
+
 package _p_svn_opt_revision_t;
 use SVN::Base qw(Core svn_opt_revision_t_);
 
