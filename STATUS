@@ -113,22 +113,7 @@ Candidate changes:
    Justification:
      Status doesn't work properly after upgrade.
    Votes:
-     +1: philip
-
- * r1365592
-   Fix issue 4224, file externals don't update with old mod_dav_svn
-   Justification:
-     Backward compatibility using 1.7 clients with old servers.
-   Votes:
-     +1: philip, rhuijben
-
- * r1380295
-   Make sure a proper revision or SVN_INVALID_REVNUM is returned as the
-   result of svn_client_update4() when not performing a real update.
-   Justification:
-     Implement api properly.
-   Votes:
-     +1: rhuijben, philip
+     +1: philip, cmpilato
 
  * r1344864, r1344865, r1344869
    Sort list of deleted paths in dump file output. See issue #4134.
@@ -137,7 +122,7 @@ Candidate changes:
    Notes:
      Merge with --accept=tc.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1365519, r1383029, r1383483
    Fix assertions in ra_serf triggered when communicating with a
@@ -234,3 +219,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1365592
+   Fix issue 4224, file externals don't update with old mod_dav_svn
+   Justification:
+     Backward compatibility using 1.7 clients with old servers.
+   Votes:
+     +1: philip, rhuijben, cmpilato
+
+ * r1380295
+   Make sure a proper revision or SVN_INVALID_REVNUM is returned as the
+   result of svn_client_update4() when not performing a real update.
+   Justification:
+     Implement api properly.
+   Votes:
+     +1: rhuijben, philip, cmpilato
+
