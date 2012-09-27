@@ -221,13 +221,6 @@ Approved changes:
    Votes:
      +1: philip, rhuijben, cmpilato
 
- * r1389499
-   Fix several test failures when running 1.7.x tests within a format 30 WC.
-   Justification:
-     Spurious test failures are bad, allows 1.7 checkout nested in 1.8 wc.
-   Votes:
-     +1: stsp, philip, cmpilato
-
  * r1387943
    Fix unbounded memory use with SVNPathAuthz short_circuit.
    Justification:
