@@ -155,12 +155,11 @@ match_search_pattern(const char *search_pattern,
                      const char *date,
                      const char *log_message,
                      apr_hash_t *changed_paths,
-                     svn_boolean_t case_insensitive_search,
                      apr_pool_t *pool)
 {
   /* Match any substring containing the pattern, like UNIX 'grep' does. */
   const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
-  int flags = (case_insensitive_search ? APR_FNM_CASE_BLIND : 0);
+  int flags = APR_FNM_CASE_BLIND;
 
   /* Does the author match the search pattern? */
   if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
@@ -227,14 +226,13 @@ match_search_patterns(apr_array_header_t *search_patterns,
       /* All patterns within the group must match. */
       for (j = 0; j < pattern_group->nelts; j++)
         {
-          svn_cl__search_pattern_t p;
+          const char *pattern;
 
           svn_pool_clear(iterpool);
           
-          p = APR_ARRAY_IDX(pattern_group, j, svn_cl__search_pattern_t);
-          match = match_search_pattern(p.pattern, author, date,
-                                       message, changed_paths,
-                                       p.case_insensitive, iterpool);
+          pattern = APR_ARRAY_IDX(pattern_group, j, const char *);
+          match = match_search_pattern(pattern, author, date, message,
+                                       changed_paths, iterpool);
           if (!match)
             break;
         }

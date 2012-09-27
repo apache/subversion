@@ -111,8 +111,6 @@ Valid options:
                                -p, --show-c-function: Show C function name
   --search ARG             : use ARG as search pattern (glob syntax)
   --search-and ARG         : combine ARG with the previous search pattern
-  --isearch ARG            : like --search, but case-insensitive
-  --isearch-and ARG        : like --search-and, but case-insensitive
 
 Global options:
   --username ARG           : specify a username ARG

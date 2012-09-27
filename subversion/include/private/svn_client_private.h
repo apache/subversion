@@ -38,6 +38,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Return true if KIND is a revision kind that is dependent on the working
+ * copy. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_previous ||                                  \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)                                   \
+
+/* Return true if KIND is a revision kind that the WC can supply without
+ * contacting the repository. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)
+
 /* A location in a repository. */
 typedef struct svn_client__pathrev_t
 {
@@ -98,6 +113,39 @@ const char *
 svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
                            apr_pool_t *result_pool);
 
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
+   REVISION, create an RA connection to that object as it exists in
+   that revision, following copy history if necessary.  If REVISION is
+   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
+   that it is the same node in both PEG_REVISION and REVISION.  If it
+   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
+
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
+
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
@@ -180,11 +228,7 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 
 
 /* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t
-{
-  svn_client__pathrev_t *yca, *base, *mid, *right;
-  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
-} svn_client__symmetric_merge_t;
+typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
 
 /* Find the information needed to merge all unmerged changes from a source
  * branch into a target branch.  The information is the locations of the
@@ -205,6 +249,45 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
+
+/* Find out what kind of symmetric merge would be needed, when the target
+ * is only known as a repository location rather than a WC.
+ *
+ * Like svn_client__find_symmetric_merge() except that SOURCE_PATH_OR_URL @
+ * SOURCE_REVISION should refer to a repository location and not a WC.
+ *
+ * ### The result, *MERGE_P, may not be suitable for passing to
+ * svn_client__do_symmetric_merge().  The target WC state would not be
+ * checked (as in the ALLOW_* flags).  We should resolve this problem:
+ * perhaps add the allow_* params here, or provide another way of setting
+ * them; and perhaps ensure __do_...() will accept the result iff given a
+ * WC that matches the stored target location.
+ */
+svn_error_t *
+svn_client__find_symmetric_merge_no_wc(
+                                 svn_client__symmetric_merge_t **merge_p,
+                                 const char *source_path_or_url,
+                                 const svn_opt_revision_t *source_revision,
+                                 const char *target_path_or_url,
+                                 const svn_opt_revision_t *target_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
+ * youngest common ancestor of the branches, the base chosen for 3-way
+ * merge, the right-hand side of the source diff, and the target WC.
+ *
+ * Any of the output pointers may be NULL if not wanted.
+ */
+svn_error_t *
+svn_client__symmetric_merge_get_locations(
+                                svn_client__pathrev_t **yca,
+                                svn_client__pathrev_t **base,
+                                svn_client__pathrev_t **right,
+                                svn_client__pathrev_t **target,
+                                const svn_client__symmetric_merge_t *merge,
+                                apr_pool_t *result_pool);
 
 /* Perform a symmetric merge.
  *
@@ -230,6 +313,17 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
                                const apr_array_header_t *merge_options,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool);
+
+/* Return TRUE iff the symmetric merge represented by MERGE is going to be
+ * a reintegrate-like merge: that is, merging in the opposite direction
+ * from the last full merge.
+ *
+ * This function exists because the merge is NOT really symmetric and the
+ * client can be more friendly if it knows something about the differences.
+ */
+svn_boolean_t
+svn_client__symmetric_merge_is_reintegrate_like(
+        const svn_client__symmetric_merge_t *merge);
 
 
 #ifdef __cplusplus

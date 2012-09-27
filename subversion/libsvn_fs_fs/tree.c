@@ -172,6 +172,25 @@ typedef struct cache_entry_t
  */
 enum { BUCKET_COUNT = 256 };
 
+/* Each pool that has received a DAG node, will hold at least on lock on
+   our cache to ensure that the node remains valid despite being allocated
+   in the cache's pool.  This is the structure to represent the lock.
+ */
+typedef struct cache_lock_t
+{
+  /* pool holding the lock */
+  apr_pool_t *pool;
+  
+  /* cache being locked */
+  fs_fs_dag_cache_t *cache;
+
+  /* next lock. NULL at EOL */
+  struct cache_lock_t *next;
+
+  /* previous lock. NULL at list head. Only then this==cache->first_lock */
+  struct cache_lock_t *prev;
+} cache_lock_t;
+
 /* The actual cache structure.  All nodes will be allocated in POOL.
    When the number of INSERTIONS (i.e. objects created form that pool)
    exceeds a certain threshold, the pool will be cleared and the cache
@@ -180,14 +199,14 @@ enum { BUCKET_COUNT = 256 };
    To ensure that nodes returned from this structure remain valid, the
    cache will get locked for the lifetime of the _receiving_ pools (i.e.
    those in which we would allocate the node if there was no cache.).
-   The cache will only be cleared LOCK_COUNT is 0.
+   The cache will only be cleared FIRST_LOCK is 0.
  */
 struct fs_fs_dag_cache_t
 {
   /* fixed number of (possibly empty) cache entries */
   cache_entry_t buckets[BUCKET_COUNT];
 
-  /* pool used for all cache and node allocation */
+  /* pool used for all node allocation */
   apr_pool_t *pool;
 
   /* number of entries created from POOL since the last cleanup */
@@ -197,21 +216,9 @@ struct fs_fs_dag_cache_t
      Thus, remember the last hit location for optimistic lookup. */
   apr_size_t last_hit;
 
-  /* receiving pool that added the latest lock. NULL if not known. */
-  apr_pool_t *last_registered;
-
-  /* lock counter */
-  apr_size_t lock_count;
+  /* List of receiving pools that are still alive. */
+  cache_lock_t *first_lock;
 };
-
-fs_fs_dag_cache_t*
-svn_fs_fs__create_dag_cache(apr_pool_t *pool)
-{
-  fs_fs_dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->pool = pool;
-
-  return result;
-}
 
 /* Cleanup function to be called when a receiving pool gets cleared.
    Unlocks the cache once.
@@ -219,11 +226,48 @@ svn_fs_fs__create_dag_cache(apr_pool_t *pool)
 static apr_status_t
 unlock_cache(void *baton_void)
 {
-  fs_fs_dag_cache_t *cache = baton_void;
-  cache->lock_count--;
-  cache->last_registered = NULL;
-  
+  cache_lock_t *lock = baton_void;
+
+  /* remove lock from chain. Update the head */
+  if (lock->next)
+    lock->next->prev = lock->prev;
+  if (lock->prev)
+    lock->prev->next = lock->next;
+  else
+    lock->cache->first_lock = lock->next;
+
   return APR_SUCCESS;
+}
+
+/* Cleanup function to be called when the cache itself gets destroyed.
+   In that case, we must unregister all unlock requests.
+ */
+static apr_status_t
+unregister_locks(void *baton_void)
+{
+  fs_fs_dag_cache_t *cache = baton_void;
+  cache_lock_t *lock;
+
+  for (lock = cache->first_lock; lock; lock = lock->next)
+    apr_pool_cleanup_kill(lock->pool,
+                          lock,
+                          unlock_cache);
+
+  return APR_SUCCESS;
+}
+
+fs_fs_dag_cache_t*
+svn_fs_fs__create_dag_cache(apr_pool_t *pool)
+{
+  fs_fs_dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->pool = svn_pool_create(pool);
+
+  apr_pool_cleanup_register(pool,
+                            result,
+                            unregister_locks,
+                            apr_pool_cleanup_null);
+  
+  return result;
 }
 
 /* Prevent the entries in CACHE from being destroyed, for as long as the
@@ -238,28 +282,44 @@ lock_cache(fs_fs_dag_cache_t* cache, apr_pool_t *pool)
      we may lock the cache more than once for the same pool (and register
      just as many cleanup actions).
    */
-  if (pool != cache->last_registered)
-    {
-      apr_pool_cleanup_register(pool,
-                                cache,
-                                unlock_cache,
-                                apr_pool_cleanup_null);
-      cache->lock_count++;
-      cache->last_registered = pool;
-    }
+  cache_lock_t *lock = cache->first_lock;
+
+  /* try to find an existing lock for POOL.
+     But limit the time spent on chasing pointers.  */
+  int limiter = 8;
+  while (lock && --limiter)
+      if (lock->pool == pool)
+        return;
+
+  /* create a new lock and put it at the beginning of the lock chain */
+  lock = apr_palloc(pool, sizeof(*lock));
+  lock->cache = cache;
+  lock->pool = pool;
+  lock->next = cache->first_lock;
+  lock->prev = NULL;
+
+  if (cache->first_lock)
+    cache->first_lock->prev = lock;
+  cache->first_lock = lock;
+
+  /* instruct POOL to remove the look upon cleanup */
+  apr_pool_cleanup_register(pool,
+                            lock,
+                            unlock_cache,
+                            apr_pool_cleanup_null);
 }
 
-/* Clears and re-creates *CACHE at regular intervals
+/* Clears the CACHE at regular intervals (destroying all cached nodes)
  */
 static void
-auto_clear_dag_cache(fs_fs_dag_cache_t** cache)
+auto_clear_dag_cache(fs_fs_dag_cache_t* cache)
 {
-  if ((*cache)->lock_count == 0 && (*cache)->insertions > BUCKET_COUNT)
+  if (cache->first_lock == NULL && cache->insertions > BUCKET_COUNT)
     {
-      apr_pool_t *pool = (*cache)->pool;
-      apr_pool_clear(pool);
-      
-      *cache = svn_fs_fs__create_dag_cache(pool);
+      apr_pool_clear(cache->pool);
+
+      memset(cache->buckets, 0, sizeof(cache->buckets));
+      cache->insertions = 0;
     }
 }
 
@@ -349,8 +409,8 @@ locate_cache(svn_cache__t **cache,
 }
 
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
-   isn't cached; read it from the FS. *NODE remains valid until POOL
-   gets cleared or destroyed.*/
+   isn't cached; read it from the FS. *NODE remains valid until either
+   POOL or the FS gets cleared or destroyed (whichever comes first). */
 static svn_error_t *
 dag_node_cache_get(dag_node_t **node_p,
                    svn_fs_root_t *root,
@@ -371,7 +431,7 @@ dag_node_cache_get(dag_node_t **node_p,
       fs_fs_data_t *ffd = root->fs->fsap_data;
       cache_entry_t *bucket;
 
-      auto_clear_dag_cache(&ffd->dag_node_cache);
+      auto_clear_dag_cache(ffd->dag_node_cache);
       bucket = cache_lookup(ffd->dag_node_cache, root->rev, path);
       if (bucket->node == NULL)
         {
@@ -2612,7 +2672,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(tb->target_stream,
                                tb->target_string->data,
                                &len));
-      svn_stringbuf_set(tb->target_string, "");
+      svn_stringbuf_setempty(tb->target_string);
     }
 
   /* Is the window NULL?  If so, we're done. */

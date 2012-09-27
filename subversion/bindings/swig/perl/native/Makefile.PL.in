@@ -49,6 +49,11 @@ my $cppflags = '@CPPFLAGS@';
 my $cflags = '@CFLAGS@';
 my $includes = '@SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@';
 
+# Avoid this bug in SWIG:
+# https://sourceforge.net/tracker/?func=detail&aid=3571361&group_id=1645&atid=101645
+# SWIG is using C++ style comments in an extern "C" code.
+$cflags =~ s/-ansi\s+//g;
+
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
 my $apr_ldflags = '@SVN_APR_LIBS@'

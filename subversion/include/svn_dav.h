@@ -53,6 +53,15 @@ extern "C" {
 
 /** This header is *TEMPORARILY* used to transmit the delta base to the
  * server. It contains a version resource URL for what is on the client.
+ *
+ * @note The HTTP delta draft recommends an If-None-Match header
+ * holding an entity tag corresponding to the base copy that the
+ * client has.  In Subversion, it is much more natural to use a version
+ * URL to specify that base.  We'd like, then, to use the If: header
+ * to specify the URL.  Unfortunately, mod_dav sees all "State-token"
+ * items as lock tokens.  So we'll use this custom header until mod_dav
+ * and other backend APIs are taught to be less rigid, at which time
+ * we can switch to using an If: header to report our base version.
  */
 #define SVN_DAV_DELTA_BASE_HEADER "X-SVN-VR-Base"
 

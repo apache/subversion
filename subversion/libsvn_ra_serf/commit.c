@@ -2113,7 +2113,7 @@ close_file(void *file_baton,
         {
           handler->body_delegate = create_put_body;
           handler->body_delegate_baton = ctx;
-          handler->body_type = "application/vnd.svn-svndiff";
+          handler->body_type = SVN_SVNDIFF_MIME_TYPE;
         }
 
       handler->header_delegate = setup_put_headers;
