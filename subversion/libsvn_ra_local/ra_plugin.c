@@ -752,6 +752,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   revprop_table = apr_hash_copy(pool, revprop_table);
   apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
                svn_string_create(sess->username, pool));
+  apr_hash_set(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+               APR_HASH_KEY_STRING, svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5

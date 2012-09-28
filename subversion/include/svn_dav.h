@@ -299,6 +299,13 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\
             SVN_DAV_PROP_NS_DAV "svn/partial-replay"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to
+ * properly handle ephemeral (that is, deleted-just-before-commit) FS
+ * transaction properties. */
+#define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
+  
 /** @} */
 
 /** @} */

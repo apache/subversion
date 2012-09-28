@@ -2269,6 +2269,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
+  svn_boolean_t supports_ephemeral_props;
 
   ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -2287,6 +2288,23 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
       apr_hash_this(hi, &key, &klen, &val);
       apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
                    svn_string_dup(val, pool));
+    }
+
+  /* If the server supports ephemeral properties, add some carrying
+     interesting version information. */
+  SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_ephemeral_props,
+                                      SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                                      pool));
+  if (supports_ephemeral_props)
+    {
+      apr_hash_set(ctx->revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(SVN_VER_NUMBER, pool));
+      apr_hash_set(ctx->revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(session->useragent, pool));
     }
 
   ctx->callback = callback;
