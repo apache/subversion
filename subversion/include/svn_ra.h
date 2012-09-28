@@ -1993,6 +1993,15 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
+/**
+ * The capability of a server to automatically remove transaction
+ * properties prefixed with SVN_PROP_EPHEMERAL_PREFIX.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
+
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
