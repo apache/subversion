@@ -717,6 +717,8 @@ use SVN::Base qw(Core svn_depth_);
 
 An enum of the following constants:
 
+=over 4
+
 =item $SVN::Depth::unknown
 
 Depth undetermined or ignored.  In some contexts, this means the client should
@@ -760,6 +762,8 @@ D + all descendants (full recursion from D).
 Updates will pull in any files or subdirectories not already present; those
 subdirectories' this_dir entries will have depth-infinity.  Equivalent to the
 pre 1.5 default update behavior.
+
+=back
 
 =cut
 
