@@ -738,7 +738,7 @@ Similar to $ctx-E<gt>status2(), but with ignore_externals always set to FALSE, a
 
 Similar to $ctx-E<gt>status3(), but with the changelists passed as undef, and with recursive instead of depth.
 
-=item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $pool);
+=item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
 
 Given $path to a working copy directory (or single file), call status_func()
 with a set of svn_wc_status2_t objects which describe the status of $path and
@@ -759,6 +759,8 @@ Unless ignore_externals is set, the function recurses into externals definitions
 calls the notify callback with $SVN::Wc::Notify::Action::status_external action
 before handling each externals definition, and with 
 $SVN::Wc::Notify::Action::status_completed after each.
+
+$changelists is a reference to an array of changelist names, used as a restrictive filter on items whose statuses are reported; that is don't report status about any item unless it's a member of those changelists.  If changelists is empty (or altogether undef), no changelist filtering occurs.
 
 The status_func subroutine takes the following parameters:
 $path, $status
