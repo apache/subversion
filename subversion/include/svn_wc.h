@@ -3989,11 +3989,6 @@ svn_wc_status(svn_wc_status_t **status,
  *
  * @a scratch_pool will be cleared between invocations to the callback.
  *
- * ### we might be revamping the status infrastructure, and this callback
- * ### could totally disappear by the end of 1.7 development. however, we
- * ### need to mark the STATUS parameter as "const" so that it is easier
- * ### to reason about who/what can modify those structures.
- *
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_wc_status_func4_t)(void *baton,
