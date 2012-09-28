@@ -199,10 +199,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1387943
-   Fix unbounded memory use with SVNPathAuthz short_circuit.
-   Justification:
-     Server process may abort if memory exhausted.
-   Votes:
-     +1: philip, ivan, cmpilato
-
