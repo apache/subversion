@@ -199,13 +199,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1365592
-   Fix issue 4224, file externals don't update with old mod_dav_svn
-   Justification:
-     Backward compatibility using 1.7 clients with old servers.
-   Votes:
-     +1: philip, rhuijben, cmpilato
-
  * r1380295
    Make sure a proper revision or SVN_INVALID_REVNUM is returned as the
    result of svn_client_update4() when not performing a real update.

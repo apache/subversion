@@ -471,7 +471,8 @@ switch_file_external(const char *local_abspath,
                                              peg_revision, revision,
                                              ctx, subpool));
 
-    SVN_ERR(svn_ra_reparent(ra_session, url, subpool));
+    SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, subpool),
+                            subpool));
     SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_uuid, subpool));
 
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
