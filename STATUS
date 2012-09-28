@@ -15,15 +15,6 @@ Status of 1.7.7:
 Candidate changes:
 ==================
 
- * r1374800, r1374802, r1389364
-   Fix issues with applying Git patch files.
-   Justification:
-     It's a small change, and it allows applying patches that failed
-     before.
-   Votes:
-     +1 (without r1389364): steveking, rhuijben
-     +1: stsp, cmpilato
-
  * r1242759, r1242770, r1242794, r1380175
    Fix various issues with GNOME and KDE keyring providers, especially
    as regards how their interact with --non-interactive mode.  Fixes
@@ -33,7 +24,7 @@ Candidate changes:
      Fixes user-reported problem which significantly limits
      usabilility in certain environments.
    Branch:
-     ^/subversion/branches/1.7.x-r1242759 
+     ^/subversion/branches/1.7.x-r1242759
    Votes:
      +1: philip, cmpilato
 
@@ -108,13 +99,6 @@ Candidate changes:
 		   for the build.conf install=... attribute) for the stable
                    branch?)
 
- * r1174342
-   Fix issue 4016, make status descend into dir externals after upgrade.
-   Justification:
-     Status doesn't work properly after upgrade.
-   Votes:
-     +1: philip, cmpilato
-
  * r1344864, r1344865, r1344869
    Sort list of deleted paths in dump file output. See issue #4134.
    Justification:
@@ -175,6 +159,44 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1391641
+   Convert cache time-to-live value from seconds to microseconds, which is
+   the unit expected by the API.  (An API doc error in the past was the
+   likely cause of this problem.)
+   Justification:
+     50 microseconds really isn't a sufficient lifespan for ... anything.
+   Votes:
+     +1: cmpilato, rhuijben
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1174342
+   Fix issue 4016, make status descend into dir externals after upgrade.
+   Justification:
+     Status doesn't work properly after upgrade.
+   Votes:
+     +1: philip, cmpilato, rhuijben
+
+ * r1374800, r1374802, r1389364
+   Fix issues with applying Git patch files.
+   Justification:
+     It's a small change, and it allows applying patches that failed
+     before.
+   Votes:
+     +1 (without r1389364): steveking
+     +1: stsp, cmpilato, rhuijben
+
+ * r1390965
+   Avoid claiming all tests pass when most fail to run.
+   Justification:
+     Summary should be accurate.
+   Votes:
+     +1: philip, cmpilato, rhuijben
+
  * r1391020, r1391022
    Fix issue #4234, "svndumpfilter exclude --targets wants pathname to
    start with '/'"
@@ -184,27 +206,4 @@ Candidate changes:
    Notes:
      Test added by r1391022 depends on r1389499 backport to PASS in 1.8 WC.
    Votes:
-     +1: stsp, cmpilato
-
- * r1390965
-   Avoid claiming all tests pass when most fail to run.
-   Justification:
-     Summary should be accurate.
-   Votes:
-     +1: philip, cmpilato
-
- * r1391641
-   Convert cache time-to-live value from seconds to microseconds, which is
-   the unit expected by the API.  (An API doc error in the past was the
-   likely cause of this problem.)
-   Justification:
-     50 microseconds really isn't a sufficient lifespan for ... anything.
-   Votes:
-     +1: cmpilato
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
+     +1: stsp, cmpilato, rhuijben
