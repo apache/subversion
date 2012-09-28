@@ -1273,41 +1273,41 @@ use SVN::Base qw(Client svn_info_t_);
 
 =over 8
 
-=item $info->URL()
+=item $info-E<gt>URL()
 
 Where the item lives in the repository.
 
-=item $info->rev()
+=item $info-E<gt>rev()
 
 The revision of the object.  If path_or_url is a working-copy
 path, then this is its current working revnum.  If path_or_url
 is a URL, then this is the repos revision that path_or_url lives in.
 
-=item $info->kind()
+=item $info-E<gt>kind()
 
 The node's kind.
 
-=item $info->repos_root_URL()
+=item $info-E<gt>repos_root_URL()
 
 The root URL of the repository.
 
-=item $info->repos_UUID()
+=item $info-E<gt>repos_UUID()
 
 The repository's UUID.
 
-=item $info->last_changed_rev()
+=item $info-E<gt>last_changed_rev()
 
 The last revision in which this object changed.
 
-=item $info->last_changed_date()
+=item $info-E<gt>last_changed_date()
 
 The date of the last_changed_rev.
 
-=item $info->last_changed_author()
+=item $info-E<gt>last_changed_author()
 
 The author of the last_changed_rev.
 
-=item $info->lock()
+=item $info-E<gt>lock()
 
 An exclusive lock, if present.  Could be either local or remote.
 
@@ -1319,27 +1319,27 @@ also only useful when working with a WC.
 
 =over 8
 
-=item $info->has_wc_info()
+=item $info-E<gt>has_wc_info()
 
-=item $info->schedule()
+=item $info-E<gt>schedule()
 
-=item $info->copyfrom_url()
+=item $info-E<gt>copyfrom_url()
 
-=item $info->copyfrom_rev()
+=item $info-E<gt>copyfrom_rev()
 
-=item $info->text_time()
+=item $info-E<gt>text_time()
 
-=item $info->prop_time()
+=item $info-E<gt>prop_time()
 
-=item $info->checksum()
+=item $info-E<gt>checksum()
 
-=item $info->conflict_old()
+=item $info-E<gt>conflict_old()
 
-=item $info->conflict_new()
+=item $info-E<gt>conflict_new()
 
-=item $info->conflict_wrk()
+=item $info-E<gt>conflict_wrk()
 
-=item $info->prejfile()
+=item $info-E<gt>prejfile()
 
 =back
 
@@ -1386,12 +1386,12 @@ $SVN::Client::COMMIT_ITEM_TEXT_MODS
 $SVN::Client::COMMIT_ITEM_PROP_MODS
 $SVN::Client::COMMIT_ITEM_IS_COPY
 
-=item $citem>incoming_prop_changes()
+=item $citem-E<gt>incoming_prop_changes()
 
 A reference to an array of svn_prop_t objects representing changes to
 WC properties.
 
-=item $citem>outgoing_prop_changes()
+=item $citem-E<gt>outgoing_prop_changes()
 
 A reference to an array of svn_prop_t objects representing extra
 changes to properties in the repository (which are not necessarily
