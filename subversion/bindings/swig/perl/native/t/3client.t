@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 165;
+use Test::More tests => 167;
 use strict;
 
 # shut up about variables that are only used once.
@@ -430,6 +430,11 @@ is($ctx->status2($wcpath, undef, sub {
                                          $SVN::Node::none,
                                          'ood_kind param to status2 callback');
                                       # TEST
+                                      is($wc_status->ood_last_cmt_author(),
+                                         undef,
+                                         'ood_last_cmt_author to status2' .
+                                         ' callback');
+                                      # TEST
                                       is($wc_status->tree_conflict(), undef,
                                          'tree_conflict to status2 callback');
                                       # TEST
@@ -512,6 +517,11 @@ is($ctx->status3($wcpath, undef, sub {
                                       is($wc_status->ood_kind(),
                                          $SVN::Node::none,
                                          'ood_kind param to status3 callback');
+                                      # TEST
+                                      is($wc_status->ood_last_cmt_author(),
+                                         undef,
+                                         'ood_last_cmt_author to status3' .
+                                         ' callback');
                                       # TEST
                                       is($wc_status->tree_conflict(), undef,
                                          'tree_conflict to status3 callback');
