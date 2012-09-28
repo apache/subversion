@@ -199,14 +199,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1380295
-   Make sure a proper revision or SVN_INVALID_REVNUM is returned as the
-   result of svn_client_update4() when not performing a real update.
-   Justification:
-     Implement api properly.
-   Votes:
-     +1: rhuijben, philip, cmpilato
-
  * r1387226
    Fix issue 4231, mod_dav_svn assert with SVNAutoVersioning and <Location />
    Justification:
