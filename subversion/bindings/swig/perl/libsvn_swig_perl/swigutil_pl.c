@@ -1304,6 +1304,38 @@ void svn_swig_pl_status_func2(void *baton,
 
 }
 
+/* Thunked version of svn_wc_status_func2_t callback type. */
+svn_error_t *svn_swig_pl_status_func3(void *baton,
+                                      const char *path,
+                                      svn_wc_status2_t *status,
+                                      apr_pool_t *pool)
+{
+  SV *result;
+  svn_error_t *ret_val = SVN_NO_ERROR;
+
+  swig_type_info *statusinfo = _SWIG_TYPE("svn_wc_status2 _t *");
+
+  if (!SvOK((SV *)baton)) {
+    return;
+  }
+
+  svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS",
+                             path, status, statusinfo,
+                             pool, POOLINFO);
+
+  if (sv_derived_from(result, "_p_svn_error_t")) {
+    swig_type_info *errorinfo = _SWIG_TYPE("svn_error_t *");
+    if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+        SvREFCNT_dec(result);
+        croak("Unable to convert from SWIG Type");
+    }
+  }
+
+  SvREFCNT_dec(result);
+  return ret_val;
+}
+
+
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func(void *baton,
                                     apr_int64_t line_no,

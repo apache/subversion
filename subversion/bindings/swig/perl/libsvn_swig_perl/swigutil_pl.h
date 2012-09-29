@@ -235,6 +235,12 @@ void svn_swig_pl_status_func2(void *baton,
                               const char *path,
                               svn_wc_status2_t *status);
 
+/* Thunked version of svn_wc_status_func2_t callback type. */
+svn_error_t *svn_swig_pl_status_func3(void *baton,
+                                      const char *path,
+                                      svn_wc_status2_t *status,
+                                      apr_pool_t *pool);
+
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func(void *baton,
                                     apr_int64_t line_no,
