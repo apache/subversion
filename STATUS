@@ -146,13 +146,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1390965
-   Avoid claiming all tests pass when most fail to run.
-   Justification:
-     Summary should be accurate.
-   Votes:
-     +1: philip, cmpilato, rhuijben
-
  * r1391020, r1391022
    Fix issue #4234, "svndumpfilter exclude --targets wants pathname to
    start with '/'"

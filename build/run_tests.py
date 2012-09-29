@@ -272,7 +272,7 @@ class TestHarness:
             % self.faillogfile)
 
     # Summary.
-    if xpassed or failed_list:
+    if failed or xpassed or failed_list:
       print("SUMMARY: Some tests failed.\n")
     else:
       print("SUMMARY: All tests successful.\n")
