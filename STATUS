@@ -146,15 +146,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1374800, r1374802, r1389364
-   Fix issues with applying Git patch files.
-   Justification:
-     It's a small change, and it allows applying patches that failed
-     before.
-   Votes:
-     +1 (without r1389364): steveking
-     +1: stsp, cmpilato, rhuijben
-
  * r1390965
    Avoid claiming all tests pass when most fail to run.
    Justification:

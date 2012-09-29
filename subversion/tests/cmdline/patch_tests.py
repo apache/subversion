@@ -3968,6 +3968,61 @@ def patch_add_and_delete(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+
+def patch_git_with_index_line(sbox):
+  "apply git patch with 'index' line"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  unidiff_patch = [
+    "diff --git a/src/tools/ConsoleRunner/hi.txt b/src/tools/ConsoleRunner/hi.txt\n",
+    "new file mode 100644\n",
+    "index 0000000..c82a38f\n",
+    "--- /dev/null\n",
+    "+++ b/src/tools/ConsoleRunner/hi.txt\n",
+    "@@ -0,0 +1 @@\n",
+    "+hihihihihihi\n",
+    "\ No newline at end of file\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'A         %s\n' % sbox.ospath('src'),
+    'A         %s\n' % sbox.ospath('src/tools'),
+    'A         %s\n' % sbox.ospath('src/tools/ConsoleRunner'),
+    'A         %s\n' % sbox.ospath('src/tools/ConsoleRunner/hi.txt'),
+  ]
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'src/'                            : Item(status='A ', wc_rev=0),
+      'src/tools'                       : Item(status='A ', wc_rev=0),
+      'src/tools/ConsoleRunner/'        : Item(status='A ', wc_rev=0),
+      'src/tools/ConsoleRunner/hi.txt'  : Item(status='A ', wc_rev=0),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'src'                            : Item(),
+                     'src/tools'                      : Item(),
+                     'src/tools/ConsoleRunner'        : Item(),
+                     'src/tools/ConsoleRunner/hi.txt' :
+                        Item(contents="hihihihihihi")
+                   })
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -4011,6 +4066,7 @@ test_list = [ None,
               patch_lacking_trailing_eol,
               patch_target_no_eol_at_eof,
               patch_add_and_delete,
+              patch_git_with_index_line,
             ]
 
 if __name__ == '__main__':
