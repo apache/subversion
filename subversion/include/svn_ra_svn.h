@@ -160,7 +160,7 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 /**
  * List of all commands supported by the SVN:// protocol.
  *
- * @since New in 1.9.
+ * @since New in 1.8
  */
 typedef enum svn_ra_svn_cmd_t
 {
@@ -228,10 +228,32 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
- * Specify the desired network data compression level (zlib) from
- * 0 (no compression) to 9 (best but slowest).
+ * @a compression_level specifies the desired network data compression
+ * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ *
+ * To reduce the overhead of checking for cancellation requests from the
+ * data receiver, set @a error_check_interval to some non-zero value.
+ * It defines the number of bytes that must have been sent since the last
+ * check before the next check will be made.
+ *
+ * Allocate the result in @a pool.
+ *
+ * @since New in 1.8
+ */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
+                                           apr_pool_t *pool);
+
+/** Similar to svn_ra_svn_create_conn3() but disables the zero copy code
+ * path and sets the error checking interval to 0.
  *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
@@ -240,7 +262,7 @@ svn_ra_svn_create_conn2(apr_socket_t *sock,
                         int compression_level,
                         apr_pool_t *pool);
 
-/** Similar to svn_ra_svn_create_conn2() but uses default
+/** Similar to svn_ra_svn_create_conn2() but uses the default
  * compression level (#SVN_DELTA_COMPRESSION_LEVEL_DEFAULT) for network
  * transmissions.
  *
@@ -276,6 +298,13 @@ svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
+
+/** Return the zero-copy data block limit to use for network transmissions
+ *
+ * @since New in 1.8.
+ */
+apr_size_t
+svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */
@@ -507,7 +536,7 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 /** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
  *
- * @deprecated Provided for backward compatibility with the 1.9 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * Use svn_ra_svn_write_templated_cmd instead.
  */
 SVN_DEPRECATED
@@ -520,6 +549,8 @@ svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
 /** Write a command of type @a cmd over the network connection @a conn.
  * The parameters to be provided are command-specific.  @a pool will be
  * used for allocations.
+ * 
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
