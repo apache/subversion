@@ -145,12 +145,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1389928
-   Fix a 1.7.x test to pass within a format 30 working copy.
-   Justification:
-     Convenience for users of trunk clients.
-   Branch:
-     ^/subversion/branches/1.7.x-r1389928
-   Votes:
-     +1: stsp, cmpilato, brane
