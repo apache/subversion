@@ -1304,7 +1304,7 @@ void svn_swig_pl_status_func2(void *baton,
 
 }
 
-/* Thunked version of svn_wc_status_func2_t callback type. */
+/* Thunked version of svn_wc_status_func3_t callback type. */
 svn_error_t *svn_swig_pl_status_func3(void *baton,
                                       const char *path,
                                       svn_wc_status2_t *status,
@@ -1316,7 +1316,7 @@ svn_error_t *svn_swig_pl_status_func3(void *baton,
   swig_type_info *statusinfo = _SWIG_TYPE("svn_wc_status2 _t *");
 
   if (!SvOK((SV *)baton)) {
-    return;
+    return ret_val;
   }
 
   svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS",
