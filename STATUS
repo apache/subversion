@@ -73,16 +73,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1368662, r1370526, r1370557, r1370801
-   Add information about the build system to 'svn --version' output.
-   Justification:
-     Makes solving user problems a little bit easier since the
-     default 'svn --version' output contains the config.guess
-     identification of the build system.
-   Votes:
-     +1: brane
-     +1 (only r1368662): steveking
-
  * r1374198
    Remove mod_dontdothat from install-tools so that configurations
    --without-apxs will not try to build it.
