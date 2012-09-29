@@ -452,6 +452,20 @@ svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
                           apr_pool_t *pool);
 
 
+/** Send the @a contents of length @a len as a txdelta against an empty
+ * source directly to window-handler @a handler/@a handler_baton.
+ *
+ * All temporary allocation is performed in @a pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_txdelta_send_contents(const unsigned char *contents,
+                          apr_size_t len,
+                          svn_txdelta_window_handler_t handler,
+                          void *handler_baton,
+                          apr_pool_t *pool);
+
 /** Prepare to apply a text delta.  @a source is a readable generic stream
  * yielding the source data, @a target is a writable generic stream to
  * write target data to, and allocation takes place in a sub-pool of
@@ -483,6 +497,7 @@ svn_txdelta_apply(svn_stream_t *source,
 
 
 
+
 /*** Producing and consuming svndiff-format text deltas.  ***/
 
 /** Prepare to produce an svndiff-format diff from text delta windows.
