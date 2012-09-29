@@ -1112,6 +1112,21 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
+/* During an upgrade to wc-ng, supply known details about an existing
+ * external.  The working copy will suck in and store the information supplied
+ * about the existing external at @a local_abspath. */
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

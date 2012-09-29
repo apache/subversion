@@ -146,13 +146,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1174342
-   Fix issue 4016, make status descend into dir externals after upgrade.
-   Justification:
-     Status doesn't work properly after upgrade.
-   Votes:
-     +1: philip, cmpilato, rhuijben
-
  * r1374800, r1374802, r1389364
    Fix issues with applying Git patch files.
    Justification:

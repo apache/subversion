@@ -2635,6 +2635,19 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_int64_t wc_id,
                                apr_pool_t *scratch_pool);
 
+/* Simply insert (or replace) one row in the EXTERNALS table. */
+svn_error_t *
+svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_wc__db_kind_t kind,
+                                   const char *parent_abspath,
+                                   const char *def_local_abspath,
+                                   const char *repos_relpath,
+                                   const char *repos_root_url,
+                                   const char *repos_uuid,
+                                   svn_revnum_t def_peg_revision,
+                                   svn_revnum_t def_revision,
+                                   apr_pool_t *scratch_pool);
 
 /* Get the repository identifier corresponding to REPOS_ROOT_URL from the
    database in SDB. The value is returned in *REPOS_ID. All allocations
