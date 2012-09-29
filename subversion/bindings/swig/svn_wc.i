@@ -160,6 +160,13 @@
                   svn_swig_pl_status_func2,
                   svn_swig_rb_wc_status_func)
 
+#ifdef SWIGPERL
+%callback_typemap(svn_wc_status_func3_t status_func, void *status_baton,
+                  ,
+                  svn_swig_pl_status_func3,
+                  ) 
+#endif
+
 #ifndef SWIGPERL
 %callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
                   void *callback_baton,

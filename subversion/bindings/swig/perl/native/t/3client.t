@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 167;
+use Test::More tests => 188;
 use strict;
 
 # shut up about variables that are only used once.
@@ -542,6 +542,99 @@ is($ctx->status3($wcpath, undef, sub {
                 $SVN::Depth::infinity, 0, 0, 0, 0, undef),
    $SVN::Core::INVALID_REVNUM,
    'status3 returns INVALID_REVNUM when run against a working copy');
+
+# No revnum for the working copy so we should get INVALID_REVNUM
+# TEST
+is($ctx->status4($wcpath, undef, sub {
+                                      my ($path,$wc_status, $pool) = @_;
+                                      # TEST
+                                      is($path,"$wcpath/dir1",
+                                         'path param to status4 callback');
+                                      # TEST
+                                      isa_ok($wc_status,'_p_svn_wc_status2_t',
+                                             'wc_stats param to the status4' .
+                                             ' callback');
+                                      # TEST
+                                      is($wc_status->text_status(),
+                                         $SVN::Wc::Status::normal,
+                                         'text_status param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->prop_status(),
+                                         $SVN::Wc::Status::modified,
+                                         'prop_status param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->locked(), 0,
+                                         'locked param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->copied(), 0,
+                                         'copied param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->switched(), 0,
+                                         'switched param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->repos_text_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_text_status param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->repos_prop_status(),
+                                         $SVN::Wc::Status::none,
+                                         'repos_prop_status param to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->repos_lock(), undef,
+                                        'repos_lock param to status4 callback');
+                                      # TEST
+                                      is($wc_status->url(),"$reposurl/dir1",
+                                        'url param to status4 callback');
+                                      # TEST
+                                      is($wc_status->ood_last_cmt_rev(),
+                                         $SVN::Core::INVALID_REVNUM,
+                                         'ood_last_cmt_rev to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->ood_last_cmt_date(), 0,
+                                         'ood_last_cmt_date to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->ood_kind(),
+                                         $SVN::Node::none,
+                                         'ood_kind param to status4 callback');
+                                      # TEST
+                                      is($wc_status->ood_last_cmt_author(),
+                                         undef,
+                                         'ood_last_cmt_author to status4' .
+                                         ' callback');
+                                      # TEST
+                                      is($wc_status->tree_conflict(), undef,
+                                         'tree_conflict to status4 callback');
+                                      # TEST
+                                      is($wc_status->file_external(), 0,
+                                         'file_external to status4 callback');
+                                      # TEST
+                                      is($wc_status->pristine_text_status(),
+                                         $SVN::Wc::Status::normal,
+                                         'pristine_text_status param to' .
+                                         ' status4 callback');
+                                      # TEST
+                                      is($wc_status->pristine_prop_status(),
+                                         $SVN::Wc::Status::modified,
+                                         'pristine_prop_status param to' .
+                                         ' status4 callback');
+                                      # TEST
+                                      isa_ok($pool, '_p_apr_pool_t',
+                                             'pool param to status4' .
+                                             ' callback'); 
+                                    },
+                $SVN::Depth::infinity, 0, 0, 0, 0, undef),
+   $SVN::Core::INVALID_REVNUM,
+   'status4 returns INVALID_REVNUM when run against a working copy');
+
 
 my ($ci_commit2) = $ctx->commit($wcpath,0);
 # TEST

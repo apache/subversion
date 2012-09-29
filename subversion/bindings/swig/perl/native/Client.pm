@@ -12,7 +12,7 @@ BEGIN {
             checkout2 checkout update3 update2 update switch2 switch
             add4 add3 add2 add mkdir3 mkdir2 mkdir delete3 delete2
             delete import3 import2 import commit4 commit3 commit2
-            commit status3 status2 status log4 log3 log2 log blame4
+            commit status4 status3 status2 status log4 log3 log2 log blame4
             blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
             diff_peg3 diff_peg2 diff_peg diff_summarize2
             diff_summarize diff_summarize_peg2 diff_summarize_peg
@@ -740,6 +740,10 @@ Similar to $ctx-E<gt>status3(), but with the changelists passed as undef, and wi
 
 =item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
 
+Similar to $ctx-E<gt>status4(), without the pool parameter to the callback and the return of the callback is ignored. 
+
+=item $ctx-E<gt>status4($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
+
 Given $path to a working copy directory (or single file), call status_func()
 with a set of svn_wc_status2_t objects which describe the status of $path and
 its children.
@@ -763,12 +767,14 @@ $SVN::Wc::Notify::Action::status_completed after each.
 $changelists is a reference to an array of changelist names, used as a restrictive filter on items whose statuses are reported; that is don't report status about any item unless it's a member of those changelists.  If changelists is empty (or altogether undef), no changelist filtering occurs.
 
 The status_func subroutine takes the following parameters:
-$path, $status
+$path, $status, $pool
 
 $path is the pathname of the file or directory which status is being
-reported.  $status is a svn_wc_status2_t object.
+reported.  $status is a svn_wc_status2_t object.  $pool is an apr_pool_t
+object which is cleaned beteween invocations to the callback.
 
-The return of the status_func subroutine is ignored.
+The return of the status_func subroutine can be a svn_error_t object created by
+SVN::Error::create in order to propogate an error up.
 
 =item $ctx-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
 
