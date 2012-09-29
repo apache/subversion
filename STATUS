@@ -146,17 +146,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1391020, r1391022
-   Fix issue #4234, "svndumpfilter exclude --targets wants pathname to
-   start with '/'"
-   Justification:
-     Fixes inconsistent parameter processing. Paths specified on the command
-     line and via --targets file should be handled the same way.
-   Notes:
-     Test added by r1391022 depends on r1389499 backport to PASS in 1.8 WC.
-   Votes:
-     +1: stsp, cmpilato, rhuijben
-
  * r1391641
    Convert cache time-to-live value from seconds to microseconds, which is
    the unit expected by the API.  (An API doc error in the past was the
