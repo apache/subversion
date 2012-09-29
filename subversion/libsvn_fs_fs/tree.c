@@ -2562,6 +2562,25 @@ fs_file_contents(svn_stream_t **contents,
 /* --- End machinery for svn_fs_file_contents() ---  */
 
 
+/* --- Machinery for svn_fs_try_process_file_contents() ---  */
+
+static svn_error_t *
+fs_try_process_file_contents(svn_boolean_t *success,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             svn_fs_process_contents_func_t processor,
+                             void* baton,
+                             apr_pool_t *pool)
+{
+  dag_node_t *node;
+  SVN_ERR(get_dag(&node, root, path, pool));
+
+  return svn_fs_fs__dag_try_process_file_contents(success, node,
+                                                  processor, baton, pool);
+}
+
+/* --- End machinery for svn_fs_try_process_file_contents() ---  */
+
 
 /* --- Machinery for svn_fs_apply_textdelta() ---  */
 
@@ -3950,6 +3969,7 @@ static root_vtable_t root_vtable = {
   fs_file_length,
   fs_file_checksum,
   fs_file_contents,
+  fs_try_process_file_contents,
   fs_make_file,
   fs_apply_textdelta,
   fs_apply_text,

@@ -56,13 +56,17 @@
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *in_file,
                                            apr_file_t *out_file,
                                            int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
                                            apr_pool_t *pool)
 {
-  svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
+  svn_ra_svn_conn_t *conn;
+  void *mem = apr_palloc(pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
+  conn = (void*)APR_ALIGN((apr_uintptr_t)mem, SVN_RA_SVN__PAGE_SIZE);
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
 #ifdef SVN_HAVE_SASL
@@ -73,10 +77,14 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
+  conn->written_since_error_check = 0;
+  conn->error_check_interval = error_check_interval;
+  conn->may_check_for_error = error_check_interval == 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->compression_level = compression_level;
+  conn->zero_copy_limit = zero_copy_limit;
   conn->pool = pool;
 
   if (sock != NULL)
@@ -96,14 +104,25 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
   return conn;
 }
 
+svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_pool_t *pool)
+{
+  return svn_ra_svn_create_conn3(sock, in_file, out_file,
+                                 compression_level, 0, 0, pool);
+}
+
 /* backward-compatible implementation using the default compression level */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool)
 {
-  return svn_ra_svn_create_conn2(sock, in_file, out_file,
-                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
+  return svn_ra_svn_create_conn3(sock, in_file, out_file,
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0, 0,
+                                 pool);
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
@@ -146,6 +165,12 @@ svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn)
   return conn->compression_level;
 }
 
+apr_size_t
+svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn)
+{
+  return conn->zero_copy_limit;
+}
+
 const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn)
 {
   return conn->remote_ip;
@@ -170,20 +195,6 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
-
-/* Write bytes into the write buffer until either the write buffer is
- * full or we reach END. */
-static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
-                                 const char *end)
-{
-  apr_ssize_t buflen, copylen;
-
-  buflen = sizeof(conn->write_buf) - conn->write_pos;
-  copylen = (buflen < end - data) ? buflen : end - data;
-  memcpy(conn->write_buf + conn->write_pos, data, copylen);
-  conn->write_pos += copylen;
-  return data + copylen;
-}
 
 /* Write data to socket or output file as appropriate. */
 static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -223,6 +234,10 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
+  conn->written_since_error_check += len;
+  conn->may_check_for_error
+    = conn->written_since_error_check >= conn->error_check_interval;
+
   if (subpool)
     svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -244,17 +259,23 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   const char *end = data + len;
 
-  if (conn->write_pos > 0 && conn->write_pos + len > sizeof(conn->write_buf))
+  /* data >= 8k is sent immediately */
+  if (len >= sizeof(conn->write_buf) / 2)
     {
-      /* Fill and then empty the write buffer. */
-      data = writebuf_push(conn, data, end);
-      SVN_ERR(writebuf_flush(conn, pool));
+      if (conn->write_pos > 0)
+        SVN_ERR(writebuf_flush(conn, pool));
+      
+      return writebuf_output(conn, pool, data, len);
     }
 
-  if (end - data > (apr_ssize_t)sizeof(conn->write_buf))
-    SVN_ERR(writebuf_output(conn, pool, data, end - data));
-  else
-    writebuf_push(conn, data, end);
+  /* ensure room for the data to add */
+  if (conn->write_pos + len > sizeof(conn->write_buf))
+    SVN_ERR(writebuf_flush(conn, pool));
+
+  /* buffer the new data block as well */
+  memcpy(conn->write_buf + conn->write_pos, data, len);
+  conn->write_pos += len;
+
   return SVN_NO_ERROR;
 }
 

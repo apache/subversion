@@ -121,9 +121,18 @@ static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
 
 /* Check for an early error status report from the consumer.  If we
  * get one, abort the edit and return the error. */
-static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
+static svn_error_t *
+check_for_error_internal(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(!eb->got_status);
+
+  /* reset TX counter */
+  eb->conn->written_since_error_check = 0;
+
+  /* if we weren't asked to always check, wait for at least the next TX */
+  eb->conn->may_check_for_error = eb->conn->error_check_interval == 0;
+
+  /* any incoming data? */
   if (svn_ra_svn__input_waiting(eb->conn, pool))
     {
       eb->got_status = TRUE;
@@ -135,6 +144,14 @@ static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
                               _("Successful edit status returned too soon"));
     }
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
+{
+  return eb->conn->may_check_for_error
+    ? check_for_error_internal(eb, pool)
+    : SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_target_rev(void *edit_baton, svn_revnum_t rev,

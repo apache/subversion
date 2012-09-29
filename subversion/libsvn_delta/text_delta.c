@@ -1022,7 +1022,7 @@ svn_txdelta_send_contents(const unsigned char *contents,
       new_data.data = (const char*)contents;
 
       /* update remaining */
-      contents -= window.tview_len;
+      contents += window.tview_len;
       len -= window.tview_len;
 
       /* shove it at the handler */
