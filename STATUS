@@ -146,15 +146,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1391641
-   Convert cache time-to-live value from seconds to microseconds, which is
-   the unit expected by the API.  (An API doc error in the past was the
-   likely cause of this problem.)
-   Justification:
-     50 microseconds really isn't a sufficient lifespan for ... anything.
-   Votes:
-     +1: cmpilato, rhuijben, brane
-
  * r1389928
    Fix a 1.7.x test to pass within a format 30 working copy.
    Justification:
