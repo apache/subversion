@@ -536,6 +536,12 @@ svn_swig_py_config_enumerator2(const char *name,
                                void *baton,
                                apr_pool_t *pool);
 
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_boolean_t
+svn_swig_py_config_section_enumerator2(const char *name,
+                                       void *baton,
+                                       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
