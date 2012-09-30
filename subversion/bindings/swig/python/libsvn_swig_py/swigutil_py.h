@@ -529,6 +529,13 @@ svn_error_t *svn_swig_py_ra_lock_callback(
 SVN_SWIG_SWIGUTIL_EXPORT
 extern const svn_ra_reporter2_t swig_py_ra_reporter2;
 
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_boolean_t
+svn_swig_py_config_enumerator2(const char *name,
+                               const char *value,
+                               void *baton,
+                               apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
