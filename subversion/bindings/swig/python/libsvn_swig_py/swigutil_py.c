@@ -4191,3 +4191,47 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   callbacks->dir_props_changed  = wc_diff_callbacks2_dir_props_changed;
   return callbacks;
 }
+
+svn_boolean_t
+svn_swig_py_config_enumerator2(const char *name,
+                               const char *value,
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"ssO&",
+                                      name,
+                                      value,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
+}
