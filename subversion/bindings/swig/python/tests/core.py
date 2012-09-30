@@ -140,6 +140,36 @@ class SubversionCoreTestCase(unittest.TestCase):
     self.assertEqual(
       svn.core.svn_config_enumerate2(cfg, "section", enumerator), 1)
 
+  def test_config_enumerate_sections2(self):
+    cfg = svn.core.svn_config_create(False)
+    sections = ['section-one', 'section-two', 'section-three']
+
+    for section in sections:
+      svn.core.svn_config_set(cfg, section, "name", "value")
+
+    received_sections = []
+    def enumerator(section, pool):
+      received_sections.append(section)
+      return len(received_sections) < 2
+
+    svn.core.svn_config_enumerate_sections2(cfg, enumerator)
+
+    self.assertEqual(len(received_sections), 2)
+    for section in received_sections:
+      self.assertIn(section, sections)
+
+  def test_config_enumerate_sections2_exception(self):
+    cfg = svn.core.svn_config_create(False)
+    svn.core.svn_config_set(cfg, "section-one", "name", "value")
+    svn.core.svn_config_set(cfg, "section-two", "name", "value")
+
+    def enumerator(section, pool):
+      raise Exception
+
+    # the exception will be swallowed, but enumeration must be stopped
+    self.assertEqual(
+      svn.core.svn_config_enumerate_sections2(cfg, enumerator), 1)
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionCoreTestCase)

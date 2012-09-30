@@ -4239,3 +4239,49 @@ svn_swig_py_config_enumerator2(const char *name,
 
   return c_result;
 }
+
+svn_boolean_t
+svn_swig_py_config_section_enumerator2(const char *name,
+                                       void *baton,
+                                       apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+      /* If it's not a SubversionException, we still have to clear it, because
+         otherwise the SWIG wrapper will not check for it, and return a value with an
+         exception pending. */
+      PyErr_Clear();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
+}
