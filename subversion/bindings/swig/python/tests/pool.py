@@ -56,17 +56,7 @@ class PoolTestCase(unittest.TestCase):
   def test_object_hash_struct_members(self):
     """Check that struct members which are hashes of objects work correctly"""
 
-    # Get an empty config
-    (cfg_fd, cfg_name) = tempfile.mkstemp(prefix="conf-")
-    os.close(cfg_fd)
-
-    try:
-      cfg = svn.core.svn_config_read(
-        svn.core.svn_dirent_internal_style(cfg_name),
-        False)
-    finally:
-      os.remove(cfg_name)
-
+    cfg = svn.core.svn_config_create(False)
     client_ctx = svn.client.svn_client_create_context()
     category = svn.core.SVN_CONFIG_CATEGORY_SERVERS
     client_ctx.config = { category: cfg }
