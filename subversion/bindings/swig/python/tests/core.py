@@ -125,7 +125,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     self.assertEqual(len(received_entries), 2)
     for (name, value) in received_entries.iteritems():
-      self.assertTrue(name in entries)
+      self.assertIn(name, entries)
       self.assertEqual(value, entries[name])
 
   def test_config_enumerate2_exception(self):
