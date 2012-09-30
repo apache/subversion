@@ -97,7 +97,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       # will be passed through.
       rec.e = svn.core.SubversionException("No fields except message.")
       # e.apr_err is None but should be an int
-      self.assertRaises(TypeError, svn.client.info2, args)
+      self.assertRaises(TypeError, svn.client.info2, *args)
     finally:
       # This would happen without the finally block as well, but we expliticly
       # order the operations so that the cleanup is not hindered by any open
