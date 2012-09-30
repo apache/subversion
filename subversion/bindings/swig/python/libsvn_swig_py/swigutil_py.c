@@ -4212,6 +4212,10 @@ svn_swig_py_config_enumerator2(const char *name,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
+      /* If it's not a SubversionException, we still have to clear it, because
+         otherwise the SWIG wrapper will not check for it, and return a value with an
+         exception pending. */
+      PyErr_Clear();
     }
   else if (!PyBool_Check(result))
     {
