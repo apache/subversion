@@ -125,7 +125,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     self.assertEqual(len(received_entries), 2)
     for (name, value) in received_entries.iteritems():
-      self.assertIn(name, entries)
+      self.assert_(name in entries)
       self.assertEqual(value, entries[name])
 
   def test_config_enumerate2_exception(self):
@@ -156,7 +156,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     self.assertEqual(len(received_sections), 2)
     for section in received_sections:
-      self.assertIn(section, sections)
+      self.assert_(section in sections)
 
   def test_config_enumerate_sections2_exception(self):
     cfg = svn.core.svn_config_create(False)
