@@ -82,6 +82,7 @@ Partial committers who have asked to be listed as dormant:
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
+        rdonch   Роман Донченко <dpb@corrigendum.ru>         (Swig-Python b.)
 
 
 Commit access for specific areas:
@@ -94,7 +95,6 @@ Commit access for specific areas:
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
-        rdonch   Роман Донченко <dpb@corrigendum.ru>         (Swig-Python b.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
 
   Packages:
