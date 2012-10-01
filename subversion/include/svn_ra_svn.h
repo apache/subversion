@@ -62,6 +62,8 @@ extern "C" {
 #define SVN_RA_SVN_CAP_PARTIAL_REPLAY "partial-replay"
 /* maps to SVN_RA_CAPABILITY_ATOMIC_REVPROPS */
 #define SVN_RA_SVN_CAP_ATOMIC_REVPROPS "atomic-revprops"
+/* maps to SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS */
+#define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

@@ -982,6 +982,17 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                             _("Server doesn't support setting arbitrary "
                               "revision properties during commit"));
 
+  /* If the server supports ephemeral txnprops, add the one that
+     reports the client's version level string. */
+  if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_COMMIT_REVPROPS) &&
+      svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS))
+    {
+      apr_hash_set(revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(SVN_VER_NUMBER, pool));
+    }
+
   /* Tell the server we're starting the commit.
      Send log message here for backwards compatibility with servers
      before 1.5. */
@@ -2502,6 +2513,9 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn,
                                      SVN_RA_SVN_CAP_ATOMIC_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn,
+                                     SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
