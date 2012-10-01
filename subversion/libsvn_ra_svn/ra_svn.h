@@ -56,6 +56,9 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
                                                void *baton);
 
+/* The default "user agent". */
+#define SVN_RA_SVN__DEFAULT_USERAGENT  "SVN/" SVN_VER_NUMBER
+
 /* The size of our per-connection read and write buffers. */
 #define SVN_RA_SVN__PAGE_SIZE 4096
 #define SVN_RA_SVN__READBUF_SIZE (4 * SVN_RA_SVN__PAGE_SIZE)
@@ -126,6 +129,7 @@ struct svn_ra_svn__session_baton_t {
   void *callbacks_baton;
   apr_off_t bytes_read, bytes_written; /* apr_off_t's because that's what
                                           the callback interface uses */
+  const char *useragent;
 };
 
 /* Set a callback for blocked writes on conn.  This handler may

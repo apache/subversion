@@ -594,7 +594,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
-
+  
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
   else
@@ -604,6 +604,23 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                      0, 0, pool);
     }
+
+  /* Build the useragent string, querying the client for any
+     customizations it wishes to note.  For historical reasons, we
+     still deliver the hard-coded client version info
+     (SVN_RA_SVN__DEFAULT_USERAGENT) and the customized client string
+     separately in the protocol/capabilities handshake below.  But the
+     commit logic wants the combined form for use with the
+     SVN_PROP_TXN_USER_AGENT ephemeral property because that's
+     consistent with our DAV approach.  */
+  if (sess->callbacks->get_client_string != NULL)
+    SVN_ERR(sess->callbacks->get_client_string(sess->callbacks_baton,
+                                               &client_string, pool));
+  if (client_string)
+    sess->useragent = apr_pstrcat(pool, SVN_RA_SVN__DEFAULT_USERAGENT "/",
+                                  client_string, (char *)NULL);
+  else
+    sess->useragent = SVN_RA_SVN__DEFAULT_USERAGENT;
 
   /* Make sure we set conn->session before reading from it,
    * because the reader and writer functions expect a non-NULL value. */
@@ -631,10 +648,6 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                             _("Server does not support edit pipelining"));
 
-  if (sess->callbacks->get_client_string != NULL)
-    SVN_ERR(sess->callbacks->get_client_string(sess->callbacks_baton,
-                                               &client_string, pool));
-
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
@@ -647,7 +660,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
                                  SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                 url, "SVN/" SVN_VER_NUMBER, client_string));
+                                 url,
+                                 SVN_RA_SVN__DEFAULT_USERAGENT,
+                                 client_string));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
@@ -991,6 +1006,10 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                    apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
                    APR_HASH_KEY_STRING,
                    svn_string_create(SVN_VER_NUMBER, pool));
+      apr_hash_set(revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(sess_baton->useragent, pool));
     }
 
   /* Tell the server we're starting the commit.
