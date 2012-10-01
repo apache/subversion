@@ -73,30 +73,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1374198
-   Remove mod_dontdothat from install-tools so that configurations
-   --without-apxs will not try to build it.
-   Justification:
-     Fixes regression from 1.7.5.
-   Notes:
-     Reverts backport of r1307177 because that caused builds to fail
-     when Apache headers and libraries were not present. Trunk has a
-     followup in r1374357 that reinstates the desired behaviour.
-   Votes:
-     +1: brane
-     =0: danielsh (does this move mod_dontdothat to 'make install'?
-                   perhaps we should special case it (new "dontdothat" value
-		   for the build.conf install=... attribute) for the stable
-                   branch?)
-
- * r1344864, r1344865, r1344869
-   Sort list of deleted paths in dump file output. See issue #4134.
-   Justification:
-     Reproducible output with APR 1.4.6.
-   Notes:
-     Merge with --accept=tc.
-   Votes:
-     +1: stsp, cmpilato
 
  * r1365519, r1383029, r1383483
    Fix assertions in ra_serf triggered when communicating with a
@@ -139,3 +115,24 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1344864, r1344865, r1344869
+   Sort list of deleted paths in dump file output. See issue #4134.
+   Justification:
+     Reproducible output with APR 1.4.6.
+   Notes:
+     Merge with --accept=tc.
+   Votes:
+     +1: stsp, cmpilato, breser
+
+ * r1374198
+   Remove mod_dontdothat from install-tools so that configurations
+   --without-apxs will not try to build it.
+   Justification:
+     Fixes regression from 1.7.5.
+   Notes:
+     Reverts backport of r1307177 because that caused builds to fail
+     when Apache headers and libraries were not present. Trunk has a
+     followup in r1374357 that reinstates the desired behaviour.
+   Votes:
+     +1: brane, breser, danielsh (via IRC)
