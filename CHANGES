@@ -51,6 +51,40 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
 
 
+Version 1.7.7
+(?? ??? 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.7
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * fixed: memory read bug (r137614)
+    * update Chinese translation
+
+  - Client-side bugfixes:
+    * fixed: issues with applying Git patch files (r1374800, et al)
+    * fixed: status does not descend into dir externals after upgrade (issue #4016)
+    * fixed: file externals don't update with old mod_dav_svn (issue #4224)
+    * fixed: external diff tool duplicates Index: lines with 'svn diff' (r1380697)
+    * fixed: GNOME keyring library fails with very old glib (r1378847)
+    * fixed: unknown password stores in config file cause error (r1375052)
+ 
+  - Server-side bugfixes:
+    * fixed: an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+    * fixed: unbounded memory use with SVNPathAuthz short_circuit (r1387943)
+    * fixed: svndumpfilter exclude --targets requires leading slash (issue #4234)
+    * fixed: connection ttl for memcache should be 50 seconds not microseconds(r1391641)
+
+ Developer-visible changes:
+  - General:
+    * print "All tests successful" at the end of 'make check' (r1375089)
+    * fixed: sandbox violation in a test (r1371282)
+    * fixed: tests fail when running within a format 30 WC (r1391188, et al)
+    * fixed: return value of svn_client_update4() incorrect (r1380295)
+    * fixed: make check summary missing test failures (r1390965)
+
+  - Bindings:
+    * fixed: swig-pl build fails with swig 2.0.7 and newer.
+
+
 Version 1.7.6
 (15 Aug 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.6
