@@ -15,7 +15,7 @@ Status of 1.7.7:
 Candidate changes:
 ==================
 
- * r1242759, r1242770, r1242794, r1380175
+ * r1242759, r1242770, r1242794, r1380175, r1392599
    Fix various issues with GNOME and KDE keyring providers, especially
    as regards how their interact with --non-interactive mode.  Fixes
    issues #4110 ("kwallet not used with --non-interactive") and #4112
@@ -26,7 +26,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1242759
    Votes:
-     +1: philip, cmpilato
+     +1: philip (without r1392599), cmpilato (without r1392599), breser
 
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
@@ -72,21 +72,6 @@ Candidate changes:
             that because the order the directory entries were read into the
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
-
-
- * r1365519, r1383029, r1383483
-   Fix assertions in ra_serf triggered when communicating with a
-   repository hosted at the server root URL.
-   Justification:
-     Assertions tell us that stuff is wrong.  Very wrong.
-   Notes:
-     r1365519: renames variables; dups a string into the session pool
-     r1383029: fixes svn_ra_serf__reparent to avoid NULL url.path
-     r1383483: fixes a couple of other NULL url.path instances
-   Branch:
-     ^/subversion/branches/1.7.x-serf-server-root-segfaults
-   Votes:
-     +1: cmpilato, rhuijben
 
  * r1389851
    Fix commit from multiple working copies nested within a parent WC.
@@ -136,3 +121,17 @@ Approved changes:
      followup in r1374357 that reinstates the desired behaviour.
    Votes:
      +1: brane, breser, danielsh (via IRC)
+
+ * r1365519, r1383029, r1383483
+   Fix assertions in ra_serf triggered when communicating with a
+   repository hosted at the server root URL.
+   Justification:
+     Assertions tell us that stuff is wrong.  Very wrong.
+   Notes:
+     r1365519: renames variables; dups a string into the session pool
+     r1383029: fixes svn_ra_serf__reparent to avoid NULL url.path
+     r1383483: fixes a couple of other NULL url.path instances
+   Branch:
+     ^/subversion/branches/1.7.x-serf-server-root-segfaults
+   Votes:
+     +1: cmpilato, rhuijben, breser
