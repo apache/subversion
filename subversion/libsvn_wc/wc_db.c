@@ -4107,6 +4107,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_op_root_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.src_wcroot,
                                                 &ocb.src_relpath, db,
