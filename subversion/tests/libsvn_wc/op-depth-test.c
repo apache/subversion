@@ -4926,9 +4926,9 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A/B/C", "base-deleted", NO_COPY_FROM},
       {1, "X",     "normal",       1, "A", MOVED_HERE},
       {1, "X/B",   "not-present",  2, "A/B"},
-      {2, "X/B",   "normal",       2, "A/B", MOVED_HERE},
+      {2, "X/B",   "normal",       2, "A/B"},
       {2, "X/B/C", "not-present",  3, "A/B/C"},
-      {3, "X/B/C", "normal",       3, "A/B/C", MOVED_HERE},
+      {3, "X/B/C", "normal",       3, "A/B/C"},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
