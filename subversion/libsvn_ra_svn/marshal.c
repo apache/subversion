@@ -257,8 +257,6 @@ static svn_error_t *writebuf_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *data, apr_size_t len)
 {
-  const char *end = data + len;
-
   /* data >= 8k is sent immediately */
   if (len >= sizeof(conn->write_buf) / 2)
     {
