@@ -701,11 +701,8 @@ fp.close()"""
                     '  svn:check-locks\n', # internal prop, not really expected
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
+                    '  svn:txn-client-compat-version\n',                    
                     ]
-  # ra_dav and ra_local add the client-compat-version ephemeral property.
-  # FIXME: ra_svn will soon, too.  cmpilato just hasn't gotten there yet.
-  if svntest.main.is_ra_type_dav() or svntest.main.is_ra_type_file():
-    expected_data.append('  svn:txn-client-compat-version\n')
   # ra_dav adds the user-agent ephemeral property
   if svntest.main.is_ra_type_dav():
     expected_data.append('  svn:txn-user-agent\n')
