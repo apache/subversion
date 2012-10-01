@@ -307,6 +307,10 @@ svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 /* for the repository referred to by this request, should httpv2 be advertised? */
 svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
+/* for the repository referred to by this request, should ephemeral
+   txnprop support be advertised? */
+svn_boolean_t dav_svn__get_ephemeral_txnprops_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
