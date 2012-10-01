@@ -253,7 +253,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
  *
  * @since New in 1.7.
  *
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
