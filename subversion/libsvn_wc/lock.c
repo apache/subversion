@@ -97,7 +97,8 @@ svn_wc__internal_check_wc(int *wc_format,
     {
       svn_node_kind_t kind;
 
-      if (err->apr_err != SVN_ERR_WC_MISSING)
+      if (err->apr_err != SVN_ERR_WC_MISSING &&
+          err->apr_err != SVN_ERR_WC_UNSUPPORTED_FORMAT)
         return svn_error_trace(err);
       svn_error_clear(err);
 
@@ -1523,6 +1524,21 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
                              _("Can't obtain lock on non-directory '%s'."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+
+  if (lock_anchor && kind == svn_wc__db_kind_dir)
+    {
+      svn_boolean_t is_wcroot;
+
+      SVN_ERR_ASSERT(lock_root_abspath != NULL);
+
+      /* Perform a cheap check to avoid looking for a parent working copy,
+         which might be very expensive in some specific scenarios */
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
+                                   scratch_pool));
+
+      if (is_wcroot)
+        lock_anchor = FALSE;
+    }
 
   if (lock_anchor)
     {

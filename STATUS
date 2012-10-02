@@ -10,45 +10,89 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.6:
+Status of 1.7.7:
 
 Candidate changes:
 ==================
 
- * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
-   r1294134, r1294147, r1294586
-   Two interdependent changes:
-   Fix issue #4121: copy followed by delete of unreadable child.
-   Fix svn:// authz in Python tests.
+ * r1242759, r1242770, r1242794, r1380175, r1392599
+   Fix various issues with GNOME and KDE keyring providers, especially
+   as regards how their interact with --non-interactive mode.  Fixes
+   issues #4110 ("kwallet not used with --non-interactive") and #4112
+   ("gnome keyring --non-interactive fail with password on disk").
    Justification:
-     User resorted to patching the commit editor to work around this.
-     Tests are broken.
-   Notes:
-     r1293945,r1293972,r1293976 are cosmetics.
-     r1293998 is the fix.
-     r1294136 is a test.
-     r1294236 fixes an uninitialized variable.
-   Notes:
-     r1294134 extends a test to demonstrate its brokenness.
-     r1294147 fixes said brokenness.
-     r1294586 fixes r1294147 for Windows.
+     Fixes user-reported problem which significantly limits
+     usabilility in certain environments.
+   Branch:
+     ^/subversion/branches/1.7.x-r1242759
    Votes:
-     +1: danielsh, stsp
+     +1: philip (without r1392599), cmpilato (without r1392599), breser
 
- * r1307177
-   Move mod_dontdothat to install-tools.
+ * r1306275, and too many other revisions to list here
+   New diff support code for added/deleted files and directories.
+   Fixes issue #4153, "svn log --diff" on moved file gives "not found",
+   and other problems.
    Justification:
-     Undo compatibility break of 'make install' in 1.7.3.
+     The current code (introduced in 1.7.x in the r1207351 backport commit)
+     produces inconsistent paths in diff output (see
+     http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
+     with the paradigm that the target of an editor drive may never have more
+     than one path component (which according to cmpilato is an API violation).
+   Notes:
+     Please read the branch and related trunk log messages for detailed notes
+     about these changes.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4153
    Votes:
-     +1: danielsh, gstein
+     +1: stsp
 
- * r1337441
-   Fix XML namespace expansion in ra_serf
+ * ^/subversion/branches/1.7.x-commit-performance
+   r1337118, r1337281, r1337374, r1337377, r1337392, r1337394, r1337485
+   Use the working copy status walker as a first filter to find committable
+   nodes.
    Justification:
-     Avoids segfaults caused by a malicious server sending unknown prefixes
-     to ra_serf. (and corrects the semantics for a bonus win)
+     Huge performance boost. Especially on NFS.
+   Notes:
+     Backports the status walker framework. Many other parts are backportable
+     too, but this branch delivers the plumbing.
+     [JAF] We might want to include some of the subsequent updates to this
+           code, such as: r1337403, r1337475, r1337736, r1338059, r1338338.
    Votes:
-     +1: gstein, rhuijben
+     +0: rhuijben (I would like to see some test results before backporting)
+
+ * r1341060
+   Sort output of 'svn import'
+   Notes: Needs a backport branch, noted here for completeness.
+   Votes:
+     +0: stsp (pending a proper conflict-free backport)
+     -0: julianfoad (Nice behaviour enhancement but what's the justification
+            for back-porting this on its own without similar for other
+            commands?  The log msg says it was done to maintain stable output
+            with APR 1.4.6 random hash order, but it wasn't stable before
+            that because the order the directory entries were read into the
+            hash, and so the order of multiple keys in one bucket, was not
+            controlled.)
+
+ * r1389851
+   Fix commit from multiple working copies nested within a parent WC.
+   Justification:
+     Prevents error when trying commit from multiple nested WCs.
+     Fixes a test failure on 1.7.x when run within a format 30 WC.
+   Branch:
+     ^/subversion/branches/1.7.x-r1389851
+   Votes:
+     +1: stsp, breser
+
+ * r1389878
+   Fix working copy access via symlink to WC nested within a format 30 WC.
+   Justification:
+     Fixes two test failures on 1.7.x when run within a format 30 WC.
+   Notes:
+     Depends on r1389499 backport for passing tests.
+   Branch:
+     ^/subversion/branches/1.7.x-r1389878
+   Votes:
+     +1: stsp, breser
 
 
 Veto-blocked changes:
@@ -56,3 +100,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1344864, r1344865, r1344869
+   Sort list of deleted paths in dump file output. See issue #4134.
+   Justification:
+     Reproducible output with APR 1.4.6.
+   Notes:
+     Merge with --accept=tc.
+   Votes:
+     +1: stsp, cmpilato, breser

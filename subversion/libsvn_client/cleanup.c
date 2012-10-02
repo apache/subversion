@@ -171,7 +171,12 @@ svn_client_upgrade(const char *path,
           svn_wc_external_item2_t *item;
           const char *external_abspath;
           const char *external_path;
+          const char *repos_relpath;
+          const char *repos_root_url;
+          const char *repos_uuid;
           svn_node_kind_t kind;
+          svn_revnum_t peg_revision;
+          svn_revnum_t revision;
           svn_error_t *err;
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
@@ -180,8 +185,10 @@ svn_client_upgrade(const char *path,
           external_path = svn_dirent_join(externals_parent, item->target_dir,
                                           iterpool2);
 
-          SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,
-                                          iterpool2));
+          err = svn_dirent_get_absolute(&external_abspath, external_path,
+                                        iterpool2);
+          if (err)
+            goto handle_error;
 
           /* This is hack. We can only send dirs to svn_wc_upgrade(). This
              way we will get an exception saying that the wc must be
@@ -195,10 +202,106 @@ svn_client_upgrade(const char *path,
             {
               svn_error_clear(err);
 
-              SVN_ERR(svn_client_upgrade(external_abspath, ctx, iterpool2));
+              err = svn_client_upgrade(external_abspath, ctx, iterpool2);
             }
-          else
-            SVN_ERR(err);
+
+          if (err)
+            goto handle_error;
+
+          /* The upgrade of any dir should be done now, get the (supposedly
+           * now reliable) kind. */
+          err = svn_wc_read_kind(&kind, ctx->wc_ctx, external_abspath,
+                                 FALSE, iterpool2);
+          if (err)
+            goto handle_error;
+
+          /* Update the EXTERNALS table according to the root URL,
+           * relpath and uuid known in the upgraded external WC. */
+
+          /* We should probably have a function that provides all three
+           * of root URL, repos relpath and uuid at once, but here goes... */
+
+          /* First get the relpath, as that returns SVN_ERR_WC_PATH_NOT_FOUND
+           * when the node is not present in the file system.
+           * (svn_wc__node_get_repos_info() would try to derive the URL). */
+          err = svn_wc__node_get_repos_relpath(&repos_relpath,
+                                               ctx->wc_ctx,
+                                               external_abspath,
+                                               iterpool2, iterpool2);
+          if (! err)
+            {
+              /* We got a repos relpath from a WC. So also get the root. */
+              err = svn_wc__node_get_repos_info(&repos_root_url,
+                                                &repos_uuid,
+                                                ctx->wc_ctx,
+                                                external_abspath,
+                                                iterpool2, iterpool2);
+            }
+          else if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              /* The external is not currently checked out. Try to figure out
+               * the URL parts via the defined URL and fetch_repos_info(). */
+              svn_error_clear(err);
+
+              /* The repos root / uuid from above get_repos_info() call, if it
+               * was successful, has returned the URL as derived from the WC's
+               * parent path, which is not what we want for the external. Only
+               * makes sense for added/deleted/not-present files. So make sure
+               * those values are not used. */
+              repos_root_url = NULL;
+              repos_relpath = NULL;
+
+              err = fetch_repos_info(&repos_root_url,
+                                     &repos_uuid,
+                                     &info_baton,
+                                     item->url,
+                                     scratch_pool, scratch_pool);
+              if (err)
+                goto handle_error;
+
+
+              repos_relpath = svn_uri_skip_ancestor(repos_root_url, item->url,
+                                                    iterpool2);
+
+              /* There's just this URL, no idea what kind it is. */
+              kind = svn_node_unknown;
+            }
+
+          if (err)
+            goto handle_error;
+
+          peg_revision = (item->peg_revision.kind == svn_opt_revision_number
+                          ? item->peg_revision.value.number
+                          : SVN_INVALID_REVNUM);
+
+          revision = (item->revision.kind == svn_opt_revision_number
+                      ? item->revision.value.number
+                      : SVN_INVALID_REVNUM);
+
+          err = svn_wc__upgrade_add_external_info(ctx->wc_ctx,
+                                                  external_abspath,
+                                                  kind,
+                                                  externals_parent,
+                                                  repos_relpath,
+                                                  repos_root_url,
+                                                  repos_uuid,
+                                                  peg_revision,
+                                                  revision,
+                                                  iterpool2);
+handle_error:
+          if (err)
+            {
+              svn_wc_notify_t *notify =
+                  svn_wc_create_notify(external_abspath,
+                                       svn_wc_notify_failed_external,
+                                       scratch_pool);
+              notify->err = err;
+
+              ctx->notify_func2(ctx->notify_baton2,
+                                notify, scratch_pool);
+
+              svn_error_clear(err);
+            }
         }
     }
 

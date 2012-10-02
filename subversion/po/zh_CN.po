@@ -55,8 +55,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2012-02-27 09:18+0000\n"
-"PO-Revision-Date: 2012-02-27 09:18+0000\n"
+"POT-Creation-Date: 2012-08-17 15:23+0000\n"
+"PO-Revision-Date: 2012-08-17 15:18+0000\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -1371,6 +1371,10 @@ msgid "URL '%s' at revision %ld is not a file or a directory"
 msgstr "URL “%s” 在版本 %ld 中不是文件或目录"
 
 #, c-format
+msgid "Unsupported external: url of file external '%s' is not in repository '%s'"
+msgstr "不支持的外部定义：外部文件“%s”的 URL 不在版本库“%s”中"
+
+#, c-format
 msgid "Traversal of '%s' found no ambient depth"
 msgstr "在 “%s” 中找不到深度"
 
@@ -2303,6 +2307,10 @@ msgid "Empty noderev in cache"
 msgstr "缓存中 noderev 为空"
 
 #, c-format
+msgid "Attempted to update ancestry of non-mutable node"
+msgstr "试图更新非可变节点的祖先"
+
+#, c-format
 msgid "Can't fetch FSFS shared data"
 msgstr "不能获取文件系统互斥体"
 
@@ -2533,8 +2541,8 @@ msgid "Corrupt 'current' file"
 msgstr "文件 “current” 损坏"
 
 #, c-format
-msgid "predecessor count for the root node-revision is wrong: found %d, committing r%ld"
-msgstr "根节点版本的前驱计数错误：发现 %d，正在提交 r%ld"
+msgid "predecessor count for the root node-revision is wrong: found (%d+%ld != %d), committing r%ld"
+msgstr "根节点版本的前任计数错误: 发现 (%d+%ld != %d), 正在提交 r%ld"
 
 msgid "Truncated protorev file detected"
 msgstr "检测到文件 protorev 被截断"
@@ -3173,6 +3181,10 @@ msgstr "OPTIONS 响应中没有包含请求的 activity-collection-set 值。"
 #, c-format
 msgid "Adding directory failed: %s on %s (%d %s)"
 msgstr "增加目录失败: “%s” 于 “%s”(%d %s)"
+
+#, c-format
+msgid "MERGE request failed: returned %d (during commit)"
+msgstr "MERGE 请求失败：返回 %d (在提交期间)"
 
 #, c-format
 msgid "Location segment report failed on '%s'@'%ld'"
@@ -5190,6 +5202,10 @@ msgid "Conflict callback violated API: returned no merged file"
 msgstr "冲突的回调函数违反 API：没有返回合并文件。"
 
 #, c-format
+msgid "Incomplete copy information on path '%s'."
+msgstr "位于路径“%s”上的复制信息不完整"
+
+#, c-format
 msgid "'%s' is not the root of the working copy '%s'"
 msgstr "“%s”不是工作副本“%s”的根"
 
@@ -5685,6 +5701,10 @@ msgstr "在数据库中找到了校验和为“%s”的原始内容，但是它�
 #, c-format
 msgid "Missing a row in WCROOT."
 msgstr "WCROOT 中丢失了一行。"
+
+#, c-format
+msgid "Working copy database '%s' not found"
+msgstr "找不到工作副本数据库“%s”"
 
 #, c-format
 msgid "Working copy format of '%s' is too old (%d); please check out your working copy again"
@@ -7880,20 +7900,20 @@ msgid ""
 "\n"
 "  Example output:\n"
 "    svn status wc\n"
-"     M     wc/bar.c\n"
-"    A  +   wc/qax.c\n"
+"     M      wc/bar.c\n"
+"    A  +    wc/qax.c\n"
 "\n"
 "    svn status -u wc\n"
-"     M           965    wc/bar.c\n"
-"           *     965    wc/foo.c\n"
-"    A  +           -    wc/qax.c\n"
+"     M             965   wc/bar.c\n"
+"            *      965   wc/foo.c\n"
+"    A  +             -   wc/qax.c\n"
 "    Status against revision:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
-"     M           965       938 kfogel       wc/bar.c\n"
-"           *     965       922 sussman      wc/foo.c\n"
-"    A  +           -       687 joe          wc/qax.c\n"
-"                 965       687 joe          wc/zig.c\n"
+"     M             965      938 kfogel       wc/bar.c\n"
+"            *      965      922 sussman      wc/foo.c\n"
+"    A  +             -      687 joe          wc/qax.c\n"
+"                   965      687 joe          wc/zig.c\n"
 "    Status against revision:   981\n"
 "\n"
 "    svn status\n"
@@ -7967,20 +7987,20 @@ msgstr ""
 "\n"
 "  范例输出: \n"
 "    svn status wc\n"
-"     M     wc/bar.c\n"
-"    A  +   wc/qax.c\n"
+"     M      wc/bar.c\n"
+"    A  +    wc/qax.c\n"
 "\n"
 "    svn status -u wc\n"
-"     M           965    wc/bar.c\n"
-"           *     965    wc/foo.c\n"
-"    A  +           -    wc/qax.c\n"
+"     M             965   wc/bar.c\n"
+"            *      965   wc/foo.c\n"
+"    A  +             -   wc/qax.c\n"
 "    版本 981 的状态\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
-"     M           965       938 kfogel       wc/bar.c\n"
-"           *     965       922 sussman      wc/foo.c\n"
-"    A  +           -       687 joe          wc/qax.c\n"
-"                 965       687 joe          wc/zig.c\n"
+"     M             965      938 kfogel       wc/bar.c\n"
+"            *      965      922 sussman      wc/foo.c\n"
+"    A  +             -      687 joe          wc/qax.c\n"
+"                   965      687 joe          wc/zig.c\n"
 "    版本 981 的状态\n"
 "\n"
 "    svn status\n"
@@ -10715,6 +10735,3 @@ msgstr "“%s” 的类型未知\n"
 #, c-format
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "未提交的本地增加，复制或移动 %s"
-
-#~ msgid "'%s' is scheduled for addition within unversioned parent"
-#~ msgstr "在未纳入版本控制的父目录，“%s” 被加入增加调度"

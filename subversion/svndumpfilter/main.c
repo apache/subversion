@@ -1453,6 +1453,8 @@ main(int argc, const char *argv[])
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
           const char *utf8_targets_file;
+          apr_array_header_t *targets = apr_array_make(pool, 0,
+                                                       sizeof(const char *));
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
@@ -1465,10 +1467,18 @@ main(int argc, const char *argv[])
                                                pool));
           SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 
-          opt_state.prefixes = apr_array_append(pool,
-                                    svn_cstring_split(buffer_utf8->data, "\n\r",
-                                                      TRUE, pool),
-                                    opt_state.prefixes);
+          targets = apr_array_append(pool,
+                         svn_cstring_split(buffer_utf8->data, "\n\r",
+                                           TRUE, pool),
+                         targets);
+
+          for (i = 0; i < targets->nelts; i++)
+            {
+              const char *prefix = APR_ARRAY_IDX(targets, i, const char *);
+              if (prefix[0] != '/')
+                prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
+              APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
+            }
         }
 
       if (apr_is_empty_array(opt_state.prefixes))

@@ -459,7 +459,8 @@ add_memcache_server(const char *name,
                                        0,  /* min connections */
                                        5,  /* soft max connections */
                                        10, /* hard max connections */
-                                       50, /* connection time to live (secs) */
+                                       /*  time to live (in microseconds) */
+                                       apr_time_from_sec(50),
                                        &server);
   if (apr_err != APR_SUCCESS)
     {

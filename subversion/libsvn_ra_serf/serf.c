@@ -338,7 +338,7 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char **corrected_url,
-                  const char *repos_URL,
+                  const char *session_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
                   apr_hash_t *config,
@@ -368,23 +368,25 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                        serf_sess->pool));
 
 
-  status = apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  status = apr_uri_parse(serf_sess->pool, session_URL, &url);
   if (status)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal repository URL '%s'"),
-                               repos_URL);
+                               _("Illegal URL '%s'"),
+                               session_URL);
     }
-  /* Contrary to what the comment for apr_uri_t.path says in apr-util 1.2.12 and
-     older, for root paths url.path will be "", where serf requires "/". */
+  /* Depending the version of apr-util in use, for root paths url.path
+     will be NULL or "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
-    url.path = apr_pstrdup(serf_sess->pool, "/");
+    {
+      url.path = apr_pstrdup(serf_sess->pool, "/");
+    }
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
   serf_sess->session_url = url;
-  serf_sess->session_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
+  serf_sess->session_url_str = apr_pstrdup(serf_sess->pool, session_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->supports_deadprop_count = svn_tristate_unknown;
@@ -470,14 +472,25 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
             "URL '%s'"), url, session->repos_root_str);
     }
 
-  status = apr_uri_parse(session->pool, url, &new_url);
+  status = apr_uri_parse(pool, url, &new_url);
   if (status)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                _("Illegal repository URL '%s'"), url);
     }
 
-  session->session_url.path = new_url.path;
+  /* Depending the version of apr-util in use, for root paths url.path
+     will be NULL or "", where serf requires "/". */
+  /* ### Maybe we should use a string buffer for these strings so we
+     ### don't allocate memory in the session on every reparent? */
+  if (new_url.path == NULL || new_url.path[0] == '\0')
+    {
+      session->session_url.path = apr_pstrdup(session->pool, "/");
+    }
+  else
+    {
+      session->session_url.path = apr_pstrdup(session->pool, new_url.path);
+    }
   session->session_url_str = apr_pstrdup(session->pool, url);
 
   return SVN_NO_ERROR;

@@ -91,37 +91,27 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
                        const char *name)
 {
   const char *colon;
-  svn_ra_serf__dav_props_t prop_name;
 
   colon = strchr(name, ':');
   if (colon)
     {
       svn_ra_serf__ns_t *ns;
 
-      prop_name.namespace = NULL;
-
       for (ns = ns_list; ns; ns = ns->next)
         {
           if (strncmp(ns->namespace, name, colon - name) == 0)
             {
-              prop_name.namespace = ns->url;
-              break;
+              returned_prop_name->namespace = ns->url;
+              returned_prop_name->name = colon + 1;
+              return;
             }
         }
-
-      SVN_ERR_ASSERT_NO_RETURN(prop_name.namespace);
-
-      prop_name.name = colon + 1;
-    }
-  else
-    {
-      /* use default namespace for now */
-      prop_name.namespace = "";
-      prop_name.name = name;
     }
 
-  *returned_prop_name = prop_name;
-  return;
+  /* If there is no prefix, or if the prefix is not found, then the
+     name is NOT within a namespace.  */
+  returned_prop_name->namespace = "";
+  returned_prop_name->name = name;
 }
 
 void

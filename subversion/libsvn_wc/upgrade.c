@@ -1545,7 +1545,8 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
-  struct bump_baton bb = { wcroot_abspath };
+  struct bump_baton bb;
+  bb.wcroot_abspath = wcroot_abspath;
 
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
@@ -1993,3 +1994,44 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t db_kind;
+  switch (kind)
+    {
+      case svn_node_dir:
+        db_kind = svn_wc__db_kind_dir;
+        break;
+
+      case svn_node_file:
+        db_kind = svn_wc__db_kind_file;
+        break;
+
+      case svn_node_unknown:
+        db_kind = svn_wc__db_kind_unknown;
+        break;
+
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  SVN_ERR(svn_wc__db_upgrade_insert_external(wc_ctx->db, local_abspath,
+                                             db_kind,
+                                             svn_dirent_dirname(local_abspath,
+                                                                scratch_pool),
+                                             def_local_abspath, repos_relpath,
+                                             repos_root_url, repos_uuid,
+                                             def_peg_revision, def_revision,
+                                             scratch_pool));
+  return SVN_NO_ERROR;
+}

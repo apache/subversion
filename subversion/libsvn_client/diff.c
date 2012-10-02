@@ -1018,6 +1018,9 @@ diff_content_changed(const char *path,
                                tmpfile1, tmpfile2,
                                &exitcode, diff_cmd_baton->outfile, errfile,
                                diff_cmd_baton->diff_cmd, subpool));
+
+      /* We have a printed a diff for this path, mark it as visited. */
+      mark_path_as_visited(diff_cmd_baton, path);
     }
   else   /* use libsvn_diff to generate the diff  */
     {

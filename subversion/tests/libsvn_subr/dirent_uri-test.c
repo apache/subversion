@@ -1357,6 +1357,9 @@ static const testcase_ancestor_t dirent_ancestor_tests[] =
     { "foo.",           "foo./.bar",        ".bar" },
     { "X:foo",          "X:bar",            NULL },
     { "../foo",         "..",               NULL },
+    { "/foo/bar/zig",   "/foo",             NULL },
+    { "/foo/bar/zig",   "/foo/ba",          NULL },
+    { "/foo/bar/zig",   "/foo/bar/zi",      NULL },
 #ifdef SVN_USE_DOS_PATHS
     { "",               "C:",               NULL },
     { "",               "C:foo",            NULL },
@@ -1377,6 +1380,9 @@ static const testcase_ancestor_t dirent_ancestor_tests[] =
     { "X:/foo",         "X:/",              NULL },
     { "A:/foo",         "A:/foo/bar",       "bar" },
     { "A:/foo",         "A:/foot",          NULL },
+    { "A:/foo/bar/zig", "A:/foo",           NULL },
+    { "A:/foo/bar/zig", "A:/foo/ba",        NULL },
+    { "A:/foo/bar/zig", "A:/foo/bar/zi",    NULL },
     { "//srv",          "//srv/share",      NULL },
     { "//srv",          "//srv/shr/fld",    NULL },
     { "//srv/shr",      "//srv",            NULL },
@@ -1386,6 +1392,7 @@ static const testcase_ancestor_t dirent_ancestor_tests[] =
     { "//srv/s r",      "//srv/s r/fld",    "fld" },
     { "//srv/shr/fld",  "//srv/shr",        NULL },
     { "//srv/shr/fld",  "//srv2/shr/fld",   NULL },
+    { "//srv/shr/fld",  "//srv/shr/f",      NULL },
     { "/",              "//srv/share",      NULL },
 #else /* !SVN_USE_DOS_PATHS */
     { "",               "C:",               "C:" },
@@ -1473,6 +1480,8 @@ static const testcase_ancestor_t uri_ancestor_tests[] =
     { "http://",        "http://test",      NULL },
     { "http://server",  "http://server/q",  "q" },
     { "svn://server",   "http://server/q",  NULL },
+    { "http://foo/bar", "http://foo",       NULL },
+    { "http://foo/bar", "http://foo/ba",    NULL },
   };
 
 static svn_error_t *

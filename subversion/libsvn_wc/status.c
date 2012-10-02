@@ -41,6 +41,7 @@
 #include "svn_config.h"
 #include "svn_time.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 
 #include "svn_private_config.h"
 
@@ -1019,14 +1020,15 @@ get_dir_status(const struct walk_status_baton *wb,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *hi;
   const char *dir_repos_root_url;
   const char *dir_repos_relpath;
   const char *dir_repos_uuid;
   apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *patterns = NULL;
+  apr_array_header_t *sorted_children;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
   svn_error_t *err;
+  int i;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1125,20 +1127,25 @@ get_dir_status(const struct walk_status_baton *wb,
     }
 
   /* Walk all the children of this directory. */
-  for (hi = apr_hash_first(subpool, all_children); hi; hi = apr_hash_next(hi))
+  sorted_children = svn_sort__hash(all_children,
+                                   svn_sort_compare_items_lexically,
+                                   subpool);
+  for (i = 0; i < sorted_children->nelts; i++)
     {
       const void *key;
       apr_ssize_t klen;
       const char *node_abspath;
       svn_io_dirent2_t *dirent_p;
       const struct svn_wc__db_info_t *info;
+      svn_sort__item_t item;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, &klen, NULL);
+      item = APR_ARRAY_IDX(sorted_children, i, svn_sort__item_t);
+      key = item.key;
+      klen = item.klen;
 
       node_abspath = svn_dirent_join(local_abspath, key, iterpool);
-
       dirent_p = apr_hash_get(dirents, key, klen);
 
       info = apr_hash_get(nodes, key, klen);

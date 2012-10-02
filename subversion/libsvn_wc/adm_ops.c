@@ -1935,7 +1935,7 @@ new_revert_partial(svn_wc__db_t *db,
         {
           svn_wc__db_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
                                        iterpool));
           if (kind != svn_wc__db_kind_file)
             continue;
@@ -2447,8 +2447,11 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct get_cl_fn_baton gnb = { wc_ctx->db, NULL,
-                                 callback_func, callback_baton };
+  struct get_cl_fn_baton gnb;
+  gnb.db = wc_ctx->db;
+  gnb.clhash = NULL;
+  gnb.callback_func = callback_func;
+  gnb.callback_baton = callback_baton;
 
   if (changelist_filter)
     SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelist_filter,

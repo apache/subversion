@@ -1963,6 +1963,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong date with getTimeMillis()",
                      lm[0].getDate(),
                      new java.util.Date(lm[0].getTimeMillis()));
+
+        // Ensure that targets get canonicalized
+        String non_canonical = thisTest.getUrl().toString() + "/";
+        LogMessage lm2[] = client.logMessages(non_canonical, null,
+                                              null, false, true);
     }
 
     /**
