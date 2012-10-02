@@ -54,6 +54,21 @@
 
 #define SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD (0x100000)
 
+/* When zero copy has been enabled, don't use blocking writes.  Instead,
+ * time out after this many microseconds. */
+
+#define ZERO_COPY_TIMEOUT 1000000
+
+/* Return the APR socket timeout to be used for the connection depending
+ * on whether there is a blockage handler or zero copy has been activated. */
+static apr_interval_time_t
+get_timeout(svn_ra_svn_conn_t *conn)
+{
+  return conn->block_handler ? 0
+                             : (conn->zero_copy_limit ? ZERO_COPY_TIMEOUT
+                                                      : -1);
+}
+
 /* --- CONNECTION INITIALIZATION --- */
 
 svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
@@ -94,6 +109,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
       if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
+      svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
     }
   else
     {
@@ -181,11 +197,9 @@ svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
                               ra_svn_block_handler_t handler,
                               void *baton)
 {
-  apr_interval_time_t interval = (handler) ? 0 : -1;
-
   conn->block_handler = handler;
   conn->block_baton = baton;
-  svn_ra_svn__stream_timeout(conn->stream, interval);
+  svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
