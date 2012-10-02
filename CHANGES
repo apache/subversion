@@ -57,37 +57,37 @@ Version 1.7.7
 http://svn.apache.org/repos/asf/subversion/tags/1.7.7
  User-visible changes
   - Client- and server-side bugfixes:
-    * fixed: memory read bug (r137614)
+    * fix memory read bug (r137614)
     * update Chinese translation
 
   - Client-side bugfixes:
-    * fixed: issues with applying Git patch files (r1374800, et al)
-    * fixed: status does not descend into dir externals after upgrade (issue #4016)
-    * fixed: file externals don't update with old mod_dav_svn (issue #4224)
-    * fixed: external diff tool duplicates Index: lines with 'svn diff' (r1380697)
-    * fixed: GNOME keyring library fails with very old glib (r1378847)
-    * fixed: unknown password stores in config file cause error (r1375052)
-    * fixed: assertions in ra_serf running against server root (r1365519, et al)
-    * fixed: ra_serf checkout/export aborts early on Windows (issue #4174)
+    * fix issues with applying Git patch files (r1374800, et al)
+    * fix status does not descend into dir externals after upgrade (issue #4016)
+    * fix file externals don't update with old mod_dav_svn (issue #4224)
+    * fix external diff tool duplicates Index: lines with 'svn diff' (r1380697)
+    * fix GNOME keyring library fails with very old glib (r1378847)
+    * fix unknown password stores in config file cause error (r1375052)
+    * fix assertions in ra_serf running against server root (r1365519, et al)
+    * fix ra_serf checkout/export aborts early on Windows (issue #4174)
  
   - Server-side bugfixes:
-    * fixed: an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
-    * fixed: unbounded memory use with SVNPathAuthz short_circuit (r1387943)
-    * fixed: svndumpfilter exclude --targets requires leading slash (issue #4234)
-    * fixed: connection ttl for memcache should be 50 seconds not microseconds (r1391641)
-    * fixed: dump of deleted paths are in random order with APR 1.4.6 (r1344864, et al)
+    * fix an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+    * fix unbounded memory use with SVNPathAuthz short_circuit (r1387943)
+    * fix svndumpfilter exclude --targets requires leading slash (issue #4234)
+    * fix connection ttl for memcache should be 50 seconds (r1391641)
+    * fix dump: random odering of deleted paths with APR 1.4.6 (r1344864, et al)
 
  Developer-visible changes:
   - General:
     * print "All tests successful" at the end of 'make check' (r1375089)
-    * fixed: sandbox violation in a test (r1371282)
-    * fixed: tests fail when running within a format 30 WC (r1391188, et al)
-    * fixed: return value of svn_client_update4() incorrect (r1380295)
-    * fixed: make check summary missing test failures (r1390965)
-    * fixed: build does not fail when apache httpd is not available (r1374198)
+    * fix sandbox violation in a test (r1371282)
+    * fix tests fail when running within a format 30 WC (r1391188, et al)
+    * fix return value of svn_client_update4() incorrect (r1380295)
+    * fix make check summary missing test failures (r1390965)
+    * fix build does not fail when apache httpd is not available (r1374198)
 
   - Bindings:
-    * fixed: swig-pl build fails with swig 2.0.7 and newer.
+    * fix swig-pl build fails with swig 2.0.7 and newer.
 
 
 Version 1.7.6
