@@ -149,8 +149,8 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
       g[4][3] = "        ";
       g[5][3] = "-       ";
       g[6][3] = "|       ";
-      g[7][3] = target_is_wc ? apr_psprintf(pool, "%-8ld", target->rev)
-                             : "WC      ";
+      g[7][3] = target_is_wc ? "WC      "
+                             : apr_psprintf(pool, "%-8ld", target->rev);
     }
 
   /* Find the width of each column, so we know how to print blank cells */
@@ -216,7 +216,7 @@ mergeinfo_summary(
   svn_client__pathrev_t *yca, *base, *right, *target;
   svn_boolean_t target_is_wc, reintegrate_like;
 
-  target_is_wc = svn_path_is_url(target_path_or_url)
+  target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
   if (target_is_wc)
