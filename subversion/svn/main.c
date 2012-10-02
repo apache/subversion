@@ -485,8 +485,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_changelist, opt_keep_changelists, opt_include_externals} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
-    ("Duplicate something in working copy or repository, remembering\n"
-     "history.\n"
+    ("Copy files and directories in a working copy or repository.\n"
      "usage: copy SRC[@REV]... DST\n"
      "\n"
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
