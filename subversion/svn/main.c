@@ -1081,7 +1081,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  When moving multiple sources, they will be added as children of DST,\n"
      "  which must be a directory.\n"
      "\n"
-     "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
      "  Note:  the --revision option has no use and is deprecated.\n"
      "\n"
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
