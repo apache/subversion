@@ -1088,6 +1088,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  When moving multiple sources, they will be added as children of DST,\n"
      "  which must be a directory.\n"
      "\n"
+     "  SRC and DST of WC->WC moves must be committed in the same revision.\n"
+     "\n"
      "  The --revision option has no use and is deprecated.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
