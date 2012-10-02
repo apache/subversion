@@ -60,6 +60,13 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1389878
    Fix working copy access via symlink to WC nested within a format 30 WC.
    Justification:
@@ -69,12 +76,5 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1389878
    Votes:
-     +1: stsp, breser
-
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stsp, breser, cmpilato
 
