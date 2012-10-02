@@ -349,7 +349,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        )},
   /* end of diff options */
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
-                       N_("Allow merge into mixed-revision working copy.\n"
+                       N_("Allow operation on mixed-revision working copy.\n"
                        "                             "
                        "Use of this option is not recommended!\n"
                        "                             "
