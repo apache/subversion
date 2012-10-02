@@ -78,15 +78,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1388975
-   Fix for issue #4174: serf checkout/export aborts early on Windows.
-   Justification:
-     Fixes issue that currently makes svn+serf+SSL on Windows unusable.
-   Notes:
-     For the issue to stop occuring, serf 1.1.1 is required. This version is
-     not yet released, testing can be done with HEAD of serf branch 1.1.x.
-   Branch:
-     ^/subversion/branches/1.7.x-r1388975
-   Votes:
-     +1: lgo, rhuijben, cmpilato
-
