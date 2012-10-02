@@ -1075,7 +1075,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'q', opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
-    ("Move and/or rename something in working copy or repository.\n"
+    ("Move (rename) an item in a working copy or repository.\n"
      "usage: move SRC... DST\n"
      "\n"
      "  When moving multiple sources, they will be added as children of DST,\n"
