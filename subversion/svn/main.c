@@ -1087,9 +1087,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  they will be added as children of DST, which must be a directory.\n"
      "\n"
      "  SRC and DST of WC->WC moves must be committed in the same revision.\n"
+     "  Furthermore, WC->WC moves will refuse to move a mixed-revision subtree.\n"
+     "  To avoid unnecessary conflicts, it is recommended to run 'svn update'\n"
+     "  to update the subtree to a single revision before moving it.\n"
+     "  The --allow-mixed-revisions option is provided for backward compatibility.\n"
      "\n"
      "  The --revision option has no use and is deprecated.\n"),
-    {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+    {'r', 'q', opt_force, opt_parents, opt_allow_mixed_revisions, 
+     SVN_CL__LOG_MSG_OPTIONS} },
 
   { "patch", svn_cl__patch, {0}, N_
     ("Apply a patch to a working copy.\n"

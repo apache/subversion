@@ -4405,6 +4405,8 @@ svn_wc_copy(const char *src,
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @see svn_client_move7()
  */
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,

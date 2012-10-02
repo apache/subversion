@@ -4282,6 +4282,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.  Otherwise, the parent of @a dst_path must already exist.
  *
+ * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
+ * will be raised if the move source is a mixed-revision subtree.
+ * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
+ * allowed. This parameter should be set to FALSE except where backwards
+ * compatibility to svn_client_move6() is required.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4302,7 +4308,26 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_move7(const apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t allow_mixed_revisions,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_move7(), but with allow_mixed_revisions always
+ * set to @c TRUE.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,
