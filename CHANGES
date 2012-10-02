@@ -30,6 +30,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svn --version --verbose' option shows runtime environment info
     * new 'svnadmin freeze' subcommand (r1376228)
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
+    * client version info now reported to commit hooks (issue #4124)
 
   - Client-side bugfixes:
     *
