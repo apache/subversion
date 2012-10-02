@@ -229,6 +229,10 @@ sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
 
+  # Because we use the ':normal' command in Vim...
+  die "A vim with the +ex_extra feature is required"
+      if `${VIM} --version` !~ /[+]ex_extra/;
+
   @ARGV = $STATUS;
 
   # Skip most of the file
