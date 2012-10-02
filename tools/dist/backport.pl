@@ -126,9 +126,9 @@ EOF
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
   # Sleep to avoid out-of-order commit notifications
-  if [ -n "$YES" ]; then sleep 15; fi
+  if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
-  if [ -n "$YES" ]; then sleep 1; fi
+  if [ -n "\$YES" ]; then sleep 1; fi
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
