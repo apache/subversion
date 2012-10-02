@@ -699,6 +699,25 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 }
 
 svn_error_t *
+svn_client_move6(const apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_move7(src_paths, dst_path,
+                                          move_as_child, make_parents,
+                                          TRUE, /* allow_mixed_revisions */
+                                          revprop_table,
+                                          commit_callback, commit_baton,
+                                          ctx, pool));
+}
+
+svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *src_paths,
                  const char *dst_path,
