@@ -83,7 +83,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches-1.7.x-r1388975
    Votes:
-     +1: lgo
+     +1: lgo, rhuijben
 
  * r1389878
    Fix working copy access via symlink to WC nested within a format 30 WC.
