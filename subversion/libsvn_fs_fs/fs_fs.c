@@ -4553,11 +4553,15 @@ set_cached_combined_window(svn_stringbuf_t *window,
    ID, and representation REP.
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
-   representation for the whole delta chain.  */
+   representation for the whole delta chain.
+   Finally, return the expanded size of the representation in 
+   *EXPANDED_SIZE. It will take care of cases where only the on-disk
+   size is known.  */
 static svn_error_t *
 build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
                struct rep_state **src_state,
+               svn_filesize_t *expanded_size,
                svn_fs_t *fs,
                representation_t *first_rep,
                apr_pool_t *pool)
@@ -4572,10 +4576,24 @@ build_rep_list(apr_array_header_t **list,
   *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
   rep = *first_rep;
 
+  /* The value as stored in the data struct.
+     0 is either for unknown length or actually zero length. */
+  *expanded_size = first_rep->expanded_size;
   while (1)
     {
       SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
                                &last_revision, &rep, fs, pool));
+
+      /* Unknown size or empty representation?
+         That implies the this being the first iteration.
+         Usually size equals on-disk size, except for empty,
+         compressed representations (delta, size = 4).
+         Please note that for all non-empty deltas have
+         a 4-byte header _plus_ some data. */
+      if (*expanded_size == 0)
+        if (! rep_args->is_delta || first_rep->size != 4)
+          *expanded_size = first_rep->size;
+        
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
         {
@@ -4632,11 +4650,15 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
   b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
-  b->len = rep->expanded_size ? rep->expanded_size : rep->size;
+  b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
+
+  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window,
+                         &b->src_state, &b->len, fs, rep,
+                         b->filehandle_pool));
 
   if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
     b->current_fulltext = svn_stringbuf_create_ensure
@@ -4644,10 +4666,6 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
                              b->filehandle_pool);
   else
     b->current_fulltext = NULL;
-
-  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window,
-                         &b->src_state, fs, rep,
-                         b->filehandle_pool));
 
   /* Save our output baton. */
   *rb_p = b;
