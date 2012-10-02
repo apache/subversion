@@ -15,19 +15,6 @@ Status of 1.7.7:
 Candidate changes:
 ==================
 
- * r1242759, r1242770, r1242794, r1380175, r1392599
-   Fix various issues with GNOME and KDE keyring providers, especially
-   as regards how their interact with --non-interactive mode.  Fixes
-   issues #4110 ("kwallet not used with --non-interactive") and #4112
-   ("gnome keyring --non-interactive fail with password on disk").
-   Justification:
-     Fixes user-reported problem which significantly limits
-     usabilility in certain environments.
-   Branch:
-     ^/subversion/branches/1.7.x-r1242759
-   Votes:
-     +1: philip, cmpilato (without r1392599), breser
-
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
@@ -102,3 +89,17 @@ Approved changes:
      ^/subversion/branches-1.7.x-r1388975
    Votes:
      +1: lgo, rhuijben, cmpilato
+
+ * r1242759, r1242770, r1242794, r1380175, r1392599
+   Fix various issues with GNOME and KDE keyring providers, especially
+   as regards how their interact with --non-interactive mode.  Fixes
+   issues #4110 ("kwallet not used with --non-interactive") and #4112
+   ("gnome keyring --non-interactive fail with password on disk").
+   Justification:
+     Fixes user-reported problem which significantly limits
+     usabilility in certain environments.
+   Branch:
+     ^/subversion/branches/1.7.x-r1242759
+   Votes:
+     +1: philip, cmpilato, breser
+
