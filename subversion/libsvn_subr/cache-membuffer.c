@@ -508,7 +508,7 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
       else
         {
           status = apr_thread_rwlock_trywrlock(cache->lock);
-          if (APR_STATUS_IS_EBUSY(status))
+          if (SVN_LOCK_IS_BUSY(status))
             {
               *success = FALSE;
               status = APR_SUCCESS;
