@@ -26,7 +26,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1242759
    Votes:
-     +1: philip (without r1392599), cmpilato (without r1392599), breser
+     +1: philip, cmpilato (without r1392599), breser
 
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
