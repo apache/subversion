@@ -1078,13 +1078,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Move (rename) an item in a working copy or repository.\n"
      "usage: move SRC... DST\n"
      "\n"
-     "  When moving multiple sources, they will be added as children of DST,\n"
-     "  which must be a directory.\n"
-     "\n"
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
      "    WC  -> WC:   move and schedule for addition (with history)\n"
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"
+     "\n"
+     "  When moving multiple sources, they will be added as children of DST,\n"
+     "  which must be a directory.\n"
      "\n"
      "  The --revision option has no use and is deprecated.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
