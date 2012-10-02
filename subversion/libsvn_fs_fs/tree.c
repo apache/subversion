@@ -121,8 +121,10 @@ typedef struct fs_txn_root_data_t
 } fs_txn_root_data_t;
 
 /* Declared here to resolve the circular dependencies. */
-static svn_error_t * get_dag(dag_node_t **dag_node_p, svn_fs_root_t *root,
-                             const char *path, svn_boolean_t lock_cache,
+static svn_error_t * get_dag(dag_node_t **dag_node_p,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             svn_boolean_t needs_lock_cache,
                              apr_pool_t *pool);
 
 static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
@@ -415,12 +417,12 @@ locate_cache(svn_cache__t **cache,
 
    Since locking can be expensive and POOL may be long-living, for
    nodes that will not need to survive the next call to this function,
-   set LOCK_CACHE to FALSE. */
+   set NEEDS_LOCK_CACHE to FALSE. */
 static svn_error_t *
 dag_node_cache_get(dag_node_t **node_p,
                    svn_fs_root_t *root,
                    const char *path,
-                   svn_boolean_t lock_cache,
+                   svn_boolean_t needs_lock_cache,
                    apr_pool_t *pool)
 {
   svn_boolean_t found;
@@ -459,7 +461,7 @@ dag_node_cache_get(dag_node_t **node_p,
 
       /* if we found a node, make sure it remains valid at least as long
          as it would when allocated in POOL. */
-      if (node && lock_cache)
+      if (node && needs_lock_cache)
         lock_cache(ffd->dag_node_cache, pool);
     }
   else
@@ -1108,12 +1110,12 @@ make_path_mutable(svn_fs_root_t *root,
 
    Since locking can be expensive and POOL may be long-living, for
    nodes that will not need to survive the next call to this function,
-   set LOCK_CACHE to FALSE. */
+   set NEEDS_LOCK_CACHE to FALSE. */
 static svn_error_t *
 get_dag(dag_node_t **dag_node_p,
         svn_fs_root_t *root,
         const char *path,
-        svn_boolean_t lock_cache,
+        svn_boolean_t needs_lock_cache,
         apr_pool_t *pool)
 {
   parent_path_t *parent_path;
@@ -1122,7 +1124,7 @@ get_dag(dag_node_t **dag_node_p,
   /* First we look for the DAG in our cache
      (if the path may be canonical). */
   if (*path == '/')
-    SVN_ERR(dag_node_cache_get(&node, root, path, lock_cache, pool));
+    SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache, pool));
 
   if (! node)
     {
@@ -1132,7 +1134,8 @@ get_dag(dag_node_t **dag_node_p,
           path = svn_fs__canonicalize_abspath(path, pool);
 
           /* Try again with the corrected path. */
-          SVN_ERR(dag_node_cache_get(&node, root, path, lock_cache, pool));
+          SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache,
+                                     pool));
         }
 
       if (! node)
