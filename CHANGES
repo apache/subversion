@@ -75,7 +75,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.7
     * fix unbounded memory use with SVNPathAuthz short_circuit (r1387943)
     * fix svndumpfilter exclude --targets requires leading slash (issue #4234)
     * fix connection ttl for memcache should be 50 seconds (r1391641)
-    * fix dump: random odering of deleted paths with APR 1.4.6 (r1344864, et al)
+    * stabilize order of paths in dumpfiles with APR 1.4.6 (r1344864, et al)
 
  Developer-visible changes:
   - General:
