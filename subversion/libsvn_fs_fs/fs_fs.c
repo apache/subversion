@@ -5136,9 +5136,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      const char *fulltext_key = svn_fs_fs__combine_two_numbers(rep->revision,
-                                                                rep->offset,
-                                                                pool);
+      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
@@ -5147,8 +5145,10 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
           void *dummy = NULL;
 
           return svn_cache__get_partial(&dummy, success,
-                                        ffd->fulltext_cache, fulltext_key,
-                                        cache_access_wrapper, &wrapper_baton,
+                                        ffd->fulltext_cache,
+                                        &fulltext_cache_key,
+                                        cache_access_wrapper,
+                                        &wrapper_baton,
                                         pool);
         }
     }
