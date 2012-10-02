@@ -60,17 +60,15 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1351117
-   Fix svn_stream_read() in swig-py to work with SWIG-2.0.5
-   Justification:
-     Inconsistent behavior with different versions of SWIG.
-   Votes:
-     +1: breser 
-
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
 
+ * r1351117
+   Fix svn_stream_read() in swig-py to work with SWIG-2.0.5
+   Justification:
+     Inconsistent behavior with different versions of SWIG.
+   Votes:
+     +1: breser 
