@@ -90,12 +90,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1344864, r1344865, r1344869
-   Sort list of deleted paths in dump file output. See issue #4134.
-   Justification:
-     Reproducible output with APR 1.4.6.
-   Notes:
-     Merge with --accept=tc.
-   Votes:
-     +1: stsp, cmpilato, breser
