@@ -87,7 +87,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.7
     * fix build does not fail when apache httpd is not available (r1374198)
 
   - Bindings:
-    * fix swig-pl build fails with swig 2.0.7 and newer.
+    * fix swig-pl build fails with swig 2.0.7 and newer. (r1389658)
+    * fix swig-py runtime problems with swig 2.0.5 and newer (r1351117)
 
 
 Version 1.7.6
