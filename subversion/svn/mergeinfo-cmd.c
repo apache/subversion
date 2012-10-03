@@ -80,37 +80,30 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
   int col_width[COLS];
   int row, col;
 
-  /* The YCA (that is, the branching point) */
-  g[0][0] = apr_psprintf(pool, "  %-8ld", yca->rev);
-  g[1][0] =     "  |       ";
+  /* The YCA (that is, the branching point).  And an ellipsis, because we
+   * don't show information about earlier merges */
+  g[0][0] = apr_psprintf(pool, "  %-8ld  ", yca->rev);
+  g[1][0] =     "  |         ";
   if (strcmp(yca->url, right->url) == 0)
     {
-      g[2][0] = "----------";
-      g[3][0] = "   \\      ";
-      g[4][0] = "    \\     ";
-      g[5][0] = "     -----";
+      g[2][0] = "-------| |--";
+      g[3][0] = "   \\        ";
+      g[4][0] = "    \\       ";
+      g[5][0] = "     --| |--";
     }
   else if (strcmp(yca->url, target->url) == 0)
     {
-      g[2][0] = "     -----";
-      g[3][0] = "    /     ";
-      g[4][0] = "   /      ";
-      g[5][0] = "----------";
+      g[2][0] = "     --| |--";
+      g[3][0] = "    /       ";
+      g[4][0] = "   /        ";
+      g[5][0] = "-------| |--";
     }
   else
     {
-      g[2][0] = "     -----";
-      g[3][0] = "... /     ";
-      g[4][0] = "    \\     ";
-      g[5][0] = "     -----";
-    }
-
-  /* An ellipsis, because we don't show information about earlier merges */
-    {
-      g[2][1] = "| ... |---";
-      g[3][1] = "          ";
-      g[4][1] = "          ";
-      g[5][1] = "| ... |---";
+      g[2][0] = "     --| |--";
+      g[3][0] = "... /       ";
+      g[4][0] = "    \\       ";
+      g[5][0] = "     --| |--";
     }
 
   /* The last full merge */
@@ -166,9 +159,9 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
 
   /* Column headings */
   SVN_ERR(svn_cmdline_fputs(
-            _("    youngest          last               repos.\n"
-              "    common            full     tip of    path of\n"
-              "    ancestor          merge    branch    branch\n"
+            _("    youngest  last               repos.\n"
+              "    common    full     tip of    path of\n"
+              "    ancestor  merge    branch    branch\n"
               "\n"),
             stdout, pool));
 
