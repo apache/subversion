@@ -994,7 +994,7 @@ def status_unversioned_dir_in_wc(sbox):
   path = sbox.ospath('1/2')
   os.makedirs(path)
 
-  expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
+  expected_err = "svn: warning: (W155007|W155010): .*'.*(/|\\\\)" + \
                  os.path.basename(path) + \
                  "' was not found"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
