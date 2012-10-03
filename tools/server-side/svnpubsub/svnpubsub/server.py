@@ -73,12 +73,15 @@ import time
 
 class Revision:
     def __init__(self, r):
+        # Don't escape the values; json handles binary values fine.
+        # ET will happily emit literal control characters (eg, NUL),
+        # thus creating invalid XML, so the XML code paths do escaping.
         self.rev = r.get('revision')
         self.repos = r.get('repos')
-        self.dirs_changed = [x.encode('unicode_escape') for x in r.get('dirs_changed')]
-        self.author = r.get('author').encode('unicode_escape')
-        self.log = r.get('log').encode('unicode_escape')
-        self.date = r.get('date').encode('unicode_escape')
+        self.dirs_changed = [x for x in r.get('dirs_changed')]
+        self.author = r.get('author')
+        self.log = r.get('log')
+        self.date = r.get('date')
 
     def render_commit(self, format):
         if format == "json":
@@ -90,13 +93,13 @@ class Revision:
                                           'date': self.date}}) +","
         elif format == "xml":
             c = ET.Element('commit', {'repository': self.repos, 'revision': "%d" % (self.rev)})
-            ET.SubElement(c, 'author').text = self.author
-            ET.SubElement(c, 'date').text = self.date
-            ET.SubElement(c, 'log').text = self.log
+            ET.SubElement(c, 'author').text = self.author.encode('unicode_escape')
+            ET.SubElement(c, 'date').text = self.date.encode('unicode_escape')
+            ET.SubElement(c, 'log').text = self.log.encode('unicode_escape')
             d = ET.SubElement(c, 'dirs_changed')
             for p in self.dirs_changed:
                 x = ET.SubElement(d, 'path')
-                x.text = p
+                x.text = p.encode('unicode_escape')
             str = ET.tostring(c, 'UTF-8') + "\n"
             return str[39:]
         else:
@@ -112,7 +115,7 @@ class Revision:
             d = ET.SubElement(c, 'dirs_changed')
             for p in self.dirs_changed:
                 x = ET.SubElement(d, 'path')
-                x.text = p
+                x.text = p.encode('unicode_escape')
             str = ET.tostring(c, 'UTF-8') + "\n"
             return str[39:]
         else:
