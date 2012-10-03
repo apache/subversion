@@ -551,7 +551,7 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 
 /** The prefix used for all (ephemeral) transaction properties. */
-#define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
+#define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn:"
 
 /** Identifies the client version compability level.  For clients
  * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
