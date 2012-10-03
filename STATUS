@@ -65,10 +65,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1351117
-   Fix svn_stream_read() in swig-py to work with SWIG-2.0.5
-   Justification:
-     Inconsistent behavior with different versions of SWIG.
-   Votes:
-     +1: breser, danielsh (via IRC)
