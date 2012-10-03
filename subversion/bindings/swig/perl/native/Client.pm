@@ -9,7 +9,7 @@ my @_all_fns;
 BEGIN {
     @_all_fns =
         qw( version diff_summarize_dup create_context checkout3
-            checkout2 checkout update3 update2 update switch2 switch
+            checkout2 checkout update4 update3 update2 update switch2 switch
             add4 add3 add2 add mkdir3 mkdir2 mkdir delete3 delete2
             delete import3 import2 import commit4 commit3 commit2
             commit status4 status3 status2 status log4 log3 log2 log blame4
@@ -829,15 +829,73 @@ switched.
 
 =item $ctx-E<gt>update($path, $revision, $recursive, $pool)
 
-Update a working copy $path to $revision.
+Similar to $ctx-E<gt>update2() except that it accepts only a single target in
+$path, returns a single revision, and $ignore_externals is always set to FALSE.
+
+=item $ctx-E<gt>update2($paths, $revision, $recursive, $ignore_externals, $pool)
+
+Similar to $ctx-E<gt>update3() but with $allow_unver_obstructions always set to
+FALSE, $depth_is_sticky to FALSE, and $depth set according to $recursive: if
+$recursive is TRUE, set $depth to $SVN::Depth::infinity, if $recursive is
+FALSE, set $depth to $SVN::Depth::files.
+
+=item $ctx-E<gt>update3($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $pool)
+
+Similar to $ctx-E<gt>update4() but with $make_parents always set to FALSE and
+$adds_as_modification set to TRUE.
+
+=item $ctx-E<gt>update4($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $adds_as_modification, $make_parents)
+
+Update working trees $paths to $revision.
+
+$paths is a array reference of paths to be updated.  Unversioned paths that are
+the direct children of a versioned path will cause an update that attempts to
+add that path; other unversioned paths are skipped.
 
 $revision must be a revision number, 'HEAD', or a date or this method will
 raise the $SVN::Error::CLIENT_BAD_REVISION error.
 
+The paths in $paths can be from multiple working copies from multiple
+repositories, but even if they all come from the same repository there is no
+guarantee that revision represented by 'HEAD' will remain the same as each path
+is updated.
+
+If $ignore_externals is set, don't process externals definitions as part of
+this operation.
+
+If $depth is $SVN::Depth::infinity, update fully recursivelly.  Else if it is
+$SVN::Depth::immediates or $SVN::Depth::files, update each target and its file
+entries, but not its subdirectories.  Else if $SVN::Depth::empty, update
+exactly each target, nonrecursively (essentially, update the target's
+properties).
+
+If $depth is $SVN::Depth::unknown, take the working depth from $paths and then
+describe as behaved above.
+
+If $depth_is_sticky is set and $depth is not $SVN::Depth::unknown, then in
+addition to update paths, also set their sticky ambient depth value to $depth.
+
+If $allow_unver_obstructions is TRUE then the update tolerates existing 
+unversioned items that obstruct added paths.  Only obstructions of the same
+type (file or dir) as the added item are tolerated.  The text of obstructing
+files is left as-is, effectively treating it as a user modification after the
+update.  Working properties of obstructing items are set equal to the base
+properties.  If $allow_unver_obstructions is FALSE then the update will abort
+if there are any unversioned obstructing items.
+
+If $adds_as_modification is TRUE, a local addition at the same path as an 
+incoming addition of the same node kind results in a normal node with a
+possible local modification, instead of a tree conflict.
+
+If $make_parents is TRUE, create any non-existent parent directories also by
+checking them out at depth=empty.
+
 Calls the notify callback for each item handled by the update, and
 also for files restored from the text-base.
 
-Returns the revision to which the working copy was actually updated.
+Returns an array reference to an array of revision numbers with each element
+set to the revision to which $revision was resolved for the corresponding
+element of $paths.
 
 
 =item $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);

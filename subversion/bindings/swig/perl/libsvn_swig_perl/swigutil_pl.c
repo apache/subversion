@@ -229,6 +229,12 @@ static SV *convert_int(int value, void *dummy)
   return sv_2mortal(newSViv(value));
 }
 
+static SV *convert_svn_revnum_t(svn_revnum_t revnum, void *dummy)
+{
+  return sv_2mortal(newSViv((long int)revnum));
+
+}
+
 /* c -> perl hash convertors */
 static SV *convert_hash(apr_hash_t *hash, element_converter_t converter_func,
                         void *ctx)
@@ -300,6 +306,12 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
   return convert_array(array, (element_converter_t)convert_to_swig_type,
                        tinfo);
 }
+
+SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
+{
+    return convert_array(array, (element_converter_t)convert_svn_revnum_t,
+                         NULL);
+} 
 
 /* put the va_arg in stack and invoke caller_func with func.
    fmt:
