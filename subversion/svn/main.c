@@ -1056,8 +1056,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  SOURCE and TARGET are the source and target branch URLs, respectively.\n"
      "  (If a WC path is given, the corresponding base URL is used.) The default\n"
      "  TARGET is the current working directory ('.'). REV specifies the revision\n"
-     "  to be considered the tip of the branch; the default is HEAD for a URL or\n"
-     "  BASE for a WC path.\n"
+     "  to be considered the tip of the branch; the default for SOURCE is HEAD,\n"
+     "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
