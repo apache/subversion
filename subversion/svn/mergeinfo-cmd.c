@@ -256,20 +256,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
 
-  /* We expect a single source URL followed by a single target --
-     nothing more, nothing less. */
+  /* Parse the arguments: SOURCE[@REV] optionally followed by TARGET[@REV]. */
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Not enough arguments given"));
   if (targets->nelts > 2)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Too many arguments given"));
-
-  /* Parse the SOURCE-URL[@REV] argument. */
   SVN_ERR(svn_opt_parse_path(&src_peg_revision, &source,
                              APR_ARRAY_IDX(targets, 0, const char *), pool));
-
-  /* Parse the TARGET[@REV] argument (if provided). */
   if (targets->nelts == 2)
     {
       SVN_ERR(svn_opt_parse_path(&tgt_peg_revision, &target,
@@ -283,11 +278,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
 
   /* If no peg-rev was attached to the source URL, assume HEAD. */
+  /* ### But what if SOURCE is a WC path not a URL -- shouldn't we then use
+   *     BASE (but not WORKING: that would be inconsistent with 'svn merge')? */
   if (src_peg_revision.kind == svn_opt_revision_unspecified)
     src_peg_revision.kind = svn_opt_revision_head;
 
   /* If no peg-rev was attached to a URL target, then assume HEAD; if
      no peg-rev was attached to a non-URL target, then assume BASE. */
+  /* ### But we would like to be able to examine a working copy with an
+         uncommitted merge in it, so change this to use WORKING not BASE? */
   if (tgt_peg_revision.kind == svn_opt_revision_unspecified)
     {
       if (svn_path_is_url(target))
