@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 188;
+use Test::More tests => 197;
 use strict;
 
 # shut up about variables that are only used once.
@@ -308,6 +308,32 @@ is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
 # TEST
 is($ctx->update($wcpath,'HEAD',1),$current_rev,
    'Return from update is the current rev');
+
+my $update2_result = $ctx->update2([$wcpath],'HEAD',1,0);
+# TEST
+isa_ok($update2_result,'ARRAY','update2 returns a list');
+# TEST
+is(scalar(@$update2_result),1,'update2 member count');
+# TEST
+is($update2_result->[0],$current_rev,'return from update2 is the current rev');
+
+my $update3_result = $ctx->update3([$wcpath],'HEAD',$SVN::Depth::infinity,
+	                                 0,0,0);
+# TEST
+isa_ok($update3_result,'ARRAY','update3 returns a list');
+# TEST
+is(scalar(@$update3_result),1,'update3 member count');
+# TEST
+is($update3_result->[0],$current_rev,'return from update3 is the current rev');
+
+my $update4_result = $ctx->update4([$wcpath],'HEAD',$SVN::Depth::infinity,
+                                   0,0,0,1,0);
+# TEST
+isa_ok($update4_result,'ARRAY','update4 returns a list');
+# TEST
+is(scalar(@$update4_result),1,'update4 member count');
+# TEST
+is($update4_result->[0],$current_rev,'return from update4 is the current rev');
 
 # no return so we should get undef as the result
 # we will get a _p_svn_error_t if there is an error.
