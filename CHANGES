@@ -25,6 +25,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
+    * 'svn mergeinfo' now shows a summary graph by default instead of revnums
     * new --search and --search-and options for 'svn log' (r1354666, -83518)
     * new built-in interactive text conflict merge tool (r1357864, et al)
     * new 'svn --version --verbose' option shows runtime environment info
