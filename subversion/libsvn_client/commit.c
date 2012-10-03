@@ -75,6 +75,13 @@ typedef struct import_ctx_t
 
   /* A magic cookie for mime-type detection. */
   svn_magic__cookie_t *magic_cookie;
+
+  /* Collection of all possible configuration file dictated auto-props and
+     svn:config:autoprops.  A hash mapping const char * file patterns to a
+     second hash which maps const char * property names to const char *
+     property values.  Properties which don't have a value, e.g. svn:executable,
+     simply map the property name to an empty string. */
+  apr_hash_t *autoprops;
 } import_ctx_t;
 
 
@@ -219,9 +226,11 @@ import_file(const svn_delta_editor_t *editor,
   if (! dirent->special)
     {
       /* add automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, local_abspath,
-                                         import_ctx->magic_cookie,
-                                         ctx, pool));
+      SVN_ERR(svn_client__get_paths_auto_props(&properties, &mimetype,
+                                               local_abspath,
+                                               import_ctx->magic_cookie,
+                                               import_ctx->autoprops,
+                                               ctx, pool, pool));
     }
   else
     properties = apr_hash_make(pool);
@@ -590,6 +599,10 @@ import_dir(const svn_delta_editor_t *editor,
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
  * the import (values are unused).
  *
+ * AUTOPROPS is hash of all config file autoprops and svn:config:auto-props
+ * inherited by the import target, see the IMPORT_CTX member of the same
+ * name.
+ *
  * If NO_IGNORE is FALSE, don't import files or directories that match
  * ignore patterns.
  *
@@ -610,6 +623,7 @@ import(const char *local_abspath,
        void *edit_baton,
        svn_depth_t depth,
        apr_hash_t *excludes,
+       apr_hash_t *autoprops,
        svn_boolean_t no_ignore,
        svn_boolean_t ignore_unknown_node_types,
        svn_client_import_filter_func_t filter_callback,
@@ -624,6 +638,7 @@ import(const char *local_abspath,
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
   const svn_io_dirent2_t *dirent;
 
+  import_ctx->autoprops = autoprops;
   svn_magic__init(&import_ctx->magic_cookie, pool);
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
@@ -822,7 +837,8 @@ get_ra_editor(const svn_delta_editor_t **editor,
   return SVN_NO_ERROR;
 }
 
-
+
+
 /*** Public Interfaces. ***/
 
 svn_error_t *
@@ -853,6 +869,7 @@ svn_client_import5(const char *path,
   const char *dir;
   apr_hash_t *commit_revprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *autoprops;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -964,10 +981,15 @@ svn_client_import5(const char *path,
                                     commit_baton, NULL, TRUE,
                                     scratch_pool));
 
+  /* Get inherited svn:config:auto-props for the location we
+     are importing to. */
+  SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
+                                         scratch_pool, iterpool));
+
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import(local_abspath, new_entries, editor, edit_baton,
-                    depth, excludes, no_ignore,
+                    depth, excludes, autoprops, no_ignore,
                     ignore_unknown_node_types,
                     filter_callback, filter_baton,
                     ctx, iterpool)))
