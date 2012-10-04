@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 197;
+use Test::More tests => 199;
 use strict;
 
 # shut up about variables that are only used once.
@@ -152,6 +152,14 @@ ok($rph->{'svn:date'},'svn:date is set from revprop_list');
 # TEST
 is($ctx->checkout($reposurl,$wcpath,'HEAD',1),$current_rev,
    'Returned current rev from checkout');
+
+# TEST
+is($ctx->checkout2($reposurl,$wcpath . '2',undef,'HEAD',1,0),$current_rev,
+   'Returned current rev from checkout2');
+
+# TEST
+is($ctx->checkout3($reposurl,$wcpath . '3',undef,'HEAD',$SVN::Depth::infinity,
+                   0,0),$current_rev, 'Returned current rev from checkout3');
 
 # TEST
 is(SVN::Client::url_from_path($wcpath),$reposurl,

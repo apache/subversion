@@ -299,11 +299,38 @@ because the desired revision can not be determined.
 
 =item $ctx-E<gt>checkout($url, $path, $revision, $recursive, $pool);
 
+Similar to $ctx-E<gt>checkout2(), but with $peg_revision always set to undef (unspecified) and $ignore_externals always set to FALSE.
+
+=item $ctx-E<gt>checkout2($url, $path, $peg_revision, $revision, $recursive, $ignore_externals, $pool);
+
+Similar to $ctx-E<gt>checkout3(), but with $allow_unver_obstructions always set
+to FALSE, and $depth set according to $recurse: if $recurse is TRUE, $depth is
+$SVN::Depth::infinity, if $recurse is FALSE, set $depth to $SVN::Depth::files.
+
+=item $ctx-E<gt>checkout3($url, $path, $preg_revision, $revision, $depth, $ignore_externals, $allow_unver_obstructions, $pool);
+
 Checkout a working copy of $url at $revision using $path as the root directory
 of the newly checked out working copy.
 
+The $peg_revision sets the revision at which the path in the $url is treated as representing.
+
 $revision must be a number, 'HEAD', or a date.  If $revision does not
 meet these requirements the $SVN::Error::CLIENT_BAD_REVISION is raised.
+
+$depth is one of the constants in SVN::Depth and specifies the depth of the
+operation.  If set to $SVN::Depth::unknown, then behave as if for
+$SVN::Depth::infinity, except in the case of resuming a previous checkout of
+$path (i.e. updating) in which case use the depth of the existing working copy.
+
+$ignore_exteranls if set to TRUE the operation will ignore external definitions.
+
+$allow_unver_obstructions if set to TRUE the operation will tolerate existing
+unversioned items that obstruct incoming paths.  Only obstructions of the same
+type (file or dir) as the added item are tolerated.  The text of obstructing
+files is left as-is, effectively treating it as a user modification after the
+checkout.  Working properties of obstructing items are set equal to the base
+properties.  If set to FALSE, then abort if there are any unversioned
+obstructing items.
 
 Returns the value of the revision actually checked out of the repository.
 
