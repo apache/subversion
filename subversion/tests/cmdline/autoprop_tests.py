@@ -42,6 +42,7 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
+from svntest.main import SVN_CONFIG_AUTOPROPS
 
 # Helper function
 def check_proplist(path, exp_out):
@@ -324,6 +325,290 @@ def fail_add_mixed_eol_style(sbox):
     {filename : Item(status='? ')})
   run_and_verify_unquiet_status(filepath, expected_status)
 
+#----------------------------------------------------------------------
+
+def create_inherited_autoprops_config(config_dir, enable_flag):
+  "create config stuffs for inherited autoprops tests"
+
+  # contents of the file 'config'
+  config_contents = '''\
+[auth]
+password-stores =
+
+[miscellany]
+enable-auto-props = %s
+
+[auto-props]
+*.c = svn:keywords=Author Date Id Rev URL;svn:eol-style=native;
+''' % (enable_flag and 'yes' or 'no')
+
+  svntest.main.create_config_dir(config_dir, config_contents)
+
+#----------------------------------------------------------------------
+def check_inheritable_autoprops(sbox, auto_props_enabled):
+  """Check that the autoprops added or imported by inheritable_autoprops_test
+     are as expected based on whether traditional auto props are active or
+     not, as indicated by AUTO_PROPS_ENABLED."""
+
+  foo_path = sbox.ospath('foo.c')
+  bar_path = sbox.ospath('B/bar.c')
+  baf_path = sbox.ospath('C/baf.c')
+  qux_path = sbox.ospath('D/qux.c')
+  rip_path = sbox.ospath('D/rip.bat')
+  snk_path = sbox.ospath('D/H/snk.py')
+  sir_path = sbox.ospath('D/H/sir.c')
+
+  if auto_props_enabled:
+    check_proplist(foo_path, {'svn:eol-style':'CRLF',
+                              'svn:keywords':'Author Date Id Rev URL'})
+    check_proplist(bar_path, {'svn:eol-style':'CR',
+                              'svn:keywords':'Date'})
+    check_proplist(baf_path, {'svn:eol-style':'LF',
+                              'svn:keywords':'Rev'})
+    check_proplist(qux_path, {'svn:eol-style':'CRLF',
+                              'svn:keywords':'Author Date Id Rev URL'})
+    check_proplist(rip_path, {'svn:executable':'*'})
+    check_proplist(snk_path, {'svn:mime-type':'text/x-python'})
+    check_proplist(sir_path, {'svn:eol-style':'CRLF',
+                              'svn:keywords':'Author Date Id Rev URL'})
+  else:
+    check_proplist(foo_path, {'svn:eol-style':'CRLF'})
+    check_proplist(bar_path, {'svn:eol-style':'CR',
+                              'svn:keywords':'Date'})
+    check_proplist(baf_path, {'svn:eol-style':'LF',
+                              'svn:keywords':'Rev'})
+    check_proplist(qux_path, {'svn:eol-style':'CRLF'})
+    check_proplist(rip_path, {'svn:executable':'*'})
+    check_proplist(snk_path, {'svn:mime-type':'text/x-python'})
+    check_proplist(sir_path, {'svn:eol-style':'CRLF'})
+
+#----------------------------------------------------------------------
+def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
+                               do_import_or_add=True):
+  """configurable autoprops and svn:config:auto-props test.
+
+     CMD is the subcommand to test: 'import' or 'add'
+     if CFGENABLE is true, enable autoprops in the config file, else disable
+     if CLIENABLE == 1: --auto-props is added to the command line
+                     0: nothing is added
+                    -1: --no-auto-props is added to command line
+     if string SUBDIR is not empty files are created in that subdir and the
+       directory is added/imported
+     if DO_IMPORT_OR_ADD is false, setup the test, but don't perform
+       the actual import or add."""
+
+  # Bootstrap
+  sbox.build()
+
+  # some directories
+  wc_dir = sbox.wc_dir
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)#config_dir = "S:/SVN/src-trunk-4/Debug/subversion/tests/cmdline/svn-test-work/config"
+  repos_url = sbox.repo_url
+
+  # initialize parameters
+  if cmd == 'import':
+    parameters = ['import', '-m', 'importing']
+    files_dir = tmp_dir
+  else:
+    parameters = ['add']
+    files_dir = wc_dir
+
+  parameters = parameters + ['--config-dir', config_dir]
+
+  create_inherited_autoprops_config(config_dir, cfgenable)
+
+  # add comandline flags
+  if clienable == 1:
+    parameters = parameters + ['--auto-props']
+    enable_flag = 1
+  elif clienable == -1:
+    parameters = parameters + ['--no-auto-props']
+    enable_flag = 0
+  else:
+    enable_flag = cfgenable
+
+  # setup subdirectory if needed
+  if len(subdir) > 0:
+    files_dir = os.path.join(files_dir, subdir)
+    files_wc_dir = os.path.join(wc_dir, subdir)
+    os.makedirs(files_dir)
+  else:
+    files_wc_dir = wc_dir
+
+  # Set differing svn:config:auto-props properties on various directories.
+  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+                      '*.c = svn:eol-style=CRLF\n'
+                      '*.bat = svn:executable',
+                      '.')
+  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+                      '*.c = svn:eol-style=CR;svn:keywords=Date',
+                      'A/B')
+  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+                      '*.c = svn:eol-style=LF;svn:keywords=Rev',
+                      'A/C')
+  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+                      '*.py = svn:mime-type=text/x-python',
+                      'A/D')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Add some ' + SVN_CONFIG_AUTOPROPS +
+                                     ' properties', wc_dir)
+
+  # Switch the root of the WC to ^/A.
+  svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                       sbox.repo_url + '/A', wc_dir)
+
+  # Array of file names to add or import, their WC locations (relative to the
+  # WC root) if being added, and their repository locations if being imported.
+  filenames = [['foo.c',  'foo.c',                           'A/foo.c'],
+               ['bar.c',   os.path.join('B', 'bar.c'),       'A/B/bar.c'],
+               ['baf.c',   os.path.join('C', 'baf.c'),       'A/C/baf.c'],
+               ['qux.c',   os.path.join('D', 'qux.c'),       'A/D/qux.c'],
+               ['rip.bat', os.path.join('D', 'rip.bat'),     'A/D/rip.bat'],
+               ['snk.py',  os.path.join('D', 'H', 'snk.py'), 'A/D/H/snk.py'],
+               ['ric.c',   os.path.join('D', 'H', 'sir.c'),  'A/D/H/sir.c']]
+
+  for filename in filenames:
+    if cmd == 'import':
+      svntest.main.file_write(os.path.join(files_dir, filename[0]),
+                              'foo\nbar\nbaz\n')
+    else:
+      svntest.main.file_write(os.path.join(files_dir, filename[1]),
+                              'foo\nbar\nbaz\n')
+
+  if do_import_or_add:
+    if len(subdir) == 0:
+      # add/import the files
+      for filename in filenames:
+        if cmd == 'import':
+          path = os.path.join(files_dir, filename[0])
+          tmp_params = parameters + [path, repos_url + '/' + filename[2]]
+        else:
+          path = os.path.join(files_dir, filename[1])
+          tmp_params = parameters + [path]
+        svntest.main.run_svn(None, *tmp_params)
+    else:
+      # add/import subdirectory
+      if cmd == 'import':
+        parameters = parameters + [files_dir, repos_url]
+      else:
+        parameters = parameters + [files_wc_dir]
+      svntest.main.run_svn(None, *parameters)
+
+    # do an svn co if needed
+    if cmd == 'import':
+      svntest.main.run_svn(None, 'checkout', repos_url + '/A', files_wc_dir,
+                          '--config-dir', config_dir)
+
+    check_inheritable_autoprops(sbox, enable_flag)
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_no_none(sbox):
+  "inherit add: config=no, commandline=none"
+  inheritable_autoprops_test(sbox, 'add', False, 0, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_yes_none(sbox):
+  "inherit add: config=yes,  commandline=none"
+  inheritable_autoprops_test(sbox, 'add', True, 0, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_no_yes(sbox):
+  "inherit add: config=no,  commandline=yes"
+
+  inheritable_autoprops_test(sbox, 'add', 0, 1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_yes_yes(sbox):
+  "inherit add: config=yes, commandline=yes"
+
+  inheritable_autoprops_test(sbox, 'add', 1, 1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_no_no(sbox):
+  "inherit add: config=no,  commandline=no"
+
+  inheritable_autoprops_test(sbox, 'add', 0, -1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_add_yes_no(sbox):
+  "inherit add: config=yes, commandline=no"
+
+  inheritable_autoprops_test(sbox, 'add', 1, -1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_import_no_none(sbox):
+  "inherit import: config=no, commandline=none"
+
+  inheritable_autoprops_test(sbox, 'import', False, 0, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_imp_yes_none(sbox):
+  "inherit import: config=yes, commandline=none"
+
+  inheritable_autoprops_test(sbox, 'import', 1, 0, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_imp_no_yes(sbox):
+  "inherit import: config=no,  commandline=yes"
+
+  inheritable_autoprops_test(sbox, 'import', 0, 1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_imp_yes_yes(sbox):
+  "inherit import: config=yes, commandline=yes"
+
+  inheritable_autoprops_test(sbox, 'import', 1, 1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_imp_no_no(sbox):
+  "inherit import: config=no,  commandline=no"
+
+  inheritable_autoprops_test(sbox, 'import', 0, -1, '')
+
+#----------------------------------------------------------------------
+
+def svn_config_autoprops_imp_yes_no(sbox):
+  "inherit import: config=yes, commandline=no"
+
+  inheritable_autoprops_test(sbox, 'import', 1, -1, '')
+
+#----------------------------------------------------------------------
+# Test svn:config:auto-props when 'svn add' targets an already versioned
+# target.
+#
+# Currently this fails with:
+#   >svn add . --force
+#   ..\..\..\subversion\svn\add-cmd.c:85: (apr_err=155007)
+#   ..\..\..\subversion\svn\util.c:981: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_client\add.c:900: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_client\add.c:741: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_client\add.c:586: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_client\prop_commands.c:894: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_wc\node.c:295: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_wc\wc_db.c:12694: (apr_err=155007)
+#   ..\..\..\subversion\libsvn_wc\wc_db_wcroot.c:556: (apr_err=155007)
+#   svn: E155007: 'S:\SVN\src-trunk-4\Debug\subversion\tests\cmdline
+#   \svn-test-work\working_copies' is not a working copy
+@XFail()
+def svn_config_autoprops_add_versioned_target(sbox):
+  "svn:config:auto-props and versioned target"
+
+  inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
+  svntest.actions.run_and_verify_svn(None, [], [], 'add', '--force',
+                                     sbox.wc_dir)
+  check_inheritable_autoprops(sbox, True)
 
 ########################################################################
 # Run the tests
@@ -346,6 +631,19 @@ test_list = [ None,
               autoprops_add_dir,
               autoprops_imp_dir,
               fail_add_mixed_eol_style,
+              svn_config_autoprops_add_no_none,
+              svn_config_autoprops_add_yes_none,
+              svn_config_autoprops_add_no_yes,
+              svn_config_autoprops_add_yes_yes,
+              svn_config_autoprops_add_no_no,
+              svn_config_autoprops_add_yes_no,
+              svn_config_autoprops_import_no_none,
+              svn_config_autoprops_imp_yes_none,
+              svn_config_autoprops_imp_no_yes,
+              svn_config_autoprops_imp_yes_yes,
+              svn_config_autoprops_imp_no_no,
+              svn_config_autoprops_imp_yes_no,
+              svn_config_autoprops_add_versioned_target,
              ]
 
 if __name__ == '__main__':

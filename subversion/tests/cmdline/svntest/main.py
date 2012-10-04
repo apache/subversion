@@ -174,6 +174,9 @@ work_dir = "svn-test-work"
 # Constant for the merge info property.
 SVN_PROP_MERGEINFO = "svn:mergeinfo"
 
+# Constant for the inheritabled auto-props property.
+SVN_CONFIG_AUTOPROPS = "svn:config:auto-props"
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
 general_repo_dir = os.path.join(work_dir, "repositories")
