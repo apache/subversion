@@ -94,7 +94,7 @@ typedef apr_uint32_t apr_uintptr_t;
  *
  * @since New in 1.8.
  */
-#if APR_HAVE_WINDOWS_H
+#ifdef WIN32
 #define SVN_LOCK_IS_BUSY(x) \
     (APR_STATUS_IS_EBUSY(x) || (x) == APR_FROM_OS_ERROR(WAIT_TIMEOUT))
 #else
