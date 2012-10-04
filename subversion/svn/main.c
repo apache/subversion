@@ -1053,7 +1053,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
      "     valid range values.\n"
      "\n"
-     "  SOURCE and TARGET are the source and target branch URLs, respectively.\n"
+     "  SOURCE and TARGET are the source and target branch URLs, respectively.\n"
      "  (If a WC path is given, the corresponding base URL is used.) The default\n"
      "  TARGET is the current working directory ('.'). REV specifies the revision\n"
      "  to be considered the tip of the branch; the default for SOURCE is HEAD,\n"
