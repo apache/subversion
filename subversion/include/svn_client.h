@@ -1471,7 +1471,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  * control, return the error #SVN_ERR_ENTRY_EXISTS.  If @a force is
  * set, do not error on already-versioned items.  When used with @a depth
  * set to #svn_depth_infinity it will enter versioned directories; scheduling
- * versioned children. 
+ * unversioned children. 
  *
  * If @a ctx->notify_func2 is non-NULL, then for each added item, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the
