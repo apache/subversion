@@ -510,10 +510,22 @@ all_auto_props_collector(const char *name,
 
       if (len > 0)
         {
-          svn_string_t *propval =
-            svn_string_create(this_value, autoprops_baton->result_pool);
           apr_hash_t *pattern_hash = apr_hash_get(autoprops_baton->autoprops,
                                                   name, APR_HASH_KEY_STRING);
+          svn_string_t *propval;
+
+          /* Force reserved boolean property values to '*'. */
+          if (svn_prop_is_boolean(property))
+            {
+              /* SVN_PROP_EXECUTABLE, SVN_PROP_NEEDS_LOCK, SVN_PROP_SPECIAL */
+              propval = svn_string_create("*", autoprops_baton->result_pool);
+            }
+          else
+            {
+              propval = svn_string_create(this_value,
+                                          autoprops_baton->result_pool);
+            }
+
           if (!pattern_hash)
             {
               pattern_hash = apr_hash_make(autoprops_baton->result_pool);
