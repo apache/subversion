@@ -1465,9 +1465,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a path and everything under it fully recursively.
  *
  * @a path's parent must be under revision control already (unless
- * @a add_parents is TRUE), but @a path is not.  If @a recursive is
- * set, then assuming @a path is a directory, all of its contents will
- * be scheduled for addition as well.
+ * @a add_parents is TRUE), but @a path is not.
  *
  * If @a force is not set and @a path is already under version
  * control, return the error #SVN_ERR_ENTRY_EXISTS.  If @a force is
