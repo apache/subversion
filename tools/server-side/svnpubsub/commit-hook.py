@@ -68,6 +68,7 @@ def do_put(body):
 
 
 def main(repo, revision):
+    revision = revision.lstrip('r')
     i = svncmd_info(repo, revision)
     data = {'revision': int(revision),
             'dirs_changed': [],
