@@ -80,7 +80,7 @@ import traceback
 import signal
 from string import Template
 
-# Packages that come with svnsubpub
+# Packages that come with svnpubsub
 import svnpubsub.client
 import daemonize
 
@@ -116,7 +116,7 @@ class BigDoEverythingClass(object):
     result = [ ]
     for section in self.config.sections():
       sys.stdout.flush()
-      section_list = section.split('/', 2)
+      section_list = section.split('/', 1)
       if len(section_list) < 2:
         # No slash so assume all paths
         section_list.append('')
