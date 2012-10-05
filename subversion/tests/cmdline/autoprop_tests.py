@@ -395,7 +395,9 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
      if string SUBDIR is not empty files are created in that subdir and the
        directory is added/imported
      if DO_IMPORT_OR_ADD is false, setup the test, but don't perform
-       the actual import or add."""
+       the actual import or add.
+
+     Return the directory where the config dir (if any) is located."""
 
   # Bootstrap
   sbox.build()
@@ -403,7 +405,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   # some directories
   wc_dir = sbox.wc_dir
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)#config_dir = "S:/SVN/src-trunk-4/Debug/subversion/tests/cmdline/svn-test-work/config"
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 
   # initialize parameters
@@ -502,6 +504,8 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
     check_inheritable_autoprops(sbox, enable_flag)
 
+  return config_dir
+
 #----------------------------------------------------------------------
 
 def svn_config_autoprops_add_no_none(sbox):
@@ -587,27 +591,23 @@ def svn_config_autoprops_imp_yes_no(sbox):
 #----------------------------------------------------------------------
 # Test svn:config:auto-props when 'svn add' targets an already versioned
 # target.
-#
-# Currently this fails with:
-#   >svn add . --force
-#   ..\..\..\subversion\svn\add-cmd.c:85: (apr_err=155007)
-#   ..\..\..\subversion\svn\util.c:981: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_client\add.c:900: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_client\add.c:741: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_client\add.c:586: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_client\prop_commands.c:894: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_wc\node.c:295: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_wc\wc_db.c:12694: (apr_err=155007)
-#   ..\..\..\subversion\libsvn_wc\wc_db_wcroot.c:556: (apr_err=155007)
-#   svn: E155007: 'S:\SVN\src-trunk-4\Debug\subversion\tests\cmdline
-#   \svn-test-work\working_copies' is not a working copy
-@XFail()
 def svn_config_autoprops_add_versioned_target(sbox):
   "svn:config:auto-props and versioned target"
 
-  inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
-  svntest.actions.run_and_verify_svn(None, [], [], 'add', '--force',
-                                     sbox.wc_dir)
+  config_dir = inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
+
+  # Perform the add with the --force flag, and check the status.
+  ### Note: You have to be inside the working copy or else Subversion
+  ### will think you're trying to add the working copy to its parent
+  ### directory, and will (possibly, if the parent directory isn't
+  ### versioned) fail -- see also schedule_tests.py 11 "'svn add'
+  ### should traverse already-versioned dirs"
+  saved_wd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  svntest.main.run_svn(None, 'add', '.', '--force', '--config-dir',
+                       config_dir)
+  os.chdir(saved_wd)
+
   check_inheritable_autoprops(sbox, True)
 
 ########################################################################
