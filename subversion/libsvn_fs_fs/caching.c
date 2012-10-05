@@ -103,8 +103,7 @@ warn_on_cache_errors(svn_error_t *err,
 {
   svn_fs_t *fs = baton;
   (fs->warning)(fs->warning_baton, err);
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
+  return err;
 }
 
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
