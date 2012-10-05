@@ -41,13 +41,15 @@
 # template=string
 #   A string to use to format the output.  The string is a Python 
 #   string Template.  The following variables are available:
-#   $author, $rev, $date, $uuid, $log, $log, $log_firstline, $dirs_changed,
-#   $dirs_count, $dirs_count_s, $subdirs_count, $subdirs_count_s, $dirs_root
+#   $author, $rev, $date, $uuid, $log, $log, $log_firstline,
+#   $log_firstparagraph, $dirs_changed, $dirs_count, $dirs_count_s,
+#   $subdirs_count, $subdirs_count_s, $dirs_root
 #   Most of them should be self explanatory.  $dirs_count is the number of
 #   entries in $dirs_changed, $dirs_count_s is a friendly string version,
 #   $dirs_root is the common root of all the $dirs_changed, $subdirs_count
 #   is the number of subdirs under the $dirs_root that changed,
-#   $subdirs_root_s is a friendly string version.
+#   $subdirs_root_s is a friendly string version. $log_firstparagraph cuts
+#   the log message at the first blank line and replaces newlines with spaces.
 #
 # Within the config file you have sections.  Any configuration option
 # missing from a given section is found in the [DEFAULT] section.
@@ -78,6 +80,7 @@ import optparse
 import ConfigParser
 import traceback
 import signal
+import re
 from string import Template
 
 # Packages that come with svnpubsub
@@ -131,7 +134,9 @@ class BigDoEverythingClass(object):
   def fill_in_extra_args(self, rev):
     # Add entries to the rev object that are useful for
     # formatting.
-    rev.log_firstline = rev.log.split("\\n",1)[0]
+    rev.log_firstline = rev.log.split("\n",1)[0]
+    rev.log_firstparagraph = re.split("\r?\n\r?\n",rev.log,1)[0]
+    rev.log_firstparagraph = re.sub("\r?\n"," ",rev.log_firstparagraph)
     if rev.dirs_changed:
       rev.dirs_root = posixpath.commonprefix(rev.dirs_changed)
       rev.dirs_count = len(rev.dirs_changed)
