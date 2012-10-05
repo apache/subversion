@@ -36,10 +36,10 @@
 #   The hostname/port combination of the irker daemon.  If port is
 #   omitted it defaults to 6659.  Irker is connected to over UDP.
 # match=What to use to decide if the commit should be sent to irker.
-#   It consists of the repository UUID followed by a slash and the path.
-#   The UUID may be replaced by a * to match all UUIDs.  If the UUID matches
-#   and any of the changed dirs starts with a portion of the path then the
-#   commit will be considered a match and will be sent to irker.
+#   It consists of the repository UUID followed by a slash and a glob pattern.
+#   The UUID may be replaced by a * to match all UUIDs. The glob pattern will
+#   be matched against all of the dirs_changed.  Both the UUID and the glob
+#   pattern must match to send the message to irker.
 # to=url
 #   Space separated list of URLs (any URL that Irker will accept) to
 #   send the resulting message to.  At current Irker only supports IRC.
@@ -94,6 +94,7 @@ import ConfigParser
 import traceback
 import signal
 import re
+import fnmatch
 from string import Template
 
 # Packages that come with svnpubsub
@@ -134,11 +135,11 @@ class BigDoEverythingClass(object):
       match = self.config.get(section, "match").split('/', 1)
       if len(match) < 2:
         # No slash so assume all paths
-        match.append('')
+        match.append('*')
       match_uuid, match_path = match
       if rev.uuid == match_uuid or match_uuid == "*":
         for path in rev.dirs_changed:
-          if path.startswith(match_path):
+          if fnmatch.fnmatch(path, match_path):
             result.append(section)
             break
     return result
