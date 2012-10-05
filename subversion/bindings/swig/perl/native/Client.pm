@@ -254,13 +254,49 @@ sub new
 
 =item $ctx-E<gt>add($path, $recursive, $pool);
 
+Similar to $ctx-E<gt>add2(), but with $force always set to FALSE.
+
+=item $ctx-E<gt>add2($path, $recursive, $force, $ctx, $pool);
+
+Similar to $ctx-E<gt>add3(), but with $no_ignore always set to FALSE.
+
+=item $ctx-E<gt>add3($path, $recursive, $force, $no_ignore, $pool);
+
+Similar to $ctx-E<gt>add4(), but with $add_parents always set to FALSE and
+$depth set according to $recursive; if TRUE, then depth is
+$SVN::Depth::infinity, if FALSE, then $SVN::Depth::empty.
+
+=item $ctx-E<gt>add4($path, $depth, $force, $no_ignore, $add_parents, $pool);
+
 Schedule a working copy $path for addition to the repository.
 
-$path's parent must be under revision control already, but $path is not.
-If $recursive is set, then assuming $path is a directory, all of its
-contents will be scheduled for addition as well.
+If $depth is $SVN::Depth::empty, add just $path and nothing below it.  If
+$SVN::Depth::files, add $path and any file children of $path.  If 
+$SVN::Depth::immediates, add $path, any file children, and any immediate
+subdirectories (but nothing underneath those subdirectories).  If 
+$SVN::Depth::infinity, add $path and everything under it fully recursively.
+
+$path's parent must be under revision control already (unless $add_parents is
+TRUE), but $path is not.
+
+Unless $force is TRUE and $path is already under version control, returns an
+$SVN::Error::ENTRY_EXISTS object.  If $force is set, do not error on
+already-versioned items.  When used with $depth set to $SVN::Depth::infinity
+it will enter versioned directories; scheduling unversioned children. 
 
 Calls the notify callback for each added item.
+
+If $no_ignore is FALSE, don't add any file or directory (or recurse into any
+directory) that is unversioned and found by recursion (as opposed to being the
+explicit target $path) and whose name matches the svn:ignore property on its
+parent directory or the global-ignores list in $ctx->config.  If $no_ignore is
+TRUE, do include such files and directories.  (Note that an svn:ignore property
+can influence this behaviour only when recursing into an already versioned
+directory with $force).
+
+If $add_parents is TRUE, recurse up $path's directory and look for a versioned
+directory.  If found, add all intermediate paths between it and $path.  If not
+found return $SVN::Error::NO_VERSIONED_PARENT.
 
 Important: this is a B<scheduling> operation.  No changes will happen
 to the repository until a commit occurs.  This scheduling can be

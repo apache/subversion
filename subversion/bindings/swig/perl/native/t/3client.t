@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 199;
+use Test::More tests => 211;
 use strict;
 
 # shut up about variables that are only used once.
@@ -176,6 +176,43 @@ ok(close(NEW),'Close new file');
 # TEST
 is($ctx->add("$wcpath/dir1/new",0),undef,
    'Returned undef from add schedule operation');
+
+# TEST
+ok(open(NEW2, ">$wcpath/dir1/new2"),'Open new2 file for writing');
+# TEST
+ok(print(NEW2 'addtest2'), 'Print to new2 file');
+# TEST
+ok(close(NEW2),'Close new2 file');
+
+# no return means success
+# TEST
+is($ctx->add2("$wcpath/dir1/new2",0,0),undef,
+   'Returned undef from add2 schedule operation');
+
+# TEST
+ok(open(NEW3, ">$wcpath/dir1/new3"),'Open new3 file for writing');
+# TEST
+ok(print(NEW3 'addtest3'), 'Print to new3 file');
+# TEST
+ok(close(NEW3),'Close new3 file');
+
+# no return means success
+# TEST
+is($ctx->add3("$wcpath/dir1/new3",0,0,0),undef,
+   'Returned undef from add3 schedule operation');
+
+# TEST
+ok(open(NEW4, ">$wcpath/dir1/new4"),'Open new4 file for writing');
+# TEST
+ok(print(NEW4 'addtest4'), 'Print to new4 file');
+# TEST
+ok(close(NEW4),'Close new4 file');
+
+# no return means success
+# TEST
+is($ctx->add4("$wcpath/dir1/new4",$SVN::Depth::empty,0,0,0),undef,
+   'Returned undef from add4 schedule operation');
+
 
 # test the log_msg callback
 $ctx->log_msg(
