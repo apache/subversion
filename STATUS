@@ -69,7 +69,15 @@ Candidate changes:
      to those repositories.
    Votes:
      +1: cmpilato
-   
+
+ * r1237779
+   Fix sense of property validation on load.
+   Justification:
+     Validation is supposed to be on by default but is off, adding
+     --bypass-prop-validation switches it on.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
