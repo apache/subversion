@@ -60,6 +60,16 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
+ * r1394519
+   Fix issue #3531 ("Error with AuthzSVNAccessFile groups parsing in
+   mod_authz_svn").
+   Justification:
+     This bug prevents users from defining access rules for certain
+     repositories, resulting in some cases in access being forbidden
+     to those repositories.
+   Votes:
+     +1: cmpilato
+   
 Veto-blocked changes:
 =====================
 
