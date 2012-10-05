@@ -1044,6 +1044,7 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   ccb = apr_palloc(pool, sizeof(*ccb));
   ccb->sess_baton = sess_baton;
   ccb->pool = pool;
+  ccb->new_rev = NULL;
   ccb->callback = callback;
   ccb->callback_baton = callback_baton;
 
