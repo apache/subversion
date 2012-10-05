@@ -451,8 +451,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->txdelta_window_cache = NULL;
     }
 
-  SVN_ERR(init_callbacks(ffd->txdelta_window_cache, fs, no_handler, pool));
-
   /* initialize txdelta window cache, if that has been enabled */
   if (cache_txdeltas)
     {
@@ -499,8 +497,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        fs,
                        no_handler,
                        fs->pool));
-
-  SVN_ERR(init_callbacks(ffd->changes_cache, fs, no_handler, pool));
 
   return SVN_NO_ERROR;
 }
