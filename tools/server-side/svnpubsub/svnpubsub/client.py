@@ -137,13 +137,13 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
     elif self.chars and self.rev:
       value = self.chars.strip()
       if name == 'path':
-        self.rev.dirs_changed.append(value)
+        self.rev.dirs_changed.append(value.decode('unicode_escape'))
       elif name == 'author':
-        self.rev.author = value
+        self.rev.author = value.decode('unicode_escape')
       elif name == 'date':
-        self.rev.date = value
+        self.rev.date = value.decode('unicode_escape')
       elif name == 'log':
-        self.rev.log = value
+        self.rev.log = value.decode('unicode_escape')
 
     # Toss out any accumulated characters for this element.
     self.chars = ''
