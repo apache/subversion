@@ -271,20 +271,37 @@ add_file(const char *local_abspath,
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special, pool));
 
-  if (is_special)
-    mimetype = NULL;
-  else
-    /* Get automatic properties */
-    /* This may fail on write-only files:
-       we open them to estimate file type.
-       That's why we postpone the add until after this step. */
-    SVN_ERR(svn_client__get_paths_auto_props(&properties, &mimetype,
-                                             local_abspath, magic_cookie,
-                                             autoprops, ctx, pool, pool));
-
   /* Add the file */
   SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
                                NULL, NULL, pool));
+
+  if (is_special)
+    {
+      mimetype = NULL;
+    }
+  else
+    {
+      apr_hash_t *file_autoprops;
+
+      /* Get automatic properties */
+      /* Grab the inherited svn:config:auto-props and config file
+         auto-props for this file if we haven't already got them
+         when iterating over the file's unversioned parents. */
+      if (autoprops == NULL)
+        SVN_ERR(svn_client__get_all_auto_props(
+          &file_autoprops, svn_dirent_dirname(local_abspath,pool),
+          ctx, pool, pool));
+      else
+        file_autoprops = autoprops;
+
+      /* This may fail on write-only files:
+         we open them to estimate file type.
+         That's why we postpone the add until after this step. */
+      SVN_ERR(svn_client__get_paths_auto_props(&properties, &mimetype,
+                                               local_abspath, magic_cookie,
+                                               file_autoprops, ctx, pool,
+                                               pool));
+    }
 
   if (is_special)
     /* This must be a special file. */
@@ -342,8 +359,8 @@ add_file(const char *local_abspath,
 }
 
 /* Schedule directory DIR_ABSPATH, and some of the tree under it, for
- * addition.  DEPTH is the depth at this
- * point in the descent (it may be changed for recursive calls).
+ * addition.  DEPTH is the depth at this point in the descent (it may
+ * be changed for recursive calls).
  *
  * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
  * addition, add will fail and return an error unless FORCE is TRUE.
@@ -354,8 +371,19 @@ add_file(const char *local_abspath,
  * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
  * if necessary.
  *
+ * If not NULL, *CONFIG_AUTOPROPS is a hash representing the config file and
+ * svn:config:auto-props autoprops which apply to DIR_ABSPATH.  It maps
+ * const char * file patterns to another hash which maps const char *
+ * property names to const char *property values.  If *CONFIG_AUTOPROPS is
+ * NULL and DIR_ABSPATH is unversioned, then this function will populate
+ * *CONFIG_AUTOPROPS (allocated in RESULT_POOL) using DIR_ABSPATH's nearest
+ * versioned parent to determine the svn:config:auto-props which DIR_ABSPATH
+ * will inherit once added.
+ *
  * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
- * the user to cancel the operation
+ * the user to cancel the operation.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 add_dir_recursive(const char *dir_abspath,
@@ -363,8 +391,9 @@ add_dir_recursive(const char *dir_abspath,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
                   svn_magic__cookie_t *magic_cookie,
-                  apr_hash_t *config_autoprops,
+                  apr_hash_t **config_autoprops,
                   svn_client_ctx_t *ctx,
+                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -372,6 +401,7 @@ add_dir_recursive(const char *dir_abspath,
   apr_array_header_t *ignores;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
+  svn_boolean_t entry_exists = FALSE;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (ctx->cancel_func)
@@ -383,10 +413,27 @@ add_dir_recursive(const char *dir_abspath,
   err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool);
-  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
-    svn_error_clear(err);
-  else if (err)
-    return svn_error_trace(err);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
+        {
+          svn_error_clear(err);
+          entry_exists = TRUE;
+        }
+      else if (err)
+        {
+          return svn_error_trace(err);
+        }
+    }
+
+  /* Grab the inherited svn:config:auto-props and config file
+     auto-props for the roots of any unversioned trees. */
+  if (!entry_exists && *config_autoprops == NULL)
+    {
+      SVN_ERR(svn_client__get_all_auto_props(config_autoprops, dir_abspath,
+                                             ctx, result_pool,
+                                             scratch_pool));
+    }
 
   if (!no_ignore)
     {
@@ -431,12 +478,13 @@ add_dir_recursive(const char *dir_abspath,
 
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
                                     force, no_ignore, magic_cookie,
-                                    config_autoprops, ctx, iterpool));
+                                    config_autoprops, ctx, iterpool,
+                                    iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, magic_cookie, config_autoprops, ctx,
+          err = add_file(abspath, magic_cookie, *config_autoprops, ctx,
                          iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
@@ -541,6 +589,57 @@ all_auto_props_collector(const char *name,
   return TRUE;
 }
 
+/* Go up the directory tree from LOCAL_ABSPATH, looking for a versioned
+ * directory.  If found, return its path in *EXISTING_PARENT_ABSPATH.
+ * Otherwise, return SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
+static svn_error_t *
+find_existing_parent(const char **existing_parent_abspath,
+                     svn_client_ctx_t *ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *parent_abspath;
+  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
+
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+
+  if (kind == svn_node_dir)
+    {
+      svn_boolean_t is_deleted;
+
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                             wc_ctx, local_abspath,
+                                             scratch_pool));
+      if (!is_deleted)
+        {
+          *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    return svn_error_create(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
+
+  if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+                        scratch_pool))
+    return svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
+                             _("'%s' ends in a reserved name"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+  SVN_ERR(find_existing_parent(existing_parent_abspath, ctx, parent_abspath,
+                               result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client__get_all_auto_props(apr_hash_t **autoprops,
                                const char *path_or_url,
@@ -555,6 +654,8 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   svn_string_t *config_auto_prop;
   svn_boolean_t use_autoprops;
   collect_auto_props_baton_t autoprops_baton;
+  svn_error_t *err = NULL;
+  svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -580,10 +681,29 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   else
     rev.kind = svn_opt_revision_working;
 
-  SVN_ERR(svn_client_propget5(&props, &inherited_config_auto_props,
-                              SVN_CONFIG_PROP_AUTO_PROPS, path_or_url, &rev,
-                              &rev, NULL, svn_depth_empty, NULL, ctx,
-                              scratch_pool, scratch_pool));
+  /* If PATH_OR_URL is a WC path, then it might be unversioned, in which case
+     we find it's nearest versioned parent. */
+  while (err == NULL)
+    {
+      err = svn_client_propget5(&props, &inherited_config_auto_props,
+                                SVN_CONFIG_PROP_AUTO_PROPS, path_or_url, &rev,
+                                &rev, NULL, svn_depth_empty, NULL, ctx,
+                                scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (target_is_url || err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          err = NULL;
+          SVN_ERR(find_existing_parent(&path_or_url, ctx, path_or_url,
+                                       scratch_pool, scratch_pool));
+        }
+      else
+        {
+          break;
+        }
+    }
 
   /* Stash any explicit PROPS for PARENT_PATH into the inherited props array,
      since these are actually inherited props for LOCAL_ABSPATH. */
@@ -685,7 +805,7 @@ add(const char *local_abspath,
   svn_node_kind_t kind;
   svn_error_t *err;
   svn_magic__cookie_t *magic_cookie;
-  apr_hash_t *config_autoprops;
+  apr_hash_t *config_autoprops = NULL;
 
   svn_magic__init(&magic_cookie, scratch_pool);
 
@@ -702,10 +822,6 @@ add(const char *local_abspath,
                                           local_abspath, NULL);
       components = svn_path_decompose(child_relpath, scratch_pool);
       iterpool = svn_pool_create(scratch_pool);
-
-      SVN_ERR(svn_client__get_all_auto_props(&config_autoprops,
-                                             existing_parent_abspath, ctx,
-                                             scratch_pool, iterpool));
 
       for (i = 0; i < components->nelts - 1; i++)
         {
@@ -733,13 +849,6 @@ add(const char *local_abspath,
         }
       svn_pool_destroy(iterpool);
     }
-  else
-    {
-      SVN_ERR(svn_client__get_all_auto_props(
-        &config_autoprops,
-        svn_dirent_dirname(local_abspath, scratch_pool),
-        ctx, scratch_pool, scratch_pool));
-    }
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_dir)
@@ -748,8 +857,8 @@ add(const char *local_abspath,
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(local_abspath, depth, force, no_ignore,
-                              magic_cookie, config_autoprops, ctx,
-                              scratch_pool);
+                              magic_cookie, &config_autoprops, ctx,
+                              scratch_pool, scratch_pool);
     }
   else if (kind == svn_node_file)
     err = add_file(local_abspath, magic_cookie, config_autoprops, ctx,
@@ -791,58 +900,6 @@ add(const char *local_abspath,
       err = SVN_NO_ERROR;
     }
   return svn_error_trace(err);
-}
-
-
-/* Go up the directory tree from LOCAL_ABSPATH, looking for a versioned
- * directory.  If found, return its path in *EXISTING_PARENT_ABSPATH.
- * Otherwise, return SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
-static svn_error_t *
-find_existing_parent(const char **existing_parent_abspath,
-                     svn_client_ctx_t *ctx,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  svn_node_kind_t kind;
-  const char *parent_abspath;
-  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
-
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
-
-  if (kind == svn_node_dir)
-    {
-      svn_boolean_t is_deleted;
-
-      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                             wc_ctx, local_abspath,
-                                             scratch_pool));
-      if (!is_deleted)
-        {
-          *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-    return svn_error_create(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
-
-  if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
-                        scratch_pool))
-    return svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
-                             _("'%s' ends in a reserved name"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  if (ctx->cancel_func)
-    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-  SVN_ERR(find_existing_parent(existing_parent_abspath, ctx, parent_abspath,
-                               result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 
