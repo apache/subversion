@@ -35,6 +35,11 @@
 # irker=hostname:port 
 #   The hostname/port combination of the irker daemon.  If port is
 #   omitted it defaults to 6659.  Irker is connected to over UDP.
+# match=What to use to decide if the commit should be sent to irker.
+#   It consists of the repository UUID followed by a slash and the path.
+#   The UUID may be replaced by a * to match all UUIDs.  If the UUID matches
+#   and any of the changed dirs starts with a portion of the path then the
+#   commit will be considered a match and will be sent to irker.
 # to=url
 #   Space separated list of URLs (any URL that Irker will accept) to
 #   send the resulting message to.  At current Irker only supports IRC.
@@ -54,11 +59,19 @@
 # Within the config file you have sections.  Any configuration option
 # missing from a given section is found in the [DEFAULT] section.
 #
-# Section names are generally the UUID of the repository followed by a
-# slash and the path.  The UUID may be replaced by a * to match all UUIDs.
-# If the UUID and anyone of the changed dirs starts with a portion of the path
-# then that section will be used to generate a message to irker.  All matching
-# sections will generate a message.  
+# Section names are arbitrary names that mean nothing to the bridge.  Each
+# section other than the [DEFAULT] section consists of a configuration that
+# may match and send a message to irker to deliver.  All matching sections
+# will generate a message.
+# 
+# Interpolation of values within the config file is allowed by including
+# %(name)s within a value.  For example I can reference the UUID of a repo
+# repeatedly by doing:
+# [DEFAULT]
+# ASF_REPO=13f79535-47bb-0310-9956-ffa450edef68
+# 
+# [#commits]
+# match=%(ASF_REPO)s/
 #
 # You can HUP the process to reload the config file without restarting the
 # process.  However, you cannot change the streams it is listening to without
@@ -118,15 +131,14 @@ class BigDoEverythingClass(object):
   def locate_matching_configs(self, rev):
     result = [ ]
     for section in self.config.sections():
-      sys.stdout.flush()
-      section_list = section.split('/', 1)
-      if len(section_list) < 2:
+      match = self.config.get(section, "match").split('/', 1)
+      if len(match) < 2:
         # No slash so assume all paths
-        section_list.append('')
-      section_uuid, section_path = section_list
-      if rev.uuid == section_uuid or section_uuid == "*":
+        match.append('')
+      match_uuid, match_path = match
+      if rev.uuid == match_uuid or match_uuid == "*":
         for path in rev.dirs_changed:
-          if path.startswith(section_path):
+          if path.startswith(match_path):
             result.append(section)
             break
     return result
