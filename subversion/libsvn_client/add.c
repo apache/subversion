@@ -702,9 +702,19 @@ svn_client_add4(const char *path,
     }
   if (is_wc_root && (! force))
     {
-      return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                               _("'%s' is already under version control"),
-                               svn_dirent_local_style(local_abspath, pool));
+#ifdef HAVE_SYMLINK
+      svn_node_kind_t disk_kind;
+      svn_boolean_t is_special;
+
+      SVN_ERR(svn_io_check_special_path(local_abspath, &disk_kind, &is_special,
+                                        pool));
+
+      /* A symlink can be an unversioned target and a wcroot */
+      if (! is_special)
+#endif
+        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                 _("'%s' is already under version control"),
+                                 svn_dirent_local_style(local_abspath, pool));
     }
   
   /* ### this is a hack.
