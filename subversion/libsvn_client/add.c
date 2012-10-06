@@ -671,8 +671,7 @@ svn_client_add4(const char *path,
   const char *parent_abspath;
   const char *local_abspath;
   const char *existing_parent_abspath;
-  svn_node_kind_t disk_kind;
-  svn_boolean_t is_wc_root = FALSE;
+  svn_boolean_t is_wc_root;
   svn_error_t *err;
 
   if (svn_path_is_url(path))
@@ -687,24 +686,19 @@ svn_client_add4(const char *path,
      svn_wc_is_wc_root2() will return TRUE even if LOCAL_ABSPATH is a
      *symlink* to a working copy root, which is a scenario we want to
      treat differently.  */
-  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, pool));
-  if (disk_kind == svn_node_dir)
+  err = svn_wc__strictly_is_wc_root(&is_wc_root, ctx->wc_ctx,
+                                    local_abspath, pool);
+  if (err)
     {
-      err = svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx,
-                               local_abspath, pool);
-      if (err)
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+          && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
         {
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-            {
-              svn_error_clear(err);
-              err = SVN_NO_ERROR;
-              is_wc_root = FALSE;
-            }
-          else
-            {
-              return err;
-            }
+          return svn_error_trace(err);
         }
+
+      svn_error_clear(err);
+      err = NULL; /* SVN_NO_ERROR */
+      is_wc_root = FALSE;
     }
   if (is_wc_root && (! force))
     {
@@ -726,7 +720,7 @@ svn_client_add4(const char *path,
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
   existing_parent_abspath = NULL;
-  if (add_parents)
+  if (add_parents && !is_wc_root)
     {
       apr_pool_t *subpool;
       const char *existing_parent_abspath2;
