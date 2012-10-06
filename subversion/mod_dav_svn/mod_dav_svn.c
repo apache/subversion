@@ -88,6 +88,7 @@ typedef struct dir_conf_t {
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
+  enum conf_flag ephemeral_txnprops; /* advertise ephemeral txnprop support? */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
@@ -196,6 +197,7 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
+  conf->ephemeral_txnprops = CONF_FLAG_ON;
   conf->hooks_env = NULL;
 
   return conf;
@@ -221,6 +223,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
+  newconf->ephemeral_txnprops = INHERIT_VALUE(parent, child,
+                                              ephemeral_txnprops);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
@@ -340,6 +344,20 @@ SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
     conf->v2_protocol = CONF_FLAG_ON;
   else
     conf->v2_protocol = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+
+static const char *
+SVNAdvertiseEphemeralTXNProps_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->ephemeral_txnprops = CONF_FLAG_ON;
+  else
+    conf->ephemeral_txnprops = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -761,6 +779,16 @@ dav_svn__get_v2_protocol_flag(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_ephemeral_txnprops_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->ephemeral_txnprops == CONF_FLAG_ON;
+}
+
+
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
@@ -1059,6 +1087,12 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNAdvertiseEphemeralTXNProps",
+               SVNAdvertiseEphemeralTXNProps_cmd, NULL, ACCESS_CONF|RSRC_CONF,
+               "enables server advertising of support for ephemeral "
+               "commit transaction properties (default value is On)."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,

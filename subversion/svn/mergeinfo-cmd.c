@@ -80,37 +80,30 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
   int col_width[COLS];
   int row, col;
 
-  /* The YCA (that is, the branching point) */
-  g[0][0] = apr_psprintf(pool, "  %-8ld", yca->rev);
-  g[1][0] =     "  |       ";
+  /* The YCA (that is, the branching point).  And an ellipsis, because we
+   * don't show information about earlier merges */
+  g[0][0] = apr_psprintf(pool, "  %-8ld  ", yca->rev);
+  g[1][0] =     "  |         ";
   if (strcmp(yca->url, right->url) == 0)
     {
-      g[2][0] = "----------";
-      g[3][0] = "   \\      ";
-      g[4][0] = "    \\     ";
-      g[5][0] = "     -----";
+      g[2][0] = "-------| |--";
+      g[3][0] = "   \\        ";
+      g[4][0] = "    \\       ";
+      g[5][0] = "     --| |--";
     }
   else if (strcmp(yca->url, target->url) == 0)
     {
-      g[2][0] = "     -----";
-      g[3][0] = "    /     ";
-      g[4][0] = "   /      ";
-      g[5][0] = "----------";
+      g[2][0] = "     --| |--";
+      g[3][0] = "    /       ";
+      g[4][0] = "   /        ";
+      g[5][0] = "-------| |--";
     }
   else
     {
-      g[2][0] = "     -----";
-      g[3][0] = "... /     ";
-      g[4][0] = "    \\     ";
-      g[5][0] = "     -----";
-    }
-
-  /* An ellipsis, because we don't show information about earlier merges */
-    {
-      g[2][1] = "| ... |---";
-      g[3][1] = "          ";
-      g[4][1] = "          ";
-      g[5][1] = "| ... |---";
+      g[2][0] = "     --| |--";
+      g[3][0] = "... /       ";
+      g[4][0] = "    \\       ";
+      g[5][0] = "     --| |--";
     }
 
   /* The last full merge */
@@ -149,8 +142,8 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
       g[4][3] = "        ";
       g[5][3] = "-       ";
       g[6][3] = "|       ";
-      g[7][3] = target_is_wc ? apr_psprintf(pool, "%-8ld", target->rev)
-                             : "WC      ";
+      g[7][3] = target_is_wc ? "WC      "
+                             : apr_psprintf(pool, "%-8ld", target->rev);
     }
 
   /* Find the width of each column, so we know how to print blank cells */
@@ -166,9 +159,9 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
 
   /* Column headings */
   SVN_ERR(svn_cmdline_fputs(
-            _("    youngest          last               repos.\n"
-              "    common            full     tip of    path of\n"
-              "    ancestor          merge    branch    branch\n"
+            _("    youngest  last               repos.\n"
+              "    common    full     tip of    path of\n"
+              "    ancestor  merge    branch    branch\n"
               "\n"),
             stdout, pool));
 
@@ -216,7 +209,7 @@ mergeinfo_summary(
   svn_client__pathrev_t *yca, *base, *right, *target;
   svn_boolean_t target_is_wc, reintegrate_like;
 
-  target_is_wc = svn_path_is_url(target_path_or_url)
+  target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
   if (target_is_wc)
@@ -263,20 +256,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
 
-  /* We expect a single source URL followed by a single target --
-     nothing more, nothing less. */
+  /* Parse the arguments: SOURCE[@REV] optionally followed by TARGET[@REV]. */
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Not enough arguments given"));
   if (targets->nelts > 2)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Too many arguments given"));
-
-  /* Parse the SOURCE-URL[@REV] argument. */
   SVN_ERR(svn_opt_parse_path(&src_peg_revision, &source,
                              APR_ARRAY_IDX(targets, 0, const char *), pool));
-
-  /* Parse the TARGET[@REV] argument (if provided). */
   if (targets->nelts == 2)
     {
       SVN_ERR(svn_opt_parse_path(&tgt_peg_revision, &target,
@@ -290,11 +278,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
 
   /* If no peg-rev was attached to the source URL, assume HEAD. */
+  /* ### But what if SOURCE is a WC path not a URL -- shouldn't we then use
+   *     BASE (but not WORKING: that would be inconsistent with 'svn merge')? */
   if (src_peg_revision.kind == svn_opt_revision_unspecified)
     src_peg_revision.kind = svn_opt_revision_head;
 
   /* If no peg-rev was attached to a URL target, then assume HEAD; if
      no peg-rev was attached to a non-URL target, then assume BASE. */
+  /* ### But we would like to be able to examine a working copy with an
+         uncommitted merge in it, so change this to use WORKING not BASE? */
   if (tgt_peg_revision.kind == svn_opt_revision_unspecified)
     {
       if (svn_path_is_url(target))

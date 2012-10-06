@@ -1151,6 +1151,13 @@ close_directory(void *dir_baton,
           const char *deleted_path = svn__apr_hash_index_key(hi);
           deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
 
+          /* Ignore paths which are not children of b->path.  (There
+             should be none due to editor ordering constraints, but
+             ra_serf drops the ball here -- see issue #3802 for
+             details.) */
+          if (! svn_relpath_skip_ancestor(b->path, deleted_path))
+            continue;
+
           notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
           notify->kind = dpn->kind;
           notify->content_state = notify->prop_state = dpn->state;

@@ -110,8 +110,6 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
-  svn_wc_conflict_resolver_func2_t conflict_func2 = ctx->conflict_func2;
-  void *conflict_baton2 = ctx->conflict_baton2;
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *externals_err = SVN_NO_ERROR;
 
@@ -189,18 +187,11 @@ svn_cl__update(apr_getopt_t *os,
         return svn_error_compose_create(externals_err, err);
     }
 
-  if (opt_state->conflict_func
-      && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
-    {
-      ctx->conflict_func2 = conflict_func2;
-      ctx->conflict_baton2 = conflict_baton2;
-      err = svn_cl__resolve_conflicts(
-              svn_cl__notifier_get_conflicted_paths(nwb.wrapped_baton,
-                                                    scratch_pool),
-              depth, opt_state, ctx, scratch_pool);
-      if (err)
-        return svn_error_compose_create(externals_err, err);
-    }
+  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                            opt_state->depth,
+                                            opt_state->accept_which,
+                                            opt_state->editor_cmd,
+                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

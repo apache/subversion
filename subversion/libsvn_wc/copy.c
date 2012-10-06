@@ -287,7 +287,9 @@ copy_versioned_file(svn_wc__db_t *db,
    otherwise copy both the versioned metadata and the filesystem nodes (even
    if they are the wrong kind, and including unversioned children).
    If IS_MOVE is true, record move information in working copy meta
-   data in addition to copying the directory.
+   data in addition to copying the directory. If IS_MOVE is TRUE and
+   ALLOW_MIXED_REVISIONS is FALSE, raise an error if a move of a
+   mixed-revision subtree is attempted.
 
    WITHIN_ONE_WC is TRUE if the copy/move is within a single working copy (root)
  */
@@ -299,6 +301,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                    const char *tmpdir_abspath,
                    svn_boolean_t metadata_only,
                    svn_boolean_t is_move,
+                   svn_boolean_t allow_mixed_revisions,
                    svn_boolean_t within_one_wc,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
@@ -314,6 +317,24 @@ copy_versioned_dir(svn_wc__db_t *db,
   apr_hash_index_t *hi;
   svn_node_kind_t disk_kind;
   apr_pool_t *iterpool;
+
+  if (is_move && !allow_mixed_revisions)
+    {
+      svn_revnum_t min_rev;
+      svn_revnum_t max_rev;
+
+      /* Verify that the move source is a single-revision subtree. */
+      SVN_ERR(svn_wc__db_min_max_revisions(&min_rev, &max_rev, db,
+                                           src_abspath, FALSE, scratch_pool));
+      if (SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev) &&
+          min_rev != max_rev)
+        return svn_error_createf(SVN_ERR_WC_MIXED_REVISIONS, NULL,
+                                 _("Cannot move mixed-revision subtree '%s' "
+                                   "[%lu:%lu]; try updating it first"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool),
+                                   min_rev, max_rev);
+    }
 
   /* Prepare a temp copy of the single filesystem node (usually a dir). */
   if (!metadata_only)
@@ -412,7 +433,8 @@ copy_versioned_dir(svn_wc__db_t *db,
             SVN_ERR(copy_versioned_dir(db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
-                                       metadata_only, is_move, within_one_wc,
+                                       metadata_only, is_move,
+                                       allow_mixed_revisions, within_one_wc,
                                        cancel_func, cancel_baton, NULL, NULL,
                                        iterpool));
           else
@@ -523,6 +545,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
              const char *dst_abspath,
              svn_boolean_t metadata_only,
              svn_boolean_t is_move,
+             svn_boolean_t allow_mixed_revisions,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
@@ -737,8 +760,8 @@ copy_or_move(svn_wc_context_t *wc_ctx,
   else
     {
       err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
-                               tmpdir_abspath,
-                               metadata_only, is_move, within_one_wc,
+                               tmpdir_abspath, metadata_only, is_move,
+                               allow_mixed_revisions, within_one_wc,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool);
@@ -773,6 +796,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 {
   return svn_error_trace(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                                       metadata_only, FALSE /* is_move */,
+                                      TRUE /* allow_mixed_revisions */,
                                       cancel_func, cancel_baton,
                                       notify_func, notify_baton,
                                       scratch_pool));
@@ -928,21 +952,23 @@ remove_all_conflict_markers(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc_move(svn_wc_context_t *wc_ctx,
-            const char *src_abspath,
-            const char *dst_abspath,
-            svn_boolean_t metadata_only,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            svn_wc_notify_func2_t notify_func,
-            void *notify_baton,
-            apr_pool_t *scratch_pool)
+svn_wc__move2(svn_wc_context_t *wc_ctx,
+              const char *src_abspath,
+              const char *dst_abspath,
+              svn_boolean_t metadata_only,
+              svn_boolean_t allow_mixed_revisions,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
 
   SVN_ERR(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        TRUE /* is_move */,
+                       allow_mixed_revisions,
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        scratch_pool));

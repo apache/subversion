@@ -557,6 +557,33 @@ svn_prop_name_is_valid(const char *prop_name);
 
 /** @} */
 
+/**
+ * These are reserved properties attached to a "transaction" object in
+ * the repository filesystem in advance of the pre-commit hook script
+ * running on the server, but then automatically removed from the
+ * transaction before its promotion to a new revision.
+ *
+ * @defgroup svn_props_ephemeral_txnprops Ephemeral transaction properties
+ * @{
+ */
+
+/** The prefix used for all (ephemeral) transaction properties. */
+#define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn:"
+
+/** Identifies the client version compability level.  For clients
+ * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
+ * Third-party implementations are advised to use similar formatting
+ * for values of this property.
+ */
+#define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
+            SVN_PROP_TXN_PREFIX "client-compat-version"
+    
+/** Identifies the client's user agent string, if any. */
+#define SVN_PROP_TXN_USER_AGENT \
+            SVN_PROP_TXN_PREFIX "user-agent"
+
+/** @} */
+
 /** @} */
 
 

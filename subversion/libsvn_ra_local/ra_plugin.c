@@ -337,7 +337,7 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos_begin_report2(&rbaton,
+  SVN_ERR(svn_repos_begin_report3(&rbaton,
                                   revision,
                                   sess->repos,
                                   sess->fs_path->data,
@@ -351,6 +351,8 @@ make_reporter(svn_ra_session_t *session,
                                   edit_baton,
                                   NULL,
                                   NULL,
+                                  1024 * 1024,  /* process-local transfers
+                                                   should be fast */
                                   pool));
 
   /* Wrap the report baton given us by the repos layer with our own
@@ -752,6 +754,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   revprop_table = apr_hash_copy(pool, revprop_table);
   apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
                svn_string_create(sess->username, pool));
+  apr_hash_set(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+               APR_HASH_KEY_STRING, svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5

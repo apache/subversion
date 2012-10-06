@@ -1600,6 +1600,10 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
                                           FALSE /* record_fileinfo */,
                                           result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+    
+    SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
+                                             result_pool, scratch_pool));
+    *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
     if (remove_source)
       {
@@ -1679,7 +1683,6 @@ save_merge_result(svn_skel_t **work_item,
                                                 db, local_abspath,
                                                 source, edited_copy_abspath,
                                                 result_pool, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -2340,6 +2343,11 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           SVN_ERR(svn_wc__wq_build_file_copy_translated(
                     &work_item, db, local_abspath,
                     auto_resolve_src, local_abspath, pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+
+          SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db,
+                                                   local_abspath,
+                                                   pool, pool));
           work_items = svn_wc__wq_merge(work_items, work_item, pool);
         }
 
