@@ -714,14 +714,15 @@ static svn_boolean_t authz_validate_section(const char *name,
 {
   struct authz_validate_baton *b = baton;
 
-  /* If the section is the groups definition, use the group checking
-     callback. Otherwise, use the rule checking callback. */
-  if (strncmp(name, "groups", 6) == 0)
+  /* Use the group checking callback for the "groups" section... */
+  if (strcmp(name, "groups") == 0)
     svn_config_enumerate2(b->config, name, authz_validate_group,
                           baton, pool);
-  else if (strncmp(name, "aliases", 7) == 0)
+  /* ...and the alias checking callback for "aliases"... */
+  else if (strcmp(name, "aliases") == 0)
     svn_config_enumerate2(b->config, name, authz_validate_alias,
                           baton, pool);
+  /* ...but for everything else use the rule checking callback. */
   else
     {
       /* Validate the section's name. Skip the optional REPOS_NAME. */

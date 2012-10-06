@@ -658,14 +658,14 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
                   )
 #endif
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(svn_config_enumerator2_t callback, void *baton,
-                  ,
+                  svn_swig_py_config_enumerator2,
                   ,
                   svn_swig_rb_config_enumerator)
 
 %callback_typemap(svn_config_section_enumerator2_t callback, void *baton,
-                  ,
+                  svn_swig_py_config_section_enumerator2,
                   ,
                   svn_swig_rb_config_section_enumerator)
 #endif

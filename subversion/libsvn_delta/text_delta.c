@@ -998,3 +998,40 @@ svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_txdelta_send_contents(const unsigned char *contents,
+                          apr_size_t len,
+                          svn_txdelta_window_handler_t handler,
+                          void *handler_baton,
+                          apr_pool_t *pool)
+{
+  svn_string_t new_data;
+  svn_txdelta_op_t op = { svn_txdelta_new, 0, 0 };
+  svn_txdelta_window_t window = { 0, 0, 0, 1, 0, &op, &new_data};
+
+  /* send CONTENT as a series of max-sized windows */
+  while (len > 0)
+    {
+      /* stuff next chunk into the window */
+      window.tview_len = len < SVN_DELTA_WINDOW_SIZE
+                       ? len
+                       : SVN_DELTA_WINDOW_SIZE;
+      op.length = window.tview_len;
+      new_data.len = window.tview_len;
+      new_data.data = (const char*)contents;
+
+      /* update remaining */
+      contents += window.tview_len;
+      len -= window.tview_len;
+
+      /* shove it at the handler */
+      SVN_ERR((*handler)(&window, handler_baton));
+    }
+
+  /* indicate end of stream */
+  SVN_ERR((*handler)(NULL, handler_baton));
+
+  return SVN_NO_ERROR;
+}
+

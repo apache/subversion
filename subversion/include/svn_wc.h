@@ -3851,7 +3851,7 @@ typedef struct svn_wc_status2_t
 
 
 /**
- * Same as #svn_wc_status2_t, but without the #svn_lock_t 'repos_lock' field.
+ * Same as #svn_wc_status2_t, but without the #svn_lock_t 'repos_lock', const char 'url', #svn_revnum_t 'ood_last_cmt_rev', apr_time_t 'ood_last_cmt_date', #svn_node_kind_t 'ood_kind', const char 'ood_last_cmt_author', #svn_wc_conflict_description_t 'tree_conflict', #svn_boolean_t 'file_external', #svn_wc_status_kind 'pristine_text_status', and #svn_wc_status_kind 'pristine_prop_status' fields.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -3988,11 +3988,6 @@ svn_wc_status(svn_wc_status_t **status,
  * implementation, and passed by the caller.
  *
  * @a scratch_pool will be cleared between invocations to the callback.
- *
- * ### we might be revamping the status infrastructure, and this callback
- * ### could totally disappear by the end of 1.7 development. however, we
- * ### need to mark the STATUS parameter as "const" so that it is easier
- * ### to reason about who/what can modify those structures.
  *
  * @since New in 1.7.
  */
@@ -4410,6 +4405,8 @@ svn_wc_copy(const char *src,
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @see svn_client_move7()
  */
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,

@@ -1485,16 +1485,15 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a path and everything under it fully recursively.
  *
  * @a path's parent must be under revision control already (unless
- * @a add_parents is TRUE), but @a path is not.  If @a recursive is
- * set, then assuming @a path is a directory, all of its contents will
- * be scheduled for addition as well.
+ * @a add_parents is TRUE), but @a path is not.
  *
  * If @a force is not set and @a path is already under version
  * control, return the error #SVN_ERR_ENTRY_EXISTS.  If @a force is
  * set, do not error on already-versioned items.  When used on a
- * directory in conjunction with the @a recursive flag, this has the
- * effect of scheduling for addition unversioned files and directories
- * scattered deep within a versioned tree.
+ * directory in conjunction with a @a depth value greater than
+ * #svn_depth_empty, this has the effect of scheduling for addition
+ * any unversioned files and directories scattered within even a
+ * versioned tree (up to @a depth).
  *
  * If @a ctx->notify_func2 is non-NULL, then for each added item, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the
@@ -2372,11 +2371,6 @@ svn_client_status_dup(const svn_client_status_t *status,
  * implementation, and passed by the caller.
  *
  * @a scratch_pool will be cleared between invocations to the callback.
- *
- * ### we might be revamping the status infrastructure, and this callback
- * ### could totally disappear by the end of 1.7 development. however, we
- * ### need to mark the STATUS parameter as "const" so that it is easier
- * ### to reason about who/what can modify those structures.
  *
  * @since New in 1.7.
  */
@@ -4307,6 +4301,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.  Otherwise, the parent of @a dst_path must already exist.
  *
+ * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
+ * will be raised if the move source is a mixed-revision subtree.
+ * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
+ * allowed. This parameter should be set to FALSE except where backwards
+ * compatibility to svn_client_move6() is required.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4327,7 +4327,26 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_move7(const apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t allow_mixed_revisions,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_move7(), but with allow_mixed_revisions always
+ * set to @c TRUE.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,

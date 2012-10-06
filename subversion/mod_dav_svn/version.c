@@ -193,6 +193,14 @@ get_option(const dav_resource *resource,
         }
     }
 
+  /* If we're allowed (by configuration) to do so, advertise support
+     for ephemeral transaction properties. */
+  if (dav_svn__get_ephemeral_txnprops_flag(r))
+    {
+      apr_table_addn(r->headers_out, "DAV",
+                     SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS);
+    }
+
   if (resource->info->repos->fs)
     {
       svn_error_t *serr;

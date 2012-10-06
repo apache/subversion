@@ -229,6 +229,12 @@ static SV *convert_int(int value, void *dummy)
   return sv_2mortal(newSViv(value));
 }
 
+static SV *convert_svn_revnum_t(svn_revnum_t revnum, void *dummy)
+{
+  return sv_2mortal(newSViv((long int)revnum));
+
+}
+
 /* c -> perl hash convertors */
 static SV *convert_hash(apr_hash_t *hash, element_converter_t converter_func,
                         void *ctx)
@@ -300,6 +306,12 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
   return convert_array(array, (element_converter_t)convert_to_swig_type,
                        tinfo);
 }
+
+SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
+{
+    return convert_array(array, (element_converter_t)convert_svn_revnum_t,
+                         NULL);
+} 
 
 /* put the va_arg in stack and invoke caller_func with func.
    fmt:
@@ -1287,6 +1299,54 @@ void svn_swig_pl_status_func(void *baton,
                              path, status, statusinfo);
 
 }
+
+/* Thunked version of svn_wc_status_func2_t callback type. */
+void svn_swig_pl_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status)
+{
+  swig_type_info *statusinfo = _SWIG_TYPE("svn_wc_status2 _t *");
+
+  if (!SvOK((SV *)baton)) {
+    return;
+  }
+
+  svn_swig_pl_callback_thunk(CALL_SV, baton, NULL, "sS",
+                             path, status, statusinfo);
+
+}
+
+/* Thunked version of svn_wc_status_func3_t callback type. */
+svn_error_t *svn_swig_pl_status_func3(void *baton,
+                                      const char *path,
+                                      svn_wc_status2_t *status,
+                                      apr_pool_t *pool)
+{
+  SV *result;
+  svn_error_t *ret_val = SVN_NO_ERROR;
+
+  swig_type_info *statusinfo = _SWIG_TYPE("svn_wc_status2 _t *");
+
+  if (!SvOK((SV *)baton)) {
+    return ret_val;
+  }
+
+  svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS",
+                             path, status, statusinfo,
+                             pool, POOLINFO);
+
+  if (sv_derived_from(result, "_p_svn_error_t")) {
+    swig_type_info *errorinfo = _SWIG_TYPE("svn_error_t *");
+    if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+        SvREFCNT_dec(result);
+        croak("Unable to convert from SWIG Type");
+    }
+  }
+
+  SvREFCNT_dec(result);
+  return ret_val;
+}
+
 
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func(void *baton,

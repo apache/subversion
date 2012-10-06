@@ -192,16 +192,11 @@ svn_cl__switch(apr_getopt_t *os,
         return svn_error_compose_create(externals_err, err);
     }
 
-  if (opt_state->conflict_func
-      && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
-    {
-      err = svn_cl__resolve_conflicts(
-              svn_cl__notifier_get_conflicted_paths(nwb.wrapped_baton,
-                                                    scratch_pool),
-              depth, opt_state, ctx, scratch_pool);
-      if (err)
-        return svn_error_compose_create(externals_err, err);
-    }
+  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                            opt_state->depth,
+                                            opt_state->accept_which,
+                                            opt_state->editor_cmd,
+                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

@@ -540,6 +540,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 39,
              "Couldn't open a working copy file because access was denied")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_WC_MIXED_REVISIONS,
+             SVN_ERR_WC_CATEGORY_START + 40,
+             "Mixed-revision working copy was found but not expected")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
