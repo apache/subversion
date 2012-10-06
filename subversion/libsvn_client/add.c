@@ -671,8 +671,7 @@ svn_client_add4(const char *path,
   const char *parent_abspath;
   const char *local_abspath;
   const char *existing_parent_abspath;
-  svn_node_kind_t disk_kind;
-  svn_boolean_t is_wc_root = FALSE;
+  svn_boolean_t is_wc_root;
   svn_error_t *err;
 
   if (svn_path_is_url(path))
@@ -682,51 +681,54 @@ svn_client_add4(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* See if we're being asked to add a wc-root.  That's typically not
-     okay, unless we're in "force" mode.  We'll check the node kind
-     first, because wc-roots must be directories.  But also,
-     svn_wc_is_wc_root2() will return TRUE even if LOCAL_ABSPATH is a
-     *symlink* to a working copy root, which is a scenario we want to
-     treat differently.  */
-  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, pool));
-  if (disk_kind == svn_node_dir)
+     okay, unless we're in "force" mode.  svn_wc__strictly_is_wc_root()
+     will return TRUE even if LOCAL_ABSPATH is a *symlink* to a working
+     copy root, which is a scenario we want to treat differently.  */
+  err = svn_wc__strictly_is_wc_root(&is_wc_root, ctx->wc_ctx,
+                                    local_abspath, pool);
+  if (err)
     {
-      err = svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx,
-                               local_abspath, pool);
-      if (err)
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+          && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
         {
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-            {
-              svn_error_clear(err);
-              err = SVN_NO_ERROR;
-              is_wc_root = FALSE;
-            }
-          else
-            {
-              return err;
-            }
+          return svn_error_trace(err);
+        }
+
+      svn_error_clear(err);
+      err = NULL; /* SVN_NO_ERROR */
+      is_wc_root = FALSE;
+    }
+  if (is_wc_root)
+    {
+#ifdef HAVE_SYMLINK
+      svn_node_kind_t disk_kind;
+      svn_boolean_t is_special;
+
+      SVN_ERR(svn_io_check_special_path(local_abspath, &disk_kind, &is_special,
+                                        pool));
+
+      /* A symlink can be an unversioned target and a wcroot. Lets try to add
+         the symlink, which can't be a wcroot. */
+      if (is_special)
+        is_wc_root = FALSE;
+      else
+#endif
+        {
+          if (! force)
+            return svn_error_createf(
+                                 SVN_ERR_ENTRY_EXISTS, NULL,
+                                 _("'%s' is already under version control"),
+                                 svn_dirent_local_style(local_abspath, pool));
         }
     }
-  if (is_wc_root && (! force))
-    {
-      return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                               _("'%s' is already under version control"),
-                               svn_dirent_local_style(local_abspath, pool));
-    }
-  
-  /* ### this is a hack.
-     ### before we switched to absolute paths, if a user tried to do
-     ### 'svn add .', PATH would be "" and PARENT_PATH would also be "",
-     ### thus emulating the behavior below.  Now that we are using
-     ### absolute paths, svn_dirent_dirname() doesn't behave the same way
-     ### w.r.t. '.', so we need to include the following hack.  This
-     ### behavior is tested in schedule_tests-11. */
-  if (path[0] == 0)
-    parent_abspath = local_abspath;
+
+  if (is_wc_root)
+    parent_abspath = local_abspath; /* We will only add children */
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
   existing_parent_abspath = NULL;
-  if (add_parents)
+  if (add_parents && !is_wc_root)
     {
       apr_pool_t *subpool;
       const char *existing_parent_abspath2;
@@ -742,9 +744,7 @@ svn_client_add4(const char *path,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     add(local_abspath, depth, force, no_ignore, existing_parent_abspath,
         ctx, pool),
-    ctx->wc_ctx,
-    is_wc_root ? local_abspath
-               : (existing_parent_abspath ? existing_parent_abspath 
+    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath 
                                           : parent_abspath),
     FALSE /* lock_anchor */, pool);
   return SVN_NO_ERROR;
