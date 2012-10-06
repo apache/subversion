@@ -1731,6 +1731,26 @@ svn_client_revprop_set(const char *propname,
 }
 
 svn_error_t *
+svn_client_propget4(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_client_propget5(props, NULL, propname, target,
+                                             peg_revision, revision,
+                                             actual_revnum, depth,
+                                             changelists, ctx,
+                                             result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_client_propget3(apr_hash_t **props,
                     const char *propname,
                     const char *path_or_url,
@@ -1868,6 +1888,70 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
     new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
 
   return new_item;
+}
+
+/* Baton for use with wrap_proplist_receiver */
+struct proplist_receiver_wrapper_baton {
+  void *baton;
+  svn_proplist_receiver_t receiver;
+};
+
+/* This implements svn_client_proplist_receiver2_t */
+static svn_error_t *
+proplist_wrapper_receiver(void *baton,
+                          const char *path,
+                          apr_hash_t *prop_hash,
+                          apr_array_header_t *inherited_props,
+                          apr_pool_t *pool)
+{
+  struct proplist_receiver_wrapper_baton *plrwb = baton;
+
+  if (plrwb->receiver)
+    return plrwb->receiver(plrwb->baton, path, prop_hash, pool);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+wrap_proplist_receiver(svn_proplist_receiver2_t *receiver2,
+                       void **receiver2_baton,
+                       svn_proplist_receiver_t receiver,
+                       void *receiver_baton,
+                       apr_pool_t *pool)
+{
+  struct proplist_receiver_wrapper_baton *plrwb = apr_palloc(pool,
+                                                             sizeof(*plrwb));
+
+  /* Set the user provided old format callback in the baton. */
+  plrwb->baton = receiver_baton;
+  plrwb->receiver = receiver;
+
+  *receiver2_baton = plrwb;
+  *receiver2 = proplist_wrapper_receiver;
+}
+
+svn_error_t *
+svn_client_proplist3(const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     const apr_array_header_t *changelists,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+
+  svn_proplist_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  wrap_proplist_receiver(&receiver2, &receiver2_baton, receiver, receiver_baton,
+                         pool);
+
+  return svn_error_trace(svn_client_proplist4(target, peg_revision, revision,
+                                              depth, changelists, FALSE,
+                                              receiver2, receiver2_baton,
+                                              ctx, pool, pool));
 }
 
 /* Receiver baton used by proplist2() */

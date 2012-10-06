@@ -475,6 +475,10 @@ CREATE TABLE NODES (
      ### anyway. */
   file_external  INTEGER,
 
+  /* serialized skel of this node's inherited properties. NULL if this
+     is not the BASE of a WC root node. */
+  inherited_props  BLOB,
+
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
@@ -574,6 +578,8 @@ CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
+
+/* ------------------------------------------------------------------------- */
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
@@ -789,7 +795,11 @@ UPDATE nodes SET presence = "server-excluded" WHERE presence = "absent";
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
-PRAGMA user_version = 30;
+/* Format 31 adds the inherited_props column to the NODES table. */
+-- STMT_UPGRADE_TO_31
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+PRAGMA user_version = 31;
 
 -- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,

@@ -176,6 +176,11 @@ typedef struct insert_base_baton_t {
   svn_boolean_t update_actual_props;
   const apr_hash_t *new_actual_props;
 
+  /* A depth-first ordered array of svn_prop_inherited_item_t *
+     structures representing the properties inherited by the base
+     node. */
+  apr_array_header_t *iprops;
+
   /* maybe we should copy information from a previous record? */
   svn_boolean_t keep_recorded_info;
 
@@ -249,6 +254,7 @@ typedef struct insert_external_baton_t {
 
   /* for file and symlink externals */
   const apr_hash_t *props;
+  apr_array_header_t *iprops;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -829,6 +835,10 @@ insert_base_node(void *baton,
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
+
+  SVN_ERR(svn_sqlite__bind_iprops(stmt, 23, pibb->iprops,
+                                      scratch_pool));
+
   if (pibb->dav_cache)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 18, pibb->dav_cache,
                                         scratch_pool));
@@ -1676,6 +1686,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const svn_skel_t *conflict,
                               svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
+                              apr_array_header_t *new_iprops,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool)
 {
@@ -1710,6 +1721,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
+  ibb.iprops = new_iprops;
   ibb.props = props;
   ibb.changed_rev = changed_rev;
   ibb.changed_date = changed_date;
@@ -2973,6 +2985,7 @@ insert_external_node(void *baton,
       ibb.revision        = ieb->revision;
 
       ibb.props           = ieb->props;
+      ibb.iprops          = ieb->iprops;
       ibb.changed_rev     = ieb->changed_rev;
       ibb.changed_date    = ieb->changed_date;
       ibb.changed_author  = ieb->changed_author;
@@ -3037,6 +3050,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              svn_revnum_t revision,
 
                              const apr_hash_t *props,
+                             apr_array_header_t *iprops,
 
                              svn_revnum_t changed_rev,
                              apr_time_t changed_date,
@@ -3091,6 +3105,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
   ieb.revision = revision;
 
   ieb.props = props;
+  ieb.iprops = iprops;
 
   ieb.changed_rev = changed_rev;
   ieb.changed_date = changed_date;
@@ -9309,6 +9324,175 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *repos_root_url;
+  svn_revnum_t revision;
+  int op_depth;
+  const char *repos_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL,
+                               &revision, &repos_relpath, &repos_root_url,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, db, local_abspath, result_pool,
+                               scratch_pool));
+
+  if (repos_relpath && repos_relpath[0] == '\0')
+    {
+      /* LOCAL_ABSPATH reflects the root of the repository, so there is
+         no parents to inherit from. */
+      *iprops = apr_array_make(result_pool, 0,
+                               sizeof(svn_prop_inherited_item_t *));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                    db, local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+      VERIFY_USABLE_WCROOT(wcroot);
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_IPROPS));
+      SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+        {
+          /* No cached iprops. */
+          *iprops = NULL;
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0, result_pool,
+                                            scratch_pool));
+         }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Recursive body of svn_wc__db_get_children_with_cached_iprops. */
+static svn_error_t *
+get_children_with_cached_iprops(apr_hash_t *iprop_paths,
+                                svn_depth_t depth,
+                                const char *local_abspath,
+                                svn_wc__db_t *db,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                                local_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+  if (depth == svn_depth_empty
+      || depth == svn_depth_files
+      || depth == svn_depth_immediates)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_INODES));  
+    }
+  else /* Default to svn_depth_infinity. */
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_INODES_RECURSIVE));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      const char *relpath_with_cache = svn_sqlite__column_text(stmt, 0,
+                                                               NULL);
+      const char *abspath_with_cache = svn_dirent_join(wcroot->abspath,
+                                                       relpath_with_cache,
+                                                       result_pool);
+      apr_hash_set(iprop_paths, abspath_with_cache, APR_HASH_KEY_STRING,
+                   abspath_with_cache);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (depth == svn_depth_files || depth == svn_depth_immediates)
+    {
+      const apr_array_header_t *rel_children;
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+      SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
+                                                       db, local_abspath,
+                                                       scratch_pool,
+                                                       scratch_pool));
+      for (i = 0; i < rel_children->nelts; i++)
+        {
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+          child_abspath = svn_dirent_join(
+            local_abspath, APR_ARRAY_IDX(rel_children, i, const char *),
+            iterpool);
+
+          if (depth == svn_depth_files)
+            {
+              svn_kind_t child_kind;
+
+              SVN_ERR(svn_wc__db_read_kind(&child_kind, db, child_abspath,
+                                           FALSE, FALSE, iterpool));
+              if (child_kind != svn_kind_file)
+                continue;
+            }
+
+          SVN_ERR(get_children_with_cached_iprops(iprop_paths,
+                                                  svn_depth_empty,
+                                                  child_abspath, db,
+                                                  result_pool,
+                                                  iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
+                                           svn_depth_t depth,
+                                           const char *local_abspath,
+                                           svn_wc__db_t *db,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool)
+{
+  *iprop_paths = apr_hash_make(result_pool);
+  SVN_ERR(get_children_with_cached_iprops(*iprop_paths, depth,
+                                          local_abspath, db, result_pool,
+                                          scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
@@ -10153,19 +10337,22 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 #endif
 }
 
-/* Sets a base nodes revision and/or repository relative path. If
-   LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
-   is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
-   REPOS_ID is still valid).
+/* Sets a base nodes revision, repository relative path, and/or inherited
+   propertis. If LOCAL_ABSPATH's rev (REV) is valid, set its revision.  If
+   SET_REPOS_RELPATH is TRUE set its repository relative path to REPOS_RELPATH
+   (and make sure its REPOS_ID is still valid).  If IPROPS is not NULL set its
+   inherited properties to IPROPS, if IPROPS is NULL then clear any the iprops
+   cache for the base node.
  */
 static svn_error_t *
-db_op_set_rev_and_repos_relpath(svn_wc__db_wcroot_t *wcroot,
-                                const char *local_relpath,
-                                svn_revnum_t rev,
-                                svn_boolean_t set_repos_relpath,
-                                const char *repos_relpath,
-                                apr_int64_t repos_id,
-                                apr_pool_t *scratch_pool)
+db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
+                                   const char *local_relpath,
+                                   apr_array_header_t *iprops,
+                                   svn_revnum_t rev,
+                                   svn_boolean_t set_repos_relpath,
+                                   const char *repos_relpath,
+                                   apr_int64_t repos_id,
+                                   apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
@@ -10197,6 +10384,15 @@ db_op_set_rev_and_repos_relpath(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
+  /* Set or clear iprops. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_IPROP));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            wcroot->wc_id,
+                            local_relpath));
+  SVN_ERR(svn_sqlite__bind_iprops(stmt, 3, iprops, scratch_pool));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -10204,7 +10400,13 @@ db_op_set_rev_and_repos_relpath(svn_wc__db_wcroot_t *wcroot,
  *
  * Tweak the information for LOCAL_RELPATH in WCROOT.  If NEW_REPOS_RELPATH is
  * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
- * NEW_REPOS_ID..  If NEW_REV is valid, make this the node's working revision.
+ * NEW_REPOS_ID.  If NEW_REV is valid, make this the node's working revision.
+ *
+ * If WCROOT_IPROPS is not NULL it is a hash mapping const char * absolute
+ * working copy paths to depth-first ordered arrays of
+ * svn_prop_inherited_item_t * structures.  If the absolute path equivalent
+ * of LOCAL_RELPATH exists in WCROOT_IPROPS, then set the hashed value as the
+ * node's inherited properties.
  *
  * Unless S_ROOT is TRUE the tweaks might cause the node for LOCAL_ABSPATH to
  * be removed from the WC; if IS_ROOT is TRUE this will not happen.
@@ -10217,6 +10419,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                    svn_revnum_t new_rev,
                    svn_depth_t depth,
                    apr_hash_t *exclude_relpaths,
+                   apr_hash_t *wcroot_iprops,
                    svn_boolean_t is_root,
                    svn_boolean_t skip_when_dir,
                    svn_wc__db_t *db,
@@ -10233,6 +10436,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   svn_boolean_t set_repos_relpath = FALSE;
   svn_boolean_t update_root;
   svn_depth_t depth_below_here = depth;
+  apr_array_header_t *iprops = NULL;
 
   /* Skip an excluded path and its descendants. */
   if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
@@ -10278,14 +10482,23 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   if (new_repos_relpath != NULL && strcmp(repos_relpath, new_repos_relpath))
     set_repos_relpath = TRUE;
 
-  if (set_repos_relpath
+  if (wcroot_iprops)
+    iprops = apr_hash_get(wcroot_iprops,
+                          svn_dirent_join(wcroot->abspath, local_relpath,
+                                          scratch_pool),
+                          APR_HASH_KEY_STRING);
+
+  if (iprops
+      || set_repos_relpath
       || (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision))
-    SVN_ERR(db_op_set_rev_and_repos_relpath(wcroot, local_relpath,
-                                            new_rev,
-                                            set_repos_relpath,
-                                            new_repos_relpath,
-                                            new_repos_id,
-                                            scratch_pool));
+    {
+      SVN_ERR(db_op_set_rev_repos_relpath_iprops(wcroot, local_relpath,
+                                                 iprops, new_rev,
+                                                 set_repos_relpath,
+                                                 new_repos_relpath,
+                                                 new_repos_id,
+                                                 scratch_pool));
+    }
 
   /* Early out */
   if (depth <= svn_depth_empty
@@ -10325,7 +10538,8 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(bump_node_revision(wcroot, child_local_relpath, new_repos_id,
                                  child_repos_relpath, new_rev,
                                  depth_below_here,
-                                 exclude_relpaths, FALSE /* is_root */,
+                                 exclude_relpaths, wcroot_iprops,
+                                 FALSE /* is_root */,
                                  (depth < svn_depth_immediates), db,
                                  iterpool));
     }
@@ -10345,6 +10559,7 @@ struct bump_revisions_baton_t
   const char *new_repos_uuid;
   svn_revnum_t new_revision;
   apr_hash_t *exclude_relpaths;
+  apr_hash_t *wcroot_iprops;
   svn_wc__db_t *db;
 };
 
@@ -10391,6 +10606,7 @@ bump_revisions_post_update(void *baton,
   SVN_ERR(bump_node_revision(wcroot, local_relpath, new_repos_id,
                              brb->new_repos_relpath, brb->new_revision,
                              brb->depth, brb->exclude_relpaths,
+                             brb->wcroot_iprops,
                              TRUE /* is_root */, FALSE, brb->db,
                              scratch_pool));
 
@@ -10406,6 +10622,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
+                                         apr_hash_t *wcroot_iprops,
                                          apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
@@ -10429,6 +10646,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   brb.new_repos_uuid = new_repos_uuid;
   brb.new_revision = new_revision;
   brb.exclude_relpaths = exclude_relpaths;
+  brb.wcroot_iprops = wcroot_iprops;
   brb.db = db;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,

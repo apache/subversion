@@ -84,4 +84,3 @@ main(int argc, const char *argv[])
 
   return got_error;
 }
-

@@ -154,10 +154,13 @@ extern "C" {
  * The bump to 30 switched the conflict storage to a skel inside conflict_data.
  * Also clears some known invalid state.
  *
+ * The bump to 31 added the inherited_props column in the NODES table.
+ * Bumped in r????????.
+ *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 30
+#define SVN_WC__VERSION 31
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */

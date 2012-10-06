@@ -417,3 +417,16 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                                     SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                     status_editor, status_baton, pool);
 }
+
+svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_hash_t **dirents,
+                            svn_revnum_t *fetched_rev,
+                            apr_hash_t **props,
+                            apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(*path != '/');
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, SVN_DIRENT_ALL, pool);
+}

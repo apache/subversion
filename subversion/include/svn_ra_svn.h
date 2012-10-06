@@ -62,6 +62,8 @@ extern "C" {
 #define SVN_RA_SVN_CAP_PARTIAL_REPLAY "partial-replay"
 /* maps to SVN_RA_CAPABILITY_ATOMIC_REVPROPS */
 #define SVN_RA_SVN_CAP_ATOMIC_REVPROPS "atomic-revprops"
+/* maps to SVN_RA_CAPABILITY_INHERITED_PROPERTIES: */
+#define SVN_RA_SVN_CAP_INHERITED_PROPS "inherited-props"
 /* maps to SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS */
 #define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 

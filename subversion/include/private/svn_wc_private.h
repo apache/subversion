@@ -55,7 +55,14 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          apr_pool_t *scratch_pool);
 
 /* Like svn_wc_get_update_editorX and svn_wc_get_status_editorX, but only
-   allows updating a file external LOCAL_ABSPATH */
+   allows updating a file external LOCAL_ABSPATH.
+
+   Since this only deals with files, the WCROOT_IPROPS argument in
+   svn_wc_get_update_editorX and svn_wc_get_status_editorX (hashes mapping
+   const char * absolute working copy paths, which are working copy roots, to
+   depth-first ordered arrays of svn_prop_inherited_item_t * structures) is
+   simply IPROPS here, a depth-first ordered arrays of
+   svn_prop_inherited_item_t * structs. */
 svn_error_t *
 svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  void **edit_baton,
@@ -66,6 +73,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *url,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
+                                 apr_array_header_t *iprops,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
@@ -885,6 +893,25 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a local_abspath from the ACTUAL tree above
+ * @a local_abspath (looking through to the WORKING or BASE tree as
+ * required), up to and including the root of the working copy and
+ * any cached inherited properties inherited by the root.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_iprops(apr_array_header_t **inherited_props,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *propname,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
 /** Obtain a mapping of const char * local_abspaths to const svn_string_t*
  * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
  * and its descendants.
@@ -899,6 +926,22 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
                                 const char *propname,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *iprops_paths to a hash mapping const char * absolute working
+ * copy paths to the same for each path in the working copy at or below
+ * @a local_abspath, limited by @a depth, that has cached inherited
+ * properties for the base node of the path.  Allocate @a *iprop_paths
+ * in @a result_pool.  Use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_cached_iprop_children(apr_hash_t **iprop_paths,
+                                  svn_depth_t depth,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.
@@ -1438,6 +1481,15 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
  *
+ * @a wcroot_iprops is a hash mapping const char * absolute working copy
+ * paths which are working copy roots (at or under the target within the
+ * constraints dictated by @a depth) to depth-first ordered arrays of
+ * svn_prop_inherited_item_t * structures which represent the inherited
+ * properties for the base of those paths at @a target_revision.  After a
+ * successful drive of this editor, the base nodes for these paths will
+ * have their inherited properties cache updated with the values from
+ * @a wcroot_iprops.
+ *
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
@@ -1479,6 +1531,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,
                           const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -1522,6 +1575,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           const char *anchor_abspath,
                           const char *target_basename,
                           const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,

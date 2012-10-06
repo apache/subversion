@@ -409,6 +409,10 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
    ACTUAL, to mark the properties unmodified.
 
+   If NEW_IPROPS is not NULL, then it is a depth-first ordered array of
+   svn_prop_inherited_item_t * structures that is set as the base node's
+   inherited_properties.
+
    Any work items that are necessary as part of this node construction may
    be passed in WORK_ITEMS.
 
@@ -432,6 +436,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const svn_skel_t *conflict,
                               svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
+                              apr_array_header_t *new_iprops,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
@@ -1036,6 +1041,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              svn_revnum_t revision,
 
                              const apr_hash_t *props,
+                             apr_array_header_t *iprops,
 
                              svn_revnum_t changed_rev,
                              apr_time_t changed_date,
@@ -2084,6 +2090,39 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Read a BASE node's inherited property information.
+
+   Set *IPROPS to to a depth-first ordered array of
+   svn_prop_inherited_item_t * structures representing the cached
+   inherited properties for the BASE node at LOCAL_ABSPATH.
+
+   If no cached properties are found, then set *IPROPS to NULL.
+   If LOCAL_ABSPATH represents the root of the repository, then set
+   *IPROPS to an empty array.
+
+   Allocate *IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations. */
+svn_error_t *
+svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Find BASE nodes with cached inherited properties.
+
+   Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
+   paths to the same for each path in the working copy at or below
+   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
+   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
+                                           svn_depth_t depth,
+                                           const char *local_abspath,
+                                           svn_wc__db_t *db,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
 
 /** Obtain a mapping of const char * local_abspaths to const svn_string_t*
  * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
@@ -2396,6 +2435,12 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    EXCLUDE_RELPATHS is a hash containing const char *local_relpath.  Nodes
    for pathnames contained in EXCLUDE_RELPATHS are not touched by this
    function.  These pathnames should be paths relative to the wcroot.
+
+   If WCROOT_IPROPS is not NULL it is a hash mapping const char * absolute
+   working copy paths to depth-first ordered arrays of
+   svn_prop_inherited_item_t * structures.  If LOCAL_ABSPATH exists in
+   WCROOT_IPROPS, then set the hashed value as the node's inherited
+   properties.
 */
 svn_error_t *
 svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
@@ -2406,6 +2451,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
+                                         apr_hash_t *wcroot_iprops,
                                          apr_pool_t *scratch_pool);
 
 
