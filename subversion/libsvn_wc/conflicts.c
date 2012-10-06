@@ -2408,10 +2408,8 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       apr_hash_t *their_old_props;
       apr_hash_t *their_props;
       apr_hash_t *conflicted_props;
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
       apr_hash_t *old_props;
       apr_hash_t *resolve_from = NULL;
-#endif
 
       SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
                                                   &mine_props, &their_old_props,
@@ -2419,7 +2417,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                                                   db, local_abspath, conflicts,
                                                   scratch_pool, scratch_pool));
 
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
       if (operation == svn_wc_operation_merge)
           SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
@@ -2483,7 +2480,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                                           FALSE, NULL, NULL,
                                           scratch_pool));
         }
-#endif
 
       /* Legacy behavior: Only report property conflicts as resolved when the
          property reject file exists
