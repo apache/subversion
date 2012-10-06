@@ -698,7 +698,7 @@ svn_client_add4(const char *path,
       err = NULL; /* SVN_NO_ERROR */
       is_wc_root = FALSE;
     }
-  if (is_wc_root && (! force))
+  if (is_wc_root)
     {
 #ifdef HAVE_SYMLINK
       svn_node_kind_t disk_kind;
@@ -713,20 +713,17 @@ svn_client_add4(const char *path,
         is_wc_root = FALSE;
       else
 #endif
-        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+        {
+          if (! force)
+            return svn_error_createf(
+                                 SVN_ERR_ENTRY_EXISTS, NULL,
                                  _("'%s' is already under version control"),
                                  svn_dirent_local_style(local_abspath, pool));
+        }
     }
-  
-  /* ### this is a hack.
-     ### before we switched to absolute paths, if a user tried to do
-     ### 'svn add .', PATH would be "" and PARENT_PATH would also be "",
-     ### thus emulating the behavior below.  Now that we are using
-     ### absolute paths, svn_dirent_dirname() doesn't behave the same way
-     ### w.r.t. '.', so we need to include the following hack.  This
-     ### behavior is tested in schedule_tests-11. */
-  if (path[0] == 0)
-    parent_abspath = local_abspath;
+
+  if (is_wc_root)
+    parent_abspath = local_abspath; /* We will only add children */
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
@@ -747,9 +744,7 @@ svn_client_add4(const char *path,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     add(local_abspath, depth, force, no_ignore, existing_parent_abspath,
         ctx, pool),
-    ctx->wc_ctx,
-    is_wc_root ? local_abspath
-               : (existing_parent_abspath ? existing_parent_abspath 
+    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath 
                                           : parent_abspath),
     FALSE /* lock_anchor */, pool);
   return SVN_NO_ERROR;
