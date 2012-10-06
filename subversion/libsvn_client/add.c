@@ -689,7 +689,7 @@ svn_client_add4(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-          && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+          && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         {
           return svn_error_trace(err);
         }
