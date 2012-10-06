@@ -355,10 +355,30 @@ typedef struct svn_client_proplist_item_t
 } svn_client_proplist_item_t;
 
 /**
- * The callback invoked by svn_client_proplist3().  Each invocation
- * provides the regular properties of @a path which is either a WC path or
- * a URL.  @a prop_hash maps property names (char *) to property
-   values (svn_string_t *).  Use @a pool for all temporary allocation.
+ * The callback invoked by svn_client_proplist4().  Each invocation
+ * provides the regular and/or inherited properties of @a path, which is
+ * either a working copy path or a URL.  If @a prop_hash is not @c NULL, then
+ * it maps explicit <tt>const char *</tt> property names to
+ * <tt>svn_string_t *</tt> explicit property values.  If @a inherited_props
+ * is not @c NULL, then it is a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the
+ * properties inherited by @a path.  Use @a scratch_pool for all temporary
+ * allocations.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_proplist_receiver2_t)(
+  void *baton,
+  const char *path,
+  apr_hash_t *prop_hash,
+  apr_array_header_t *inherited_props,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to #svn_proplist_receiver2_t, but doesn't return inherited
+ * properties.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  *
  * @since New in 1.5.
  */
@@ -4677,9 +4697,20 @@ svn_client_revprop_set(const char *propname,
 
 /**
  * Set @a *props to a hash table whose keys are absolute paths or URLs
- * of items on which property @a propname is set, and whose values are
- * `#svn_string_t *' representing the property value for @a propname
- * at that path.
+ * of items on which property @a propname is explicitly set, and whose
+ * values are <tt>svn_string_t *</tt> representing the property value for
+ * @a propname at that path.
+ *
+ * If @a inherited_props is not @c NULL, then set @a *inherited_props to a
+ * depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * representing the properties inherited by @a target.  If @a target is a
+ * working copy path, then properties inherited by @a target as far as the
+ * root of the working copy are obtained from the working copy's actual
+ * property values.  Properties inherited from above the working copy root
+ * come from the inherited properties cache.  If @a target is a URL, then
+ * the inherited properties come from the repository.  If @a inherited_props
+ * is not @c NULL and no inheritable properties are found, then set
+ * @a *inherited_props to an empty array.
  *
  * Allocate @a *props, its keys, and its values in @a pool, use
  * @a scratch_pool for temporary allocations.
@@ -4719,8 +4750,30 @@ svn_client_revprop_set(const char *propname,
  * This function returns SVN_ERR_UNVERSIONED_RESOURCE when it is called on
  * unversioned nodes.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_propget5(apr_hash_t **props,
+                    apr_array_header_t **inherited_props,
+                    const char *propname,
+                    const char *target,  /* abspath or URL */
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_propget5 but doesn't support the retrieval of the
+ * properties inherited by @a target.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget4(apr_hash_t **props,
                     const char *propname,
@@ -4814,22 +4867,22 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool);
 
 /**
- * Invoke @a receiver with @a receiver_baton to return the regular properties
- * of @a target, a URL or working copy path.  @a receiver will be called
- * for each path encountered.
+ * Invoke @a receiver with @a receiver_baton to return the regular explicit, and
+ * possibly the inherited, properties of @a target, a URL or working copy path.
+ * @a receiver will be called for each path encountered.
  *
  * @a target is a WC path or a URL.
  *
- * If @a revision->kind is #svn_opt_revision_unspecified, then get
- * properties from the working copy, if @a target is a working copy
- * path, or from the repository head if @a target is a URL.  Else get
- * the properties as of @a revision.  The actual node revision
- * selected is determined by the path as it exists in @a peg_revision.
- * If @a peg_revision->kind is #svn_opt_revision_unspecified, then it
- * defaults to #svn_opt_revision_head for URLs or
- * #svn_opt_revision_working for WC targets.  Use the authentication
- * baton cached in @a ctx for authentication if contacting the
- * repository.
+ * If @a revision->kind is #svn_opt_revision_unspecified, then get the
+ * explicit (and possibly the inherited) properties from the working copy,
+ * if @a target is a working copy path, or from the repository head if
+ * @a target is a URL.  Else get the properties as of @a revision.
+ * The actual node revision selected is determined by the path as it exists
+ * in @a peg_revision.  If @a peg_revision->kind is
+ * #svn_opt_revision_unspecified, then it defaults to #svn_opt_revision_head
+ * for URLs or #svn_opt_revision_working for WC targets.  Use the
+ * authentication baton cached in @a ctx for authentication if contacting
+ * the repository.
  *
  * If @a depth is #svn_depth_empty, list only the properties of
  * @a target itself.  If @a depth is #svn_depth_files, and
@@ -4847,10 +4900,43 @@ svn_client_revprop_get(const char *propname,
  * of one of those changelists.  If @a changelists is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
+ * If @a get_target_inherited_props is true, then also return any inherited
+ * properties when @a receiver is called for @a target.  If @a target is a
+ * working copy path, then properties inherited by @a target as far as the
+ * root of the working copy are obtained from the working copy's actual
+ * property values.  Properties inherited from above the working copy
+ * root come from the inherited properties cache.  If @a target is a URL,
+ * then the inherited properties come from the repository.
+ * If @a get_target_inherited_props is false, then no inherited properties
+ * are returned to @a receiver.
+ *
  * If @a target is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_proplist4(const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     const apr_array_header_t *changelists,
+                     svn_boolean_t get_target_inherited_props,
+                     svn_proplist_receiver2_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_proplist4(), except that the @a receiver type is
+ * a #svn_proplist_receiver_t and there is no support for finding the
+ * inherited properties for @a target and there is no separate scratch pool.
+ *
+ * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,

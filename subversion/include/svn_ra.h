@@ -971,11 +971,42 @@ svn_ra_get_commit_editor(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
+ * If the server advertises the #SVN_RA_CAPABILITY_INHERITED_PROPS capability
+ * and if @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * a depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * representing the properties inherited by @a path at @a revision (or the
+ * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
+ * @a inherited_props is not @c NULL and no inheritable properties are found,
+ * then set @a *inherited_props to an empty array.  If the server does not
+ * advertise the #SVN_RA_CAPABILITY_INHERITED_PROPS capability and
+ * @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * @c NULL.
+ *
  * The stream handlers for @a stream may not perform any RA
  * operations using @a session.
  *
- * @since New in 1.2.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_get_file2(svn_ra_session_t *session,
+                 const char *path,
+                 svn_revnum_t revision,
+                 svn_stream_t *stream,
+                 svn_revnum_t *fetched_rev,
+                 apr_hash_t **props,
+                 apr_array_header_t **inherited_props,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to @c svn_ra_get_file2, but does not support the retrieval of
+ * inherited properties.
+ *
+ * @since New in 1.2.
+ *
+ * @deprecated Provided for compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_file(svn_ra_session_t *session,
                 const char *path,
@@ -1010,8 +1041,40 @@ svn_ra_get_file(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
- * @since New in 1.4.
+ * If the server advertises the #SVN_RA_CAPABILITY_INHERITED_PROPS capability
+ * and if @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * a depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * representing the properties inherited by @a path at @a revision (or the
+ * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
+ * @a inherited_props is not @c NULL and no inheritable properties are found,
+ * then set @a *inherited_props to an empty array.  If the server does not
+ * advertise the #SVN_RA_CAPABILITY_INHERITED_PROPS capability and
+ * @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * @c NULL.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_get_dir3(svn_ra_session_t *session,
+                apr_hash_t **dirents,
+                svn_revnum_t *fetched_rev,
+                apr_hash_t **props,
+                apr_array_header_t **inherited_props,
+                const char *path,
+                svn_revnum_t revision,
+                apr_uint32_t dirent_fields,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to @c svn_ra_get_dir3, but does not support the retrieval of
+ * inherited properties.
+ *
+ * @since New in 1.4.
+ *
+ * @deprecated Provided for compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_dir2(svn_ra_session_t *session,
                 apr_hash_t **dirents,
@@ -1922,6 +1985,28 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        apr_pool_t *pool);
 
 /**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a path at @a revision (or the 'head' revision if
+ * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a path relative to
+ * the URL in @a session.  Use @a pool for all allocations.  If no
+ * inheritable properties are found, then set @a *inherited_props to
+ * an empty array.
+ *
+ * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **inherited_props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
  * @{
@@ -1994,13 +2079,19 @@ svn_ra_has_capability(svn_ra_session_t *session,
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
 /**
+ * The capability to get inherited properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_INHERITED_PROPS "inherited-props"
+
+/**
  * The capability of a server to automatically remove transaction
  * properties prefixed with SVN_PROP_EPHEMERAL_PREFIX.
  *
  * @since New in 1.8.
  */
 #define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
-
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

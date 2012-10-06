@@ -528,6 +528,34 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
 /* ---------------------------------------------------------------- */
 
+/*** Inheritable Properties ***/
+
+/* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
+   as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
+   RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
+   const char * absolute working copy paths to depth-first ordered arrays
+   of svn_prop_inherited_item_t * structures.
+
+   If LOCAL_ABSPATH has no base then do nothing.
+
+   RA_SESSION should be an open RA session pointing at the URL of PATH,
+   or NULL, in which case this function will open its own temporary session.
+
+   Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations.
+*/
+svn_error_t *
+svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
+                                  const char *local_abspath,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/* ---------------------------------------------------------------- */
+
 /*** Editor for repository diff ***/
 
 /* Create an editor for a pure repository comparison, i.e. comparing one

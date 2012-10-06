@@ -236,6 +236,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
+  svn_boolean_t show_inherited_props; /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
 } svn_cl__opt_state_t;
 
@@ -477,12 +478,15 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
-/* Same as svn_cl__print_prop_hash(), only output xml to *OUTSTR.  If *OUTSTR is
-   NULL, allocate it first from POOL, otherwise append to it. */
+/* Similar to svn_cl__print_prop_hash(), only output xml to *OUTSTR.
+   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
+   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
+   allocate it first from POOL, otherwise append to it. */
 svn_error_t *
 svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             apr_hash_t *prop_hash,
                             svn_boolean_t names_only,
+                            svn_boolean_t inherited_props,
                             apr_pool_t *pool);
 
 /* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it

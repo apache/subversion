@@ -224,8 +224,8 @@ def prop_conflict_resolution(sbox):
   #   2) 'A/mu' - An incoming prop edit on a local prop modification.
   #   3) 'A/D/gamma' - An local, non-conflicted prop edit
   #
-  # This currently fails because svn resolve --accept=[theirs-conflict |
-  # theirs-full] removes the conflicts, but doesn't install 'their' version
+  # Previously this failed because svn resolve --accept=[theirs-conflict |
+  # theirs-full] removed the conflicts, but didn't install 'their' version
   # of the conflicted properties.
   do_prop_conflicting_up_and_resolve('mine-full',
                                      ['local_edit\n'],

@@ -649,7 +649,7 @@ log_entry_receiver_xml(void *baton,
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
       SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
                                           FALSE, /* name_only */
-                                          pool));
+                                          FALSE, pool));
       svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 

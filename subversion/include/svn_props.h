@@ -85,6 +85,23 @@ svn_prop_array_dup(const apr_array_header_t *array,
                    apr_pool_t *pool);
 
 
+/** A structure to represent inherited properties.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_prop_inherited_item_t
+{
+  /** The absolute working copy path, relative filesystem path, or URL from
+   * which the properties in @a prop_hash are inherited. */
+  const char *path_or_url;
+
+  /** A hash of (const char *) inherited property names, and (svn_string_t *)
+   * property values. */
+  apr_hash_t *prop_hash;
+
+} svn_prop_inherited_item_t;
+
+
 /**
  * Given a hash (keys <tt>const char *</tt> and values <tt>const
  * svn_string_t</tt>) of properties, returns an array of svn_prop_t

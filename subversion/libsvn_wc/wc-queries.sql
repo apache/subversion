@@ -149,9 +149,10 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
-  dav_cache, symlink_target, file_external, moved_to, moved_here)
+  dav_cache, symlink_target, file_external, moved_to, moved_here,
+  inherited_props)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
+        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
 
 -- STMT_SELECT_BASE_PRESENT
 SELECT local_relpath, kind FROM nodes n
@@ -1128,6 +1129,28 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 SELECT 1 FROM nodes WHERE op_depth > 0
 LIMIT 1
 
+-- STMT_SELECT_WCROOT_NODES
+/* Select all base nodes which are the root of a WC, including
+   switched subtrees, but excluding those which map to the root
+   of the repos.
+
+   ### IPROPS: Is this query horribly inefficient?  Quite likely,
+   ### but it only runs during an upgrade, so do we care? */
+SELECT l.wc_id, l.local_relpath FROM nodes as l
+LEFT OUTER JOIN nodes as r
+ON l.wc_id = r.wc_id
+   AND l.repos_id = r.repos_id
+   AND r.local_relpath = l.parent_relpath
+WHERE (l.local_relpath == '' AND l.repos_path != '')
+   OR (l.op_depth = 0
+       AND l.local_relpath != ''
+       AND l.repos_path != ltrim(r.repos_path
+                                 || '/'
+                                 || ltrim(substr(l.local_relpath,
+                                                 length(l.parent_relpath) + 1),
+                                          '/'),
+                                 '/'))
+
 /* --------------------------------------------------------------------------
  * Complex queries for callback walks, caching results in a temporary table.
  *
@@ -1488,6 +1511,40 @@ WHERE wc_id = ?1
 -- STMT_SELECT_ALL_NODES
 SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
 WHERE wc_id == ?1
+
+/* ------------------------------------------------------------------------- */
+
+/* Queries for cached inherited properties. */
+
+/* Select the inherited properties of a single base node. */
+-- STMT_SELECT_IPROPS
+SELECT inherited_props FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND op_depth = 0
+
+/* Update the inherited properties of a single base node. */
+-- STMT_UPDATE_IPROP
+UPDATE nodes
+SET inherited_props = ?3
+WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
+
+/* Select a single path if its base node has cached inherited properties. */
+-- STMT_SELECT_INODES
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND op_depth = 0
+  AND (inherited_props not null)
+
+/* Select all paths whose base nodes at or below a given path, which
+   have cached inherited properties. */
+-- STMT_SELECT_INODES_RECURSIVE
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND (inherited_props not null)
 
 /* ------------------------------------------------------------------------- */
 

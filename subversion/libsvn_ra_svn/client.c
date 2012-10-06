@@ -1056,6 +1056,80 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Parse IPROPLIST, an array of svn_ra_svn_item_t structures, as a list of
+   const char * repos relative paths and properties for those paths, storing
+   the result as an array of svn_prop_inherited_item_t *items. */
+static svn_error_t *
+parse_iproplist(apr_array_header_t **inherited_props,
+                const apr_array_header_t *iproplist,
+                svn_ra_session_t *session,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+
+{
+  int i;
+  const char *repos_root_url;
+  apr_pool_t *iterpool;
+
+  if (iproplist == NULL)
+    {
+      /* If the server doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS
+         capability we shouldn't be asking for inherited props, but if we
+         did and the server sent back nothing then we'll want to handle
+         that. */
+      *inherited_props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(ra_svn_get_repos_root(session, &repos_root_url, scratch_pool));
+
+  *inherited_props = apr_array_make(
+    result_pool, iproplist->nelts, sizeof(svn_prop_inherited_item_t *));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < iproplist->nelts; i++)
+    {
+      apr_array_header_t *iprop_list;
+      char *parent_rel_path;
+      apr_hash_t *iprops;
+      apr_hash_index_t *hi;
+      svn_prop_inherited_item_t *new_iprop =
+        apr_palloc(result_pool, sizeof(*new_iprop));
+      svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(iproplist, i,
+                                              svn_ra_svn_item_t);
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(
+          SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+          _("Inherited proplist element not a list"));
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool, "cl",
+                                     &parent_rel_path, &iprop_list));
+      SVN_ERR(svn_ra_svn_parse_proplist(iprop_list, iterpool, &iprops));
+      new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
+                                                           parent_rel_path,
+                                                           result_pool);
+      new_iprop->prop_hash = apr_hash_make(result_pool);
+      for (hi = apr_hash_first(iterpool, iprops);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
+          apr_hash_set(new_iprop->prop_hash,
+                       apr_pstrdup(result_pool, name),
+                       APR_HASH_KEY_STRING,
+                       svn_string_dup(value, result_pool));
+        }
+      APR_ARRAY_PUSH(*inherited_props, svn_prop_inherited_item_t *) =
+        new_iprop;
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
@@ -2533,6 +2607,9 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn,
                                      SVN_RA_SVN_CAP_ATOMIC_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn,
+                                     SVN_RA_SVN_CAP_INHERITED_PROPS);
   else if (strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn,
                                      SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS);
@@ -2582,6 +2659,27 @@ ra_svn_register_editor_shim_callbacks(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **iprops,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  apr_array_header_t *iproplist;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, scratch_pool, "get-iprops", "c(?r)",
+                               path, revision));
+  SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, "l", &iproplist));
+  SVN_ERR(parse_iproplist(iprops, iproplist, session, result_pool,
+                          scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2619,7 +2717,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_has_capability,
   ra_svn_replay_range,
   ra_svn_get_deleted_rev,
-  ra_svn_register_editor_shim_callbacks
+  ra_svn_register_editor_shim_callbacks,
+  ra_svn_get_inherited_props
 };
 
 svn_error_t *

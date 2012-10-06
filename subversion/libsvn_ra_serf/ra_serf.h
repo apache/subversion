@@ -1657,6 +1657,14 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              svn_revnum_t *revision_deleted,
                              apr_pool_t *pool);
 
+/* Implements the get_inherited_props RA layer function. */
+svn_error_t * svn_ra_serf__get_inherited_props(svn_ra_session_t *session,
+                                               apr_array_header_t **iprops,
+                                               const char *path,
+                                               svn_revnum_t revision,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
+
 /* Implements svn_ra__vtable_t.get_repos_root(). */
 svn_error_t *
 svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
@@ -1667,7 +1675,6 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
-
 
 /*** Authentication handler declarations ***/
 

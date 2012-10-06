@@ -129,6 +129,7 @@ typedef enum svn_cl__longopt_t {
   opt_diff,
   opt_allow_mixed_revisions,
   opt_include_externals,
+  opt_show_inherited_props,
   opt_search,
   opt_search_and,
 } svn_cl__longopt_t;
@@ -360,6 +361,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "recursion. This does not include externals with a\n"
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
+  {"show-inherited-props", opt_show_inherited_props, 0,
+                       N_("retrieve target's inherited properties")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
@@ -1190,7 +1193,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  use the --strict option to disable this (useful when redirecting a binary\n"
      "  property value to a file, for example).\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
-     opt_changelist },
+     opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
      {opt_strict, N_("don't print an extra newline")}} },
 
@@ -1206,7 +1209,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  With --verbose, the property values are printed as well, like 'svn propget\n"
      "  --verbose'.  With --quiet, the paths are not printed.\n"),
-    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist },
+    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist,
+     opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
      {'q', N_("don't print the path")}} },
 
@@ -2168,6 +2172,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_include_externals:
         opt_state.include_externals = TRUE;
+        break;
+      case opt_show_inherited_props:
+        opt_state.show_inherited_props = TRUE;
         break;
       case opt_properties_only:
         opt_state.diff.properties_only = TRUE;

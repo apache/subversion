@@ -146,6 +146,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INHERITED_PROPS);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too
    * is a separate matter.
@@ -1119,6 +1120,10 @@ deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "get-deleted-rev-report") == 0)
         {
           return dav_svn__get_deleted_rev_report(resource, doc, output);
+        }
+      else if (strcmp(doc->root->name, SVN_DAV__INHERITED_PROPS_REPORT) == 0)
+        {
+          return dav_svn__get_inherited_props_report(resource, doc, output);
         }
       /* NOTE: if you add a report, don't forget to add it to the
        *       dav_svn__reports_list[] array.

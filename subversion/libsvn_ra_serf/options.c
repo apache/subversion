@@ -199,6 +199,12 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY, APR_HASH_KEY_STRING,
                        capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INHERITED_PROPS, vals))
+        {
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_INHERITED_PROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
         {
           apr_hash_set(session->capabilities,
@@ -322,6 +328,8 @@ options_response_handler(serf_request_t *request,
       apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                    APR_HASH_KEY_STRING, capability_no);
       apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
                    APR_HASH_KEY_STRING, capability_no);
       apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
                    APR_HASH_KEY_STRING, capability_no);

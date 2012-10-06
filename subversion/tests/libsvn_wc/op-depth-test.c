@@ -1284,7 +1284,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
                                         "not-even-a-uuid", revision,
                                         apr_hash_make(b->pool), revision,
                                         0, NULL, NULL, svn_depth_infinity,
-                                        NULL, NULL, FALSE, NULL, NULL,
+                                        NULL, NULL, FALSE, NULL, NULL, NULL,
                                         b->pool));
 
   after = apr_palloc(b->pool, sizeof(*after) * (apr_size_t)(num_before + num_added + 1));
