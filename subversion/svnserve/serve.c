@@ -886,13 +886,14 @@ static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
+  SVN_CMD_ERR(svn_repos_begin_report3(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
                                       text_deltas, depth, ignore_ancestry,
                                       send_copyfrom_args,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
-                                      b, pool));
+                                      b, svn_ra_svn_zero_copy_limit(conn),
+                                      pool));
 
   rb.sb = b;
   rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
@@ -3367,7 +3368,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)
-    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwwww)",
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwwwww)",
                                           (apr_uint64_t) 2, (apr_uint64_t) 2,
                                           SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                           SVN_RA_SVN_CAP_SVNDIFF1,
@@ -3377,9 +3378,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                           SVN_RA_SVN_CAP_LOG_REVPROPS,
                                           SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
                                           SVN_RA_SVN_CAP_PARTIAL_REPLAY,
-                                          SVN_RA_SVN_CAP_INHERITED_PROPS));
+                                          SVN_RA_SVN_CAP_INHERITED_PROPS,
+                                          SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS));
   else
-    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwwww)",
                                           (apr_uint64_t) 2, (apr_uint64_t) 2,
                                           SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                           SVN_RA_SVN_CAP_ABSENT_ENTRIES,
@@ -3388,7 +3390,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                           SVN_RA_SVN_CAP_LOG_REVPROPS,
                                           SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
                                           SVN_RA_SVN_CAP_PARTIAL_REPLAY,
-                                          SVN_RA_SVN_CAP_INHERITED_PROPS));
+                                          SVN_RA_SVN_CAP_INHERITED_PROPS,
+                                          SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

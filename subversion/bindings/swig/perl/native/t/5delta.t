@@ -33,12 +33,15 @@ open my $aresult, '>', \$result;
 
 my $txstream = SVN::TxDelta::new($source, $target);
 
+# TEST
 isa_ok($txstream, '_p_svn_txdelta_stream_t');
 open my $asource, '<', \$srctext;
 my ($md5, @handle) = SVN::TxDelta::apply($asource, $aresult, undef);
 
 SVN::TxDelta::send_txstream($txstream, @handle);
 
+# TEST
 is($result, $tgttext, 'delta self test');
 
+# TEST
 is("$md5", 'a22b3dadcbddac48d2f1eae3ec5fb86a', 'md5 matched');

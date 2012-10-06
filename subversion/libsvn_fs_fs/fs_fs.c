@@ -3366,12 +3366,10 @@ parse_revprop(apr_hash_t **properties,
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
   if (has_revprop_cache(fs, pool))
     {
-      const char *key;
+      pair_cache_key_t key = {revision, generation};
       fs_fs_data_t *ffd = fs->fsap_data;
 
-      key = svn_fs_fs__combine_two_numbers(revision, generation,
-                                           scratch_pool);
-      SVN_ERR(svn_cache__set(ffd->revprop_cache, key, *properties,
+      SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
                              scratch_pool));
     }
 
@@ -3670,13 +3668,13 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      const char *key;
+      pair_cache_key_t key = { rev, 0};
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
-      key = svn_fs_fs__combine_two_numbers(rev, generation, pool);
+      key.second = generation;
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                             ffd->revprop_cache, key, pool));
+                             ffd->revprop_cache, &key, pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
@@ -4364,7 +4362,7 @@ struct rep_read_baton
 
   /* The key for the fulltext cache for this rep, if there is a
      fulltext cache. */
-  const char *fulltext_cache_key;
+  pair_cache_key_t fulltext_cache_key;
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
@@ -4555,11 +4553,15 @@ set_cached_combined_window(svn_stringbuf_t *window,
    ID, and representation REP.
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
-   representation for the whole delta chain.  */
+   representation for the whole delta chain.
+   Finally, return the expanded size of the representation in 
+   *EXPANDED_SIZE. It will take care of cases where only the on-disk
+   size is known.  */
 static svn_error_t *
 build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
                struct rep_state **src_state,
+               svn_filesize_t *expanded_size,
                svn_fs_t *fs,
                representation_t *first_rep,
                apr_pool_t *pool)
@@ -4574,10 +4576,24 @@ build_rep_list(apr_array_header_t **list,
   *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
   rep = *first_rep;
 
+  /* The value as stored in the data struct.
+     0 is either for unknown length or actually zero length. */
+  *expanded_size = first_rep->expanded_size;
   while (1)
     {
       SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
                                &last_revision, &rep, fs, pool));
+
+      /* Unknown size or empty representation?
+         That implies the this being the first iteration.
+         Usually size equals on-disk size, except for empty,
+         compressed representations (delta, size = 4).
+         Please note that for all non-empty deltas have
+         a 4-byte header _plus_ some data. */
+      if (*expanded_size == 0)
+        if (! rep_args->is_delta || first_rep->size != 4)
+          *expanded_size = first_rep->size;
+        
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
         {
@@ -4621,7 +4637,7 @@ static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
                    representation_t *rep,
-                   const char *fulltext_cache_key,
+                   pair_cache_key_t fulltext_cache_key,
                    apr_pool_t *pool)
 {
   struct rep_read_baton *b;
@@ -4634,22 +4650,22 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
   b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
-  b->len = rep->expanded_size ? rep->expanded_size : rep->size;
+  b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
 
-  if (fulltext_cache_key)
+  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window,
+                         &b->src_state, &b->len, fs, rep,
+                         b->filehandle_pool));
+
+  if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
     b->current_fulltext = svn_stringbuf_create_ensure
                             ((apr_size_t)b->len,
                              b->filehandle_pool);
   else
     b->current_fulltext = NULL;
-
-  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window,
-                         &b->src_state, fs, rep,
-                         b->filehandle_pool));
 
   /* Save our output baton. */
   *rb_p = b;
@@ -4935,7 +4951,7 @@ rep_read_contents(void *baton,
   if (rb->off == rb->len && rb->current_fulltext)
     {
       fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
+      SVN_ERR(svn_cache__set(ffd->fulltext_cache, &rb->fulltext_cache_key,
                              rb->current_fulltext, rb->pool));
       rb->current_fulltext = NULL;
     }
@@ -4966,7 +4982,7 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      const char *fulltext_cache_key = NULL;
+      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
@@ -4975,11 +4991,8 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_cache_key = svn_fs_fs__combine_two_numbers(rep->revision,
-                                                              rep->offset,
-                                                              pool);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, fulltext_cache_key,
+                                 ffd->fulltext_cache, &fulltext_cache_key,
                                  pool));
           if (is_cached)
             {
@@ -4987,6 +5000,8 @@ read_representation(svn_stream_t **contents_p,
               return SVN_NO_ERROR;
             }
         }
+      else
+        fulltext_cache_key.revision = SVN_INVALID_REVNUM;
 
       SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
 
@@ -5095,6 +5110,70 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   return SVN_NO_ERROR;
 }
 
+/* Baton for cache_access_wrapper. Wraps the original parameters of
+ * svn_fs_fs__try_process_file_content().
+ */
+typedef struct cache_access_wrapper_baton_t
+{
+  svn_fs_process_contents_func_t func;
+  void* baton;
+} cache_access_wrapper_baton_t;
+
+/* Wrapper to translate between svn_fs_process_contents_func_t and
+ * svn_cache__partial_getter_func_t.
+ */
+static svn_error_t *
+cache_access_wrapper(void **out,
+                     const void *data,
+                     apr_size_t data_len,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  cache_access_wrapper_baton_t *wrapper_baton = baton;
+
+  SVN_ERR(wrapper_baton->func((const unsigned char *)data,
+                              data_len - 1, /* cache adds terminating 0 */
+                              wrapper_baton->baton,
+                              pool));
+  
+  /* non-NULL value to signal the calling cache that all went well */
+  *out = baton;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
+                                     svn_fs_t *fs,
+                                     node_revision_t *noderev,
+                                     svn_fs_process_contents_func_t processor,
+                                     void* baton,
+                                     apr_pool_t *pool)
+{
+  representation_t *rep = noderev->data_rep;
+  if (rep)
+    {
+      fs_fs_data_t *ffd = fs->fsap_data;
+      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
+
+      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
+        {
+          cache_access_wrapper_baton_t wrapper_baton = {processor, baton};
+          void *dummy = NULL;
+
+          return svn_cache__get_partial(&dummy, success,
+                                        ffd->fulltext_cache,
+                                        &fulltext_cache_key,
+                                        cache_access_wrapper,
+                                        &wrapper_baton,
+                                        pool);
+        }
+    }
+
+  *success = FALSE;
+  return SVN_NO_ERROR;
+}
 
 /* Fetch the contents of a directory into ENTRIES.  Values are stored
    as filename to string mappings; further conversion is necessary to
@@ -5365,11 +5444,10 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
 
-  proplist = apr_hash_make(pool);
-
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       const char *filename = path_txn_node_props(fs, noderev->id, pool);
+      proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
@@ -5377,9 +5455,31 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     }
   else if (noderev->prop_rep)
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
+      representation_t *rep = noderev->prop_rep;
+      
+      pair_cache_key_t key = { rep->revision, rep->offset };
+      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
+        {
+          svn_boolean_t is_cached;
+          SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
+                                 ffd->properties_cache, &key, pool));
+          if (is_cached)
+            return SVN_NO_ERROR;
+        }
+
+      proplist = apr_hash_make(pool);
       SVN_ERR(read_representation(&stream, fs, noderev->prop_rep, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
+      
+      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
+        SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist, pool));
+    }
+  else
+    {
+      /* return an empty prop list if the node doesn't have any props */
+      proplist = apr_hash_make(pool);
     }
 
   *proplist_p = proplist;
@@ -6532,25 +6632,20 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   if (!rep || !rep->txn_id)
     {
       const char *unique_suffix;
+      apr_hash_t *entries;
 
-      {
-        apr_hash_t *entries;
+      /* Before we can modify the directory, we need to dump its old
+         contents into a mutable representation file. */
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
+                                          subpool));
+      SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
+      SVN_ERR(svn_io_file_open(&file, filename,
+                               APR_WRITE | APR_CREATE | APR_BUFFERED,
+                               APR_OS_DEFAULT, pool));
+      out = svn_stream_from_aprfile2(file, TRUE, pool);
+      SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
 
-        svn_pool_clear(subpool);
-
-        /* Before we can modify the directory, we need to dump its old
-           contents into a mutable representation file. */
-        SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
-                                            subpool));
-        SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
-        SVN_ERR(svn_io_file_open(&file, filename,
-                                 APR_WRITE | APR_CREATE | APR_BUFFERED,
-                                 APR_OS_DEFAULT, pool));
-        out = svn_stream_from_aprfile2(file, TRUE, pool);
-        SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
-
-        svn_pool_clear(subpool);
-      }
+      svn_pool_clear(subpool);
 
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
@@ -6571,7 +6666,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* if we have a directory cache for this transaction, update it */
-  svn_pool_clear(subpool);
   if (ffd->txn_dir_cache)
     {
       /* build parameters: (name, new entry) pair */

@@ -70,23 +70,10 @@ def no_mergeinfo(sbox):
   sbox.build(create_wc=False)
   sbox.simple_repo_copy('A', 'A2')
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           "\n".join(
-["    youngest          last               repos."] +
-["    common            full     tip of    path of"] +
-["    ancestor          merge    branch    branch"] +
-[""] +
-["    1                          2       "] +
-["    |                          |       "] +
-["  ----------| ... |-------------         A"] +
-["     \                                 "] +
-["      \                                "] +
-["       -----| ... |-------------         A2"] +
-["                               |       "] +
-["                               WC      "] +
-[""]
-                                           ),
+                                           [],
                                            sbox.repo_url + '/A',
-                                           sbox.repo_url + '/A2')
+                                           sbox.repo_url + '/A2',
+                                           "--show-revs=merged")
 
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"

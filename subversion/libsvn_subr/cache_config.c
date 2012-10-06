@@ -119,7 +119,9 @@ svn_cache__get_global_membuffer_cache(void)
           &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 10),
+          0,
           ! svn_cache_config_get()->single_threaded,
+          FALSE,
           pool);
 
       /* Some error occured. Most likely it's an OOM error but we don't

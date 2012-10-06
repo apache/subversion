@@ -9,10 +9,10 @@ my @_all_fns;
 BEGIN {
     @_all_fns =
         qw( version diff_summarize_dup create_context checkout3
-            checkout2 checkout update3 update2 update switch2 switch
+            checkout2 checkout update4 update3 update2 update switch2 switch
             add4 add3 add2 add mkdir3 mkdir2 mkdir delete3 delete2
             delete import3 import2 import commit4 commit3 commit2
-            commit status3 status2 status log4 log3 log2 log blame4
+            commit status4 status3 status2 status log4 log3 log2 log blame4
             blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
             diff_peg3 diff_peg2 diff_peg diff_summarize2
             diff_summarize diff_summarize_peg2 diff_summarize_peg
@@ -254,13 +254,49 @@ sub new
 
 =item $ctx-E<gt>add($path, $recursive, $pool);
 
+Similar to $ctx-E<gt>add2(), but with $force always set to FALSE.
+
+=item $ctx-E<gt>add2($path, $recursive, $force, $ctx, $pool);
+
+Similar to $ctx-E<gt>add3(), but with $no_ignore always set to FALSE.
+
+=item $ctx-E<gt>add3($path, $recursive, $force, $no_ignore, $pool);
+
+Similar to $ctx-E<gt>add4(), but with $add_parents always set to FALSE and
+$depth set according to $recursive; if TRUE, then depth is
+$SVN::Depth::infinity, if FALSE, then $SVN::Depth::empty.
+
+=item $ctx-E<gt>add4($path, $depth, $force, $no_ignore, $add_parents, $pool);
+
 Schedule a working copy $path for addition to the repository.
 
-$path's parent must be under revision control already, but $path is not.
-If $recursive is set, then assuming $path is a directory, all of its
-contents will be scheduled for addition as well.
+If $depth is $SVN::Depth::empty, add just $path and nothing below it.  If
+$SVN::Depth::files, add $path and any file children of $path.  If 
+$SVN::Depth::immediates, add $path, any file children, and any immediate
+subdirectories (but nothing underneath those subdirectories).  If 
+$SVN::Depth::infinity, add $path and everything under it fully recursively.
+
+$path's parent must be under revision control already (unless $add_parents is
+TRUE), but $path is not.
+
+Unless $force is TRUE and $path is already under version control, returns an
+$SVN::Error::ENTRY_EXISTS object.  If $force is set, do not error on
+already-versioned items.  When used with $depth set to $SVN::Depth::infinity
+it will enter versioned directories; scheduling unversioned children. 
 
 Calls the notify callback for each added item.
+
+If $no_ignore is FALSE, don't add any file or directory (or recurse into any
+directory) that is unversioned and found by recursion (as opposed to being the
+explicit target $path) and whose name matches the svn:ignore property on its
+parent directory or the global-ignores list in $ctx->config.  If $no_ignore is
+TRUE, do include such files and directories.  (Note that an svn:ignore property
+can influence this behaviour only when recursing into an already versioned
+directory with $force).
+
+If $add_parents is TRUE, recurse up $path's directory and look for a versioned
+directory.  If found, add all intermediate paths between it and $path.  If not
+found return $SVN::Error::NO_VERSIONED_PARENT.
 
 Important: this is a B<scheduling> operation.  No changes will happen
 to the repository until a commit occurs.  This scheduling can be
@@ -299,11 +335,38 @@ because the desired revision can not be determined.
 
 =item $ctx-E<gt>checkout($url, $path, $revision, $recursive, $pool);
 
+Similar to $ctx-E<gt>checkout2(), but with $peg_revision always set to undef (unspecified) and $ignore_externals always set to FALSE.
+
+=item $ctx-E<gt>checkout2($url, $path, $peg_revision, $revision, $recursive, $ignore_externals, $pool);
+
+Similar to $ctx-E<gt>checkout3(), but with $allow_unver_obstructions always set
+to FALSE, and $depth set according to $recurse: if $recurse is TRUE, $depth is
+$SVN::Depth::infinity, if $recurse is FALSE, set $depth to $SVN::Depth::files.
+
+=item $ctx-E<gt>checkout3($url, $path, $preg_revision, $revision, $depth, $ignore_externals, $allow_unver_obstructions, $pool);
+
 Checkout a working copy of $url at $revision using $path as the root directory
 of the newly checked out working copy.
 
+The $peg_revision sets the revision at which the path in the $url is treated as representing.
+
 $revision must be a number, 'HEAD', or a date.  If $revision does not
 meet these requirements the $SVN::Error::CLIENT_BAD_REVISION is raised.
+
+$depth is one of the constants in SVN::Depth and specifies the depth of the
+operation.  If set to $SVN::Depth::unknown, then behave as if for
+$SVN::Depth::infinity, except in the case of resuming a previous checkout of
+$path (i.e. updating) in which case use the depth of the existing working copy.
+
+$ignore_exteranls if set to TRUE the operation will ignore external definitions.
+
+$allow_unver_obstructions if set to TRUE the operation will tolerate existing
+unversioned items that obstruct incoming paths.  Only obstructions of the same
+type (file or dir) as the added item are tolerated.  The text of obstructing
+files is left as-is, effectively treating it as a user modification after the
+checkout.  Working properties of obstructing items are set equal to the base
+properties.  If set to FALSE, then abort if there are any unversioned
+obstructing items.
 
 Returns the value of the revision actually checked out of the repository.
 
@@ -732,8 +795,20 @@ in the repository, this feature will fail.
 
 =item $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
+Similar to $ctx-E<gt>status2(), but with ignore_externals always set to FALSE, and with the status_func receiving a svn_wc_status2_t instead of a svn_wc_status_t object.
+
+=item $ctx-E<gt>status2($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $ignore_externals, $pool);
+
+Similar to $ctx-E<gt>status3(), but with the changelists passed as undef, and with recursive instead of depth.
+
+=item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
+
+Similar to $ctx-E<gt>status4(), without the pool parameter to the callback and the return of the callback is ignored. 
+
+=item $ctx-E<gt>status4($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
+
 Given $path to a working copy directory (or single file), call status_func()
-with a set of svn_wc_status_t objects which describe the status of $path and
+with a set of svn_wc_status2_t objects which describe the status of $path and
 its children.
 
 If $recursive is true, recurse fully, else do only immediate children.
@@ -746,19 +821,23 @@ information about out-of-dateness (with respect to $revision).  Also, will
 return the value of the actual revision against with the working copy was
 compared.  (The return will be undef if $update is not set).
 
-The function recurses into externals definitions ('svn:externals') after
-handling the main target, if any exist.  The function calls the notify callback
-with $SVN::Wc::Notify::Action::status_external action before handling each
-externals definition, and with $SVN::Wc::Notify::Action::status_completed
-after each.
+Unless ignore_externals is set, the function recurses into externals definitions
+('svn:externals') after handling the main target, if any exist.  The function
+calls the notify callback with $SVN::Wc::Notify::Action::status_external action
+before handling each externals definition, and with 
+$SVN::Wc::Notify::Action::status_completed after each.
+
+$changelists is a reference to an array of changelist names, used as a restrictive filter on items whose statuses are reported; that is don't report status about any item unless it's a member of those changelists.  If changelists is empty (or altogether undef), no changelist filtering occurs.
 
 The status_func subroutine takes the following parameters:
-$path, $status
+$path, $status, $pool
 
 $path is the pathname of the file or directory which status is being
-reported.  $status is a svn_wc_status_t object.
+reported.  $status is a svn_wc_status2_t object.  $pool is an apr_pool_t
+object which is cleaned beteween invocations to the callback.
 
-The return of the status_func subroutine is ignored.
+The return of the status_func subroutine can be a svn_error_t object created by
+SVN::Error::create in order to propogate an error up.
 
 =item $ctx-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
 
@@ -813,15 +892,73 @@ switched.
 
 =item $ctx-E<gt>update($path, $revision, $recursive, $pool)
 
-Update a working copy $path to $revision.
+Similar to $ctx-E<gt>update2() except that it accepts only a single target in
+$path, returns a single revision, and $ignore_externals is always set to FALSE.
+
+=item $ctx-E<gt>update2($paths, $revision, $recursive, $ignore_externals, $pool)
+
+Similar to $ctx-E<gt>update3() but with $allow_unver_obstructions always set to
+FALSE, $depth_is_sticky to FALSE, and $depth set according to $recursive: if
+$recursive is TRUE, set $depth to $SVN::Depth::infinity, if $recursive is
+FALSE, set $depth to $SVN::Depth::files.
+
+=item $ctx-E<gt>update3($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $pool)
+
+Similar to $ctx-E<gt>update4() but with $make_parents always set to FALSE and
+$adds_as_modification set to TRUE.
+
+=item $ctx-E<gt>update4($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $adds_as_modification, $make_parents)
+
+Update working trees $paths to $revision.
+
+$paths is a array reference of paths to be updated.  Unversioned paths that are
+the direct children of a versioned path will cause an update that attempts to
+add that path; other unversioned paths are skipped.
 
 $revision must be a revision number, 'HEAD', or a date or this method will
 raise the $SVN::Error::CLIENT_BAD_REVISION error.
 
+The paths in $paths can be from multiple working copies from multiple
+repositories, but even if they all come from the same repository there is no
+guarantee that revision represented by 'HEAD' will remain the same as each path
+is updated.
+
+If $ignore_externals is set, don't process externals definitions as part of
+this operation.
+
+If $depth is $SVN::Depth::infinity, update fully recursivelly.  Else if it is
+$SVN::Depth::immediates or $SVN::Depth::files, update each target and its file
+entries, but not its subdirectories.  Else if $SVN::Depth::empty, update
+exactly each target, nonrecursively (essentially, update the target's
+properties).
+
+If $depth is $SVN::Depth::unknown, take the working depth from $paths and then
+describe as behaved above.
+
+If $depth_is_sticky is set and $depth is not $SVN::Depth::unknown, then in
+addition to update paths, also set their sticky ambient depth value to $depth.
+
+If $allow_unver_obstructions is TRUE then the update tolerates existing 
+unversioned items that obstruct added paths.  Only obstructions of the same
+type (file or dir) as the added item are tolerated.  The text of obstructing
+files is left as-is, effectively treating it as a user modification after the
+update.  Working properties of obstructing items are set equal to the base
+properties.  If $allow_unver_obstructions is FALSE then the update will abort
+if there are any unversioned obstructing items.
+
+If $adds_as_modification is TRUE, a local addition at the same path as an 
+incoming addition of the same node kind results in a normal node with a
+possible local modification, instead of a tree conflict.
+
+If $make_parents is TRUE, create any non-existent parent directories also by
+checking them out at depth=empty.
+
 Calls the notify callback for each item handled by the update, and
 also for files restored from the text-base.
 
-Returns the revision to which the working copy was actually updated.
+Returns an array reference to an array of revision numbers with each element
+set to the revision to which $revision was resolved for the corresponding
+element of $paths.
 
 
 =item $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
@@ -1265,41 +1402,41 @@ use SVN::Base qw(Client svn_info_t_);
 
 =over 8
 
-=item $info->URL()
+=item $info-E<gt>URL()
 
 Where the item lives in the repository.
 
-=item $info->rev()
+=item $info-E<gt>rev()
 
 The revision of the object.  If path_or_url is a working-copy
 path, then this is its current working revnum.  If path_or_url
 is a URL, then this is the repos revision that path_or_url lives in.
 
-=item $info->kind()
+=item $info-E<gt>kind()
 
 The node's kind.
 
-=item $info->repos_root_URL()
+=item $info-E<gt>repos_root_URL()
 
 The root URL of the repository.
 
-=item $info->repos_UUID()
+=item $info-E<gt>repos_UUID()
 
 The repository's UUID.
 
-=item $info->last_changed_rev()
+=item $info-E<gt>last_changed_rev()
 
 The last revision in which this object changed.
 
-=item $info->last_changed_date()
+=item $info-E<gt>last_changed_date()
 
 The date of the last_changed_rev.
 
-=item $info->last_changed_author()
+=item $info-E<gt>last_changed_author()
 
 The author of the last_changed_rev.
 
-=item $info->lock()
+=item $info-E<gt>lock()
 
 An exclusive lock, if present.  Could be either local or remote.
 
@@ -1311,27 +1448,27 @@ also only useful when working with a WC.
 
 =over 8
 
-=item $info->has_wc_info()
+=item $info-E<gt>has_wc_info()
 
-=item $info->schedule()
+=item $info-E<gt>schedule()
 
-=item $info->copyfrom_url()
+=item $info-E<gt>copyfrom_url()
 
-=item $info->copyfrom_rev()
+=item $info-E<gt>copyfrom_rev()
 
-=item $info->text_time()
+=item $info-E<gt>text_time()
 
-=item $info->prop_time()
+=item $info-E<gt>prop_time()
 
-=item $info->checksum()
+=item $info-E<gt>checksum()
 
-=item $info->conflict_old()
+=item $info-E<gt>conflict_old()
 
-=item $info->conflict_new()
+=item $info-E<gt>conflict_new()
 
-=item $info->conflict_wrk()
+=item $info-E<gt>conflict_wrk()
 
-=item $info->prejfile()
+=item $info-E<gt>prejfile()
 
 =back
 
@@ -1378,12 +1515,12 @@ $SVN::Client::COMMIT_ITEM_TEXT_MODS
 $SVN::Client::COMMIT_ITEM_PROP_MODS
 $SVN::Client::COMMIT_ITEM_IS_COPY
 
-=item $citem>incoming_prop_changes()
+=item $citem-E<gt>incoming_prop_changes()
 
 A reference to an array of svn_prop_t objects representing changes to
 WC properties.
 
-=item $citem>outgoing_prop_changes()
+=item $citem-E<gt>outgoing_prop_changes()
 
 A reference to an array of svn_prop_t objects representing extra
 changes to properties in the repository (which are not necessarily

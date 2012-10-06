@@ -244,6 +244,7 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
                               const char *dst_parent_abspath,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
+                              svn_boolean_t allow_mixed_revisions,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
@@ -252,11 +253,12 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
   dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
                                 scratch_pool);
 
-  SVN_ERR(svn_wc_move(ctx->wc_ctx, pair->src_abspath_or_url,
-                     dst_abspath, FALSE /* metadata_only */,
-                     ctx->cancel_func, ctx->cancel_baton,
-                     ctx->notify_func2, ctx->notify_baton2,
-                     scratch_pool));
+  SVN_ERR(svn_wc__move2(ctx->wc_ctx, pair->src_abspath_or_url,
+                        dst_abspath, FALSE /* metadata_only */,
+                        allow_mixed_revisions,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        ctx->notify_func2, ctx->notify_baton2,
+                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -267,17 +269,20 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
                               const char *dst_parent_abspath,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
+                              svn_boolean_t allow_mixed_revisions,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
   if (lock_dst)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
-                                    lock_dst, ctx, scratch_pool),
+                                    lock_dst, allow_mixed_revisions, ctx,
+                                    scratch_pool),
       ctx->wc_ctx, dst_parent_abspath, FALSE, scratch_pool);
   else
     SVN_ERR(do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
-                                          lock_dst, ctx, scratch_pool));
+                                          lock_dst, allow_mixed_revisions,
+                                          ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -287,6 +292,7 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
 static svn_error_t *
 do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                   const char *dst_path,
+                  svn_boolean_t allow_mixed_revisions,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -341,13 +347,15 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (lock_src)
         SVN_WC__CALL_WITH_WRITE_LOCK(
           do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                        lock_src, lock_dst, ctx, iterpool),
+                                        lock_src, lock_dst,
+                                        allow_mixed_revisions, ctx, iterpool),
           ctx->wc_ctx, src_parent_abspath,
           FALSE, iterpool);
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                              lock_src, lock_dst, ctx,
-                                              iterpool));
+                                              lock_src, lock_dst,
+                                              allow_mixed_revisions,
+                                              ctx, iterpool));
 
     }
   svn_pool_destroy(iterpool);
@@ -1856,6 +1864,7 @@ static svn_error_t *
 try_copy(const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
+         svn_boolean_t allow_mixed_revisions,
          svn_boolean_t make_parents,
          svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
@@ -2145,8 +2154,9 @@ try_copy(const apr_array_header_t *sources,
 
       /* Copy or move all targets. */
       if (is_move)
-        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
-                                                 pool));
+        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in,
+                                                 allow_mixed_revisions,
+                                                 ctx, pool));
       else
         return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }
@@ -2195,6 +2205,7 @@ svn_client_copy6(const apr_array_header_t *sources,
 
   err = try_copy(sources, dst_path,
                  FALSE /* is_move */,
+                 TRUE /* allow_mixed_revisions */,
                  make_parents,
                  ignore_externals,
                  revprop_table,
@@ -2226,6 +2237,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                                                        subpool)
                          : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
+                     TRUE /* allow_mixed_revisions */,
                      make_parents,
                      ignore_externals,
                      revprop_table,
@@ -2240,10 +2252,11 @@ svn_client_copy6(const apr_array_header_t *sources,
 
 
 svn_error_t *
-svn_client_move6(const apr_array_header_t *src_paths,
+svn_client_move7(const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 svn_boolean_t allow_mixed_revisions,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
@@ -2277,6 +2290,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
 
   err = try_copy(sources, dst_path,
                  TRUE /* is_move */,
+                 allow_mixed_revisions,
                  make_parents,
                  FALSE,
                  revprop_table,
@@ -2307,6 +2321,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
                                                        src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
+                     allow_mixed_revisions,
                      make_parents,
                      FALSE,
                      revprop_table,
