@@ -681,11 +681,9 @@ svn_client_add4(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* See if we're being asked to add a wc-root.  That's typically not
-     okay, unless we're in "force" mode.  We'll check the node kind
-     first, because wc-roots must be directories.  But also,
-     svn_wc_is_wc_root2() will return TRUE even if LOCAL_ABSPATH is a
-     *symlink* to a working copy root, which is a scenario we want to
-     treat differently.  */
+     okay, unless we're in "force" mode.  svn_wc__strictly_is_wc_root()
+     will return TRUE even if LOCAL_ABSPATH is a *symlink* to a working
+     copy root, which is a scenario we want to treat differently.  */
   err = svn_wc__strictly_is_wc_root(&is_wc_root, ctx->wc_ctx,
                                     local_abspath, pool);
   if (err)
@@ -709,8 +707,11 @@ svn_client_add4(const char *path,
       SVN_ERR(svn_io_check_special_path(local_abspath, &disk_kind, &is_special,
                                         pool));
 
-      /* A symlink can be an unversioned target and a wcroot */
-      if (! is_special)
+      /* A symlink can be an unversioned target and a wcroot. Lets try to add
+         the symlink, which can't be a wcroot. */
+      if (is_special)
+        is_wc_root = FALSE;
+      else
 #endif
         return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                  _("'%s' is already under version control"),
