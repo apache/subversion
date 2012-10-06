@@ -5589,7 +5589,7 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
                                         STMT_INSERT_ACTUAL_CONFLICT));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       if (*local_relpath != '\0')
-        SVN_ERR(svn_sqlite__bind_text(stmt, 9,
+        SVN_ERR(svn_sqlite__bind_text(stmt, 4,
                                       svn_relpath_dirname(local_relpath,
                                                           scratch_pool)));
     }
