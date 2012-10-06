@@ -1077,9 +1077,10 @@ rmlocks(const svn_test_opts_t *opts,
     SVN_ERR(create_rmlocks_editor(&editor, &edit_baton, &removed, subpool));
 
     /* Report what we have. */
-    SVN_ERR(svn_repos_begin_report2(&report_baton, 1, repos, "/", "", NULL,
+    SVN_ERR(svn_repos_begin_report3(&report_baton, 1, repos, "/", "", NULL,
                                     FALSE, svn_depth_infinity, FALSE, FALSE,
-                                    editor, edit_baton, NULL, NULL, subpool));
+                                    editor, edit_baton, NULL, NULL, 1024,
+                                    subpool));
     SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                                 svn_depth_infinity,
                                 FALSE, NULL, subpool));
@@ -2065,9 +2066,10 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
   SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
                                txn_root, "", subpool));
 
-  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+  SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, subpool));
+                                  editor, edit_baton, NULL, NULL, 16,
+                                  subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
                               FALSE, NULL, subpool));
@@ -2122,9 +2124,10 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
   SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
                                txn_root, "", subpool));
 
-  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+  SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, subpool));
+                                  editor, edit_baton, NULL, NULL, 20,
+                                  subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
                               FALSE, NULL, subpool));

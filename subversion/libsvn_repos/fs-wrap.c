@@ -50,6 +50,9 @@ svn_repos_fs_commit_txn(const char **conflict_p,
 {
   svn_error_t *err, *err2;
   const char *txn_name;
+  apr_hash_t *props;
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
 
   *new_rev = SVN_INVALID_REVNUM;
 
@@ -57,6 +60,24 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_repos__hooks_pre_commit(repos, txn_name, pool));
 
+  /* Remove any ephemeral transaction properties. */
+  SVN_ERR(svn_fs_txn_proplist(&props, txn, pool));
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_hash_this(hi, &key, NULL, NULL);
+
+      svn_pool_clear(iterpool);
+
+      if (strncmp(key, SVN_PROP_TXN_PREFIX,
+                  (sizeof(SVN_PROP_TXN_PREFIX) - 1)) == 0)
+        {
+          SVN_ERR(svn_fs_change_txn_prop(txn, key, NULL, iterpool));
+        }
+    }
+  svn_pool_destroy(iterpool);
+  
   /* Commit. */
   err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))

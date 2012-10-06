@@ -25,7 +25,7 @@ IF ERRORLEVEL 1 EXIT /B 1
 
 PUSHD ..\deps
 
-nant gen-dev -D:wc=..\build -D:impBase=../deps/build/win32 %NANTARGS%
+nant gen-dev -D:wc=..\build -D:impBase=../deps/build/win32 -D:botBuild=true %NANTARGS%
 IF ERRORLEVEL 1 EXIT /B 1
 
 POPD

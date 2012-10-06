@@ -350,7 +350,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        )},
   /* end of diff options */
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
-                       N_("Allow merge into mixed-revision working copy.\n"
+                       N_("Allow operation on mixed-revision working copy.\n"
                        "                             "
                        "Use of this option is not recommended!\n"
                        "                             "
@@ -488,19 +488,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_changelist, opt_keep_changelists, opt_include_externals} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
-    ("Duplicate something in working copy or repository, remembering\n"
-     "history.\n"
+    ("Copy files and directories in a working copy or repository.\n"
      "usage: copy SRC[@REV]... DST\n"
-     "\n"
-     "  When copying multiple sources, they will be added as children of DST,\n"
-     "  which must be a directory.\n"
      "\n"
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
      "    WC  -> URL:  immediately commit a copy of WC to URL\n"
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
      "    URL -> URL:  complete server-side copy;  used to branch and tag\n"
-     "  All the SRCs must be of the same type.\n"
+     "  All the SRCs must be of the same type. When copying multiple sources,\n"
+     "  they will be added as children of DST, which must be a directory.\n"
      "\n"
      "  WARNING: For compatibility with previous versions of Subversion,\n"
      "  copies performed using two working copy paths (WC -> WC) will not\n"
@@ -1040,22 +1037,30 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
      "usage: 1. mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
-     "       2. mergeinfo --show-revs=merged SOURCE[@REV] [TARGET[@REV]]\n"
-     "       3. mergeinfo --show-revs=eligible SOURCE[@REV] [TARGET[@REV]]\n"
+     "       2. mergeinfo --show-revs=WHICH SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
-     "  1. Display the following information about merges between SOURCE and\n"
-     "     TARGET:\n"
-     "       the youngest common ancestor;\n"
-     "       the latest full merge in either direction, and thus the\n"
-     "         base that will be used for the next full merge.\n"
-     "  2. Print the revision numbers on SOURCE that have been merged to TARGET.\n"
-     "  3. Print the revision numbers on SOURCE that have NOT been merged to TARGET.\n"
+     "  1. Summarize the history of merging between SOURCE and TARGET. The graph\n"
+     "     shows, from left to right:\n"
+     "       the youngest common ancestor of the branches;\n"
+     "       the latest full merge in either direction, and thus the common base\n"
+     "         that will be used for the next automatic merge;\n"
+     "       the repository path and revision number of the tip of each branch.\n"
      "\n"
-     "  The default TARGET is the current working directory ('.').\n"
-     "  If --revision (-r) is provided, filter the displayed information to\n"
-     "  show only that which is associated with the revisions within the\n"
-     "  specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
-     "  valid range values.\n"
+     "  2. Print the revision numbers on SOURCE that have been merged to TARGET\n"
+     "     (with --show-revs=merged), or that have not been merged to TARGET\n"
+     "     (with --show-revs=eligible). Print only revisions in which there was\n"
+     "     at least one change in SOURCE.\n"
+     "\n"
+     "     If --revision (-r) is provided, filter the displayed information to\n"
+     "     show only that which is associated with the revisions within the\n"
+     "     specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
+     "     valid range values.\n"
+     "\n"
+     "  SOURCE and TARGET are the source and target branch URLs, respectively.\n"
+     "  (If a WC path is given, the corresponding base URL is used.) The default\n"
+     "  TARGET is the current working directory ('.'). REV specifies the revision\n"
+     "  to be considered the tip of the branch; the default for SOURCE is HEAD,\n"
+     "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
@@ -1078,20 +1083,26 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'q', opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
-    ("Move and/or rename something in working copy or repository.\n"
+    ("Move (rename) an item in a working copy or repository.\n"
      "usage: move SRC... DST\n"
      "\n"
-     "  When moving multiple sources, they will be added as children of DST,\n"
-     "  which must be a directory.\n"
-     "\n"
-     "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
-     "  Note:  the --revision option has no use and is deprecated.\n"
-     "\n"
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
-     "    WC  -> WC:   move and schedule for addition (with history)\n"
-     "    URL -> URL:  complete server-side rename.\n"
-     "  All the SRCs must be of the same type.\n"),
-    {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+     "    WC  -> WC:  move an item in a working copy, as a local change to\n"
+     "                be committed later (with or without further changes)\n"
+     "    URL -> URL: move an item in the repository directly, immediately\n"
+     "                creating a new revision in the repository\n"
+     "  All the SRCs must be of the same type. When moving multiple sources,\n"
+     "  they will be added as children of DST, which must be a directory.\n"
+     "\n"
+     "  SRC and DST of WC -> WC moves must be committed in the same revision.\n"
+     "  Furthermore, WC -> WC moves will refuse to move a mixed-revision subtree.\n"
+     "  To avoid unnecessary conflicts, it is recommended to run 'svn update'\n"
+     "  to update the subtree to a single revision before moving it.\n"
+     "  The --allow-mixed-revisions option is provided for backward compatibility.\n"
+     "\n"
+     "  The --revision option has no use and is deprecated.\n"),
+    {'r', 'q', opt_force, opt_parents, opt_allow_mixed_revisions, 
+     SVN_CL__LOG_MSG_OPTIONS} },
 
   { "patch", svn_cl__patch, {0}, N_
     ("Apply a patch to a working copy.\n"
@@ -2657,60 +2668,53 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   ctx->auth_baton = ab;
 
-  /* Set up conflict resolution callback. */
+  /* Install the default conflict handler which postpones all conflicts
+   * and remembers the list of conflicted paths to be resolved later.
+   * This is overridden only within the 'resolve' subcommand. */
+  ctx->conflict_func = NULL;
+  ctx->conflict_baton = NULL;
+  ctx->conflict_func2 = svn_cl__conflict_func_postpone;
+  ctx->conflict_baton2 = svn_cl__get_conflict_func_postpone_baton(pool);
+
+  if (opt_state.non_interactive)
+    {
+      if (opt_state.accept_which == svn_cl__accept_edit)
+        return EXIT_ERROR(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("--accept=%s incompatible with"
+                                     " --non-interactive"),
+                                   SVN_CL__ACCEPT_EDIT));
+
+      if (opt_state.accept_which == svn_cl__accept_launch)
+        return EXIT_ERROR(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("--accept=%s incompatible with"
+                                     " --non-interactive"),
+                                   SVN_CL__ACCEPT_LAUNCH));
+
+      /* The default action when we're non-interactive is to postpone
+       * conflict resolution. */
+      if (opt_state.accept_which == svn_cl__accept_unspecified)
+        opt_state.accept_which = svn_cl__accept_postpone;
+    }
+
+  /* Check whether interactive conflict resolution is disabled by
+   * the configuration file. If no --accept option was specified
+   * we postpone all conflicts in this case. */
   SVN_INT_ERR(svn_config_get_bool(cfg_config, &interactive_conflicts,
                                   SVN_CONFIG_SECTION_MISCELLANY,
                                   SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
-                                  TRUE));  /* ### interactivity on by default.
-                                                  we can change this. */
-
-  /* The new svn behavior is to postpone everything until after the operation
-     completed */
-  ctx->conflict_func = NULL;
-  ctx->conflict_baton = NULL;
-  ctx->conflict_func2 = NULL;
-  ctx->conflict_baton2 = NULL;
-
-  if ((opt_state.accept_which == svn_cl__accept_unspecified
-       && (!interactive_conflicts || opt_state.non_interactive))
-      || opt_state.accept_which == svn_cl__accept_postpone)
+                                  TRUE));
+  if (!interactive_conflicts)
     {
-      /* If no --accept option at all and we're non-interactive, we're
-         leaving the conflicts behind, so don't need the callback.  Same if
-         the user said to postpone. */
-      opt_state.conflict_func = NULL;
-      opt_state.conflict_baton = NULL;
-    }
-  else
-    {
-      svn_cl__conflict_baton_t * conflict_baton2;
-      svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
-      pb->cancel_func = ctx->cancel_func;
-      pb->cancel_baton = ctx->cancel_baton;
+      /* Make 'svn resolve' non-interactive. */
+      if (subcommand->cmd_func == svn_cl__resolve)
+        opt_state.non_interactive = TRUE;
 
-      if (opt_state.non_interactive)
-        {
-          if (opt_state.accept_which == svn_cl__accept_edit)
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("--accept=%s incompatible with"
-                                   " --non-interactive"), SVN_CL__ACCEPT_EDIT));
-          if (opt_state.accept_which == svn_cl__accept_launch)
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("--accept=%s incompatible with"
-                                   " --non-interactive"),
-                                 SVN_CL__ACCEPT_LAUNCH));
-        }
-
-      opt_state.conflict_func = svn_cl__conflict_handler;
-      SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
-                                              opt_state.accept_which,
-                                              ctx->config,
-                                              opt_state.editor_cmd,
-                                              pb,
-                                              pool));
-      opt_state.conflict_baton = conflict_baton2;
+      /* We're not resolving conflicts interactively. If no --accept option
+       * was provided the default behaviour is to postpone all conflicts. */
+      if (opt_state.accept_which == svn_cl__accept_unspecified)
+        opt_state.accept_which = svn_cl__accept_postpone;
     }
 
   /* And now we finally run the subcommand. */

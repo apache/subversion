@@ -629,12 +629,23 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   if (!*changed_p)
     return SVN_NO_ERROR;
 
-  /* From this point on, assume things haven't changed. */
+  /* If the SHA1 checksums match for these things, we'll claim they
+     have the same contents.  (We don't give quite as much weight to
+     MD5 checksums.)  */
+  SVN_ERR(svn_fs_file_checksum(&checksum1, svn_checksum_sha1,
+                               root1, path1, FALSE, pool));
+  SVN_ERR(svn_fs_file_checksum(&checksum2, svn_checksum_sha1,
+                               root2, path2, FALSE, pool));
+  if (checksum1 && checksum2)
+    {
+      *changed_p = !svn_checksum_match(checksum1, checksum2);
+      return SVN_NO_ERROR;
+    }
+
+  /* From this point on, our default answer is "Nothing's changed". */
   *changed_p = FALSE;
 
-  /* So, things have changed.  But we need to know if the two sets of
-     file contents are actually different.  If they have differing
-     sizes, then we know they differ. */
+  /* Different filesizes means the contents are different. */
   SVN_ERR(svn_fs_file_length(&size1, root1, path1, pool));
   SVN_ERR(svn_fs_file_length(&size2, root2, path2, pool));
   if (size1 != size2)
@@ -643,8 +654,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
       return SVN_NO_ERROR;
     }
 
-  /* Same sizes, huh?  Well, if their checksums differ, we know they
-     differ. */
+  /* Different MD5 checksums means the contents are different. */
   SVN_ERR(svn_fs_file_checksum(&checksum1, svn_checksum_md5, root1, path1,
                                FALSE, pool));
   SVN_ERR(svn_fs_file_checksum(&checksum2, svn_checksum_md5, root2, path2,
@@ -655,13 +665,11 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
       return SVN_NO_ERROR;
     }
 
-  /* Same sizes, same checksums.  Chances are reallllly good that they
-     don't differ, but to be absolute sure, we need to compare bytes. */
+  /* And finally, different contents means the ... uh ... contents are
+     different. */
   SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
   SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
-
   SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, pool));
-
   *changed_p = !same;
 
   return SVN_NO_ERROR;

@@ -23,11 +23,18 @@
 #ifndef SVN_LIBSVN_FS_TREE_H
 #define SVN_LIBSVN_FS_TREE_H
 
+#include "fs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+
+/* In POOL, create an instance of a DAG node 1st level cache.
+   The POOL will be cleared at regular intervals. */
+fs_fs_dag_cache_t*
+svn_fs_fs__create_dag_cache(apr_pool_t *pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate the structure in POOL. */

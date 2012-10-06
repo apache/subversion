@@ -933,12 +933,23 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      if (val && svn_cstring_casecmp(val, "application/vnd.svn-svndiff") == 0)
+      if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
           fetch_ctx->delta_stream =
               svn_txdelta_parse_svndiff(info->textdelta,
                                         info->textdelta_baton,
                                         TRUE, info->editor_pool);
+
+          /* Validate the delta base claimed by the server matches
+             what we asked for! */
+          val = serf_bucket_headers_get(hdrs, SVN_DAV_DELTA_BASE_HEADER);
+          if (val && (strcmp(val, info->delta_base) != 0))
+            {
+              err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                      _("GET request returned unexpected "
+                                        "delta base: %s"), val);
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
       else
         {

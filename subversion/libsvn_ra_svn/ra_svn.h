@@ -56,9 +56,13 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
                                                void *baton);
 
+/* The default "user agent". */
+#define SVN_RA_SVN__DEFAULT_USERAGENT  "SVN/" SVN_VER_NUMBER
+
 /* The size of our per-connection read and write buffers. */
-#define SVN_RA_SVN__READBUF_SIZE (4*4096)
-#define SVN_RA_SVN__WRITEBUF_SIZE (4*4096)
+#define SVN_RA_SVN__PAGE_SIZE 4096
+#define SVN_RA_SVN__READBUF_SIZE (4 * SVN_RA_SVN__PAGE_SIZE)
+#define SVN_RA_SVN__WRITEBUF_SIZE (4 * SVN_RA_SVN__PAGE_SIZE)
 
 /* Create forward reference */
 typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
@@ -66,6 +70,14 @@ typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
+
+  /* I/O buffers */
+  char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
+  char read_buf[SVN_RA_SVN__READBUF_SIZE];
+  char *read_ptr;
+  char *read_end;
+  apr_size_t write_pos;
+
   svn_ra_svn__stream_t *stream;
   svn_ra_svn__session_baton_t *session;
 #ifdef SVN_HAVE_SASL
@@ -75,19 +87,32 @@ struct svn_ra_svn_conn_st {
   apr_socket_t *sock;
   svn_boolean_t encrypted;
 #endif
-  char read_buf[SVN_RA_SVN__READBUF_SIZE];
-  char *read_ptr;
-  char *read_end;
-  char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
-  apr_size_t write_pos;
+
+  /* abortion check control */
+  apr_size_t written_since_error_check;
+  apr_size_t error_check_interval;
+  svn_boolean_t may_check_for_error;
+
+  /* repository info */
   const char *uuid;
   const char *repos_root;
+
+  /* TX block notification target */
   ra_svn_block_handler_t block_handler;
   void *block_baton;
+
+  /* server settings */
   apr_hash_t *capabilities;
   int compression_level;
+  apr_size_t zero_copy_limit;
+
+  /* who's on the other side of the connection? */
   char *remote_ip;
+
+  /* EV2 support*/
   svn_delta_shim_callbacks_t *shim_callbacks;
+
+  /* our pool */
   apr_pool_t *pool;
 };
 
@@ -104,6 +129,7 @@ struct svn_ra_svn__session_baton_t {
   void *callbacks_baton;
   apr_off_t bytes_read, bytes_written; /* apr_off_t's because that's what
                                           the callback interface uses */
+  const char *useragent;
 };
 
 /* Set a callback for blocked writes on conn.  This handler may
@@ -166,6 +192,13 @@ svn_error_t *svn_ra_svn__stream_write(svn_ra_svn__stream_t *stream,
  */
 svn_error_t *svn_ra_svn__stream_read(svn_ra_svn__stream_t *stream,
                                      char *data, apr_size_t *len);
+
+/* Read the command word from CONN, return it in *COMMAND and skip to the
+ * end of the command.  Allocate data in POOL.
+ */
+svn_error_t *svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
+                                           apr_pool_t *pool,
+                                           const char **command);
 
 /* Set the timeout for operations on STREAM to INTERVAL. */
 void svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
