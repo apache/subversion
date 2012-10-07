@@ -4212,16 +4212,17 @@ svn_swig_py_config_enumerator2(const char *name,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
-      /* If it's not a SubversionException, we still have to clear it, because
-         otherwise the SWIG wrapper will not check for it, and return a value with an
-         exception pending. */
-      PyErr_Clear();
     }
   else if (!PyBool_Check(result))
     {
       err = callback_bad_return_error("Not bool");
       Py_DECREF(result);
     }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
 
   if (err)
     {
@@ -4258,16 +4259,17 @@ svn_swig_py_config_section_enumerator2(const char *name,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
-      /* If it's not a SubversionException, we still have to clear it, because
-         otherwise the SWIG wrapper will not check for it, and return a value with an
-         exception pending. */
-      PyErr_Clear();
     }
   else if (!PyBool_Check(result))
     {
       err = callback_bad_return_error("Not bool");
       Py_DECREF(result);
     }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
 
   if (err)
     {
