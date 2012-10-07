@@ -176,6 +176,17 @@ class BigDoEverythingClass(object):
     if self.options.verbose:
       print "SENT: %s to %s" % (json_msg, irker)
 
+  def join_all(self):
+    # Like self.commit(), but ignores self.config.get(section, "template").
+    for section in self.config.sections():
+      irker = self.config.get(section, "irker")
+      to_list = self.config.get(section, "to").split()
+      if not irker or not to_list:
+        continue
+      for to in to_list:
+        msg = {'to': to, 'privmsg': ''}
+        self._send(irker, msg)
+
   def commit(self, host, port, rev):
     if self.options.verbose:
       print "RECV: from %s:%s" % (host, port)
