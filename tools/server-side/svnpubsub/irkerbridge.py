@@ -201,7 +201,7 @@ class BigDoEverythingClass(object):
           to_list = self.config.get(section, "to").split()
           template = self.config.get(section, "template")
           if not irker or not to_list or not template:
-            next
+            continue
           privmsg = Template(template).safe_substitute(vars(rev))
           if len(privmsg) > MAX_PRIVMSG:
             privmsg = privmsg[:MAX_PRIVMSG-3] + '...'
