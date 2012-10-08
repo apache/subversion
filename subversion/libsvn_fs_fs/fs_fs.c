@@ -2178,16 +2178,6 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Return a string that uniquely identifies the noderev with the
- * given ID, for use as a cache key.
- */
-static const char *
-get_noderev_cache_key(const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(id, pool);
-  return id_unparsed->data;
-}
-
 /* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev
  * caching has been enabled and the data can be found, IS_CACHED will
  * be set to TRUE. The noderev will be allocated from POOL.
@@ -2203,13 +2193,19 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (! ffd->node_revision_cache || svn_fs_fs__id_txn_id(id))
-    *is_cached = FALSE;
+    {
+      *is_cached = FALSE;
+    }
   else
-    SVN_ERR(svn_cache__get((void **) noderev_p,
-                           is_cached,
-                           ffd->node_revision_cache,
-                           get_noderev_cache_key(id, pool),
-                           pool));
+    {
+      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
+                               svn_fs_fs__id_offset(id) };
+      SVN_ERR(svn_cache__get((void **) noderev_p,
+                            is_cached,
+                            ffd->node_revision_cache,
+                            &key,
+                            pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2228,10 +2224,14 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
-    return svn_cache__set(ffd->node_revision_cache,
-                          get_noderev_cache_key(id, scratch_pool),
-                          noderev_p,
-                          scratch_pool);
+    {
+      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
+                               svn_fs_fs__id_offset(id) };
+      return svn_cache__set(ffd->node_revision_cache,
+                            &key,
+                            noderev_p,
+                            scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
