@@ -39,6 +39,7 @@
 #include "repos.h"
 #include "private/svn_fspath.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_subr_private.h"
 
 
 
@@ -192,7 +193,7 @@ detect_changed(apr_hash_t **changed,
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
 
-  *changed = apr_hash_make(pool);
+  *changed = svn_hash__make(pool);
   if (changes == NULL)
     SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
@@ -577,8 +578,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   apr_hash_index_t *hi;
 
   /* Initialize return variables. */
-  *deleted_mergeinfo_catalog = apr_hash_make(result_pool);
-  *added_mergeinfo_catalog = apr_hash_make(result_pool);
+  *deleted_mergeinfo_catalog = svn_hash__make(result_pool);
+  *added_mergeinfo_catalog = svn_hash__make(result_pool);
 
   /* Revision 0 has no mergeinfo and no mergeinfo changes. */
   if (rev == 0)
@@ -802,8 +803,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   svn_error_t *err;
 
   /* Initialize return value. */
-  *added_mergeinfo = apr_hash_make(result_pool);
-  *deleted_mergeinfo = apr_hash_make(result_pool);
+  *added_mergeinfo = svn_hash__make(result_pool);
+  *deleted_mergeinfo = svn_hash__make(result_pool);
 
   /* If we're asking about revision 0, there's no mergeinfo to be found. */
   if (rev == 0)
@@ -845,6 +846,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *prev_path;
+      apr_ssize_t klen;
       svn_revnum_t appeared_rev, prev_rev;
       svn_fs_root_t *prev_root;
       svn_mergeinfo_catalog_t catalog, inherited_catalog;
@@ -915,8 +917,9 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                     FALSE, /* adjust_inherited_mergeinfo */
                                     iterpool, iterpool));
 
-      prev_mergeinfo = apr_hash_get(catalog, prev_path, APR_HASH_KEY_STRING);
-      prev_inherited_mergeinfo = apr_hash_get(inherited_catalog, prev_path, APR_HASH_KEY_STRING);
+      klen = strlen(prev_path);
+      prev_mergeinfo = apr_hash_get(catalog, prev_path, klen);
+      prev_inherited_mergeinfo = apr_hash_get(inherited_catalog, prev_path, klen);
 
       /* Fetch the current mergeinfo (as of REV, and including
          inherited stuff) for this path. */
@@ -931,8 +934,9 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                     FALSE, /* adjust_inherited_mergeinfo */
                                     iterpool, iterpool));
 
-      mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
-      inherited_mergeinfo = apr_hash_get(inherited_catalog, path, APR_HASH_KEY_STRING);
+      klen = strlen(path);
+      mergeinfo = apr_hash_get(catalog, path, klen);
+      inherited_mergeinfo = apr_hash_get(inherited_catalog, path, klen);
 
       if (!prev_mergeinfo && !mergeinfo)
         continue;
@@ -1075,7 +1079,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
           if (censor_revprops)
             {
               /* ... but we can only return author/date. */
-              log_entry->revprops = apr_hash_make(pool);
+              log_entry->revprops = svn_hash__make(pool);
               apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
                            APR_HASH_KEY_STRING,
                            apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
@@ -1104,7 +1108,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
                 /* ... but we can only return author/date. */
                 continue;
               if (log_entry->revprops == NULL)
-                log_entry->revprops = apr_hash_make(pool);
+                log_entry->revprops = svn_hash__make(pool);
               apr_hash_set(log_entry->revprops, name,
                            APR_HASH_KEY_STRING, value);
             }
@@ -1828,7 +1832,7 @@ store_search(svn_mergeinfo_t processed,
      singe revisions where HIST_START is equal to HIST_END. */
   svn_revnum_t start = hist_start <= hist_end ? hist_start : hist_end;
   svn_revnum_t end = hist_start <= hist_end ? hist_end + 1 : hist_start + 1;
-  svn_mergeinfo_t mergeinfo = apr_hash_make(scratch_pool);
+  svn_mergeinfo_t mergeinfo = svn_hash__make(scratch_pool);
   apr_pool_t *processed_pool = apr_hash_pool_get(processed);
   int i;
 
@@ -2019,8 +2023,8 @@ do_logs(svn_fs_t *fs,
                          single hash to be shared across all of the merged
                          recursions so we can track and squelch duplicates. */
                       subpool = svn_pool_create(pool);
-                      nested_merges = apr_hash_make(subpool);
-                      processed = apr_hash_make(subpool);
+                      nested_merges = svn_hash__make(subpool);
+                      processed = svn_hash__make(subpool);
                     }
 
                   SVN_ERR(handle_merged_revisions(
@@ -2065,7 +2069,7 @@ do_logs(svn_fs_t *fs,
 
                   *cur_rev = current;
                   if (! rev_mergeinfo)
-                    rev_mergeinfo = apr_hash_make(pool);
+                    rev_mergeinfo = svn_hash__make(pool);
                   apr_hash_set(rev_mergeinfo, cur_rev, sizeof(*cur_rev),
                                add_and_del_mergeinfo);
                 }
@@ -2119,7 +2123,7 @@ do_logs(svn_fs_t *fs,
               if (!nested_merges)
                 {
                   subpool = svn_pool_create(pool);
-                  nested_merges = apr_hash_make(subpool);
+                  nested_merges = svn_hash__make(subpool);
                 }
 
               SVN_ERR(handle_merged_revisions(current, fs,
@@ -2199,7 +2203,7 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
       end_rev = tmp_rev;
     }
 
-  *paths_history_mergeinfo = apr_hash_make(result_pool);
+  *paths_history_mergeinfo = svn_hash__make(result_pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
