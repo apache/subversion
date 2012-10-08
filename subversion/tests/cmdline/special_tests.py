@@ -759,7 +759,6 @@ def symlink_destination_change(sbox):
 # (disk and metadata).
 @Issue(3884)
 @SkipUnless(svntest.main.is_posix_os)
-@XFail()
 def merge_foreign_symlink(sbox):
   "merge symlink-add from foreign repos"
 
@@ -790,7 +789,7 @@ def merge_foreign_symlink(sbox):
   # Verify special status.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/zeta': Item(props={ 'svn:special': '*' })
+    'A/zeta': Item(contents="link target", props={ 'svn:special': '*' })
   })
   svntest.actions.verify_disk(sbox.ospath(''), expected_disk, True)
 
