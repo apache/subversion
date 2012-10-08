@@ -3957,7 +3957,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(result_pool);
+  svn_mergeinfo_catalog_t result_catalog = svn_hash__make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
