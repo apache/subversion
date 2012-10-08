@@ -367,21 +367,16 @@ read_link_target(const char **link_target_abspath,
   SVN_ERR(svn_io_read_link(&link_target, local_abspath, pool));
   canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
                 
+  /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
   if (!svn_dirent_is_absolute(canon_link_target))
-    {
-      /* Treat symlink as relative to LOCAL_ABSPATH's parent directory. */
-      canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,
-                                                             pool),
-                                          canon_link_target, pool);
-      SVN_ERR(svn_dirent_get_absolute(link_target_abspath, canon_link_target,
-                                      pool));
-    }
-  else if (svn_path_is_backpath_present(canon_link_target))
-    {
-      /* Collapse any .. in the symlink part of the path. */
-      SVN_ERR(svn_dirent_get_absolute(link_target_abspath, canon_link_target,
-                                      pool));
-    }
+    canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,
+                                                           pool),
+                                        canon_link_target, pool);
+
+  /* Collapse any .. in the symlink part of the path. */
+  if (svn_path_is_backpath_present(canon_link_target))
+    SVN_ERR(svn_dirent_get_absolute(link_target_abspath, canon_link_target,
+                                    pool));
   else
     *link_target_abspath = canon_link_target;
 
