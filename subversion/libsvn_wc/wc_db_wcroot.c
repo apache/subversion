@@ -365,6 +365,11 @@ read_link_target(const char **link_target_abspath,
   const char *canon_link_target;
 
   SVN_ERR(svn_io_read_link(&link_target, local_abspath, pool));
+  if (link_target->len == 0)
+    return svn_error_createf(SVN_ERR_WC_NOT_SYMLINK, NULL,
+                             _("The symlink at '%s' points nowhere"),
+                             svn_dirent_local_style(local_abspath, pool));
+
   canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
                 
   /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
