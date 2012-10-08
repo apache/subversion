@@ -819,7 +819,7 @@ def symlink_to_wc_basic(sbox):
   wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
   expected_info = [{
       'Path' : re.escape(os.path.join(symlink_path)),
-      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(wc_dir)),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
       'Revision' : '1',
@@ -828,7 +828,7 @@ def symlink_to_wc_basic(sbox):
   }, {
       'Name' : 'iota',
       'Path' : re.escape(os.path.join(symlink_path, 'iota')),
-      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(wc_dir)),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
       'Revision' : '1',
