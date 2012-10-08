@@ -4894,16 +4894,21 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  const char *dir_abspath;
+  const char *name;
   insert_working_baton_t iwb;
 
+  /* Resolve wcroot via parent directory to avoid obstruction handling */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              dir_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   blank_iwb(&iwb);
 
+  local_relpath = svn_relpath_join(local_relpath, name, scratch_pool);
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_dir;
   iwb.op_depth = relpath_depth(local_relpath);
@@ -4930,15 +4935,20 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   insert_working_baton_t iwb;
+  const char *dir_abspath;
+  const char *name;
 
+  /* Resolve wcroot via parent directory to avoid obstruction handling */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              dir_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   blank_iwb(&iwb);
 
+  local_relpath = svn_relpath_join(local_relpath, name, scratch_pool);
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_file;
   iwb.op_depth = relpath_depth(local_relpath);
@@ -4963,16 +4973,23 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   insert_working_baton_t iwb;
+  const char *dir_abspath;
+  const char *name;
 
+  /* Resolve wcroot via parent directory to avoid obstruction handling */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(target != NULL);
 
+  svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
+
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              dir_abspath, scratch_pool, scratch_pool));
+
   VERIFY_USABLE_WCROOT(wcroot);
 
   blank_iwb(&iwb);
 
+  local_relpath = svn_relpath_join(local_relpath, name, scratch_pool);
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_symlink;
   iwb.op_depth = relpath_depth(local_relpath);
