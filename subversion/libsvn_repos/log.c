@@ -951,6 +951,16 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           if (inherits_same_mergeinfo)
             continue;
         }
+      else
+        {
+          svn_boolean_t same_mergeinfo;
+          SVN_ERR(svn_mergeinfo__equals(&same_mergeinfo,
+                                        prev_inherited_mergeinfo,
+                                        FALSE,
+                                        TRUE, iterpool));
+          if (same_mergeinfo)
+            continue;
+        }
 
       /* Compare, constrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
