@@ -498,6 +498,39 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        no_handler,
                        fs->pool));
 
+  if (cache_fulltexts)
+    {
+      SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_mergeinfo,
+                           svn_fs_fs__deserialize_mergeinfo,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "MERGEINFO",
+                                       (char *)NULL),
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           /* Values are svn_stringbuf_t */
+                           NULL, NULL,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "HAS_MERGEINFO",
+                                       (char *)NULL),
+                           fs,
+                           no_handler,
+                           fs->pool));
+    }
+  else
+    {
+      ffd->mergeinfo_cache = NULL;
+      ffd->mergeinfo_existence_cache = NULL;
+    }
+
   return SVN_NO_ERROR;
 }
 
