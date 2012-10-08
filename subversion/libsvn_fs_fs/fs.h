@@ -306,6 +306,15 @@ typedef struct fs_fs_data_t
      is the revision */
   svn_cache__t *changes_cache;
 
+  /* Cache for svn_mergeinfo_t objects; the key is a combination of
+     revision, inheritance flags and path. */
+  svn_cache__t *mergeinfo_cache;
+
+  /* Cache for presence of svn_mergeinfo_t on a noderev; the key is a
+     combination of revision, inheritance flags and path; value is "1"
+     if the node has mergeinfo, "0" if it doesn't. */
+  svn_cache__t *mergeinfo_existence_cache;
+
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;
 
