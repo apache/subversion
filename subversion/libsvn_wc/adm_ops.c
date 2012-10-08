@@ -1019,6 +1019,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
   const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
+  svn_boolean_t is_special;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
@@ -1035,7 +1036,8 @@ check_can_add_node(svn_node_kind_t *kind_p,
   SVN_ERR(svn_path_check_valid(local_abspath, scratch_pool));
 
   /* Make sure something's there; set KIND and *KIND_P. */
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+  SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
+                                    scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' not found"),
@@ -1097,14 +1099,20 @@ check_can_add_node(svn_node_kind_t *kind_p,
               SVN_ERR_ASSERT(!is_wc_root);
               break;
             case svn_wc__db_status_normal:
-              if (copyfrom_url)
-                {
-                  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                                db, local_abspath,
-                                                scratch_pool));
+              SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, local_abspath,
+                                           scratch_pool));
 
-                  if (is_wc_root)
-                    break;
+              if (is_wc_root && copyfrom_url)
+                {
+                  /* Integrate a sub working copy in a parent working copy
+                     (legacy behavior) */
+                  break;
+                }
+              else if (is_wc_root && is_special)
+                {
+                  /* Adding a symlink to a working copy root.
+                     (special_tests.py 23: externals as symlink targets) */
+                  break;
                 }
               /* else: Fall through in default error */
 
