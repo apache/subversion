@@ -479,7 +479,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        0, 0, /* Do not use inprocess cache */
                        svn_fs_fs__serialize_node_revision,
                        svn_fs_fs__deserialize_node_revision,
-                       APR_HASH_KEY_STRING,
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
                        fs,
                        no_handler, 
