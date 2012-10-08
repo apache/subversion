@@ -3872,14 +3872,10 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  apr_hash_t *proplist;
-  svn_string_t *mergeinfo_string;
   fs_fs_data_t *ffd = rev_root->fs->fsap_data;
   const char *cache_key;
   svn_boolean_t found = FALSE;
   svn_stringbuf_t *mergeinfo_exists;
-  const char *rel_path;
-  svn_mergeinfo_t mergeinfo_old = NULL;
 
   *mergeinfo = NULL;
 
