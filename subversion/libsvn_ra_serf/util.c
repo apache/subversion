@@ -691,6 +691,11 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (session->http10)
+      serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
+#endif
+
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
@@ -1796,9 +1801,9 @@ handle_response(serf_request_t *request,
       handler->sline = sl;
       handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
 
-      /* HTTP/1.1? (or later)  */
-      if (sl.version != SERF_HTTP_10)
-        handler->session->http10 = FALSE;
+      /* Fall back to HTTP/1.0 needed? */
+      if (sl.version == SERF_HTTP_10)
+        handler->session->http10 = TRUE;
     }
 
   /* Keep reading from the network until we've read all the headers.  */
@@ -1907,6 +1912,14 @@ handle_response(serf_request_t *request,
                                    handler->sline.code, handler->sline.reason);
             }
         }
+    }
+
+  /* 411 Length Required: server or proxy does not support HTTP/1.1, fall back
+     to HTTP/1.0. */
+  if (handler->sline.code == 411)
+    {
+      handler->discard_body = TRUE;
+      handler->session->http10 = TRUE;
     }
 
   /* Stop processing the above, on every packet arrival.  */
