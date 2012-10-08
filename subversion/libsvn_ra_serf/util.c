@@ -1914,9 +1914,12 @@ handle_response(serf_request_t *request,
         }
     }
 
-  /* 411 Length Required: server or proxy does not support HTTP/1.1, fall back
-     to HTTP/1.0. */
-  if (handler->sline.code == 411)
+  /* These error codes might indicate that the server or proxy does not support
+     HTTP/1.1 (completely), so fall back to HTTP/1.0. */
+  if (handler->session->http10 == FALSE &&
+      (handler->sline.code == 400      /* 400 Bad Request */
+       || handler->sline.code == 411   /* 411 Length Required */
+       || handler->sline.code == 501)) /* 501 Not Implemented */
     {
       handler->discard_body = TRUE;
       handler->session->http10 = TRUE;
