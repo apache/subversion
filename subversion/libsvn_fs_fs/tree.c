@@ -4025,7 +4025,7 @@ make_revision_root(svn_fs_t *fs,
   root->rev = rev;
 
   frd->root_dir = root_dir;
-  frd->copyfrom_cache = apr_hash_make(root->pool);
+  frd->copyfrom_cache = svn_hash__make(root->pool);
 
   root->fsap_data = frd;
 

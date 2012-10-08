@@ -5584,8 +5584,9 @@ fold_change(apr_hash_t *changes,
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
   const char *path;
+  apr_size_t path_len = strlen(change->path);
 
-  if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
+  if ((old_change = apr_hash_get(changes, change->path, path_len)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
@@ -5723,8 +5724,8 @@ fold_change(apr_hash_t *changes,
      re-use its value, but there is no way to fetch it. The API makes no
      guarantees that this (new) key will not be retained. Thus, we (again)
      copy the key into the target pool to ensure a proper lifetime.  */
-  path = apr_pstrdup(pool, change->path);
-  apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
+  path = apr_pstrmemdup(pool, change->path, path_len);
+  apr_hash_set(changes, path, path_len, new_change);
 
   /* Update the copyfrom cache, if any. */
   if (copyfrom_cache)
@@ -5742,10 +5743,12 @@ fold_change(apr_hash_t *changes,
         }
       /* We need to allocate a copy of the key in the copyfrom_pool if
        * we're not doing a deletion and if it isn't already there. */
-      if (copyfrom_string && ! apr_hash_get(copyfrom_cache, copyfrom_key,
-                                            APR_HASH_KEY_STRING))
-        copyfrom_key = apr_pstrdup(copyfrom_pool, copyfrom_key);
-      apr_hash_set(copyfrom_cache, copyfrom_key, APR_HASH_KEY_STRING,
+      if (   copyfrom_string
+          && (   ! apr_hash_count(copyfrom_cache)
+              || ! apr_hash_get(copyfrom_cache, copyfrom_key, path_len)))
+        copyfrom_key = apr_pstrmemdup(copyfrom_pool, copyfrom_key, path_len);
+
+      apr_hash_set(copyfrom_cache, copyfrom_key, path_len,
                    copyfrom_string);
     }
 
@@ -6119,7 +6122,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 
   SVN_ERR(get_changes(&changes, fs, rev, scratch_pool));
 
-  changed_paths = apr_hash_make(pool);
+  changed_paths = svn_hash__make(pool);
 
   SVN_ERR(process_changes(changed_paths, copyfrom_cache, changes,
                           TRUE, pool));
