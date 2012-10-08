@@ -251,8 +251,6 @@ print_properties(svn_stream_t *out,
 
   if (inherited_props)
     {
-      int i;
-
       svn_pool_clear(iterpool);
 
       for (i = 0; i < inherited_props->nelts; i++)
