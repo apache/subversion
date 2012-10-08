@@ -371,8 +371,33 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        no_handler,
                        fs->pool));
 
-  /* initialize fulltext cache as configured */
-  ffd->fulltext_cache = NULL;
+  /* initialize node revision cache, if caching has been enabled */
+  SVN_ERR(create_cache(&(ffd->node_revision_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_node_revision,
+                       svn_fs_fs__deserialize_node_revision,
+                       sizeof(pair_cache_key_t),
+                       apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
+                       fs,
+                       no_handler,
+                       fs->pool));
+
+  /* initialize node change list cache, if caching has been enabled */
+  SVN_ERR(create_cache(&(ffd->changes_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_changes,
+                       svn_fs_fs__deserialize_changes,
+                       sizeof(svn_revnum_t),
+                       apr_pstrcat(pool, prefix, "CHANGES", (char *)NULL),
+                       fs,
+                       no_handler,
+                       fs->pool));
+
+  /* if enabled, cache fulltext and other derived information */
   if (cache_fulltexts)
     {
       SVN_ERR(create_cache(&(ffd->fulltext_cache),
@@ -386,11 +411,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-    }
-
-  /* initialize node properties cache, if that has been enabled */
-  if (cache_fulltexts)
-    {
+      
       SVN_ERR(create_cache(&(ffd->properties_cache),
                            NULL,
                            membuffer,
@@ -403,10 +424,39 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
+      
+      SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_mergeinfo,
+                           svn_fs_fs__deserialize_mergeinfo,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "MERGEINFO",
+                                       (char *)NULL),
+                           fs,
+                           no_handler,
+                           fs->pool));
+      
+      SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           /* Values are svn_stringbuf_t */
+                           NULL, NULL,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "HAS_MERGEINFO",
+                                       (char *)NULL),
+                           fs,
+                           no_handler,
+                           fs->pool));
     }
   else
     {
+      ffd->fulltext_cache = NULL;
       ffd->properties_cache = NULL;
+      ffd->mergeinfo_cache = NULL;
+      ffd->mergeinfo_existence_cache = NULL;
     }
 
   /* initialize revprop cache, if full-text caching has been enabled */
@@ -430,7 +480,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->revprop_cache = NULL;
     }
 
-  /* initialize txdelta window cache, if that has been enabled */
+  /* if enabled, cache text deltas and their combinations */
   if (cache_txdeltas)
     {
       SVN_ERR(create_cache(&(ffd->txdelta_window_cache),
@@ -445,15 +495,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-    }
-  else
-    {
-      ffd->txdelta_window_cache = NULL;
-    }
 
-  /* initialize txdelta window cache, if that has been enabled */
-  if (cache_txdeltas)
-    {
       SVN_ERR(create_cache(&(ffd->combined_window_cache),
                            NULL,
                            membuffer,
@@ -469,66 +511,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     }
   else
     {
+      ffd->txdelta_window_cache = NULL;
       ffd->combined_window_cache = NULL;
-    }
-
-  /* initialize node revision cache, if caching has been enabled */
-  SVN_ERR(create_cache(&(ffd->node_revision_cache),
-                       NULL,
-                       membuffer,
-                       0, 0, /* Do not use inprocess cache */
-                       svn_fs_fs__serialize_node_revision,
-                       svn_fs_fs__deserialize_node_revision,
-                       sizeof(pair_cache_key_t),
-                       apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
-                       fs,
-                       no_handler, 
-                       fs->pool));
-
-  /* initialize node change list cache, if caching has been enabled */
-  SVN_ERR(create_cache(&(ffd->changes_cache),
-                       NULL,
-                       membuffer,
-                       0, 0, /* Do not use inprocess cache */
-                       svn_fs_fs__serialize_changes,
-                       svn_fs_fs__deserialize_changes,
-                       sizeof(svn_revnum_t),
-                       apr_pstrcat(pool, prefix, "CHANGES", (char *)NULL),
-                       fs,
-                       no_handler,
-                       fs->pool));
-
-  if (cache_fulltexts)
-    {
-      SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           svn_fs_fs__serialize_mergeinfo,
-                           svn_fs_fs__deserialize_mergeinfo,
-                           APR_HASH_KEY_STRING,
-                           apr_pstrcat(pool, prefix, "MERGEINFO",
-                                       (char *)NULL),
-                           fs,
-                           no_handler,
-                           fs->pool));
-      SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           /* Values are svn_stringbuf_t */
-                           NULL, NULL,
-                           APR_HASH_KEY_STRING,
-                           apr_pstrcat(pool, prefix, "HAS_MERGEINFO",
-                                       (char *)NULL),
-                           fs,
-                           no_handler,
-                           fs->pool));
-    }
-  else
-    {
-      ffd->mergeinfo_cache = NULL;
-      ffd->mergeinfo_existence_cache = NULL;
     }
 
   return SVN_NO_ERROR;
