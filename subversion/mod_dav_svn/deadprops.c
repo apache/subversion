@@ -1,5 +1,7 @@
 /*
- * deadprops.c: mod_dav_svn dead property provider functions for Subversion
+ * deadprops.c: mod_dav_svn provider functions for "dead properties"
+ *              (properties implemented by Subversion or its users,
+ *              not as part of the WebDAV specification).
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
