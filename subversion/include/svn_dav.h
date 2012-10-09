@@ -260,6 +260,11 @@ extern "C" {
  */
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
 
+/** An extensible base URI from which other custom namespace URIs
+ * extend on an as-needed basis.
+ */
+#define SVN_DAV_PROP_NS_EXTENSIBLE "http://subversion.apache.org/xmlns/ext/"
+
 
 /**
  * @name Custom (extension) values for the DAV header.
