@@ -294,7 +294,7 @@ svn_cl__null_export(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  const char *from, *to;
+  const char *from;
   apr_array_header_t *targets;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
@@ -316,21 +316,6 @@ svn_cl__null_export(apr_getopt_t *os,
 
   /* Get the peg revision if present. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &truefrom, from, pool));
-
-  /* If only one target was given, split off the basename to use as
-     the `to' path.  Else, a `to' path was supplied. */
-  if (targets->nelts == 1)
-    {
-      to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
-    }
-  else
-    {
-      to = APR_ARRAY_IDX(targets, 1, const char *);
-
-      /* If given the cwd, pretend we weren't given anything. */
-      if (strcmp("", to) == 0)
-        to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
-    }
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
