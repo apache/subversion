@@ -2058,8 +2058,12 @@ svn_io_file_lock2(const char *lock_file,
   if (locktype == APR_FLOCK_EXCLUSIVE)
     flags |= APR_WRITE;
 
+  /* locktype is never read after this block, so we don't need to bother
+     setting it.  If that were to ever change, uncomment the following
+     block. 
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
+  */
 
   SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
                            APR_OS_DEFAULT,
