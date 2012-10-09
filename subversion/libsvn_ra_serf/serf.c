@@ -399,8 +399,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
-  serf_sess->http10 = TRUE;  /* until we confirm HTTP/1.1  */
-  serf_sess->http10 = FALSE; /* ### don't change behavior yet  */
+  /* Assume HTTP/1.1 is supported. When the server responds HTTP/1.0, switch
+     from chunked encoding to Content-Length, and set Connection:keep-alive
+     header to try and keep the pipeline open. */
+  serf_sess->http10 = FALSE;
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 

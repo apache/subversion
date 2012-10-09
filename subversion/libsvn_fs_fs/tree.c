@@ -3736,6 +3736,24 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+/* Return the cache key as a combination of REV_ROOT->REV, the inheritance
+   flags INHERIT and ADJUST_INHERITED_MERGEINFO, and the PATH.  The result
+   will be allocated in POOL..
+ */
+static const char *
+mergeinfo_cache_key(const char *path,
+                    svn_fs_root_t *rev_root,
+                    svn_mergeinfo_inheritance_t inherit,
+                    svn_boolean_t adjust_inherited_mergeinfo,
+                    apr_pool_t *pool)
+{
+  apr_int64_t number = rev_root->rev;
+  number = number * 4
+         + (inherit == svn_mergeinfo_nearest_ancestor ? 2 : 0)
+         + (adjust_inherited_mergeinfo ? 1 : 0);
+  
+  return svn_fs_fs__combine_number_and_string(number, path, pool);
+}
 
 /* Calculates the mergeinfo for PATH under REV_ROOT using inheritance
    type INHERIT.  Returns it in *MERGEINFO, or NULL if there is none.
@@ -3743,19 +3761,17 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
    used for temporary allocations.
  */
 static svn_error_t *
-get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
-                       svn_fs_root_t *rev_root,
-                       const char *path,
-                       svn_mergeinfo_inheritance_t inherit,
-                       svn_boolean_t adjust_inherited_mergeinfo,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
+                                svn_fs_root_t *rev_root,
+                                const char *path,
+                                svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t adjust_inherited_mergeinfo,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   parent_path_t *parent_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
-
-  *mergeinfo = NULL;
 
   path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
@@ -3845,6 +3861,58 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* Caching wrapper around get_mergeinfo_for_path_internal().
+ */
+static svn_error_t *
+get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
+                       svn_fs_root_t *rev_root,
+                       const char *path,
+                       svn_mergeinfo_inheritance_t inherit,
+                       svn_boolean_t adjust_inherited_mergeinfo,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = rev_root->fs->fsap_data;
+  const char *cache_key;
+  svn_boolean_t found = FALSE;
+  svn_stringbuf_t *mergeinfo_exists;
+
+  *mergeinfo = NULL;
+
+  cache_key = mergeinfo_cache_key(path, rev_root, inherit,
+                                  adjust_inherited_mergeinfo, scratch_pool);
+  if (ffd->mergeinfo_existence_cache)
+    {
+      SVN_ERR(svn_cache__get((void **)&mergeinfo_exists, &found,
+                             ffd->mergeinfo_existence_cache,
+                             cache_key, result_pool));
+      if (found && mergeinfo_exists->data[0] == '1')
+        SVN_ERR(svn_cache__get((void **)mergeinfo, &found,
+                              ffd->mergeinfo_cache,
+                              cache_key, result_pool));
+    }
+    
+  if (! found)
+    {
+      SVN_ERR(get_mergeinfo_for_path_internal(mergeinfo, rev_root, path,
+                                              inherit,
+                                              adjust_inherited_mergeinfo,
+                                              result_pool, scratch_pool));
+      if (ffd->mergeinfo_existence_cache)
+        {
+          mergeinfo_exists = svn_stringbuf_create(*mergeinfo ? "1" : "0",
+                                                  scratch_pool);
+          SVN_ERR(svn_cache__set(ffd->mergeinfo_existence_cache,
+                                 cache_key, mergeinfo_exists, scratch_pool));
+          if (*mergeinfo)
+            SVN_ERR(svn_cache__set(ffd->mergeinfo_cache,
+                                  cache_key, *mergeinfo, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Adds mergeinfo for each descendant of PATH (but not PATH itself)
    under ROOT to RESULT_CATALOG.  Returned values are allocated in
    RESULT_POOL; temporary values in POOL. */
@@ -3885,7 +3953,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(result_pool);
+  svn_mergeinfo_catalog_t result_catalog = svn_hash__make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
@@ -4025,7 +4093,7 @@ make_revision_root(svn_fs_t *fs,
   root->rev = rev;
 
   frd->root_dir = root_dir;
-  frd->copyfrom_cache = apr_hash_make(root->pool);
+  frd->copyfrom_cache = svn_hash__make(root->pool);
 
   root->fsap_data = frd;
 

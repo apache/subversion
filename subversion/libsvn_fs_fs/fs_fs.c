@@ -2178,16 +2178,6 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Return a string that uniquely identifies the noderev with the
- * given ID, for use as a cache key.
- */
-static const char *
-get_noderev_cache_key(const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(id, pool);
-  return id_unparsed->data;
-}
-
 /* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev
  * caching has been enabled and the data can be found, IS_CACHED will
  * be set to TRUE. The noderev will be allocated from POOL.
@@ -2203,13 +2193,19 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (! ffd->node_revision_cache || svn_fs_fs__id_txn_id(id))
-    *is_cached = FALSE;
+    {
+      *is_cached = FALSE;
+    }
   else
-    SVN_ERR(svn_cache__get((void **) noderev_p,
-                           is_cached,
-                           ffd->node_revision_cache,
-                           get_noderev_cache_key(id, pool),
-                           pool));
+    {
+      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
+                               svn_fs_fs__id_offset(id) };
+      SVN_ERR(svn_cache__get((void **) noderev_p,
+                            is_cached,
+                            ffd->node_revision_cache,
+                            &key,
+                            pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2228,10 +2224,14 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
-    return svn_cache__set(ffd->node_revision_cache,
-                          get_noderev_cache_key(id, scratch_pool),
-                          noderev_p,
-                          scratch_pool);
+    {
+      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
+                               svn_fs_fs__id_offset(id) };
+      return svn_cache__set(ffd->node_revision_cache,
+                            &key,
+                            noderev_p,
+                            scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5584,8 +5584,9 @@ fold_change(apr_hash_t *changes,
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
   const char *path;
+  apr_size_t path_len = strlen(change->path);
 
-  if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
+  if ((old_change = apr_hash_get(changes, change->path, path_len)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
@@ -5723,8 +5724,8 @@ fold_change(apr_hash_t *changes,
      re-use its value, but there is no way to fetch it. The API makes no
      guarantees that this (new) key will not be retained. Thus, we (again)
      copy the key into the target pool to ensure a proper lifetime.  */
-  path = apr_pstrdup(pool, change->path);
-  apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
+  path = apr_pstrmemdup(pool, change->path, path_len);
+  apr_hash_set(changes, path, path_len, new_change);
 
   /* Update the copyfrom cache, if any. */
   if (copyfrom_cache)
@@ -5742,10 +5743,12 @@ fold_change(apr_hash_t *changes,
         }
       /* We need to allocate a copy of the key in the copyfrom_pool if
        * we're not doing a deletion and if it isn't already there. */
-      if (copyfrom_string && ! apr_hash_get(copyfrom_cache, copyfrom_key,
-                                            APR_HASH_KEY_STRING))
-        copyfrom_key = apr_pstrdup(copyfrom_pool, copyfrom_key);
-      apr_hash_set(copyfrom_cache, copyfrom_key, APR_HASH_KEY_STRING,
+      if (   copyfrom_string
+          && (   ! apr_hash_count(copyfrom_cache)
+              || ! apr_hash_get(copyfrom_cache, copyfrom_key, path_len)))
+        copyfrom_key = apr_pstrmemdup(copyfrom_pool, copyfrom_key, path_len);
+
+      apr_hash_set(copyfrom_cache, copyfrom_key, path_len,
                    copyfrom_string);
     }
 
@@ -6119,7 +6122,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 
   SVN_ERR(get_changes(&changes, fs, rev, scratch_pool));
 
-  changed_paths = apr_hash_make(pool);
+  changed_paths = svn_hash__make(pool);
 
   SVN_ERR(process_changes(changed_paths, copyfrom_cache, changes,
                           TRUE, pool));
