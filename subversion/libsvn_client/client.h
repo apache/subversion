@@ -351,11 +351,11 @@ svn_error_t *svn_client__get_paths_auto_props(
   apr_pool_t *scratch_pool);
 
 /* Gather all auto-props from CTX->config (or none if auto-props are
-   disabled) and all svn:iprop-auto-props explicitly set on or inherited
+   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
    by PATH_OR_URL.
 
    If PATH_OR_URL is an unversioned WC path then gather the
-   svn:iprop-auto-props inherited by PATH_OR_URL's nearest versioned
+   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
    parent.
 
    If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
@@ -366,10 +366,10 @@ svn_error_t *svn_client__get_paths_auto_props(
    names to const char *property values.
 
    If a given property name exists for the same pattern in both the config
-   file and in an a svn:iprop-auto-props property, the latter overrides the
+   file and in an a svn:inheritable-auto-props property, the latter overrides the
    former.  If a given property name exists for the same pattern in two
-   different inherited svn:iprop-auto-props, then the closer path-wise
-   property overrides the more distant. svn:iprop-auto-props explicitly set
+   different inherited svn:inheritable-auto-props, then the closer path-wise
+   property overrides the more distant. svn:inheritable-auto-props explicitly set
    on PATH_OR_URL have the highest precedence and override inherited props
    and config file settings.
 

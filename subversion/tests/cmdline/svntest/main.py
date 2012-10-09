@@ -175,7 +175,7 @@ work_dir = "svn-test-work"
 SVN_PROP_MERGEINFO = "svn:mergeinfo"
 
 # Constant for the inheritabled auto-props property.
-SVN_CONFIG_AUTOPROPS = "svn:iprop-auto-props"
+SVN_CONFIG_AUTOPROPS = "svn:inheritable-auto-props"
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!

@@ -385,7 +385,7 @@ def check_inheritable_autoprops(sbox, auto_props_enabled):
 #----------------------------------------------------------------------
 def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
                                do_import_or_add=True):
-  """configurable autoprops and svn:iprop-auto-props test.
+  """configurable autoprops and svn:inheritable-auto-props test.
 
      CMD is the subcommand to test: 'import' or 'add'
      if CFGENABLE is true, enable autoprops in the config file, else disable
@@ -438,7 +438,8 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   else:
     files_wc_dir = wc_dir
 
-  # Set differing svn:iprop-auto-props properties on various directories.
+  # Set differing svn:inheritable-auto-props properties on various
+  # directories.
   sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
                       '*.c = svn:eol-style=CRLF\n'
                       '*.bat = svn:executable',
@@ -589,10 +590,10 @@ def svn_config_autoprops_imp_yes_no(sbox):
   inheritable_autoprops_test(sbox, 'import', 1, -1, '')
 
 #----------------------------------------------------------------------
-# Test svn:iprop-auto-props when 'svn add' targets an already versioned
+# Test svn:inheritable-auto-props when 'svn add' targets an already versioned
 # target.
 def svn_config_autoprops_add_versioned_target(sbox):
-  "svn:iprop-auto-props and versioned target"
+  "svn:inheritable-auto-props and versioned target"
 
   config_dir = inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
 
