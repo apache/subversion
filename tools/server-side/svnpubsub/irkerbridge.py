@@ -183,7 +183,7 @@ class BigDoEverythingClass(object):
             next
           privmsg = Template(template).safe_substitute(vars(rev))
           if len(privmsg) > MAX_PRIVMSG:
-            privmsg = privmsg[:MAX_PRIV_MSG-3] + '...'
+            privmsg = privmsg[:MAX_PRIVMSG-3] + '...'
           for to in to_list:
             msg = {'to': to, 'privmsg': privmsg}
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
