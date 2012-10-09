@@ -107,7 +107,7 @@ static svn_boolean_t
 receive_from_gpg_agent(int sd, char *buf, size_t n)
 {
   int i = 0;
-  int recvd;
+  size_t recvd;
   char c;
 
   /* Clear existing buffer content before reading response. */
