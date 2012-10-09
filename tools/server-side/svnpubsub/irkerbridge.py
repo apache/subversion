@@ -166,6 +166,27 @@ class BigDoEverythingClass(object):
       else:
         rev.subdirs_count_s = ""
 
+  def _send(self, irker, msg):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    irker_list = irker.split(':')
+    if len(irker_list) < 2:
+      irker_list.append(6659)
+    json_msg = json.dumps(msg)
+    sock.sendto(json_msg, (irker_list[0],int(irker_list[1])))
+    if self.options.verbose:
+      print "SENT: %s to %s" % (json_msg, irker)
+
+  def join_all(self):
+    # Like self.commit(), but ignores self.config.get(section, "template").
+    for section in self.config.sections():
+      irker = self.config.get(section, "irker")
+      to_list = self.config.get(section, "to").split()
+      if not irker or not to_list:
+        continue
+      for to in to_list:
+        msg = {'to': to, 'privmsg': ''}
+        self._send(irker, msg)
+
   def commit(self, host, port, rev):
     if self.options.verbose:
       print "RECV: from %s:%s" % (host, port)
@@ -180,20 +201,13 @@ class BigDoEverythingClass(object):
           to_list = self.config.get(section, "to").split()
           template = self.config.get(section, "template")
           if not irker or not to_list or not template:
-            next
+            continue
           privmsg = Template(template).safe_substitute(vars(rev))
           if len(privmsg) > MAX_PRIVMSG:
             privmsg = privmsg[:MAX_PRIVMSG-3] + '...'
           for to in to_list:
             msg = {'to': to, 'privmsg': privmsg}
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            irker_list = irker.split(':')
-            if len(irker_list) < 2:
-              irker_list.append(6659)
-            json_msg = json.dumps(msg)
-            sock.sendto(json_msg, (irker_list[0],int(irker_list[1])))
-            if self.options.verbose:
-              print "SENT: %s to %s" % (json_msg, irker)
+            self._send(irker, msg)
 
     except:
       print "Unexpected error:"

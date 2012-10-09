@@ -1,5 +1,7 @@
 /*
- * liveprops.c: mod_dav_svn live property provider functions for Subversion
+ * liveprops.c: mod_dav_svn provider functions for "live properties"
+ *              (properties implemented by the WebDAV specification
+ *              itself, not unique to Subversion or its users).
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

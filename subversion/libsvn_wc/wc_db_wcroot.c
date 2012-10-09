@@ -26,6 +26,7 @@
 #include <assert.h>
 
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -353,6 +354,40 @@ compute_relpath(const svn_wc__db_wcroot_t *wcroot,
 }
 
 
+/* Return in *LINK_TARGET_ABSPATH the absolute path the symlink at
+ * LOCAL_ABSPATH is pointing to. Perform all allocations in POOL. */
+static svn_error_t *
+read_link_target(const char **link_target_abspath,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
+{
+  svn_string_t *link_target;
+  const char *canon_link_target;
+
+  SVN_ERR(svn_io_read_link(&link_target, local_abspath, pool));
+  if (link_target->len == 0)
+    return svn_error_createf(SVN_ERR_WC_NOT_SYMLINK, NULL,
+                             _("The symlink at '%s' points nowhere"),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
+                
+  /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
+  if (!svn_dirent_is_absolute(canon_link_target))
+    canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,
+                                                           pool),
+                                        canon_link_target, pool);
+
+  /* Collapse any .. in the symlink part of the path. */
+  if (svn_path_is_backpath_present(canon_link_target))
+    SVN_ERR(svn_dirent_get_absolute(link_target_abspath, canon_link_target,
+                                    pool));
+  else
+    *link_target_abspath = canon_link_target;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
@@ -543,6 +578,8 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                   if (found_wcroot)
                     break;
 
+                  SVN_ERR(read_link_target(&local_abspath, local_abspath,
+                                           scratch_pool));
 try_symlink_as_dir:
                   kind = svn_kind_dir;
                   moved_upwards = FALSE;
@@ -692,7 +729,8 @@ try_symlink_as_dir:
                                              scratch_pool));
           if (resolved_kind == svn_node_dir)
             {
-              local_abspath = original_abspath;
+              SVN_ERR(read_link_target(&local_abspath, original_abspath,
+                                       scratch_pool));
               goto try_symlink_as_dir;
             }
         }

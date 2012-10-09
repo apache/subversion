@@ -322,15 +322,10 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
   else
     {
       apr_hash_t *gathered;
-      const char *path;
 
       SVN_ERR_ASSERT(leaving_state == PROPSTAT);
 
       gathered = svn_ra_serf__xml_gather_since(xes, PROPSTAT);
-
-      path = apr_hash_get(gathered, "path", APR_HASH_KEY_STRING);
-      if (path == NULL)
-        path = ctx->path;
 
       /* If we've squirreled away a note that says we want to ignore
          these properties, we'll do so.  Otherwise, we need to copy

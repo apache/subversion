@@ -152,10 +152,10 @@ extern "C" {
  * == 1.7.x shipped with format 29
  *
  * The bump to 30 switched the conflict storage to a skel inside conflict_data.
- * Also clears some known invalid state.
+ * Also clears some known invalid state. Bumped in r1387742.
  *
  * The bump to 31 added the inherited_props column in the NODES table.
- * Bumped in r????????.
+ * Bumped in r1395109.
  *
  * Please document any further format changes here.
  */
@@ -187,9 +187,6 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
-
-/* The first version that uses conflict skels for all conflicts */
-#define SVN_WC__USES_CONFLICT_SKELS 30
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
