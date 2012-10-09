@@ -77,7 +77,7 @@ typedef struct import_ctx_t
   svn_magic__cookie_t *magic_cookie;
 
   /* Collection of all possible configuration file dictated auto-props and
-     svn:config:autoprops.  A hash mapping const char * file patterns to a
+     svn:iprop-auto-props.  A hash mapping const char * file patterns to a
      second hash which maps const char * property names to const char *
      property values.  Properties which don't have a value, e.g. svn:executable,
      simply map the property name to an empty string. */
@@ -599,7 +599,7 @@ import_dir(const svn_delta_editor_t *editor,
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
  * the import (values are unused).
  *
- * AUTOPROPS is hash of all config file autoprops and svn:config:auto-props
+ * AUTOPROPS is hash of all config file autoprops and svn:iprop-auto-props
  * inherited by the import target, see the IMPORT_CTX member of the same
  * name.
  *
@@ -981,7 +981,7 @@ svn_client_import5(const char *path,
                                     commit_baton, NULL, TRUE,
                                     scratch_pool));
 
-  /* Get inherited svn:config:auto-props for the location we
+  /* Get inherited svn:iprop-auto-props for the location we
      are importing to. */
   SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
                                          scratch_pool, iterpool));

@@ -284,7 +284,7 @@ add_file(const char *local_abspath,
       apr_hash_t *file_autoprops;
 
       /* Get automatic properties */
-      /* Grab the inherited svn:config:auto-props and config file
+      /* Grab the inherited svn:iprop-auto-props and config file
          auto-props for this file if we haven't already got them
          when iterating over the file's unversioned parents. */
       if (autoprops == NULL)
@@ -372,12 +372,12 @@ add_file(const char *local_abspath,
  * if necessary.
  *
  * If not NULL, *CONFIG_AUTOPROPS is a hash representing the config file and
- * svn:config:auto-props autoprops which apply to DIR_ABSPATH.  It maps
+ * svn:iprop-auto-props autoprops which apply to DIR_ABSPATH.  It maps
  * const char * file patterns to another hash which maps const char *
  * property names to const char *property values.  If *CONFIG_AUTOPROPS is
  * NULL and DIR_ABSPATH is unversioned, then this function will populate
  * *CONFIG_AUTOPROPS (allocated in RESULT_POOL) using DIR_ABSPATH's nearest
- * versioned parent to determine the svn:config:auto-props which DIR_ABSPATH
+ * versioned parent to determine the svn:iprop-auto-props which DIR_ABSPATH
  * will inherit once added.
  *
  * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
@@ -426,7 +426,7 @@ add_dir_recursive(const char *dir_abspath,
         }
     }
 
-  /* Grab the inherited svn:config:auto-props and config file
+  /* Grab the inherited svn:iprop-auto-props and config file
      auto-props for the roots of any unversioned trees. */
   if (!entry_exists && *config_autoprops == NULL)
     {
@@ -500,7 +500,7 @@ add_dir_recursive(const char *dir_abspath,
 }
 
 /* This structure is used as baton for collecting the config entries
-   in the auto-props section and any inherited svn:config:auto-props
+   in the auto-props section and any inherited svn:iprop-auto-props
    properties.
 */
 typedef struct collect_auto_props_baton_t
@@ -665,7 +665,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
     config.  This is our starting set auto-props, which may be overriden
-    by svn:config:auto-props. */
+    by svn:iprop-auto-props. */
   SVN_ERR(svn_config_get_bool(cfg, &use_autoprops,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE));
@@ -744,7 +744,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
           config_auto_prop_pattern = svn_stringbuf_create_empty(iterpool);
           config_auto_prop_val = svn_stringbuf_create_empty(iterpool);
 
-          /* Parse svn:config:auto-props value. */
+          /* Parse svn:iprop-auto-props value. */
           while (*ch != '\0')
             {
               svn_stringbuf_setempty(config_auto_prop_pattern);
