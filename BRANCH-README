@@ -1,0 +1,108 @@
+This branch is a playground for one proposed solution to Subversion's
+currently inability to support property names which have colon
+characters in them without generating invalid XML in its WebDAV
+PROPFIND and PROPPATCH requests and responses.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1971 for more
+information.
+
+
+BACKGROUND INFORMATION
+======================
+
+The WebDAV specification dictates that in PROPFIND and PROPPATCH
+requests and responses, property names are carried as XML tags.  XML
+tag names have requirements which limit the valid characters used in
+the name.  Subversion tries to ensure that its property names employ
+only character whichs are valid in XML "Names", but there's one area in
+particular where this protection isn't enough to ensure that valid XML
+is generated in these requests and responses: colon characters in
+property names.
+
+Subversion makes use of colon-carrying property names itself
+("svn:log", "svn:date", "svn:ignore", etc.).  A single colon character
+in an XML tag is permissible, but the meaning differs from what
+Subversion requires.  In a PROPFIND XML response, "<svn:date>" doesn't
+mean "the 'svn:date' property", it means "the property 'date' in the
+XML namespace whose prefix is "svn".  But if no XML namespace has been
+defined to have such a prefix, that XML is invalid.
+
+Even a property name which doesn't have a colon can present a problem,
+as a user could choose a property name that, when represented as an
+XML tag, has some other meaning.  And certainly, properties with
+multiple colons are problematic, as "<svn:foo:bar>" is invalid.
+
+Subversion attempts to compensate for some of these problems.  It
+defines namespaces for Subversion properties ("svn:*") and
+user-created properties (which are assumed to have no colons in their
+names).  Subversion then uses those defined namespaces and prefixes in
+the PROPFIND and PROPPATCH requests and responses.  Thus, the property
+"svn:log" is represented as "<S:log>", and that's okay because
+elsewhere in the request/response there is XML which maps the prefix
+"S" to a static namespace URI which Subversion clients all agree means
+"the 'svn:' namespace".  A property such as "foo" is carried as
+"<C:foo>", with a mapping of the prefix "C" to another static
+namespace URI which means (by Subversion convention) "a bare,
+user-generated property".
+
+But this compensation only works to an extent.  The property
+"svn:foo:bar" is carried as "<S:foo:bar>"; the property "custom:prop"
+is carried as "<C:custom:prop>".  Both are invalid XML.
+
+
+PROPOSED SOLUTION
+=================
+
+The solution proposed which this branch attempts to implement is to
+dynamically pre-examine all the properties which need to be referred
+to in a given PROPFIND or PROPPATCH request/response, and generate
+namespace mappings for every unique property prefix using a namespace
+URI which extends from a fixed base namespace URI.
+
+Here's an example.  Say the server is answering a request for all the
+properties on a given resource.  And say those properties have names
+as follows:
+
+   svn:ignore
+   svn:config:auto-props
+   svn:config:ignore
+   last-tested
+   cvs2svn:orig-rev
+
+Subversion can determine that there are three unique prefixes:
+
+   svn:
+   svn:config:
+   cvs2svn:
+
+For historical reasons, "svn:" properties will continue to use their
+existing mapping.  The bare property "last-tested" will do so, too.
+So the list of required XML namespace mappings is:
+
+   S = $(SVN_DAV_PROP_NS_SVN)
+   C = $(SVN_DAV_PROP_NS_CUSTOM)
+   svn0 = $(SVN_DAV_PROP_NS_EXTENSIBLE)/svn:config
+   svn1 = $(SVN_DAV_PROP_NS_EXTENSIBLE)/cvs2svn
+
+(where SVN_DAV_PROP_NS_EXTENSIBLE is a new URI).  Given those
+mappings, the properies are transmitted like so:
+
+   <S:ignore>
+   <svn0:auto-props>
+   <svn0:ignore>
+   <C:last-tested>
+   <svn1:orig-rev>
+
+On the receiving end, Subversion's XML parsers will match the tag
+namespace prefixes to the namespace URIs.  Property tags which make
+use of the existing "Subversion" and "custom" namespace URIs will be
+treated as they are today, with "svn:" prepended to the tag names of
+the former and the latter taken as bare property names.  However, for
+property tags which have a namespace URI that is a child of the fixed
+extensible base URI, Subversion prepends the URI-decoded relative path
+that remains when you skip past that base URI in the namespace URI.
+
+
+OUTLOOK
+=======
+
+This whole thing could be doomed to utter failure.  --cmpilato
