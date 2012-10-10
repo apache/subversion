@@ -317,6 +317,14 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
             SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
 
+/** Presence of this in a DAV header in an OPTIONS request/response
+ * indicates that the transmitter knows how to properly handle
+ * Subversion properties delivered via WebDAV's PROPFIND and PROPPATCH
+ * mechanisms using Subversion's extensible property namespace
+ * SVN_DAV_PROP_NS_EXTENSIBLE. */
+#define SVN_DAV_NS_DAV_SVN_PROP_EXT_NS\
+            SVN_DAV_PROP_NS_DAV "svn/prop-ext-ns"
+
 /** @} */
 
 /** @} */
