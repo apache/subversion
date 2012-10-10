@@ -102,6 +102,18 @@ extensible base URI, Subversion prepends the URI-decoded relative path
 that remains when you skip past that base URI in the namespace URI.
 
 
+ALTERNATIVE SOLUTION
+====================
+
+While costing us a bit more in terms of network transmission, it would
+be significantly simpler to skip the whole namespace prefix concept
+altogether and just add 'xmlns' attributes as necessary (again
+employing the extensible XML namespace URI) for property name tags
+which aren't in the "S"- and "C"-prefixed namespaces.  This would
+eliminate the need to pre-scan property sets in order to build a
+dictionary of all the required namespaces and prefixes.
+
+
 OUTLOOK
 =======
 
