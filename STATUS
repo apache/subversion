@@ -78,6 +78,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1396285
+   Verify return value instead of pointer.
+   Justification:
+     Code bug. Potentially a crash (reported by steveking), but I'm unable
+     to confirm this last part.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
