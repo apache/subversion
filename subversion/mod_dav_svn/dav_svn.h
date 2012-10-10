@@ -137,6 +137,11 @@ typedef struct dav_svn_repos {
      'is_svn_client' is false, then 'capabilities' should be empty. */
   apr_hash_t *client_capabilities;
 
+  /* Whether its okay to use the extensible property XML namespace
+     SVN_DAV_PROP_NS_SVN in PROPFIND/PROPPATCH requests and
+     responses. */
+  svn_boolean_t use_ext_prop_ns;
+
   /* The path to the activities db */
   const char *activities_db;
 
