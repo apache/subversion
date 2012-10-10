@@ -1049,9 +1049,9 @@ macos_shared_libs(apr_pool_t *pool)
   static const char fwk_prefix[] = "/System/Library/Frameworks/";
   static const char pfk_prefix[] = "/System/Library/PrivateFrameworks/";
 
-  const int slb_prefix_len = strlen(slb_prefix);
-  const int fwk_prefix_len = strlen(fwk_prefix);
-  const int pfk_prefix_len = strlen(pfk_prefix);
+  const size_t slb_prefix_len = strlen(slb_prefix);
+  const size_t fwk_prefix_len = strlen(fwk_prefix);
+  const size_t pfk_prefix_len = strlen(pfk_prefix);
 
   apr_array_header_t *result = NULL;
   apr_array_header_t *dylibs = NULL;
