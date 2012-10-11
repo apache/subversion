@@ -200,7 +200,6 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   svn_boolean_t clean_checkout = FALSE;
-  svn_boolean_t is_not_present;
   const char *diff3_cmd;
   apr_hash_t *wcroot_iprops;
   svn_opt_revision_t opt_rev;
@@ -459,19 +458,6 @@ update_internal(svn_revnum_t *result_rev,
                                            anchor_loc->repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
-    }
-
-  /* Cache inherited props. */
-  err = svn_wc__node_is_status_not_present(&is_not_present, ctx->wc_ctx,
-                                           local_abspath, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      is_not_present = TRUE;
     }
 
   if (sleep_here)

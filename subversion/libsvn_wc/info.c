@@ -476,25 +476,25 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       && fetch_actual_only
       && err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      const svn_wc_conflict_description2_t *root_tree_conflict;
+      svn_boolean_t tree_conflicted;
       svn_error_t *err2;
 
-      err2 = svn_wc__get_tree_conflict(&root_tree_conflict,
-                                       wc_ctx, local_abspath,
-                                       scratch_pool, iterpool);
+      err2 = svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
+                                           wc_ctx->db, local_abspath,
+                                           iterpool);
 
       if ((err2 && err2->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
         {
           svn_error_clear(err2);
           return svn_error_trace(err);
         }
-      else if (err2 || !root_tree_conflict)
+      else if (err2 || !tree_conflicted)
         return svn_error_compose_create(err, err2);
 
       svn_error_clear(err);
 
       apr_hash_set(fe_baton.tree_conflicts, local_abspath,
-                   APR_HASH_KEY_STRING, root_tree_conflict);
+                   APR_HASH_KEY_STRING, "");
     }
   else
     SVN_ERR(err);

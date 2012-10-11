@@ -62,7 +62,6 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
   svn_string_t *eol_style, *keywords, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
-  apr_time_t tm;
   svn_stream_t *input;
   svn_node_kind_t kind;
 
@@ -118,27 +117,15 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
 
-  if (local_mod && (! special))
-    {
-      /* Use the modified time from the working copy if
-         the file */
-      SVN_ERR(svn_io_file_affected_time(&tm, local_abspath, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
-                                            local_abspath, scratch_pool,
-                                            scratch_pool));
-    }
-
   if (keywords)
     {
       svn_revnum_t changed_rev;
       const char *rev_str;
       const char *author;
       const char *url;
+      apr_time_t tm;
 
-      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, &tm, &author, wc_ctx,
                                             local_abspath, scratch_pool,
                                             scratch_pool));
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
@@ -152,6 +139,13 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
              current user's username */
           rev_str = apr_psprintf(scratch_pool, "%ldM", changed_rev);
           author = _("(local)");
+
+          if (! special)
+            {
+              /* Use the modified time from the working copy for files */
+              SVN_ERR(svn_io_file_affected_time(&tm, local_abspath,
+                                                scratch_pool));
+            }
         }
       else
         {
