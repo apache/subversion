@@ -287,7 +287,7 @@ svn_ra_serf__add_open_tag_attrs_buckets(serf_bucket_t *agg_bucket,
   for (hi = apr_hash_first(NULL, attrs); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
 
       apr_hash_this(hi, &key, &klen, &val);
