@@ -1203,6 +1203,19 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             apr_pool_t *pool);
 
 
+/* Map a property SVNNAME as referred to internally by Subversion to
+   its corresponding wire namespace (*NS) and *NAME.
+
+   If USE_EXT_PROP_NS is set, the function may make use of the
+   extensible property XML namespace (SVN_DAV_PROP_NS_EXTENSIBLE).  */
+void
+svn_ra_serf__wirename_from_svnname(const char **ns,
+                                   const char **name,
+                                   const char *svnname,
+                                   svn_boolean_t use_ext_prop_ns,
+                                   apr_pool_t *result_pool);
+
+
 /* Map a property name, as passed over the wire, into its corresponding
    Subversion-internal name. The returned name will be a static value,
    or allocated within RESULT_POOL.

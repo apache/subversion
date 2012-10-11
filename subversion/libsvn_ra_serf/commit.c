@@ -61,6 +61,11 @@ typedef struct commit_context_t {
   svn_boolean_t keep_locks;
   apr_hash_t *deleted_entries;   /* deleted files (for delete+add detection) */
 
+  /* Stuff for extensible property XML namespaces. */
+  svn_boolean_t use_ext_prop_ns;
+  apr_hash_t *propname_to_xmlname;  /* svn propname -> xml tag name */
+  apr_hash_t *xmlprefix_to_xmlns;   /* xml prefix -> xml namespace */
+
   /* HTTP v2 stuff */
   const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
   const char *txn_root_url;      /* commit anchor txn root URL */
@@ -197,6 +202,54 @@ typedef struct file_context_t {
   const char *url;
 
 } file_context_t;
+
+
+/* Property name/XML name/namespace map management. */
+
+  
+/* Examine Subversion property name SVNNAME and its wire components NS
+   and NAME, adding them as necessary to the mapping hashes associated
+   with COMMIT_CTX.  */
+static void
+populate_prop_maps(commit_context_t *commit_ctx,
+                   const char *svnname,
+                   const char *ns,
+                   const char *name)
+{
+  apr_pool_t *p2x_pool = apr_hash_pool_get(commit_ctx->propname_to_xmlname);
+  apr_pool_t *x2x_pool = apr_hash_pool_get(commit_ctx->xmlprefix_to_xmlns);
+
+  /* If we've already mapped this property name, don't do it
+     again. */
+  if (apr_hash_get(commit_ctx->propname_to_xmlname, svnname,
+                   APR_HASH_KEY_STRING))
+    return;
+
+  if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+              sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
+    {
+      const char *xmlprefix =
+        apr_psprintf(x2x_pool, "svn%d",
+                     apr_hash_count(commit_ctx->xmlprefix_to_xmlns));
+      apr_hash_set(commit_ctx->xmlprefix_to_xmlns, xmlprefix,
+                   APR_HASH_KEY_STRING, apr_pstrdup(x2x_pool, ns));
+      apr_hash_set(commit_ctx->propname_to_xmlname,
+                   apr_pstrdup(p2x_pool, svnname), APR_HASH_KEY_STRING,
+                   apr_pstrcat(p2x_pool, xmlprefix, name, NULL));
+    }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    {
+      apr_hash_set(commit_ctx->propname_to_xmlname,
+                   apr_pstrdup(p2x_pool, svnname), APR_HASH_KEY_STRING,
+                   apr_pstrcat(p2x_pool, "S:", name, NULL));
+    }
+  else
+    {
+      apr_hash_set(commit_ctx->propname_to_xmlname,
+                   apr_pstrdup(p2x_pool, svnname), APR_HASH_KEY_STRING,
+                   apr_pstrcat(p2x_pool, "C:", name, NULL));
+    }
+}
 
 
 /* Setup routines and handlers for various requests we'll invoke. */
@@ -614,6 +667,10 @@ typedef struct walker_baton_t {
 
   /* Is the property being deleted? */
   svn_boolean_t deleting;
+
+  /* Mapping of actual property name to XML property name. */
+  apr_hash_t *propname_to_xmlname;
+
 } walker_baton_t;
 
 /* If we have (recorded in WB) the old value of the property named NS:NAME,
@@ -703,10 +760,7 @@ proppatch_walker(void *baton,
 
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
-  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
-  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
+  prop_name = apr_hash_get(wb->propname_to_xmlname, name, APR_HASH_KEY_STRING);
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
@@ -841,22 +895,44 @@ create_proppatch_body(serf_bucket_t **bkt,
   proppatch_context_t *ctx = pbb->proppatch;
   serf_bucket_t *body_bkt;
   walker_baton_t wb = { 0 };
+  apr_hash_t *xmlns_attrs = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
+  /* Add our four stock xmlns prefix mappings. */
+  apr_hash_set(xmlns_attrs, "xmlns:D", APR_HASH_KEY_STRING,
+               "DAV:");
+  apr_hash_set(xmlns_attrs, "xmlns:V", APR_HASH_KEY_STRING,
+               SVN_DAV_PROP_NS_DAV);
+  apr_hash_set(xmlns_attrs, "xmlns:C", APR_HASH_KEY_STRING,
+               SVN_DAV_PROP_NS_CUSTOM);
+  apr_hash_set(xmlns_attrs, "xmlns:S", APR_HASH_KEY_STRING,
+               SVN_DAV_PROP_NS_SVN);
+  for (hi = apr_hash_first(scratch_pool,
+                           ctx->commit->xmlprefix_to_xmlns);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_set(xmlns_attrs,
+                   apr_pstrcat(scratch_pool, "xmlns:", key, NULL),
+                   klen + 6, val);
+    }
+
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:propertyupdate",
-                                    "xmlns:D", "DAV:",
-                                    "xmlns:V", SVN_DAV_PROP_NS_DAV,
-                                    "xmlns:C", SVN_DAV_PROP_NS_CUSTOM,
-                                    "xmlns:S", SVN_DAV_PROP_NS_SVN,
-                                    NULL);
+  svn_ra_serf__add_open_tag_attrs_buckets(body_bkt, alloc, "D:propertyupdate",
+                                          xmlns_attrs);
 
   wb.body_bkt = body_bkt;
   wb.body_pool = pbb->body_pool;
   wb.previous_changed_props = ctx->previous_changed_props;
   wb.previous_removed_props = ctx->previous_removed_props;
   wb.path = ctx->path;
+  wb.propname_to_xmlname = ctx->commit->propname_to_xmlname;
 
   if (apr_hash_count(ctx->changed_props) > 0)
     {
@@ -1739,12 +1815,12 @@ open_directory(const char *path,
 
 static svn_error_t *
 change_dir_prop(void *dir_baton,
-                const char *name,
+                const char *propname,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
   dir_context_t *dir = dir_baton;
-  const char *ns;
+  const char *ns, *name;
   const char *proppatch_target;
 
 
@@ -1760,16 +1836,13 @@ change_dir_prop(void *dir_baton,
       proppatch_target = dir->working_url;
     }
 
-  name = apr_pstrdup(dir->pool, name);
-  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-    {
-      ns = SVN_DAV_PROP_NS_SVN;
-      name += sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      ns = SVN_DAV_PROP_NS_CUSTOM;
-    }
+  /* Calculate the wirename bits for this property name. */
+  svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
+                                     dir->commit->use_ext_prop_ns,
+                                     dir->pool);
+
+  /* Register this property name with the mapping system. */
+  populate_prop_maps(dir->commit, propname, ns, name);
 
   if (value)
     {
@@ -1993,24 +2066,20 @@ apply_textdelta(void *file_baton,
 
 static svn_error_t *
 change_file_prop(void *file_baton,
-                 const char *name,
+                 const char *propname,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
   file_context_t *file = file_baton;
-  const char *ns;
+  const char *ns, *name;
 
-  name = apr_pstrdup(file->pool, name);
+  /* Calculate the wirename bits for this property name. */
+  svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
+                                     file->commit->use_ext_prop_ns,
+                                     file->pool);
 
-  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-    {
-      ns = SVN_DAV_PROP_NS_SVN;
-      name += sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      ns = SVN_DAV_PROP_NS_CUSTOM;
-    }
+  /* Register this property name with the mapping system. */
+  populate_prop_maps(file->commit, propname, ns, name);
 
   if (value)
     {
@@ -2314,6 +2383,10 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->keep_locks = keep_locks;
 
   ctx->deleted_entries = apr_hash_make(ctx->pool);
+
+  ctx->use_ext_prop_ns = FALSE; /* temporary */
+  ctx->propname_to_xmlname = apr_hash_make(ctx->pool);
+  ctx->xmlprefix_to_xmlns = apr_hash_make(ctx->pool);
 
   editor = svn_delta_default_editor(pool);
   editor->open_root = open_root;

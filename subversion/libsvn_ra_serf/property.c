@@ -832,6 +832,64 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
 }
 
 
+void
+svn_ra_serf__wirename_from_svnname(const char **ns,
+                                   const char **name,
+                                   const char *svnname,
+                                   svn_boolean_t use_ext_prop_ns,
+                                   apr_pool_t *result_pool)
+{
+  /* If we're allowed to use the extensible property namespace... */
+  if (use_ext_prop_ns)
+    {
+      const char *colon;
+
+      /* If there's no colon in this property name, it's a custom
+         property (C:name). */
+      colon = strrchr(svnname, ':');
+      if (! colon)
+        {
+          *ns = SVN_DAV_PROP_NS_CUSTOM;
+          *name = apr_pstrdup(result_pool, svnname);
+        }
+      /* Otherwise... */
+      else
+        {
+          /* If the property name prefix is merely "svn:", it's a
+             Subversion property (S:name-without-the-prefix). */
+          if (strncmp(svnname, "svn:", colon - svnname) == 0)
+            {
+              *ns = SVN_DAV_PROP_NS_SVN;
+            }
+          /* ...but anything else requires the extensible namespace. */
+          else
+            {
+              *ns = svn_path_url_add_component2(SVN_DAV_PROP_NS_EXTENSIBLE,
+                                                apr_pstrndup(result_pool,
+                                                             svnname,
+                                                             colon - svnname),
+                                                result_pool);
+            }
+
+          /* Either way, the base name begins after the colon. */
+          *name = apr_pstrdup(result_pool, colon + 1);
+        }
+    }
+  else
+    {
+      if (strncmp(svnname, "svn:", 4) == 0)
+        {
+          *ns = SVN_DAV_PROP_NS_SVN;
+          *name = apr_pstrdup(result_pool, svnname + 4);
+        }
+      else
+        {
+          *ns = SVN_DAV_PROP_NS_CUSTOM;
+          *name = apr_pstrdup(result_pool, svnname);
+        }
+    }
+}
+
 const char *
 svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
