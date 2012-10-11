@@ -97,9 +97,6 @@ static const int slow_statements[] =
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,
 
-  /* Only runs once during upgrade. */
-  STMT_SELECT_WCROOT_NODES,
-
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
