@@ -144,8 +144,9 @@ svn_client_upgrade(const char *path,
      upgrade to avoid that errors in the externals causes the wc upgrade to
      fail. Thanks to caching the performance penalty of walking the wc a
      second time shouldn't be too severe */
-  SVN_ERR(svn_client_propget4(&externals, SVN_PROP_EXTERNALS, local_abspath,
-                              &rev, &rev, NULL, svn_depth_infinity, NULL, ctx,
+  SVN_ERR(svn_client_propget5(&externals, NULL, SVN_PROP_EXTERNALS,
+                              local_abspath, &rev, &rev, NULL,
+                              svn_depth_infinity, NULL, ctx,
                               scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);

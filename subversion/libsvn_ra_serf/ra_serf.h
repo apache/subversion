@@ -979,12 +979,15 @@ svn_ra_serf__add_xml_header_buckets(serf_bucket_t *agg_bucket,
                                     serf_bucket_alloc_t *bkt_alloc);
 
 /*
- * Add the appropriate serf buckets to AGG_BUCKET representing xml tag open
- * with name TAG.
+ * Add the appropriate serf buckets to AGG_BUCKET representing the XML
+ * open tag with name TAG.
  *
  * Take the tag's attributes from varargs, a NULL-terminated list of
- * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
- * on each val. Attribute will be ignored if it's value is NULL.
+ * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Attribute
+ * will be ignored if it's value is NULL.
+ *
+ * NOTE: Callers are responsible for XML-escaping attribute values as
+ * necessary.
  *
  * The bucket will be allocated from BKT_ALLOC.
  */

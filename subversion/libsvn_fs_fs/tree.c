@@ -148,7 +148,7 @@ typedef struct cache_entry_t
 {
   /* hash value derived from PATH, REVISION.
      Used to short-circuit failed lookups. */
-  apr_uint32_t hash_value;
+  apr_uint64_t hash_value;
 
   /* revision to which the NODE belongs */
   svn_revnum_t revision;
@@ -337,7 +337,7 @@ cache_lookup( fs_fs_dag_cache_t *cache
 {
   apr_size_t i, bucket_index;
   apr_size_t path_len = strlen(path);
-  apr_uint32_t hash_value = revision;
+  apr_uint64_t hash_value = revision;
 
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];

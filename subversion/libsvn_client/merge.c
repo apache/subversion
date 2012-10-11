@@ -5733,10 +5733,10 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_client_propget4(subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
-                              target_abspath, &working_revision,
-                              &working_revision, NULL, depth, NULL,
-                              ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client_propget5(subtrees_with_mergeinfo, NULL,
+                              SVN_PROP_MERGEINFO, target_abspath,
+                              &working_revision, &working_revision, NULL,
+                              depth, NULL, ctx, result_pool, scratch_pool));
 
   /* Convert property values to svn_mergeinfo_t. */
   for (hi = apr_hash_first(scratch_pool, *subtrees_with_mergeinfo);

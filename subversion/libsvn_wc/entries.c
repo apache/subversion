@@ -455,6 +455,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
                                          db, child_abspath,
+                                         FALSE /* create tempfiles */,
                                          scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)
@@ -874,37 +875,53 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   if (conflicted)
     {
-      const apr_array_header_t *conflicts;
-      int j;
-      SVN_ERR(svn_wc__read_conflicts(&conflicts, db, entry_abspath,
-                                     scratch_pool, scratch_pool));
+      svn_skel_t *conflict;
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, db, entry_abspath,
+                                       scratch_pool, scratch_pool));
 
-      for (j = 0; j < conflicts->nelts; j++)
+      SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,
+                                         &prop_conflicted, NULL,
+                                         db, dir_abspath, conflict,
+                                         scratch_pool, scratch_pool));
+
+      if (text_conflicted)
         {
-          const svn_wc_conflict_description2_t *cd;
-          cd = APR_ARRAY_IDX(conflicts, j,
-                             const svn_wc_conflict_description2_t *);
+          const char *my_abspath;
+          const char *their_old_abspath;
+          const char *their_abspath;
+          SVN_ERR(svn_wc__conflict_read_text_conflict(&my_abspath,
+                                                      &their_old_abspath,
+                                                      &their_abspath,
+                                                      db, dir_abspath,
+                                                      conflict, scratch_pool,
+                                                      scratch_pool));
 
-          switch (cd->kind)
-            {
-            case svn_wc_conflict_kind_text:
-              if (cd->base_abspath)
-                entry->conflict_old = svn_dirent_basename(cd->base_abspath,
-                                                          result_pool);
-              if (cd->their_abspath)
-                entry->conflict_new = svn_dirent_basename(cd->their_abspath,
-                                                          result_pool);
-              if (cd->my_abspath)
-                entry->conflict_wrk = svn_dirent_basename(cd->my_abspath,
-                                                          result_pool);
-              break;
-            case svn_wc_conflict_kind_property:
-              entry->prejfile = svn_dirent_basename(cd->their_abspath,
-                                                    result_pool);
-              break;
-            case svn_wc_conflict_kind_tree:
-              break;
-            }
+          if (my_abspath)
+            entry->conflict_wrk = svn_dirent_basename(my_abspath, result_pool);
+
+          if (their_old_abspath)
+            entry->conflict_old = svn_dirent_basename(their_old_abspath,
+                                                      result_pool);
+
+          if (their_abspath)
+            entry->conflict_new = svn_dirent_basename(their_abspath,
+                                                      result_pool);
+        }
+
+      if (prop_conflicted)
+        {
+          const char *prej_abspath;
+
+          SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_abspath, NULL,
+                                                      NULL, NULL, NULL,
+                                                      db, dir_abspath,
+                                                      conflict, scratch_pool,
+                                                      scratch_pool));
+
+          if (prej_abspath)
+            entry->prejfile = svn_dirent_basename(prej_abspath, result_pool);
         }
     }
 
