@@ -397,11 +397,30 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
       /* If DST_PATH does not exist, then its basename will become a new
          file or dir added to its parent (possibly an implicit '.').
          Else, just error out. */
-      SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
-                                iterpool));
+      SVN_ERR(svn_wc_read_kind(&dst_kind, ctx->wc_ctx,
+                               pair->dst_abspath_or_url, TRUE /* show_hidden */,
+                               iterpool));
       if (dst_kind != svn_node_none)
         {
-          if (is_move
+          svn_boolean_t is_not_present;
+          svn_boolean_t is_excluded;
+          svn_boolean_t is_server_excluded;
+
+          SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+                                              &is_server_excluded, ctx->wc_ctx,
+                                              pair->dst_abspath_or_url,
+                                              iterpool));
+
+          if (is_excluded || is_server_excluded)
+            {
+              return svn_error_createf(
+                  SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                  NULL, _("Path '%s' exists, but is excluded"),
+                  svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
+            }
+
+          if ((! is_not_present)
+              && is_move
               && copy_pairs->nelts == 1
               && strcmp(svn_dirent_dirname(pair->src_abspath_or_url, iterpool),
                         svn_dirent_dirname(pair->dst_abspath_or_url,
@@ -440,10 +459,20 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                 }
             }
 
-          return svn_error_createf(
-                      SVN_ERR_ENTRY_EXISTS, NULL,
-                      _("Path '%s' already exists"),
-                      svn_dirent_local_style(pair->dst_abspath_or_url, pool));
+          if (! is_not_present)
+            {
+              svn_boolean_t is_deleted;
+
+              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                                     pair->dst_abspath_or_url, pool));
+
+              if (! is_deleted)
+                return svn_error_createf(
+                            SVN_ERR_ENTRY_EXISTS, NULL,
+                            _("Path '%s' already exists"),
+                            svn_dirent_local_style(pair->dst_abspath_or_url,
+                                                   pool));
+            }
         }
 
       svn_dirent_split(&pair->dst_parent_abspath, &pair->base_name,
@@ -1621,13 +1650,15 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_node_kind_t kind;
+      svn_boolean_t is_not_present;
       svn_boolean_t is_excluded;
       svn_boolean_t is_server_excluded;
+      svn_boolean_t is_deleted;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, pair->dst_abspath_or_url,
-                               FALSE, iterpool));
+                               TRUE /* show_hidden */, iterpool));
       if (kind == svn_node_none)
         continue;
 
@@ -1635,48 +1666,34 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
          ### simplify the conditions? */
 
       /* Hidden by client exclusion */
-      SVN_ERR(svn_wc__node_is_status_excluded(&is_excluded, ctx->wc_ctx,
-                                              pair->dst_abspath_or_url,
-                                              iterpool));
-      if (is_excluded)
-        {
-          return svn_error_createf
-            (SVN_ERR_ENTRY_EXISTS,
-             NULL, _("'%s' is already under version control"),
-             svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
-        }
+      SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+                                          &is_server_excluded, ctx->wc_ctx,
+                                          pair->dst_abspath_or_url,
+                                          iterpool));
 
-      /* Hidden by server exclusion (not authorized) */
-      SVN_ERR(svn_wc__node_is_status_server_excluded(&is_server_excluded,
-                                                     ctx->wc_ctx,
-                                                     pair->dst_abspath_or_url,
-                                                     iterpool));
-      if (is_server_excluded)
+      if (is_not_present)
+        continue;
+
+      if (is_excluded || is_server_excluded)
         {
-          return svn_error_createf
-            (SVN_ERR_ENTRY_EXISTS,
-             NULL, _("'%s' is already under version control"),
+          return svn_error_createf(
+             SVN_ERR_WC_OBSTRUCTED_UPDATE,
+             NULL, _("Path '%s' exists, but is excluded"),
              svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
         }
 
       /* Working file missing to something other than being scheduled
          for addition or in "deleted" state. */
-      if (kind != svn_node_dir)
-        {
-          svn_boolean_t is_deleted;
-          svn_boolean_t is_not_present;
 
-          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
-                                                 pair->dst_abspath_or_url,
-                                                 iterpool));
-          SVN_ERR(svn_wc__node_is_status_not_present(&is_not_present,
-                                                     ctx->wc_ctx,
-                                                     pair->dst_abspath_or_url,
-                                                     iterpool));
-          if ((! is_deleted) && (! is_not_present))
-            return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Entry for '%s' exists (though the working file is missing)"),
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                             pair->dst_abspath_or_url,
+                                             iterpool));
+
+      if (! is_deleted)
+        {
+          return svn_error_createf(
+               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Path '%s' exists, but the working file is missing"),
                svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
         }
     }

@@ -557,42 +557,25 @@ svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
                                   apr_pool_t *scratch_pool);
 
 /**
- * Set @a *is_server_excluded to whether @a local_abspath has been
- * excluded by the server, using @a wc_ctx.  If @a local_abspath is not
- * in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
- * Use @a scratch_pool for all temporary allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
-                                       svn_wc_context_t *wc_ctx,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_not_present to whether the status of @a local_abspath is
- * #svn_wc__db_status_not_present, using @a wc_ctx.
+ * Set @a *not_present to TRUE when @a local_abspath has status
+ * svn_wc__db_status_not_present. Set @a *user_excluded to TRUE when
+ * @a local_abspath has status svn_wc__db_status_excluded. Set
+ * @a *server_excluded to TRUE when @a local_abspath has status
+ * svn_wc__db_status_server_excluded. Otherwise set these values to FALSE.
+ *
+ * If a value is not interesting you can pass #NULL.
+ *
  * If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_not_present(svn_boolean_t *is_not_present,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_excluded to whether the status of @a local_abspath is
- * #svn_wc__db_status_excluded, using @a wc_ctx.
- * If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_excluded(svn_boolean_t *is_excluded,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
+svn_wc__node_is_not_present(svn_boolean_t *not_present,
+                            svn_boolean_t *user_excluded,
+                            svn_boolean_t *server_excluded,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_added to whether @a local_abspath is added, using
