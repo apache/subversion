@@ -1577,7 +1577,7 @@ bump_to_31(void *baton,
      switched subtrees in the WC.  This allows subsequent updates
      to recognize these roots as needing an iprops cache. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_WCROOT_NODES));
+                                    STMT_UPGRADE_31_SELECT_WCROOT_NODES));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_mark_switch_roots, sdb,

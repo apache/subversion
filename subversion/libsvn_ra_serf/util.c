@@ -1801,9 +1801,9 @@ handle_response(serf_request_t *request,
       handler->sline = sl;
       handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
 
-      /* Fall back to HTTP/1.0 needed? */
-      if (sl.version == SERF_HTTP_10)
-        handler->session->http10 = TRUE;
+      /* HTTP/1.1? (or later)  */
+      if (sl.version != SERF_HTTP_10)
+        handler->session->http10 = FALSE;
     }
 
   /* Keep reading from the network until we've read all the headers.  */
@@ -1912,17 +1912,6 @@ handle_response(serf_request_t *request,
                                    handler->sline.code, handler->sline.reason);
             }
         }
-    }
-
-  /* These error codes might indicate that the server or proxy does not support
-     HTTP/1.1 (completely), so fall back to HTTP/1.0. */
-  if (handler->session->http10 == FALSE &&
-      (handler->sline.code == 400      /* 400 Bad Request */
-       || handler->sline.code == 411   /* 411 Length Required */
-       || handler->sline.code == 501)) /* 501 Not Implemented */
-    {
-      handler->discard_body = TRUE;
-      handler->session->http10 = TRUE;
     }
 
   /* Stop processing the above, on every packet arrival.  */

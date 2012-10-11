@@ -1883,7 +1883,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
             svn_revnum_t copyfrom_rev;
             svn_stream_t *new_contents, *new_base_contents;
             apr_hash_t *new_base_props, *new_props;
-            const svn_wc_conflict_description2_t *existing_conflict;
+            svn_boolean_t existing_tree_conflict;
             svn_error_t *err;
 
             /* If this is a merge from the same repository as our
@@ -1920,10 +1920,9 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                                  scratch_pool, scratch_pool));
               }
 
-            err = svn_wc__get_tree_conflict(&existing_conflict,
-                                            merge_b->ctx->wc_ctx,
-                                            mine_abspath, merge_b->pool,
-                                            merge_b->pool);
+            err = svn_wc_conflicted_p3(NULL, NULL, &existing_tree_conflict,
+                                       merge_b->ctx->wc_ctx, mine_abspath,
+                                       merge_b->pool);
 
             if (err)
               {
@@ -1931,10 +1930,10 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                   return svn_error_trace(err);
 
                 svn_error_clear(err);
-                existing_conflict = FALSE;
+                existing_tree_conflict = FALSE;
               }
 
-            if (existing_conflict)
+            if (existing_tree_conflict)
               {
                 svn_boolean_t moved_here;
                 svn_wc_conflict_reason_t reason;
@@ -5733,10 +5732,10 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_client_propget4(subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
-                              target_abspath, &working_revision,
-                              &working_revision, NULL, depth, NULL,
-                              ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client_propget5(subtrees_with_mergeinfo, NULL,
+                              SVN_PROP_MERGEINFO, target_abspath,
+                              &working_revision, &working_revision, NULL,
+                              depth, NULL, ctx, result_pool, scratch_pool));
 
   /* Convert property values to svn_mergeinfo_t. */
   for (hi = apr_hash_first(scratch_pool, *subtrees_with_mergeinfo);

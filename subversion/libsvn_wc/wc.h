@@ -708,6 +708,8 @@ svn_wc__write_check(svn_wc__db_t *db,
  *
  * Victim must be versioned or be part of a tree conflict.
  *
+ * If CREATE_TEMPFILES is TRUE, create temporary files for property conflicts.
+ *
  * Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
  * SCRATCH_POOL
  */
@@ -715,6 +717,7 @@ svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                        svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t create_tempfiles,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 

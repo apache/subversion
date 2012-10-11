@@ -36,6 +36,7 @@
 #include "wc.h"
 #include "workqueue.h"
 #include "props.h"
+#include "conflicts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -206,7 +207,6 @@ copy_versioned_file(svn_wc__db_t *db,
   if (!metadata_only)
     {
       const char *my_src_abspath = NULL;
-      int i;
       svn_boolean_t handle_as_unversioned = FALSE;
 
       /* By default, take the copy source as given. */
@@ -214,26 +214,27 @@ copy_versioned_file(svn_wc__db_t *db,
 
       if (conflicted)
         {
-          const apr_array_header_t *conflicts;
-          const char *conflict_working = NULL;
+          svn_skel_t *conflict;
+          const char *conflict_working;
+          svn_error_t *err;
 
           /* Is there a text conflict at the source path? */
-          SVN_ERR(svn_wc__read_conflicts(&conflicts, db, src_abspath,
+          SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
                                          scratch_pool, scratch_pool));
 
-          for (i = 0; i < conflicts->nelts; i++)
+          err = svn_wc__conflict_read_text_conflict(&conflict_working, NULL, NULL,
+                                                    db, src_abspath, conflict,
+                                                    scratch_pool,
+                                                    scratch_pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_MISSING)
             {
-              const svn_wc_conflict_description2_t *desc;
-
-              desc = APR_ARRAY_IDX(conflicts, i,
-                                   const svn_wc_conflict_description2_t*);
-
-              if (desc->kind == svn_wc_conflict_kind_text)
-                {
-                  conflict_working = desc->my_abspath;
-                  break;
-                }
+              /* not text conflicted */
+              svn_error_clear(err);
+              conflict_working = NULL;
             }
+          else
+            SVN_ERR(err);
 
           if (conflict_working)
             {
@@ -816,75 +817,40 @@ remove_node_conflict_markers(svn_wc__db_t *db,
                              const char *node_abspath,
                              apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *conflicts;
+  svn_skel_t *conflict;
 
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, src_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
                                  scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */
-  if (conflicts != NULL)
+  if (conflict != NULL)
     {
+      const apr_array_header_t *markers;
       int i;
       const char *src_dir = svn_dirent_dirname(src_abspath, scratch_pool);
       const char *dst_dir = svn_dirent_dirname(node_abspath, scratch_pool);
 
-      /* No iterpool: Maximum number of possible conflict markers is 4 */
+      SVN_ERR(svn_wc__conflict_read_markers(&markers, db, src_abspath,
+                                            conflict,
+                                            scratch_pool, scratch_pool));
 
-      for (i = 0; i < conflicts->nelts; i++)
+      /* No iterpool: Maximum number of possible conflict markers is 4 */
+      for (i = 0; markers && (i < markers->nelts); i++)
         {
-          const svn_wc_conflict_description2_t *desc;
+          const char *marker_abspath;
           const char *child_relpath;
           const char *child_abpath;
 
-          desc = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description2_t*);
+          marker_abspath = APR_ARRAY_IDX(markers, i, const char *);
 
-          if (desc->kind != svn_wc_conflict_kind_text
-              && desc->kind != svn_wc_conflict_kind_property)
-            continue;
+          child_relpath = svn_dirent_is_child(src_dir, marker_abspath, NULL);
 
-          if (desc->base_abspath != NULL)
+          if (child_relpath)
             {
-              child_relpath = svn_dirent_is_child(src_dir, desc->base_abspath,
-                                                  NULL);
+              child_abpath = svn_dirent_join(dst_dir, child_relpath,
+                                             scratch_pool);
 
-              if (child_relpath)
-                {
-                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
-                                                 scratch_pool);
-
-                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
-                                              scratch_pool));
-                }
-            }
-          if (desc->their_abspath != NULL)
-            {
-              child_relpath = svn_dirent_is_child(src_dir, desc->their_abspath,
-                                                  NULL);
-
-              if (child_relpath)
-                {
-                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
-                                                 scratch_pool);
-
-                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
-                                              scratch_pool));
-                }
-            }
-          if (desc->my_abspath != NULL)
-            {
-              child_relpath = svn_dirent_is_child(src_dir, desc->my_abspath,
-                                                  NULL);
-
-              if (child_relpath)
-                {
-                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
-                                                 scratch_pool);
-
-                  /* ### Copy child_abspath to node_abspath if it exists? */
-                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
-                                              scratch_pool));
-                }
+              SVN_ERR(svn_io_remove_file2(child_abpath, TRUE, scratch_pool));
             }
         }
     }
