@@ -2197,36 +2197,6 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
 }
 
 svn_error_t *
-svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
-                                svn_mergeinfo_t mergeinfo,
-                                const char *repos_root_url,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  *out_mergeinfo = NULL;
-  if (mergeinfo)
-    {
-      apr_hash_index_t *hi;
-      apr_hash_t *full_path_mergeinfo = apr_hash_make(result_pool);
-
-      for (hi = apr_hash_first(scratch_pool, mergeinfo);
-           hi; hi = apr_hash_next(hi))
-        {
-          const char *key = svn__apr_hash_index_key(hi);
-          void *val = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(full_path_mergeinfo,
-                       svn_path_url_add_component2(repos_root_url, key + 1,
-                                                   result_pool),
-                       APR_HASH_KEY_STRING, val);
-        }
-      *out_mergeinfo = full_path_mergeinfo;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
                                        const char *suffix_relpath,
@@ -2355,38 +2325,6 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
   else
     *output = svn_string_create("\n", pool);
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_mergeinfo__to_formatted_string(svn_string_t **output,
-                                   svn_mergeinfo_t mergeinfo,
-                                   const char *prefix,
-                                   apr_pool_t *pool)
-{
-  svn_stringbuf_t *output_buf = NULL;
-
-  if (mergeinfo && apr_hash_count(mergeinfo))
-    {
-      SVN_ERR(mergeinfo_to_stringbuf(&output_buf, mergeinfo,
-                                     prefix ? prefix : "", pool));
-      svn_stringbuf_appendcstr(output_buf, "\n");
-    }
-#if SVN_DEBUG
-  else if (!mergeinfo)
-    {
-      output_buf = svn_stringbuf_create(prefix ? prefix : "", pool);
-      svn_stringbuf_appendcstr(output_buf, _("NULL mergeinfo\n"));
-    }
-  else if (apr_hash_count(mergeinfo) == 0)
-    {
-      output_buf = svn_stringbuf_create(prefix ? prefix : "", pool);
-      svn_stringbuf_appendcstr(output_buf, _("empty mergeinfo\n"));
-    }
-#endif
-
-  *output = output_buf ? svn_stringbuf__morph_into_string(output_buf)
-                       : svn_string_create_empty(pool);
   return SVN_NO_ERROR;
 }
 
