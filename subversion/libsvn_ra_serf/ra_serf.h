@@ -995,8 +995,11 @@ svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
                                   ...);
 
 /*
- * Add the appropriate serf buckets to AGG_BUCKET representing xml tag open
- * with name TAG and attributes ATTRS.  XML-escape attributes as necessary.
+ * Add the appropriate serf buckets to AGG_BUCKET representing the XML
+ * open tag with name TAG and attributes ATTRS.
+ *
+ * NOTE: Callers are responsible for XML-escaping attribute values as
+ * necessary.
  *
  * The bucket will be allocated from BKT_ALLOC.
  */
