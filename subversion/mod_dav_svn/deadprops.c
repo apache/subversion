@@ -103,7 +103,8 @@ davname_to_propname(dav_db *db,
       /* the name of a custom prop is just the name -- no ns URI */
       propname = davname->name;
     }
-  else
+  else if (strncmp(davname->ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
     {
       const char *relpath =
         svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
