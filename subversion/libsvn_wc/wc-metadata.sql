@@ -834,7 +834,7 @@ LEFT OUTER JOIN nodes as r
 ON l.wc_id = r.wc_id
    AND l.repos_id = r.repos_id
    AND r.local_relpath = l.parent_relpath
-WHERE (l.local_relpath == '' AND l.repos_path != '')
+WHERE (l.local_relpath = '' AND l.repos_path != '')
    OR (l.op_depth = 0
        AND l.local_relpath != ''
        AND l.repos_path != ltrim(r.repos_path

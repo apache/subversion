@@ -245,7 +245,7 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND presence == 'not-present'
+  AND presence = 'not-present'
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
@@ -1421,7 +1421,7 @@ WHERE wc_id = ?1
 
 -- STMT_SELECT_ALL_NODES
 SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
-WHERE wc_id == ?1
+WHERE wc_id = ?1
 
 /* ------------------------------------------------------------------------- */
 
