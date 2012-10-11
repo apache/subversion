@@ -108,6 +108,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_USE_COMMIT_TIMES          "use-commit-times"
+/** @deprecated Not used by Subversion since 2003/r847039 (well before 1.0) */
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
