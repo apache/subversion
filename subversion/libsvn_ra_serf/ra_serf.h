@@ -173,6 +173,9 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Does the server understand the extensible property XML namespace? */
+  svn_boolean_t use_ext_prop_ns;
+
   /* Are we using a proxy? */
   int using_proxy;
 

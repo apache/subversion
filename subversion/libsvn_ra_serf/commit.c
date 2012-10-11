@@ -2384,7 +2384,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   ctx->deleted_entries = apr_hash_make(ctx->pool);
 
-  ctx->use_ext_prop_ns = FALSE; /* temporary */
+  ctx->use_ext_prop_ns = session->use_ext_prop_ns;
   ctx->propname_to_xmlname = apr_hash_make(ctx->pool);
   ctx->xmlprefix_to_xmlns = apr_hash_make(ctx->pool);
 
