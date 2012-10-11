@@ -125,20 +125,6 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
-   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
-   is declared as 'apr_hash_t *' because its key do not obey the rules of
-   'svn_mergeinfo_t'.
-
-   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
-   SCRATCH_POOL for any temporary allocations. */
-svn_error_t *
-svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
-                                svn_mergeinfo_t mergeinfo,
-                                const char *repos_root_url,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
 /* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
 
@@ -169,20 +155,6 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            const char *key_prefix,
                                            const char *val_prefix,
                                            apr_pool_t *pool);
-
-/* Create a string representation of MERGEINFO in *OUTPUT, allocated in POOL.
-   Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
-   in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
-   causes *OUTPUT to be set to an appropriate newline terminated string.  If
-   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT.
-
-   Any relative merge source paths in MERGEINFO are converted to absolute
-   paths in *OUTPUT.*/
-svn_error_t *
-svn_mergeinfo__to_formatted_string(svn_string_t **output,
-                                   svn_mergeinfo_t mergeinfo,
-                                   const char *prefix,
-                                   apr_pool_t *pool);
 
 /* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
    found in the rangelists within MERGEINFO.  Note that *OLDEST_REV is
