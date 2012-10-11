@@ -455,6 +455,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
                                          db, child_abspath,
+                                         FALSE /* create tempfiles */,
                                          scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)

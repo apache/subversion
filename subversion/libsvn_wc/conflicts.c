@@ -1912,13 +1912,19 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 
 /* Read all property conflicts contained in CONFLICT_SKEL into
  * individual conflict descriptions, and append those descriptions
- * to the CONFLICTS array. Allocate results in RESULT_POOL.
- * SCRATCH_POOL is used for temporary allocations. */
+ * to the CONFLICTS array.
+ *
+ * If NOT create_tempfiles, always create a legacy property conflict
+ * descriptor.
+ *
+ * Allocate results in RESULT_POOL. SCRATCH_POOL is used for temporary
+ * allocations. */
 static svn_error_t *
 read_prop_conflicts(apr_array_header_t *conflicts,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_skel_t *conflict_skel,
+                    svn_boolean_t create_tempfiles,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -1939,7 +1945,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
                                               conflict_skel,
                                               scratch_pool, scratch_pool));
 
-  if (apr_hash_count(conflicted_props) == 0)
+  if ((! create_tempfiles) || apr_hash_count(conflicted_props) == 0)
     {
       /* Legacy prop conflict with only a .reject file. */
       svn_wc_conflict_description2_t *desc;
@@ -2061,6 +2067,7 @@ svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                        svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t create_tempfiles,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -2093,6 +2100,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
   if (prop_conflicted)
     SVN_ERR(read_prop_conflicts(cflcts, db, local_abspath, conflict_skel,
+                                create_tempfiles,
                                 result_pool, scratch_pool));
 
   if (text_conflicted)
@@ -2575,7 +2583,7 @@ conflict_status_walker(void *baton,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath, TRUE,
                                  scratch_pool, iterpool));
 
   for (i = 0; i < conflicts->nelts; i++)
