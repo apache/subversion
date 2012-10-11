@@ -843,6 +843,15 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
 
+  /* Check for something within our extensible namespace. */
+  if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+              sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
+    {
+      const char *relpath = svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
+                                                  ns, result_pool);
+      return apr_pstrcat(result_pool, relpath, ":", name, (char *)NULL);
+    }
+
   if (strcmp(ns, SVN_PROP_PREFIX) == 0)
     return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
 
@@ -932,6 +941,13 @@ select_revprops(void *baton,
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+  else if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
+    {
+      const char *relpath = svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
+                                                  ns, scratch_pool);
+      prop_name = apr_pstrcat(result_pool, relpath, ":", name, (char *)NULL);
+    }
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
     prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, "") == 0)
