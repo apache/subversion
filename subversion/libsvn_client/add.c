@@ -686,8 +686,8 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   while (err == NULL)
     {
       err = svn_client_propget5(&props, &inherited_config_auto_props,
-                                SVN_CONFIG_PROP_AUTO_PROPS, path_or_url, &rev,
-                                &rev, NULL, svn_depth_empty, NULL, ctx,
+                                SVN_PROP_INHERITABLE_AUTO_PROPS, path_or_url,
+                                &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
                                 scratch_pool, scratch_pool);
       if (err)
         {
@@ -716,7 +716,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
       new_iprop->path_or_url = path_or_url;
       new_iprop->prop_hash = apr_hash_make(scratch_pool);
       apr_hash_set(new_iprop->prop_hash,
-                   SVN_CONFIG_PROP_AUTO_PROPS,
+                   SVN_PROP_INHERITABLE_AUTO_PROPS,
                    APR_HASH_KEY_STRING,
                    config_auto_prop);
       APR_ARRAY_PUSH(inherited_config_auto_props,

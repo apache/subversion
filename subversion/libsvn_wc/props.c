@@ -1675,7 +1675,7 @@ validate_prop_against_node_kind(const char *name,
 
   const char *file_prohibit[] = { SVN_PROP_IGNORE,
                                   SVN_PROP_EXTERNALS,
-                                  SVN_CONFIG_PROP_AUTO_PROPS,
+                                  SVN_PROP_INHERITABLE_AUTO_PROPS,
                                   NULL };
   const char *dir_prohibit[] = { SVN_PROP_EXECUTABLE,
                                  SVN_PROP_KEYWORDS,
