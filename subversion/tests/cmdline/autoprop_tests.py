@@ -611,6 +611,18 @@ def svn_config_autoprops_add_versioned_target(sbox):
 
   check_inheritable_autoprops(sbox, True)
 
+#----------------------------------------------------------------------
+# Can't set svn:inheritable-auto-props on files.
+def svn_config_autoprops_propset_file_target(sbox):
+  "svn:inheritable-auto-props can't be set on files"
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*Cannot set '" + SVN_CONFIG_AUTOPROPS + "' on a file.*",
+    'ps', SVN_CONFIG_AUTOPROPS, '*.c=svn:eol-style=native',
+    sbox.ospath('iota'))
+
 ########################################################################
 # Run the tests
 
@@ -645,6 +657,7 @@ test_list = [ None,
               svn_config_autoprops_imp_no_no,
               svn_config_autoprops_imp_yes_no,
               svn_config_autoprops_add_versioned_target,
+              svn_config_autoprops_propset_file_target,
              ]
 
 if __name__ == '__main__':
