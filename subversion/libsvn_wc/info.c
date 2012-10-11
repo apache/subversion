@@ -281,6 +281,7 @@ build_info_for_node(svn_wc__info2_t **info,
   if (conflicted)
     SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
                                    local_abspath,
+                                   TRUE /* ### create tempfiles */,
                                    result_pool, scratch_pool));
   else
     wc_info->conflicts = NULL;
@@ -526,6 +527,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_wc__read_conflicts(&info->wc_info->conflicts,
                                      wc_ctx->db, this_abspath,
+                                     TRUE /* ### create tempfiles */,
                                      iterpool, iterpool));
 
       if (! info->wc_info->conflicts || ! info->wc_info->conflicts->nelts)

@@ -245,7 +245,7 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND presence == 'not-present'
+  AND presence = 'not-present'
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
@@ -1073,28 +1073,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 SELECT 1 FROM nodes WHERE op_depth > 0
 LIMIT 1
 
--- STMT_SELECT_WCROOT_NODES
-/* Select all base nodes which are the root of a WC, including
-   switched subtrees, but excluding those which map to the root
-   of the repos.
-
-   ### IPROPS: Is this query horribly inefficient?  Quite likely,
-   ### but it only runs during an upgrade, so do we care? */
-SELECT l.wc_id, l.local_relpath FROM nodes as l
-LEFT OUTER JOIN nodes as r
-ON l.wc_id = r.wc_id
-   AND l.repos_id = r.repos_id
-   AND r.local_relpath = l.parent_relpath
-WHERE (l.local_relpath == '' AND l.repos_path != '')
-   OR (l.op_depth = 0
-       AND l.local_relpath != ''
-       AND l.repos_path != ltrim(r.repos_path
-                                 || '/'
-                                 || ltrim(substr(l.local_relpath,
-                                                 length(l.parent_relpath) + 1),
-                                          '/'),
-                                 '/'))
-
 /* --------------------------------------------------------------------------
  * Complex queries for callback walks, caching results in a temporary table.
  *
@@ -1443,7 +1421,7 @@ WHERE wc_id = ?1
 
 -- STMT_SELECT_ALL_NODES
 SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
-WHERE wc_id == ?1
+WHERE wc_id = ?1
 
 /* ------------------------------------------------------------------------- */
 
