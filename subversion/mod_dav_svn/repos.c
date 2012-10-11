@@ -2148,8 +2148,7 @@ get_resource(request_rec *r,
                extensible property XML namespace capability to
                clients, so we'll just stash it in our repos
                structure. */
-            else if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS,
-                                            vals))
+            if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS, vals))
               {
                 repos->use_ext_prop_ns = TRUE;
               }
