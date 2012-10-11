@@ -119,16 +119,6 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
                                  const svn_string_t *mylocktoken,
                                  apr_pool_t *scratch_pool);
 
-
-/** Like svn_ra_get_path_relative_to_root(), except returning a fspath
- * (starting with '/') instead of a relpath.
- */
-svn_error_t *
-svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
-                                    const char **fspath,
-                                    const char *url,
-                                    apr_pool_t *pool);
-
 /** Register CALLBACKS to be used with the Ev2 shims in RA_SESSION. */
 svn_error_t *
 svn_ra__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
