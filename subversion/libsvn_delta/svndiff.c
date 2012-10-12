@@ -524,7 +524,7 @@ decode_size(apr_size_t *val,
  */
 static svn_error_t *
 zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
-            apr_size_t limit, svn_boolean_t copyless_allowed)
+            apr_size_t limit)
 {
   apr_size_t len;
   const unsigned char *oldplace = in;
@@ -543,22 +543,10 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
   inLen -= (in - oldplace);
   if (inLen == len)
     {
-      if (copyless_allowed)
-        {
-          /* "in" is no longer used but the memory remains allocated for
-           * at least as long as "out" will be used by the caller.
-           */
-          out->data = (char *)in;
-          out->len = len;
-          out->blocksize = len; /* sic! */
-        }
-      else
-        {
-          svn_stringbuf_ensure(out, len);
-          memcpy(out->data, in, len);
-          out->data[len] = 0;
-          out->len = len;
-        }
+      svn_stringbuf_ensure(out, len);
+      memcpy(out->data, in, len);
+      out->data[len] = 0;
+      out->len = len;
 
       return SVN_NO_ERROR;
     }
@@ -735,9 +723,9 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       /* these may in fact simply return references to insend */
 
       SVN_ERR(zlib_decode(insend, newlen, ndout,
-                          SVN_DELTA_WINDOW_SIZE, TRUE));
+                          SVN_DELTA_WINDOW_SIZE));
       SVN_ERR(zlib_decode(data, insend - data, instout,
-                          MAX_INSTRUCTION_SECTION_LEN, TRUE));
+                          MAX_INSTRUCTION_SECTION_LEN));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
@@ -1082,8 +1070,7 @@ svn__compress(svn_string_t *in,
               svn_stringbuf_t *out,
               int compression_level)
 {
-  return zlib_encode(in->data, in->len, out,
-                     compression_level);
+  return zlib_encode(in->data, in->len, out, compression_level);
 }
 
 svn_error_t *
@@ -1091,6 +1078,5 @@ svn__decompress(svn_string_t *in,
                 svn_stringbuf_t *out,
                 apr_size_t limit)
 {
-  return zlib_decode((const unsigned char*)in->data, in->len, out, limit,
-                     FALSE);
+  return zlib_decode((const unsigned char*)in->data, in->len, out, limit);
 }
