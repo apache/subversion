@@ -83,11 +83,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1396285
-   Verify return value instead of pointer.
-   Justification:
-     Pointer/boolean code bug. Allows crashing 'svn' with an explicit
-     --username that doesn't match the stored username.
-   Votes:
-     +1: rhuijben, steveking, brane

@@ -104,7 +104,7 @@ windows_password_decrypter(svn_boolean_t *done,
 
   SVN_ERR(svn_auth__simple_password_get(done, &in, creds, realmstring, username,
                                         parameters, non_interactive, pool));
-  if (!done)
+  if (!*done)
     return SVN_NO_ERROR;
 
   blobin.cbData = strlen(in);
@@ -243,7 +243,7 @@ windows_ssl_client_cert_pw_decrypter(svn_boolean_t *done,
   SVN_ERR(svn_auth__ssl_client_cert_pw_get(done, &in, creds, realmstring,
                                            username, parameters,
                                            non_interactive, pool));
-  if (!done)
+  if (!*done)
     return SVN_NO_ERROR;
 
   blobin.cbData = strlen(in);
