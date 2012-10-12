@@ -107,15 +107,13 @@ davname_to_propname(dav_db *db,
                    sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
     {
       const char *relpath =
-        svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
-                              davname->ns, db->resource->pool);
-      if (relpath)
-        {
-          svn_stringbuf_set(db->work, relpath);
-          svn_stringbuf_appendbytes(db->work, ":", 1);
-          svn_stringbuf_appendcstr(db->work, davname->name);
-          propname = db->work->data;
-        }
+        svn_path_uri_decode(davname->ns +
+                            (sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1),
+                            db->resource->pool);
+      svn_stringbuf_set(db->work, relpath);
+      svn_stringbuf_appendbytes(db->work, ":", 1);
+      svn_stringbuf_appendcstr(db->work, davname->name);
+      propname = db->work->data;
     }
 
   return propname;
@@ -169,11 +167,11 @@ propname_to_davname(svn_boolean_t *needs_ext_ns,
          the magic prefixes we've already built in. */
       else
         {
+          const char *barename = apr_pstrndup(pool, propname, colon - propname);
           *needs_ext_ns = TRUE;
-          davname->ns = svn_path_url_add_component2(
-                            SVN_DAV_PROP_NS_EXTENSIBLE,
-                            apr_pstrndup(pool, propname, colon - propname),
-                            pool);
+          davname->ns = apr_pstrcat(pool, SVN_DAV_PROP_NS_EXTENSIBLE,
+                                    svn_path_uri_encode(barename, pool),
+                                    (char *)NULL);
           davname->name = apr_pstrdup(pool, colon + 1);
         }
     }
