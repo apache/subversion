@@ -864,11 +864,11 @@ svn_ra_serf__wirename_from_svnname(const char **ns,
           /* ...but anything else requires the extensible namespace. */
           else
             {
-              *ns = svn_path_url_add_component2(SVN_DAV_PROP_NS_EXTENSIBLE,
-                                                apr_pstrndup(result_pool,
-                                                             svnname,
-                                                             colon - svnname),
-                                                result_pool);
+              const char *barename = apr_pstrndup(result_pool, svnname,
+                                                  colon - svnname);
+              *ns = apr_pstrcat(result_pool, SVN_DAV_PROP_NS_EXTENSIBLE,
+                                svn_path_uri_encode(barename, result_pool),
+                                (char *)NULL);
             }
 
           /* Either way, the base name begins after the colon. */
@@ -905,8 +905,9 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
   if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
               sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
     {
-      const char *relpath = svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
-                                                  ns, result_pool);
+      const char *relpath =
+        svn_path_uri_decode(ns + (sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1),
+                            result_pool);
       return apr_pstrcat(result_pool, relpath, ":", name, (char *)NULL);
     }
 
