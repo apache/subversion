@@ -130,6 +130,11 @@
  */
 #define MAX_SEGMENT_COUNT 0x10000
 
+/* As of today, APR won't allocate chunks of 4GB or more. So, limit the
+ * segment size to slightly below that.
+ */
+#define MAX_SEGMENT_SIZE 0xffff0000ull
+
 /* We don't mark the initialization status for every group but initialize
  * a number of groups at once. That will allow for a very small init flags
  * vector that is likely to fit into the CPU caches even for fairly large
@@ -1140,6 +1145,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
 
+  /* Limit the total size
+   */
+  if (total_size > MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT)
+    total_size = MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT;
+  
   /* Limit the segment count
    */
   if (segment_count > MAX_SEGMENT_COUNT)
@@ -1176,6 +1186,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
       segment_count = 1 << segment_count_shift;
     }
+
+  /* If we have an extremely large cache (>512 GB), the default segment
+   * size may exceed the amount allocatable as one chunk. In that case,
+   * increase segmentation until we are under the threshold.
+   */
+  while (   total_size / segment_count > MAX_SEGMENT_SIZE
+         && segment_count < MAX_SEGMENT_COUNT)
+    segment_count *= 2;
 
   /* allocate cache as an array of segments / cache objects */
   c = apr_palloc(pool, segment_count * sizeof(*c));
