@@ -2585,6 +2585,10 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
+  const char *sha1 = ffd->rep_sharing_allowed && noderev->data_rep
+                   ? svn_checksum_to_cstring(noderev->data_rep->sha1_checksum,
+                                             pool)
+                   : NULL;
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
@@ -2603,7 +2607,32 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  return svn_io_file_close(noderev_file, pool);
+  SVN_ERR(svn_io_file_close(noderev_file, pool));
+
+  /* if rep sharing has been enabled and the noderev has a data rep and
+   * its SHA-1 is known, store the rep struct under its SHA1. */
+  if (sha1)
+    {
+      apr_file_t *rep_file;
+      const char *file_name = svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                                              sha1, pool);
+      const char *rep_string = representation_string(noderev->data_rep,
+                                                     ffd->format,
+                                                     (noderev->kind
+                                                      == svn_node_dir),
+                                                     FALSE,
+                                                     pool);
+      SVN_ERR(svn_io_file_open(&rep_file, file_name,
+                               APR_WRITE | APR_CREATE | APR_TRUNCATE
+                               | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+      SVN_ERR(svn_io_file_write_full(rep_file, rep_string,
+                                     strlen(rep_string), NULL, pool));
+
+      SVN_ERR(svn_io_file_close(rep_file, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -7080,6 +7109,30 @@ get_shared_rep(representation_t **old_rep,
           (fs->warning)(fs->warning_baton, err);
           svn_error_clear(err);
           *old_rep = NULL;
+        }
+    }
+
+  /* look for intra-revision matches (usually data reps but not limited
+     to them in case props happen to look like some data rep)
+   */
+  if (*old_rep == NULL && rep->txn_id)
+    {
+      svn_node_kind_t kind;
+      const char *file_name
+        = svn_dirent_join(path_txn_dir(fs, rep->txn_id, pool),
+                          svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                          pool);
+
+      /* in our txn, is there a rep file named with the wanted SHA1?
+         If so, read it and use that rep.
+       */
+      SVN_ERR(svn_io_check_path(file_name, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          svn_stringbuf_t *rep_string;
+          SVN_ERR(svn_stringbuf_from_file2(&rep_string, file_name, pool));
+          SVN_ERR(read_rep_offsets_body(old_rep, rep_string->data,
+                                        rep->txn_id, FALSE, pool));
         }
     }
 
