@@ -21,6 +21,12 @@ the suite does pass all tests now in the following configurations:
    trunk client vs. branch server
    branch client vs. branch server
 
+Note that Bert will probably suggest soon that there be a way to flip
+off the server-side support for this to accomodate WebDAV proxy
+configurations where the slave and master are of different pedigrees.
+*sigh*.  Having to expose feature toggles of this sort to admins is
+wrong on so many levels.
+
 
 BACKGROUND INFORMATION
 ======================
