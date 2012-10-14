@@ -5,6 +5,22 @@ PROPFIND and PROPPATCH requests and responses.  See
 http://subversion.tigris.org/issues/show_bug.cgi?id=1971 for more
 information.
 
+STATUS
+======
+
+I went with the alternative solution, which may cost us a little bit
+of network payload, but is vastly simpler to implement and maintain,
+and doesn't require pre-scanning the property sets (in other words,
+streaminess is preserved).
+
+While our regression test suite doesn't cover these cases (because
+Subversion's XML parser doesn't care about these kinds of problems),
+the suite does pass all tests now in the following configurations:
+
+   branch client vs. trunk server
+   trunk client vs. branch server
+   branch client vs. branch server
+
 
 BACKGROUND INFORMATION
 ======================
