@@ -76,7 +76,7 @@ Candidate changes:
      Validation is supposed to be on by default but is off, adding
      --bypass-prop-validation switches it on.
    Votes:
-     +1: philip
+     +1: philip, cmpilato
 
  * r1398100
    Add missing 'prop-mods' and 'text-mods' attributes in the changed paths
@@ -85,14 +85,14 @@ Candidate changes:
    Justification:
      Simple fix. Seems unlikely to cause harm.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, cmpilato
 
  * r1390653
    Add Vary: header to GET response.
    Justification:
      The 1.8 serf-only client may fail to work with caching proxies.
    Votes:
-     +1: philip
+     +1: philip, cmpilato
 
 Veto-blocked changes:
 =====================
