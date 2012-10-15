@@ -71,7 +71,7 @@ Candidate changes:
      +1: cmpilato
 
  * r1237779
-   Fix sense of property validation on load.
+   Fix sense of property validation on load and make the revprop change atomic.
    Justification:
      Validation is supposed to be on by default but is off, adding
      --bypass-prop-validation switches it on.
