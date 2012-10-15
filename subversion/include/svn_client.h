@@ -999,6 +999,18 @@ typedef struct svn_client_ctx_t
  *
  * The current implementation never returns error, but callers should
  * still check for error, for compatibility with future versions.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_create_context2(svn_client_ctx_t **ctx,
+                           apr_hash_t *cfg_hash,
+                           apr_pool_t *pool);
+
+
+/** Similar to svn_client_create_context but passes a NULL @a cfg_hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_create_context(svn_client_ctx_t **ctx,

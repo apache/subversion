@@ -118,6 +118,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
+/** @since New in 1.8. */
+#define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
 /** @} */
 
 /** @name Repository conf directory configuration files strings

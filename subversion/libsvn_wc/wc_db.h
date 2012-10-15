@@ -255,7 +255,7 @@ typedef struct svn_wc__db_lock_t {
 */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                const svn_config_t *config,
+                svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,

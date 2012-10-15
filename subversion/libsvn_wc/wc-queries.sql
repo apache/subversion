@@ -1040,6 +1040,9 @@ FROM nodes_current n
 WHERE (wc_id = ?1 AND local_relpath = ?2)
    OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
+-- STMT_PRAGA_LOCKING_MODE
+PRAGMA locking_mode = exclusive
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

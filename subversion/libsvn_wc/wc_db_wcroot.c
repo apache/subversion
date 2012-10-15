@@ -186,7 +186,7 @@ close_wcroot(void *data)
 
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                const svn_config_t *config,
+                svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
@@ -508,6 +508,18 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 
       if (adm_subdir_kind == svn_node_dir)
         {
+          svn_boolean_t sqlite_exclusive = FALSE;
+
+          err = svn_config_get_bool(db->config, &sqlite_exclusive,
+                                    SVN_CONFIG_SECTION_WORKING_COPY,
+                                    SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                                    FALSE);
+          if (err)
+            {
+              svn_error_clear(err);
+              sqlite_exclusive = FALSE;
+            }
+
           /* We always open the database in read/write mode.  If the database
              isn't writable in the filesystem, SQLite will internally open
              it as read-only, and we'll get an error if we try to do a write
@@ -517,7 +529,8 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              we're caching database handles, it make sense to be as permissive
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
-                                        svn_sqlite__mode_readwrite, NULL,
+                                        svn_sqlite__mode_readwrite,
+                                        sqlite_exclusive, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {
@@ -731,6 +744,9 @@ try_symlink_as_dir:
             {
               SVN_ERR(read_link_target(&local_abspath, original_abspath,
                                        scratch_pool));
+              /* This handle was opened in this function but is not going
+                 to be used further so close it. */
+              SVN_ERR(svn_sqlite__close(sdb));
               goto try_symlink_as_dir;
             }
         }
