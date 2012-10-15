@@ -196,9 +196,14 @@ svn_error_wrap_apr(apr_status_t status,
       va_start(ap, fmt);
       msg = apr_pvsprintf(err->pool, fmt, ap);
       va_end(ap);
-      err->message = apr_psprintf(err->pool, "%s%s%s", msg,
-                                  (msg_apr) ? ": " : "",
-                                  (msg_apr) ? msg_apr : "");
+      if (msg_apr)
+        {
+          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr, NULL);
+        }
+      else
+        {
+          err->message = msg;
+        }
     }
 
   return err;

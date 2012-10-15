@@ -2000,9 +2000,9 @@ read_prop_conflicts(apr_array_header_t *conflicts,
       if (my_value == NULL)
         desc->reason = svn_wc_conflict_reason_deleted;
       else if (their_value == NULL)
-        desc->action = svn_wc_conflict_reason_added;
+        desc->reason = svn_wc_conflict_reason_added;
       else
-        desc->action = svn_wc_conflict_reason_edited;
+        desc->reason = svn_wc_conflict_reason_edited;
 
       /* ### This should be changed. The prej file should be stored
        * ### separately from the other files. We need to rev the

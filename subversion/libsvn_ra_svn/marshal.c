@@ -365,12 +365,12 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 }
 
 /* Treat the next LEN input bytes from CONN as "read" */
-static svn_error_t *readbuf_skip(svn_ra_svn_conn_t *conn, apr_size_t len)
+static svn_error_t *readbuf_skip(svn_ra_svn_conn_t *conn, apr_uint64_t len)
 {
   do
   {
     apr_size_t buflen = conn->read_end - conn->read_ptr;
-    apr_size_t copylen = (buflen < len) ? buflen : len;
+    apr_size_t copylen = (buflen < len) ? buflen : (apr_size_t)len;
     conn->read_ptr += copylen;
     len -= copylen;
     if (len == 0)

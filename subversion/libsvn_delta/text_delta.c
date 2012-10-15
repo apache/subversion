@@ -1008,7 +1008,9 @@ svn_txdelta_send_contents(const unsigned char *contents,
 {
   svn_string_t new_data;
   svn_txdelta_op_t op = { svn_txdelta_new, 0, 0 };
-  svn_txdelta_window_t window = { 0, 0, 0, 1, 0, &op, &new_data};
+  svn_txdelta_window_t window = { 0, 0, 0, 1, 0 };
+  window.ops = &op;
+  window.new_data = &new_data;
 
   /* send CONTENT as a series of max-sized windows */
   while (len > 0)
