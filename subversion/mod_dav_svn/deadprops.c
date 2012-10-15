@@ -410,7 +410,10 @@ db_open(apr_pool_t *p,
   db->authz_read_baton = arb;
   db->authz_read_func = dav_svn__authz_read_func(arb);
 
+  /* ### use RO and node's mutable status to look for an error? */
+
   *pdb = db;
+
   return NULL;
 }
 
@@ -428,6 +431,8 @@ db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
   dav_xmlns_add(xi, "S", SVN_DAV_PROP_NS_SVN);
   dav_xmlns_add(xi, "C", SVN_DAV_PROP_NS_CUSTOM);
   dav_xmlns_add(xi, "V", SVN_DAV_PROP_NS_DAV);
+
+  /* ### we don't have any other possible namespaces right now. */
 
   return NULL;
 }
