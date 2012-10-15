@@ -952,7 +952,7 @@ int main(int argc, const char *argv[])
     settings.single_threaded = TRUE;
     if (handling_mode == connection_mode_thread)
       {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
         settings.single_threaded = FALSE;
 #else
         /* No requests will be processed at all
