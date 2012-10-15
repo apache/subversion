@@ -45,6 +45,13 @@ Candidate changes:
      +0: gstein (haven't reviewed these specific revisions yet)
      -0: stsp (not a critical fix, serf is an optional dependency in 1.6.x)
 
+ * r1390653
+   Add Vary: header to GET response.
+   Justification:
+     The 1.8 serf-only client may fail to work with caching proxies.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
