@@ -61,23 +61,23 @@ enum fragment_kind_t
 
 typedef struct fragment_t
 {
-  apr_int64_t position;
+  apr_size_t position;
   void *data;
   enum fragment_kind_t kind;
 } fragment_t;
 
 typedef struct revision_location_t
 {
-  apr_int64_t offset;
-  apr_int64_t changes;
-  apr_int64_t changes_len;
-  apr_int64_t end;  
+  apr_size_t offset;
+  apr_size_t changes;
+  apr_size_t changes_len;
+  apr_size_t end;  
 } revision_location_t;
 
 typedef struct location_t
 {
-  apr_int64_t offset;
-  apr_int64_t size;
+  apr_size_t offset;
+  apr_size_t size;
 } location_t;
 
 typedef struct direntry_t
@@ -98,7 +98,7 @@ typedef struct representation_t
 {
   location_t original;
   location_t target;
-  apr_int64_t header_size;
+  apr_size_t header_size;
   struct representation_t *delta_base;
   revision_info_t *revision;
   directory_t *dir;
@@ -153,7 +153,7 @@ typedef struct content_cache_t
 typedef struct dir_cache_entry_t
 {
   svn_revnum_t revision;
-  apr_int64_t offset;
+  apr_size_t offset;
   
   apr_hash_t *hash;
 } dir_cache_entry_t;
@@ -171,7 +171,7 @@ typedef struct dir_cache_t
 typedef struct window_cache_entry_t
 {
   svn_revnum_t revision;
-  apr_int64_t offset;
+  apr_size_t offset;
 
   svn_stringbuf_t *window;
 } window_cache_entry_t;
@@ -342,10 +342,11 @@ get_content(svn_string_t **data,
   temp->len = revision_info->original.end - revision_info->original.offset;
   SVN_ERR(open_rev_or_pack_file(&file, fs, revision, scratch_pool));
 
-  temp_offset = (apr_off_t)revision_info->original.offset;
+  temp_offset = revision_info->original.offset;
   SVN_ERR(svn_io_file_seek(file, APR_SET, &temp_offset,
                            scratch_pool));
-  revision_info->original.offset = temp_offset;
+  SVN_ERR_ASSERT(temp_offset < APR_SIZE_MAX);
+  revision_info->original.offset = (apr_size_t)temp_offset;
   SVN_ERR(svn_io_file_read(file, temp->data, &temp->len, scratch_pool));
 
   set_cached_content(fs->cache, revision,
@@ -373,7 +374,7 @@ create_dir_cache(apr_pool_t *pool,
 static apr_size_t
 get_dir_cache_index(fs_fs_t *fs,
                     svn_revnum_t revision,
-                    apr_int64_t offset)
+                    apr_size_t offset)
 {
   return (revision + offset * 0xd1f3da69) % fs->dir_cache->entry_count;
 }
@@ -389,7 +390,7 @@ get_cached_dir(fs_fs_t *fs,
                representation_t *representation)
 {
   svn_revnum_t revision = representation->revision->revision;
-  apr_int64_t offset = representation->original.offset;
+  apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_dir_cache_index(fs, revision, offset);
   dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
@@ -405,7 +406,7 @@ set_cached_dir(fs_fs_t *fs,
                apr_hash_t *hash)
 {
   svn_revnum_t revision = representation->revision->revision;
-  apr_int64_t offset = representation->original.offset;
+  apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_dir_cache_index(fs, revision, offset);
   dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
@@ -450,7 +451,7 @@ create_window_cache(apr_pool_t *pool,
 static apr_size_t
 get_window_cache_index(fs_fs_t *fs,
                        svn_revnum_t revision,
-                       apr_int64_t offset)
+                       apr_size_t offset)
 {
   return (revision + offset * 0xd1f3da69) % fs->window_cache->entry_count;
 }
@@ -461,7 +462,7 @@ get_cached_window(fs_fs_t *fs,
                   apr_pool_t *pool)
 {
   svn_revnum_t revision = representation->revision->revision;
-  apr_int64_t offset = representation->original.offset;
+  apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_window_cache_index(fs, revision, offset);
   window_cache_entry_t *entry = &fs->window_cache->entries[i];
@@ -477,7 +478,7 @@ set_cached_window(fs_fs_t *fs,
                   svn_stringbuf_t *window)
 {
   svn_revnum_t revision = representation->revision->revision;
-  apr_int64_t offset = representation->original.offset;
+  apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_window_cache_index(fs, revision, offset);
   window_cache_entry_t *entry = &fs->window_cache->entries[i];
@@ -516,12 +517,12 @@ read_manifest(apr_array_header_t **manifest,
   /* While we're here, let's just read the entire manifest file into an array,
      so we can cache the entire thing. */
   iterpool = svn_pool_create(pool);
-  *manifest = apr_array_make(pool, fs->max_files_per_dir, sizeof(apr_int64_t));
+  *manifest = apr_array_make(pool, fs->max_files_per_dir, sizeof(apr_size_t));
   while (1)
     {
       svn_stringbuf_t *sb;
       svn_boolean_t eof;
-      apr_int64_t val;
+      apr_uint64_t val;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -529,12 +530,12 @@ read_manifest(apr_array_header_t **manifest,
       if (eof)
         break;
 
-      err = svn_cstring_atoi64(&val, sb->data);
+      err = svn_cstring_strtoui64(&val, sb->data, 0, APR_SIZE_MAX, 10);
       if (err)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                  _("Manifest offset '%s' too large"),
                                  sb->data);
-      APR_ARRAY_PUSH(*manifest, apr_int64_t) = (apr_int64_t)val;
+      APR_ARRAY_PUSH(*manifest, apr_size_t) = (apr_size_t)val;
     }
   svn_pool_destroy(iterpool);
 
@@ -542,18 +543,18 @@ read_manifest(apr_array_header_t **manifest,
 }
 
 static svn_error_t *
-read_revision_header(apr_int64_t *changes,
-                     apr_int64_t *changes_len,
-                     apr_int64_t *root_noderev,
+read_revision_header(apr_size_t *changes,
+                     apr_size_t *changes_len,
+                     apr_size_t *root_noderev,
                      svn_stringbuf_t *file_content,
-                     apr_int64_t start,
-                     apr_int64_t end,
+                     apr_size_t start,
+                     apr_size_t end,
                      apr_pool_t *pool)
 {
   char buf[64];
   const char *line;
   const char *space;
-  apr_int64_t val;
+  apr_uint64_t val;
   apr_size_t len;
   
   /* Read in this last block, from which we will identify the last line. */
@@ -583,10 +584,10 @@ read_revision_header(apr_int64_t *changes,
 
   *(char *)space = 0;
   
-  SVN_ERR(svn_cstring_atoi64(&val, line+1));
-  *root_noderev = (apr_int64_t)val;
-  SVN_ERR(svn_cstring_atoi64(&val, space+1));
-  *changes = (apr_int64_t)val;
+  SVN_ERR(svn_cstring_strtoui64(&val, line+1, 0, APR_SIZE_MAX, 10));
+  *root_noderev = (apr_size_t)val;
+  SVN_ERR(svn_cstring_strtoui64(&val, space+1, 0, APR_SIZE_MAX, 10));
+  *changes = (apr_size_t)val;
   *changes_len = end - *changes - start - (buf + len - line) + 1;
 
   return SVN_NO_ERROR;
@@ -723,16 +724,17 @@ static int
 compare_noderev_offsets(const void *data, const void *key)
 {
   return (*(const noderev_t **)data)->original.offset
-       - *(const apr_int64_t *)key;
+       - *(const apr_size_t *)key;
 }
 
 static svn_error_t *
 parse_revnode_pos(revision_info_t **revision_info,
-                  apr_int64_t *offset,
+                  apr_size_t *offset,
                   fs_fs_t *fs,
                   svn_string_t *id)
 {
   int revision;
+  apr_uint64_t temp;
 
   const char *revision_pos = strrchr(id->data, 'r');
   char *offset_pos = (char *)strchr(id->data, '/');
@@ -743,7 +745,8 @@ parse_revnode_pos(revision_info_t **revision_info,
 
   *offset_pos = 0;
   SVN_ERR(svn_cstring_atoi(&revision, revision_pos + 1));
-  SVN_ERR(svn_cstring_atoi64(offset, offset_pos + 1));
+  SVN_ERR(svn_cstring_strtoui64(&temp, offset_pos + 1, 0, APR_SIZE_MAX, 10));
+  *offset = (apr_size_t)temp;
   *offset_pos = '/';
 
   if (revision - fs->start_revision > fs->revisions->nelts)
@@ -760,7 +763,7 @@ parse_revnode_pos(revision_info_t **revision_info,
 static svn_error_t *
 find_noderev(noderev_t **result,
             revision_info_t *revision_info,
-            apr_int64_t offset)
+            apr_size_t offset)
 {
   int idx = svn_sort__bsearch_lower_bound(&offset,
                                           revision_info->node_revs,
@@ -784,7 +787,7 @@ parse_pred(noderev_t **result,
            fs_fs_t *fs,
            svn_string_t *id)
 {
-  apr_int64_t offset;
+  apr_size_t offset;
   revision_info_t *revision_info;
 
   SVN_ERR(parse_revnode_pos(&revision_info, &offset, fs, id));
@@ -797,7 +800,7 @@ static int
 compare_representation_offsets(const void *data, const void *key)
 {
   return (*(const representation_t **)data)->original.offset
-       - *(const apr_int64_t *)key;
+       - *(const apr_size_t *)key;
 }
 
 static representation_t *
@@ -805,7 +808,7 @@ find_representation(int *idx,
                     fs_fs_t *fs,
                     revision_info_t **revision_info,
                     int revision,
-                    apr_int64_t offset)
+                    apr_size_t offset)
 {
   revision_info_t *info;
   *idx = -1;
@@ -839,16 +842,17 @@ find_representation(int *idx,
 
 static svn_error_t *
 read_rep_base(representation_t **representation,
-              apr_int64_t *header_size,
+              apr_size_t *header_size,
               svn_boolean_t *is_plain,
               fs_fs_t *fs,
               svn_stringbuf_t *file_content,
-              apr_int64_t offset,
+              apr_size_t offset,
               apr_pool_t *pool,
               apr_pool_t *scratch_pool)
 {
   char *str, *last_str;
   int idx, revision;
+  apr_uint64_t temp;
 
   const char *buffer = file_content->data + offset;
   const char *line_end = strchr(buffer, '\n');
@@ -878,9 +882,9 @@ read_rep_base(representation_t **representation,
   SVN_ERR(svn_cstring_atoi(&revision, str));
 
   str = svn_cstring_tokenize(" ", &last_str);
-  SVN_ERR(svn_cstring_atoi64(&offset, str));
+  SVN_ERR(svn_cstring_strtoui64(&temp, str, 0, APR_SIZE_MAX, 10));
 
-  *representation = find_representation(&idx, fs, NULL, revision, offset);
+  *representation = find_representation(&idx, fs, NULL, revision, (apr_size_t)temp);
   return SVN_NO_ERROR;
 }
 
@@ -896,25 +900,25 @@ parse_representation(representation_t **representation,
   representation_t *result;
   int revision;
 
-  apr_int64_t offset;
-  svn_filesize_t size;
+  apr_uint64_t offset;
+  apr_uint64_t size;
   int idx;
 
   char *c = (char *)value->data;
   SVN_ERR(svn_cstring_atoi(&revision, svn_cstring_tokenize(" ", &c)));
-  SVN_ERR(svn_cstring_atoi64(&offset, svn_cstring_tokenize(" ", &c)));
-  SVN_ERR(svn_cstring_atoi64(&size, svn_cstring_tokenize(" ", &c)));
+  SVN_ERR(svn_cstring_strtoui64(&offset, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
+  SVN_ERR(svn_cstring_strtoui64(&size, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
 
-  result = find_representation(&idx, fs, &revision_info, revision, offset);
+  result = find_representation(&idx, fs, &revision_info, revision, (apr_size_t)offset);
   if (!result)
     {
       result = apr_pcalloc(pool, sizeof(*result));
       result->revision = revision_info;
-      result->original.offset = offset;
-      result->original.size = size;
+      result->original.offset = (apr_size_t)offset;
+      result->original.size = (apr_size_t)size;
       SVN_ERR(read_rep_base(&result->delta_base, &result->header_size,
                             &result->is_plain, fs, file_content,
-                            offset + revision_info->original.offset,
+                            (apr_size_t)offset + revision_info->original.offset,
                             pool, scratch_pool));
 
       svn_sort__array_insert(&result, revision_info->representations, idx);
@@ -936,8 +940,8 @@ read_windows(apr_array_header_t **windows,
   svn_string_t *content;
   svn_string_t data;
   svn_stream_t *stream;
-  apr_int64_t offset = representation->original.offset
-                   + representation->header_size;
+  apr_size_t offset = representation->original.offset
+                    + representation->header_size;
   char version;
   apr_size_t len = sizeof(version);
 
@@ -977,8 +981,8 @@ read_plain(svn_stringbuf_t **content,
            apr_pool_t *pool)
 {
   svn_string_t *data;
-  apr_int64_t offset = representation->original.offset
-                   + representation->header_size;
+  apr_size_t offset = representation->original.offset
+                    + representation->header_size;
 
   SVN_ERR(get_content(&data, fs, representation->revision->revision, pool));
 
@@ -1051,7 +1055,7 @@ static svn_error_t *
 read_noderev(noderev_t **noderev,
              fs_fs_t *fs,
              svn_stringbuf_t *file_content,
-             apr_int64_t offset,
+             apr_size_t offset,
              revision_info_t *revision_info,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool);
@@ -1060,7 +1064,7 @@ static svn_error_t *
 get_noderev(noderev_t **noderev,
             fs_fs_t *fs,
             svn_stringbuf_t *file_content,
-            apr_int64_t offset,
+            apr_size_t offset,
             revision_info_t *revision_info,
             apr_pool_t *pool,
             apr_pool_t *scratch_pool)
@@ -1151,7 +1155,7 @@ parse_dir(fs_fs_t *fs,
     {
       const char *name = svn__apr_hash_index_key(hi);
       svn_string_t *str_val = svn__apr_hash_index_val(hi);
-      apr_int64_t offset;
+      apr_size_t offset;
       revision_info_t *revision_info;
       apr_size_t name_len = strlen(name);
       direntry_t *entry = base_dir
@@ -1189,7 +1193,7 @@ static svn_error_t *
 read_noderev(noderev_t **noderev,
              fs_fs_t *fs,
              svn_stringbuf_t *file_content,
-             apr_int64_t offset,
+             apr_size_t offset,
              revision_info_t *revision_info,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool)
@@ -1297,7 +1301,7 @@ read_pack_file(fs_fs_t *fs,
 
   for (i = 0; i < manifest->nelts; ++i)
     {
-      apr_int64_t root_node_offset;
+      apr_size_t root_node_offset;
       svn_string_t rev_content;
   
       revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
@@ -1305,15 +1309,15 @@ read_pack_file(fs_fs_t *fs,
       info->representations = apr_array_make(iter_pool, 4, sizeof(representation_t*));
 
       info->revision = base + i;
-      info->original.offset = APR_ARRAY_IDX(manifest, i, apr_int64_t);
+      info->original.offset = APR_ARRAY_IDX(manifest, i, apr_size_t);
       info->original.end = i+1 < manifest->nelts
-                         ? APR_ARRAY_IDX(manifest, i+1 , apr_int64_t)
+                         ? APR_ARRAY_IDX(manifest, i+1 , apr_size_t)
                          : file_content->len;
       SVN_ERR(read_revision_header(&info->original.changes,
                                    &info->original.changes_len,
                                    &root_node_offset,
                                    file_content,
-                                   APR_ARRAY_IDX(manifest, i , apr_int64_t),
+                                   APR_ARRAY_IDX(manifest, i , apr_size_t),
                                    info->original.end,
                                    iter_pool));
 
@@ -1344,7 +1348,7 @@ read_revision_file(fs_fs_t *fs,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  apr_int64_t root_node_offset;
+  apr_size_t root_node_offset;
   apr_pool_t *local_pool = svn_pool_create(pool);
   svn_stringbuf_t *file_content;
   svn_string_t rev_content;
@@ -2436,7 +2440,8 @@ int main(int argc, const char *argv[])
   svn_error_t *svn_err;
   const char *repo_path = NULL;
   svn_revnum_t start_revision = 0;
-  apr_int64_t memsize = 0;
+  apr_size_t memsize = 0;
+  apr_uint64_t temp = 0;
   fs_fs_t *fs;
 
   apr_initialize();
@@ -2457,7 +2462,7 @@ int main(int argc, const char *argv[])
       return 2;
     }
 
-  svn_err = svn_cstring_atoi64(&memsize, argv[2]);
+  svn_err = svn_cstring_strtoui64(&temp, argv[2], 0, APR_SIZE_MAX, 10);
   if (svn_err)
     {
       print_usage(ostream, argv[0], pool);
@@ -2465,6 +2470,7 @@ int main(int argc, const char *argv[])
       return 2;
     }
 
+  memsize = (apr_size_t)temp;
   repo_path = argv[1];
   start_revision = 0;
 
