@@ -219,7 +219,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   /* Encode the action code and length.  */
   if (window->tview_len >> 6 == 0)
     {
-      ibuf[0] = window->tview_len + (0x2 << 6);
+      ibuf[0] = (unsigned char)(window->tview_len + (0x2 << 6));
       ip_len = 1;
     }
   else

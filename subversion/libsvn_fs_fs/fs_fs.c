@@ -3539,8 +3539,8 @@ parse_packed_revprops(svn_fs_t *fs,
 
   revprops->packed_revprops = svn_stringbuf_create_empty(pool);
   revprops->packed_revprops->data = uncompressed->data + offset;
-  revprops->packed_revprops->len = uncompressed->len - offset;
-  revprops->packed_revprops->blocksize = uncompressed->blocksize - offset;
+  revprops->packed_revprops->len = (apr_size_t)(uncompressed->len - offset);
+  revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
 
   /* STREAM still points to the first entry in the sizes list.
    * Init / construct REVPROPS members. */
@@ -4872,8 +4872,8 @@ get_contents(struct rep_read_baton *rb,
           offset = rs->off - rs->start;
           if (copy_len + offset > rb->base_window->len)
             copy_len = offset < rb->base_window->len
-                     ? rb->base_window->len - offset
-                     : 0;
+                     ? (apr_size_t)(rb->base_window->len - offset)
+                     : 0ul;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
         }
@@ -5235,8 +5235,8 @@ get_dir_contents(apr_hash_t *entries,
        */
       apr_pool_t *text_pool = svn_pool_create(pool);
       apr_size_t len = noderev->data_rep->expanded_size
-                     ? noderev->data_rep->expanded_size
-                     : noderev->data_rep->size;
+                     ? (apr_size_t)noderev->data_rep->expanded_size
+                     : (apr_size_t)noderev->data_rep->size;
       svn_stringbuf_t *text = svn_stringbuf_create_ensure(len, text_pool);
       text->len = len;
 
@@ -9703,7 +9703,7 @@ pack_revprops_shard(const char *pack_file_dir,
           total_size + SVN_INT64_BUFFER_SIZE + finfo.size > max_pack_size)
         {
           SVN_ERR(copy_revprops(pack_file_dir, pack_filename, shard_path,
-                                start_rev, rev-1, sizes, total_size,
+                                start_rev, rev-1, sizes, (apr_size_t)total_size,
                                 compression_level, cancel_func, cancel_baton,
                                 iterpool));
 
@@ -9729,7 +9729,7 @@ pack_revprops_shard(const char *pack_file_dir,
   /* write the last pack file */
   if (sizes->nelts != 0)
     SVN_ERR(copy_revprops(pack_file_dir, pack_filename, shard_path,
-                          start_rev, rev-1, sizes, total_size,
+                          start_rev, rev-1, sizes, (apr_size_t)total_size,
                           compression_level, cancel_func, cancel_baton,
                           iterpool));
 
