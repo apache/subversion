@@ -1637,8 +1637,11 @@ apply_change(void **dir_baton,
                                                        change->copyfrom_path,
                                                        scratch_pool);
           else
-            /* ### prefix with "/" ?  */
             copyfrom_url = change->copyfrom_path;
+
+          /* Make this an FS path by prepending "/" */
+          if (copyfrom_url[0] != '/')
+            copyfrom_url = apr_pstrcat(scratch_pool, "/", copyfrom_url, NULL);
 
           copyfrom_rev = change->copyfrom_rev;
         }
