@@ -38,11 +38,6 @@
 #include "dav_svn.h"
 
 
-/* Define this as '1' to enable the use of namespace prefix mappings
-   in the Subversion extensible property XML namespace. */
-#define SVN_DAV__USE_EXT_NS_MAPPINGS 0
-
-
 struct dav_db {
   const dav_resource *resource;
   apr_pool_t *p;
@@ -50,13 +45,6 @@ struct dav_db {
   /* the resource's properties that we are sequencing over */
   apr_hash_t *props;
   apr_hash_index_t *hi;
-
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-  /* property namespace mappings (assumed to be allocated from the
-     same pool!) */
-  apr_hash_t *propname_to_davname;
-  apr_hash_t *xmlns_to_xmlprefix;
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
 
   /* used for constructing repos-local names for properties */
   svn_stringbuf_t *work;
@@ -124,23 +112,18 @@ davname_to_propname(dav_db *db,
    describes the Subversion property name PROPNAME (with length
    NAMELEN).  If ALLOW_EXT_NS is set, PROPNAME is parsed according to
    the rules which apply when the custom Subversion extensible
-   property namespace is in use, and *NEEDS_EXT_NS will be set
-   whenever that namespace is employed for the returned structure.
-   Otherwise, we fall back to old rules which have been in place since
-   Subversion's origins.
+   property namespace is in use.  Otherwise, we fall back to old rules
+   which have been in place since Subversion's origins.
 
    This is the reverse of the davname_to_propname() function.  */
 static dav_prop_name *
-propname_to_davname(svn_boolean_t *needs_ext_ns,
-                    const char *propname,
+propname_to_davname(const char *propname,
                     int namelen,
                     svn_boolean_t allow_ext_ns,
                     apr_pool_t *pool)
 {
   const char *colon;
   dav_prop_name *davname = apr_pcalloc(pool, sizeof(*davname));
-
-  *needs_ext_ns = FALSE;
 
   /* If we're allowed to use the extensible XML property namespace, we
      parse pretty carefully. */
@@ -168,7 +151,6 @@ propname_to_davname(svn_boolean_t *needs_ext_ns,
       else
         {
           const char *barename = apr_pstrndup(pool, propname, colon - propname);
-          *needs_ext_ns = TRUE;
           davname->ns = apr_pstrcat(pool, SVN_DAV_PROP_NS_EXTENSIBLE,
                                     svn_path_uri_encode(barename, pool),
                                     (char *)NULL);
@@ -193,40 +175,6 @@ propname_to_davname(svn_boolean_t *needs_ext_ns,
 
   return davname;
 }
-
-
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-/* Populate the hashes which map Subversion property names to DAV
-   names and XML namespaces to namespace prefixes for the property
-   PROPNAME.  */
-static void
-populate_prop_maps(dav_db *db,
-                   const char *propname,
-                   apr_pool_t *scratch_pool)
-{
-  apr_pool_t *map_pool = apr_hash_pool_get(db->propname_to_davname);
-  apr_ssize_t namelen;
-  svn_boolean_t needs_ext_ns;
-  dav_prop_name *davname;
-
-  /* If we've already mapped this property name, don't do it
-     again. */
-  namelen = strlen(propname);
-  if (apr_hash_get(db->propname_to_davname, propname, namelen))
-    return;
-
-  davname = propname_to_davname(&needs_ext_ns, propname, namelen, 
-                                db->resource->info->repos->use_ext_prop_ns,
-                                map_pool);
-  apr_hash_set(db->propname_to_davname, propname, namelen, davname);
-  if (needs_ext_ns)
-    {
-      apr_hash_set(db->xmlns_to_xmlprefix, davname->ns, APR_HASH_KEY_STRING,
-                   apr_psprintf(map_pool, "svn%d",
-                                apr_hash_count(db->xmlns_to_xmlprefix)));
-    }
-}
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
 
 
 /* Read and remember the property list (node, transaction, or revision
@@ -290,20 +238,6 @@ cache_proplist(dav_db *db,
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "unable to cache property list",
                                 db->resource->pool);
-
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-  {
-    apr_hash_index_t *hi;
-
-    for (hi = apr_hash_first(db->p, db->props); hi; hi = apr_hash_next(hi))
-      {
-        const void *key;
-      
-        apr_hash_this(hi, &key, NULL, NULL);
-        populate_prop_maps(db, key, db->resource->pool);
-      }
-  }
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
 
   /* If we have a high-level action to log, do so. */
   if (action != NULL)
@@ -545,20 +479,6 @@ db_open(apr_pool_t *p,
   db->authz_read_baton = arb;
   db->authz_read_func = dav_svn__authz_read_func(arb);
 
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-  db->propname_to_davname = apr_hash_make(db->p);
-  db->xmlns_to_xmlprefix = apr_hash_make(db->p);
-
-  /* If this is a read-only operation, then go ahead and read/cache
-     the property list for this resource. */
-  if (ro)
-    {
-      dav_error *derr = cache_proplist(db, db->p, db->resource->pool);
-      if (derr)
-        return derr;
-    }
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
-
   *pdb = db;
   return NULL;
 }
@@ -577,29 +497,6 @@ db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
   dav_xmlns_add(xi, "S", SVN_DAV_PROP_NS_SVN);
   dav_xmlns_add(xi, "C", SVN_DAV_PROP_NS_CUSTOM);
   dav_xmlns_add(xi, "V", SVN_DAV_PROP_NS_DAV);
-
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-  {
-    apr_hash_index_t *hi;
-
-    if (! db->props)
-      {
-        dav_error *derr = cache_proplist(db, db->p, db->resource->pool);
-        if (derr)
-          return derr;
-      }
-    
-    for (hi = apr_hash_first(NULL, db->xmlns_to_xmlprefix);
-         hi; hi = apr_hash_next(hi))
-      {
-        const void *key;
-        void *val;
-        
-        apr_hash_this(hi, &key, NULL, &val);
-        dav_xmlns_add(xi, val, key);
-      }
-  }
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
 
   return NULL;
 }
@@ -636,18 +533,8 @@ db_output_value(dav_db *db,
   else if (strncmp(name->ns, SVN_DAV_PROP_NS_EXTENSIBLE,
                    sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
     {
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-      prefix = apr_hash_get(db->xmlns_to_xmlprefix, name->ns,
-                            APR_HASH_KEY_STRING);
-      if (! prefix)
-        return dav_svn__new_error(db->resource->pool,
-                                  HTTP_INTERNAL_SERVER_ERROR, 0,
-                                  "Error mapping XML namespace.");
-      prefix = apr_pstrcat(pool, prefix, ":", (char *)NULL);
-#else  /* SVN_DAV__USE_EXT_NS_MAPPINGS */
       prefix = "";
       xmlns_attr = apr_pstrcat(pool, " xmlns=\"", name->ns, "\"", (char *)NULL);
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
     }
 
   if (propval->len == 0)
@@ -904,20 +791,10 @@ static void get_name(dav_db *db, dav_prop_name *pname)
       dav_prop_name *dav_name;
 
       apr_hash_this(db->hi, &name, &namelen, NULL);
-
-#if SVN_DAV__USE_EXT_NS_MAPPINGS
-      dav_name = apr_hash_get(db->propname_to_davname, name,
-                              namelen);
-#else  /* SVN_DAV__USE_EXT_NS_MAPPINGS */
-      {
-        svn_boolean_t needs_ext_ns;
-        dav_name = propname_to_davname(
-                       &needs_ext_ns, name, namelen,
-                       db->resource->info->repos->use_ext_prop_ns,
-                       db->resource->pool);
-      }
-#endif /* SVN_DAV__USE_EXT_NS_MAPPINGS */
-
+      dav_name = propname_to_davname(
+                     name, namelen,
+                     db->resource->info->repos->use_ext_prop_ns,
+                     db->resource->pool);
       pname->ns = dav_name->ns;
       pname->name = dav_name->name;
     }
