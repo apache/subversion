@@ -87,6 +87,12 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1398325
    Fix some improper usage of #ifdef where #if should be used.
    Justification:
@@ -94,10 +100,4 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1398325
    Votes:
-     +1: breser, danielsh (via IRC) 
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: breser, danielsh, stsp
