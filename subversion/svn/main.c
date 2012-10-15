@@ -1663,6 +1663,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t interactive_conflicts = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
+  const char *sqlite_exclusive;
+  apr_hash_t *cfg_hash;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -2384,14 +2386,111 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   opt_state.end_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
                                          svn_opt_revision_range_t *)->end;
 
+  err = svn_config_get_config(&cfg_hash, opt_state.config_dir, pool);
+  if (err)
+    {
+      /* Fallback to default config if the config directory isn't readable
+         or is not a directory. */
+      if (APR_STATUS_IS_EACCES(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
+        {
+          svn_handle_warning2(stderr, err, "svn: ");
+          svn_error_clear(err);
+          cfg_hash = NULL;
+        }
+      else
+        return EXIT_ERROR(err);
+    }
+
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  SVN_INT_ERR(svn_client_create_context(&ctx, pool));
+  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
   command_baton.ctx = ctx;
+
+  /* Relocation is infinite-depth only. */
+  if (opt_state.relocate)
+    {
+      if (opt_state.depth != svn_depth_unknown)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--relocate and --depth are mutually "
+                                   "exclusive"));
+          return EXIT_ERROR(err);
+        }
+      if (! descend)
+        {
+          err = svn_error_create(
+                    SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                    _("--relocate and --non-recursive (-N) are mutually "
+                      "exclusive"));
+          return EXIT_ERROR(err);
+        }
+    }
+
+  /* Only a few commands can accept a revision range; the rest can take at
+     most one revision number. */
+  if (subcommand->cmd_func != svn_cl__blame
+      && subcommand->cmd_func != svn_cl__diff
+      && subcommand->cmd_func != svn_cl__log
+      && subcommand->cmd_func != svn_cl__mergeinfo
+      && subcommand->cmd_func != svn_cl__merge)
+    {
+      if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
+        {
+          err = svn_error_create(SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL);
+          return EXIT_ERROR(err);
+        }
+    }
+
+  /* -N has a different meaning depending on the command */
+  if (descend == FALSE)
+    {
+      if (subcommand->cmd_func == svn_cl__status)
+        {
+          opt_state.depth = svn_depth_immediates;
+        }
+      else if (subcommand->cmd_func == svn_cl__revert
+               || subcommand->cmd_func == svn_cl__add
+               || subcommand->cmd_func == svn_cl__commit)
+        {
+          /* In pre-1.5 Subversion, some commands treated -N like
+             --depth=empty, so force that mapping here.  Anyway, with
+             revert it makes sense to be especially conservative,
+             since revert can lose data. */
+          opt_state.depth = svn_depth_empty;
+        }
+      else
+        {
+          opt_state.depth = svn_depth_files;
+        }
+    }
+
+  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                            APR_HASH_KEY_STRING);
+
+  /* Update the options in the config */
+  if (opt_state.config_options)
+    {
+      svn_error_clear(
+          svn_cmdline__apply_config_options(ctx->config,
+                                            opt_state.config_options,
+                                            "svn: ", "--config-option"));
+    }
+
+  svn_config_get(cfg_config, &sqlite_exclusive,
+                 SVN_CONFIG_SECTION_WORKING_COPY,
+                 SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                 NULL);
+  if (!sqlite_exclusive)
+    svn_config_set(cfg_config,
+                   SVN_CONFIG_SECTION_WORKING_COPY,
+                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                   "true");
 
   /* If we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
-     sense (unless we've also been instructed not to care). */
+     sense (unless we've also been instructed not to care).  This may
+     access the working copy so do it after setting the locking mode. */
   if ((! opt_state.force_log)
       && (subcommand->cmd_func == svn_cl__commit
           || subcommand->cmd_func == svn_cl__copy
@@ -2464,92 +2563,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               return EXIT_ERROR(err);
             }
         }
-    }
-
-  /* Relocation is infinite-depth only. */
-  if (opt_state.relocate)
-    {
-      if (opt_state.depth != svn_depth_unknown)
-        {
-          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                 _("--relocate and --depth are mutually "
-                                   "exclusive"));
-          return EXIT_ERROR(err);
-        }
-      if (! descend)
-        {
-          err = svn_error_create(
-                    SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                    _("--relocate and --non-recursive (-N) are mutually "
-                      "exclusive"));
-          return EXIT_ERROR(err);
-        }
-    }
-
-  /* Only a few commands can accept a revision range; the rest can take at
-     most one revision number. */
-  if (subcommand->cmd_func != svn_cl__blame
-      && subcommand->cmd_func != svn_cl__diff
-      && subcommand->cmd_func != svn_cl__log
-      && subcommand->cmd_func != svn_cl__mergeinfo
-      && subcommand->cmd_func != svn_cl__merge)
-    {
-      if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
-        {
-          err = svn_error_create(SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL);
-          return EXIT_ERROR(err);
-        }
-    }
-
-  /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
-    {
-      if (subcommand->cmd_func == svn_cl__status)
-        {
-          opt_state.depth = svn_depth_immediates;
-        }
-      else if (subcommand->cmd_func == svn_cl__revert
-               || subcommand->cmd_func == svn_cl__add
-               || subcommand->cmd_func == svn_cl__commit)
-        {
-          /* In pre-1.5 Subversion, some commands treated -N like
-             --depth=empty, so force that mapping here.  Anyway, with
-             revert it makes sense to be especially conservative,
-             since revert can lose data. */
-          opt_state.depth = svn_depth_empty;
-        }
-      else
-        {
-          opt_state.depth = svn_depth_files;
-        }
-    }
-
-  err = svn_config_get_config(&(ctx->config),
-                              opt_state.config_dir, pool);
-  if (err)
-    {
-      /* Fallback to default config if the config directory isn't readable
-         or is not a directory. */
-      if (APR_STATUS_IS_EACCES(err->apr_err)
-          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
-        {
-          svn_handle_warning2(stderr, err, "svn: ");
-          svn_error_clear(err);
-        }
-      else
-        return EXIT_ERROR(err);
-    }
-
-  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
-
-  /* Update the options in the config */
-  if (opt_state.config_options)
-    {
-      svn_error_clear(
-          svn_cmdline__apply_config_options(ctx->config,
-                                            opt_state.config_options,
-                                            "svn: ", "--config-option"));
     }
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
