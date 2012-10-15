@@ -130,6 +130,11 @@
  */
 #define MAX_SEGMENT_COUNT 0x10000
 
+/* As of today, APR won't allocate chunks of 4GB or more. So, limit the
+ * segment size to slightly below that.
+ */
+#define MAX_SEGMENT_SIZE 0xffff0000ull
+
 /* We don't mark the initialization status for every group but initialize
  * a number of groups at once. That will allow for a very small init flags
  * vector that is likely to fit into the CPU caches even for fairly large
@@ -149,6 +154,12 @@
  * to and from the cache would block other threads for a very long time.
  */
 #define MAX_ITEM_SIZE ((apr_uint32_t)(0 - ITEM_ALIGNMENT))
+
+/* A 16 byte key type. We use that to identify cache entries.
+ * The notation as just two integer values will cause many compilers
+ * to create better code.
+ */
+typedef apr_uint64_t entry_key_t[2];
 
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
@@ -210,7 +221,7 @@ static void get_prefix_tail(const char *prefix, char *prefix_tail)
 /* Initialize all members of TAG except for the content hash.
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
-                                   unsigned char *prefix_hash,
+                                   entry_key_t prefix_hash,
                                    char *prefix_tail,
                                    const void *key,
                                    apr_size_t key_len,
@@ -275,11 +286,12 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 
 #define DEBUG_CACHE_MEMBUFFER_TAG_ARG entry_tag_t *tag,
 
-#define DEBUG_CACHE_MEMBUFFER_TAG &tag,
+#define DEBUG_CACHE_MEMBUFFER_TAG tag,
 
 #define DEBUG_CACHE_MEMBUFFER_INIT_TAG                         \
-  entry_tag_t tag;                                             \
-  SVN_ERR(store_key_part(&tag,                                 \
+  entry_tag_t _tag;                                            \
+  entry_tag_t *tag = &_tag;                                    \
+  SVN_ERR(store_key_part(tag,                                  \
                          cache->prefix,                        \
                          cache->prefix_tail,                   \
                          key,                                  \
@@ -297,12 +309,6 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 #define DEBUG_CACHE_MEMBUFFER_INIT_TAG
 
 #endif /* SVN_DEBUG_CACHE_MEMBUFFER */
-
-/* A 16 byte key type. We use that to identify cache entries.
- * The notation as just two integer values will cause many compilers
- * to create better code.
- */
-typedef apr_uint64_t entry_key_t[2];
 
 /* A single dictionary entry. Since all entries will be allocated once
  * during cache creation, those entries might be either used or unused.
@@ -1139,6 +1145,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
 
+  /* Limit the total size
+   */
+  if (total_size > MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT)
+    total_size = MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT;
+  
   /* Limit the segment count
    */
   if (segment_count > MAX_SEGMENT_COUNT)
@@ -1175,6 +1186,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
       segment_count = 1 << segment_count_shift;
     }
+
+  /* If we have an extremely large cache (>512 GB), the default segment
+   * size may exceed the amount allocatable as one chunk. In that case,
+   * increase segmentation until we are under the threshold.
+   */
+  while (   total_size / segment_count > MAX_SEGMENT_SIZE
+         && segment_count < MAX_SEGMENT_COUNT)
+    segment_count *= 2;
 
   /* allocate cache as an array of segments / cache objects */
   c = apr_palloc(pool, segment_count * sizeof(*c));
@@ -1378,6 +1397,14 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
       && cache->max_entry_size >= size
       && ensure_data_insertable(cache, size))
     {
+      /* Remove old data for this key, if that exists.
+       * Get an unused entry for the key and and initialize it with
+       * the serialized item's (future) position within data buffer.
+       */
+      entry = find_entry(cache, group_index, to_find, TRUE);
+      entry->size = size;
+      entry->offset = cache->current_data;
+
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
       /* Remember original content, type and key (hashes)
@@ -1387,16 +1414,8 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
 #endif
 
-      /* Remove old data for this key, if that exists.
-       * Get an unused entry for the key and and initialize it with
-       * the serialized item's (future) position within data buffer.
-       */
-      entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = size;
-      entry->offset = cache->current_data;
-
       /* Link the entry properly.
-        */
+       */
       insert_entry(cache, entry);
 
       /* Copy the serialized item data into the cache.
@@ -1509,7 +1528,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* Compare original content, type and key (hashes)
    */
-  SVN_ERR(store_content_part(tag, buffer, entry->size, result_pool));
+  SVN_ERR(store_content_part(tag, *buffer, entry->size, result_pool));
   SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
@@ -1746,17 +1765,17 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   /* Link the entry properly.
                    */
                   insert_entry(cache, entry);
+                }
+            }
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
-                  /* Remember original content, type and key (hashes)
-                   */
-                  SVN_ERR(store_content_part(tag, data, size, scratch_pool));
-                  memcpy(&entry->tag, tag, sizeof(*tag));
+          /* Remember original content, type and key (hashes)
+           */
+          SVN_ERR(store_content_part(tag, data, size, scratch_pool));
+          memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
-                }
-            }
         }
     }
 
@@ -1782,7 +1801,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
   WITH_WRITE_LOCK(cache,
                   membuffer_cache_set_partial_internal
                      (cache, group_index, key, func, baton,
-                      DEBUG_CACHE_MEMBUFFER_TAG_ARG
+                      DEBUG_CACHE_MEMBUFFER_TAG
                       scratch_pool));
 
   /* done here -> unlock the cache
