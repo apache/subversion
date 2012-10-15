@@ -866,7 +866,7 @@ find_entry(svn_membuffer_t *cache,
 {
   entry_group_t *group;
   entry_t *entry = NULL;
-  int i;
+  apr_size_t i;
 
   /* get the group that *must* contain the entry
    */
@@ -1145,11 +1145,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
 
-  /* Limit the total size
+  /* Limit the total size (only relevant if we can address > 4GB)
    */
+#if APR_SIZEOF_VOIDP > 4
   if (total_size > MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT)
     total_size = MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT;
-  
+#endif
+
   /* Limit the segment count
    */
   if (segment_count > MAX_SEGMENT_COUNT)
