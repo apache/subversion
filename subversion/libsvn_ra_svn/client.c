@@ -1003,11 +1003,11 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
       svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS))
     {
       apr_hash_set(revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                   SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
                    APR_HASH_KEY_STRING,
                    svn_string_create(SVN_VER_NUMBER, pool));
       apr_hash_set(revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                   SVN_PROP_TXN_USER_AGENT,
                    APR_HASH_KEY_STRING,
                    svn_string_create(sess_baton->useragent, pool));
     }
