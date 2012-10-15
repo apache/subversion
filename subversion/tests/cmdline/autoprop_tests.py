@@ -623,6 +623,51 @@ def svn_config_autoprops_propset_file_target(sbox):
     'ps', SVN_CONFIG_AUTOPROPS, '*.c=svn:eol-style=native',
     sbox.ospath('iota'))
 
+#----------------------------------------------------------------------
+# Multiple unversioned subtrees under a versioned target shouldn't segfault.
+def svn_config_autoprops_unversioned_subtrees_versioned_target(sbox):
+  "versioned target and unversioned subtrees"
+
+  sbox.build()
+  Z_path = sbox.ospath('A/D/Z')
+  Y_path = sbox.ospath('A/B/Y')
+  foo_path = sbox.ospath('A/D/Z/foo.c')
+  bar_path = sbox.ospath('A/B/Y/bar.c')
+
+  # Set svn:inheritable-auto-props properties on two directories.
+  svntest.main.run_svn(None, 'ps', SVN_CONFIG_AUTOPROPS,
+                       '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
+  svntest.main.run_svn(None, 'ps', SVN_CONFIG_AUTOPROPS,
+                       '*.c=svn:eol-style=native', sbox.ospath('A/D'))
+  svntest.main.run_svn(None, 'ci', '-m', 'Add inheritable autoprops',
+                       sbox.wc_dir)
+
+  # Create two subtrees, each with one new file.
+  os.mkdir(Z_path)
+  os.mkdir(Y_path)
+  svntest.main.file_write(foo_path,
+                          '/* Someday there will be code here. */\n')
+  svntest.main.file_write(bar_path,
+                          '/* Someday there will be code here. */\n')
+
+  # Perform the add with the --force flag, targeting the root of the WC.
+  ### Note: You have to be inside the working copy or else Subversion
+  ### will think you're trying to add the working copy to its parent
+  ### directory, and will (possibly, if the parent directory isn't
+  ### versioned) fail -- see also schedule_tests.py 11 "'svn add'
+  ### should traverse already-versioned dirs"
+  saved_wd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  # This was causing a segfault at one point.
+  svntest.main.run_svn(None, 'add', '.', '--force')
+  os.chdir(saved_wd)
+
+  # Check the resulting autoprops.
+  svntest.actions.run_and_verify_svn(None, 'native\n', [],
+                                     'pg', 'svn:eol-style', foo_path)
+  svntest.actions.run_and_verify_svn(None, 'CR\n', [],
+                                     'pg', 'svn:eol-style', bar_path)
+
 ########################################################################
 # Run the tests
 
@@ -658,6 +703,7 @@ test_list = [ None,
               svn_config_autoprops_imp_yes_no,
               svn_config_autoprops_add_versioned_target,
               svn_config_autoprops_propset_file_target,
+              svn_config_autoprops_unversioned_subtrees_versioned_target,
              ]
 
 if __name__ == '__main__':

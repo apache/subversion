@@ -402,6 +402,7 @@ add_dir_recursive(const char *dir_abspath,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   svn_boolean_t entry_exists = FALSE;
+  svn_boolean_t found_unversioned_root = FALSE;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (ctx->cancel_func)
@@ -433,6 +434,7 @@ add_dir_recursive(const char *dir_abspath,
       SVN_ERR(svn_client__get_all_auto_props(config_autoprops, dir_abspath,
                                              ctx, result_pool,
                                              scratch_pool));
+      found_unversioned_root = TRUE;
     }
 
   if (!no_ignore)
@@ -495,6 +497,11 @@ add_dir_recursive(const char *dir_abspath,
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(iterpool);
+
+  /* Reset CONFIG_AUTOPROPS if we just finished processing the root
+     of an unversioned subtree. */
+  if (found_unversioned_root)
+    *config_autoprops = NULL;
 
   return SVN_NO_ERROR;
 }
