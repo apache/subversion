@@ -177,75 +177,6 @@ propname_to_davname(const char *propname,
 }
 
 
-/* Read and remember the property list (node, transaction, or revision
-   properties as appropriate) associated with current resource.  */
-static dav_error *
-cache_proplist(dav_db *db,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  svn_error_t *serr;
-  const char *action = NULL;
-  
-  /* Working Baseline, Baseline, or (Working) Version resource */
-  if (db->resource->baselined)
-    {
-      if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
-        {
-          serr = svn_fs_txn_proplist(&db->props,
-                                     db->resource->info->root.txn,
-                                     result_pool);
-        }
-      else
-        {
-          action = svn_log__rev_proplist(db->resource->info->root.rev,
-                                         scratch_pool);
-          serr = svn_repos_fs_revision_proplist(&db->props,
-                                                db->resource->info->repos->repos,
-                                                db->resource->info->root.rev,
-                                                db->authz_read_func,
-                                                db->authz_read_baton,
-                                                result_pool);
-        }
-    }
-  else
-    {
-      svn_node_kind_t kind;
-
-      serr = svn_fs_node_proplist(&db->props,
-                                  db->resource->info->root.root,
-                                  get_repos_path(db->resource->info),
-                                  result_pool);
-      if (! serr)
-        serr = svn_fs_check_path(&kind, db->resource->info->root.root,
-                                 get_repos_path(db->resource->info),
-                                 scratch_pool);
-
-      if (! serr)
-        {
-          if (kind == svn_node_dir)
-            action = svn_log__get_dir(db->resource->info->repos_path,
-                                      db->resource->info->root.rev,
-                                      FALSE, TRUE, 0, scratch_pool);
-          else
-            action = svn_log__get_file(db->resource->info->repos_path,
-                                       db->resource->info->root.rev,
-                                       FALSE, TRUE, scratch_pool);
-        }
-    }
-
-  if (serr)
-    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                "unable to cache property list",
-                                db->resource->pool);
-
-  /* If we have a high-level action to log, do so. */
-  if (action != NULL)
-    dav_svn__operational_log(db->resource->info, action);
-
-  return NULL;
-}
-
 static dav_error *
 get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
 {
@@ -804,11 +735,63 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 static dav_error *
 db_first_name(dav_db *db, dav_prop_name *pname)
 {
-  if (! db->props)
+  /* for operational logging */
+  const char *action = NULL;
+
+  /* if we don't have a copy of the properties, then get one */
+  if (db->props == NULL)
     {
-      dav_error *derr = cache_proplist(db, db->p, db->resource->pool);
-      if (derr)
-        return derr;
+      svn_error_t *serr;
+
+      /* Working Baseline, Baseline, or (Working) Version resource */
+      if (db->resource->baselined)
+        {
+          if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+            serr = svn_fs_txn_proplist(&db->props,
+                                       db->resource->info->root.txn,
+                                       db->p);
+          else
+            {
+              action = svn_log__rev_proplist(db->resource->info->root.rev,
+                                             db->resource->pool);
+              serr = svn_repos_fs_revision_proplist
+                (&db->props,
+                 db->resource->info->repos->repos,
+                 db->resource->info->root.rev,
+                 db->authz_read_func,
+                 db->authz_read_baton,
+                 db->p);
+            }
+        }
+      else
+        {
+          svn_node_kind_t kind;
+          serr = svn_fs_node_proplist(&db->props,
+                                      db->resource->info->root.root,
+                                      get_repos_path(db->resource->info),
+                                      db->p);
+          if (! serr)
+            serr = svn_fs_check_path(&kind, db->resource->info->root.root,
+                                     get_repos_path(db->resource->info),
+                                     db->p);
+
+          if (! serr)
+            {
+              if (kind == svn_node_dir)
+                action = svn_log__get_dir(db->resource->info->repos_path,
+                                          db->resource->info->root.rev,
+                                          FALSE, TRUE, 0, db->resource->pool);
+              else
+                action = svn_log__get_file(db->resource->info->repos_path,
+                                           db->resource->info->root.rev,
+                                           FALSE, TRUE, db->resource->pool);
+            }
+        }
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not begin sequencing through "
+                                    "properties",
+                                    db->resource->pool);
     }
 
   /* begin the iteration over the hash */
@@ -816,6 +799,10 @@ db_first_name(dav_db *db, dav_prop_name *pname)
 
   /* fetch the first key */
   get_name(db, pname);
+
+  /* If we have a high-level action to log, do so. */
+  if (action != NULL)
+    dav_svn__operational_log(db->resource->info, action);
 
   return NULL;
 }
