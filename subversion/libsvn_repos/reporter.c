@@ -534,7 +534,9 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     {
       /* convert committed-rev to  string */
       char buf[SVN_INT64_BUFFER_SIZE];
-      svn_string_t cr_str = { buf, svn__i64toa(buf, crev) };
+      svn_string_t cr_str;
+      cr_str.data = buf;
+      cr_str.len = svn__i64toa(buf, crev);
 
       /* Transmit the committed-rev. */
       SVN_ERR(change_fn(b, object,
