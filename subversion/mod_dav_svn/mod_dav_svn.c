@@ -820,6 +820,21 @@ dav_svn__check_ephemeral_txnprops_support(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__check_prop_ext_ns_support(request_rec *r)
+{
+  svn_version_t *version = dav_svn__get_master_version(r);
+
+  /* We know this server supports extensible property namespaces.  But
+     if we're proxying requests to a master server, we need to see if
+     it supports them, too.  */
+  if (version && (! svn_version__at_least(version, 1, 8, 0)))
+    return FALSE;
+
+  return TRUE;
+}
+
+
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
