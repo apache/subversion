@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 211;
+use Test::More tests => 221;
 use strict;
 
 # shut up about variables that are only used once.
@@ -101,6 +101,43 @@ $current_rev++;
 # TEST
 is($ci_dir1->revision,$current_rev,"commit info revision equals $current_rev");
 
+my ($ci_dir2) = $ctx->mkdir2(["$reposurl/dir2"]);
+# TEST
+isa_ok($ci_dir2,'_p_svn_commit_info_t');
+$current_rev++;
+# TEST
+is($ci_dir2->revision,$current_rev,"commit info revision equals $current_rev");
+
+my ($ci_dir3) = $ctx->mkdir3(["$reposurl/dir3"],0,undef);
+# TEST
+isa_ok($ci_dir3,'_p_svn_commit_info_t');
+$current_rev++;
+# TEST
+is($ci_dir3->revision,$current_rev,"commit info revision equals $current_rev");
+
+# TEST
+is($ctx->mkdir4(["$reposurl/dir4"],0,undef,sub {
+      my ($commit_info) = @_;
+
+      # TEST
+      isa_ok($commit_info,'_p_svn_commit_info_t','commit_info type check');
+
+      # TEST
+      is($commit_info->revision(),$current_rev + 1, 'commit info revision');
+
+      # TEST
+      like($commit_info->date(),
+           qr/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/,
+           'commit info date');
+
+      # TEST
+      is($commit_info->post_commit_err(),undef,'commit info post_commit_error');
+
+      # TEST
+      is($commit_info->repos_root(),$reposurl,'commit info repos_root');
+    }),
+    undef,'Returned undef from mkdir4 operation.');
+$current_rev++;
 
 
 my ($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
@@ -736,13 +773,13 @@ isa_ok($plh,'HASH',
 is_deeply($plh, {'perl-test' => 'test-val'}, 'test prop list prop_hash values');
 
 # add a dir to test update
-my ($ci_dir2) = $ctx->mkdir(["$reposurl/dir2"]);
+my ($ci_dir5) = $ctx->mkdir(["$reposurl/dir5"]);
 # TEST
-isa_ok($ci_dir2,'_p_svn_client_commit_info_t',
+isa_ok($ci_dir5,'_p_svn_client_commit_info_t',
        'mkdir returns a _p_svn_client_commit_info_t');
 $current_rev++;
 # TEST
-is($ci_dir2->revision(),$current_rev,
+is($ci_dir5->revision(),$current_rev,
    "commit info revision equals $current_rev");
 
 # Use explicit revnum to test that instead of just HEAD.

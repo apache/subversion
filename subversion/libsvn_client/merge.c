@@ -11401,7 +11401,7 @@ find_base_on_target(svn_client__pathrev_t **base_p,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_client__find_symmetric_merge(), which see.
+/* The body of svn_client_find_symmetric_merge(), which see.
  */
 static svn_error_t *
 find_symmetric_merge(svn_client__pathrev_t **base_p,
@@ -11482,15 +11482,15 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
 }
 
 /* Details of a symmetric merge. */
-struct svn_client__symmetric_merge_t
+struct svn_client_symmetric_merge_t
 {
   svn_client__pathrev_t *yca, *base, *mid, *right, *target;
   svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
 };
 
 svn_error_t *
-svn_client__find_symmetric_merge_no_wc(
-                                 svn_client__symmetric_merge_t **merge_p,
+svn_client_find_symmetric_merge_no_wc(
+                                 svn_client_symmetric_merge_t **merge_p,
                                  const char *source_path_or_url,
                                  const svn_opt_revision_t *source_revision,
                                  const char *target_path_or_url,
@@ -11501,7 +11501,7 @@ svn_client__find_symmetric_merge_no_wc(
 {
   source_and_target_t *s_t = apr_palloc(scratch_pool, sizeof(*s_t));
   svn_client__pathrev_t *target_loc;
-  svn_client__symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
+  svn_client_symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   /* Source */
   SVN_ERR(svn_client__ra_session_from_path2(
@@ -11531,20 +11531,20 @@ svn_client__find_symmetric_merge_no_wc(
 }
 
 svn_error_t *
-svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_wcpath,
-                                 svn_boolean_t allow_mixed_rev,
-                                 svn_boolean_t allow_local_mods,
-                                 svn_boolean_t allow_switched_subtrees,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
+svn_client_find_symmetric_merge(svn_client_symmetric_merge_t **merge_p,
+                                const char *source_path_or_url,
+                                const svn_opt_revision_t *source_revision,
+                                const char *target_wcpath,
+                                svn_boolean_t allow_mixed_rev,
+                                svn_boolean_t allow_local_mods,
+                                svn_boolean_t allow_switched_subtrees,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   const char *target_abspath;
   source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
-  svn_client__symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
+  svn_client_symmetric_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, scratch_pool));
 
@@ -11588,7 +11588,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_client__do_symmetric_merge(), which see.
+/* The body of svn_client_do_symmetric_merge(), which see.
  *
  * Five locations are inputs: YCA, BASE, MID, RIGHT, TARGET, as shown
  * depending on whether the base is on the source branch or the target
@@ -11616,7 +11616,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
  * eliminate already-cherry-picked revisions from the source.
  */
 static svn_error_t *
-do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
+do_symmetric_merge_locked(const svn_client_symmetric_merge_t *merge,
                           const char *target_abspath,
                           svn_depth_t depth,
                           svn_boolean_t force,
@@ -11735,15 +11735,15 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 }
 
 svn_error_t *
-svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
-                               const char *target_wcpath,
-                               svn_depth_t depth,
-                               svn_boolean_t force,
-                               svn_boolean_t record_only,
-                               svn_boolean_t dry_run,
-                               const apr_array_header_t *merge_options,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool)
+svn_client_do_symmetric_merge(const svn_client_symmetric_merge_t *merge,
+                              const char *target_wcpath,
+                              svn_depth_t depth,
+                              svn_boolean_t force,
+                              svn_boolean_t record_only,
+                              svn_boolean_t dry_run,
+                              const apr_array_header_t *merge_options,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
 {
   const char *target_abspath, *lock_abspath;
 
@@ -11767,8 +11767,8 @@ svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
 }
 
 svn_boolean_t
-svn_client__symmetric_merge_is_reintegrate_like(
-        const svn_client__symmetric_merge_t *merge)
+svn_client_symmetric_merge_is_reintegrate_like(
+        const svn_client_symmetric_merge_t *merge)
 {
   return merge->mid != NULL;
 }
@@ -11779,7 +11779,7 @@ svn_client__symmetric_merge_get_locations(
                                 svn_client__pathrev_t **base,
                                 svn_client__pathrev_t **right,
                                 svn_client__pathrev_t **target,
-                                const svn_client__symmetric_merge_t *merge,
+                                const svn_client_symmetric_merge_t *merge,
                                 apr_pool_t *result_pool)
 {
   if (yca)

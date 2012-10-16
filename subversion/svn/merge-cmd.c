@@ -120,16 +120,16 @@ symmetric_merge(const char *source_path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  svn_client__symmetric_merge_t *merge;
+  svn_client_symmetric_merge_t *merge;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
-  SVN_ERR(svn_client__find_symmetric_merge(&merge,
-                                           source_path_or_url, source_revision,
-                                           target_wcpath, allow_mixed_rev,
-                                           allow_local_mods, allow_switched_subtrees,
-                                           ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_find_symmetric_merge(&merge,
+                                          source_path_or_url, source_revision,
+                                          target_wcpath, allow_mixed_rev,
+                                          allow_local_mods, allow_switched_subtrees,
+                                          ctx, scratch_pool, scratch_pool));
 
-  if (svn_client__symmetric_merge_is_reintegrate_like(merge))
+  if (svn_client_symmetric_merge_is_reintegrate_like(merge))
     {
       if (record_only)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
@@ -157,10 +157,10 @@ symmetric_merge(const char *source_path_or_url,
     }
 
   /* Perform the 3-way merges */
-  SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
-                                         force, record_only,
-                                         dry_run, merge_options,
-                                         ctx, scratch_pool));
+  SVN_ERR(svn_client_do_symmetric_merge(merge, target_wcpath, depth,
+                                        force, record_only,
+                                        dry_run, merge_options,
+                                        ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
