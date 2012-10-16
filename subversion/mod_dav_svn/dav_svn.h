@@ -304,13 +304,6 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 /* for the repository referred to by this request, are bulk updates allowed? */
 svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 
-/* for the repository referred to by this request, should httpv2 be advertised? */
-svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
-
-/* for the repository referred to by this request, should ephemeral
-   txnprop support be advertised? */
-svn_boolean_t dav_svn__get_ephemeral_txnprops_flag(request_rec *r);
-
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
@@ -331,6 +324,17 @@ authz_svn__subreq_bypass_func_t dav_svn__get_pathauthz_bypass(request_rec *r);
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
+
+/* For the repository referred to by this request, should HTTPv2
+   protocol support be advertised?  Note that this also takes into
+   account the support level expected of based on the specified
+   master server version (if provided via SVNMasterVersion).  */
+svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
+
+/* For the repository referred to by this request, should ephemeral
+   txnprop support be advertised?  */
+svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
+
 
 
 /* SPECIAL URI
@@ -379,6 +383,11 @@ const char *dav_svn__get_xslt_uri(request_rec *r);
    Comes from the <SVNMasterURI> directive. */
 /* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_master_uri(request_rec *r);
+
+/* Return the version of the master server (used for mirroring) iff a
+   master URI is in place for this location; otherwise, return NULL.
+   Comes from the <SVNMasterVersion> directive. */
+svn_version_t *dav_svn__get_master_version(request_rec *r);
 
 /* Return the disk path to the activities db.
    Comes from the <SVNActivitiesDB> directive. */
