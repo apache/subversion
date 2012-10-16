@@ -71,7 +71,8 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
 
     env->DeleteLocalRef(jctx);
 
-    SVN_JNI_ERR(svn_client_create_context(&m_context, pool.getPool()),
+    SVN_JNI_ERR(svn_client_create_context2(&m_context, NULL,
+                                           pool.getPool()),
                 );
 
     /* Clear the wc_ctx as we don't want to maintain this unconditionally
