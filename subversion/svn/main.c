@@ -1630,7 +1630,8 @@ add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
 
 /*** Main. ***/
 
-/* Report and clear the error ERR, and return EXIT_FAILURE. */
+/* Report and clear the error ERR, and return EXIT_FAILURE. Suppress the
+ * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR. */
 #define EXIT_ERROR(err)                                                 \
   svn_cmdline_handle_exit_error(err, NULL, "svn: ")
 
