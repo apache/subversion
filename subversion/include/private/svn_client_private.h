@@ -226,54 +226,6 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-
-/* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
-
-/* Find the information needed to merge all unmerged changes from a source
- * branch into a target branch.  The information is the locations of the
- * youngest common ancestor, merge base, and such like.
- *
- * Set *MERGE to the information needed to merge all unmerged changes
- * (up to SOURCE_REVISION) from the source branch SOURCE_PATH_OR_URL @
- * SOURCE_REVISION into the target WC at TARGET_WCPATH.
- */
-svn_error_t *
-svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_wcpath,
-                                 svn_boolean_t allow_mixed_rev,
-                                 svn_boolean_t allow_local_mods,
-                                 svn_boolean_t allow_switched_subtrees,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/* Find out what kind of symmetric merge would be needed, when the target
- * is only known as a repository location rather than a WC.
- *
- * Like svn_client__find_symmetric_merge() except that SOURCE_PATH_OR_URL @
- * SOURCE_REVISION should refer to a repository location and not a WC.
- *
- * ### The result, *MERGE_P, may not be suitable for passing to
- * svn_client__do_symmetric_merge().  The target WC state would not be
- * checked (as in the ALLOW_* flags).  We should resolve this problem:
- * perhaps add the allow_* params here, or provide another way of setting
- * them; and perhaps ensure __do_...() will accept the result iff given a
- * WC that matches the stored target location.
- */
-svn_error_t *
-svn_client__find_symmetric_merge_no_wc(
-                                 svn_client__symmetric_merge_t **merge_p,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_path_or_url,
-                                 const svn_opt_revision_t *target_revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
 /* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
  * youngest common ancestor of the branches, the base chosen for 3-way
  * merge, the right-hand side of the source diff, and the target WC.
@@ -286,44 +238,8 @@ svn_client__symmetric_merge_get_locations(
                                 svn_client__pathrev_t **base,
                                 svn_client__pathrev_t **right,
                                 svn_client__pathrev_t **target,
-                                const svn_client__symmetric_merge_t *merge,
+                                const svn_client_symmetric_merge_t *merge,
                                 apr_pool_t *result_pool);
-
-/* Perform a symmetric merge.
- *
- * Merge according to MERGE into the WC at TARGET_WCPATH.
- *
- * The other parameters are as in svn_client_merge4().
- *
- * ### TODO: There's little point in this function being the only way the
- * caller can use the result of svn_client__find_symmetric_merge().  The
- * contents of MERGE should be more public, or there should be other ways
- * the caller can use it, or these two functions should be combined into
- * one.  I want to make it more public, and also possibly have more ways
- * to use it in future (for example, do_symmetric_merge_with_step_by_-
- * step_confirmation).
- */
-svn_error_t *
-svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
-                               const char *target_wcpath,
-                               svn_depth_t depth,
-                               svn_boolean_t force,
-                               svn_boolean_t record_only,
-                               svn_boolean_t dry_run,
-                               const apr_array_header_t *merge_options,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *scratch_pool);
-
-/* Return TRUE iff the symmetric merge represented by MERGE is going to be
- * a reintegrate-like merge: that is, merging in the opposite direction
- * from the last full merge.
- *
- * This function exists because the merge is NOT really symmetric and the
- * client can be more friendly if it knows something about the differences.
- */
-svn_boolean_t
-svn_client__symmetric_merge_is_reintegrate_like(
-        const svn_client__symmetric_merge_t *merge);
 
 
 #ifdef __cplusplus
