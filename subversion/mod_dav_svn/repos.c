@@ -2144,10 +2144,9 @@ get_resource(request_rec *r,
                              APR_HASH_KEY_STRING, capability_yes);
               }
 
-            /* We don't need to report the very DAV-specific
-               extensible property XML namespace capability to
-               clients, so we'll just stash it in our repos
-               structure. */
+            /* We don't need to report the DAV-specific extensible
+               property XML namespace capability to hook scripts, so
+               we'll just stash it in our repos structure. */
             if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS, vals))
               {
                 repos->use_ext_prop_ns = TRUE;
