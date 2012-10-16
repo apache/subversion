@@ -99,12 +99,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1398325
-   Fix some improper usage of #ifdef where #if should be used.
-   Justification:
-     Incorrect detection of threading is a bug.
-   Branch:
-     ^/subversion/branches/1.7.x-r1398325
-   Votes:
-     +1: breser, danielsh, stsp
