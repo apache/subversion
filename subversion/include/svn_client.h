@@ -990,7 +990,9 @@ typedef struct svn_client_ctx_t
 
 /** Initialize a client context.
  * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
+ * represents a particular instance of an svn client. @a cfg_hash is used
+ * to initialise the config member of the returned context object and should
+ * remain valid for the lifetime of the object.
  *
  * In order to avoid backwards compatibility problems, clients must
  * use this function to initialize and allocate the
