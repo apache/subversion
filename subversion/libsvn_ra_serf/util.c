@@ -771,7 +771,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                         _("Error running context"));
             }
 
-          return svn_error_wrap_apr(status, _("Error running context"));
+          return svn_ra_serf__wrap_err(status, _("Error running context"));
         }
 
       /* Debugging purposes only! */
@@ -954,7 +954,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 
   status = drain_bucket(response);
   if (status)
-    return svn_error_wrap_apr(status, NULL);
+    return svn_ra_serf__wrap_err(status, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1493,7 +1493,7 @@ handle_server_error(serf_request_t *request,
      surface. */
   err = drain_bucket(response);
   if (err && !SERF_BUCKET_READ_ERROR(err))
-    return svn_error_wrap_apr(err, NULL);
+    return svn_ra_serf__wrap_err(err, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1515,7 +1515,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return svn_error_wrap_apr(status, NULL);
+      return svn_ra_serf__wrap_err(status, NULL);
     }
 
   /* Woo-hoo.  Nothing here to see.  */
@@ -1567,7 +1567,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       ctx->read_size += len;
@@ -1588,7 +1588,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1632,7 +1632,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -1653,7 +1653,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               add_done_item(ctx);
             }
 
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       /* feed me! */
@@ -1843,7 +1843,7 @@ handle_response(serf_request_t *request,
           && handler->sline.code != 304)
         {
           err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                  svn_error_wrap_apr(status, NULL),
+                                  svn_ra_serf__wrap_err(status, NULL),
                                   _("Premature EOF seen from server"
                                     " (http status=%d)"),
                                   handler->sline.code);
@@ -2445,7 +2445,7 @@ expat_response_handler(serf_request_t *request,
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
-        return svn_error_wrap_apr(status, NULL);
+        return svn_ra_serf__wrap_err(status, NULL);
 
 #if 0
       /* ### move restart/skip into the core handler  */
@@ -2499,7 +2499,7 @@ expat_response_handler(serf_request_t *request,
 
       if (status && !SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
 

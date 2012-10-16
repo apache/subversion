@@ -904,9 +904,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       SVN_ERR(err);
       if (status)
         {
-          return svn_error_wrap_apr(status,
-                                    _("Error retrieving replay REPORT (%d)"),
-                                    status);
+          return svn_ra_serf__wrap_err(status,
+                                       _("Error retrieving replay REPORT"));
         }
       done_reports = NULL;
     }

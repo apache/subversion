@@ -1508,13 +1508,14 @@ create_db(svn_sqlite__db_t **sdb,
           const char *root_node_repos_relpath,
           svn_revnum_t root_node_revision,
           svn_depth_t root_node_depth,
+          svn_boolean_t exclusive,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
   struct init_db_baton idb;
 
   SVN_ERR(svn_wc__db_util_open_db(sdb, dir_abspath, sdb_fname,
-                                  svn_sqlite__mode_rwcreate,
+                                  svn_sqlite__mode_rwcreate, exclusive,
                                   NULL /* my_statements */,
                                   result_pool, scratch_pool));
 
@@ -1547,6 +1548,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   apr_int64_t repos_id;
   apr_int64_t wc_id;
   svn_wc__db_wcroot_t *wcroot;
+  svn_boolean_t sqlite_exclusive = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1557,10 +1559,15 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* ### REPOS_ROOT_URL and REPOS_UUID may be NULL. ... more doc: tbd  */
 
+  SVN_ERR(svn_config_get_bool((svn_config_t *)db->config, &sqlite_exclusive,
+                              SVN_CONFIG_SECTION_WORKING_COPY,
+                              SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                              FALSE));
+
   /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
                     repos_uuid, SDB_FILE, 
-                    repos_relpath, initial_rev, depth,
+                    repos_relpath, initial_rev, depth, sqlite_exclusive,
                     db->state_pool, scratch_pool));
 
   /* Create the WCROOT for this directory.  */
@@ -11498,10 +11505,13 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
+
+  /* Upgrade is inherently exclusive so specify exclusive locking. */
   SVN_ERR(create_db(sdb, repos_id, wc_id, dir_abspath,
                     repos_root_url, repos_uuid,
                     SDB_FILE,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
+                    TRUE /* exclusive */,
                     wc_db->state_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,

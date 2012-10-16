@@ -1415,6 +1415,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 36,
              "too many memcached servers configured")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
+             SVN_ERR_MISC_CATEGORY_START + 37,
+             "too many memcached servers configured")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
