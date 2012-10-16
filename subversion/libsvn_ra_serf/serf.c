@@ -307,9 +307,9 @@ load_config(svn_ra_serf__session_t *session,
                                      session->pool);
       if (status)
         {
-          return svn_error_wrap_apr(status,
-                                    _("Could not resolve proxy server '%s'"),
-                                    proxy_host);
+          return svn_ra_serf__wrap_err(
+                   status, _("Could not resolve proxy server '%s'"),
+                   proxy_host);
         }
       session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
@@ -431,7 +431,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             svn_ra_serf__conn_closed, serf_sess->conns[0],
                             serf_sess->pool);
   if (status)
-    return svn_error_wrap_apr(status, NULL);
+    return svn_ra_serf__wrap_err(status, NULL);
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,

@@ -1719,6 +1719,21 @@ svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+/** Wrap STATUS from an serf function. If STATUS is not serf error code,
+  * this is equivalent to svn_error_wrap_apr().
+ */
+svn_error_t *
+svn_ra_serf__wrap_err(apr_status_t status,
+                      const char *fmt,
+                      ...);
+
+
+#if defined(SVN_DEBUG)
+/* Wrapper macros to collect file and line information */
+#define svn_ra_serf__wrap_err \
+  (svn_error__locate(__FILE__,__LINE__), (svn_ra_serf__wrap_err))
+
+#endif
 
 #ifdef __cplusplus
 }
