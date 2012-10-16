@@ -823,6 +823,37 @@ Author of created rev.
 
 =cut
 
+package _p_svn_commit_info_t;
+use SVN::Base qw(Core svn_commit_info_t_);
+
+=head2 svn_commit_info_t
+
+=over 4
+
+=item $commit-E<gt>revision()
+
+Just committed revision.
+
+=item $commit-E<gt>date()
+
+Server-side date of the commit.
+
+=item $commit-E<gt>author()
+
+Author of the commit.
+
+=item $commit-E<gt>post_commit_err()
+
+Error message from the post-commit hook, or undef.
+
+=item $commit-E<gt>repos_root()
+
+Repoistory root, may be undef if unknown.
+
+=back
+
+=cut
+
 package _p_svn_auth_cred_simple_t;
 use SVN::Base qw(Core svn_auth_cred_simple_t_);
 

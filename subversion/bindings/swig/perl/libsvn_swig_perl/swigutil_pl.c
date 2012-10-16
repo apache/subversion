@@ -919,6 +919,22 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info, 
+                                                void *baton,
+                                                apr_pool_t *pool)
+{
+    if (!SvOK((SV *)baton))
+        return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV, baton, NULL,
+                               "SS",
+                               commit_info, _SWIG_TYPE("svn_commit_info_t *"),
+                               pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
+
 /* Wrap RA */
 
 static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
