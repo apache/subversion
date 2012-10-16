@@ -1012,6 +1012,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_create_context(svn_client_ctx_t **ctx,
                           apr_pool_t *pool);
