@@ -37,7 +37,9 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "svn_version.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
@@ -196,7 +198,7 @@ get_option(const dav_resource *resource,
 
   /* If we're allowed (by configuration) to do so, advertise support
      for ephemeral transaction properties. */
-  if (dav_svn__get_ephemeral_txnprops_flag(r))
+  if (dav_svn__check_ephemeral_txnprops_support(r))
     {
       apr_table_addn(r->headers_out, "DAV",
                      SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS);
@@ -247,12 +249,15 @@ get_option(const dav_resource *resource,
       /* The list of Subversion's custom POSTs.  You'll want to keep
          this in sync with the handling of these suckers in
          handle_post_request().  */
-      static const char * posts_list[] = {
-        "create-txn",
-        "create-txn-with-props",
-        NULL
+      int i;
+      svn_version_t *master_version = dav_svn__get_master_version(r);
+      struct posts_versions_t {
+        const char *post_name;
+        svn_version_t min_version;
+      } posts_versions[] = {
+        { "create-txn",             { 1, 7, 0, "" } },
+        { "create-txn-with-props",  { 1, 8, 0, "" } },
       };
-      const char **this_post = posts_list;
 
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
@@ -278,12 +283,20 @@ get_option(const dav_resource *resource,
                                 dav_svn__get_vtxn_stub(r), (char *)NULL));
 
       /* Report the supported POST types. */
-      while (*this_post)
+      for (i = 0; i < sizeof(posts_versions)/sizeof(posts_versions[0]); ++i)
         {
+          /* If we're proxying to a master server and its version
+             number is declared, we can selectively filter out POST
+             types that it doesn't support. */
+          if (master_version
+              && (! svn_version__at_least(master_version,
+                                          posts_versions[i].min_version.major,
+                                          posts_versions[i].min_version.minor,
+                                          posts_versions[i].min_version.patch)))
+            continue;
+
           apr_table_addn(r->headers_out, SVN_DAV_SUPPORTED_POSTS_HEADER,
-                         apr_pstrcat(resource->pool, *this_post,
-                                     (char *)NULL));
-          this_post++;
+                         apr_pstrdup(resource->pool, posts_versions[i].post_name));
         }
     }
 

@@ -42,6 +42,7 @@
 #include "mod_dav_svn.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
@@ -88,11 +89,11 @@ typedef struct dir_conf_t {
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
-  enum conf_flag ephemeral_txnprops; /* advertise ephemeral txnprop support? */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
+  svn_version_t *master_version;     /* version of master server */
   const char *activities_db;         /* path to activities database(s) */
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
@@ -197,7 +198,6 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
-  conf->ephemeral_txnprops = CONF_FLAG_ON;
   conf->hooks_env = NULL;
 
   return conf;
@@ -216,6 +216,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
   newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
+  newconf->master_version = INHERIT_VALUE(parent, child, master_version);
   newconf->activities_db = INHERIT_VALUE(parent, child, activities_db);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
@@ -223,8 +224,6 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
-  newconf->ephemeral_txnprops = INHERIT_VALUE(parent, child,
-                                              ephemeral_txnprops);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
@@ -281,6 +280,25 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
+  return NULL;
+}
+
+
+static const char *
+SVNMasterVersion_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+  svn_error_t *err;
+  svn_version_t *version;
+
+  err = svn_version__parse_version_string(&version, arg1, cmd->pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Malformed master server version string.";
+    }
+  
+  conf->master_version = version;
   return NULL;
 }
 
@@ -344,20 +362,6 @@ SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
     conf->v2_protocol = CONF_FLAG_ON;
   else
     conf->v2_protocol = CONF_FLAG_OFF;
-
-  return NULL;
-}
-
-
-static const char *
-SVNAdvertiseEphemeralTXNProps_cmd(cmd_parms *cmd, void *config, int arg)
-{
-  dir_conf_t *conf = config;
-
-  if (arg)
-    conf->ephemeral_txnprops = CONF_FLAG_ON;
-  else
-    conf->ephemeral_txnprops = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -673,6 +677,16 @@ dav_svn__get_master_uri(request_rec *r)
 }
 
 
+svn_version_t *
+dav_svn__get_master_version(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->master_uri ? conf->master_version : NULL;
+}
+
+
 const char *
 dav_svn__get_xslt_uri(request_rec *r)
 {
@@ -770,22 +784,39 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
 
 
 svn_boolean_t
-dav_svn__get_v2_protocol_flag(request_rec *r)
+dav_svn__check_httpv2_support(request_rec *r)
 {
   dir_conf_t *conf;
+  svn_boolean_t available;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->v2_protocol == CONF_FLAG_ON;
+  available = conf->v2_protocol == CONF_FLAG_ON;
+
+  /* If our configuration says that HTTPv2 is available, but we are
+     proxying requests to a master Subversion server which lacks
+     support for HTTPv2, we dumb ourselves down. */
+  if (available)
+    {
+      svn_version_t *version = dav_svn__get_master_version(r);
+      if (version && (! svn_version__at_least(version, 1, 7, 0)))
+        available = FALSE;
+    }
+  return available;
 }
 
 
 svn_boolean_t
-dav_svn__get_ephemeral_txnprops_flag(request_rec *r)
+dav_svn__check_ephemeral_txnprops_support(request_rec *r)
 {
-  dir_conf_t *conf;
+  svn_version_t *version = dav_svn__get_master_version(r);
 
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->ephemeral_txnprops == CONF_FLAG_ON;
+  /* We know this server supports ephemeral txnprops.  But if we're
+     proxying requests to a master server, we need to see if it
+     supports them, too.  */
+  if (version && (! svn_version__at_least(version, 1, 8, 0)))
+    return FALSE;
+
+  return TRUE;
 }
 
 
@@ -1071,6 +1102,11 @@ static const command_rec cmds[] =
                 "specifies a URI to access a master Subversion repository"),
 
   /* per directory/location */
+  AP_INIT_TAKE1("SVNMasterVersion", SVNMasterVersion_cmd, NULL, ACCESS_CONF,
+                "specifies the Subversion release version of a master "
+                "Subversion server "),
+  
+  /* per directory/location */
   AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem in which the "
                 "activities database(s) should be stored"),
@@ -1087,12 +1123,6 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
-
-  /* per directory/location */
-  AP_INIT_FLAG("SVNAdvertiseEphemeralTXNProps",
-               SVNAdvertiseEphemeralTXNProps_cmd, NULL, ACCESS_CONF|RSRC_CONF,
-               "enables server advertising of support for ephemeral "
-               "commit transaction properties (default value is On)."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
