@@ -68,28 +68,112 @@ get_repos_path(struct dav_resource_private *info)
 }
 
 
-/* construct the repos-local name for the given DAV property name */
-static void
-get_repos_propname(dav_db *db,
-                   const dav_prop_name *name,
-                   const char **repos_propname)
+/* Return a Subversion property name constructed from the namespace
+   and bare name values found withing DAVNAME.  Use SCRATCH_POOL for
+   temporary allocations.
+
+   This is the reverse of the davname_to_propname() function. */
+static const char *
+davname_to_propname(dav_db *db,
+                    const dav_prop_name *davname)
 {
-  if (strcmp(name->ns, SVN_DAV_PROP_NS_SVN) == 0)
+  const char *propname = NULL;
+
+  if (strcmp(davname->ns, SVN_DAV_PROP_NS_SVN) == 0)
     {
       /* recombine the namespace ("svn:") and the name. */
       svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
-      svn_stringbuf_appendcstr(db->work, name->name);
-      *repos_propname = db->work->data;
+      svn_stringbuf_appendcstr(db->work, davname->name);
+      propname = db->work->data;
     }
-  else if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+  else if (strcmp(davname->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     {
       /* the name of a custom prop is just the name -- no ns URI */
-      *repos_propname = name->name;
+      propname = davname->name;
     }
+  else if (strncmp(davname->ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
+    {
+      const char *relpath =
+        svn_path_uri_decode(davname->ns +
+                            (sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1),
+                            db->resource->pool);
+      svn_stringbuf_set(db->work, relpath);
+      svn_stringbuf_appendbytes(db->work, ":", 1);
+      svn_stringbuf_appendcstr(db->work, davname->name);
+      propname = db->work->data;
+    }
+
+  return propname;
+}
+
+
+/* Return a dav_prop_name structure allocated from POOL which
+   describes the Subversion property name PROPNAME (with length
+   NAMELEN).  If ALLOW_EXT_NS is set, PROPNAME is parsed according to
+   the rules which apply when the custom Subversion extensible
+   property namespace is in use.  Otherwise, we fall back to old rules
+   which have been in place since Subversion's origins.
+
+   This is the reverse of the davname_to_propname() function.  */
+static dav_prop_name *
+propname_to_davname(const char *propname,
+                    int namelen,
+                    svn_boolean_t allow_ext_ns,
+                    apr_pool_t *pool)
+{
+  const char *colon;
+  dav_prop_name *davname = apr_pcalloc(pool, sizeof(*davname));
+
+  /* If we're allowed to use the extensible XML property namespace, we
+     parse pretty carefully. */
+  if (allow_ext_ns)
+    {
+      /* If there's no colon in this property name, it's a custom
+         property (C:name). */
+      colon = strrchr((char *)propname, ':');
+      if (! colon)
+        {
+          davname->ns = SVN_DAV_PROP_NS_CUSTOM;
+          davname->name = apr_pstrdup(pool, propname);
+        }
+
+      /* If the property name prefix is merely "svn:", it's a
+         Subversion property (S:name-without-the-prefix). */
+      else if (strncmp(propname, "svn:", colon - propname) == 0)
+        {
+          davname->ns = SVN_DAV_PROP_NS_SVN;
+          davname->name = apr_pstrdup(pool, colon + 1);
+        }
+
+      /* Anything else requires a custom xmlns prefix mapping beyond
+         the magic prefixes we've already built in. */
+      else
+        {
+          const char *barename = apr_pstrndup(pool, propname, colon - propname);
+          davname->ns = apr_pstrcat(pool, SVN_DAV_PROP_NS_EXTENSIBLE,
+                                    svn_path_uri_encode(barename, pool),
+                                    (char *)NULL);
+          davname->name = apr_pstrdup(pool, colon + 1);
+        }
+    }
+
+  /* Otherwise, we distinguish only between "svn:*" and everything else. */
   else
     {
-      *repos_propname = NULL;
+      if (strncmp(propname, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+        {
+          davname->ns = SVN_DAV_PROP_NS_SVN;
+          davname->name = apr_pstrdup(pool, propname + 4);
+        }
+      else
+        {
+          davname->ns = SVN_DAV_PROP_NS_CUSTOM;
+          davname->name = apr_pstrdup(pool, propname);
+        }
     }
+
+  return davname;
 }
 
 
@@ -100,7 +184,7 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
   svn_error_t *serr;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  propname = davname_to_propname(db, name);
 
   if (propname == NULL)
     {
@@ -172,7 +256,7 @@ save_value(dav_db *db, const dav_prop_name *name,
   const dav_resource *resource = db->resource;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  propname = davname_to_propname(db, name);
 
   if (propname == NULL)
     {
@@ -360,7 +444,7 @@ db_output_value(dav_db *db,
                 apr_text_header *phdr,
                 int *found)
 {
-  const char *prefix;
+  const char *prefix = "", *xmlns_attr = "";
   const char *s;
   svn_string_t *propval;
   dav_error *err;
@@ -375,14 +459,25 @@ db_output_value(dav_db *db,
     return NULL;
 
   if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prefix = "C:";
-  else
-    prefix = "S:";
+    {
+      prefix = "C:";
+    }
+  else if (strcmp(name->ns, SVN_DAV_PROP_NS_SVN) == 0)
+    {
+      prefix = "S:";
+    }
+  else if (strncmp(name->ns, SVN_DAV_PROP_NS_EXTENSIBLE,
+                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
+    {
+      prefix = "";
+      xmlns_attr = apr_pstrcat(pool, " xmlns=\"", name->ns, "\"", (char *)NULL);
+    }
 
   if (propval->len == 0)
     {
       /* empty value. add an empty elem. */
-      s = apr_psprintf(pool, "<%s%s/>" DEBUG_CR, prefix, name->name);
+      s = apr_psprintf(pool, "<%s%s%s/>" DEBUG_CR,
+                       prefix, name->name, xmlns_attr);
       apr_text_append(pool, phdr, s);
     }
   else
@@ -407,7 +502,8 @@ db_output_value(dav_db *db,
           xml_safe = xmlval->data;
         }
 
-      s = apr_psprintf(pool, "<%s%s%s>", prefix, name->name, encoding);
+      s = apr_psprintf(pool, "<%s%s%s%s>",
+                       prefix, name->name, encoding, xmlns_attr);
       apr_text_append(pool, phdr, s);
 
       /* the value is in our pool which means it has the right lifetime. */
@@ -540,7 +636,7 @@ db_remove(dav_db *db, const dav_prop_name *name)
   const char *propname;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  propname = davname_to_propname(db, name);
 
   /* ### non-svn props aren't in our repos, so punt for now */
   if (propname == NULL)
@@ -588,7 +684,7 @@ db_exists(dav_db *db, const dav_prop_name *name)
   int retval;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  propname = davname_to_propname(db, name);
 
   /* ### non-svn props aren't in our repos */
   if (propname == NULL)
@@ -627,21 +723,16 @@ static void get_name(dav_db *db, dav_prop_name *pname)
   else
     {
       const void *name;
+      apr_ssize_t namelen;
+      dav_prop_name *dav_name;
 
-      apr_hash_this(db->hi, &name, NULL, NULL);
-
-#define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
-      if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
-#undef PREFIX_LEN
-        {
-          pname->ns = SVN_DAV_PROP_NS_SVN;
-          pname->name = (const char *)name + 4;
-        }
-      else
-        {
-          pname->ns = SVN_DAV_PROP_NS_CUSTOM;
-          pname->name = name;
-        }
+      apr_hash_this(db->hi, &name, &namelen, NULL);
+      dav_name = propname_to_davname(
+                     name, namelen,
+                     db->resource->info->repos->use_ext_prop_ns,
+                     db->resource->pool);
+      pname->ns = dav_name->ns;
+      pname->name = dav_name->name;
     }
 }
 

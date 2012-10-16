@@ -137,6 +137,11 @@ typedef struct dav_svn_repos {
      'is_svn_client' is false, then 'capabilities' should be empty. */
   apr_hash_t *client_capabilities;
 
+  /* Whether its okay to use the extensible property XML namespace
+     SVN_DAV_PROP_NS_SVN in PROPFIND/PROPPATCH requests and
+     responses. */
+  svn_boolean_t use_ext_prop_ns;
+
   /* The path to the activities db */
   const char *activities_db;
 
@@ -335,6 +340,10 @@ svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
    txnprop support be advertised?  */
 svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
 
+/* For the repository referred to by this request, should support for
+   property on-the-wire XML namespaces under the extensible namespace
+   URI be advertised?  */
+svn_boolean_t dav_svn__check_prop_ext_ns_support(request_rec *r);
 
 
 /* SPECIAL URI
