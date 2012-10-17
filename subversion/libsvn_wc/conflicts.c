@@ -1162,7 +1162,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           {
             const char *propname = svn__apr_hash_index_key(hi);
 
-            prop_conflict_skel_add(
+            SVN_ERR(prop_conflict_skel_add(
                             prop_data, propname,
                             old_props
                                     ? apr_hash_get(old_props, propname,
@@ -1180,7 +1180,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                     ? apr_hash_get(their_original_props, propname,
                                                    APR_HASH_KEY_STRING)
                                       : NULL,
-                            result_pool, scratch_pool);
+                            result_pool, scratch_pool));
           }
 
         SVN_ERR(svn_wc__wq_build_prej_install(work_items,

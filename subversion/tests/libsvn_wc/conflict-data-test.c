@@ -86,8 +86,10 @@ compare_conflict(const svn_wc_conflict_description2_t *expected,
   SVN_TEST_STRING_ASSERT(expected->my_abspath, actual->my_abspath);
   SVN_TEST_STRING_ASSERT(expected->merged_file, actual->merged_file);
   SVN_TEST_ASSERT(expected->operation == actual->operation);
-  compare_version(expected->src_left_version, actual->src_left_version);
-  compare_version(expected->src_right_version, actual->src_right_version);
+  SVN_ERR(compare_version(expected->src_left_version,
+                          actual->src_left_version));
+  SVN_ERR(compare_version(expected->src_right_version,
+                          actual->src_right_version));
   return SVN_NO_ERROR;
 }
 

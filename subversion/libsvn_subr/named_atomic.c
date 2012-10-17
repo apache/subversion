@@ -396,10 +396,8 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* initialize the lock objects
    */
-  svn_atomic__init_once(&mutex_initialized,
-                        init_thread_mutex,
-                        NULL,
-                        result_pool);
+  SVN_ERR(svn_atomic__init_once(&mutex_initialized, init_thread_mutex, NULL,
+                                result_pool));
 
   new_ns->mutex.pool = result_pool;
   SVN_ERR(svn_io_file_open(&new_ns->mutex.lock_file, lock_name,

@@ -2725,7 +2725,7 @@ merge_dir_closed(svn_wc_notify_state_t *contentstate,
   merge_cmd_baton_t *merge_b = baton;
 
   if (merge_b->dry_run)
-    svn_hash__clear(merge_b->dry_run_deletions, scratch_pool);
+    SVN_ERR(svn_hash__clear(merge_b->dry_run_deletions, scratch_pool));
 
   return SVN_NO_ERROR;
 }
