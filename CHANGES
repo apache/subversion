@@ -4,7 +4,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
   - General:
-    * remove extraneous externals output from 'svn status -q' (issue #1935)
+    *
 
   - Major new features:
     *
@@ -12,6 +12,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'commit --include-externals' option (related to issues #1167, #3563)
+    * remove extraneous externals output from 'svn status -q' (issue #1935)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
