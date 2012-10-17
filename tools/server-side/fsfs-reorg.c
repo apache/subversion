@@ -2003,9 +2003,10 @@ write_revisions(fs_fs_t *fs,
 
       for (i = 0; i < pack->info->nelts; ++i)
         {
-          revision_info_t *info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
-	  SVN_ERR(svn_stream_printf(stream, itempool,
-				    "%" APR_UINT64_T_FMT "\n",
+          revision_info_t *info = APR_ARRAY_IDX(pack->info, i,
+                                                revision_info_t *);
+          SVN_ERR(svn_stream_printf(stream, itempool,
+                                    "%" APR_UINT64_T_FMT "\n",
                                     info->target.offset));
           svn_pool_clear(itempool);
         }
