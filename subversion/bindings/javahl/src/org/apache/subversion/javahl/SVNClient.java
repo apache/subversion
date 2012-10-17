@@ -366,8 +366,16 @@ public class SVNClient implements ISVNClient
                                       boolean force)
             throws ClientException;
 
+    public byte[] propertyGet(String path, String name,
+                              Revision revision, Revision pegRevision)
+            throws ClientException
+    {
+        return propertyGet(path, name, revision, pegRevision, null);
+    }
+
     public native byte[] propertyGet(String path, String name,
-                                     Revision revision, Revision pegRevision)
+                                     Revision revision, Revision pegRevision,
+                                     Collection<String> changelists)
             throws ClientException;
 
     public byte[] fileContent(String path, Revision revision,

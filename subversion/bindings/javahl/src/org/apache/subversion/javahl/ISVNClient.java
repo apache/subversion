@@ -719,6 +719,10 @@ public interface ISVNClient
      * @throws ClientException
      */
     byte[] propertyGet(String path, String name, Revision revision,
+                       Revision pegRevision, Collection<String> changelists)
+            throws ClientException;
+
+    byte[] propertyGet(String path, String name, Revision revision,
                        Revision pegRevision)
             throws ClientException;
 
