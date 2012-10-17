@@ -1878,12 +1878,14 @@ def mv_unversioned_file(sbox):
 
   # Try to move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*unversioned1.* is not under version control.*",
+                                     ".*unversioned1' " +
+                                       "(does not exist|is not under version control)",
                                      'mv', unver_path_1, dest_path_1)
 
   # Try to forcibly move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*unversioned2.* is not under version control.*",
+                                     ".*unversioned2.* " +
+                                       "(does not exist|is not under version control)",
                                      'mv',
                                      unver_path_2, dest_path_2)
 
@@ -5457,11 +5459,13 @@ def copy_deleted_dir(sbox):
   sbox.simple_rm('A')
 
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E145000: Path.* does not exist',
+                                     '(svn: E145000: Path.* does not exist)|' +
+                                      "(svn: E155035: Deleted node .* copied)",
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E145000: Path.* does not exist',
+                                     '(svn: E145000: Path.* does not exist)|' +
+                                      "(svn: E155035: Deleted node .* copied)",
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
