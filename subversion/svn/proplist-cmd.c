@@ -86,7 +86,7 @@ proplist_receiver_xml(void *baton,
                                               (! opt_state->verbose),
                                               TRUE, iterpool));
           svn_xml_make_close_tag(&sb, iterpool, "target");
-          svn_cl__error_checked_fputs(sb->data, stdout);
+          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
       svn_pool_destroy(iterpool);
     }

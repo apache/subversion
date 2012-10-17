@@ -363,7 +363,7 @@ lsb_release(apr_pool_t *pool)
           else if (0 == svn_cstring_casecmp(key, "Codename"))
             codename = line->data;
         }
-      svn_stream_close(lsbinfo);
+      SVN_ERR(svn_stream_close(lsbinfo));
       if (err)
         {
           svn_error_clear(err);

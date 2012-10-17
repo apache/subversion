@@ -143,8 +143,8 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
 
   /* Test GNOME Keyring auth providers */
 #ifdef SVN_HAVE_GNOME_KEYRING
-  svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
-                                          "simple", pool);
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
+                                                  "simple", pool));
 
   if (!provider)
     return svn_error_createf
@@ -152,8 +152,8 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
        "svn_auth_get_platform_specific_provider('gnome_keyring', 'simple') "
        "should not return NULL");
 
-  svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
-                                          "ssl_client_cert_pw", pool);
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
+                                                  "ssl_client_cert_pw", pool));
 
   if (!provider)
     return svn_error_createf
@@ -162,8 +162,8 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
        "'ssl_client_cert_pw') should not return NULL");
 
   /* Make sure you do not get a Windows auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "windows",
-                                          "simple", pool);
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "windows",
+                                                  "simple", pool));
 
   if (provider)
     return svn_error_createf
