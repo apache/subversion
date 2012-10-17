@@ -793,39 +793,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Callback: svn_commit_callback2_t
    svn_ra get_commit_editor2()
    svn_repos_get_commit_editor4()
-*/
-
-#ifdef SWIGPERL
-%typemap(in) (svn_commit_callback2_t callback, void *callback_baton) {
-    $1 = svn_swig_pl_thunk_commit_callback2;
-    $2 = (void *)$input;
-    svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
-};
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_commit_callback2_t callback, void *callback_baton)
-{
-  $1 = svn_swig_rb_commit_callback2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-};
-
-%typemap(argout) (svn_commit_callback2_t callback, void *callback_baton)
-{
-  svn_swig_rb_set_baton($result, (VALUE)$2);
-};
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_commit_callback2_t callback, void *callback_baton)
-{
-  $1 = svn_swig_py_commit_callback2;
-  $2 = (void *)$input;
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_commit_callback2_t
    svn_client_mkdir4() 
    svn_client_delete4() 
    svn_client_import4() 
@@ -833,10 +800,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    svn_client_copy6() 
    svn_client_move6() 
    svn_client_propset_remote() 
-
-   A separate typemap is needed here because we used different variable names
-   in the client library functions than we used in the ra/repos library
-   functions.
 */
 
 #ifdef SWIGPERL
@@ -845,6 +808,27 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     $2 = (void *)$input;
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton)
+{
+  $1 = svn_swig_rb_commit_callback2;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+};
+
+%typemap(argout) (svn_commit_callback2_t commit_callback, void *commit_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton)
+{
+  $1 = svn_swig_py_commit_callback2;
+  $2 = (void *)$input;
+}
 #endif
 
 /* -----------------------------------------------------------------------
