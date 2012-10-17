@@ -874,12 +874,12 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * or @c SVN_PROP_REVISION_AUTHOR.
  *
  * Before @c close_edit returns, but after the commit has succeeded,
- * it will invoke @a callback (if non-NULL) with the new revision number,
- * the commit date (as a <tt>const char *</tt>), commit author (as a
- * <tt>const char *</tt>), and @a callback_baton as arguments.  If
- * @a callback returns an error, that error will be returned from @c
- * close_edit, otherwise @c close_edit will return successfully
- * (unless it encountered an error before invoking @a callback).
+ * it will invoke @a commit_callback (if non-NULL) with filled-in
+ * #svn_commit_info_t *, @a commit_baton, and @a pool or some subpool
+ * thereof as arguments.  If @a commit_callback returns an error, that error
+ * will be returned from @c * close_edit, otherwise @c close_edit will return
+ * successfully (unless it encountered an error before invoking
+ * @a commit_callback).
  *
  * The callback will not be called if the commit was a no-op
  * (i.e. nothing was committed);
@@ -905,8 +905,8 @@ svn_ra_get_commit_editor3(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_hash_t *revprop_table,
-                          svn_commit_callback2_t callback,
-                          void *callback_baton,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
                           apr_hash_t *lock_tokens,
                           svn_boolean_t keep_locks,
                           apr_pool_t *pool);
@@ -926,8 +926,8 @@ svn_ra_get_commit_editor2(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           const char *log_msg,
-                          svn_commit_callback2_t callback,
-                          void *callback_baton,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
                           apr_hash_t *lock_tokens,
                           svn_boolean_t keep_locks,
                           apr_pool_t *pool);
