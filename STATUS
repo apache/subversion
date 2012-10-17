@@ -94,6 +94,16 @@ Candidate changes:
    Votes:
      +1: philip, cmpilato
 
+ * r1399174
+   Fix a diff parser bug that prevents some patch files from being applied.
+   Justification:
+     Prevents users from applying certain patches with 'svn patch', see
+     http://svn.haxx.se/users/archive-2012-10/0081.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-r1399174
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
