@@ -130,7 +130,14 @@ public class SVNRepos implements ISVNRepos
      * @throws ClientException  throw in case of problem
      */
     public native void hotcopy(File path, File targetPath,
-                               boolean cleanLogs) throws ClientException;
+                               boolean cleanLogs, boolean incremental)
+            throws ClientException;
+
+    public void hotcopy(File path, File targetPath,
+                        boolean cleanLogs) throws ClientException
+    {
+        hotcopy(path, targetPath, cleanLogs, false);
+    }
 
     /**
      * list all logfiles (BDB) in use or not)
