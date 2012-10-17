@@ -1188,7 +1188,6 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
-    apr_pool_t *pool = subPool.getPool();
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
 
@@ -1196,13 +1195,12 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame5(intPath.c_str(), pegRevision.revision(),
-                                  revisionStart.revision(),
-                                  revisionEnd.revision(),
-                                  svn_diff_file_options_create(pool),
-                                  ignoreMimeType, includeMergedRevisions,
-                                  BlameCallback::callback, callback, ctx,
-                                  pool),
+    SVN_JNI_ERR(svn_client_blame5(
+          intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
+          revisionEnd.revision(),
+          svn_diff_file_options_create(subPool.getPool()), ignoreMimeType,
+          includeMergedRevisions, BlameCallback::callback, callback, ctx,
+          subPool.getPool()),
         );
 }
 
