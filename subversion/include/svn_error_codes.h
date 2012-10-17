@@ -1418,7 +1418,7 @@ SVN_ERROR_START
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
              SVN_ERR_MISC_CATEGORY_START + 37,
-             "too many memcached servers configured")
+             "failed to parse version number string")
 
   /* command-line client errors */
 
