@@ -798,12 +798,10 @@ fetch_kind_func(svn_kind_t *kind,
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
-  /* ### If base_revision is valid, should we use that as the root
-   * ### revision? */
-  SVN_ERR(svn_fs_revision_root(&prev_root, fs,
-                               svn_fs_revision_root_revision(root) - 1,
-                               scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_revision_root_revision(root) - 1;
 
+  SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
   SVN_ERR(svn_fs_check_path(&node_kind, prev_root, path, scratch_pool));
 
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
@@ -822,12 +820,10 @@ fetch_props_func(apr_hash_t **props,
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
-  /* ### If base_revision is valid, should we use that as the root
-   * ### revision? */
-  SVN_ERR(svn_fs_revision_root(&prev_root, fs,
-                               svn_fs_revision_root_revision(root) - 1,
-                               scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_revision_root_revision(root) - 1;
 
+  SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
   SVN_ERR(svn_fs_node_proplist(props, prev_root, path, result_pool));
 
   return SVN_NO_ERROR;
