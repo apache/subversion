@@ -59,6 +59,8 @@ struct tc_editor_baton {
   svn_skel_t **work_items;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
   apr_pool_t *result_pool;
 } tc_editor_baton;
 
@@ -154,8 +156,8 @@ tc_editor_alter_file(void *baton,
       const char *post_update_pristine_abspath;
       svn_skel_t *conflict_skel;
       enum svn_wc_merge_outcome_t merge_outcome;
-
-      /* ### notify */
+      svn_wc_notify_state_t content_state;
+      svn_wc_notify_t *notify;
 
       /* 
        * Run a 3-way merge to update the file, using the pre-update
@@ -186,27 +188,54 @@ tc_editor_alter_file(void *baton,
                                      NULL, NULL, /* cancel_func + baton */
                                      b->result_pool, scratch_pool));
 
-      if (merge_outcome == svn_wc_merge_conflict && conflict_skel)
+      if (merge_outcome == svn_wc_merge_conflict)
         {
           svn_skel_t *work_item;
           svn_wc_conflict_version_t *original_version;
 
-          original_version = svn_wc_conflict_version_dup(b->old_version,
-                                                         scratch_pool);
-          original_version->path_in_repos = original_repos_relpath;
-          original_version->node_kind = svn_node_file;
-          SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                                      original_version,
+          if (conflict_skel)
+            {
+              original_version = svn_wc_conflict_version_dup(b->old_version,
+                                                             scratch_pool);
+              original_version->path_in_repos = original_repos_relpath;
+              original_version->node_kind = svn_node_file;
+              SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
+                                                          original_version,
+                                                          scratch_pool,
+                                                          scratch_pool));
+              SVN_ERR(svn_wc__conflict_create_markers(&work_item, b->db,
+                                                      moved_to_abspath,
+                                                      conflict_skel,
                                                       scratch_pool,
                                                       scratch_pool));
-          SVN_ERR(svn_wc__conflict_create_markers(&work_item, b->db,
-                                                  moved_to_abspath,
-                                                  conflict_skel,
-                                                  scratch_pool,
-                                                  scratch_pool));
-          *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
-                                            b->result_pool);
+              *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
+                                                b->result_pool);
+            }
+          content_state = svn_wc_notify_state_conflicted;
         }
+      else
+        {
+          svn_boolean_t is_locally_modified;
+
+          SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                                   b->db, moved_to_abspath,
+                                                   FALSE /* exact_comparison */,
+                                                   scratch_pool));
+          if (is_locally_modified)
+            content_state = svn_wc_notify_state_merged;
+          else
+            content_state = svn_wc_notify_state_changed;
+        }
+
+      notify = svn_wc_create_notify(moved_to_abspath,
+                                    svn_wc_notify_update_update,
+                                    scratch_pool);
+      notify->kind = svn_node_file;
+      notify->content_state = content_state;
+      notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
+      notify->old_revision = b->old_version->peg_rev;
+      notify->revision = b->new_version->peg_rev;
+      b->notify_func(b->notify_baton, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -267,7 +296,17 @@ static svn_error_t *
 tc_editor_complete(void *baton,
                    apr_pool_t *scratch_pool)
 {
-  /* ### notify */
+  struct tc_editor_baton *b = baton;
+  svn_wc_notify_t *notify;
+
+  notify = svn_wc_create_notify(b->dst_abspath,
+                                svn_wc_notify_update_completed,
+                                scratch_pool);
+  notify->kind = svn_node_none;
+  notify->content_state = svn_wc_notify_state_inapplicable;
+  notify->prop_state = svn_wc_notify_state_inapplicable;
+  notify->revision = b->new_version->peg_rev;
+  b->notify_func(b->notify_baton, notify, scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -576,6 +615,8 @@ svn_error_t *
 svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
                                           const char *victim_abspath,
                                           svn_wc__db_t *db,
+                                          svn_wc_notify_func2_t notify_func,
+                                          void *notify_baton,
                                           svn_cancel_func_t cancel_func,
                                           void *cancel_baton,
                                           apr_pool_t *result_pool,
@@ -609,6 +650,8 @@ svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
                       db, scratch_pool, scratch_pool));
   b->db = db;
   b->work_items = work_items;
+  b->notify_func = notify_func;
+  b->notify_baton = notify_baton;
   b->result_pool = result_pool;
 
   /* Create the editor... */
