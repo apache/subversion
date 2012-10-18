@@ -59,6 +59,7 @@ struct tc_editor_baton {
   svn_skel_t **work_items;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
+  apr_pool_t *result_pool;
 } tc_editor_baton;
 
 static svn_error_t *
@@ -183,7 +184,7 @@ tc_editor_alter_file(void *baton,
                                      NULL, /* merge options */
                                      NULL, /* prop_diff */
                                      NULL, NULL, /* cancel_func + baton */
-                                     scratch_pool, scratch_pool));
+                                     b->result_pool, scratch_pool));
 
       if (merge_outcome == svn_wc_merge_conflict && conflict_skel)
         {
@@ -204,7 +205,7 @@ tc_editor_alter_file(void *baton,
                                                   scratch_pool,
                                                   scratch_pool));
           *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
-                                            scratch_pool);
+                                            b->result_pool);
         }
     }
 
@@ -583,6 +584,7 @@ svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
                                           svn_wc__db_t *db,
                                           svn_cancel_func_t cancel_func,
                                           void *cancel_baton,
+                                          apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
   svn_editor_t *tc_editor;
@@ -613,6 +615,7 @@ svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
                       db, scratch_pool, scratch_pool));
   b->db = db;
   b->work_items = work_items;
+  b->result_pool = result_pool;
 
   /* Create the editor... */
   SVN_ERR(svn_editor_create(&tc_editor, b, cancel_func, cancel_baton,
