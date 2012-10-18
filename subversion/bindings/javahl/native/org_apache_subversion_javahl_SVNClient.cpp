@@ -47,6 +47,7 @@
 #include "InfoCallback.h"
 #include "StatusCallback.h"
 #include "ListCallback.h"
+#include "ImportFilterCallback.h"
 #include "ChangelistCallback.h"
 #include "StringArray.h"
 #include "RevpropTable.h"
@@ -712,7 +713,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jdepth,
  jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes, jobject jrevpropTable,
- jobject jmessage, jobject jcallback)
+ jobject jimportFilterCallback, jobject jmessage, jobject jcommitCallback)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -737,11 +738,14 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  CommitCallback callback(jcallback);
+  ImportFilterCallback importFilterCallback(jimportFilterCallback);
+  CommitCallback commitCallback(jcommitCallback);
+
   cl->doImport(path, url, &message, EnumMapper::toDepth(jdepth),
                jnoIgnore ? true : false,
                jignoreUnknownNodeTypes ? true : false, revprops,
-               jcallback ? &callback : NULL);
+               jimportFilterCallback ? &importFilterCallback : NULL,
+               jcommitCallback ? &commitCallback : NULL);
 }
 
 JNIEXPORT jobject JNICALL
