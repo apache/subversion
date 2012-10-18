@@ -70,7 +70,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 {
   JNIEnv *env = JNIUtil::getEnv();
   // An object of our class is passed in as the baton.
-  InputStream *that = (InputStream*)baton;
+  InputStream *that = static_cast<InputStream *>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.

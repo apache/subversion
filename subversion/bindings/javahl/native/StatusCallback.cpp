@@ -55,7 +55,8 @@ StatusCallback::callback(void *baton,
                          apr_pool_t *pool)
 {
   if (baton)
-    return ((StatusCallback *)baton)->doStatus(local_abspath, status, pool);
+    return static_cast<StatusCallback *>(baton)->doStatus(
+            local_abspath, status, pool);
 
   return SVN_NO_ERROR;
 }

@@ -427,7 +427,7 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
                                      svn_boolean_t may_save,
                                      apr_pool_t *pool)
 {
-  Prompter *that = (Prompter*)baton;
+  Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_simple_t *ret =
     (svn_auth_cred_simple_t*)apr_pcalloc(pool, sizeof(*ret));
   if (!that->prompt(realm, username, may_save ? true : false))
@@ -460,7 +460,7 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
                                        svn_boolean_t may_save,
                                        apr_pool_t *pool)
 {
-  Prompter *that = (Prompter*)baton;
+  Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_username_t *ret =
     (svn_auth_cred_username_t*)apr_pcalloc(pool, sizeof(*ret));
   const char *user = that->askQuestion(realm, _("Username: "), true,
@@ -484,7 +484,7 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
                                   svn_boolean_t may_save,
                                   apr_pool_t *pool)
 {
-  Prompter *that = (Prompter*)baton;
+  Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_server_trust_t *ret =
     (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
 
@@ -550,7 +550,7 @@ Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
                                  svn_boolean_t may_save,
                                  apr_pool_t *pool)
 {
-  Prompter *that = (Prompter*)baton;
+  Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_client_cert_t *ret =
     (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
   const char *cert_file =
@@ -572,7 +572,7 @@ Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
                                     svn_boolean_t may_save,
                                     apr_pool_t *pool)
 {
-  Prompter *that = (Prompter*)baton;
+  Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_client_cert_pw_t *ret =
     (svn_auth_cred_ssl_client_cert_pw_t*)apr_pcalloc(pool, sizeof(*ret));
   const char *info = that->askQuestion(realm,
@@ -593,7 +593,7 @@ Prompter::plaintext_prompt(svn_boolean_t *may_save_plaintext,
                            void *baton,
                            apr_pool_t *pool)
 {
-  Prompter *that = (Prompter *) baton;
+  Prompter *that = static_cast<Prompter *>(baton);
 
   bool result = that->askYesNo(realmstring,
                                _("Store password unencrypted?"),
@@ -610,7 +610,7 @@ Prompter::plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
                                       void *baton,
                                       apr_pool_t *pool)
 {
-  Prompter *that = (Prompter *) baton;
+  Prompter *that = static_cast<Prompter *>(baton);
 
   bool result = that->askYesNo(realmstring,
                                _("Store passphrase unencrypted?"),

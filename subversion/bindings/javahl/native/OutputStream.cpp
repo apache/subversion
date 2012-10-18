@@ -76,7 +76,7 @@ svn_error_t *OutputStream::write(void *baton, const char *buffer,
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton.
-  OutputStream *that = (OutputStream*)baton;
+  OutputStream *that = static_cast<OutputStream *>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.

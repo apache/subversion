@@ -57,7 +57,8 @@ LogMessageCallback::callback(void *baton,
                              apr_pool_t *pool)
 {
   if (baton)
-    return ((LogMessageCallback *)baton)->singleMessage(log_entry, pool);
+    return static_cast<LogMessageCallback *>(baton)->singleMessage(
+            log_entry, pool);
 
   return SVN_NO_ERROR;
 }
