@@ -888,6 +888,21 @@ svn_ra_serf__wirename_from_svnname(const char **ns,
           *name = apr_pstrdup(result_pool, svnname);
         }
     }
+
+  /* Special case: an empty "name" (which happens if the original
+     property name ends with a colon) is going to cause problems for
+     even non-strict XML parsers.  Until we have a better solution,
+     we'll fall back to old-school handling in such a case.  This will
+     result in XML that strict parsers will complain about, but better
+     to break only some clients than all of them.
+
+     [http://subversion.tigris.org/issues/show_bug.cgi?id=1971]
+  */
+  if (! *name)
+    {
+      *ns = SVN_DAV_PROP_NS_CUSTOM;
+      *name = apr_pstrdup(result_pool, svnname);
+    }
 }
 
 const char *

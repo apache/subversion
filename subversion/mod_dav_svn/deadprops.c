@@ -173,6 +173,21 @@ propname_to_davname(const char *propname,
         }
     }
 
+  /* Special case: an empty "name" (which happens if the original
+     property name ends with a colon) is going to cause problems for
+     even non-strict XML parsers.  Until we have a better solution,
+     we'll fall back to old-school handling in such a case.  This will
+     result in XML that strict parsers will complain about, but better
+     to break only some clients than all of them.
+
+     [http://subversion.tigris.org/issues/show_bug.cgi?id=1971]
+  */
+  if (! davname->name[0])
+    {
+      davname->ns = SVN_DAV_PROP_NS_CUSTOM;
+      davname->name = apr_pstrdup(pool, propname);
+    }
+
   return davname;
 }
 
