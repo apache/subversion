@@ -2635,7 +2635,7 @@ conflict_status_walker(void *baton,
                   SVN_ERR(svn_wc__update_moved_away_conflict_victim(
                             &work_items, local_abspath, cswb->db,
                             cswb->cancel_func, cswb->cancel_baton,
-                            scratch_pool));
+                            scratch_pool, scratch_pool));
                  else if (my_choice == svn_wc_conflict_choose_theirs_conflict)
                   {
                     /* ### TODO break move */
