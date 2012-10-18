@@ -25,6 +25,8 @@
 #include "svn_utf.h"
 #include "private/svn_error_private.h"
 
+#include "libsvn_ra_serf/ra_serf.h"
+
 /*
  * Undefine the helpers for creating errors.
  *
