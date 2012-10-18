@@ -1443,15 +1443,18 @@ replay_node(svn_fs_root_t *root,
       if (change->node_kind == svn_node_file
           && (change->text_mod || change->prop_mod || downgraded_copy))
         {
-          svn_checksum_t *checksum;
-          svn_stream_t *contents;
+          svn_checksum_t *checksum = NULL;
+          svn_stream_t *contents = NULL;
 
-          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
-                                       root, repos_relpath, TRUE,
-                                       scratch_pool));
+          if (change->text_mod)
+            {
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                           root, repos_relpath, TRUE,
+                                           scratch_pool));
 
-          SVN_ERR(svn_fs_file_contents(&contents, root, repos_relpath,
-                                       scratch_pool));
+              SVN_ERR(svn_fs_file_contents(&contents, root, repos_relpath,
+                                           scratch_pool));
+            }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
                                         SVN_INVALID_REVNUM, props, checksum,
