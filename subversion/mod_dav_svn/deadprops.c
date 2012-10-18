@@ -266,8 +266,9 @@ save_value(dav_db *db, const dav_prop_name *name,
       else
         return dav_svn__new_error(db->p, HTTP_CONFLICT, 0,
                                   "Properties may only be defined in the "
-                                  SVN_DAV_PROP_NS_SVN " and "
-                                  SVN_DAV_PROP_NS_CUSTOM " namespaces.");
+                                  SVN_DAV_PROP_NS_SVN ", "
+                                  SVN_DAV_PROP_NS_CUSTOM ", and "
+                                  SVN_DAV_PROP_NS_EXTENSIBLE " namespaces.");
     }
 
   /* We've got three different types of properties (node, txn, and
