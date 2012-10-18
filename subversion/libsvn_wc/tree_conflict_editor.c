@@ -43,10 +43,10 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
 
-#include "libsvn_wc/wc.h"
-#include "libsvn_wc/wc_db.h"
-#include "libsvn_wc/conflicts.h"
-#include "libsvn_wc/workqueue.h"
+#include "wc.h"
+#include "wc_db.h"
+#include "conflicts.h"
+#include "workqueue.h"
 
 /*
  * Receiver code.
