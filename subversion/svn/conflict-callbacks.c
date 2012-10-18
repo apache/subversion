@@ -804,7 +804,7 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                                      desc->local_abspath,
                                                      subpool)));
       prompt = _("Select: (p) postpone, (mf) mine-full, "
-                 "(tf) theirs-full, (h) help:");
+                 "(tf) theirs-full, (h) help: ");
 
       while (1)
         {
