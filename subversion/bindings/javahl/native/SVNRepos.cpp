@@ -68,7 +68,7 @@ void SVNRepos::cancelOperation()
 svn_error_t *
 SVNRepos::checkCancel(void *cancelBaton)
 {
-  SVNRepos *that = (SVNRepos *)cancelBaton;
+  SVNRepos *that = static_cast<SVNRepos *>(cancelBaton);
   if (that->m_cancelOperation)
     return svn_error_create(SVN_ERR_CANCELLED, NULL,
                             _("Operation cancelled"));
