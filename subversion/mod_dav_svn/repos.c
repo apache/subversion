@@ -2153,6 +2153,12 @@ get_resource(request_rec *r,
               }
           }
       }
+    else
+      {
+        /* Non-SVN clients may use the extensible property namespaces,
+           too.  (They're the ones most likely to need this feature!)  */
+        repos->use_ext_prop_ns = TRUE;
+      }
   }
 
   /* Retrieve/cache open repository */
