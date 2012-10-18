@@ -88,6 +88,9 @@ typedef struct update_ctx_t {
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
 
+  /* Compression level of SVNDIFF deltas. */
+  int compression_level;
+
   /* Did the client submit this REPORT request via the HTTPv2 "me
      resource" and are we advertising support for as much? */
   svn_boolean_t enable_v2_response;
@@ -840,7 +843,7 @@ upd_apply_textdelta(void *file_baton,
 
   svn_txdelta_to_svndiff3(&(wb->handler), &(wb->handler_baton),
                           base64_stream, file->uc->svndiff_version,
-                          dav_svn__get_compression_level(), file->pool);
+                          file->uc->compression_level, file->pool);
 
   *handler = window_handler;
   *handler_baton = wb;
@@ -1150,6 +1153,7 @@ dav_svn__update_report(const dav_resource *resource,
     }
 
   uc.svndiff_version = resource->info->svndiff_version;
+  uc.compression_level = dav_svn__get_compression_level(resource->info->r);
   uc.resource = resource;
   uc.output = output;
   uc.anchor = src_path;

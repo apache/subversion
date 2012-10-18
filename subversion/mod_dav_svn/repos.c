@@ -3654,7 +3654,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           /* get a handler/baton for writing into the output stream */
           svn_txdelta_to_svndiff3(&handler, &h_baton,
                                   o_stream, resource->info->svndiff_version,
-                                  dav_svn__get_compression_level(),
+                                  dav_svn__get_compression_level(resource->info->r),
                                   resource->pool);
 
           /* got everything set up. read in delta windows and shove them into

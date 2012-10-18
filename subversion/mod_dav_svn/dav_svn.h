@@ -408,7 +408,7 @@ const char *dav_svn__get_activities_db(request_rec *r);
 const char *dav_svn__get_root_dir(request_rec *r);
 
 /* Return the data compression level to be used over the wire. */
-int dav_svn__get_compression_level(void);
+int dav_svn__get_compression_level(request_rec *r);
 
 /* Return the hook script environment parsed from the configuration. */
 const char *dav_svn__get_hooks_env(request_rec *r);
