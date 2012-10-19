@@ -211,13 +211,6 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
                        capability_yes);
         }
-
-      /* The "extensible property namespace" feature is an artefact of
-         our WebDAV protocol only.  We handle it specially. */
-      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS, vals))
-        {
-          session->use_ext_prop_ns = TRUE;
-        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */

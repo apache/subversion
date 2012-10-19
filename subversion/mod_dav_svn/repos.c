@@ -2143,21 +2143,7 @@ get_resource(request_rec *r,
                              SVN_RA_CAPABILITY_MERGEINFO,
                              APR_HASH_KEY_STRING, capability_yes);
               }
-
-            /* We don't need to report the DAV-specific extensible
-               property XML namespace capability to hook scripts, so
-               we'll just stash it in our repos structure. */
-            if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS, vals))
-              {
-                repos->use_ext_prop_ns = TRUE;
-              }
           }
-      }
-    else
-      {
-        /* Non-SVN clients may use the extensible property namespaces,
-           too.  (They're the ones most likely to need this feature!)  */
-        repos->use_ext_prop_ns = TRUE;
       }
   }
 
