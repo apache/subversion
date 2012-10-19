@@ -676,11 +676,6 @@ dirent_walker(void *baton,
     {
       dwb->entry->has_props = TRUE;
     }
-  else if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
-                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
-    {
-      dwb->entry->has_props = TRUE;
-    }
   else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
       if(strcmp(name, "deadprop-count") == 0)

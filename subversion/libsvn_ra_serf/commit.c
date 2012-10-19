@@ -61,9 +61,6 @@ typedef struct commit_context_t {
   svn_boolean_t keep_locks;
   apr_hash_t *deleted_entries;   /* deleted files (for delete+add detection) */
 
-  /* Stuff for extensible property XML namespaces. */
-  svn_boolean_t use_ext_prop_ns;
-
   /* HTTP v2 stuff */
   const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
   const char *txn_root_url;      /* commit anchor txn root URL */
@@ -673,7 +670,7 @@ proppatch_walker(void *baton,
   svn_boolean_t have_old_val;
   const svn_string_t *old_val;
   const svn_string_t *encoded_value;
-  const char *prop_name, *xmlns = NULL;
+  const char *prop_name;
 
   SVN_ERR(derive_old_val(&have_old_val, &old_val, wb, ns, name));
 
@@ -704,31 +701,19 @@ proppatch_walker(void *baton,
       cdata_bkt = NULL;
     }
 
-  /* To reduce the wire transfer size, use prefixes for property
-     namespace for which we've predefined them. */
+  /* Use the namespace prefix instead of adding the xmlns attribute to support
+     property names containing ':' */
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    {
-      prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
-    }
+    prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    {
-      prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
-    }
-  else if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
-                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
-    {
-      prop_name = name;
-      xmlns = ns;
-    }
+    prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                      "xmlns", xmlns,
                                       "V:encoding", encoding,
                                       NULL);
   else
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                      "xmlns", xmlns,
                                       "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
                                       NULL);
 
@@ -1483,18 +1468,23 @@ open_root(void *edit_baton,
         {
           const void *key;
           void *val;
-          const char *propname;
+          const char *name;
           svn_string_t *value;
-          const char *ns, *name;
+          const char *ns;
 
           apr_hash_this(hi, &key, NULL, &val);
-          propname = key;
+          name = key;
           value = val;
 
-          /* Calculate the wirename bits for this property name. */
-          svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
-                                             dir->commit->use_ext_prop_ns,
-                                             ctx->pool);
+          if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+            {
+              ns = SVN_DAV_PROP_NS_SVN;
+              name += sizeof(SVN_PROP_PREFIX) - 1;
+            }
+          else
+            {
+              ns = SVN_DAV_PROP_NS_CUSTOM;
+            }
 
           svn_ra_serf__set_prop(proppatch_ctx->changed_props,
                                 proppatch_ctx->path,
@@ -1749,12 +1739,12 @@ open_directory(const char *path,
 
 static svn_error_t *
 change_dir_prop(void *dir_baton,
-                const char *propname,
+                const char *name,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
   dir_context_t *dir = dir_baton;
-  const char *ns, *name;
+  const char *ns;
   const char *proppatch_target;
 
 
@@ -1770,10 +1760,16 @@ change_dir_prop(void *dir_baton,
       proppatch_target = dir->working_url;
     }
 
-  /* Calculate the wirename bits for this property name. */
-  svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
-                                     dir->commit->use_ext_prop_ns,
-                                     dir->pool);
+  name = apr_pstrdup(dir->pool, name);
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
 
   if (value)
     {
@@ -1997,17 +1993,24 @@ apply_textdelta(void *file_baton,
 
 static svn_error_t *
 change_file_prop(void *file_baton,
-                 const char *propname,
+                 const char *name,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
   file_context_t *file = file_baton;
-  const char *ns, *name;
+  const char *ns;
 
-  /* Calculate the wirename bits for this property name. */
-  svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
-                                     file->commit->use_ext_prop_ns,
-                                     file->pool);
+  name = apr_pstrdup(file->pool, name);
+
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
 
   if (value)
     {
@@ -2306,9 +2309,10 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   ctx->callback = callback;
   ctx->callback_baton = callback_baton;
+
   ctx->lock_tokens = lock_tokens;
   ctx->keep_locks = keep_locks;
-  ctx->use_ext_prop_ns = session->use_ext_prop_ns;
+
   ctx->deleted_entries = apr_hash_make(ctx->pool);
 
   editor = svn_delta_default_editor(pool);
@@ -2343,7 +2347,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                              svn_revnum_t rev,
-                             const char *propname,
+                             const char *name,
                              const svn_string_t *const *old_value_p,
                              const svn_string_t *value,
                              apr_pool_t *pool)
@@ -2352,7 +2356,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_context_t *proppatch_ctx;
   commit_context_t *commit;
   const char *proppatch_target;
-  const char *ns, *name;
+  const char *ns;
   svn_error_t *err;
 
   if (old_value_p)
@@ -2372,7 +2376,6 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
 
   commit->session = session;
   commit->conn = session->conns[0];
-  commit->use_ext_prop_ns = session->use_ext_prop_ns;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
@@ -2391,9 +2394,15 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                                           pool, pool));
     }
 
-  /* Calculate the wirename bits for this property name. */
-  svn_ra_serf__wirename_from_svnname(&ns, &name, propname,
-                                     commit->use_ext_prop_ns, pool);
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
 
   /* PROPPATCH our log message and pass it along.  */
   proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
