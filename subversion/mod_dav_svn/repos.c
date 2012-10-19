@@ -885,8 +885,11 @@ create_private_resource(const dav_resource *base,
   comb->res.collection = TRUE;                  /* ### always true? */
   /* versioned = baselined = working = FALSE */
 
-  comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path->data, NULL);
+  if (base->info->repos->root_path[1])
+    comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                                path->data, NULL);
+  else
+    comb->res.uri = path->data;
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = base->pool;
@@ -1593,9 +1596,11 @@ parse_querystring(request_rec *r, const char *query,
          only use a temporary redirect. */
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool,
-                                      apr_psprintf(r->pool, "%s%s?p=%ld",
-                                                   comb->priv.repos->root_path,
-                                                   newpath, working_rev),
+                                  apr_psprintf(r->pool, "%s%s?p=%ld",
+                                               (comb->priv.repos->root_path[1]
+                                                ? comb->priv.repos->root_path
+                                                : ""),
+                                               newpath, working_rev),
                                       r));
       return dav_new_error(r->pool,
                            prevstr ? HTTP_MOVED_PERMANENTLY
@@ -3938,8 +3943,11 @@ dav_svn__create_working_resource(dav_resource *base,
   res->baselined = base->baselined;
   /* collection = FALSE.   ### not necessarily correct */
 
-  res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                         path, NULL);
+  if (base->info->repos->root_path[1])
+    res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                           path, NULL);
+  else
+    res->uri = path;
   res->hooks = &dav_svn__hooks_repository;
   res->pool = base->pool;
 
