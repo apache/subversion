@@ -20,10 +20,25 @@
 #
 #
 
-"""\
+import sys
+import os
+from svn import repos, fs, core
+
+def duplicate_ephemeral_txnprops(repos_path, txn_name):
+  fs_ptr = repos.fs(repos.open(repos_path))
+  txn_t = fs.open_txn(fs_ptr, txn_name)
+  for name, value in fs.txn_proplist(txn_t).items():
+    if name.startswith(core.SVN_PROP_TXN_PREFIX):
+      name = core.SVN_PROP_REVISION_PREFIX + \
+                  name[len(core.SVN_PROP_TXN_PREFIX):]
+      fs.change_txn_prop(txn_t, name, value)
+
+def usage_and_exit(errmsg=None):
+  stream = errmsg and sys.stderr or sys.stdout
+  stream.write("""\
 Usage:
 
-   persist-ephemeral-txnprops.py REPOS_PATH TXN_NAME [PREFIX]
+   persist-ephemeral-txnprops.py REPOS_PATH TXN_NAME
 
 Duplicate ephemeral transaction properties so that the information
 they carry may persist as properties of the revision created once the
@@ -34,48 +49,22 @@ REPOS_PATH is the on-disk path of the repository whose transaction
 properties are being examined/modified.  TXN_NAME is the name of the
 transaction.
 
-By default, ephemeral transaction properties will be copied to new
-properties whose names lack the "svn:" prefix.  "svn:txn-user-agent"
-will, then, persist as "txn-user-agent".  If, however, the optional
-PREFIX string argument is provided, it will be prepended to the base
-property name in place of the "svn:" namespace.  For example, a prefix
-of "acme" will cause the "svn:txn-user-agent" property to be copied
-to "acme:txn-user-agent".
+Ephemeral transaction properties, whose names all begin with the
+prefix "%s", will be copied to new properties which use the
+prefix "%s" instead.
 
-"""
-
-import sys
-import os
-from svn import repos, fs, core
-
-def duplicate_ephemeral_txnprops(repos_path, txn_name, prefix=None):
-  prefix = prefix.rstrip(':')
-  fs_ptr = repos.fs(repos.open(repos_path))
-  txn_t = fs.open_txn(fs_ptr, txn_name)
-  for name, value in fs.txn_proplist(txn_t).items():
-    if name.startswith('svn:txn-'):
-      name = name[4:]
-      if prefix:
-        name = prefix + ':' + name
-      fs.change_txn_prop(txn_t, name, value)
-
-def usage_and_exit(errmsg=None):
-  stream = errmsg and sys.stderr or sys.stdout
-  stream.write(__doc__)
+""" % (core.SVN_PROP_TXN_PREFIX, core.SVN_PROP_REVISION_PREFIX))
   if errmsg:
     stream.write("ERROR: " + errmsg + "\n")
   sys.exit(errmsg and 1 or 0)
 
 def main():
   argc = len(sys.argv)
-  if argc < 3:
-    usage_and_exit("Not enough arguments.")
-  if argc > 4:
-    usage_and_exit("Too many arguments.")
+  if argc != 3:
+    usage_and_exit("Incorrect number of arguments.")
   repos_path = sys.argv[1]
   txn_name = sys.argv[2]
-  prefix = (argc == 4) and sys.argv[3] or ''
-  duplicate_ephemeral_txnprops(repos_path, txn_name, prefix)
+  duplicate_ephemeral_txnprops(repos_path, txn_name)
 
 if __name__ == "__main__":
   main()
