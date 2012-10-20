@@ -94,14 +94,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1237779
-   Fix sense of property validation on load and make the revprop change atomic.
-   Justification:
-     Validation is supposed to be on by default but is off, adding
-     --bypass-prop-validation switches it on.
-   Votes:
-     +1: philip, cmpilato, danielsh
-
  * r1398100
    Add missing 'prop-mods' and 'text-mods' attributes in the changed paths
    section of the output of 'log -v --xml'.  When these attributes were
