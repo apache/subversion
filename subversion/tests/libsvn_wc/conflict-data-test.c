@@ -113,10 +113,11 @@ tree_conflict_create(const char *local_abspath,
   svn_wc_conflict_version_t *left, *right;
   svn_wc_conflict_description2_t *conflict;
 
-  left = svn_wc_conflict_version_create(left_repo, left_path, left_revnum,
-                                        left_kind, result_pool);
-  right = svn_wc_conflict_version_create(right_repo, right_path, right_revnum,
-                                         right_kind, result_pool);
+  left = svn_wc_conflict_version_create2(left_repo, NULL, left_path,
+                                         left_revnum, left_kind, result_pool);
+  right = svn_wc_conflict_version_create2(right_repo, NULL, right_path,
+                                          right_revnum, right_kind,
+                                          result_pool);
   conflict = svn_wc_conflict_description_create_tree2(
                     local_abspath, node_kind, operation,
                     left, right, result_pool);

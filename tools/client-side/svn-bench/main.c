@@ -783,7 +783,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  SVN_INT_ERR(svn_client_create_context(&ctx, pool));
+  SVN_INT_ERR(svn_client_create_context2(&ctx, NULL, pool));
   command_baton.ctx = ctx;
 
   /* Only a few commands can accept a revision range; the rest can take at
