@@ -85,7 +85,7 @@ create_repos_and_wc(const char **repos_url,
     svn_client_ctx_t *ctx;
     svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
-    SVN_ERR(svn_client_create_context(&ctx, subpool));
+    SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
     SVN_ERR(svn_dirent_get_absolute(wc_abspath, wc_path, pool));
     SVN_ERR(svn_client_checkout3(NULL, *repos_url, *wc_abspath,
                                  &head_rev, &head_rev, svn_depth_infinity,

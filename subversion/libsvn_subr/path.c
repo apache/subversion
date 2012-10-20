@@ -1082,7 +1082,7 @@ svn_path_url_add_component2(const char *url,
   /* = svn_path_uri_encode() but without always copying */
   component = uri_escape(component, svn_uri__char_validity, pool);
 
-  return svn_path_join(url, component, pool);
+  return svn_path_join_internal(url, component, pool);
 }
 
 svn_error_t *
