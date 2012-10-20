@@ -94,12 +94,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1398100
-   Add missing 'prop-mods' and 'text-mods' attributes in the changed paths
-   section of the output of 'log -v --xml'.  When these attributes were
-   added in 1.7.0 they were accidentally only included for copied paths.
-   Justification:
-     Simple fix. Seems unlikely to cause harm.
-   Votes:
-     +1: julianfoad, cmpilato, danielsh
-
