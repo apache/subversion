@@ -2671,8 +2671,9 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *iproplist;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, scratch_pool, "get-iprops", "c(?r)",
-                               path, revision));
+  SVN_ERR(svn_ra_svn_write_templated_cmd(conn, scratch_pool,
+                                         svn_ra_svn_cmd_get_iprops,
+                                         path, revision));
   SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, "l", &iproplist));
   SVN_ERR(parse_iproplist(iprops, iproplist, session, result_pool,

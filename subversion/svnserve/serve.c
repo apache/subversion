@@ -2841,7 +2841,8 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
     svn_error_clear(editor->abort_edit(edit_baton, pool));
   SVN_CMD_ERR(err);
 
-  return svn_ra_svn_write_cmd(conn, pool, "finish-replay", "");
+  return svn_ra_svn_write_templated_cmd(conn, pool,
+                                        svn_ra_svn_cmd_finish_replay);
 }
 
 static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
