@@ -4596,7 +4596,7 @@ build_rep_list(apr_array_header_t **list,
                apr_pool_t *pool)
 {
   representation_t rep;
-  struct rep_state *rs;
+  struct rep_state *rs = NULL;
   struct rep_args *rep_args;
   svn_boolean_t is_cached = FALSE;
   apr_file_t *last_file = NULL;
@@ -4608,21 +4608,28 @@ build_rep_list(apr_array_header_t **list,
   /* The value as stored in the data struct.
      0 is either for unknown length or actually zero length. */
   *expanded_size = first_rep->expanded_size;
+
+  /* for the top-level rep, we need the rep_args */
+  SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
+                           &last_revision, &rep, fs, pool));
+
+  /* Unknown size or empty representation?
+     That implies the this being the first iteration.
+     Usually size equals on-disk size, except for empty,
+     compressed representations (delta, size = 4).
+     Please note that for all non-empty deltas have
+     a 4-byte header _plus_ some data. */
+  if (*expanded_size == 0)
+    if (! rep_args->is_delta || first_rep->size != 4)
+      *expanded_size = first_rep->size;
+
   while (1)
     {
-      SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
-                               &last_revision, &rep, fs, pool));
+      /* fetch state, if that has not been done already */
+      if (!rs)
+        SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
+                                &last_revision, &rep, fs, pool));
 
-      /* Unknown size or empty representation?
-         That implies the this being the first iteration.
-         Usually size equals on-disk size, except for empty,
-         compressed representations (delta, size = 4).
-         Please note that for all non-empty deltas have
-         a 4-byte header _plus_ some data. */
-      if (*expanded_size == 0)
-        if (! rep_args->is_delta || first_rep->size != 4)
-          *expanded_size = first_rep->size;
-        
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
         {
@@ -4653,6 +4660,8 @@ build_rep_list(apr_array_header_t **list,
       rep.offset = rep_args->base_offset;
       rep.size = rep_args->base_length;
       rep.txn_id = NULL;
+
+      rs = NULL;
     }
 }
 
