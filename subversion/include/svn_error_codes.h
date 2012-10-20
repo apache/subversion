@@ -782,6 +782,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 51,
              "A packed revprop could not be read")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+             SVN_ERR_FS_CATEGORY_START + 52,
+             "Could not initialize the revprop caching infrastructure.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

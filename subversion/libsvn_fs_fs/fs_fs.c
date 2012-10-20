@@ -3151,7 +3151,7 @@ ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
                                     TRUE));
 
       /* If the generation is at 0, we just created a new namespace
-       * (it would be at least 2 otherwise). Read the lastest generation
+       * (it would be at least 2 otherwise). Read the latest generation
        * from disk and if we are the first one to initialize the atomic
        * (i.e. is still 0), set it to the value just gotten.
        */
@@ -3182,6 +3182,21 @@ ensure_revprop_timeout(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
+/* Create an error object with the given MESSAGE and pass it to the
+   WARNING member of FS. */
+static void
+log_revprop_cache_init_warning(svn_fs_t *fs, const char *message)
+{
+  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+                                       NULL,
+                                       message, fs->path);
+
+  if (fs->warning)
+    (fs->warning)(fs->warning_baton, err);
+  
+  svn_error_clear(err);
+}
+
 /* Test whether revprop cache and necessary infrastructure are
    available in FS. */
 static svn_boolean_t
@@ -3201,6 +3216,9 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
        * -> disable the revprop cache for good
        */
       ffd->revprop_cache = NULL;
+      log_revprop_cache_init_warning(fs, "Disable revprop caching for '%s'"
+                                         " because it is inefficient.");
+      
       return FALSE;
     }
 
@@ -3212,6 +3230,9 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
 
       svn_error_clear(error);
       ffd->revprop_cache = NULL;
+      log_revprop_cache_init_warning(fs, "Failed to initialize SHM "
+                                         "infrastructure for revprop "
+                                         "caching in '%s'.");
 
       return FALSE;
     }
