@@ -1107,7 +1107,9 @@ static svn_error_t *
 vwrite_cmd_get_iprops(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
+  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
   SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
+  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
 
   return SVN_NO_ERROR;
 }
