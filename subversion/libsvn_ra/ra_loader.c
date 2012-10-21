@@ -470,6 +470,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
   /* Create the session object. */
   session = apr_pcalloc(sesspool, sizeof(*session));
+  session->cancel_func = callbacks->cancel_func;
+  session->cancel_baton = callback_baton;
   session->vtable = vtable;
   session->pool = sesspool;
 
@@ -1307,8 +1309,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra__provide_props_cb_t provide_props_cb,
                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
                        void *cb_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -1333,7 +1333,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                                provide_props_cb,
                                get_copysrc_kind_cb,
                                cb_baton,
-                               cancel_func, cancel_baton,
+                               session->cancel_func, session->cancel_baton,
                                result_pool, scratch_pool));
     }
 
@@ -1351,7 +1351,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                            provide_props_cb,
                            get_copysrc_kind_cb,
                            cb_baton,
-                           cancel_func, cancel_baton,
+                           session->cancel_func, session->cancel_baton,
                            result_pool, scratch_pool));
 }
 
