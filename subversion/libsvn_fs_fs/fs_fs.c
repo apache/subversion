@@ -589,6 +589,17 @@ get_lock_on_filesystem(const char *lock_filename,
   return svn_error_trace(err);
 }
 
+/* Reset the HAS_WRITE_LOCK member in the FFD given as BATON_VOID.
+   When registered with the pool holding the lock on the lock file,
+   this makes sure the flag gets reset just before we release the lock. */
+static apr_status_t
+reset_lock_flag(void *baton_void)
+{
+  fs_fs_data_t *ffd = baton_void;
+  ffd->has_write_lock = FALSE;
+  return APR_SUCCESS;
+}
+
 /* Obtain a write lock on the file LOCK_FILENAME (protecting with
    LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
    BATON and that subpool, destroy the subpool (releasing the write
@@ -607,6 +618,16 @@ with_some_lock_file(svn_fs_t *fs,
   if (!err)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
+
+      /* set the "got the lock" flag and register reset function */
+      apr_pool_cleanup_register(subpool,
+                                ffd,
+                                reset_lock_flag,
+                                apr_pool_cleanup_null);
+      ffd->has_write_lock = TRUE;
+
+      /* nobody else will modify the repo state
+         => read HEAD & pack info once */
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
       SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,

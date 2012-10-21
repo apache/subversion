@@ -315,6 +315,9 @@ typedef struct fs_fs_data_t
      if the node has mergeinfo, "0" if it doesn't. */
   svn_cache__t *mergeinfo_existence_cache;
 
+  /* TRUE while the we hold a lock on the write lock file. */
+  svn_boolean_t has_write_lock;
+
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;
 
