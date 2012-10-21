@@ -1753,6 +1753,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
             {
               /* Remove the old entry and try to make space for the new one.
                */
+              drop_entry(cache, entry);
               if (   (cache->max_entry_size >= size)
                   && ensure_data_insertable(cache, size))
                 {
