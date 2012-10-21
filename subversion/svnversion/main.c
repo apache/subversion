@@ -37,8 +37,8 @@
 static svn_error_t *
 version(svn_boolean_t quiet, apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, quiet, NULL, NULL,
-                             NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnversion", TRUE, quiet, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -57,19 +57,19 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
     (svn_cmdline_fprintf
      (stdout, pool,
       _("usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n"
-        "  Produce a compact 'version number' for the working copy path\n"
+        "  Produce a compact version identifier for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
         "  determine if WC_PATH itself is switched (detection of switches\n"
-        "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+        "  within WC_PATH does not rely on TRAIL_URL).  The version identifier\n"
         "  is written to standard output.  For example:\n"
         "\n"
         "    $ svnversion . /repos/svn/trunk\n"
         "    4168\n"
         "\n"
-        "  The version number will be a single number if the working\n"
+        "  The version identifier will be a single number if the working\n"
         "  copy is single revision, unmodified, not switched and with\n"
         "  a URL that matches the TRAIL_URL argument.  If the working\n"
-        "  copy is unusual the version number will be more complex:\n"
+        "  copy is unusual the version identifier will be more complex:\n"
         "\n"
         "   4123:4168     mixed revision working copy\n"
         "   4168M         modified working copy\n"
@@ -107,8 +107,8 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 

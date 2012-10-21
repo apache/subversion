@@ -67,8 +67,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnraisetreeconflict", TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnraisetreeconflict", TRUE, FALSE, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -218,10 +218,10 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 
   /* Allocate and fill in the description data structures */
   SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
-  left = svn_wc_conflict_version_create(repos_url1, path_in_repos1, peg_rev1,
-                                        kind1, pool);
-  right = svn_wc_conflict_version_create(repos_url2, path_in_repos2, peg_rev2,
-                                         kind2, pool);
+  left = svn_wc_conflict_version_create2(repos_url1, NULL, path_in_repos1,
+                                         peg_rev1, kind1, pool);
+  right = svn_wc_conflict_version_create2(repos_url2, NULL, path_in_repos2,
+                                          peg_rev2, kind2, pool);
   c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
@@ -308,8 +308,8 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: UTF-8
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -29,6 +30,7 @@
 # See svnwcsub.conf for more information on its contents.
 #
 
+import errno
 import subprocess
 import threading
 import sys
@@ -71,6 +73,22 @@ def svn_info(svnbin, env, path):
         info[line[:idx]] = line[idx+1:].strip()
     return info
 
+try:
+    import glob
+    glob.iglob
+    def is_emptydir(path):
+        # ### If the directory contains only dotfile children, this will readdir()
+        # ### the entire directory.  But os.readdir() is not exposed to us...
+        for x in glob.iglob('%s/*' % path):
+            return False
+        for x in glob.iglob('%s/.*' % path):
+            return False
+        return True
+except (ImportError, AttributeError):
+    # Python ≤2.4
+    def is_emptydir(path):
+        # This will read the entire directory list to memory.
+        return not os.listdir(path)
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
@@ -106,7 +124,7 @@ class WorkingCopy(object):
 
     def _get_match(self, svnbin, env):
         ### quick little hack to auto-checkout missing working copies
-        if not os.path.isdir(self.path):
+        if not os.path.isdir(self.path) or is_emptydir(self.path):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
             subprocess.check_call([svnbin, 'co', '-q',
                                    '--non-interactive',
@@ -131,7 +149,8 @@ class BigDoEverythingClasss(object):
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
-        self.worker = BackgroundWorker(self.svnbin, self.env)
+        self.hook = config.get_value('hook')
+        self.worker = BackgroundWorker(self.svnbin, self.env, self.hook)
         self.watch = [ ]
 
         self.hostports = [ ]
@@ -150,7 +169,7 @@ class BigDoEverythingClasss(object):
         # Add it to our watchers, and trigger an svn update.
         logging.info("Watching WC at %s <-> %s" % (wc.path, wc.url))
         self.watch.append(wc)
-        self.worker.add_work(OP_UPDATE, wc)
+        self.worker.add_work(OP_BOOT, wc)
 
     def _normalize_path(self, path):
         if path[0] != '/':
@@ -182,11 +201,12 @@ class BigDoEverythingClasss(object):
 
 # Start logging warnings if the work backlog reaches this many items
 BACKLOG_TOO_HIGH = 20
+OP_BOOT = 'boot'
 OP_UPDATE = 'update'
 OP_CLEANUP = 'cleanup'
 
 class BackgroundWorker(threading.Thread):
-    def __init__(self, svnbin, env):
+    def __init__(self, svnbin, env, hook):
         threading.Thread.__init__(self)
 
         # The main thread/process should not wait for this thread to exit.
@@ -195,20 +215,28 @@ class BackgroundWorker(threading.Thread):
 
         self.svnbin = svnbin
         self.env = env
+        self.hook = hook
         self.q = Queue.Queue()
 
         self.has_started = False
 
     def run(self):
         while True:
-            if self.q.qsize() > BACKLOG_TOO_HIGH:
-                logging.warn('worker backlog is at %d', self.q.qsize())
-
             # This will block until something arrives
             operation, wc = self.q.get()
+
+            # Warn if the queue is too long.
+            # (Note: the other thread might have added entries to self.q
+            # after the .get() and before the .qsize().)
+            qsize = self.q.qsize()+1
+            if operation != OP_BOOT and qsize > BACKLOG_TOO_HIGH:
+                logging.warn('worker backlog is at %d', qsize)
+
             try:
                 if operation == OP_UPDATE:
                     self._update(wc)
+                elif operation == OP_BOOT:
+                    self._update(wc, boot=True)
                 elif operation == OP_CLEANUP:
                     self._cleanup(wc)
                 else:
@@ -228,7 +256,7 @@ class BackgroundWorker(threading.Thread):
 
         self.q.put((operation, wc))
 
-    def _update(self, wc):
+    def _update(self, wc, boot=False):
         "Update the specified working copy."
 
         # For giggles, let's clean up the working copy in case something
@@ -252,6 +280,15 @@ class BackgroundWorker(threading.Thread):
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
+
+        ## Run the hook
+        if self.hook:
+            hook_mode = ['post-update', 'boot'][boot]
+            logging.info('running hook: %s at revision %s due to %s',
+                         wc.path, info['Revision'], hook_mode)
+            args = [self.hook, hook_mode,
+                    wc.path, info['Revision'], wc.url]
+            subprocess.check_call(args, env=self.env)
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."

@@ -403,6 +403,19 @@ svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
                                          dag_node_t *file,
                                          apr_pool_t *pool);
 
+/* Attempt to fetch the contents of NODE and pass it along with the BATON
+   to the PROCESSOR.   Set *SUCCESS only of the data could be provided
+   and the processor had been called.
+
+   Use POOL for all allocations.
+ */
+svn_error_t *
+svn_fs_fs__dag_try_process_file_contents(svn_boolean_t *success,
+                                         dag_node_t *node,
+                                         svn_fs_process_contents_func_t processor,
+                                         void* baton,
+                                         apr_pool_t *pool);
+
 
 /* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into
    the contents of TARGET, allocated in POOL.  If SOURCE is null, the empty

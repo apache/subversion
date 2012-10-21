@@ -581,6 +581,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 {
   struct gls_receiver_baton_t gls_receiver_baton;
   const char *old_session_url;
+  svn_error_t *err;
 
   *segments = apr_array_make(pool, 8, sizeof(svn_location_segment_t *));
   gls_receiver_baton.segments = *segments;
@@ -588,11 +589,12 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
   gls_receiver_baton.pool = pool;
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             url, pool));
-  SVN_ERR(svn_ra_get_location_segments(ra_session, "", peg_revision,
-                                       start_revision, end_revision,
-                                       gls_receiver, &gls_receiver_baton,
-                                       pool));
-  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+  err = svn_ra_get_location_segments(ra_session, "", peg_revision,
+                                     start_revision, end_revision,
+                                     gls_receiver, &gls_receiver_baton,
+                                     pool);
+  SVN_ERR(svn_error_compose_create(
+            err, svn_ra_reparent(ra_session, old_session_url, pool)));
   qsort((*segments)->elts, (*segments)->nelts,
         (*segments)->elt_size, compare_segments);
   return SVN_NO_ERROR;
@@ -689,14 +691,16 @@ svn_client__repos_location(svn_client__pathrev_t **op_loc_p,
 {
   const char *old_session_url;
   const char *op_url;
+  svn_error_t *err;
 
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             peg_loc->url, scratch_pool));
-  SVN_ERR(repos_locations(&op_url, NULL, ra_session,
-                          peg_loc->url, peg_loc->rev,
-                          op_revnum, SVN_INVALID_REVNUM,
-                          result_pool, scratch_pool));
-  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
+  err = repos_locations(&op_url, NULL, ra_session,
+                        peg_loc->url, peg_loc->rev,
+                        op_revnum, SVN_INVALID_REVNUM,
+                        result_pool, scratch_pool);
+  SVN_ERR(svn_error_compose_create(
+            err, svn_ra_reparent(ra_session, old_session_url, scratch_pool)));
 
   *op_loc_p = svn_client__pathrev_create(peg_loc->repos_root_url,
                                          peg_loc->repos_uuid,
@@ -896,8 +900,8 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
     {
       const char *path = svn__apr_hash_index_key(hi);
       apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      apr_array_header_t *ranges1 = svn__apr_hash_index_val(hi);
-      apr_array_header_t *ranges2, *common;
+      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);
       if (ranges2)

@@ -381,6 +381,10 @@ struct edit_baton
   /* List of incoming propchanges */
   apr_array_header_t *propchanges;
 
+  /* Array of svn_prop_inherited_item_t * structures representing the
+     properties inherited by the base node at LOCAL_ABSPATH. */
+  apr_array_header_t *iprops;
+
   /* The last change information */
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -810,6 +814,7 @@ close_file(void *file_baton,
                         eb->repos_uuid,
                         *eb->target_revision,
                         new_pristine_props,
+                        eb->iprops,
                         eb->changed_rev,
                         eb->changed_date,
                         eb->changed_author,
@@ -824,6 +829,12 @@ close_file(void *file_baton,
                         conflict_skel,
                         all_work_items,
                         pool));
+
+    /* close_edit may also update iprops for switched files, catching
+       those for which close_file is never called (e.g. an update of a
+       file external with no changes).  So as a minor optimization we
+       clear the iprops so as not to set them again in close_edit. */
+    eb->iprops = NULL;
 
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
                            eb->cancel_func, eb->cancel_baton, pool));
@@ -864,8 +875,18 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  if (!eb->file_closed)
+  if (!eb->file_closed
+      || eb->iprops)
     {
+      apr_hash_t *wcroot_iprops = NULL;
+
+      if (eb->iprops)
+        {
+          wcroot_iprops = apr_hash_make(pool);
+          apr_hash_set(wcroot_iprops, eb->local_abspath, APR_HASH_KEY_STRING,
+                       eb->iprops);
+        }
+
       /* The node wasn't updated, so we just have to bump its revision */
       SVN_ERR(svn_wc__db_op_bump_revisions_post_update(eb->db,
                                                        eb->local_abspath,
@@ -873,6 +894,7 @@ close_edit(void *edit_baton,
                                                        NULL, NULL, NULL,
                                                        *eb->target_revision,
                                                        apr_hash_make(pool),
+                                                       wcroot_iprops,
                                                        pool));
     }
 
@@ -889,6 +911,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *url,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
+                                 apr_array_header_t *iprops,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
@@ -923,6 +946,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->url = apr_pstrdup(edit_pool, url);
   eb->repos_root_url = apr_pstrdup(edit_pool, repos_root_url);
   eb->repos_uuid = apr_pstrdup(edit_pool, repos_uuid);
+
+  eb->iprops = iprops;
 
   eb->use_commit_times = use_commit_times;
   eb->ext_patterns = preserved_exts;
@@ -1288,6 +1313,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1303,9 +1329,12 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
                                      NULL, scratch_pool));
 
+  if (declaration_only)
+    return SVN_NO_ERROR;
+
   if (kind == svn_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
-                                                 TRUE, FALSE,
+                                                 TRUE, TRUE,
                                                  cancel_func, cancel_baton,
                                                  scratch_pool));
   else
@@ -1550,7 +1579,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
   /* The remaining URLs are relative to either the scheme or server root
      and can only refer to locations inside that scope, so backpaths are
      not allowed. */
-  if (svn_path_is_backpath_present(url + 2))
+  if (svn_path_is_backpath_present(url))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),

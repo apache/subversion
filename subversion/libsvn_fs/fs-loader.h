@@ -107,7 +107,7 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*pack_fs)(svn_fs_t *fs, const char *path,
                           svn_fs_pack_notify_t notify_func, void *notify_baton,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
-                          apr_pool_t *pool);
+                          apr_pool_t *pool, apr_pool_t *common_pool);
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
@@ -202,6 +202,9 @@ typedef struct fs_vtable_t
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*freeze)(svn_fs_t *fs,
+                         svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+                         void *baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
@@ -303,6 +306,12 @@ typedef struct root_vtable_t
   svn_error_t *(*file_contents)(svn_stream_t **contents,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
+  svn_error_t *(*try_process_file_contents)(svn_boolean_t *success,
+                                            svn_fs_root_t *target_root,
+                                            const char *target_path,
+                                            svn_fs_process_contents_func_t processor,
+                                            void* baton,
+                                            apr_pool_t *pool);
   svn_error_t *(*make_file)(svn_fs_root_t *root, const char *path,
                             apr_pool_t *pool);
   svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *contents_p,

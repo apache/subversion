@@ -1821,6 +1821,12 @@ def mergeinfo_race(sbox):
     raise svntest.Failure("one or both commits failed")
 
 
+@Issue(4213)
+def recover_old(sbox):
+  "recover --pre-1.4-compatible"
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir, minor_version=0)
+  svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 
 ########################################################################
@@ -1858,6 +1864,7 @@ test_list = [ None,
               hotcopy_incremental_packed,
               locking,
               mergeinfo_race,
+              recover_old,
              ]
 
 if __name__ == '__main__':

@@ -613,6 +613,17 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * corrected_url is NULL, return an #SVN_ERR_RA_SESSION_URL_MISMATCH
  * error.  Allocate all returned items in @a pool.
  *
+ * The @a repos_URL need not point to the root of the repository: subject
+ * to authorization, it may point to any path within the repository, even
+ * a path at which no node exists in the repository.  The session will
+ * remember this URL as its "session URL" (also called "session root URL"),
+ * until changed by svn_ra_reparent().  Many RA functions take or return
+ * paths that are relative to the session URL.
+ *
+ * If a @a corrected_url is returned, it will point to the same path
+ * within the new repository root URL that @a repos_URL pointed to within
+ * the old repository root URL.
+ *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
  *
@@ -621,7 +632,10 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @a config is a hash mapping <tt>const char *</tt> keys to
  * @c svn_config_t * values.  For example, the @c svn_config_t for the
- * "~/.subversion/config" file is under the key "config".
+ * "~/.subversion/config" file is under the key "config".  @a config may
+ * be NULL.  This function examines some config settings under the
+ * "servers" key (if present) before loading the required RA module, and
+ * the RA module may also examine any config settings.
  *
  * All RA requests require a session; they will continue to
  * use @a pool for memory allocation.
@@ -699,7 +713,7 @@ svn_ra_reparent(svn_ra_session_t *ra_session,
                 const char *url,
                 apr_pool_t *pool);
 
-/** Set @a *url to the repository URL to which @a ra_session was
+/** Set @a *url to the session URL -- the URL to which @a ra_session was
  * opened or most recently reparented.
  *
  * @since New in 1.5.
@@ -710,8 +724,8 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 
-/** Convert @a url into a path relative to the URL at which @a ra_session
- * is parented, setting @a *rel_path to that value.  If @a url is not
+/** Convert @a url into a path relative to the session URL of @a ra_session,
+ * setting @a *rel_path to that value.  If @a url is not
  * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
  *
  * The returned path is uri decoded to allow using it with the ra or other
@@ -860,12 +874,12 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * or @c SVN_PROP_REVISION_AUTHOR.
  *
  * Before @c close_edit returns, but after the commit has succeeded,
- * it will invoke @a callback (if non-NULL) with the new revision number,
- * the commit date (as a <tt>const char *</tt>), commit author (as a
- * <tt>const char *</tt>), and @a callback_baton as arguments.  If
- * @a callback returns an error, that error will be returned from @c
- * close_edit, otherwise @c close_edit will return successfully
- * (unless it encountered an error before invoking @a callback).
+ * it will invoke @a commit_callback (if non-NULL) with filled-in
+ * #svn_commit_info_t *, @a commit_baton, and @a pool or some subpool
+ * thereof as arguments.  If @a commit_callback returns an error, that error
+ * will be returned from @c * close_edit, otherwise @c close_edit will return
+ * successfully (unless it encountered an error before invoking
+ * @a commit_callback).
  *
  * The callback will not be called if the commit was a no-op
  * (i.e. nothing was committed);
@@ -891,8 +905,8 @@ svn_ra_get_commit_editor3(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_hash_t *revprop_table,
-                          svn_commit_callback2_t callback,
-                          void *callback_baton,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
                           apr_hash_t *lock_tokens,
                           svn_boolean_t keep_locks,
                           apr_pool_t *pool);
@@ -912,8 +926,8 @@ svn_ra_get_commit_editor2(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           const char *log_msg,
-                          svn_commit_callback2_t callback,
-                          void *callback_baton,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
                           apr_hash_t *lock_tokens,
                           svn_boolean_t keep_locks,
                           apr_pool_t *pool);
@@ -1908,6 +1922,28 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        apr_pool_t *pool);
 
 /**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a path at @a revision (or the 'head' revision if
+ * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a path relative to
+ * the URL in @a session.  Use @a pool for all allocations.  If no
+ * inheritable properties are found, then set @a *inherited_props to
+ * an empty array.
+ *
+ * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **inherited_props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
  * @{
@@ -1978,6 +2014,21 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.7.
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
+
+/**
+ * The capability to get inherited properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_INHERITED_PROPS "inherited-props"
+
+/**
+ * The capability of a server to automatically remove transaction
+ * properties prefixed with SVN_PROP_EPHEMERAL_PREFIX.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
 /**
  * The capability to respond to requests using Ev2, as well as accept

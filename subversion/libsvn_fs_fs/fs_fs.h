@@ -150,6 +150,20 @@ svn_error_t *svn_fs_fs__get_contents(svn_stream_t **contents,
                                      node_revision_t *noderev,
                                      apr_pool_t *pool);
 
+/* Attempt to fetch the text representation of node-revision NODEREV as
+   seen in filesystem FS and pass it along with the BATON to the PROCESSOR.
+   Set *SUCCESS only of the data could be provided and the processing
+   had been called.
+   Use POOL for all allocations.
+ */
+svn_error_t *
+svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
+                                     svn_fs_t *fs,
+                                     node_revision_t *noderev,
+                                     svn_fs_process_contents_func_t processor,
+                                     void* baton,
+                                     apr_pool_t *pool);
+
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
    the contents of the file TARGET, allocated in POOL.
    If SOURCE is null, the empty string will be used. */

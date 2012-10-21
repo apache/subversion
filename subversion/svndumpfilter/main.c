@@ -766,7 +766,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
 
       /* Determine whether the merge_source is a part of the prefix. */
@@ -1135,11 +1135,12 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "\n"
       "Available subcommands:\n");
 
-  SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
+  SVN_ERR(svn_opt_print_help4(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              opt_state ? opt_state->quiet : FALSE, NULL,
-                              header, cmd_table, options_table, NULL,
-                              NULL, pool));
+                              opt_state ? opt_state->quiet : FALSE,
+                              /*###opt_state ? opt_state->verbose :*/ FALSE,
+                              NULL, header, cmd_table, options_table,
+                              NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1156,8 +1157,8 @@ check_lib_versions(void)
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -1525,6 +1526,8 @@ main(int argc, const char *argv[])
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
           const char *utf8_targets_file;
+          apr_array_header_t *targets = apr_array_make(pool, 0,
+                                                       sizeof(const char *));
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
@@ -1537,10 +1540,18 @@ main(int argc, const char *argv[])
                                                pool));
           SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 
-          opt_state.prefixes = apr_array_append(pool,
-                                    svn_cstring_split(buffer_utf8->data, "\n\r",
-                                                      TRUE, pool),
-                                    opt_state.prefixes);
+          targets = apr_array_append(pool,
+                         svn_cstring_split(buffer_utf8->data, "\n\r",
+                                           TRUE, pool),
+                         targets);
+
+          for (i = 0; i < targets->nelts; i++)
+            {
+              const char *prefix = APR_ARRAY_IDX(targets, i, const char *);
+              if (prefix[0] != '/')
+                prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
+              APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
+            }
         }
 
       if (apr_is_empty_array(opt_state.prefixes))

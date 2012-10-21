@@ -42,13 +42,64 @@ dav_svn__post_create_txn(const dav_resource *resource,
   request_rec *r = resource->info->r;
 
   /* Create a Subversion repository transaction based on HEAD. */
-  if ((derr = dav_svn__create_txn(resource->info->repos, &txn_name,
+  if ((derr = dav_svn__create_txn(resource->info->repos, &txn_name, NULL,
                                   resource->pool)))
     return derr;
 
   /* Build a "201 Created" response with header that tells the
      client our new transaction's name. */
-  vtxn_name =  apr_table_get(r->headers_in, SVN_DAV_VTXN_NAME_HEADER);
+  vtxn_name = apr_table_get(r->headers_in, SVN_DAV_VTXN_NAME_HEADER);
+  if (vtxn_name && vtxn_name[0])
+    {
+      /* If the client supplied a vtxn name then store a mapping from
+         the client name to the FS transaction name in the activity
+         database. */
+      if ((derr  = dav_svn__store_activity(resource->info->repos,
+                                           vtxn_name, txn_name)))
+        return derr;
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_NAME_HEADER, vtxn_name);
+    }
+  else
+    apr_table_set(r->headers_out, SVN_DAV_TXN_NAME_HEADER, txn_name);
+
+  r->status = HTTP_CREATED;
+
+  return NULL;
+}
+
+
+/* Respond to a "create-txn-with-props" POST request.
+ *
+ * Syntax:  ( create-txn-with-props (PROPNAME PROPVAL [PROPNAME PROPVAL ...])
+ */
+dav_error *
+dav_svn__post_create_txn_with_props(const dav_resource *resource,
+                                    svn_skel_t *request_skel,
+                                    ap_filter_t *output)
+{
+  const char *txn_name;
+  const char *vtxn_name;
+  dav_error *derr;
+  svn_error_t *err;
+  request_rec *r = resource->info->r;
+  apr_hash_t *revprops;
+  svn_skel_t *proplist_skel = request_skel->children->next;
+
+  if ((err = svn_skel__parse_proplist(&revprops, proplist_skel,
+                                      resource->pool)))
+    {
+      return dav_svn__convert_err(err, HTTP_BAD_REQUEST,
+                                  "Malformatted request skel", resource->pool);
+    }
+  
+  /* Create a Subversion repository transaction based on HEAD. */
+  if ((derr = dav_svn__create_txn(resource->info->repos, &txn_name,
+                                  revprops, resource->pool)))
+    return derr;
+
+  /* Build a "201 Created" response with header that tells the
+     client our new transaction's name. */
+  vtxn_name = apr_table_get(r->headers_in, SVN_DAV_VTXN_NAME_HEADER);
   if (vtxn_name && vtxn_name[0])
     {
       /* If the client supplied a vtxn name then store a mapping from

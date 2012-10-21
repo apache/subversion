@@ -768,10 +768,12 @@ svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
 }
 
 svn_error_t *
-svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
-                                       svn_wc_context_t *wc_ctx,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool)
+svn_wc__node_is_not_present(svn_boolean_t *is_not_present,
+                            svn_boolean_t *is_excluded,
+                            svn_boolean_t *is_server_excluded,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
 
@@ -782,47 +784,15 @@ svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
                                NULL, NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
-  *is_server_excluded = (status == svn_wc__db_status_server_excluded);
 
-  return SVN_NO_ERROR;
-}
+  if (is_not_present)
+    *is_not_present = (status == svn_wc__db_status_not_present);
 
-svn_error_t *
-svn_wc__node_is_status_not_present(svn_boolean_t *is_not_present,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
+  if (is_excluded)
+    *is_excluded = (status == svn_wc__db_status_excluded);
 
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-  *is_not_present = (status == svn_wc__db_status_not_present);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__node_is_status_excluded(svn_boolean_t *is_excluded,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-  *is_excluded = (status == svn_wc__db_status_excluded);
+  if (is_server_excluded)
+    *is_server_excluded = (status == svn_wc__db_status_server_excluded);
 
   return SVN_NO_ERROR;
 }
@@ -1378,6 +1348,15 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
               *is_copy = FALSE;
             return SVN_NO_ERROR; /* Local addition */
           }
+
+        /* We don't know how the following error condition can be fulfilled
+         * but we have seen that happening in the wild.  Better to create
+         * an error than a SEGFAULT. */
+        if (status == svn_wc__db_status_incomplete && !original_repos_relpath)
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("Incomplete copy information on path '%s'."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
 
         *repos_relpath = svn_relpath_join(
                                 original_repos_relpath,

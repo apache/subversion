@@ -202,9 +202,7 @@ svn_auth__simple_creds_cache_get(void **credentials,
             }
           else
             {
-              if (0 == strcmp(default_username, username))
-                need_to_save = FALSE;
-              else
+              if (strcmp(default_username, username) != 0)
                 need_to_save = TRUE;
             }
         }
@@ -226,9 +224,7 @@ svn_auth__simple_creds_cache_get(void **credentials,
                 }
               else
                 {
-                  if (0 == strcmp(default_password, password))
-                    need_to_save = FALSE;
-                  else
+                  if (strcmp(default_password, password) != 0)
                     need_to_save = TRUE;
                 }
             }
@@ -479,6 +475,10 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
   /* Save credentials to disk. */
   err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
                                    realmstring, config_dir, pool);
+  if (err)
+    *saved = FALSE;
+
+  /* ### return error? */
   svn_error_clear(err);
 
   return SVN_NO_ERROR;

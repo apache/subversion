@@ -94,6 +94,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     # Instrumentation options
     self.disable_shared = None
     self.static_apr = None
+    self.static_openssl = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -155,6 +156,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--with-static-apr':
         self.static_apr = 1
+      elif opt == '--with-static-openssl':
+        self.static_openssl = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vs_version = '2002'
@@ -962,7 +965,11 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    libcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
+    expatlibcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
+    if self.static_apr:
+      libcfg = expatlibcfg
+    else:
+      libcfg = cfg
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.zlib_path),
@@ -976,10 +983,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.serf_lib:
       fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
-    fakelibdirs.append(self.apath(self.apr_path, cfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_path, libcfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, libcfg))
     fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
-                                  'lib', libcfg))
+                                  'lib', expatlibcfg))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
@@ -1160,6 +1167,8 @@ class WinGeneratorBase(GeneratorBase):
     else:
       serflib = 'serf.lib'
 
+    apr_static = self.static_apr and 'APR_STATIC=1' or ''
+    openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources', serf_sources),
                          ('serf_headers', serf_headers),
@@ -1172,7 +1181,8 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_util_path', os.path.relpath(self.apr_util_path,
                                                            self.serf_path)),
                          ('project_guid', self.makeguid('serf')),
-                         ('apr_static', self.static_apr),
+                         ('apr_static', apr_static),
+                         ('openssl_static', openssl_static),
                          ('serf_lib', serflib),
                         ))
 
@@ -1605,7 +1615,6 @@ class POFile:
   "Item class for holding po file info"
   def __init__(self, base):
     self.po = base + '.po'
-    self.spo = base + '.spo'
     self.mo = base + '.mo'
 
 # MSVC paths always use backslashes regardless of current platform

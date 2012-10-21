@@ -578,6 +578,80 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr, const char *cstr)
   svn_stringbuf_appendbytes(targetstr, cstr, strlen(cstr));
 }
 
+void
+svn_stringbuf_insert(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     const char *bytes,
+                     apr_size_t count)
+{
+  if (bytes + count > str->data && bytes < str->data + str->blocksize)
+    {
+      /* special case: BYTES overlaps with this string -> copy the source */
+      const char *temp = apr_pstrndup(str->pool, bytes, count);
+      svn_stringbuf_insert(str, pos, temp, count);
+    }
+  else
+    {
+      if (pos > str->len)
+        pos = str->len;
+
+      svn_stringbuf_ensure(str, str->len + count);
+      memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
+      memcpy(str->data + pos, bytes, count);
+
+      str->len += count;
+    }
+}
+
+void
+svn_stringbuf_remove(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     apr_size_t count)
+{
+  if (pos > str->len)
+    pos = str->len;
+  if (pos + count > str->len)
+    count = str->len - pos;
+
+  memmove(str->data + pos, str->data + pos + count, str->len - pos - count + 1);
+  str->len -= count;
+}
+
+void
+svn_stringbuf_replace(svn_stringbuf_t *str,
+                      apr_size_t pos,
+                      apr_size_t old_count,
+                      const char *bytes,
+                      apr_size_t new_count)
+{
+  if (bytes + new_count > str->data && bytes < str->data + str->blocksize)
+    {
+      /* special case: BYTES overlaps with this string -> copy the source */
+      const char *temp = apr_pstrndup(str->pool, bytes, new_count);
+      svn_stringbuf_replace(str, pos, old_count, temp, new_count);
+    }
+  else
+    {
+      if (pos > str->len)
+        pos = str->len;
+      if (pos + old_count > str->len)
+        old_count = str->len - pos;
+
+      if (old_count < new_count)
+        {
+          apr_size_t delta = new_count - old_count;
+          svn_stringbuf_ensure(str, str->len + delta);
+        }
+
+      if (old_count != new_count)
+        memmove(str->data + pos + new_count, str->data + pos + old_count,
+                str->len - pos - old_count + 1);
+
+      memcpy(str->data + pos, bytes, new_count);
+      str->len += new_count - old_count;
+    }
+}
+
 
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool)
@@ -989,7 +1063,7 @@ svn__ui64toa(char * dest, apr_uint64_t number)
       target -= 8;
     }
 
-  /* Now, the number fits into 32 bits, but is larger than 1 */
+  /* Now, the number fits into 32 bits, but may still be larger than 99 */
   reduced = (apr_uint32_t)(number);
   while (reduced >= 100)
     {
@@ -1019,3 +1093,44 @@ svn__i64toa(char * dest, apr_int64_t number)
   *dest = '-';
   return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
 }
+
+static void
+ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
+{
+  apr_size_t length = svn__ui64toa(buffer, number);
+  apr_size_t i;
+
+  for (i = length; i > 3; i -= 3)
+    {
+      memmove(&buffer[i - 2], &buffer[i - 3], length - i + 3);
+      buffer[i-3] = seperator;
+      length++;
+    }
+
+  buffer[length] = 0;
+}
+
+char *
+svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool)
+{
+  char buffer[2 * SVN_INT64_BUFFER_SIZE];
+  ui64toa_sep(number, seperator, buffer);
+
+  return apr_pstrdup(pool, buffer);
+}
+
+char *
+svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
+{
+  char buffer[2 * SVN_INT64_BUFFER_SIZE];
+  if (number < 0)
+    {
+      buffer[0] = '-';
+      ui64toa_sep((apr_uint64_t)(-number), seperator, &buffer[1]);
+    }
+  else
+    ui64toa_sep((apr_uint64_t)(number), seperator, buffer);
+
+  return apr_pstrdup(pool, buffer);
+}
+

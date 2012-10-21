@@ -255,7 +255,7 @@ typedef struct svn_wc__db_lock_t {
 */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                const svn_config_t *config,
+                svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
@@ -370,7 +370,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    In the BASE tree, each node corresponds to a particular node-rev in the
    repository.  It can be a mixed-revision tree.  Each node holds either a
    copy of the node-rev as it exists in the repository (if presence =
-   'normal'), or a place-holder (if presence = 'absent' or 'excluded' or
+   'normal'), or a place-holder (if presence = 'server-excluded' or 'excluded' or
    'not-present').
 
    @{
@@ -409,6 +409,10 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
    ACTUAL, to mark the properties unmodified.
 
+   If NEW_IPROPS is not NULL, then it is a depth-first ordered array of
+   svn_prop_inherited_item_t * structures that is set as the base node's
+   inherited_properties.
+
    Any work items that are necessary as part of this node construction may
    be passed in WORK_ITEMS.
 
@@ -432,6 +436,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const svn_skel_t *conflict,
                               svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
+                              apr_array_header_t *new_iprops,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
@@ -1036,6 +1041,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              svn_revnum_t revision,
 
                              const apr_hash_t *props,
+                             apr_array_header_t *iprops,
 
                              svn_revnum_t changed_rev,
                              apr_time_t changed_date,
@@ -1356,7 +1362,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* ### do we need svn_wc__db_op_copy_absent() ??  */
+/* ### do we need svn_wc__db_op_copy_server_excluded() ??  */
 
 
 /* ### add a new versioned directory. a list of children is NOT passed
@@ -1466,6 +1472,10 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below LOCAL_ABSPATH.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
+ *
  * If MOVED_TO_ABSPATH is not NULL, mark the deletion of LOCAL_ABSPATH
  * as the delete-half of a move from LOCAL_ABSPATH to MOVED_TO_ABSPATH.
  *
@@ -1481,6 +1491,7 @@ svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      const char *moved_to_abspath,
+                     svn_boolean_t delete_dir_externals,
                      svn_skel_t *conflict,
                      svn_skel_t *work_items,
                      svn_cancel_func_t cancel_func,
@@ -1498,6 +1509,10 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
  * It currently lacks support for moves (though this could be changed,
  * at which point svn_wc__db_op_delete() becomes redundant).
  *
+ * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
+ * TRUE also the directory externals) registered below the targets.
+ * (DELETE_DIR_EXTERNALS should be true if also removing unversioned nodes)
+ *
  * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
  * for each node deleted. While this processing occurs, if CANCEL_FUNC is
  * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
@@ -1509,6 +1524,8 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete_many(svn_wc__db_t *db,
                           apr_array_header_t *targets,
+                          svn_boolean_t delete_dir_externals,
+                          const svn_skel_t *conflict,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -1912,7 +1929,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t incomplete; /* TRUE if a working node is incomplete */
 
   const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
-  svn_boolean_t moved_here;     /* On both op-roots and children. */
+  svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
 };
@@ -2073,6 +2090,39 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Read a BASE node's inherited property information.
+
+   Set *IPROPS to to a depth-first ordered array of
+   svn_prop_inherited_item_t * structures representing the cached
+   inherited properties for the BASE node at LOCAL_ABSPATH.
+
+   If no cached properties are found, then set *IPROPS to NULL.
+   If LOCAL_ABSPATH represents the root of the repository, then set
+   *IPROPS to an empty array.
+
+   Allocate *IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations. */
+svn_error_t *
+svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Find BASE nodes with cached inherited properties.
+
+   Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
+   paths to the same for each path in the working copy at or below
+   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
+   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
+                                           svn_depth_t depth,
+                                           const char *local_abspath,
+                                           svn_wc__db_t *db,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
 
 /** Obtain a mapping of const char * local_abspaths to const svn_string_t*
  * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
@@ -2280,7 +2330,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
    values in the BASE_NODE table.
 
-   CHANGED_REVISION is the the new 'last changed' revision. If the node is
+   CHANGED_REVISION is the new 'last changed' revision. If the node is
    modified its value is equivalent to NEW_REVISION, but in case of a
    decendant of a copy/move it can be an older revision.
 
@@ -2385,6 +2435,12 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    EXCLUDE_RELPATHS is a hash containing const char *local_relpath.  Nodes
    for pathnames contained in EXCLUDE_RELPATHS are not touched by this
    function.  These pathnames should be paths relative to the wcroot.
+
+   If WCROOT_IPROPS is not NULL it is a hash mapping const char * absolute
+   working copy paths to depth-first ordered arrays of
+   svn_prop_inherited_item_t * structures.  If LOCAL_ABSPATH exists in
+   WCROOT_IPROPS, then set the hashed value as the node's inherited
+   properties.
 */
 svn_error_t *
 svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
@@ -2395,6 +2451,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
+                                         apr_hash_t *wcroot_iprops,
                                          apr_pool_t *scratch_pool);
 
 
@@ -2827,19 +2884,39 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 */
 
 /* Removes all references to LOCAL_ABSPATH from DB, while optionally leaving
-   tree conflicts and/or a not present node.
+   a not present node.
 
    This operation always recursively removes all nodes at and below
    LOCAL_ABSPATH from NODES and ACTUAL.
 
    If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
-   BASE node at local_abspath. (Requires an existing BASE node before removing)
+   BASE node at local_abspath of the specified status and kind.
+   (Requires an existing BASE node before removing)
+
+   If DESTROY_WC is TRUE, this operation *installs* workqueue operations to
+   update the local filesystem after the database operation. If DESTROY_CHANGES
+   is FALSE, modified and unversioned files are left after running this
+   operation (and the WQ). If DESTROY_CHANGES and DESTROY_WC are TRUE,
+   LOCAL_ABSPATH and everything below it will be removed by the WQ.
+
+
+   Note: Unlike many similar functions it is a valid scenario for this
+   function to be called on a wcroot! In this case it will just leave the root
+   record in BASE
  */
 svn_error_t *
-svn_wc__db_op_remove_node(svn_wc__db_t *db,
+svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
+                          svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t destroy_wc,
+                          svn_boolean_t destroy_changes,
                           svn_revnum_t not_present_revision,
+                          svn_wc__db_status_t not_present_status,
                           svn_kind_t not_present_kind,
+                          const svn_skel_t *conflict,
+                          const svn_skel_t *work_items,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.

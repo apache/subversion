@@ -104,14 +104,12 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
-/* Symmetric, merge-tracking merge, used for sync or reintegrate purposes. */
+/* Automatic, merge-tracking merge, used for sync or reintegrate purposes. */
 static svn_error_t *
-symmetric_merge(const char *source_path_or_url,
+automatic_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
-                svn_boolean_t ignore_ancestry,
                 svn_boolean_t force,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
@@ -122,24 +120,50 @@ symmetric_merge(const char *source_path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  svn_client__symmetric_merge_t *merge;
+  svn_client_automatic_merge_t *merge;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
-  SVN_ERR(svn_client__find_symmetric_merge(&merge,
-                                           source_path_or_url, source_revision,
-                                           target_wcpath, allow_mixed_rev,
-                                           allow_local_mods, allow_switched_subtrees,
-                                           ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_find_automatic_merge(&merge,
+                                          source_path_or_url, source_revision,
+                                          target_wcpath, allow_mixed_rev,
+                                          allow_local_mods, allow_switched_subtrees,
+                                          ctx, scratch_pool, scratch_pool));
+
+  if (svn_client_automatic_merge_is_reintegrate_like(merge))
+    {
+      if (record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --record-only option "
+                                  "cannot be used with this kind of merge"));
+
+      if (depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --depth option "
+                                  "cannot be used with this kind of merge"));
+
+      if (force)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --force option "
+                                  "cannot be used with this kind of merge"));
+
+      if (allow_mixed_rev)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("The required merge is reintegrate-like, "
+                                  "and the --allow-mixed-revisions option "
+                                  "cannot be used with this kind of merge"));
+    }
 
   /* Perform the 3-way merges */
-  SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
-                                         ignore_ancestry, force, record_only,
-                                         dry_run, merge_options,
-                                         ctx, scratch_pool));
+  SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
+                                        force, record_only,
+                                        dry_run, merge_options,
+                                        ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -371,6 +395,16 @@ svn_cl__merge(apr_getopt_t *os,
   /* More input validation. */
   if (opt_state->reintegrate)
     {
+      if (opt_state->ignore_ancestry)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--ignore-ancestry"));
+
+      if (opt_state->record_only)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--reintegrate cannot be used with "
+                                  "--record-only"));
+
       if (opt_state->depth != svn_depth_unknown)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                 _("--depth cannot be used with "
@@ -394,39 +428,29 @@ svn_cl__merge(apr_getopt_t *os,
   /* Postpone conflict resolution during the merge operation.
    * If any conflicts occur we'll run the conflict resolver later. */
 
-#ifdef SVN_WITH_SYMMETRIC_MERGE
-  if (opt_state->symmetric_merge)
+  /* Do an automatic merge if just one source and no revisions. */
+  if ((! two_sources_specified)
+      && (! opt_state->reintegrate)
+      && (! opt_state->ignore_ancestry)
+      && first_range_start.kind == svn_opt_revision_unspecified
+      && first_range_end.kind == svn_opt_revision_unspecified)
     {
-      svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
-      svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
-
-      if (two_sources_specified)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("SOURCE2 can't be used with --symmetric"));
-      if (first_range_start.kind != svn_opt_revision_unspecified
-          || first_range_end.kind != svn_opt_revision_unspecified)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("a revision range can't be used with --symmetric"));
-
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      merge_err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
+      merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
-                                  opt_state->ignore_ancestry,
                                   opt_state->force,
                                   opt_state->record_only,
                                   opt_state->dry_run,
                                   opt_state->allow_mixed_rev,
-                                  allow_local_mods,
-                                  allow_switched_subtrees,
+                                  TRUE /*allow_local_mods*/,
+                                  TRUE /*allow_switched_subtrees*/,
                                   options, ctx, pool);
     }
-  else
-#endif
-  if (opt_state->reintegrate)
+  else if (opt_state->reintegrate)
     {
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
@@ -497,15 +521,12 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (!err
-      && opt_state->conflict_func
-      && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
-    {
-      err = svn_cl__resolve_conflicts(
-              svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
-              opt_state->depth, opt_state, ctx, pool);
-    }
-
+  if (!err)
+    err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                              opt_state->depth,
+                                              opt_state->accept_which,
+                                              opt_state->editor_cmd,
+                                              ctx, pool);
   if (merge_err)
     {
       if (merge_err->apr_err ==

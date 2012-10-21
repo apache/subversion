@@ -91,16 +91,33 @@ is_canonical(const char *path,
 #endif
 
 
-char *svn_path_join(const char *base,
-                    const char *component,
-                    apr_pool_t *pool)
+/* functionality of svn_path_is_canonical but without the deprecation */
+static svn_boolean_t
+svn_path_is_canonical_internal(const char *path, apr_pool_t *pool)
+{
+  return svn_uri_is_canonical(path, pool) ||
+      svn_dirent_is_canonical(path, pool) ||
+      svn_relpath_is_canonical(path);
+}
+
+svn_boolean_t
+svn_path_is_canonical(const char *path, apr_pool_t *pool)
+{
+  return svn_path_is_canonical_internal(path, pool);
+}
+
+/* functionality of svn_path_join but without the deprecation */
+static char *
+svn_path_join_internal(const char *base,
+                       const char *component,
+                       apr_pool_t *pool)
 {
   apr_size_t blen = strlen(base);
   apr_size_t clen = strlen(component);
   char *path;
 
-  assert(svn_path_is_canonical(base, pool));
-  assert(svn_path_is_canonical(component, pool));
+  assert(svn_path_is_canonical_internal(base, pool));
+  assert(svn_path_is_canonical_internal(component, pool));
 
   /* If the component is absolute, then return it.  */
   if (*component == '/')
@@ -124,6 +141,13 @@ char *svn_path_join(const char *base,
   return path;
 }
 
+char *svn_path_join(const char *base,
+                    const char *component,
+                    apr_pool_t *pool)
+{
+  return svn_path_join_internal(base, component, pool);
+}
+
 char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
 {
 #define MAX_SAVED_LENGTHS 10
@@ -140,7 +164,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
 
   total_len = strlen(base);
 
-  assert(svn_path_is_canonical(base, pool));
+  assert(svn_path_is_canonical_internal(base, pool));
 
   if (total_len == 1 && *base == '/')
     base_is_root = TRUE;
@@ -160,7 +184,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
     {
       len = strlen(s);
 
-      assert(svn_path_is_canonical(s, pool));
+      assert(svn_path_is_canonical_internal(s, pool));
 
       if (SVN_PATH_IS_EMPTY(s))
         continue;
@@ -353,7 +377,7 @@ svn_path_dirname(const char *path, apr_pool_t *pool)
 {
   apr_size_t len = strlen(path);
 
-  assert(svn_path_is_canonical(path, pool));
+  assert(svn_path_is_canonical_internal(path, pool));
 
   return apr_pstrmemdup(pool, path, previous_segment(path, len));
 }
@@ -365,7 +389,7 @@ svn_path_basename(const char *path, apr_pool_t *pool)
   apr_size_t len = strlen(path);
   apr_size_t start;
 
-  assert(svn_path_is_canonical(path, pool));
+  assert(svn_path_is_canonical_internal(path, pool));
 
   if (len == 1 && path[0] == '/')
     start = 0;
@@ -593,7 +617,7 @@ svn_path_decompose(const char *path,
   apr_array_header_t *components =
     apr_array_make(pool, 1, sizeof(const char *));
 
-  assert(svn_path_is_canonical(path, pool));
+  assert(svn_path_is_canonical_internal(path, pool));
 
   if (SVN_PATH_IS_EMPTY(path))
     return components;  /* ### Should we return a "" component? */
@@ -1058,7 +1082,7 @@ svn_path_url_add_component2(const char *url,
   /* = svn_path_uri_encode() but without always copying */
   component = uri_escape(component, svn_uri__char_validity, pool);
 
-  return svn_path_join(url, component, pool);
+  return svn_path_join_internal(url, component, pool);
 }
 
 svn_error_t *
@@ -1076,7 +1100,7 @@ svn_path_get_absolute(const char **pabsolute,
 }
 
 
-
+#if !defined(WIN32) && !defined(DARWIN)
 /** Get APR's internal path encoding. */
 static svn_error_t *
 get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
@@ -1095,6 +1119,7 @@ get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *

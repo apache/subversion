@@ -269,8 +269,23 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  * will generally result in higher hit rates and reduced conflict
  * resolution overhead.
  *
- * If access to the resulting cache object is guranteed to be serialized,
+ * The cache will be split into @a segment_count segments of equal size.
+ * A higher number reduces lock contention but also limits the maximum
+ * cachable item size.  If it is not a power of two, it will be rounded
+ * down to next lower power of two. Also, there is an implementation
+ * specific upper limit and the setting will be capped there automatically.
+ * If the number is 0, a default will be derived from @a total_size.
+ * 
+ * If access to the resulting cache object is guaranteed to be serialized,
  * @a thread_safe may be set to @c FALSE for maximum performance.
+ *
+ * There is no limit on the number of threads reading a given cache segment
+ * concurrently.  Writes, however, need an exclusive lock on the respective
+ * segment.  @a allow_blocking_writes controls contention is handled here.
+ * If set to TRUE, writes will wait until the lock becomes available, i.e.
+ * reads should be short.  If set to FALSE, write attempts will be ignored
+ * (no data being written to the cache) if some reader or another writer
+ * currently holds the segment lock.
  *
  * Allocations will be made in @a result_pool, in particular the data buffers.
  */
@@ -278,7 +293,9 @@ svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,
+                                  apr_size_t segment_count,
                                   svn_boolean_t thread_safe,
+                                  svn_boolean_t allow_blocking_writes,
                                   apr_pool_t *result_pool);
 
 /**

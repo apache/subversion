@@ -79,10 +79,11 @@ svn_cl__help(apr_getopt_t *os,
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  return svn_opt_print_help3(os,
+  return svn_opt_print_help4(os,
                              "svn",   /* ### erm, derive somehow? */
                              opt_state ? opt_state->version : FALSE,
                              opt_state ? opt_state->quiet : FALSE,
+                             opt_state ? opt_state->verbose : FALSE,
                              version_footer->data,
                              help_header,   /* already gettext()'d */
                              svn_cl__cmd_table,

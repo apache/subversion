@@ -71,10 +71,9 @@ struct log_receiver_baton
   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
 
-  /* Log message search pattern. Log entries will only be shown if the author,
-   * the log message, or a changed path matches this pattern. */
-  const char *search_pattern;
-  svn_boolean_t case_insensitive_search;
+  /* Log message search patterns. Log entries will only be shown if the author,
+   * the log message, or a changed path matches one of these patterns. */
+  apr_array_header_t *search_patterns;
 
   /* Pool for persistent allocations. */
   apr_pool_t *pool;
@@ -123,7 +122,7 @@ display_diff(const svn_log_entry_t *log_entry,
   end_revision.kind = svn_opt_revision_number;
   end_revision.value.number = log_entry->revision;
 
-  SVN_ERR(svn_stream_puts(outstream, _("\n")));
+  SVN_ERR(svn_stream_puts(outstream, "\n"));
   SVN_ERR(svn_client_diff_peg6(diff_options,
                                target_path_or_url,
                                target_peg_revision,
@@ -156,12 +155,11 @@ match_search_pattern(const char *search_pattern,
                      const char *date,
                      const char *log_message,
                      apr_hash_t *changed_paths,
-                     svn_boolean_t case_insensitive_search,
                      apr_pool_t *pool)
 {
   /* Match any substring containing the pattern, like UNIX 'grep' does. */
   const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
-  int flags = (case_insensitive_search ? APR_FNM_CASE_BLIND : 0);
+  int flags = APR_FNM_CASE_BLIND;
 
   /* Does the author match the search pattern? */
   if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
@@ -203,6 +201,50 @@ match_search_pattern(const char *search_pattern,
   return FALSE;
 }
 
+/* Match all search patterns in SEARCH_PATTERNS against AUTHOR, DATE, MESSAGE,
+ * and CHANGED_PATHS. Return TRUE if any pattern matches, else FALSE.
+ * SCRACH_POOL is used for temporary allocations. */
+static svn_boolean_t
+match_search_patterns(apr_array_header_t *search_patterns,
+                      const char *author,
+                      const char *date,
+                      const char *message,
+                      apr_hash_t *changed_paths,
+                      apr_pool_t *scratch_pool)
+{
+  int i;
+  svn_boolean_t match = FALSE;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < search_patterns->nelts; i++)
+    {
+      apr_array_header_t *pattern_group;
+      int j;
+
+      pattern_group = APR_ARRAY_IDX(search_patterns, i, apr_array_header_t *);
+
+      /* All patterns within the group must match. */
+      for (j = 0; j < pattern_group->nelts; j++)
+        {
+          const char *pattern;
+
+          svn_pool_clear(iterpool);
+          
+          pattern = APR_ARRAY_IDX(pattern_group, j, const char *);
+          match = match_search_pattern(pattern, author, date, message,
+                                       changed_paths, iterpool);
+          if (!match)
+            break;
+        }
+
+      match = (match && j == pattern_group->nelts);
+      if (match)
+        break;
+    }
+  svn_pool_destroy(iterpool);
+
+  return match;
+}
 
 /* Implement `svn_log_entry_receiver_t', printing the logs in
  * a human-readable and machine-parseable format.
@@ -320,10 +362,9 @@ log_entry_receiver(void *baton,
   if (! lb->omit_log_message && message == NULL)
     message = "";
 
-  if (lb->search_pattern &&
-      ! match_search_pattern(lb->search_pattern, author, date, message,
-                             log_entry->changed_paths2,
-                             lb->case_insensitive_search, pool))
+  if (lb->search_patterns &&
+      ! match_search_patterns(lb->search_patterns, author, date, message,
+                              log_entry->changed_paths2, pool))
     {
       if (log_entry->has_children)
         APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
@@ -505,10 +546,9 @@ log_entry_receiver_xml(void *baton,
     }
 
   /* Match search pattern before XML-escaping. */
-  if (lb->search_pattern &&
-      ! match_search_pattern(lb->search_pattern, author, date, message,
-                             log_entry->changed_paths2,
-                             lb->case_insensitive_search, pool))
+  if (lb->search_patterns &&
+      ! match_search_patterns(lb->search_patterns, author, date, message,
+                              log_entry->changed_paths2, pool))
     {
       if (log_entry->has_children)
         APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
@@ -586,7 +626,13 @@ log_entry_receiver_xml(void *baton,
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
-                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
+                                    "kind", svn_cl__node_kind_str_xml(
+                                                     log_item->node_kind),
+                                    "text-mods", svn_tristate__to_word(
+                                                     log_item->text_modified),
+                                    "prop-mods", svn_tristate__to_word(
+                                                     log_item->props_modified),
+                                    NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -609,7 +655,7 @@ log_entry_receiver_xml(void *baton,
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
       SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
                                           FALSE, /* name_only */
-                                          pool));
+                                          FALSE, pool));
       svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 
@@ -740,8 +786,7 @@ svn_cl__log(apr_getopt_t *os,
                                                    : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
-  lb.search_pattern = opt_state->search_pattern;
-  lb.case_insensitive_search = opt_state->case_insensitive_search;
+  lb.search_patterns = opt_state->search_patterns;
   lb.pool = pool;
 
   if (opt_state->xml)

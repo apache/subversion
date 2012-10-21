@@ -28,6 +28,7 @@
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
+#include <apr_strings.h>
 
 #include "svn_ctype.h"
 #include "svn_types.h"
@@ -65,27 +66,37 @@ svn_mutex__t *common_pool_lock;
 
 /* --- Utility functions for the loader --- */
 
-static const struct fs_type_defn {
+struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
   fs_init_func_t initfunc;
-} fs_modules[] = {
+  struct fs_type_defn *next;
+};
+
+static struct fs_type_defn base_defn =
   {
     SVN_FS_TYPE_BDB, "base",
 #ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
-    svn_fs_base__init
+    svn_fs_base__init,
+#else
+    NULL,
 #endif
-  },
+    NULL
+  };
 
+static struct fs_type_defn fsfs_defn =
   {
     SVN_FS_TYPE_FSFS, "fs",
 #ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-    svn_fs_fs__init
+    svn_fs_fs__init,
+#else
+    NULL,
 #endif
-  },
+    &base_defn
+  };
 
-  { NULL }
-};
+static struct fs_type_defn *fs_modules = &fsfs_defn;
+
 
 static svn_error_t *
 load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
@@ -99,6 +110,15 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
     const char *libname;
     const char *funcname;
     apr_status_t status;
+    const char *p;
+
+    /* Demand a simple alphanumeric name so that the generated DSO
+       name is sensible. */
+    for (p = name; *p; ++p)
+      if (!svn_ctype_isalnum(*p))
+        return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                                 _("Invalid name for FS type '%s'"),
+                                 name);
 
     libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.0",
                            name, SVN_VER_MAJOR);
@@ -173,21 +193,77 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
   return SVN_NO_ERROR;
 }
 
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+/* Return *FST for the third party FS_TYPE */
+static svn_error_t *
+get_or_allocate_third(struct fs_type_defn **fst,
+                      const char *fs_type)
+{
+  while (*fst)
+    {
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        return SVN_NO_ERROR;
+      fst = &(*fst)->next;
+    }
+
+  *fst = apr_palloc(common_pool, sizeof(struct fs_type_defn));
+  (*fst)->fs_type = apr_pstrdup(common_pool, fs_type);
+  (*fst)->fsap_name = (*fst)->fs_type;
+  (*fst)->initfunc = NULL;
+  (*fst)->next = NULL;
+
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Fetch a library vtable by FS type. */
 static svn_error_t *
 get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
                    apr_pool_t *pool)
 {
-  const struct fs_type_defn *fst;
+  struct fs_type_defn **fst = &fs_modules;
+  svn_boolean_t known = FALSE;
 
-  for (fst = fs_modules; fst->fs_type; fst++)
+  /* There are two FS module definitions known at compile time.  We
+     want to check these without any locking overhead even when
+     dynamic third party modules are enabled.  The third party modules
+     cannot be checked until the lock is held.  */
+  if (strcmp(fs_type, (*fst)->fs_type) == 0)
+    known = TRUE;
+  else
     {
-      if (strcmp(fs_type, fst->fs_type) == 0)
-        return get_library_vtable_direct(vtable, fst, pool);
+      fst = &(*fst)->next;
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        known = TRUE;
     }
 
-  return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
-                           _("Unknown FS type '%s'"), fs_type);
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+  /* Third party FS modules that are unknown at compile time.
+     
+     A third party FS is identified by the file fs-type containing a
+     third party name, say "foo".  The loader will load the DSO with
+     the name "libsvn_fs_foo" and use the entry point with the name
+     "svn_fs_foo__init".
+
+     Note: the BDB and FSFS modules don't follow this naming scheme
+     and this allows them to be used to test the third party loader.
+     Change the content of fs-type to "base" in a BDB filesystem or to
+     "fs" in an FSFS filesystem and they will be loaded as third party
+     modules. */
+  if (!known)
+    {
+      fst = &(*fst)->next;
+      if (!common_pool)  /* Best-effort init, see get_library_vtable_direct. */
+        SVN_ERR(svn_fs_initialize(NULL));
+      SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                           get_or_allocate_third(fst, fs_type));
+      known = TRUE;
+    }
+#endif
+  if (!known)
+    return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                             _("Unknown FS type '%s'"), fs_type);
+  return get_library_vtable_direct(vtable, *fst, pool);
 }
 
 svn_error_t *
@@ -525,7 +601,8 @@ svn_fs_pack(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool));
+                                       cancel_func, cancel_baton, pool,
+                                       common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -545,6 +622,17 @@ svn_fs_recover(const char *path,
                                                     common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
+}
+
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool)
+{
+  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -594,8 +682,8 @@ svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
                         svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_hotcopy(src_path, dest_path, clean_logs,
-                                        pool));
+  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean_logs,
+                                         FALSE, NULL, NULL, pool));
 }
 
 svn_error_t *
@@ -1116,6 +1204,27 @@ svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool)
+{
+  /* if the FS doesn't implement this function, report a "failed" attempt */
+  if (root->vtable->try_process_file_contents == NULL)
+    {
+      *success = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(root->vtable->try_process_file_contents(
+                         success,
+                         root, path,
+                         processor, baton, pool));
+}
+
+svn_error_t *
 svn_fs_make_file(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__path_valid(path, pool));
@@ -1414,11 +1523,11 @@ svn_error_t *
 svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool)
 {
-  const struct fs_type_defn *defn;
+  const struct fs_type_defn *defn = fs_modules;
   fs_library_vtable_t *vtable;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  for (defn = fs_modules; defn->fs_type != NULL; ++defn)
+  while (defn)
     {
       char *line;
       svn_error_t *err;
@@ -1431,6 +1540,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
           if (err->apr_err == SVN_ERR_FS_UNKNOWN_FS_TYPE)
             {
               svn_error_clear(err);
+              defn = defn->next;
               continue;
             }
           else
@@ -1440,6 +1550,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
       line = apr_psprintf(iterpool, "* fs_%s : %s\n",
                           defn->fsap_name, vtable->get_description());
       svn_stringbuf_appendcstr(output, line);
+      defn = defn->next;
     }
 
   svn_pool_destroy(iterpool);

@@ -57,6 +57,7 @@ svn_cl__resolve(apr_getopt_t *os,
   svn_boolean_t had_error = FALSE;
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
+  svn_cl__interactive_conflict_baton_t *b;
 
   switch (opt_state->accept_which)
     {
@@ -79,7 +80,7 @@ svn_cl__resolve(apr_getopt_t *os,
       conflict_choice = svn_wc_conflict_choose_mine_full;
       break;
     case svn_cl__accept_unspecified:
-      if (opt_state->conflict_func == NULL)
+      if (opt_state->non_interactive)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("missing --accept option"));
       conflict_choice = svn_wc_conflict_choose_unspecified;
@@ -112,9 +113,16 @@ svn_cl__resolve(apr_getopt_t *os,
   conflict_func2 = ctx->conflict_func2;
   conflict_baton2 = ctx->conflict_baton2;
 
-  /* Store interactive resolver */
-  ctx->conflict_func2 = opt_state->conflict_func;
-  ctx->conflict_baton2 = opt_state->conflict_baton;
+  /* This subcommand always uses the interactive resolver function. */
+  ctx->conflict_func2 = svn_cl__conflict_func_interactive;
+  SVN_ERR(svn_cl__get_conflict_func_interactive_baton(&b,
+                                                      opt_state->accept_which,
+                                                      ctx->config,
+                                                      opt_state->editor_cmd,
+                                                      ctx->cancel_func,
+                                                      ctx->cancel_baton,
+                                                      scratch_pool));
+  ctx->conflict_baton2 = b;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

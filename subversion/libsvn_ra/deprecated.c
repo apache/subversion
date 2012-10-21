@@ -209,8 +209,8 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        const char *log_msg,
-                                       svn_commit_callback2_t callback,
-                                       void *callback_baton,
+                                       svn_commit_callback2_t commit_callback,
+                                       void *commit_baton,
                                        apr_hash_t *lock_tokens,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
@@ -221,7 +221,7 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                  APR_HASH_KEY_STRING,
                  svn_string_create(log_msg, pool));
   return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
-                                   callback, callback_baton,
+                                   commit_callback, commit_baton,
                                    lock_tokens, keep_locks, pool);
 }
 
@@ -416,4 +416,17 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                                     status_target, revision,
                                     SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                     status_editor, status_baton, pool);
+}
+
+svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_hash_t **dirents,
+                            svn_revnum_t *fetched_rev,
+                            apr_hash_t **props,
+                            apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(*path != '/');
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, SVN_DIRENT_ALL, pool);
 }

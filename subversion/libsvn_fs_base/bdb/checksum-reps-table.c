@@ -139,7 +139,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
   /* Create a value from our REP_KEY, and add this record to the table. */
   svn_fs_base__str_to_dbt(&value, rep_key);
   svn_fs_base__trail_debug(trail, "checksum-reps", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing checksum-reps record"),
+  SVN_ERR(BDB_WRAP(fs, N_("storing checksum-reps record"),
                    bfd->checksum_reps->put(bfd->checksum_reps, trail->db_txn,
                                            &key, &value, 0)));
   return SVN_NO_ERROR;
@@ -161,7 +161,7 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
 
   svn_fs_base__checksum_to_dbt(&key, checksum);
   svn_fs_base__trail_debug(trail, "checksum-reps", "del");
-  SVN_ERR(BDB_WRAP(fs, "deleting entry from 'checksum-reps' table",
+  SVN_ERR(BDB_WRAP(fs, N_("deleting entry from 'checksum-reps' table"),
                    bfd->checksum_reps->del(bfd->checksum_reps,
                                            trail->db_txn, &key, 0)));
   return SVN_NO_ERROR;
@@ -183,7 +183,7 @@ svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **id_p,
   /* Get the current value associated with the `next-key' key in the
      `checksum-reps' table.  */
   svn_fs_base__trail_debug(trail, "checksum-reps", "get");
-  SVN_ERR(BDB_WRAP(fs, _("allocating new representation reuse ID "
+  SVN_ERR(BDB_WRAP(fs, N_("allocating new representation reuse ID "
                          "(getting 'next-key')"),
                    bfd->checksum_reps->get(bfd->checksum_reps, trail->db_txn,
                                            &query,
@@ -204,5 +204,5 @@ svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **id_p,
                                    svn_fs_base__str_to_dbt(&result, next_key),
                                    0);
 
-  return BDB_WRAP(fs, _("bumping next representation reuse ID"), db_err);
+  return BDB_WRAP(fs, N_("bumping next representation reuse ID"), db_err);
 }

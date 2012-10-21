@@ -732,6 +732,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   svn_revnum_t rev = start_revision;
   const char *report_target;
   int active_reports = 0;
+  apr_short_interval_time_t waittime_left = session->timeout;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
@@ -855,18 +856,36 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          ### ahead and apply it here, too, in case serf eventually uses
          ### that parameter.
       */
-      status = serf_context_run(session->context, session->timeout,
+      status = serf_context_run(session->context,
+                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
                                 pool);
 
       err = session->pending_error;
       session->pending_error = NULL;
 
+      /* If the context duration timeout is up, we'll subtract that
+         duration from the total time alloted for such things.  If
+         there's no time left, we fail with a message indicating that
+         the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          err = SVN_NO_ERROR;
+          status = 0;
+
+          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                      _("Connection timed out"));
+            }
+        }
+      else
+        {
+          waittime_left = session->timeout;
         }
 
       /* Substract the number of completely handled responses from our
@@ -885,9 +904,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       SVN_ERR(err);
       if (status)
         {
-          return svn_error_wrap_apr(status,
-                                    _("Error retrieving replay REPORT (%d)"),
-                                    status);
+          return svn_ra_serf__wrap_err(status,
+                                       _("Error retrieving replay REPORT"));
         }
       done_reports = NULL;
     }

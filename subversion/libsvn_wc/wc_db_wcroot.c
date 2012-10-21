@@ -26,6 +26,7 @@
 #include <assert.h>
 
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -185,7 +186,7 @@ close_wcroot(void *data)
 
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                const svn_config_t *config,
+                svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
@@ -353,6 +354,40 @@ compute_relpath(const svn_wc__db_wcroot_t *wcroot,
 }
 
 
+/* Return in *LINK_TARGET_ABSPATH the absolute path the symlink at
+ * LOCAL_ABSPATH is pointing to. Perform all allocations in POOL. */
+static svn_error_t *
+read_link_target(const char **link_target_abspath,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
+{
+  svn_string_t *link_target;
+  const char *canon_link_target;
+
+  SVN_ERR(svn_io_read_link(&link_target, local_abspath, pool));
+  if (link_target->len == 0)
+    return svn_error_createf(SVN_ERR_WC_NOT_SYMLINK, NULL,
+                             _("The symlink at '%s' points nowhere"),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
+                
+  /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
+  if (!svn_dirent_is_absolute(canon_link_target))
+    canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,
+                                                           pool),
+                                        canon_link_target, pool);
+
+  /* Collapse any .. in the symlink part of the path. */
+  if (svn_path_is_backpath_present(canon_link_target))
+    SVN_ERR(svn_dirent_get_absolute(link_target_abspath, canon_link_target,
+                                    pool));
+  else
+    *link_target_abspath = canon_link_target;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
@@ -473,6 +508,18 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 
       if (adm_subdir_kind == svn_node_dir)
         {
+          svn_boolean_t sqlite_exclusive = FALSE;
+
+          err = svn_config_get_bool(db->config, &sqlite_exclusive,
+                                    SVN_CONFIG_SECTION_WORKING_COPY,
+                                    SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                                    FALSE);
+          if (err)
+            {
+              svn_error_clear(err);
+              sqlite_exclusive = FALSE;
+            }
+
           /* We always open the database in read/write mode.  If the database
              isn't writable in the filesystem, SQLite will internally open
              it as read-only, and we'll get an error if we try to do a write
@@ -482,7 +529,8 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              we're caching database handles, it make sense to be as permissive
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
-                                        svn_sqlite__mode_readwrite, NULL,
+                                        svn_sqlite__mode_readwrite,
+                                        sqlite_exclusive, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {
@@ -543,6 +591,8 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                   if (found_wcroot)
                     break;
 
+                  SVN_ERR(read_link_target(&local_abspath, local_abspath,
+                                           scratch_pool));
 try_symlink_as_dir:
                   kind = svn_kind_dir;
                   moved_upwards = FALSE;
@@ -599,11 +649,22 @@ try_symlink_as_dir:
          inside the wcroot, but we know the abspath is this directory
          (ie. where we found it).  */
 
-      SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
+      err = svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
-                            db->state_pool, scratch_pool));
+                            db->state_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+          kind == svn_kind_symlink)
+        {
+          /* We found an unsupported WC after traversing upwards from a
+           * symlink. Fall through to code below to check if the symlink
+           * points at a supported WC. */
+          svn_error_clear(err);
+          *wcroot = NULL;
+        }
+      else
+        SVN_ERR(err);
     }
   else
     {
@@ -615,16 +676,17 @@ try_symlink_as_dir:
                             db->state_pool, scratch_pool));
     }
 
-  {
-    const char *dir_relpath;
+  if (*wcroot)
+    {
+      const char *dir_relpath;
 
-    /* The subdirectory's relpath is easily computed relative to the
-       wcroot that we just found.  */
-    dir_relpath = compute_relpath(*wcroot, local_dir_abspath, NULL);
+      /* The subdirectory's relpath is easily computed relative to the
+         wcroot that we just found.  */
+      dir_relpath = compute_relpath(*wcroot, local_dir_abspath, NULL);
 
-    /* And the result local_relpath may include a filename.  */
-    *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
-  }
+      /* And the result local_relpath may include a filename.  */
+      *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
+    }
 
   if (kind == svn_kind_symlink)
     {
@@ -638,33 +700,38 @@ try_symlink_as_dir:
        * points to a directory, try to find a wcroot in that directory
        * instead. */
 
-      err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
-                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                          NULL, &conflicted, NULL, NULL, NULL,
-                                          NULL, NULL, NULL,
-                                          *wcroot, *local_relpath,
-                                          scratch_pool, scratch_pool);
-      if (err)
+      if (*wcroot)
         {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
-            return svn_error_trace(err);
+          err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, &conflicted,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, *wcroot, *local_relpath,
+                                              scratch_pool, scratch_pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                  && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+                return svn_error_trace(err);
 
-          svn_error_clear(err);
-          retry_if_dir = TRUE; /* The symlink is unversioned. */
+              svn_error_clear(err);
+              retry_if_dir = TRUE; /* The symlink is unversioned. */
+            }
+          else
+            {
+              /* The symlink is versioned, or obstructs a versioned node.
+               * Ignore non-conflicted not-present/excluded nodes.
+               * This allows the symlink to redirect the wcroot query to a
+               * directory, regardless of 'invisible' nodes in this WC. */
+              retry_if_dir = ((status == svn_wc__db_status_not_present ||
+                               status == svn_wc__db_status_excluded ||
+                               status == svn_wc__db_status_server_excluded)
+                              && !conflicted);
+            }
         }
       else
-        {
-          /* The symlink is versioned, or obstructs a versioned node.
-           * Ignore non-conflicted not-present/excluded nodes.
-           * This allows the symlink to redirect the wcroot query to a
-           * directory, regardless of 'invisible' nodes in this WC. */
-          retry_if_dir = ((status == svn_wc__db_status_not_present ||
-                           status == svn_wc__db_status_excluded ||
-                           status == svn_wc__db_status_server_excluded)
-                          && !conflicted);
-        }
+        retry_if_dir = TRUE;
 
       if (retry_if_dir)
         {
@@ -675,7 +742,11 @@ try_symlink_as_dir:
                                              scratch_pool));
           if (resolved_kind == svn_node_dir)
             {
-              local_abspath = original_abspath;
+              SVN_ERR(read_link_target(&local_abspath, original_abspath,
+                                       scratch_pool));
+              /* This handle was opened in this function but is not going
+                 to be used further so close it. */
+              SVN_ERR(svn_sqlite__close(sdb));
               goto try_symlink_as_dir;
             }
         }

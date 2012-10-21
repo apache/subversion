@@ -199,15 +199,38 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY, APR_HASH_KEY_STRING,
                        capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INHERITED_PROPS, vals))
+        {
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_INHERITED_PROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
+        {
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
+                       capability_yes);
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
   else if (strncmp(key, "SVN", 3) == 0)
     {
+      /* If we've not yet seen any information about supported POST
+         requests, we'll initialize the list/hash with "create-txn"
+         (which we know is supported by virtue of the server speaking
+         HTTPv2 at all. */
+      if (! session->supported_posts)
+        {
+          session->supported_posts = apr_hash_make(session->pool);
+          apr_hash_set(session->supported_posts, "create-txn", 10, (void *)1);
+        }
+
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
           session->repos_root = session->session_url;
-          session->repos_root.path = apr_pstrdup(session->pool, val);
+          session->repos_root.path =
+            (char *)svn_fspath__canonicalize(val, session->pool);
           session->repos_root_str =
             svn_urlpath__canonicalize(
                 apr_uri_unparse(session->pool, &session->repos_root, 0),
@@ -257,6 +280,21 @@ capabilities_headers_iterator_callback(void *baton,
         {
           opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_SUPPORTED_POSTS_HEADER) == 0)
+        {
+          /* May contain multiple values, separated by commas. */
+          int i;
+          apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE,
+                                                       opt_ctx->pool);
+
+          for (i = 0; i < vals->nelts; i++)
+            {
+              const char *post_val = APR_ARRAY_IDX(vals, i, const char *);
+
+              apr_hash_set(session->supported_posts, post_val,
+                           APR_HASH_KEY_STRING, (void *)1);
+            }
+        }
     }
 
   return 0;
@@ -291,6 +329,10 @@ options_response_handler(serf_request_t *request,
                    APR_HASH_KEY_STRING, capability_no);
       apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                    APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                   APR_HASH_KEY_STRING, capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
@@ -299,7 +341,7 @@ options_response_handler(serf_request_t *request,
       opt_ctx->headers_processed = TRUE;
     }
 
-  /* Execute the 'real' response handler to XML-parse the repsonse body. */
+  /* Execute the 'real' response handler to XML-parse the response body. */
   return opt_ctx->inner_handler(request, response, opt_ctx->inner_baton, pool);
 }
 

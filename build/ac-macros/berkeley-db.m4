@@ -175,13 +175,24 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     svn_check_berkeley_db_minor=$2
     svn_check_berkeley_db_patch=$3
 
-    # Extract only the -ldb.* flag from the libs supplied by apu-config
-    # Otherwise we get bit by the fact that expat might not be built yet
-    # Or that it resides in a non-standard location which we would have
-    # to compensate with using something like -R`$apu_config --prefix`/lib.
-    #
-    if test -z "$SVN_DB_LIBS"; then
-      SVN_DB_LIBS=["`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
+   if test -z "$SVN_DB_LIBS"; then
+      # We pass --dbm-libs here since Debian has modified apu-config not
+      # to return -ldb unless --dbm-libs is passed.  This may also produce
+      # extra output beyond -ldb but since we're only filtering for -ldb
+      # it won't matter to us.  However, --dbm-libs was added to apu-config
+      # in 1.3.8 so it's possible the version we have doesn't support it
+      # so fallback without it if we get an error.
+      svn_db_libs_prefiltered=["`$apu_config --libs --dbm-libs`"]
+      if test $? -ne 0; then
+        svn_db_libs_prefiltered=["`$apu_config --libs`"]
+      fi
+
+      # Extract only the -ldb.* flag from the libs supplied by apu-config
+      # Otherwise we get bit by the fact that expat might not be built yet
+      # Or that it resides in a non-standard location which we would have
+      # to compensate with using something like -R`$apu_config --prefix`/lib.
+      #
+      SVN_DB_LIBS=["`echo \"$svn_db_libs_prefiltered\" | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
     fi
 
     CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 

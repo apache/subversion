@@ -1613,7 +1613,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   if (! strncmp(identifier, SVN_SUBST__SPECIAL_LINK_STR " ",
-                strlen(SVN_SUBST__SPECIAL_LINK_STR " ")))
+                sizeof(SVN_SUBST__SPECIAL_LINK_STR " ")-1))
     {
       /* For symlinks, the type specific data is just a filesystem
          path that the symlink should reference. */

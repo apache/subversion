@@ -1087,7 +1087,6 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     }
   else /* ! svn_path_is_url() */
     {
-      /* Acquire return values. */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
         mergeinfo_catalog, NULL, NULL, include_descendants, FALSE,
         ignore_invalid_mergeinfo, svn_mergeinfo_inherited,
@@ -1259,7 +1258,7 @@ struct filter_log_entry_baton_t
   /* A rangelist describing all the revisions potentially merged or
      potentially eligible for merging (see FILTERING_MERGED) based on
      the target's explicit or inherited mergeinfo. */
-  const apr_array_header_t *rangelist;
+  const svn_rangelist_t *rangelist;
 
   /* The wrapped svn_log_entry_receiver_t callback and baton which
      filter_log_entry_with_rangelist() is acting as a filter for. */
@@ -1291,7 +1290,7 @@ filter_log_entry_with_rangelist(void *baton,
                                 apr_pool_t *pool)
 {
   struct filter_log_entry_baton_t *fleb = baton;
-  apr_array_header_t *intersection, *this_rangelist;
+  svn_rangelist_t *intersection, *this_rangelist;
 
   if (fleb->ctx->cancel_func)
     SVN_ERR(fleb->ctx->cancel_func(fleb->ctx->cancel_baton));
@@ -1332,7 +1331,7 @@ filter_log_entry_with_rangelist(void *baton,
     {
       apr_hash_index_t *hi;
       svn_boolean_t all_subtrees_have_this_rev = TRUE;
-      apr_array_header_t *this_rev_rangelist =
+      svn_rangelist_t *this_rev_rangelist =
         svn_rangelist__initialize(log_entry->revision - 1,
                                   log_entry->revision, TRUE, pool);
       apr_pool_t *iterpool = svn_pool_create(pool);
@@ -1405,7 +1404,7 @@ filter_log_entry_with_rangelist(void *baton,
           if (ancestor_is_self /* Explicit mergeinfo on TARGET_PATH_AFFECTED */
               && (change->action != 'M'))
             {
-              apr_array_header_t *rangelist = apr_hash_get(
+              svn_rangelist_t *rangelist = apr_hash_get(
                 nearest_ancestor_mergeinfo, path, APR_HASH_KEY_STRING);
               svn_merge_range_t *youngest_range = APR_ARRAY_IDX(
                 rangelist, rangelist->nelts - 1, svn_merge_range_t *);
@@ -1424,7 +1423,7 @@ filter_log_entry_with_rangelist(void *baton,
                    hi2 = apr_hash_next(hi2))
                 {
                   const char *mergeinfo_path = svn__apr_hash_index_key(hi2);
-                  apr_array_header_t *rangelist = svn__apr_hash_index_val(hi2);
+                  svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi2);
 
                   /* Does the mergeinfo for PATH reflect if
                      LOG_ENTRY->REVISION was previously merged
@@ -1498,7 +1497,7 @@ static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
                              const apr_array_header_t *merge_source_fspaths,
                              svn_boolean_t filtering_merged,
-                             const apr_array_header_t *rangelist,
+                             const svn_rangelist_t *rangelist,
                              svn_mergeinfo_catalog_t target_mergeinfo_catalog,
                              const char *target_fspath,
                              svn_boolean_t discover_changed_paths,
@@ -1573,6 +1572,44 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   return SVN_NO_ERROR;
 }
+
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
+   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
+   is declared as 'apr_hash_t *' because its key do not obey the rules of
+   'svn_mergeinfo_t'.
+
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
+static svn_error_t *
+mergeinfo_relpaths_to_urls(apr_hash_t **out_mergeinfo,
+                           svn_mergeinfo_t mergeinfo,
+                           const char *repos_root_url,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  *out_mergeinfo = NULL;
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *full_path_mergeinfo = apr_hash_make(result_pool);
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi; hi = apr_hash_next(hi))
+        {
+          const char *key = svn__apr_hash_index_key(hi);
+          void *val = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(full_path_mergeinfo,
+                       svn_path_url_add_component2(repos_root_url, key + 1,
+                                                   result_pool),
+                       APR_HASH_KEY_STRING, val);
+        }
+      *out_mergeinfo = full_path_mergeinfo;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Public APIs ***/
 
@@ -1615,8 +1652,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
       mergeinfo = NULL;
     }
 
-  SVN_ERR(svn_mergeinfo__relpaths_to_urls(mergeinfo_p, mergeinfo,
-                                          repos_root, pool, pool));
+  SVN_ERR(mergeinfo_relpaths_to_urls(mergeinfo_p, mergeinfo,
+                                     repos_root, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1649,8 +1686,8 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
 
   svn_mergeinfo_t source_history;
   svn_mergeinfo_t target_history;
-  apr_array_header_t *master_noninheritable_rangelist;
-  apr_array_header_t *master_inheritable_rangelist;
+  svn_rangelist_t *master_noninheritable_rangelist;
+  svn_rangelist_t *master_inheritable_rangelist;
   apr_array_header_t *merge_source_fspaths =
     apr_array_make(scratch_pool, 1, sizeof(const char *));
   apr_hash_index_t *hi_catalog;
@@ -1730,7 +1767,10 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         }
     }
 
-  /* Open RA sessions to the repository for the source and target.
+  /* Fetch the location history as mergeinfo, for the source branch
+   * (between the given start and end revisions), and, if we're finding
+   * merged revisions, then also for the entire target branch.
+   *
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
   {
@@ -1885,7 +1925,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         {
           /* The inheritable rangelist merged from SUBTREE_SOURCE_HISTORY
              to SUBTREE_PATH. */
-          apr_array_header_t *subtree_merged_rangelist =
+          svn_rangelist_t *subtree_merged_rangelist =
             apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
 
           SVN_ERR(svn_rangelist__merge_many(master_inheritable_rangelist,
@@ -1922,9 +1962,9 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
            hi;
            hi = apr_hash_next(hi))
         {
-          apr_array_header_t *deleted_rangelist;
-          apr_array_header_t *added_rangelist;
-          apr_array_header_t *subtree_merged_rangelist =
+          svn_rangelist_t *deleted_rangelist;
+          svn_rangelist_t *added_rangelist;
+          svn_rangelist_t *subtree_merged_rangelist =
             svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
@@ -1960,7 +2000,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
   else
     {
       /* Create the starting rangelist for what might be eligible. */
-      apr_array_header_t *source_master_rangelist =
+      svn_rangelist_t *source_master_rangelist =
         apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
 
       SVN_ERR(svn_rangelist__merge_many(source_master_rangelist,
@@ -1997,7 +2037,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         = APR_ARRAY_IDX(master_inheritable_rangelist,
                         master_inheritable_rangelist->nelts - 1,
                         svn_merge_range_t *);
-      apr_array_header_t *youngest_rangelist =
+      svn_rangelist_t *youngest_rangelist =
         svn_rangelist__initialize(youngest_range->end - 1,
                                   youngest_range->end,
                                   youngest_range->inheritable,
@@ -2008,9 +2048,9 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
            hi = apr_hash_next(hi))
         {
           const char *key = svn__apr_hash_index_key(hi);
-          apr_array_header_t *subtree_merged_rangelist =
+          svn_rangelist_t *subtree_merged_rangelist =
             svn__apr_hash_index_val(hi);
-          apr_array_header_t *intersecting_rangelist;
+          svn_rangelist_t *intersecting_rangelist;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_rangelist_intersect(&intersecting_rangelist,

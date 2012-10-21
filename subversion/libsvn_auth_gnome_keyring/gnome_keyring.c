@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
+#include <apr_strings.h>
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -38,7 +39,6 @@
 #include "svn_private_config.h"
 
 #include <glib.h>
-#include <dbus/dbus.h>
 #include <gnome-keyring.h>
 
 
@@ -138,9 +138,9 @@ callback_default_keyring(GnomeKeyringResult result,
   return;
 }
 
-/* Returns the default keyring name. */
+/* Returns the default keyring name, allocated in RESULT_POOL. */
 static char*
-get_default_keyring_name(apr_pool_t *pool)
+get_default_keyring_name(apr_pool_t *result_pool)
 {
   char *def = NULL;
   struct gnome_keyring_baton key_info;
@@ -159,7 +159,7 @@ get_default_keyring_name(apr_pool_t *pool)
       return NULL;
     }
 
-  def = strdup(key_info.keyring_name);
+  def = apr_pstrdup(result_pool, key_info.keyring_name);
   callback_destroy_data_keyring(&key_info);
 
   return def;
@@ -291,15 +291,12 @@ password_get_gnome_keyring(svn_boolean_t *done,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  char *default_keyring = NULL;
   GnomeKeyringResult result;
   GList *items;
 
   *done = FALSE;
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
-
-  default_keyring = get_default_keyring_name(pool);
 
   if (! apr_hash_get(parameters,
                      "gnome-keyring-opening-failed",
@@ -339,8 +336,6 @@ password_get_gnome_keyring(svn_boolean_t *done,
                    "");
     }
 
-  free(default_keyring);
-
   return SVN_NO_ERROR;
 }
 
@@ -356,15 +351,12 @@ password_set_gnome_keyring(svn_boolean_t *done,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  char *default_keyring = NULL;
   GnomeKeyringResult result;
   guint32 item_id;
 
   *done = FALSE;
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
-
-  default_keyring = get_default_keyring_name(pool);
 
   if (! apr_hash_get(parameters,
                      "gnome-keyring-opening-failed",
@@ -387,8 +379,6 @@ password_set_gnome_keyring(svn_boolean_t *done,
                    APR_HASH_KEY_STRING,
                    "");
     }
-
-  free(default_keyring);
 
   *done = (result == GNOME_KEYRING_RESULT_OK);
   return SVN_NO_ERROR;
@@ -428,12 +418,14 @@ simple_gnome_keyring_save_creds(svn_boolean_t *saved,
                                           pool);
 }
 
+#if GLIB_CHECK_VERSION(2,6,0)
 static void
 log_noop(const gchar *log_domain, GLogLevelFlags log_level,
          const gchar *message, gpointer user_data)
 {
   /* do nothing */
 }
+#endif
 
 static void
 init_gnome_keyring(void)
@@ -449,7 +441,9 @@ init_gnome_keyring(void)
      suppress stderr spam for not only libgnome-keyring, but for
      anything else the app is linked to that uses glib logging and
      doesn't specify a log_domain. */
+#if GLIB_CHECK_VERSION(2,6,0)
   g_log_set_default_handler(log_noop, NULL);
+#endif
 }
 
 static const svn_auth_provider_t gnome_keyring_simple_provider = {

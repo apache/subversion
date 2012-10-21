@@ -79,6 +79,8 @@ switch_internal(svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   const char *diff3_cmd;
+  apr_hash_t *wcroot_iprops;
+  apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
@@ -218,6 +220,62 @@ switch_internal(svn_revnum_t *result_rev,
                                  svn_dirent_dirname(local_abspath, pool));
     }
 
+  wcroot_iprops = apr_hash_make(pool);
+  
+  /* Will the base of LOCAL_ABSPATH require an iprop cache post-switch?
+     If we are switching LOCAL_ABSPATH to the root of the repository then
+     we don't need to cache inherited properties.  In all other cases we
+     *might* need to cache iprops. */
+  if (strcmp(switch_loc->repos_root_url, switch_loc->url) != 0)
+    {
+      svn_boolean_t wc_root;
+      svn_boolean_t needs_iprop_cache = TRUE;
+
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
+                                          ctx->wc_ctx,
+                                          local_abspath,
+                                          pool));
+
+      /* Switching the WC root to anything but the repos root means
+         we need an iprop cache. */ 
+      if (!wc_root)
+        {
+          /* We know we are switching a subtree to something other than the
+             repos root, but if we are unswitching that subtree we don't
+             need an iprops cache. */
+          const char *target_parent_url;
+          const char *unswitched_url;
+
+          /* Calculate the URL LOCAL_ABSPATH would have if it was unswitched
+             relative to its parent. */
+          SVN_ERR(svn_wc__node_get_url(&target_parent_url, ctx->wc_ctx,
+                                       svn_dirent_dirname(local_abspath,
+                                                          pool),
+                                       pool, pool));
+          unswitched_url = svn_path_url_add_component2(
+            target_parent_url,
+            svn_dirent_basename(local_abspath, pool),
+            pool);
+
+          /* If LOCAL_ABSPATH will be unswitched relative to its parent, then
+             it doesn't need an iprop cache.  Note: It doesn't matter if
+             LOCAL_ABSPATH is withing a switched subtree, only if it's the
+             *root* of a switched subtree.*/
+          if (strcmp(unswitched_url, switch_loc->url) == 0)
+            needs_iprop_cache = FALSE;
+      }
+
+
+      if (needs_iprop_cache)
+        {
+          SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
+                                             "", switch_loc->rev, pool,
+                                             pool));
+          apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
+                       inherited_props);
+        }
+    }
+
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
@@ -226,13 +284,13 @@ switch_internal(svn_revnum_t *result_rev,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
   dfb.ra_session = ra_session;
-  SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
+  dfb.anchor_url = anchor_url;
   dfb.target_revision = switch_loc->rev;
 
   SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, switch_loc->url, use_commit_times,
-                                    depth,
+                                    target, switch_loc->url, wcroot_iprops,
+                                    use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,

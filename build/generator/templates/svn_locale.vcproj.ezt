@@ -31,9 +31,9 @@
 	<Configurations>
 [for platforms][for configs]		<Configuration
 			Name="[configs]|[platforms]"
-			OutputDirectory="..\..\[configs]\mo"
+			OutputDirectory="..\..\..\[configs]\mo"
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\[configs]\mo"
+			IntermediateDirectory="..\..\..\[configs]\mo"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">

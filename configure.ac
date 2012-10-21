@@ -146,7 +146,9 @@ SVN_FIND_APACHE(20020903)
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.7.12"
 SQLITE_RECOMMENDED_VER="3.7.12"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SQLITE_RECOMMENDED_VER_URL="3071200"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER_URL}.zip"
+
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
 
@@ -477,43 +479,11 @@ if test "$svn_lib_sasl" = "yes"; then
             [Defined if Cyrus SASL v2 is present on the system])
 fi
 
-dnl Mac OS KeyChain -------------------
+dnl Mac OS specific features -------------------
 
-AC_ARG_ENABLE(keychain,
-  AS_HELP_STRING([--disable-keychain], 
-  [Disable use of Mac OS KeyChain for auth credentials]),
-  [enable_keychain=$enableval],[enable_keychain=yes])
-
-AC_MSG_CHECKING([for Mac OS KeyChain Services])
-
-if test "$enable_keychain" = "yes"; then
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <AvailabilityMacros.h>
-#if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_2)
-#error KeyChain API unavailable.
-#endif]], [[]])],[],[enable_keychain=no])
-fi
-
-if test "$enable_keychain" = "yes"; then
-  dnl ### Hack.  We should only need to pass the -framework options when
-  dnl linking libsvn_subr, since it is the only library that uses Keychain.
-  dnl
-  dnl Unfortunately, libtool 1.5.x doesn't track transitive dependencies for
-  dnl OS X frameworks like it does for normal libraries, so we need to
-  dnl explicitly pass the option to all the users of libsvn_subr to allow
-  dnl static builds to link successfully.
-  dnl
-  dnl This does mean that all executables we link will be linked directly
-  dnl to these frameworks - even when building shared libraries - but that
-  dnl shouldn't cause any problems.
-  LIBS="$LIBS -framework Security"
-  LIBS="$LIBS -framework CoreFoundation"
-  LIBS="$LIBS -framework CoreServices"
-  AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
-  AC_MSG_RESULT([yes])
-else
-  AC_MSG_RESULT([no])
-fi
-
+SVN_LIB_MACHO_ITERATE
+SVN_LIB_MACOS_PLIST
+SVN_LIB_MACOS_KEYCHAIN
 
 dnl APR_HAS_DSO -------------------
 
@@ -532,7 +502,7 @@ AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
 CPPFLAGS="$old_CPPFLAGS"
 
 
-dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
+dnl D-Bus (required for support for KWallet) -------------------
 
 if test -n "$PKG_CONFIG"; then
   AC_MSG_CHECKING([for D-Bus .pc file])
@@ -575,9 +545,7 @@ AS_HELP_STRING([--without-gpg-agent],
                [Disable support for GPG-Agent]),
                [], [with_gpg_agent=yes])
 AC_MSG_CHECKING([whether to support GPG-Agent])
-if test "$svn_enable_shared" != "yes"; then
-  AC_MSG_RESULT([no (shared library support is disabled)])
-elif test "$with_gpg_agent" = "yes"; then
+if test "$with_gpg_agent" = "yes"; then
   AC_MSG_RESULT([yes])
   AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
             [Is GPG Agent support enabled?])
@@ -591,50 +559,65 @@ dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
   AS_HELP_STRING([--with-gnome-keyring], 
-                 [Enable use of GNOME Keyring for auth credentials]),
+                 [Enable use of GNOME Keyring for auth credentials (enabled by default if found)]),
                  [with_gnome_keyring="$withval"],
-                 [with_gnome_keyring=no])
+                 [with_gnome_keyring=auto])
 
+found_gnome_keyring=no
 AC_MSG_CHECKING([whether to look for GNOME Keyring])
 if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
   if test "$svn_enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test -n "$PKG_CONFIG"; then
-        if test "$HAVE_DBUS" = "yes"; then
-          AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-          if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
+        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+        if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
+          AC_MSG_RESULT([yes])
+          old_CPPFLAGS="$CPPFLAGS"
+          SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
+          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+          AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
+          AC_MSG_CHECKING([for GNOME Keyring])
+          if test "$found_gnome_keyring" = "yes"; then
             AC_MSG_RESULT([yes])
-            old_CPPFLAGS="$CPPFLAGS"
-            SVN_GNOME_KEYRING_INCLUDES="$DBUS_CPPFLAGS `$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
-            CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-            AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
-            AC_MSG_CHECKING([for GNOME Keyring])
-            if test "$with_gnome_keyring" = "yes"; then
-              AC_MSG_RESULT([yes])
-              AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                        [Is GNOME Keyring support enabled?])
-              CPPFLAGS="$old_CPPFLAGS"
-              SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
-            else
-              AC_MSG_RESULT([no])
-              AC_MSG_ERROR([cannot find GNOME Keyring])
-            fi
+            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                      [Is GNOME Keyring support enabled?])
+            CPPFLAGS="$old_CPPFLAGS"
+            SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
           else
             AC_MSG_RESULT([no])
-            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+            if test "$with_gnome_keyring" = "yes"; then
+              AC_MSG_ERROR([cannot find GNOME Keyring])
+            fi
           fi
         else
-          AC_MSG_ERROR([cannot find D-Bus])
+          AC_MSG_RESULT([no])
+          if test "$with_gnome_keyring" = "yes"; then
+            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
+          else
+            with_gnome_keyring=no
+          fi
         fi
       else
-        AC_MSG_ERROR([cannot find pkg-config])
+        if test "$with_gnome_keyring" = "yes"; then
+          AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
+        else
+          with_gnome_keyring=no
+        fi
       fi
     else
-      AC_MSG_ERROR([APR does not have support for DSOs])
+      if test "$with_gnome_keyring" = "yes"; then
+        AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
+      else
+        with_gnome_keyring=no
+      fi
     fi
   else
-    AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
+    if test "$with_gnome_keyring" = "yes"; then
+      AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
+    else
+      with_gnome_keyring=no
+    fi
   fi
 else
   AC_MSG_RESULT([no])
@@ -699,13 +682,23 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
-AH_BOTTOM(
+AH_BOTTOM([
+/* Indicate to translators that string X should be translated.  Do not look
+   up the translation at run time; just expand to X.  This macro is suitable
+   for use where a constant string is required at compile time. */
 #define N_(x) x
+/* Indicate to translators that we have decided the string X should not be
+   translated.  Expand to X. */
 #define U_(x) x
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
+/* Indicate to translators that string X should be translated.  At run time,
+   look up and return the translation of X. */
 #define _(x) dgettext(PACKAGE_NAME, x)
+/* Indicate to translators that strings X1 and X2 are singular and plural
+   forms of the same message, and should be translated.  At run time, return
+   an appropriate translation depending on the number N. */
 #define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
 #else
 #define _(x) (x)
@@ -713,7 +706,7 @@ AH_BOTTOM(
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
 #endif
-)
+])
 
 dnl Used to simulate makefile conditionals.
 GETTEXT_CODESET=\#
@@ -836,7 +829,7 @@ if test "$svn_lib_kwallet" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
 fi
 
-if test "$with_gnome_keyring" = "yes"; then
+if test "$found_gnome_keyring" = "yes"; then
   BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gnome-keyring-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
@@ -877,6 +870,8 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
+dnl check for uname
+AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
 
 dnl Process some configuration options ----------
 
@@ -1192,7 +1187,8 @@ SVN_CHECK_CTYPESGEN
 dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
 AS_HELP_STRING([--enable-runtime-module-search],
-               [Turn on dynamic loading of RA/FS libraries]),
+               [Turn on dynamic loading of RA/FS libraries including
+                third-party FS libraries]),
 [
     if test "$enableval" = "yes"; then
       use_dso=yes
@@ -1387,6 +1383,10 @@ AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 # Ensure that SWIG is checked after reconfiguration.
 rm -f .swig_checked
+
+dnl Provide ${host} for use in compiled code (for svn --version)
+AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",
+                   [Defined to the config.guess name of the build system])
 
 AC_OUTPUT
 

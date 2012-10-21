@@ -32,7 +32,7 @@ IF ERRORLEVEL 1 (
 PATH %PATH%;%TESTDIR%\bin
 SET result=0
 
-python win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
 IF ERRORLEVEL 1 (
   echo [python reported error %ERRORLEVEL%]
   SET result=1

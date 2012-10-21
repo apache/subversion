@@ -2047,7 +2047,7 @@ def atomic_over_ra(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
 
-  # From this point on, similar to ../libsvn_fs-fs-test.c:revision_props().
+  # From this point on, similar to ../libsvn_fs/fs-test.c:revision_props().
   s1 = "violet"
   s2 = "wrong value"
 
@@ -2268,7 +2268,7 @@ def propget_redirection(sbox):
 
   # Run propget -vR svn:mergeinfo, redirecting the stdout to a file.
   arglist = [svntest.main.svn_binary, 'propget', SVN_PROP_MERGEINFO, '-vR',
-             wc_dir]
+             '--config-dir', svntest.main.default_config_dir, wc_dir]
   redir_file = open(redirect_file, 'wb')
   pg_proc = subprocess.Popen(arglist, stdout=redir_file)
   pg_proc.wait()

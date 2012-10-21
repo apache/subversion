@@ -31,7 +31,9 @@
    ### remain in the code. at that point, we can rejigger this header.  */
 #ifdef SVN_DEBUG
 
-#include <stdio.h>
+#define APR_WANT_STDIO
+#include <apr_want.h>
+#include <apr_hash.h>
 
 #ifdef __cplusplus
 extern "C" {

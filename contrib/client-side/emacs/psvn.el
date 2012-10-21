@@ -3575,7 +3575,7 @@ If the file is not found, return nil."
     (and found start-pos)))
 
 (defun svn-status-goto-file-name (name)
-  "Move the cursor the the line that displays NAME."
+  "Move the cursor to the line that displays NAME."
   (let ((pos (svn-status-get-file-name-buffer-position name)))
     (if pos
         (goto-char pos)

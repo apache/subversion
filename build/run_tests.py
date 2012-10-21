@@ -45,7 +45,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 SVN_VER_MINOR = 8
 
-import os, re, subprocess, sys, imp
+import os, re, subprocess, sys, imp, threading
 from datetime import datetime
 
 import getopt
@@ -317,6 +317,12 @@ class TestHarness:
       print("WARNING: no failures, but '%s' exists from a previous run."
             % self.faillogfile)
 
+    # Summary.
+    if failed or xpassed or failed_list:
+      print("SUMMARY: Some tests failed.\n")
+    else:
+      print("SUMMARY: All tests successful.\n")
+
     self._close_log()
     return failed
 
@@ -377,12 +383,13 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed):
+      if not self.log or self.dots_written >= dot_count:
+        return
       dots = (completed * dot_count) / total
-
+      if dots > dot_count:
+        dots = dot_count
       dots_to_write = dots - self.dots_written
-      if self.log:
-        os.write(sys.stdout.fileno(), '.' * dots_to_write)
-
+      os.write(sys.stdout.fileno(), '.' * dots_to_write)
       self.dots_written = dots
 
     tests_completed = 0
@@ -478,21 +485,28 @@ class TestHarness:
       sys.stdout.flush()
       sys.stderr.flush()
       self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
-      os.dup2(self.log.fileno(), 1)
-      os.dup2(self.log.fileno(), 2)
+      old_stdout = os.dup(sys.stdout.fileno())
+      old_stderr = os.dup(sys.stderr.fileno())
+      os.dup2(self.log.fileno(), sys.stdout.fileno())
+      os.dup2(self.log.fileno(), sys.stderr.fileno())
 
-    # This has to be class-scoped for use in the progress_func()
+    # These have to be class-scoped for use in the progress_func()
     self.dots_written = 0
+    self.progress_lock = threading.Lock()
     def progress_func(completed, total):
+      """Report test suite progress. Can be called from multiple threads
+         in parallel mode."""
+      if not self.log:
+        return
       dots = (completed * dot_count) / total
-
-      dots_to_write = dots - self.dots_written
-      if self.log:
+      if dots > dot_count:
+        dots = dot_count
+      self.progress_lock.acquire()
+      if self.dots_written < dot_count:
+        dots_to_write = dots - self.dots_written
+        self.dots_written = dots
         os.write(old_stdout, '.' * dots_to_write)
-
-      self.dots_written = dots
+      self.progress_lock.release()
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
 
@@ -525,8 +539,8 @@ class TestHarness:
     if self.log:
       sys.stdout.flush()
       sys.stderr.flush()
-      os.dup2(old_stdout, 1)
-      os.dup2(old_stderr, 2)
+      os.dup2(old_stdout, sys.stdout.fileno())
+      os.dup2(old_stderr, sys.stderr.fileno())
       os.close(old_stdout)
       os.close(old_stderr)
 

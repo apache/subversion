@@ -44,6 +44,7 @@
 #include "StatusCallback.h"
 #include "ChangelistCallback.h"
 #include "ListCallback.h"
+#include "ImportFilterCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
@@ -553,7 +554,9 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops, CommitCallback *callback)
+                         RevpropTable &revprops,
+                         ImportFilterCallback *ifCallback,
+                         CommitCallback *commitCallback)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -567,10 +570,11 @@ void SVNClient::doImport(const char *path, const char *url,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
+    SVN_JNI_ERR(svn_client_import5(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(subPool),
-                                   CommitCallback::callback, callback,
+                                   ImportFilterCallback::callback, ifCallback,
+                                   CommitCallback::callback, commitCallback,
                                    ctx, subPool.getPool()), );
 }
 
@@ -760,7 +764,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
         jobject jranges =
-            CreateJ::RevisionRangeList((apr_array_header_t *) val);
+            CreateJ::RevisionRangeList((svn_rangelist_t *) val);
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
@@ -816,7 +820,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
  * Get a property.
  */
 jbyteArray SVNClient::propertyGet(const char *path, const char *name,
-                                  Revision &revision, Revision &pegRevision)
+                                  Revision &revision, Revision &pegRevision,
+                                  StringArray &changelists)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -829,11 +834,11 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
         return NULL;
 
     apr_hash_t *props;
-    SVN_JNI_ERR(svn_client_propget4(&props, name,
+    SVN_JNI_ERR(svn_client_propget5(&props, NULL, name,
                                     intPath.c_str(), pegRevision.revision(),
                                     revision.revision(), NULL, svn_depth_empty,
-                                    NULL, ctx, subPool.getPool(),
-                                    subPool.getPool()),
+                                    changelists.array(subPool), ctx,
+                                    subPool.getPool(), subPool.getPool()),
                 NULL);
 
     apr_hash_index_t *hi;
@@ -1187,7 +1192,6 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
-    apr_pool_t *pool = subPool.getPool();
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
 
@@ -1195,13 +1199,12 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame5(intPath.c_str(), pegRevision.revision(),
-                                  revisionStart.revision(),
-                                  revisionEnd.revision(),
-                                  svn_diff_file_options_create(pool),
-                                  ignoreMimeType, includeMergedRevisions,
-                                  BlameCallback::callback, callback, ctx,
-                                  pool),
+    SVN_JNI_ERR(svn_client_blame5(
+          intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
+          revisionEnd.revision(),
+          svn_diff_file_options_create(subPool.getPool()), ignoreMimeType,
+          includeMergedRevisions, BlameCallback::callback, callback, ctx,
+          subPool.getPool()),
         );
 }
 

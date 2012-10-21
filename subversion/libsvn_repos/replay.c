@@ -150,7 +150,6 @@ struct path_driver_cb_baton
   apr_pool_t *pool;
 };
 
-#ifndef USE_EV2_IMPL
 /* Recursively traverse EDIT_PATH (as it exists under SOURCE_ROOT) emitting
    the appropriate editor calls to add it and its children without any
    history.  This is meant to be used when either a subset of the tree
@@ -342,7 +341,6 @@ add_subdir(svn_fs_root_t *source_root,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* Given PATH deleted under ROOT, return in READABLE whether the path was
    readable prior to the deletion.  Consult COPIES (a stack of 'struct
@@ -459,7 +457,6 @@ fill_copyfrom(svn_fs_root_t **copyfrom_root,
   return SVN_NO_ERROR;
 }
 
-#ifndef USE_EV2_IMPL
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -784,8 +781,6 @@ path_driver_cb_func(void **dir_baton,
   return SVN_NO_ERROR;
 }
 
-#else
-
 static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
@@ -795,8 +790,14 @@ fetch_kind_func(svn_kind_t *kind,
 {
   svn_fs_root_t *root = baton;
   svn_node_kind_t node_kind;
+  svn_fs_root_t *prev_root;
+  svn_fs_t *fs = svn_fs_root_fs(root);
 
-  SVN_ERR(svn_fs_check_path(&node_kind, root, path, scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_revision_root_revision(root) - 1;
+
+  SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
+  SVN_ERR(svn_fs_check_path(&node_kind, prev_root, path, scratch_pool));
 
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
@@ -814,16 +815,14 @@ fetch_props_func(apr_hash_t **props,
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
-  SVN_ERR(svn_fs_revision_root(&prev_root, fs,
-                               svn_fs_revision_root_revision(root) - 1,
-                               scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_revision_root_revision(root) - 1;
 
+  SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
   SVN_ERR(svn_fs_node_proplist(props, prev_root, path, result_pool));
 
   return SVN_NO_ERROR;
 }
-
-#endif
 
 
 
@@ -1009,7 +1008,6 @@ svn_repos_replay2(svn_fs_root_t *root,
  *                      Ev2 Implementation                       *
  *****************************************************************/
 
-#ifdef USE_EV2_IMPL
 /* Recursively traverse EDIT_PATH (as it exists under SOURCE_ROOT) emitting
    the appropriate editor calls to add it and its children without any
    history.  This is meant to be used when either a subset of the tree
@@ -1018,16 +1016,16 @@ svn_repos_replay2(svn_fs_root_t *root,
    unavailable because of authz and we need to use it as the source of
    a copy. */
 static svn_error_t *
-add_subdir(svn_fs_root_t *source_root,
-           svn_fs_root_t *target_root,
-           svn_editor_t *editor,
-           const char *repos_relpath,
-           const char *source_fspath,
-           svn_repos_authz_func_t authz_read_func,
-           void *authz_read_baton,
-           apr_hash_t *changed_paths,
-           apr_pool_t *result_pool,
-           apr_pool_t *scratch_pool)
+add_subdir_ev2(svn_fs_root_t *source_root,
+               svn_fs_root_t *target_root,
+               svn_editor_t *editor,
+               const char *repos_relpath,
+               const char *source_fspath,
+               svn_repos_authz_func_t authz_read_func,
+               void *authz_read_baton,
+               apr_hash_t *changed_paths,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
@@ -1131,11 +1129,11 @@ add_subdir(svn_fs_root_t *source_root,
             }
           else
             {
-              SVN_ERR(add_subdir(new_source_root, target_root,
-                                 editor, child_relpath,
-                                 new_source_fspath,
-                                 authz_read_func, authz_read_baton,
-                                 changed_paths, result_pool, iterpool));
+              SVN_ERR(add_subdir_ev2(new_source_root, target_root,
+                                     editor, child_relpath,
+                                     new_source_fspath,
+                                     authz_read_func, authz_read_baton,
+                                     changed_paths, result_pool, iterpool));
             }
         }
       else if (dent->kind == svn_node_file)
@@ -1164,7 +1162,6 @@ add_subdir(svn_fs_root_t *source_root,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 static svn_error_t *
 replay_node(svn_fs_root_t *root,
@@ -1178,11 +1175,6 @@ replay_node(svn_fs_root_t *root,
             void *authz_read_baton,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
-#ifndef USE_EV2_IMPL
-{
-  SVN__NOT_IMPLEMENTED();
-}
-#else
 {
   svn_fs_path_change2_t *change;
   svn_boolean_t do_add = FALSE;
@@ -1297,10 +1289,11 @@ replay_node(svn_fs_root_t *root,
              contents. */
           if (change->copyfrom_path && ! copyfrom_path)
             {
-              SVN_ERR(add_subdir(copyfrom_root, root, editor,
-                                 repos_relpath, change->copyfrom_path,
-                                 authz_read_func, authz_read_baton,
-                                 changed_paths, result_pool, scratch_pool));
+              SVN_ERR(add_subdir_ev2(copyfrom_root, root, editor,
+                                     repos_relpath, change->copyfrom_path,
+                                     authz_read_func, authz_read_baton,
+                                     changed_paths, result_pool,
+                                     scratch_pool));
             }
           else
             {
@@ -1437,15 +1430,18 @@ replay_node(svn_fs_root_t *root,
       if (change->node_kind == svn_node_file
           && (change->text_mod || change->prop_mod || downgraded_copy))
         {
-          svn_checksum_t *checksum;
-          svn_stream_t *contents;
+          svn_checksum_t *checksum = NULL;
+          svn_stream_t *contents = NULL;
 
-          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
-                                       root, repos_relpath, TRUE,
-                                       scratch_pool));
+          if (change->text_mod)
+            {
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                           root, repos_relpath, TRUE,
+                                           scratch_pool));
 
-          SVN_ERR(svn_fs_file_contents(&contents, root, repos_relpath,
-                                       scratch_pool));
+              SVN_ERR(svn_fs_file_contents(&contents, root, repos_relpath,
+                                           scratch_pool));
+            }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
                                         SVN_INVALID_REVNUM, props, checksum,
@@ -1465,7 +1461,6 @@ replay_node(svn_fs_root_t *root,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 svn_error_t *
 svn_repos__replay_ev2(svn_fs_root_t *root,

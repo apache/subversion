@@ -2989,6 +2989,7 @@ def delete_conflicts_one_of_many(sbox):
   verify_file_deleted("failed to remove conflict file",
                       sbox.ospath('A/D/G/rho.mine'))
 
+
 ########################################################################
 # Run the tests
 

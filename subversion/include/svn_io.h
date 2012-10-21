@@ -610,13 +610,13 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
 /** Set @a *different_p12 to non-zero if @a file1 and @a file2 have different
  * sizes, else set to zero.  Do the similar for @a *different_p23 with
  * @a file2 and @a file3, and @a *different_p13 for @a file1 and @a file3.
- * All three of @a file1, @a file2 and @a file3 are utf8-encoded.
+ * The filenames @a file1, @a file2 and @a file3 are utf8-encoded.
  *
  * Setting @a *different_p12 to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
  * definitely different.  That is, if the size of one or both files
- * cannot be determined, then the sizes are not known to be different,
- * so @a *different_p12 is set to 0.
+ * cannot be determined (due to stat() returning an error), then the sizes
+ * are not known to be different, so @a *different_p12 is set to 0.
  */
 svn_error_t *
 svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
@@ -1155,9 +1155,9 @@ svn_stream_write(svn_stream_t *stream,
 svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
-/** Reset a generic stream back to its origin. E.g. On a file this would be
+/** Reset a generic stream back to its origin. (E.g. On a file this would be
  * implemented as a seek to position 0).  This function returns a
- * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
  * @since New in 1.7.
@@ -2200,9 +2200,9 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
 
-/* Read a line of text from a file, up to a specified length.
+/** Read a line of text from a file, up to a specified length.
  *
- * Allocate @a *stringbuf in @a result_pool, and read into it one line 
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
  * from @a file. Reading stops either after a line-terminator was found
  * or after @a max_len bytes have been read.
  *

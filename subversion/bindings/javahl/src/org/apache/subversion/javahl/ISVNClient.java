@@ -406,6 +406,13 @@ public interface ISVNClient
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,
+                  ImportFilterCallback importFilterCallback,
+                  CommitMessageCallback handler, CommitCallback commitCallback)
+            throws ClientException;
+
+    void doImport(String path, String url, Depth depth,
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                  Map<String, String> revpropTable,
                   CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
@@ -718,6 +725,10 @@ public interface ISVNClient
      * @return the Property
      * @throws ClientException
      */
+    byte[] propertyGet(String path, String name, Revision revision,
+                       Revision pegRevision, Collection<String> changelists)
+            throws ClientException;
+
     byte[] propertyGet(String path, String name, Revision revision,
                        Revision pegRevision)
             throws ClientException;

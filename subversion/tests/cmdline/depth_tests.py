@@ -2881,7 +2881,29 @@ def commit_then_immediates_update(sbox):
                                         expected_status,
                                         None, None, None, None, None, False,
                                         "--depth=immediates", wc_dir)
+
+def revert_depth_files(sbox):
+  "depth immediate+files should revert deleted files"
+
+  sbox.build(read_only = True)
   
+  expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
+  
+  # Apply an unrelated delete one level to deep
+  sbox.simple_rm('A/D/gamma')
+
+  sbox.simple_rm('A/mu')
+  # Expect reversion of just 'mu'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=immediates', sbox.ospath('A'))
+
+  # Apply an unrelated directory delete
+  sbox.simple_rm('A/D')
+
+  sbox.simple_rm('A/mu')
+  # Expect reversion of just 'mu'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=files', sbox.ospath('A'))
 
 
 #----------------------------------------------------------------------
@@ -2932,6 +2954,7 @@ test_list = [ None,
               sparse_update_with_dash_dash_parents,
               update_below_depth_empty,
               commit_then_immediates_update,
+              revert_depth_files,
               ]
 
 if __name__ == "__main__":

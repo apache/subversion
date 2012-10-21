@@ -72,7 +72,8 @@ def no_mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            [],
                                            sbox.repo_url + '/A',
-                                           sbox.repo_url + '/A2')
+                                           sbox.repo_url + '/A2',
+                                           "--show-revs=merged")
 
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"
@@ -94,7 +95,8 @@ def mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['3'],
                                            sbox.repo_url + '/A',
-                                           sbox.ospath('A2'))
+                                           sbox.ospath('A2'),
+                                           "--show-revs=merged")
 
 @SkipUnless(server_has_mergeinfo)
 def explicit_mergeinfo_source(sbox):
@@ -132,13 +134,17 @@ def explicit_mergeinfo_source(sbox):
 
   # Check using each of our recorded merge sources (as paths and URLs).
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['2', '4'], url(B2), path(B))
+                                           ['2', '4'], url(B2), path(B),
+                                           "--show-revs=merged")
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['2', '4'], path(B2), path(B))
+                                           ['2', '4'], path(B2), path(B),
+                                           "--show-revs=merged")
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['3', '5'], url(B3), path(B))
+                                           ['3', '5'], url(B3), path(B),
+                                           "--show-revs=merged")
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['3', '5'], path(B3), path(B))
+                                           ['3', '5'], path(B3), path(B),
+                                           "--show-revs=merged")
 
 @SkipUnless(server_has_mergeinfo)
 def mergeinfo_non_source(sbox):
@@ -162,7 +168,8 @@ def mergeinfo_non_source(sbox):
 
   # Check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [], H2_url, H_path)
+                                           [], H2_url, H_path,
+                                           "--show-revs=merged")
 
 #----------------------------------------------------------------------
 # Issue #3138
@@ -238,7 +245,8 @@ def non_inheritable_mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['4','6*'],
                                            sbox.repo_url + '/A',
-                                           A_COPY_path)
+                                           A_COPY_path,
+                                           '--show-revs', 'merged')
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['3','5','6*'],
                                            sbox.repo_url + '/A',
@@ -249,7 +257,8 @@ def non_inheritable_mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['4'],
                                            sbox.repo_url + '/A/D',
-                                           D_COPY_path)
+                                           D_COPY_path,
+                                           '--show-revs', 'merged')
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['3','6'],
                                            sbox.repo_url + '/A/D',

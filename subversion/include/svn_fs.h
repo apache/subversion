@@ -402,6 +402,24 @@ svn_fs_recover(const char *path,
                apr_pool_t *pool);
 
 
+/**
+ * Take an exclusive lock on @a fs to prevent commits and then invoke
+ * @a freeze_body passing @a baton.
+ *
+ * @note The BDB backend doesn't implement this feature so most
+ * callers should not call this function directly but should use the
+ * higher level #svn_repos_freeze instead.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool);
+              
+
+
 /** Subversion filesystems based on Berkeley DB.
  *
  * The following functions are specific to Berkeley DB filesystems.
@@ -1957,6 +1975,44 @@ svn_fs_file_contents(svn_stream_t **contents,
                      const char *path,
                      apr_pool_t *pool);
 
+/**
+ * Callback function type that gets presented with a immutable non-NULL
+ * @a contents of @a len bytes.  Further parameters may be passed through
+ * in @a baton.
+ *
+ * Allocations must be made in @a pool.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_fs_process_contents_func_t)(const unsigned char *contents,
+                                  apr_size_t len,
+                                  void *baton,
+                                  apr_pool_t *pool);
+
+/** Attempts to efficiently provide the contents of the file @a path in
+ * @a root.  If that succeeds, @a *success will be set to #TRUE and the
+ * contents will be passed to the the @a processor along with the given
+ * @a baton.  Allocations take place in @a pool.
+ *
+ * This function is intended to support zero copy data processing.  It may
+ * not be implemented for all data backends or not applicable for certain
+ * content.  In that case, @a *success will always be #FALSE.  Also, this
+ * is a best-effort function which means there is no guarantee that e.g.
+ * @a processor gets called at for any content.
+ *
+ * @note @a processor is expected to be relatively short function with
+ * at most O(content size) runtime.
+ * 
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool);
 
 /** Create a new file named @a path in @a root.  The file's initial contents
  * are the empty string, and it has no properties.  @a root must be the
@@ -2405,7 +2461,8 @@ svn_fs_get_locks(svn_fs_t *fs,
 
 /**
  * Append a textual list of all available FS modules to the stringbuf
- * @a output.
+ * @a output.  Third-party modules are only included if repository
+ * access has caused them to be loaded.
  *
  * @since New in 1.2.
  */

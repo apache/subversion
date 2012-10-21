@@ -297,7 +297,10 @@ svn_xml_make_header2(svn_stringbuf_t **str,
                      const char *encoding,
                      apr_pool_t *pool);
 
-/* Like svn_xml_make_header2, but does not emit encoding information. */
+/** Like svn_xml_make_header2(), but does not emit encoding information.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
 SVN_DEPRECATED
 void
 svn_xml_make_header(svn_stringbuf_t **str,

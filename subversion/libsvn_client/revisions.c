@@ -96,7 +96,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                            scratch_pool, scratch_pool);
 
         /* Return the same error as older code did (before and at r935091).
-           At least svn_client_proplist3 promises SVN_ERR_ENTRY_NOT_FOUND. */
+           At least svn_client_proplist4 promises SVN_ERR_ENTRY_NOT_FOUND. */
         if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           {
             svn_error_clear(err);

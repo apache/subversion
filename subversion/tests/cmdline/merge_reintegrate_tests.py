@@ -1002,18 +1002,18 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # reflects that the same revisions have been applied across all of A_COPY,
   # then the reintegrate merge should succeed.  We'll try that case first.
   #
-  #   A_COPY_3       4--------9---
+  #   A_COPY_3       4-------[9]--
   #                 /          \
-  #                /            \c.
+  #                /            \
   #   A     -1--------5-6-7-8---10-------------------WC--
-  #            \ \              (D)         \        /r.
-  #             \ \                    (mu)  \s.    /
+  #            \ \              (D)         \        /reint.
+  #             \ \                    (mu)  \      /
   #   A_COPY     2-\--------------------12---13--14------
-  #                 \                   /c.
+  #                 \                   /
   #                  \                 /
-  #   A_COPY_2        3--------------11---
+  #   A_COPY_2        3-------------[11]--
   #
-  #   Key: c. = cherry-pick, s. = sync, r. = reintegrate.
+  #   Key: [#] = cherry-picked revision; (foo) = merge of subtree 'foo'
   #   Note: These diagrams show an overview and do not capture every detail.
 
   # r9 - Make a text change to A_COPY_3/D/gamma
@@ -1189,16 +1189,16 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # merge should fail, but should provide a helpful message as to where the
   # problems are.
   #
-  #   A_COPY_3        4--------9---
+  #   A_COPY_3        4-------[9]--
   #                  /          \
-  #                 /            \c.        [-8]___
+  #                 /            \          [-8]___
   #   A     -1---------5-6-7-8---10----------------\-------WC--
-  #            \ \               (D)        \       \      /r.
-  #             \ \                    (mu)  \s.     \c.  /
+  #            \ \               (D)        \       \      /reint.
+  #             \ \                    (mu)  \       \    /
   #   A_COPY     2-\--------------------12---13--14--15--------
-  #                 \                   /c.          (D)
+  #                 \                   /            (D)
   #                  \                 /
-  #   A_COPY_2        3--------------11---
+  #   A_COPY_2        3-------------[11]--
 
   # First revert the previous reintegrate merge
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1269,16 +1269,16 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      of 'trunk' was previously merged to 'branch'
   #
   #                                       Step:   A   B    C   D    E
-  #   A_COPY_3    ----9---
+  #   A_COPY_3    ---[9]--
   #              /     \                      (D/g.->
-  #             /       \c.        [-8]___     D/g.m.) (D/g.m.)
+  #             /       \          [-8]___     D/g.m.) (D/g.m.)
   #   A     ------------10----------------\------16-------18--------WC
-  #          \\         (D)        \       \        \        \      /r.
-  #           \\              (mu)  \s.     \c.      \s.      \s.  /
+  #          \\         (D)        \       \        \        \      /reint.
+  #           \\              (mu)  \       \        \        \    /
   #   A_COPY   -\--------------12---13--14--15-------17-------19------
-  #              \             /c.          (D)
+  #              \             /            (D)
   #               \           /
-  #   A_COPY_2     ---------11---
+  #   A_COPY_2     --------[11]--
 
   # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
   # r874258 WC-to-WC moves won't create mergeinfo on the dest if the source
@@ -1503,7 +1503,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
   # r12 - Do a --record-only merge from 'A' to the feature branch so we
   # don't try to merge r11 from trunk during the next sync merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c11',
                                      '--record-only',
                                      sbox.repo_url + '/A',
                                      Feature_branch_path)

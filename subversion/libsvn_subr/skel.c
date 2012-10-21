@@ -23,6 +23,8 @@
 #include <string.h>
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_props.h"
+#include "svn_pools.h"
 #include "private/svn_skel.h"
 #include "private/svn_string_private.h"
 
@@ -160,6 +162,35 @@ is_valid_proplist_skel(const svn_skel_t *skel)
       for (elt = skel->children; elt; elt = elt->next)
         if (! elt->is_atom)
           return FALSE;
+
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
+static svn_boolean_t
+is_valid_iproplist_skel(const svn_skel_t *skel)
+{
+  int len = svn_skel__list_length(skel);
+
+  if ((len >= 0) && (len & 1) == 0)
+    {
+      svn_skel_t *elt;
+
+      for (elt = skel->children; elt; elt = elt->next)
+        {
+          if (!elt->is_atom)
+            return FALSE;
+
+          if (elt->next == NULL)
+            return FALSE;
+
+          elt = elt->next;
+
+          if (! is_valid_proplist_skel(elt))
+            return FALSE;
+        }
 
       return TRUE;
     }
@@ -532,6 +563,33 @@ svn_skel__make_empty_list(apr_pool_t *pool)
   return skel;
 }
 
+svn_skel_t *svn_skel__dup(const svn_skel_t *src_skel, svn_boolean_t dup_data,
+                          apr_pool_t *result_pool)
+{
+  svn_skel_t *skel = apr_pmemdup(result_pool, src_skel, sizeof(svn_skel_t));
+
+  if (dup_data && skel->data)
+    {
+      if (skel->is_atom)
+        skel->data = apr_pmemdup(result_pool, skel->data, skel->len);
+      else
+        {
+          /* When creating a skel this would be NULL, 0 for a list.
+             When parsing a string to a skel this might point to real data
+             delimiting the sublist. We don't copy that from here. */
+          skel->data = NULL;
+          skel->len = 0;
+        }
+    }
+
+  if (skel->children)
+    skel->children = svn_skel__dup(skel->children, dup_data, result_pool);
+
+  if (skel->next)
+    skel->next = svn_skel__dup(skel->next, dup_data, result_pool);
+
+  return skel;
+}
 
 void
 svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
@@ -662,6 +720,34 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_skel__parse_iprops(apr_array_header_t **iprops,
+                       const svn_skel_t *skel,
+                       apr_pool_t *result_pool)
+{
+  svn_skel_t *elt;
+
+  /* Validate the skel. */
+  if (! is_valid_iproplist_skel(skel))
+    return skel_err("iprops");
+
+  /* Create the returned structure */
+  *iprops = apr_array_make(result_pool, 1,
+                           sizeof(svn_prop_inherited_item_t *));
+
+  for (elt = skel->children; elt; elt = elt->next->next)
+    {
+      svn_prop_inherited_item_t *new_iprop = apr_palloc(result_pool,
+                                                        sizeof(*new_iprop));
+      svn_string_t *repos_parent = svn_string_ncreate(elt->data, elt->len,
+                                                      result_pool);
+      SVN_ERR(svn_skel__parse_proplist(&(new_iprop->prop_hash), elt->next,
+                                       result_pool));
+      new_iprop->path_or_url = repos_parent->data;
+      APR_ARRAY_PUSH(*iprops, svn_prop_inherited_item_t *) = new_iprop;
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_skel__parse_prop(svn_string_t **propval,
@@ -730,6 +816,68 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
   /* Validate and return the skel. */
   if (! is_valid_proplist_skel(skel))
     return skel_err("proplist");
+  *skel_p = skel;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_skel__unparse_iproplist(svn_skel_t **skel_p,
+                            const apr_array_header_t *inherited_props,
+                            apr_pool_t *result_pool)
+{
+  svn_skel_t *skel = svn_skel__make_empty_list(result_pool);
+
+  /* Create the skel. */
+  if (inherited_props)
+    {
+      int i;
+      apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create(result_pool);
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          svn_skel_t *skel_list = svn_skel__make_empty_list(result_pool);
+          svn_skel_t *skel_atom;
+
+          svn_pool_clear(subpool);
+
+          /* Loop over hash entries */
+          for (hi = apr_hash_first(subpool, iprop->prop_hash);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              void *val;
+              apr_ssize_t klen;
+              svn_string_t *value;
+
+              apr_hash_this(hi, &key, &klen, &val);
+              value = val;
+
+              /* VALUE */
+              svn_skel__prepend(svn_skel__mem_atom(value->data, value->len,
+                                                   result_pool), skel_list);
+
+              /* NAME */
+              svn_skel__prepend(svn_skel__mem_atom(key, klen, result_pool),
+                                skel_list);
+            }
+
+          skel_atom = svn_skel__str_atom(
+            apr_pstrdup(result_pool, iprop->path_or_url), result_pool);
+          svn_skel__append(skel, skel_atom);
+          svn_skel__append(skel, skel_list);
+        }
+      svn_pool_destroy(subpool);
+    }
+
+  /* Validate and return the skel. */
+  if (! is_valid_iproplist_skel(skel))
+    return skel_err("iproplist");
+
   *skel_p = skel;
   return SVN_NO_ERROR;
 }

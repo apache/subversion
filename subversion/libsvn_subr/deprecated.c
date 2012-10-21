@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_cmdline.h"
+#include "svn_version.h"
 #include "svn_pools.h"
 #include "svn_dso.h"
 #include "svn_mergeinfo.h"
@@ -524,6 +525,33 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 }
 
 svn_error_t *
+svn_opt_print_help3(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const int *global_options,
+                    const char *footer,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_opt_print_help4(os,
+                                             pgm_name,
+                                             print_version,
+                                             quiet,
+                                             FALSE,
+                                             version_footer,
+                                             header,
+                                             cmd_table,
+                                             option_table,
+                                             global_options,
+                                             footer,
+                                             pool));
+}
+
+svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
@@ -535,10 +563,11 @@ svn_opt_print_help2(apr_getopt_t *os,
                     const char *footer,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(svn_opt_print_help3(os,
+  return svn_error_trace(svn_opt_print_help4(os,
                                              pgm_name,
                                              print_version,
                                              quiet,
+                                             FALSE,
                                              version_footer,
                                              header,
                                              cmd_table,
@@ -576,8 +605,11 @@ svn_opt_print_help(apr_getopt_t *os,
         }
     }
   else if (print_version)   /* just --version */
-    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
-                                        pool));
+    {
+      SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                          svn_version_extended(FALSE, pool),
+                                          quiet, FALSE, pool));
+    }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help(header,
                                cmd_table,
@@ -1056,14 +1088,6 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
     return svn_dirent_canonicalize(path, pool);
 }
 
-svn_boolean_t
-svn_path_is_canonical(const char *path, apr_pool_t *pool)
-{
-  return svn_uri_is_canonical(path, pool) ||
-      svn_dirent_is_canonical(path, pool) ||
-      svn_relpath_is_canonical(path);
-}
-
 
 /*** From mergeinfo.c ***/
 
@@ -1081,8 +1105,8 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
 }
 
 svn_error_t *
-svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
-                          const apr_array_header_t *rangelist,
+svn_rangelist_inheritable(svn_rangelist_t **inheritable_rangelist,
+                          const svn_rangelist_t *rangelist,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool)
@@ -1094,8 +1118,8 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
 }
 
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **rangelist,
-                    const apr_array_header_t *changes,
+svn_rangelist_merge(svn_rangelist_t **rangelist,
+                    const svn_rangelist_t *changes,
                     apr_pool_t *pool)
 {
   return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,

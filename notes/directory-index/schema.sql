@@ -19,165 +19,259 @@
 
 ---SCRIPT CREATE_SCHEMA
 
-DROP TABLE IF EXISTS dirindex;
-DROP TABLE IF EXISTS strindex;
-DROP TABLE IF EXISTS revision;
+DROP VIEW IF EXISTS nodeview;
+DROP TABLE IF EXISTS noderev;
+DROP TABLE IF EXISTS string;
+DROP TABLE IF EXISTS txn;
 
--- Revision record
 
-CREATE TABLE revision (
-  version integer NOT NULL PRIMARY KEY,
-  created timestamp NOT NULL,
-  author  varchar NULL,
-  log     varchar NULL
+-- Transactions
+CREATE TABLE txn (
+  -- transaction number
+  id        integer NOT NULL PRIMARY KEY,
+
+  -- the version of the tree associated with this transaction;
+  -- initially the same as id, but may refer to the originator
+  -- transaction when tracking revprop changes and/or modified trees
+  -- (q.v., obliterate)
+  treeid    integer NULL REFERENCES txn(id),
+
+  -- the revision that this transaction represents; for uncommitted
+  -- transactions, the revision in which it was created
+  revision  integer NULL,
+
+  -- creation date, independent of the svn:date property
+  created   timestamp NOT NULL,
+
+  -- transaction author, independent of the svn:author property; may
+  -- be null if the repository allows anonymous modifications
+  author    varchar NULL,
+
+  -- transaction state
+  -- T = transient (uncommitted), P = permanent (committed), D = dead
+  state     character(1) NOT NULL DEFAULT 'T',
+
+  -- sanity check: enumerated value validation
+  CONSTRAINT enumeration_validation CHECK (state IN ('T', 'P', 'D'))
+
+  -- other attributes:
+     -- revision properties
 );
 
--- Path lookup table
+CREATE INDEX txn_revision_idx ON txn(revision);
 
-CREATE TABLE strindex (
-  strid   integer NOT NULL PRIMARY KEY,
-  content varchar NOT NULL UNIQUE
+CREATE TRIGGER txn_ensure_treeid AFTER INSERT ON txn
+BEGIN
+  UPDATE txn SET treeid = NEW.id WHERE treeid IS NULL AND id = NEW.id;
+END;
+
+
+-- File names -- lookup table of strings
+CREATE TABLE string (
+  id        integer NOT NULL PRIMARY KEY,
+  val       varchar NOT NULL UNIQUE
 );
 
--- Versioned directory tree
 
-CREATE TABLE dirindex (
-  -- unique id of this node revision, used for
-  -- predecessor/successor links
-  rowid   integer NOT NULL PRIMARY KEY,
+-- Node revisions -- DAG of versioned node changes
+CREATE TABLE noderev (
+  -- node revision identifier
+  id        integer NOT NULL PRIMARY KEY,
 
-  -- link to this node's immediate predecessor
-  origin  integer NULL REFERENCES dirindex(rowid),
+  -- the transaction in which the node was changed
+  treeid    integer NOT NULL REFERENCES txn(id),
 
-  -- absolute (repository) path
-  pathid  integer NOT NULL REFERENCES strindex(strid),
+  -- the node identifier
+  -- a new node will get the ID of its initial noderev.id
+  nodeid    integer NULL REFERENCES noderev(id),
 
-  -- revision number
-  version integer NOT NULL REFERENCES revision(version),
+  -- this node revision's immediate predecessor
+  origin    integer NULL REFERENCES noderev(id),
 
-  -- node kind (D = dir, F = file, etc.)
-  kind    character(1) NOT NULL,
+  -- the parent (directory) of this node revision -- tree graph
+  parent    integer NULL REFERENCES noderev(id),
 
-  -- the operation that produced this entry:
-  -- A = add, R = replace, M = modify, D = delete, N = rename
-  opcode  character(1) NOT NULL,
+  -- the branch that this node revision belongs to -- history graph
+  -- a new branch will get the ID of its initial noderev.id
+  branch    integer NULL REFERENCES noderev(id),
 
-  -- the index entry is the result of an implicit subtree operation
-  subtree boolean NOT NULL
-);
-CREATE UNIQUE INDEX dirindex_versioned_tree ON dirindex(pathid, version DESC);
-CREATE INDEX dirindex_successor_list ON dirindex(origin);
-CREATE INDEX dirindex_operation ON dirindex(opcode);
+  -- the indexable, NFC-normalized name of this noderev within its parent
+  nameid    integer NOT NULL REFERENCES string(id),
 
--- Repository root
+  -- the original, denormalized, non-indexable name
+  denameid  integer NOT NULL REFERENCES string(id),
 
-INSERT INTO revision (version, created, author, log)
-  VALUES (0, 'EPOCH', NULL, NULL);
-INSERT INTO strindex (strid, content) VALUES (0, '/');
-INSERT INTO dirindex (rowid, origin, pathid, version, kind, opcode, subtree)
-  VALUES (0, NULL, 0, 0, 'D', 'A', 0);
+  -- the node kind; immutable within the node
+  -- D = directory, F = file, etc.
+  kind      character(1) NOT NULL,
 
+  -- the change that produced this node revision
+  -- A = added, D = deleted, M = modified, N = renamed, R = replaced
+  -- B = branched (added + origin <> null)
+  -- L = lazy branch, indicates that child lookup should be performed
+  --     on the origin (requires kind=D + added + origin <> null)
+  -- X = replaced by branch (R + B)
+  -- Z = lazy replace by branch (Like L but implies X instead of B)
+  opcode    character(1) NOT NULL,
 
----STATEMENT INSERT_REVISION_RECORD
+  -- mark noderevs of uncommitted transactions so that they can be
+  -- ignored by tree traversals
+  -- T = transient (uncommitted), P = permanent (committed)
+  state     character(1) NOT NULL DEFAULT 'T',
 
-INSERT INTO revision (version, created, author, log)
-  VALUES (?, ?, ?, ?);
+  -- sanity check: enumerated value validation
+  CONSTRAINT enumeration_validation CHECK (
+    kind IN ('D', 'F')
+    AND state IN ('T', 'P')
+    AND opcode IN ('A', 'D', 'M', 'N', 'R', 'B', 'L', 'X', 'Z')),
 
----STATEMENT GET_REVENT_BY_VERSION
+  -- sanity check: only directories can be lazy
+  CONSTRAINT lazy_copies_make_more_work CHECK (
+    opcode NOT IN ('B', 'L', 'X', 'Z')
+    OR (opcode IN ('B', 'X') AND origin IS NOT NULL)
+    OR (opcode IN ('L', 'Z') AND kind = 'D' AND origin IS NOT NULL)),
 
-SELECT * FROM revision WHERE version = ?;
+  -- sanity check: ye can't be yer own daddy
+  CONSTRAINT genetic_diversity CHECK (id <> origin),
 
----STATEMENT INSERT_STRINDEX_RECORD
+  -- sanity check: ye can't be yer own stepdaddy, either
+  CONSTRAINT escher_avoidance CHECK (parent <> branch)
 
-INSERT INTO strindex (content) VALUES (?);
-
----STATEMENT GET_STRENT_BY_STRID
-
-SELECT * FROM strindex WHERE strid = ?;
-
----STATEMENT GET_STRENT_BY_CONTENT
-
-SELECT * FROM strindex WHERE content = ?;
-
----STATEMENT INSERT_DIRINDEX_RECORD
-
-INSERT INTO dirindex (origin, pathid, version, kind, opcode, subtree)
-  VALUES (?, ?, ?, ?, ?, ?);
-
----STATEMENT GET_DIRENT_BY_ROWID
-
-SELECT dirindex.*, strindex.content FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE dirindex.rowid = ?;
-
----STATEMENT GET_DIRENT_BY_ABSPATH_AND_VERSION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE abspath = ? AND dirindex.version = ?;
-
----STATEMENT LOOKUP_ABSPATH_AT_REVISION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE abspath = ? AND dirindex.version <= ?
-ORDER BY abspath ASC, dirindex.version DESC
-LIMIT 1;
-
----STATEMENT LIST_SUBTREE_AT_REVISION
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-  JOIN (SELECT pathid, MAX(version) AS maxver FROM dirindex
-        WHERE version <= ? GROUP BY pathid)
-    AS filtered
-    ON dirindex.pathid == filtered.pathid
-        AND dirindex.version == filtered.maxver
-WHERE abspath LIKE ? ESCAPE '#'
-      AND dirindex.opcode <> 'D'
-ORDER BY abspath ASC;
-
----STATEMENT LIST_DIRENT_SUCCESSORS
-
-SELECT dirindex.*, strindex.content AS abspath FROM dirindex
-  JOIN strindex ON dirindex.pathid = strindex.strid
-WHERE dirindex.origin = ?
-ORDER BY abspath ASC, dirindex.version ASC;
-
-
--- Temporary transaction
-
----SCRIPT CREATE_TRANSACTION_CONTEXT
-
-CREATE TEMPORARY TABLE txncontext (
-  origin  integer NULL,
-  abspath varchar NOT NULL UNIQUE,
-  kind    character(1) NOT NULL,
-  opcode  character(1) NOT NULL,
-  subtree boolean NOT NULL
+  -- other attributes:
+     -- versioned properties
+     -- contents reference
 );
 
----SCRIPT REMOVE_TRANSACTION_CONTEXT
+CREATE UNIQUE INDEX noderev_tree_idx ON noderev(parent,nameid,treeid,opcode);
+CREATE INDEX noderev_txn_idx ON noderev(treeid);
+CREATE INDEX nodefev_node_idx ON noderev(nodeid);
+CREATE INDEX noderev_branch_idx ON noderev(branch);
+CREATE INDEX noderev_successor_idx ON noderev(origin);
 
-DROP TABLE IF EXISTS temp.txncontext;
+CREATE TRIGGER noderev_ensure_node_and_branch AFTER INSERT ON noderev
+BEGIN
+    UPDATE noderev SET nodeid = NEW.id WHERE nodeid IS NULL AND id = NEW.id;
+    UPDATE noderev SET branch = NEW.id WHERE branch IS NULL AND id = NEW.id;
+END;
 
----STATEMENT INSERT_TRANSACTION_RECORD
 
-INSERT INTO temp.txncontext (origin, abspath, kind, opcode, subtree)
-  VALUES (?, ?, ?, ?, ?);
+CREATE VIEW nodeview AS
+  SELECT
+    noderev.*,
+    ns.val AS name,
+    ds.val AS dename
+  FROM
+    noderev JOIN string AS ns ON noderev.nameid = ns.id
+    JOIN string AS ds ON noderev.denameid = ds.id;
 
----STATEMENT GET_TRANSACTION_RECORD
 
-SELECT * FROM temp.txncontext WHERE abspath = ?;
+-- Root directory
 
----STATEMENT REMOVE_TRANSACTION_RECORD
+INSERT INTO txn (id, treeid, revision, created, state)
+  VALUES (0, 0, 0, 'EPOCH', 'P');
+INSERT INTO string (id, val) VALUES (0, '');
+INSERT INTO noderev (id, treeid, nodeid, branch,
+                     nameid, denameid, kind, opcode, state)
+  VALUES (0, 0, 0, 0, 0, 0, 'D', 'A', 'P');
 
-DELETE FROM temp.txncontext WHERE abspath = ?;
 
----STATEMENT REMOVE_TRANSACTION_SUBTREE
+---STATEMENT TXN_INSERT
+INSERT INTO txn (treeid, revision, created, author)
+  VALUES (:treeid, :revision, :created, :author);
 
-DELETE FROM temp.txncontext WHERE abspath LIKE ? ESCAPE '#';
+---STATEMENT TXN_GET
+SELECT * FROM txn WHERE id = :id;
 
----STATEMENT LIST_TRANSACTION_RECORDS
+---STATEMENT TXN_FIND_NEWEST
+SELECT * FROM txn WHERE state = 'P' ORDER BY id DESC LIMIT 1;
 
-SELECT * FROM temp.txncontext ORDER BY abspath ASC;
+---STATEMENT TXN_FIND_BY_REVISION
+SELECT * FROM txn WHERE revision = :revision AND state = 'P'
+ORDER BY id DESC LIMIT 1;
+
+---STATEMENT TXN_FIND_BY_REVISION_AND_TIMESTAMP
+SELECT * FROM txn
+WHERE revision = :revision AND created <= :created AND state = 'P'
+ORDER BY id DESC LIMIT 1;
+
+---STATEMENT TXN_COMMIT
+UPDATE txn SET
+  revision = :revision,
+  created = :created,
+  state = 'P'
+WHERE id = :id;
+
+---STATEMENT TXN_ABORT
+UPDATE txn SET state = 'D' WHERE id = :id;
+
+---STATEMENT TXN_CLEANUP
+DELETE FROM txn WHERE id = :id;
+
+---STATEMENT STRING_INSERT
+INSERT INTO string (val) VALUES (:val);
+
+---STATEMENT STRING_FIND
+SELECT * FROM string WHERE val = :val;
+
+---STATEMENT NODEREV_INSERT
+INSERT INTO noderev (nodeid, treeid, origin, parent, branch,
+                     nameid, denameid, kind, opcode)
+  VALUES (:nodeid, :treeid, :origin, :parent, :branch,
+          :nameid, :denameid, :kind, :opcode);
+
+---STATEMENT NODEREV_UPDATE_TREEID
+UPDATE noderev SET treeid = :new_treeid WHERE treeid = :old_treeid;
+
+---STATEMENT NODEREV_UPDATE_OPCODE
+UPDATE noderev SET opcode = :opcode WHERE id = :id;
+
+---STATEMENT NODEVIEW_GET
+SELECT * FROM nodeview WHERE id = :id;
+
+---STATEMENT NODEREV_COMMIT
+UPDATE noderev SET state = 'P' WHERE treeid = :treeid;
+
+---STATEMENT NODEREV_CLEANUP
+DELETE FROM noderev WHERE treeid = :treeid;
+
+---STATEMENT NODEVIEW_FIND_ROOT
+SELECT * FROM nodeview
+WHERE parent IS NULL AND name = ''
+      AND treeid <= :treeid AND state = 'P'
+ORDER BY treeid DESC LIMIT 1;
+
+---STATEMENT NODEVIEW_FIND_BY_NAME
+SELECT * FROM nodeview
+WHERE parent = :parent AND name = :name
+      AND treeid <= :treeid AND state = 'P'
+ORDER BY treeid DESC LIMIT 1;
+
+---STATEMENT NODEVIEW_FIND_TRANSIENT_ROOT
+SELECT * FROM nodeview
+WHERE parent IS NULL AND name = ''
+      AND (treeid < :treeid AND state = 'P' OR treeid = :treeid)
+ORDER BY treeid DESC LIMIT 1;
+
+---STATEMENT NODEVIEW_FIND_TRANSIENT_BY_NAME
+SELECT * FROM nodeview
+WHERE parent = :parent AND name = :name
+      AND (treeid < :treeid AND state = 'P' OR treeid = :treeid)
+ORDER BY treeid DESC LIMIT 1;
+
+---STATEMENT NODEVIEW_LIST_DIRECTORY
+SELECT * FROM nodeview
+  JOIN (SELECT nameid, MAX(treeid) AS treeid FROM noderev
+        WHERE treeid <= :treeid AND state = 'P'
+        GROUP BY nameid) AS filter
+    ON nodeview.nameid = filter.nameid AND nodeview.treeid = filter.treeid
+WHERE parent = :parent AND opcode <> 'D'
+ORDER BY nodeview.name ASC;
+
+---STATEMENT NODEVIEW_LIST_TRANSIENT_DIRECTORY
+SELECT * FROM nodeview
+  JOIN (SELECT nameid, MAX(treeid) AS treeid FROM noderev
+        WHERE treeid < :treeid AND state = 'P' OR treeid = :treeid
+        GROUP BY nameid) AS filter
+    ON nodeview.nameid = filter.name AND nodeview.treeid = filter.treeid
+WHERE parent = :parent AND opcode <> 'D'
+ORDER BY nodeview.name ASC;

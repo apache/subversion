@@ -85,6 +85,23 @@ svn_prop_array_dup(const apr_array_header_t *array,
                    apr_pool_t *pool);
 
 
+/** A structure to represent inherited properties.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_prop_inherited_item_t
+{
+  /** The absolute working copy path, relative filesystem path, or URL from
+   * which the properties in @a prop_hash are inherited. */
+  const char *path_or_url;
+
+  /** A hash of (const char *) inherited property names, and (svn_string_t *)
+   * property values. */
+  apr_hash_t *prop_hash;
+
+} svn_prop_inherited_item_t;
+
+
 /**
  * Given a hash (keys <tt>const char *</tt> and values <tt>const
  * svn_string_t</tt>) of properties, returns an array of svn_prop_t
@@ -537,6 +554,44 @@ svn_prop_name_is_valid(const char *prop_name);
                                     SVNSYNC_PROP_FROM_UUID, \
                                     SVNSYNC_PROP_LAST_MERGED_REV, \
                                     SVNSYNC_PROP_CURRENTLY_COPYING,
+
+/** @} */
+
+/**
+ * These are reserved properties attached to a "transaction" object in
+ * the repository filesystem in advance of the pre-commit hook script
+ * running on the server, but then automatically removed from the
+ * transaction before its promotion to a new revision.
+ *
+ * @defgroup svn_props_ephemeral_txnprops Ephemeral transaction properties
+ * @{
+ */
+
+/** The prefix used for all (ephemeral) transaction properties. */
+#define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
+
+/** Identifies the client version compability level.  For clients
+ * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
+ * Third-party implementations are advised to use similar formatting
+ * for values of this property.
+ */
+#define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
+            SVN_PROP_TXN_PREFIX "client-compat-version"
+    
+/** Identifies the client's user agent string, if any. */
+#define SVN_PROP_TXN_USER_AGENT \
+            SVN_PROP_TXN_PREFIX "user-agent"
+
+/** The prefix reserved for copies of (ephemeral) transaction
+ * properties designed to outlive the transaction.  Administrators may
+ * choose to, in their pre-commit hook scripts, copy the values of one
+ * or more properties named @c SVN_PROP_TXN_PREFIX + "something"
+ * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
+ * allowing that information to survive the commit-time removal of
+ * ephemeral transaction properties.
+ */
+#define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
+
 
 /** @} */
 

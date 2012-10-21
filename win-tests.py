@@ -78,10 +78,10 @@ def _usage_exit():
   print("                           will be used, if not specified")
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
-  print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
+  print("  --ssl-cert             : Path to SSL server certificate to trust.")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
@@ -127,12 +127,13 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
-                        'httpd-server', 'http-library=', 'http-short-circuit',
+                        'httpd-server', 'http-short-circuit',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
-                        'log-to-stdout', 'mode-filter=', 'milestone-filter='])
+                        'log-to-stdout', 'mode-filter=', 'milestone-filter=',
+                        'ssl-cert='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -147,7 +148,6 @@ svnserve_args = None
 run_httpd = None
 httpd_port = None
 httpd_service = None
-http_library = 'serf'
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -165,6 +165,7 @@ log_to_stdout = None
 mode_filter=None
 tests_to_run = []
 log_level = None
+ssl_cert = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -199,8 +200,6 @@ for opt, val in opts:
     httpd_service = 0
   elif opt == '--httpd-service':
     httpd_service = 1
-  elif opt == '--http-library':
-    http_library = val
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -234,6 +233,8 @@ for opt, val in opts:
     log_to_stdout = 1
   elif opt == '--log-level':
     log_level = val
+  elif opt == '--ssl-cert':
+    ssl_cert = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -740,13 +741,13 @@ if not test_javahl:
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file,
                              fail_log_file,
-                             base_url, fs_type, http_library,
+                             base_url, fs_type, 'serf',
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
                              list_tests, svn_bin, mode_filter,
                              milestone_filter,
-                             set_log_level=log_level)
+                             set_log_level=log_level, ssl_cert=ssl_cert)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)

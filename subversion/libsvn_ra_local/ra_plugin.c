@@ -337,7 +337,7 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos_begin_report2(&rbaton,
+  SVN_ERR(svn_repos_begin_report3(&rbaton,
                                   revision,
                                   sess->repos,
                                   sess->fs_path->data,
@@ -351,6 +351,8 @@ make_reporter(svn_ra_session_t *session,
                                   edit_baton,
                                   NULL,
                                   NULL,
+                                  1024 * 1024,  /* process-local transfers
+                                                   should be fast */
                                   pool));
 
   /* Wrap the report baton given us by the repos layer with our own
@@ -752,6 +754,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   revprop_table = apr_hash_copy(pool, revprop_table);
   apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
                svn_string_create(sess->username, pool));
+  apr_hash_set(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+               APR_HASH_KEY_STRING, svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
@@ -1038,41 +1042,70 @@ svn_ra_local__stat(svn_ra_session_t *session,
 
 static svn_error_t *
 get_node_props(apr_hash_t **props,
+               apr_array_header_t **inherited_props,
                svn_ra_local__session_baton_t *sess,
                svn_fs_root_t *root,
                const char *path,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   svn_revnum_t cmt_rev;
   const char *cmt_date, *cmt_author;
 
   /* Create a hash with props attached to the fs node. */
-  SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
+  if (props)
+    {
+      SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
+    }
+
+  /* Turn FS-path keys into URLs. */
+  if (inherited_props)
+    {
+      int i;
+
+      SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
+                                               NULL, NULL,
+                                               result_pool, scratch_pool));
+
+      for (i = 0; i < (*inherited_props)->nelts; i++)
+        {
+          svn_prop_inherited_item_t *i_props =
+            APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
+          i_props->path_or_url = svn_path_url_add_component2(
+            sess->repos_url, i_props->path_or_url, result_pool);
+        }
+    }
 
   /* Now add some non-tweakable metadata to the hash as well... */
 
-  /* The so-called 'entryprops' with info about CR & friends. */
-  SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
-                                       &cmt_author, root, path, pool));
+  if (props)
+    {
+      /* The so-called 'entryprops' with info about CR & friends. */
+      SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
+                                           &cmt_author, root, path,
+                                           scratch_pool));
 
-  apr_hash_set(*props,
-               SVN_PROP_ENTRY_COMMITTED_REV,
-               APR_HASH_KEY_STRING,
-               svn_string_createf(pool, "%ld", cmt_rev));
-  apr_hash_set(*props,
-               SVN_PROP_ENTRY_COMMITTED_DATE,
-               APR_HASH_KEY_STRING,
-               cmt_date ? svn_string_create(cmt_date, pool) : NULL);
-  apr_hash_set(*props,
-               SVN_PROP_ENTRY_LAST_AUTHOR,
-               APR_HASH_KEY_STRING,
-               cmt_author ? svn_string_create(cmt_author, pool) : NULL);
-  apr_hash_set(*props,
-               SVN_PROP_ENTRY_UUID,
-               APR_HASH_KEY_STRING,
-               svn_string_create(sess->uuid, pool));
+      apr_hash_set(*props,
+                   SVN_PROP_ENTRY_COMMITTED_REV,
+                   APR_HASH_KEY_STRING,
+                   svn_string_createf(result_pool, "%ld", cmt_rev));
+      apr_hash_set(*props,
+                   SVN_PROP_ENTRY_COMMITTED_DATE,
+                   APR_HASH_KEY_STRING,
+                   cmt_date ? svn_string_create(cmt_date,
+                                                result_pool) : NULL);
+      apr_hash_set(*props,
+                   SVN_PROP_ENTRY_LAST_AUTHOR,
+                   APR_HASH_KEY_STRING,
+                   cmt_author ? svn_string_create(cmt_author,
+                                                  result_pool) : NULL);
+      apr_hash_set(*props,
+                   SVN_PROP_ENTRY_UUID,
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(sess->uuid, result_pool));
 
-  /* We have no 'wcprops' in ra_local, but might someday. */
+      /* We have no 'wcprops' in ra_local, but might someday. */
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1144,7 +1177,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, sess, root, abs_path, pool));
+    SVN_ERR(get_node_props(props, NULL, sess, root, abs_path, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1255,7 +1288,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, sess, root, abs_path, pool));
+    SVN_ERR(get_node_props(props, NULL, sess, root, abs_path, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1489,7 +1522,8 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
     {
       *has = TRUE;
     }
@@ -1530,6 +1564,44 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
                                 pool));
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__get_inherited_props(svn_ra_session_t *session,
+                                  apr_array_header_t **iprops,
+                                  const char *path,
+                                  svn_revnum_t revision,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *root;
+  svn_revnum_t youngest_rev;
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path = svn_fspath__join(sess->fs_path->data, path,
+                                          scratch_pool);
+  svn_node_kind_t node_kind;
+
+  /* Open the revision's root. */
+  if (! SVN_IS_VALID_REVNUM(revision))
+    {
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, sess->fs, scratch_pool));
+      SVN_ERR(svn_fs_revision_root(&root, sess->fs, youngest_rev,
+                                   scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, scratch_pool));
+    }
+
+  SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, scratch_pool));
+  if (node_kind == svn_node_none)
+    {
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("'%s' path not found"), abs_path);
+    }
+
+  return svn_error_trace(get_node_props(NULL, iprops, sess, root, abs_path,
+                                        result_pool, scratch_pool));
 }
 
 static svn_error_t *
@@ -1645,6 +1717,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__replay_range,
   svn_ra_local__get_deleted_rev,
   svn_ra_local__register_editor_shim_callbacks,
+  svn_ra_local__get_inherited_props,
   svn_ra_local__get_commit_ev2
 };
 

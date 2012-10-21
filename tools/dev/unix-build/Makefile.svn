@@ -624,9 +624,19 @@ $(DISTDIR)/$(NEON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
+NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
+	# fix build with OpenSSL lacking SSLv2 support:
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1872 \
+		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_session.c | patch -p0
 	touch $@
 
 # OpenBSD does not have krb5-config in PATH, but the neon port has
@@ -852,6 +862,8 @@ endif
 		> $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched
 	mv $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched \
 		$(CYRUS_SASL_SRCDIR)/lib/dlopen.c
+	# Fix a weird autotools error about missing cmulocal dir
+	(cd $(CYRUS_SASL_SRCDIR)/saslauthd/ && ln -sf ../cmulocal)
 	touch $@
 
 # configure cyrus-sasl
@@ -951,6 +963,12 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
 
+ifeq ($(THREADING),yes)
+THREADSAFE_FLAG=--enable-pthread
+else
+THREADSAFE_FLAG=--disable-pthread
+endif
+
 # configure ruby
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
@@ -958,7 +976,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
-		--disable-pthread
+		$(THREADSAFE_FLAG)
 	touch $@
 
 # compile ruby
@@ -1139,6 +1157,7 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
@@ -1146,6 +1165,7 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
@@ -1154,12 +1174,14 @@ MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
+JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+JAVAHL_CHECK_TARGET=check-all-javahl
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1340,10 +1362,17 @@ endif
 libpath:
 	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
+#
+# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
+# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
+# aren't linked to libpthread.
+ifeq ($(UNAME),OpenBSD)
+LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
+endif
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
-HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
 		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1390,7 +1419,7 @@ define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
-    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
         make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
@@ -1446,6 +1475,7 @@ svn-check-swig-pl:
 	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			$(LIB_PTHREAD_HACK) \
 			make check-swig-pl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.pl; \
 	fi
@@ -1463,6 +1493,7 @@ svn-check-swig-rb:
 		env RUBYLIB=$(RUBYLIB) \
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		PATH=$(SVN_PREFIX)/bin:$$PATH \
+		$(LIB_PTHREAD_HACK) \
 			make check-swig-rb 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.rb
 
@@ -1470,7 +1501,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-all-javahl 2>&1) | \
+			make $(JAVAHL_CHECK_TARGET) 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
