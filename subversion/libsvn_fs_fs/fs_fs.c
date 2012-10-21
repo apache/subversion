@@ -3268,6 +3268,46 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
   return TRUE;
 }
 
+/* Baton structure for revprop_generation_fixup. */
+typedef struct revprop_generation_fixup_t
+{
+  /* revprop generation to read */
+  apr_int64_t *generation;
+
+  /* containing the revprop_generation member to query */
+  fs_fs_data_t *ffd;
+} revprop_generation_upgrade_t;
+
+/* If the revprop generation has an odd value, it means the original writer
+   of the revprop got killed. We don't know whether that process as able
+   to change the revprop data but we assume that it was. Therefore, we
+   increase the generation in that case to basically invalidate everyones
+   cache content.
+   Execute this onlx while holding the write lock to the repo in baton->FFD.
+ */
+static svn_error_t *
+revprop_generation_fixup(void *void_baton,
+                         apr_pool_t *pool)
+{
+  revprop_generation_upgrade_t *baton = void_baton;
+  assert(baton->ffd->has_write_lock);
+  
+  /* Maybe, either the original revprop writer or some other reader has
+     already corrected / bumped the revprop generation.  Thus, we need
+     to read it again. */
+  SVN_ERR(svn_named_atomic__read(baton->generation,
+                                 baton->ffd->revprop_generation));
+
+  /* Cause everyone to re-read revprops upon their next access, if the
+     last revprop write did not complete properly. */
+  while (*baton->generation % 2)
+    SVN_ERR(svn_named_atomic__add(baton->generation,
+                                  1,
+                                  baton->ffd->revprop_generation));
+
+  return SVN_NO_ERROR;
+}
+
 /* Read the current revprop generation and return it in *GENERATION.
    Also, detect aborted / crashed writers and recover from that.
    Use the access object in FS to set the shared mem values. */
@@ -3297,13 +3337,19 @@ read_revprop_generation(apr_int64_t *generation,
        */
       if (apr_time_now() > timeout)
         {
-          /* Cause everyone to re-read revprops upon their next access.
-           * Keep in mind that we may not be the only one trying to do it.
+          revprop_generation_upgrade_t baton;
+          baton.generation = &current;
+          baton.ffd = ffd;
+
+          /* Ensure that the original writer process no longer exists by
+           * acquiring the write lock to this repository.  Then, fix up
+           * the revprop generation.
            */
-          while (current % 2)
-            SVN_ERR(svn_named_atomic__add(&current,
-                                          1,
-                                          ffd->revprop_generation));
+          if (ffd->has_write_lock)
+            SVN_ERR(revprop_generation_fixup(&baton, pool));
+          else
+            SVN_ERR(svn_fs_fs__with_write_lock(fs, revprop_generation_fixup,
+                                               &baton, pool));
         }
     }
 
