@@ -677,7 +677,6 @@ get_ra_editor(svn_editor_t **editor,
                                  svn_client__ra_make_cb_baton(ctx->wc_ctx,
                                                               relpath_map,
                                                               pool),
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   return SVN_NO_ERROR;
@@ -819,7 +818,6 @@ svn_client_import5(const char *path,
                                  commit_revprops, commit_callback,
                                  commit_baton, NULL, TRUE,
                                  NULL, NULL, NULL, NULL,
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  scratch_pool, scratch_pool));
 
   /* Do the import. */

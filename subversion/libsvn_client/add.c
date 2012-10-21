@@ -997,7 +997,6 @@ mkdir_urls(const apr_array_header_t *urls,
                                  commit_baton,
                                  NULL, TRUE, /* No lock tokens */
                                  NULL, NULL, NULL, NULL,
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   return svn_error_trace(drive_editor(editor, targets, children_hash,

@@ -228,7 +228,6 @@ propset_on_url(const char *propname,
                                  commit_baton,
                                  NULL, TRUE, /* No lock tokens */
                                  NULL, NULL, NULL, NULL,
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   /* ### Need to handle symlink? */

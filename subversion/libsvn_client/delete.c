@@ -188,7 +188,6 @@ single_repos_delete(svn_ra_session_t *ra_session,
                                  commit_baton,
                                  NULL, TRUE, /* No lock tokens */
                                  NULL, NULL, NULL, NULL,
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   for (i = 0; i < relpaths->nelts; i++)

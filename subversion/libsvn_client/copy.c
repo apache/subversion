@@ -1047,7 +1047,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                  fetch_props_func,
                                  fetch_kind_func,
                                  path_infos,
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   return svn_error_trace(drive_editor(editor, new_dirs, path_infos, is_move,
@@ -1371,7 +1370,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                  svn_client__ra_make_cb_baton(ctx->wc_ctx,
                                                               relpath_map,
                                                               pool),
-                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool, pool));
 
   /* Perform the commit. */
