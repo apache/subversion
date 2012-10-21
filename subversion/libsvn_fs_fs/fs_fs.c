@@ -3244,8 +3244,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
        * -> disable the revprop cache for good
        */
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Disable revprop caching for '%s'"
-                                         " because it is inefficient.");
+      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled"
+                                         " because it would be inefficient.");
       
       return FALSE;
     }
