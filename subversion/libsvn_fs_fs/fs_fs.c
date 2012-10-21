@@ -603,13 +603,15 @@ reset_lock_flag(void *baton_void)
 /* Obtain a write lock on the file LOCK_FILENAME (protecting with
    LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
    BATON and that subpool, destroy the subpool (releasing the write
-   lock) and return what BODY returned. */
+   lock) and return what BODY returned.  If IS_GLOBAL_LOCK is set,
+   set the HAS_WRITE_LOCK flag while we keep the write lock. */
 static svn_error_t *
 with_some_lock_file(svn_fs_t *fs,
                     svn_error_t *(*body)(void *baton,
                                          apr_pool_t *pool),
                     void *baton,
                     const char *lock_filename,
+                    svn_boolean_t is_global_lock,
                     apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -619,12 +621,15 @@ with_some_lock_file(svn_fs_t *fs,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
 
-      /* set the "got the lock" flag and register reset function */
-      apr_pool_cleanup_register(subpool,
-                                ffd,
-                                reset_lock_flag,
-                                apr_pool_cleanup_null);
-      ffd->has_write_lock = TRUE;
+      if (is_global_lock)
+        {
+          /* set the "got the lock" flag and register reset function */
+          apr_pool_cleanup_register(subpool,
+                                    ffd,
+                                    reset_lock_flag,
+                                    apr_pool_cleanup_null);
+          ffd->has_write_lock = TRUE;
+        }
 
       /* nobody else will modify the repo state
          => read HEAD & pack info once */
@@ -653,6 +658,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
   SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
                        with_some_lock_file(fs, body, baton,
                                            path_lock(fs, pool),
+                                           TRUE,
                                            pool));
 
   return SVN_NO_ERROR;
@@ -673,6 +679,7 @@ with_txn_current_lock(svn_fs_t *fs,
   SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
                        with_some_lock_file(fs, body, baton,
                                            path_txn_current_lock(fs, pool),
+                                           FALSE,
                                            pool));
 
   return SVN_NO_ERROR;
