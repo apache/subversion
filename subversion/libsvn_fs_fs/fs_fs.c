@@ -3258,9 +3258,10 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
 
       svn_error_clear(error);
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Failed to initialize SHM "
+      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled "
+                                         "because SHM "
                                          "infrastructure for revprop "
-                                         "caching in '%s'.");
+                                         "caching failed to initialize.");
 
       return FALSE;
     }
