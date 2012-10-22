@@ -241,8 +241,8 @@ will raise an error when accessed.  'svnadmin hotcopy' avoids the problem by
 establishing an appropriate SQLite lock (see svn_sqlite__hotcopy()).  User
 code should either use an atomic filesystem snapshot (as with zfs/LVM),
 refrain from copying rep-cache.db, or stop all access to that file before
-copying it (either by disabling commits or by establishing a lock a la
-svn_sqlite__hotcopy()). ]
+copying it (for example, by disabling commits, by establishing a lock a la
+svn_sqlite__hotcopy(), or by using 'svnadmin freeze'). ]
 
 The "svnadmin hotcopy" command avoids this problem by copying the
 "current" file before copying the revision files.  But a backup using
