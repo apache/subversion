@@ -1189,7 +1189,7 @@ svn_ra_replay_range(svn_ra_session_t *session,
                                   revstart_func, revfinish_func,
                                   replay_baton, pool);
 
-  if (err && (err->apr_err != SVN_ERR_RA_NOT_IMPLEMENTED))
+  if (!err || (err && (err->apr_err != SVN_ERR_RA_NOT_IMPLEMENTED)))
     return svn_error_trace(err);
 
   svn_error_clear(err);
