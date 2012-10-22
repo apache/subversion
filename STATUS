@@ -75,11 +75,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1390653
-   Add Vary: header to GET response.
-   Justification:
-     The 1.8 serf-only client may fail to work with caching proxies.
-   Votes:
-     +1: philip, cmpilato, breser
-     +0: danielsh
