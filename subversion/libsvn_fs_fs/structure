@@ -273,14 +273,13 @@ in revprops/0/0.
 
 Pack file format
 
-  Top level: <length><packed container>
+  Top level: <packed container>
 
   We always apply data compression to the pack file - using the
   SVN_DELTA_COMPRESSION_LEVEL_NONE level if compression is disabled.
-  <length> is being encoded using the variable-length svndiff unsigned
-  integer format (see svndiff.c): 7 bits / byte in little endian order
-  with the MSB of each byte indicating whether there is a another byte
-  to read.
+  (Note that compression at SVN_DELTA_COMPRESSION_LEVEL_NONE is not
+  a no-op stream transformation although most of the data will remain
+  human readable.)
 
   container := header '\n' (revprops)+
   header    := start_rev '\n' rev_count '\n' (size '\n')+
