@@ -589,16 +589,29 @@ get_lock_on_filesystem(const char *lock_filename,
   return svn_error_trace(err);
 }
 
+/* Reset the HAS_WRITE_LOCK member in the FFD given as BATON_VOID.
+   When registered with the pool holding the lock on the lock file,
+   this makes sure the flag gets reset just before we release the lock. */
+static apr_status_t
+reset_lock_flag(void *baton_void)
+{
+  fs_fs_data_t *ffd = baton_void;
+  ffd->has_write_lock = FALSE;
+  return APR_SUCCESS;
+}
+
 /* Obtain a write lock on the file LOCK_FILENAME (protecting with
    LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
    BATON and that subpool, destroy the subpool (releasing the write
-   lock) and return what BODY returned. */
+   lock) and return what BODY returned.  If IS_GLOBAL_LOCK is set,
+   set the HAS_WRITE_LOCK flag while we keep the write lock. */
 static svn_error_t *
 with_some_lock_file(svn_fs_t *fs,
                     svn_error_t *(*body)(void *baton,
                                          apr_pool_t *pool),
                     void *baton,
                     const char *lock_filename,
+                    svn_boolean_t is_global_lock,
                     apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -607,6 +620,19 @@ with_some_lock_file(svn_fs_t *fs,
   if (!err)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
+
+      if (is_global_lock)
+        {
+          /* set the "got the lock" flag and register reset function */
+          apr_pool_cleanup_register(subpool,
+                                    ffd,
+                                    reset_lock_flag,
+                                    apr_pool_cleanup_null);
+          ffd->has_write_lock = TRUE;
+        }
+
+      /* nobody else will modify the repo state
+         => read HEAD & pack info once */
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
       SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
@@ -632,6 +658,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
   SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
                        with_some_lock_file(fs, body, baton,
                                            path_lock(fs, pool),
+                                           TRUE,
                                            pool));
 
   return SVN_NO_ERROR;
@@ -652,6 +679,7 @@ with_txn_current_lock(svn_fs_t *fs,
   SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
                        with_some_lock_file(fs, body, baton,
                                            path_txn_current_lock(fs, pool),
+                                           FALSE,
                                            pool));
 
   return SVN_NO_ERROR;
@@ -3216,8 +3244,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
        * -> disable the revprop cache for good
        */
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Disable revprop caching for '%s'"
-                                         " because it is inefficient.");
+      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled"
+                                         " because it would be inefficient.");
       
       return FALSE;
     }
@@ -3230,14 +3258,55 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
 
       svn_error_clear(error);
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Failed to initialize SHM "
+      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled "
+                                         "because SHM "
                                          "infrastructure for revprop "
-                                         "caching in '%s'.");
+                                         "caching failed to initialize.");
 
       return FALSE;
     }
 
   return TRUE;
+}
+
+/* Baton structure for revprop_generation_fixup. */
+typedef struct revprop_generation_fixup_t
+{
+  /* revprop generation to read */
+  apr_int64_t *generation;
+
+  /* containing the revprop_generation member to query */
+  fs_fs_data_t *ffd;
+} revprop_generation_upgrade_t;
+
+/* If the revprop generation has an odd value, it means the original writer
+   of the revprop got killed. We don't know whether that process as able
+   to change the revprop data but we assume that it was. Therefore, we
+   increase the generation in that case to basically invalidate everyones
+   cache content.
+   Execute this onlx while holding the write lock to the repo in baton->FFD.
+ */
+static svn_error_t *
+revprop_generation_fixup(void *void_baton,
+                         apr_pool_t *pool)
+{
+  revprop_generation_upgrade_t *baton = void_baton;
+  assert(baton->ffd->has_write_lock);
+  
+  /* Maybe, either the original revprop writer or some other reader has
+     already corrected / bumped the revprop generation.  Thus, we need
+     to read it again. */
+  SVN_ERR(svn_named_atomic__read(baton->generation,
+                                 baton->ffd->revprop_generation));
+
+  /* Cause everyone to re-read revprops upon their next access, if the
+     last revprop write did not complete properly. */
+  while (*baton->generation % 2)
+    SVN_ERR(svn_named_atomic__add(baton->generation,
+                                  1,
+                                  baton->ffd->revprop_generation));
+
+  return SVN_NO_ERROR;
 }
 
 /* Read the current revprop generation and return it in *GENERATION.
@@ -3269,13 +3338,19 @@ read_revprop_generation(apr_int64_t *generation,
        */
       if (apr_time_now() > timeout)
         {
-          /* Cause everyone to re-read revprops upon their next access.
-           * Keep in mind that we may not be the only one trying to do it.
+          revprop_generation_upgrade_t baton;
+          baton.generation = &current;
+          baton.ffd = ffd;
+
+          /* Ensure that the original writer process no longer exists by
+           * acquiring the write lock to this repository.  Then, fix up
+           * the revprop generation.
            */
-          while (current % 2)
-            SVN_ERR(svn_named_atomic__add(&current,
-                                          1,
-                                          ffd->revprop_generation));
+          if (ffd->has_write_lock)
+            SVN_ERR(revprop_generation_fixup(&baton, pool));
+          else
+            SVN_ERR(svn_fs_fs__with_write_lock(fs, revprop_generation_fixup,
+                                               &baton, pool));
         }
     }
 

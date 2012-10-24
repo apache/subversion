@@ -3096,9 +3096,13 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: '%s'", url);
 
-
-  path = strchr(path, '/');
-  path = (path == NULL) ? "" : svn_relpath_canonicalize(path, pool);
+  if (! b->vhost)
+    {
+      path = strchr(path, '/');
+      if (path == NULL)
+        path = "";
+    }
+  path = svn_relpath_canonicalize(path, pool);
   path = svn_path_uri_decode(path, pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
@@ -3352,6 +3356,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.log_file = params->log_file;
   b.pool = pool;
   b.use_sasl = FALSE;
+  b.vhost = params->vhost;
 
   /* construct FS configuration parameters */
   b.fs_config = apr_hash_make(pool);
