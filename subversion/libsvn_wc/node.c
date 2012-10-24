@@ -219,6 +219,70 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
   return SVN_NO_ERROR;
 }
 
+/* ### This is essentially a copy-paste of svn_wc__internal_get_url().
+ * ### If we decide to keep this one, then it should be rewritten to avoid
+ * ### code duplication.*/
+svn_error_t *
+svn_wc__internal_get_repos_relpath(const char **repos_relpath,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_boolean_t have_base;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, repos_relpath,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL,
+                               db, local_abspath,
+                               result_pool, scratch_pool));
+  if (*repos_relpath == NULL)
+    {
+      if (status == svn_wc__db_status_added)
+        {
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           result_pool, scratch_pool));
+        }
+      else if (have_base)
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
+                                             NULL,
+                                             db, local_abspath,
+                                             result_pool, scratch_pool));
+        }
+      else if (status == svn_wc__db_status_excluded
+               || (!have_base && (status == svn_wc__db_status_deleted)))
+        {
+          const char *parent_abspath, *name, *parent_relpath;
+
+          svn_dirent_split(&parent_abspath, &name, local_abspath,
+                           scratch_pool);
+          SVN_ERR(svn_wc__internal_get_repos_relpath(&parent_relpath, db,
+                                                     parent_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+          if (parent_relpath)
+            *repos_relpath = svn_relpath_join(parent_relpath, name,
+                                              result_pool);
+        }
+      else
+        {
+          /* Status: obstructed, obstructed_add */
+          *repos_relpath = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
@@ -348,9 +412,6 @@ svn_wc__node_get_url(const char **url,
                                              result_pool, scratch_pool));
 }
 
-/* ### This is essentially a copy-paste of svn_wc__internal_get_url().
- * ### If we decide to keep this one, then it should be rewritten to avoid
- * ### code duplication.*/
 svn_error_t *
 svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                svn_wc_context_t *wc_ctx,
@@ -358,58 +419,11 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
-  svn_boolean_t have_base;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, repos_relpath,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               result_pool, scratch_pool));
-  if (*repos_relpath == NULL)
-    {
-      if (status == svn_wc__db_status_added)
-        {
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
-                                           NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           wc_ctx->db, local_abspath,
-                                           result_pool, scratch_pool));
-        }
-      else if (have_base)
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
-                                             NULL,
-                                             wc_ctx->db, local_abspath,
-                                             result_pool, scratch_pool));
-        }
-      else if (status == svn_wc__db_status_excluded
-               || (!have_base && (status == svn_wc__db_status_deleted)))
-        {
-          const char *parent_abspath, *name, *parent_relpath;
-
-          svn_dirent_split(&parent_abspath, &name, local_abspath,
-                           scratch_pool);
-          SVN_ERR(svn_wc__node_get_repos_relpath(&parent_relpath, wc_ctx,
-                                                 parent_abspath,
-                                                 scratch_pool,
-                                                 scratch_pool));
-
-          if (parent_relpath)
-            *repos_relpath = svn_relpath_join(parent_relpath, name,
-                                              result_pool);
-        }
-      else
-        {
-          /* Status: obstructed, obstructed_add */
-          *repos_relpath = NULL;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_wc__internal_get_repos_relpath(repos_relpath,
+                                                            wc_ctx->db,
+                                                            local_abspath,
+                                                            result_pool,
+                                                            scratch_pool));
 }
 
 svn_error_t *

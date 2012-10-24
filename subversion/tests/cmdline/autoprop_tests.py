@@ -42,7 +42,7 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_CONFIG_AUTOPROPS
+from svntest.main import SVN_PROP_INHERITABLE_AUTOPROPS
 
 # Helper function
 def check_proplist(path, exp_out):
@@ -440,21 +440,21 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
   # Set differing svn:inheritable-auto-props properties on various
   # directories.
-  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+  sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.c = svn:eol-style=CRLF\n'
                       '*.bat = svn:executable',
                       '.')
-  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+  sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.c = svn:eol-style=CR;svn:keywords=Date',
                       'A/B')
-  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+  sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.c = svn:eol-style=LF;svn:keywords=Rev',
                       'A/C')
-  sbox.simple_propset(SVN_CONFIG_AUTOPROPS,
+  sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.py = svn:mime-type=text/x-python',
                       'A/D')
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'Add some ' + SVN_CONFIG_AUTOPROPS +
+                                     'Add some ' + SVN_PROP_INHERITABLE_AUTOPROPS +
                                      ' properties', wc_dir)
 
   # Switch the root of the WC to ^/A.
@@ -509,82 +509,82 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_no_none(sbox):
+def svn_prop_inheritable_autoprops_add_no_none(sbox):
   "inherit add: config=no, commandline=none"
   inheritable_autoprops_test(sbox, 'add', False, 0, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_yes_none(sbox):
+def svn_prop_inheritable_autoprops_add_yes_none(sbox):
   "inherit add: config=yes,  commandline=none"
   inheritable_autoprops_test(sbox, 'add', True, 0, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_no_yes(sbox):
+def svn_prop_inheritable_autoprops_add_no_yes(sbox):
   "inherit add: config=no,  commandline=yes"
 
   inheritable_autoprops_test(sbox, 'add', 0, 1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_yes_yes(sbox):
+def svn_prop_inheritable_autoprops_add_yes_yes(sbox):
   "inherit add: config=yes, commandline=yes"
 
   inheritable_autoprops_test(sbox, 'add', 1, 1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_no_no(sbox):
+def svn_prop_inheritable_autoprops_add_no_no(sbox):
   "inherit add: config=no,  commandline=no"
 
   inheritable_autoprops_test(sbox, 'add', 0, -1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_add_yes_no(sbox):
+def svn_prop_inheritable_autoprops_add_yes_no(sbox):
   "inherit add: config=yes, commandline=no"
 
   inheritable_autoprops_test(sbox, 'add', 1, -1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_import_no_none(sbox):
+def svn_prop_inheritable_autoprops_import_no_none(sbox):
   "inherit import: config=no, commandline=none"
 
   inheritable_autoprops_test(sbox, 'import', False, 0, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_imp_yes_none(sbox):
+def svn_prop_inheritable_autoprops_imp_yes_none(sbox):
   "inherit import: config=yes, commandline=none"
 
   inheritable_autoprops_test(sbox, 'import', 1, 0, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_imp_no_yes(sbox):
+def svn_prop_inheritable_autoprops_imp_no_yes(sbox):
   "inherit import: config=no,  commandline=yes"
 
   inheritable_autoprops_test(sbox, 'import', 0, 1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_imp_yes_yes(sbox):
+def svn_prop_inheritable_autoprops_imp_yes_yes(sbox):
   "inherit import: config=yes, commandline=yes"
 
   inheritable_autoprops_test(sbox, 'import', 1, 1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_imp_no_no(sbox):
+def svn_prop_inheritable_autoprops_imp_no_no(sbox):
   "inherit import: config=no,  commandline=no"
 
   inheritable_autoprops_test(sbox, 'import', 0, -1, '')
 
 #----------------------------------------------------------------------
 
-def svn_config_autoprops_imp_yes_no(sbox):
+def svn_prop_inheritable_autoprops_imp_yes_no(sbox):
   "inherit import: config=yes, commandline=no"
 
   inheritable_autoprops_test(sbox, 'import', 1, -1, '')
@@ -592,7 +592,7 @@ def svn_config_autoprops_imp_yes_no(sbox):
 #----------------------------------------------------------------------
 # Test svn:inheritable-auto-props when 'svn add' targets an already versioned
 # target.
-def svn_config_autoprops_add_versioned_target(sbox):
+def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   "svn:inheritable-auto-props and versioned target"
 
   config_dir = inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
@@ -613,19 +613,19 @@ def svn_config_autoprops_add_versioned_target(sbox):
 
 #----------------------------------------------------------------------
 # Can't set svn:inheritable-auto-props on files.
-def svn_config_autoprops_propset_file_target(sbox):
+def svn_prop_inheritable_autoprops_propset_file_target(sbox):
   "svn:inheritable-auto-props can't be set on files"
 
   sbox.build()
   svntest.actions.run_and_verify_svn(
     None, None,
-    ".*Cannot set '" + SVN_CONFIG_AUTOPROPS + "' on a file.*",
-    'ps', SVN_CONFIG_AUTOPROPS, '*.c=svn:eol-style=native',
+    ".*Cannot set '" + SVN_PROP_INHERITABLE_AUTOPROPS + "' on a file.*",
+    'ps', SVN_PROP_INHERITABLE_AUTOPROPS, '*.c=svn:eol-style=native',
     sbox.ospath('iota'))
 
 #----------------------------------------------------------------------
 # Multiple unversioned subtrees under a versioned target shouldn't segfault.
-def svn_config_autoprops_unversioned_subtrees_versioned_target(sbox):
+def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
   "versioned target and unversioned subtrees"
 
   sbox.build()
@@ -635,9 +635,9 @@ def svn_config_autoprops_unversioned_subtrees_versioned_target(sbox):
   bar_path = sbox.ospath('A/B/Y/bar.c')
 
   # Set svn:inheritable-auto-props properties on two directories.
-  svntest.main.run_svn(None, 'ps', SVN_CONFIG_AUTOPROPS,
+  svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
-  svntest.main.run_svn(None, 'ps', SVN_CONFIG_AUTOPROPS,
+  svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=native', sbox.ospath('A/D'))
   svntest.main.run_svn(None, 'ci', '-m', 'Add inheritable autoprops',
                        sbox.wc_dir)
@@ -689,21 +689,21 @@ test_list = [ None,
               autoprops_add_dir,
               autoprops_imp_dir,
               fail_add_mixed_eol_style,
-              svn_config_autoprops_add_no_none,
-              svn_config_autoprops_add_yes_none,
-              svn_config_autoprops_add_no_yes,
-              svn_config_autoprops_add_yes_yes,
-              svn_config_autoprops_add_no_no,
-              svn_config_autoprops_add_yes_no,
-              svn_config_autoprops_import_no_none,
-              svn_config_autoprops_imp_yes_none,
-              svn_config_autoprops_imp_no_yes,
-              svn_config_autoprops_imp_yes_yes,
-              svn_config_autoprops_imp_no_no,
-              svn_config_autoprops_imp_yes_no,
-              svn_config_autoprops_add_versioned_target,
-              svn_config_autoprops_propset_file_target,
-              svn_config_autoprops_unversioned_subtrees_versioned_target,
+              svn_prop_inheritable_autoprops_add_no_none,
+              svn_prop_inheritable_autoprops_add_yes_none,
+              svn_prop_inheritable_autoprops_add_no_yes,
+              svn_prop_inheritable_autoprops_add_yes_yes,
+              svn_prop_inheritable_autoprops_add_no_no,
+              svn_prop_inheritable_autoprops_add_yes_no,
+              svn_prop_inheritable_autoprops_import_no_none,
+              svn_prop_inheritable_autoprops_imp_yes_none,
+              svn_prop_inheritable_autoprops_imp_no_yes,
+              svn_prop_inheritable_autoprops_imp_yes_yes,
+              svn_prop_inheritable_autoprops_imp_no_no,
+              svn_prop_inheritable_autoprops_imp_yes_no,
+              svn_prop_inheritable_autoprops_add_versioned_target,
+              svn_prop_inheritable_autoprops_propset_file_target,
+              svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target,
              ]
 
 if __name__ == '__main__':
