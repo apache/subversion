@@ -257,6 +257,10 @@ svn_ra__replay_range_ev2(svn_ra_session_t *session,
                          svn_ra__replay_revstart_ev2_callback_t revstart_func,
                          svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
                          void *replay_baton,
+                         svn_ra__provide_base_cb_t provide_base_cb,
+                         svn_ra__provide_props_cb_t provide_props_cb,
+                         svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                         void *cb_baton,
                          apr_pool_t *scratch_pool);
 
 /* Similar to svn_ra_replay(), but with an Ev2 editor. */
