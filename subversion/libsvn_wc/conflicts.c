@@ -1617,34 +1617,6 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* Helper for maybe_resolve_conflicts() below. */
-static const svn_wc_conflict_description2_t *
-setup_text_conflict_desc(const char *left_abspath,
-                         const char *right_abspath,
-                         const char *target_abspath,
-                         const svn_wc_conflict_version_t *left_version,
-                         const svn_wc_conflict_version_t *right_version,
-                         const char *result_target,
-                         const char *detranslated_target,
-                         const char *mimeprop,
-                         svn_boolean_t is_binary,
-                         apr_pool_t *pool)
-{
-  svn_wc_conflict_description2_t *cdesc;
-
-  cdesc = svn_wc_conflict_description_create_text2(target_abspath, pool);
-  cdesc->is_binary = is_binary;
-  cdesc->mime_type = mimeprop;
-  cdesc->base_abspath = left_abspath;
-  cdesc->their_abspath = right_abspath;
-  cdesc->my_abspath = detranslated_target;
-  cdesc->merged_file = result_target;
-
-  cdesc->src_left_version = left_version;
-  cdesc->src_right_version = right_version;
-
-  return cdesc;
-}
 
 /* Create a new file in the same directory as VERSIONED_ABSPATH, with the
    same basename as VERSIONED_ABSPATH, with a ".edited" extension, and set
@@ -1711,7 +1683,7 @@ resolve_text_conflicts(svn_skel_t **work_items,
 {
   svn_wc_conflict_result_t *result;
   svn_skel_t *work_item;
-  const svn_wc_conflict_description2_t *cdesc;
+  svn_wc_conflict_description2_t *cdesc;
   apr_hash_t *props;
 
   *work_items = NULL;
@@ -1722,17 +1694,16 @@ resolve_text_conflicts(svn_skel_t **work_items,
   SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
                               scratch_pool, scratch_pool));
 
-  cdesc = setup_text_conflict_desc(left_abspath,
-                                   right_abspath,
-                                   local_abspath,
-                                   left_version,
-                                   right_version,
-                                   result_target,
-                                   detranslated_target,
-                                   svn_prop_get_value(props,
-                                                       SVN_PROP_MIME_TYPE),
-                                   FALSE,
-                                   scratch_pool);
+  cdesc = svn_wc_conflict_description_create_text2(local_abspath,
+                                                   scratch_pool);
+  cdesc->is_binary = FALSE;
+  cdesc->mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
+  cdesc->base_abspath = left_abspath;
+  cdesc->their_abspath = right_abspath;
+  cdesc->my_abspath = detranslated_target;
+  cdesc->merged_file = result_target;
+  cdesc->src_left_version = left_version;
+  cdesc->src_right_version = right_version;
 
   SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
                         scratch_pool));
