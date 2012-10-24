@@ -874,7 +874,7 @@ complete_conflict(svn_skel_t *conflict,
   SVN_ERR(svn_wc__conflict_skel_is_complete(&is_complete, conflict));
 
   if (is_complete)
-    return SVN_NO_ERROR; /* Already competed */
+    return SVN_NO_ERROR; /* Already completed */
 
   if (old_repos_relpath)
     src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
