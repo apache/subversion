@@ -150,6 +150,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
 #define SVNSERVE_OPT_CLIENT_SPEED    269
+#define SVNSERVE_OPT_VIRTUAL_HOST    270
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -277,6 +278,10 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[mode: tunnel]")},
     {"help",             'h', 0, N_("display this help")},
+    {"virtual-host",     SVNSERVE_OPT_VIRTUAL_HOST, 0,
+     N_("virtual host mode (look for repo in directory\n"
+        "                             "
+        "of provided hostname)")},
     {"version",           SVNSERVE_OPT_VERSION, 0,
      N_("show program version information")},
     {"quiet",            'q', 0,
@@ -503,6 +508,7 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
+  params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
   params.cache_fulltexts = TRUE;
@@ -694,7 +700,11 @@ int main(int argc, const char *argv[])
                                               pool));
           break;
 
-        case SVNSERVE_OPT_LOG_FILE:
+         case SVNSERVE_OPT_VIRTUAL_HOST:
+           params.vhost = TRUE;
+           break;
+
+         case SVNSERVE_OPT_LOG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
           log_filename = svn_dirent_internal_style(log_filename, pool);
           SVN_INT_ERR(svn_dirent_get_absolute(&log_filename, log_filename,
@@ -952,7 +962,7 @@ int main(int argc, const char *argv[])
     settings.single_threaded = TRUE;
     if (handling_mode == connection_mode_thread)
       {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
         settings.single_threaded = FALSE;
 #else
         /* No requests will be processed at all

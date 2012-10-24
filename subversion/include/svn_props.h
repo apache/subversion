@@ -590,6 +590,17 @@ svn_prop_name_is_valid(const char *prop_name);
 #define SVN_PROP_TXN_USER_AGENT \
             SVN_PROP_TXN_PREFIX "user-agent"
 
+/** The prefix reserved for copies of (ephemeral) transaction
+ * properties designed to outlive the transaction.  Administrators may
+ * choose to, in their pre-commit hook scripts, copy the values of one
+ * or more properties named @c SVN_PROP_TXN_PREFIX + "something"
+ * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
+ * allowing that information to survive the commit-time removal of
+ * ephemeral transaction properties.
+ */
+#define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
+
+
 /** @} */
 
 /** @} */

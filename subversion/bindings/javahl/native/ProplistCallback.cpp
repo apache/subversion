@@ -54,7 +54,8 @@ ProplistCallback::callback(void *baton,
                            apr_pool_t *pool)
 {
   if (baton)
-    return ((ProplistCallback *)baton)->singlePath(path, prop_hash, pool);
+    return static_cast<ProplistCallback *>(baton)->singlePath(
+            path, prop_hash, pool);
 
   return SVN_NO_ERROR;
 }

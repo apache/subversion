@@ -1878,12 +1878,14 @@ def mv_unversioned_file(sbox):
 
   # Try to move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*unversioned1.* is not under version control.*",
+                                     ".*unversioned1' " +
+                                       "(does not exist|is not under version control)",
                                      'mv', unver_path_1, dest_path_1)
 
   # Try to forcibly move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*unversioned2.* is not under version control.*",
+                                     ".*unversioned2.* " +
+                                       "(does not exist|is not under version control)",
                                      'mv',
                                      unver_path_2, dest_path_2)
 
@@ -5457,11 +5459,13 @@ def copy_deleted_dir(sbox):
   sbox.simple_rm('A')
 
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E145000: Path.* does not exist',
+                                     '(svn: E145000: Path.* does not exist)|' +
+                                      "(svn: E155035: Deleted node .* copied)",
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E145000: Path.* does not exist',
+                                     '(svn: E145000: Path.* does not exist)|' +
+                                      "(svn: E155035: Deleted node .* copied)",
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
@@ -5742,6 +5746,30 @@ def copy_text_conflict(sbox):
   })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+@Issue(2843)
+def copy_over_excluded(sbox):
+  "copy on top of excluded should give error"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '--set-depth', 'exclude',
+                                     sbox.ospath('A/D'))
+
+  expected_error = "svn: E155000: Path '.*D' exists.*excluded.*"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp',
+                                       sbox.repo_url + '/A/C',
+                                       sbox.ospath('A/D'))
+
+  expected_error = "svn: E155000: Path '.*D' exists.*excluded.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp',
+                                       sbox.ospath('A/C'),
+                                       sbox.ospath('A/D'))
+
 ########################################################################
 # Run the tests
 
@@ -5858,6 +5886,7 @@ test_list = [ None,
               three_nested_moves,
               copy_to_unversioned_parent,
               copy_text_conflict,
+              copy_over_excluded,
              ]
 
 if __name__ == '__main__':

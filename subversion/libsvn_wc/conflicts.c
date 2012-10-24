@@ -1162,7 +1162,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           {
             const char *propname = svn__apr_hash_index_key(hi);
 
-            prop_conflict_skel_add(
+            SVN_ERR(prop_conflict_skel_add(
                             prop_data, propname,
                             old_props
                                     ? apr_hash_get(old_props, propname,
@@ -1180,7 +1180,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                     ? apr_hash_get(their_original_props, propname,
                                                    APR_HASH_KEY_STRING)
                                       : NULL,
-                            result_pool, scratch_pool);
+                            result_pool, scratch_pool));
           }
 
         SVN_ERR(svn_wc__wq_build_prej_install(work_items,
@@ -2000,9 +2000,9 @@ read_prop_conflicts(apr_array_header_t *conflicts,
       if (my_value == NULL)
         desc->reason = svn_wc_conflict_reason_deleted;
       else if (their_value == NULL)
-        desc->action = svn_wc_conflict_reason_added;
+        desc->reason = svn_wc_conflict_reason_added;
       else
-        desc->action = svn_wc_conflict_reason_edited;
+        desc->reason = svn_wc_conflict_reason_edited;
 
       /* ### This should be changed. The prej file should be stored
        * ### separately from the other files. We need to rev the
@@ -2243,6 +2243,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                          svn_boolean_t resolve_props,
                          svn_boolean_t resolve_tree,
                          svn_wc_conflict_choice_t conflict_choice,
+                         svn_skel_t *work_items,
                          svn_cancel_func_t cancel_func_t,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
@@ -2252,7 +2253,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
   svn_boolean_t tree_conflicted;
-  svn_skel_t *work_items = NULL;
   svn_skel_t *work_item;
   apr_pool_t *pool = scratch_pool;
 
@@ -2542,6 +2542,7 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
                            FALSE /* resolve_props */,
                            FALSE /* resolve_tree */,
                            svn_wc_conflict_choose_merged,
+                           NULL,
                            NULL, NULL, /* cancel_func */
                            scratch_pool));
 }
@@ -2591,6 +2592,8 @@ conflict_status_walker(void *baton,
       const svn_wc_conflict_description2_t *cd;
       svn_boolean_t did_resolve;
       svn_wc_conflict_choice_t my_choice = cswb->conflict_choice;
+      svn_skel_t *work_items = NULL;
+
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
@@ -2621,15 +2624,32 @@ conflict_status_walker(void *baton,
             if (!cswb->resolve_tree)
               break;
 
-            /* For now, we only clear tree conflict information and resolve
-             * to the working state. There is no way to pick theirs-full
-             * or mine-full, etc. Throw an error if the user expects us
-             * to be smarter than we really are. */
-            if (my_choice != svn_wc_conflict_choose_merged)
+            /* After updates, we can resolve local moved-away vs. any incoming
+             * change, either by updating the moved-away node (mine-conflict)
+             * or by breaking the move (theirs-conflict). */
+            if ((cd->operation == svn_wc_operation_update ||
+                 cd->operation == svn_wc_operation_switch) &&
+                cd->reason == svn_wc_conflict_reason_moved_away)
               {
+                if (my_choice == svn_wc_conflict_choose_mine_conflict)
+                  SVN_ERR(svn_wc__update_moved_away_conflict_victim(
+                            &work_items, local_abspath, cswb->db,
+                            cswb->notify_func, cswb->notify_baton,
+                            cswb->cancel_func, cswb->cancel_baton,
+                            scratch_pool, scratch_pool));
+                 else if (my_choice == svn_wc_conflict_choose_theirs_conflict)
+                  {
+                    /* ### TODO break move */
+                  }
+              }
+            else if (my_choice != svn_wc_conflict_choose_merged)
+              {
+                /* For other tree conflicts, there is no way to pick
+                 * theirs-full or mine-full, etc. Throw an error if the
+                 * user expects us to be smarter than we really are. */
                 return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                          NULL,
-                                         _("Tree conflicts can only be "
+                                         _("Tree conflict can only be "
                                            "resolved to 'working' state; "
                                            "'%s' not resolved"),
                                          svn_dirent_local_style(local_abspath,
@@ -2643,6 +2663,7 @@ conflict_status_walker(void *baton,
                                              FALSE /* resolve_props */,
                                              TRUE /* resolve_tree */,
                                              my_choice,
+                                             work_items,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));
@@ -2661,6 +2682,7 @@ conflict_status_walker(void *baton,
                                              FALSE /* resolve_props */,
                                              FALSE /* resolve_tree */,
                                              my_choice,
+                                             NULL,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));
@@ -2690,6 +2712,7 @@ conflict_status_walker(void *baton,
                                              TRUE /* resolve_props */,
                                              FALSE /* resolve_tree */,
                                              my_choice,
+                                             NULL,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));

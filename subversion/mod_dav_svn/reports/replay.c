@@ -47,6 +47,7 @@ typedef struct edit_baton_t {
   ap_filter_t *output;
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
+  int compression_level;
 } edit_baton_t;
 
 
@@ -326,7 +327,7 @@ apply_textdelta(void *file_baton,
                                                              eb->output,
                                                              pool),
                           0,
-                          dav_svn__get_compression_level(),
+                          eb->compression_level,
                           pool);
 
   eb->sending_textdelta = TRUE;
@@ -367,6 +368,7 @@ make_editor(const svn_delta_editor_t **editor,
             void **edit_baton,
             apr_bucket_brigade *bb,
             ap_filter_t *output,
+            int compression_level,
             apr_pool_t *pool)
 {
   edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
@@ -376,6 +378,7 @@ make_editor(const svn_delta_editor_t **editor,
   eb->output = output;
   eb->started = FALSE;
   eb->sending_textdelta = FALSE;
+  eb->compression_level = compression_level;
 
   e->set_target_revision = set_target_revision;
   e->open_root = open_root;
@@ -506,7 +509,9 @@ dav_svn__replay_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  make_editor(&editor, &edit_baton, bb, output, resource->pool);
+  make_editor(&editor, &edit_baton, bb, output,
+              dav_svn__get_compression_level(resource->info->r),
+              resource->pool);
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
                                send_deltas, editor, edit_baton,

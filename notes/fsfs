@@ -234,6 +234,16 @@ repository.  The backed-up "current" file could wind up referring to a
 new revision which wasn't copied, or which was only partially
 populated when it was copied.
 
+[ Update: as of 1.6, FSFS uses an optional SQLite DB, rep-cache.db, when
+rep-sharing is enabled.  SQLite provides no guarantee that copying live
+databases will result in copies that are uncorrupt, or that are corrupt but
+will raise an error when accessed.  'svnadmin hotcopy' avoids the problem by
+establishing an appropriate SQLite lock (see svn_sqlite__hotcopy()).  User
+code should either use an atomic filesystem snapshot (as with zfs/LVM),
+refrain from copying rep-cache.db, or stop all access to that file before
+copying it (for example, by disabling commits, by establishing a lock a la
+svn_sqlite__hotcopy(), or by using 'svnadmin freeze'). ]
+
 The "svnadmin hotcopy" command avoids this problem by copying the
 "current" file before copying the revision files.  But a backup using
 the hotcopy command isn't as efficient as a straight incremental

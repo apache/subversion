@@ -990,7 +990,10 @@ typedef struct svn_client_ctx_t
 
 /** Initialize a client context.
  * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
+ * represents a particular instance of an svn client. @a cfg_hash is used
+ * to initialise the config member of the returned context object and should
+ * remain valid for the lifetime of the object. @a cfg_hash may be @c NULL,
+ * in which case it is ignored.
  *
  * In order to avoid backwards compatibility problems, clients must
  * use this function to initialize and allocate the
@@ -999,7 +1002,20 @@ typedef struct svn_client_ctx_t
  *
  * The current implementation never returns error, but callers should
  * still check for error, for compatibility with future versions.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_create_context2(svn_client_ctx_t **ctx,
+                           apr_hash_t *cfg_hash,
+                           apr_pool_t *pool);
+
+
+/** Similar to svn_client_create_context but passes a NULL @a cfg_hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_create_context(svn_client_ctx_t **ctx,
                           apr_pool_t *pool);
@@ -3359,6 +3375,90 @@ svn_client_diff_summarize_peg(const char *path,
  *
  * @{
  */
+
+/* Details of an automatic merge. */
+typedef struct svn_client_automatic_merge_t svn_client_automatic_merge_t;
+
+/* Find the information needed to merge all unmerged changes from a source
+ * branch into a target branch.  The information is the locations of the
+ * youngest common ancestor, merge base, and such like.
+ *
+ * Set *MERGE to the information needed to merge all unmerged changes
+ * (up to SOURCE_REVISION) from the source branch SOURCE_PATH_OR_URL @
+ * SOURCE_REVISION into the target WC at TARGET_WCPATH.
+ */
+svn_error_t *
+svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge,
+                                const char *source_path_or_url,
+                                const svn_opt_revision_t *source_revision,
+                                const char *target_wcpath,
+                                svn_boolean_t allow_mixed_rev,
+                                svn_boolean_t allow_local_mods,
+                                svn_boolean_t allow_switched_subtrees,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/* Find out what kind of automatic merge would be needed, when the target
+ * is only known as a repository location rather than a WC.
+ *
+ * Like svn_client_find_automatic_merge() except that SOURCE_PATH_OR_URL @
+ * SOURCE_REVISION should refer to a repository location and not a WC.
+ *
+ * ### The result, *MERGE_P, may not be suitable for passing to
+ * svn_client_do_automatic_merge().  The target WC state would not be
+ * checked (as in the ALLOW_* flags).  We should resolve this problem:
+ * perhaps add the allow_* params here, or provide another way of setting
+ * them; and perhaps ensure __do_...() will accept the result iff given a
+ * WC that matches the stored target location.
+ */
+svn_error_t *
+svn_client_find_automatic_merge_no_wc(
+                                 svn_client_automatic_merge_t **merge_p,
+                                 const char *source_path_or_url,
+                                 const svn_opt_revision_t *source_revision,
+                                 const char *target_path_or_url,
+                                 const svn_opt_revision_t *target_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Perform an automatic merge.
+ *
+ * Merge according to MERGE into the WC at TARGET_WCPATH.
+ *
+ * The other parameters are as in svn_client_merge4().
+ *
+ * ### TODO: There's little point in this function being the only way the
+ * caller can use the result of svn_client_find_automatic_merge().  The
+ * contents of MERGE should be more public, or there should be other ways
+ * the caller can use it, or these two functions should be combined into
+ * one.  I want to make it more public, and also possibly have more ways
+ * to use it in future (for example, do_automatic_merge_with_step_by_-
+ * step_confirmation).
+ */
+svn_error_t *
+svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
+                              const char *target_wcpath,
+                              svn_depth_t depth,
+                              svn_boolean_t force,
+                              svn_boolean_t record_only,
+                              svn_boolean_t dry_run,
+                              const apr_array_header_t *merge_options,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool);
+
+/* Return TRUE iff the automatic merge represented by MERGE is going to be
+ * a reintegrate-like merge: that is, merging in the opposite direction
+ * from the last full merge.
+ *
+ * This function exists because the merge is NOT really automatic and the
+ * client can be more friendly if it knows something about the differences.
+ */
+svn_boolean_t
+svn_client_automatic_merge_is_reintegrate_like(
+        const svn_client_automatic_merge_t *merge);
+
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
  * the working-copy path @a target_wcpath.

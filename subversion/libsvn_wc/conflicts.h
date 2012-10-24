@@ -394,6 +394,20 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
+/* Update a moved-away tree conflict victim at VICTIM_ABSPATH with changes
+ * brought in by the update operation which flagged the tree conflict.
+ * Set *WORK_ITEMS to a list of work items, allocated in RESULT_POOL, that
+ * need to run as part of marking the conflict resolved. */
+svn_error_t *
+svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
+                                          const char *victim_abspath,
+                                          svn_wc__db_t *db,
+                                          svn_wc_notify_func2_t notify_func,
+                                          void *notify_baton,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

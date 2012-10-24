@@ -10,7 +10,7 @@ BEGIN {
     @_all_fns =
         qw( version diff_summarize_dup create_context checkout3
             checkout2 checkout update4 update3 update2 update switch2 switch
-            add4 add3 add2 add mkdir3 mkdir2 mkdir delete3 delete2
+            add4 add3 add2 add mkdir4 mkdir3 mkdir2 mkdir delete3 delete2
             delete import3 import2 import commit4 commit3 commit2
             commit status4 status3 status2 status log4 log3 log2 log blame4
             blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
@@ -628,6 +628,21 @@ Has no return.
 
 =item $ctx-E<gt>mkdir($targets, $pool);
 
+Similar to $ctx-E<gt>mkdir2() except it returns an svn_client_commit_info_t
+object instead of a svn_commit_info_t object.
+
+=item $ctx-E<gt>mkdir2($targets, $pool);
+
+Similar to $ctx-E<gt>mkdir3(), but with $make_parents always FALSE, and
+$revprop_hash always undef.
+
+=item $ctx-E<gt>mkdir3($targets, $make_parents, $revprop_hash, $pool);
+
+Similar to $ctx-E<gt>mkdir4(), but returns a svn_commit_info_t object rather
+than through a callback function.
+
+=item $ctx-E<gt>mkdir4($targets, $make_parents, $revprop_hash, \&commit_callback, $pool);
+
 Create a directory, either in a repository or a working copy.
 
 If $targets contains URLs, immediately attempts to commit the creation of the
@@ -637,9 +652,22 @@ object.
 Else, create the directories on disk, and attempt to schedule them for addition.
 In this case returns undef.
 
+If $make_parents is TRUE, create any non-existant parent directories also.
+
+If not undef, $revprop_hash is a reference to a hash table holding additional
+custom revision properites (property names mapped to strings) to be set on the
+new revision in the event that this is a committing operation.  This hash
+cannot contain any standard Subversion properties.
+
+Calls the log message callback to query for a commit log message when one is
+needed.
+
 Calls the notify callback when the directory has been created (successfully)
 in the working copy, with the path of the new directory.  Note this is only
 called for items added to the working copy.
+
+If \&commit_callback is not undef, then for each successful commit, call
+\&commit_callback with the svn_commit_info_t object for the commit.
 
 =item $ctx-E<gt>move($src_path, $src_revision, $dst_path, $force, $pool);
 

@@ -42,7 +42,6 @@ class SQLclass(object):
     def __init__(self):
         import cStringIO
         import pkgutil
-        import re
 
         comment_rx = re.compile(r"\s*--.*$")
         header_rx = re.compile(r"^---(?P<kind>STATEMENT|SCRIPT)"
@@ -215,7 +214,6 @@ class Txn(SQLobject):
             self.created = self._now()
         super(Txn, self)._put(cursor)
         if self.treeid is None:
-            SQL.TXN_UPDATE_INITIAL_TREEID(cursor, id = self.id)
             self.treeid = self.id
 
     @classmethod
@@ -253,49 +251,6 @@ class Txn(SQLobject):
         SQL.TXN_CLEANUP(cursor, id = self.id)
 
 
-class Branch(SQLobject):
-    """O/R mapping for the "branch" table."""
-
-    _columns = ("id", "treeid", "nodeid", "origin", "state")
-    _put_statement = SQL.BRANCH_INSERT
-    _get_statement = SQL.BRANCH_GET
-
-    # state
-    TRANSIENT = "T"
-    PERMANENT = "P"
-
-    def __init__(self, **kwargs):
-        super(Branch, self).__init__(**kwargs)
-        if self.state is None:
-            self.state = self.TRANSIENT
-
-    def _put(self, cursor):
-        super(Branch, self)._put(cursor)
-        if self.nodeid is None:
-            SQL.BRANCH_UPDATE_INITIAL_NODEID(cursor, id = self.id)
-            self.nodeid = self.id
-
-    @classmethod
-    def _update_treeid(cls, cursor, new_txn, old_txn):
-        SQL.BRANCH_UPDATE_TREEID(cursor,
-                                 new_treeid = new_txn.treeid,
-                                 old_treeid = old_txn.treeid)
-
-    @classmethod
-    def _history(cls, cursor, nodeid):
-        SQL.BRANCH_HISTORY(cursor, nodeid = nodeid)
-        for row in cursor:
-            yield cls._from_row(row)
-
-    @classmethod
-    def _commit(cls, cursor, txn):
-        SQL.BRANCH_COMMIT(cursor, treeid = txn.treeid)
-
-    @classmethod
-    def _cleanup(cls, cursor, txn):
-        SQL.BRANCH_CLEANUP(cursor, treeid = txn.treeid)
-
-
 class NodeRev(SQLobject):
     """O/R mapping for the noderev/string/nodeview table."""
 
@@ -330,8 +285,8 @@ class NodeRev(SQLobject):
             self.state = self.TRANSIENT
 
     def __str__(self):
-        return "%d %c %s%s" % (self.treeid, self.opcode, self.name,
-                               self._isdir and '/' or '')
+        return "%d(%d) %c %s%s" % (self.id, self.treeid, self.opcode,
+                                   self.name, self._isdir and '/' or '')
 
     # Opcode names
     __opnames = {ADD: "add",
@@ -384,6 +339,10 @@ class NodeRev(SQLobject):
                 assert self.dename is not None
                 self.denameid = self.__stringid(cursor, self.dename)
         super(NodeRev, self)._put(cursor)
+        if self.nodeid is None:
+            self.nodeid = self.id
+        if self.branch is None:
+            self.branch = self.id
 
     @classmethod
     def _update_treeid(cls, cursor, new_txn, old_txn):
@@ -472,10 +431,6 @@ class NodeRev(SQLobject):
         track.close(cls.__find(cursor, parent.branch, parts[-1], txn))
         return track
 
-    def _count_successors(self, cursor):
-        SQL.NODEREV_COUNT_SUCCESSORS(cursor, origin = self.id)
-        return int(cursor.fetchone()[0])
-
     def _listdir(self, cursor, txn):
         assert self._isdir
         if txn.state != txn.PERMANENT:
@@ -501,17 +456,13 @@ class NodeRev(SQLobject):
 
     def _branch(self, cursor, parent, txn, replaced=False):
         assert txn._uncommitted
-        branch = Branch(treeid = txn.treeid,
-                        nodeid = self.nodeid,
-                        origin = self.branch)
-        branch._put(cursor)
         if self._isdir:
             opcode = replaced and self.LAZY_BREPLACE or self.LAZY
         else:
             opcode = replaced and self.BREPLACE or self.BRANCH
         node = self._revise(opcode, txn)
         node.parent = parent.id
-        node.branch = branch.id
+        node.branch = None
         node._put(cursor)
         return node
 
@@ -519,7 +470,9 @@ class NodeRev(SQLobject):
         assert txn._uncommitted
         noderev = NodeRev._clone(self)
         noderev.treeid = txn.treeid
+        noderev.origin = self.id
         noderev.opcode = opcode
+        return noderev
 
     __readonly = frozenset(("name",))
     def __setitem__(self, key, value):
@@ -528,7 +481,10 @@ class NodeRev(SQLobject):
         if key == "dename":
             name = self.__normtext(value)
             value = self.__text(value)
-            super(NodeRev, self).__setitem__("name", name)
+            if name != self.name:
+                super(NodeRev, self).__setitem__("name", name)
+                super(NodeRev, self).__setitem__("nameid", None)
+            super(NodeRev, self).__setitem__("denameid", None)
         super(NodeRev, self).__setitem__(key, value)
 
     def __getitem__(self, key):
@@ -680,12 +636,10 @@ class Index(object):
     def commit_txn(self, txn, revision):
         txn._commit(self.cursor, revision)
         NodeRev._commit(self.cursor, txn)
-        Branch._commit(self.cursor, txn)
 
     def abort_txn(self, txn):
         txn._abort(self.cursor)
         NodeRev._cleanup(self.cursor, txn)
-        Branch._cleanup(self.cursor, txn)
         txn._cleanup(self.cursor)
 
     def listdir(self, txn, noderev):
@@ -743,11 +697,9 @@ class Index(object):
             newnode = origin._branch(self.cursor, parent.id, txn,
                                      replaced = (oldnode is not None))
         else:
-            branch = Branch(treeid = txn.treeid)
-            branch._put(self.cursor)
             newnode = NodeRev(treeid = txn.treeid,
-                              nodeid = branch.nodeid,
-                              branch = branch.id,
+                              nodeid = None,
+                              branch = None,
                               parent = parent.id,
                               kind = kind,
                               opcode = opcode)
@@ -777,6 +729,45 @@ class Tree(object):
         index.rollback()
 
 
+__greek_tree = {
+    'iota': 'file',
+    'A': {
+        'mu': 'file',
+        'B': {
+            'lambda': 'file',
+            'E': {
+                'alpha': 'file',
+                'beta': 'file'},
+            'F': 'dir'},
+        'C': 'dir',
+        'D': {
+            'G': {
+                'pi': 'file',
+                'rho': 'file',
+                'tau': 'file'},
+            'H': {
+                'chi': 'file',
+                'psi': 'file',
+                'omega': 'file'}
+            }
+        }
+    }
+def greektree(ix, tx):
+    def populate(track, items):
+        print 'Populating', track
+        for name, kind in items.iteritems():
+            if kind == 'file':
+                node = ix.add(tx, track, name, NodeRev.FILE)
+            else:
+                node = ix.add(tx, track, name, NodeRev.DIR)
+            print 'Added', node, 'node:', node.noderev
+            if isinstance(kind, dict):
+                populate(node, kind)
+
+    root = ix.lookup(tx)
+    populate(root, __greek_tree)
+
+
 def simpletest(database):
     ix = Index(database)
     ix.initialize()
@@ -789,37 +780,34 @@ def simpletest(database):
         print "root track:", root
         print "root noderev", root.noderev
 
-        print "Add A/foo"
+        print 'Create greek tree'
         tx = ix.new_txn(0)
         print "transaction:", tx
-        parent = ix.add(tx, root, "A", NodeRev.DIR)
-        print "A track:", parent
-        print "A noderev", parent.noderev
-
-        node = ix.add(tx, parent, "foo", NodeRev.FILE)
-        print "foo track:", node
-        print "foo noderev", node.noderev
+        greektree(ix, tx)
         ix.commit_txn(tx, 1)
         ix.commit()
+
+
+        def listdir(noderev, prefix):
+            for n in ix.listdir(tx, noderev):
+                print prefix, str(n)
+                if n._isdir:
+                    listdir(n, prefix + "  ")
 
         print "List contents"
         tx = ix.get_txn()
         print "transaction:", tx
         root = ix.lookup(tx)
         print str(root.noderev)
-        for n1 in ix.listdir(tx, root.noderev):
-            print " ", str(n1)
-            if n1._isdir:
-                for n2 in ix.listdir(tx, n1):
-                    print "   ", str(n2)
+        listdir(root.noderev, " ")
 
-        print "Lookup A"
-        track = ix.lookup(tx, None, "A")
-        print str(track.noderev)
+        print "Lookup iota"
+        track = ix.lookup(tx, None, "iota")
+        print str(track), str(track.noderev)
 
-        print "Lookup A/foo"
-        track = ix.lookup(tx, None, "A/foo")
-        print str(track.noderev)
+        print "Lookup A/D/H/psi"
+        track = ix.lookup(tx, None, "A/D/H/psi")
+        print str(track), str(track.noderev)
     finally:
         ix.close()
 

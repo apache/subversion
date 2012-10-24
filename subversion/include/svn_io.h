@@ -610,13 +610,13 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
 /** Set @a *different_p12 to non-zero if @a file1 and @a file2 have different
  * sizes, else set to zero.  Do the similar for @a *different_p23 with
  * @a file2 and @a file3, and @a *different_p13 for @a file1 and @a file3.
- * All three of @a file1, @a file2 and @a file3 are utf8-encoded.
+ * The filenames @a file1, @a file2 and @a file3 are utf8-encoded.
  *
  * Setting @a *different_p12 to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
  * definitely different.  That is, if the size of one or both files
- * cannot be determined, then the sizes are not known to be different,
- * so @a *different_p12 is set to 0.
+ * cannot be determined (due to stat() returning an error), then the sizes
+ * are not known to be different, so @a *different_p12 is set to 0.
  */
 svn_error_t *
 svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,

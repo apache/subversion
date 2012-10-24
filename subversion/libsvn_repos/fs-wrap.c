@@ -393,9 +393,9 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
     {
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   strlen(SVN_PROP_REVISION_AUTHOR)) != 0)
+                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
           && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      strlen(SVN_PROP_REVISION_DATE)) != 0))
+                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
         *value_p = NULL;
 
       else

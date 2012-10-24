@@ -2841,7 +2841,8 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
     svn_error_clear(editor->abort_edit(edit_baton, pool));
   SVN_CMD_ERR(err);
 
-  return svn_ra_svn_write_cmd(conn, pool, "finish-replay", "");
+  return svn_ra_svn_write_templated_cmd(conn, pool,
+                                        svn_ra_svn_cmd_finish_replay);
 }
 
 static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -3095,9 +3096,13 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: '%s'", url);
 
-
-  path = strchr(path, '/');
-  path = (path == NULL) ? "" : svn_relpath_canonicalize(path, pool);
+  if (! b->vhost)
+    {
+      path = strchr(path, '/');
+      if (path == NULL)
+        path = "";
+    }
+  path = svn_relpath_canonicalize(path, pool);
   path = svn_path_uri_decode(path, pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
@@ -3144,8 +3149,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
 #ifdef SVN_HAVE_SASL
   /* Should we use Cyrus SASL? */
-  svn_config_get_bool(b->cfg, &b->use_sasl, SVN_CONFIG_SECTION_SASL,
-                      SVN_CONFIG_OPTION_USE_SASL, FALSE);
+  SVN_ERR(svn_config_get_bool(b->cfg, &b->use_sasl, SVN_CONFIG_SECTION_SASL,
+                              SVN_CONFIG_OPTION_USE_SASL, FALSE));
 #endif
 
   /* Use the repository UUID as the default realm. */
@@ -3169,7 +3174,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
     hooks_env = svn_dirent_internal_style(hooks_env, pool);
-  svn_repos_hooks_setenv(b->repos, hooks_env, pool, pool);
+  SVN_ERR(svn_repos_hooks_setenv(b->repos, hooks_env, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3197,6 +3202,53 @@ fs_warning_func(void *baton, svn_error_t *err)
   svn_pool_clear(b->pool);
 }
 
+/* Return the normalized repository-relative path for the given PATH
+ * (may be a URL, full path or relative path) and fs contained in the
+ * server baton BATON. Allocate the result in POOL.
+ */
+static const char *
+get_normalized_repo_rel_path(void *baton,
+                             const char *path,
+                             apr_pool_t *pool)
+{
+  server_baton_t *sb = baton;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(sb->repos_url, path, pool);
+      path = svn_fspath__canonicalize(path, pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if ((path)[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(sb->fs_path->data, path, pool);
+    }
+
+  return path;
+}
+
+/* Get the revision root for REVISION in fs given by server baton BATON
+ * and return it in *FS_ROOT. Use HEAD if REVISION is SVN_INVALID_REVNUM.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+get_revision_root(svn_fs_root_t **fs_root,
+                  void *baton,
+                  svn_revnum_t revision,
+                  apr_pool_t *pool)
+{
+  server_baton_t *sb = baton;
+
+  if (!SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_fs_youngest_rev(&revision, sb->fs, pool));
+
+  SVN_ERR(svn_fs_revision_root(fs_root, sb->fs, revision, pool));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 fetch_props_func(apr_hash_t **props,
@@ -3206,28 +3258,11 @@ fetch_props_func(apr_hash_t **props,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   err = svn_fs_node_proplist(props, fs_root, path, result_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -3249,28 +3284,11 @@ fetch_kind_func(svn_kind_t *kind,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
@@ -3286,31 +3304,14 @@ fetch_base_func(const char **filename,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_stream_t *contents;
   svn_stream_t *file_stream;
   const char *tmp_filename;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -3355,6 +3356,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.log_file = params->log_file;
   b.pool = pool;
   b.use_sasl = FALSE;
+  b.vhost = params->vhost;
 
   /* construct FS configuration parameters */
   b.fs_config = apr_hash_make(pool);
