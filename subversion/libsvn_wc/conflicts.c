@@ -1719,38 +1719,38 @@ resolve_text_conflicts(svn_skel_t **work_items,
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
 
-    SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
-                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
+                              scratch_pool, scratch_pool));
 
-    cdesc = setup_text_conflict_desc(left_abspath,
-                                    right_abspath,
-                                    local_abspath,
-                                    left_version,
-                                    right_version,
-                                    result_target,
-                                    detranslated_target,
-                                    svn_prop_get_value(props,
-                                                        SVN_PROP_MIME_TYPE),
-                                    FALSE,
-                                    scratch_pool);
+  cdesc = setup_text_conflict_desc(left_abspath,
+                                   right_abspath,
+                                   local_abspath,
+                                   left_version,
+                                   right_version,
+                                   result_target,
+                                   detranslated_target,
+                                   svn_prop_get_value(props,
+                                                       SVN_PROP_MIME_TYPE),
+                                   FALSE,
+                                   scratch_pool);
 
-    SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
+  SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
                         scratch_pool));
-    if (result == NULL)
-    return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
-                            NULL, _("Conflict callback violated API:"
-                                    " returned no results"));
+  if (result == NULL)
+    return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                            _("Conflict callback violated API: "
+                              "returned no results"));
 
-    if (result->save_merged)
+  if (result->save_merged)
     {
-        SVN_ERR(save_merge_result(work_items,
-                                  db, local_abspath,
-                                  /* Look for callback's own
-                                      merged-file first: */
-                                  result->merged_file
-                                      ? result->merged_file
-                                      : result_target,
-                                  result_pool, scratch_pool));
+      SVN_ERR(save_merge_result(work_items,
+                                db, local_abspath,
+                                /* Look for callback's own
+                                    merged-file first: */
+                                result->merged_file
+                                  ? result->merged_file
+                                  : result_target,
+                                result_pool, scratch_pool));
     }
 
   SVN_ERR(eval_text_conflict_func_result(&work_item,
