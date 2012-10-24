@@ -71,7 +71,8 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
 
     env->DeleteLocalRef(jctx);
 
-    SVN_JNI_ERR(svn_client_create_context(&m_context, pool.getPool()),
+    SVN_JNI_ERR(svn_client_create_context2(&m_context, NULL,
+                                           pool.getPool()),
                 );
 
     /* Clear the wc_ctx as we don't want to maintain this unconditionally
@@ -323,7 +324,7 @@ ClientContext::cancelOperation()
 svn_error_t *
 ClientContext::checkCancel(void *cancelBaton)
 {
-    ClientContext *that = (ClientContext *)cancelBaton;
+    ClientContext *that = static_cast<ClientContext *>(cancelBaton);
     if (that->m_cancelOperation)
         return svn_error_create(SVN_ERR_CANCELLED, NULL,
                                 _("Operation cancelled"));

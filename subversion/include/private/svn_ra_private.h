@@ -119,16 +119,6 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
                                  const svn_string_t *mylocktoken,
                                  apr_pool_t *scratch_pool);
 
-
-/** Like svn_ra_get_path_relative_to_root(), except returning a fspath
- * (starting with '/') instead of a relpath.
- */
-svn_error_t *
-svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
-                                    const char **fspath,
-                                    const char *url,
-                                    apr_pool_t *pool);
-
 /** Register CALLBACKS to be used with the Ev2 shims in RA_SESSION. */
 svn_error_t *
 svn_ra__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
@@ -218,8 +208,8 @@ typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
 
    CB_BATON is the baton used/shared by the above three callbacks.
 
-   CANCEL_FUNC/BATON is a standard cancellation function, and is used for
-   the returned Ev2 editor, and possibly other RA-specific operations.
+   Cancellation is handled through the callbacks provided when SESSION
+   is initially opened.
 
    *EDITOR will be allocated in RESULT_POOL, and all temporary allocations
    will be performed in SCRATCH_POOL.
@@ -236,8 +226,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra__provide_props_cb_t provide_props_cb,
                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
                        void *cb_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  merge_symmetric_tests.py:  testing "symmetric merge" scenarios
+#  merge_automatic_tests.py:  testing "automatic merge" scenarios
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
@@ -206,7 +206,7 @@ def get_3ways_from_output(output):
      Return a list of (base, source-right) tuples."""
   ### Problem: test suite strips debugging output within run_and_verify_...()
   ### so we don't see it here.  And relying on debug output is a temporary
-  ### measure only.  Better to access svn_client_find_symmetric_merge()
+  ### measure only.  Better to access svn_client_find_automatic_merge()
   ### directly, via bindings?
 
   merges = []
@@ -251,7 +251,7 @@ def modify_branch(sbox, branch, number, conflicting=False):
     sbox.simple_copy(branch + '/mu', branch + '/mu-' + uniq)
   sbox.simple_commit()
 
-def expected_symmetric_merge_output(target, expect_3ways):
+def expected_automatic_merge_output(target, expect_3ways):
   """Calculate the expected output."""
 
   # (This is rather specific to the current implementation.)
@@ -275,7 +275,7 @@ def expected_symmetric_merge_output(target, expect_3ways):
   # Match mergeinfo changes.  (### Subtrees are not yet supported here.)
   lines += [" [UG]   " + target + "\n"]
 
-  # At the moment, the symmetric merge code sometimes says 'Merging
+  # At the moment, the automatic merge code sometimes says 'Merging
   # differences between repository URLs' and sometimes 'Merging r3 through
   # r5', but it's not trivial to predict which, so expect either form.
   lines += ["--- Merging .* into '%s':\n" % (target,),
@@ -283,7 +283,7 @@ def expected_symmetric_merge_output(target, expect_3ways):
 
   return expected_merge_output(rev_ranges, lines, target=target)
 
-def symmetric_merge(sbox, source, target, args=[],
+def automatic_merge(sbox, source, target, args=[],
                     expect_changes=None, expect_mi=None, expect_3ways=None):
   """Do a complete, automatic merge from path SOURCE to path TARGET, and
   commit.  Verify the output and that there is no error.
@@ -299,7 +299,7 @@ def symmetric_merge(sbox, source, target, args=[],
 
   before_changes = logical_changes_in_branch(sbox, target)
 
-  exp_out = expected_symmetric_merge_output(target, expect_3ways)
+  exp_out = expected_automatic_merge_output(target, expect_3ways)
   exit, out, err = svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge',
                                      '^/' + source, target,
@@ -362,7 +362,7 @@ def init_mod_merge_mod(sbox, mod_6, mod_7):
   modify_branch(sbox, 'A', 3)
   modify_branch(sbox, 'B', 4)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A3'],
                   expect_mi=[2, 3, 4],
                   expect_3ways=[three_way_merge('A1', 'A4')])
@@ -394,7 +394,7 @@ def merge_once_1(sbox):
   no_op_commit(sbox)  # r3
   no_op_commit(sbox)  # r4
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=[],
                   expect_mi=[2, 3, 4],
                   expect_3ways=[three_way_merge_no_op('A1', 'A4')])
@@ -412,7 +412,7 @@ def merge_once_2(sbox):
   modify_branch(sbox, 'A', 3)
   no_op_commit(sbox)  # r4
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A3'],
                   expect_mi=[2, 3, 4],
                   expect_3ways=[three_way_merge('A1', 'A4')])
@@ -430,7 +430,7 @@ def merge_once_3(sbox):
   no_op_commit(sbox)  # r3
   modify_branch(sbox, 'B', 4)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=[],
                   expect_mi=[2, 3, 4],
                   expect_3ways=[three_way_merge_no_op('A1', 'A4')])
@@ -448,7 +448,7 @@ def merge_once_4(sbox):
   modify_branch(sbox, 'A', 3)
   modify_branch(sbox, 'B', 4)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A3'],
                   expect_mi=[2, 3, 4],
                   expect_3ways=[three_way_merge('A1', 'A4')])
@@ -468,7 +468,7 @@ def merge_twice_same_direction_1(sbox):
 
   init_mod_merge_mod(sbox, mod_6=False, mod_7=False)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=[],
                   expect_mi=[5, 6, 7],
                   expect_3ways=[three_way_merge_no_op('A4', 'A7')])
@@ -484,7 +484,7 @@ def merge_twice_same_direction_2(sbox):
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A6'],
                   expect_mi=[5, 6, 7],
                   expect_3ways=[three_way_merge('A4', 'A7')])
@@ -504,7 +504,7 @@ def merge_to_and_fro_1_1(sbox):
 
   init_mod_merge_mod(sbox, mod_6=False, mod_7=False)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B4'],
                   expect_mi=[2, 3, 4, 5, 6, 7],
                   expect_3ways=[three_way_merge('A4', 'B7')])
@@ -520,7 +520,7 @@ def merge_to_and_fro_1_2(sbox):
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7'],
                   expect_mi=[2, 3, 4, 5, 6, 7],
                   expect_3ways=[three_way_merge('A4', 'B7')])
@@ -537,7 +537,7 @@ def init_merge_to_and_fro_2(sbox, mod_9, mod_10):
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A6'],
                   expect_mi=[5, 6, 7],
                   expect_3ways=[three_way_merge('A4', 'A7')])
@@ -563,7 +563,7 @@ def merge_to_and_fro_2_1(sbox):
 
   init_merge_to_and_fro_2(sbox, mod_9=False, mod_10=False)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7'],
                   expect_mi=[2, 3, 4, 5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge('A7', 'B10')])
@@ -579,7 +579,7 @@ def merge_to_and_fro_2_2(sbox):
 
   init_merge_to_and_fro_2(sbox, mod_9=True, mod_10=True)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7', 'B10'],
                   expect_mi=[2, 3, 4, 5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge('A7', 'B10')])
@@ -596,7 +596,7 @@ def init_merge_to_and_fro_3(sbox, mod_9, mod_10):
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7'],
                   expect_mi=[2, 3, 4, 5, 6, 7],
                   expect_3ways=[three_way_merge('A4', 'B7')])
@@ -622,7 +622,7 @@ def merge_to_and_fro_3_1(sbox):
 
   init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=[],
                   expect_mi=[8, 9, 10],
                   expect_3ways=[three_way_merge_no_op('B7', 'B10')])
@@ -638,7 +638,7 @@ def merge_to_and_fro_3_2(sbox):
 
   init_merge_to_and_fro_3(sbox, mod_9=True, mod_10=True)
 
-  symmetric_merge(sbox, 'B', 'A',
+  automatic_merge(sbox, 'B', 'A',
                   expect_changes=['B10'],
                   expect_mi=[8, 9, 10],
                   expect_3ways=[three_way_merge('B7', 'B10')])
@@ -654,7 +654,7 @@ def merge_to_and_fro_4_1(sbox):
 
   init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A6'],
                   expect_mi=[5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge_no_op('B7', 'A10')])
@@ -670,7 +670,7 @@ def merge_to_and_fro_4_2(sbox):
 
   init_merge_to_and_fro_3(sbox, mod_9=True, mod_10=True)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A6', 'A9'],
                   expect_mi=[5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge('B7', 'A10')])
@@ -693,7 +693,7 @@ def cherry1_fwd(sbox):
   cherry_pick(sbox, 8, 'A', 'B')
   modify_branch(sbox, 'A', 10)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A6', 'A10'],  # and NOT A8
                   expect_mi=[5, 6, 7, 9, 10],
                   expect_3ways=[three_way_merge('A4', 'A7'),
@@ -714,7 +714,7 @@ def cherry2_fwd(sbox):
   cherry_pick(sbox, 8, 'B', 'A')
   modify_branch(sbox, 'A', 10)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A10'],  # and NOT A9
                   expect_mi=[5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge('A9', 'A10')])
@@ -737,7 +737,7 @@ def cherry3_fwd(sbox):
   modify_branch(sbox, 'B', 5)
   modify_branch(sbox, 'B', 6)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A3'],
                   expect_mi=[2, 3, 4, 5, 6],
                   expect_3ways=[three_way_merge('A1', 'A6')])
@@ -745,13 +745,13 @@ def cherry3_fwd(sbox):
   cherry_pick(sbox, 6, 'B', 'A')
   modify_branch(sbox, 'A', 9)
 
-  symmetric_merge(sbox, 'A', 'B',
+  automatic_merge(sbox, 'A', 'B',
                   expect_changes=['A9'],  # and NOT A8
                   expect_mi=[7, 8, 9],
                   expect_3ways=[three_way_merge('A8', 'A9')])
 
 #----------------------------------------------------------------------
-# Symmetric merges ignore subtree mergeinfo during reintegrate.
+# Automatic merges ignore subtree mergeinfo during reintegrate.
 @SkipUnless(server_has_mergeinfo)
 @XFail()
 def subtree_to_and_fro(sbox):
@@ -786,32 +786,32 @@ def subtree_to_and_fro(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A/D', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
-                                     '-m', 'Symmetric subtree merge')
+                                     '-m', 'Automatic subtree merge')
 
   # r9 - Make an edit to A/D/H/psi.
   svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our trunk')
 
-  # Now reintegrate ^/A_COPY back to A.  To the symmetric merge code the
+  # Now reintegrate ^/A_COPY back to A.  To the automatic merge code the
   # subtree merge to A_COPY/D just looks like any other branch edit, it is
   # not considered a merge.  So the changes which exist on A/D and were
   # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
   #
   #   C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
-  #     working_copies\merge_symmetric_tests-18>svn merge ^^/A_COPY A
+  #     working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
   #   DBG: merge.c:11461: base on source: file:///C:/SVN/src-trunk/Debug/
   #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_symmetric_tests-18/A@1
+  #     merge_automatic_tests-18/A@1
   #   DBG: merge.c:11462: base on target: file:///C:/SVN/src-trunk/Debug/
   #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_symmetric_tests-18/A@1
+  #     merge_automatic_tests-18/A@1
   #   DBG: merge.c:11567: yca   file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/A@1
+  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
   #   DBG: merge.c:11568: base  file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/A@1
+  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
   #   DBG: merge.c:11571: right file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_symmetric_tests-18/
+  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/
   #     A_COPY@8
   #   Conflict discovered in file 'A\D\H\psi'.
   #   Select: (p) postpone, (df) diff-full, (e) edit,
@@ -831,7 +831,7 @@ def subtree_to_and_fro(sbox):
 
   # The 'old' merge produced a warning that reintegrate could not be used.
   # Not claiming this is perfect, but it's better(?) than a conflict:
-  svntest.verify.verify_outputs("Symmetric Reintegrate failed, but not "
+  svntest.verify.verify_outputs("Automatic Reintegrate failed, but not "
                                 "in the way expected",
                                 err, None,
                                 "(svn: E195016: Reintegrate can only be used if "
@@ -846,7 +846,7 @@ def subtree_to_and_fro(sbox):
                                 True) # Match *all* lines of stdout  
 
 #----------------------------------------------------------------------
-# Symmetric merges ignore subtree mergeinfo gaps older than the last rev
+# Automatic merges ignore subtree mergeinfo gaps older than the last rev
 # synced to the target root.
 @SkipUnless(server_has_mergeinfo)
 def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
@@ -889,7 +889,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, '-m',
                                      'sync merge and reverse subtree merge')
 
-  # Try a symmetric sync merge from ^/A to A_COPY.  Revision 5 should be
+  # Try an automatic sync merge from ^/A to A_COPY.  Revision 5 should be
   # merged to A_COPY/B as its subtree mergeinfo reveals that rev is missing,
   # like so:
   # 

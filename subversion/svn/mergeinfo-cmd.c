@@ -205,7 +205,7 @@ mergeinfo_summary(
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client__symmetric_merge_t *the_merge;
+  svn_client_automatic_merge_t *the_merge;
   svn_client__pathrev_t *yca, *base, *right, *target;
   svn_boolean_t target_is_wc, reintegrate_like;
 
@@ -213,22 +213,22 @@ mergeinfo_summary(
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
   if (target_is_wc)
-    SVN_ERR(svn_client__find_symmetric_merge(
+    SVN_ERR(svn_client_find_automatic_merge(
               &the_merge,
               source_path_or_url, source_revision,
               target_path_or_url,
               TRUE, TRUE, TRUE,  /* allow_* */
               ctx, pool, pool));
   else
-    SVN_ERR(svn_client__find_symmetric_merge_no_wc(
+    SVN_ERR(svn_client_find_automatic_merge_no_wc(
               &the_merge,
               source_path_or_url, source_revision,
               target_path_or_url, target_revision,
               ctx, pool, pool));
 
-  SVN_ERR(svn_client__symmetric_merge_get_locations(
+  SVN_ERR(svn_client__automatic_merge_get_locations(
             &yca, &base, &right, &target, the_merge, pool));
-  reintegrate_like = svn_client__symmetric_merge_is_reintegrate_like(the_merge);
+  reintegrate_like = svn_client_automatic_merge_is_reintegrate_like(the_merge);
 
   SVN_ERR(mergeinfo_diagram(yca, base, right, target,
                             target_is_wc, reintegrate_like,

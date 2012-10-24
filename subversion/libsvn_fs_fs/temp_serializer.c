@@ -1244,7 +1244,8 @@ svn_fs_fs__serialize_mergeinfo(void **data,
   svn_temp_serializer__context_t *context;
   svn_stringbuf_t *serialized;
   apr_hash_index_t *hi;
-  int i, k;
+  unsigned i;
+  int k;
   apr_size_t range_count;
 
   /* initialize our auxiliary data structure */
@@ -1326,7 +1327,8 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
                                  apr_size_t data_len,
                                  apr_pool_t *pool)
 {
-  int i, k, n;
+  unsigned i;
+  int k, n;
   mergeinfo_data_t *merges = (mergeinfo_data_t *)data;
   svn_mergeinfo_t mergeinfo;
   

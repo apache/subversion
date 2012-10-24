@@ -1003,11 +1003,11 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
       svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS))
     {
       apr_hash_set(revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                   SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
                    APR_HASH_KEY_STRING,
                    svn_string_create(SVN_VER_NUMBER, pool));
       apr_hash_set(revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                   SVN_PROP_TXN_USER_AGENT,
                    APR_HASH_KEY_STRING,
                    svn_string_create(sess_baton->useragent, pool));
     }
@@ -2671,8 +2671,9 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *iproplist;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, scratch_pool, "get-iprops", "c(?r)",
-                               path, revision));
+  SVN_ERR(svn_ra_svn_write_templated_cmd(conn, scratch_pool,
+                                         svn_ra_svn_cmd_get_iprops,
+                                         path, revision));
   SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, scratch_pool, "l", &iproplist));
   SVN_ERR(parse_iproplist(iprops, iproplist, session, result_pool,

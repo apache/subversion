@@ -20,53 +20,56 @@
  * ====================================================================
  * @endcopyright
  *
- * @file PatchCallback.cpp
- * @brief Implementation of the class PatchCallback
+ * @file ImportFilterCallback.cpp
+ * @brief Implementation of the class ImportFilterCallback
  */
 
-#include "PatchCallback.h"
-#include "CreateJ.h"
+#include "ImportFilterCallback.h"
 #include "EnumMapper.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
-#include "svn_path.h"
 
 /**
- * Create a PatchCallback object.  jcallback is the Java callback object.
+ * Create a ImportFilterCallback object
+ * @param jcallback the Java callback object.
  */
-PatchCallback::PatchCallback(jobject jcallback)
+ImportFilterCallback::ImportFilterCallback(jobject jcallback)
 {
   m_callback = jcallback;
 }
 
-PatchCallback::~PatchCallback()
+/**
+ * Destroy a ImportFilterCallback object
+ */
+ImportFilterCallback::~ImportFilterCallback()
 {
-  // The m_callback does not need to be destroyed, because it is the
-  // passed in parameter to the Java SVNClient.patch method.
+  // The m_callback does not need to be destroyed, because it is the passed
+  // in parameter to the Java SVNClient.list method.
 }
 
 svn_error_t *
-PatchCallback::callback(void *baton,
-                        svn_boolean_t *filtered,
-                        const char *canon_path_from_patchfile,
-                        const char *patch_abspath,
-                        const char *reject_abspath,
-                        apr_pool_t *pool)
+ImportFilterCallback::callback(void *baton,
+                               svn_boolean_t *filtered,
+                               const char *local_abspath,
+                               const svn_io_dirent2_t *dirent,
+                               apr_pool_t *pool)
 {
   if (baton)
-    return static_cast<PatchCallback *>(baton)->singlePatch(
-            filtered, canon_path_from_patchfile, patch_abspath, reject_abspath,
-            pool);
+    return static_cast<ImportFilterCallback *>(baton)->doImportFilter(
+            filtered, local_abspath, dirent, pool);
 
   return SVN_NO_ERROR;
 }
 
+/**
+ * Callback called for each directory entry.
+ */
 svn_error_t *
-PatchCallback::singlePatch(svn_boolean_t *filtered,
-                           const char *canon_path_from_patchfile,
-                           const char *patch_abspath,
-                           const char *reject_abspath,
-                           apr_pool_t *pool)
+ImportFilterCallback::doImportFilter(svn_boolean_t *filtered,
+                                     const char *local_abspath,
+                                     const svn_io_dirent2_t *dirent,
+                                     apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -80,35 +83,35 @@ PatchCallback::singlePatch(svn_boolean_t *filtered,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/PatchCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ImportFilterCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
-      mid = env->GetMethodID(clazz, "singlePatch",
-                             "(Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;)Z");
+      mid = env->GetMethodID(clazz, "filter",
+                             "(Ljava/lang/String;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;Z)Z");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jstring jcanonPath = JNIUtil::makeJString(canon_path_from_patchfile);
+  // convert the parameters to their Java relatives
+  jstring jpath = JNIUtil::makeJString(local_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jstring jpatchAbsPath = JNIUtil::makeJString(patch_abspath);
+  jboolean jspecial = (dirent->special ? JNI_TRUE : JNI_FALSE);
+
+  jobject jkind = EnumMapper::mapNodeKind(dirent->kind);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jstring jrejectAbsPath = JNIUtil::makeJString(reject_abspath);
+  // call the Java method
+  jboolean jfilter = env->CallBooleanMethod(m_callback, mid, jpath, jkind,
+                                            jspecial);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jboolean jfiltered = env->CallBooleanMethod(m_callback, mid, jcanonPath,
-                                              jpatchAbsPath, jrejectAbsPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
-  *filtered = (jfiltered ? TRUE : FALSE);
+  *filtered = jfilter ? TRUE : FALSE;
 
   env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;

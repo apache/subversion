@@ -1629,7 +1629,7 @@ delete_entry(const char *path,
     if (is_root)
       {
         /* Just skip this node; a future update will handle it */
-        remember_skipped_tree(eb, local_abspath, pool);
+        SVN_ERR(remember_skipped_tree(eb, local_abspath, pool));
         do_notification(eb, local_abspath, svn_node_unknown,
                         svn_wc_notify_update_skip_obstruction, scratch_pool);
 
@@ -1918,7 +1918,7 @@ add_directory(const char *path,
                                                    NULL, NULL,
                                                    pool));
 
-      remember_skipped_tree(eb, db->local_abspath, pool);
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 
@@ -1942,7 +1942,7 @@ add_directory(const char *path,
          file externals.
       */
 
-      remember_skipped_tree(eb, db->local_abspath, pool);
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 
@@ -2200,7 +2200,7 @@ open_directory(const char *path,
     if (is_root)
       {
         /* Just skip this node; a future update will handle it */
-        remember_skipped_tree(eb, db->local_abspath, pool);
+        SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
         db->skip_this = TRUE;
         db->already_notified = TRUE;
 
@@ -2993,7 +2993,7 @@ add_file(const char *path,
       apr_hash_set(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
                    APR_HASH_KEY_STRING, (void*)1);
 
-      remember_skipped_tree(eb, fb->local_abspath, pool);
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
 
@@ -3018,7 +3018,7 @@ add_file(const char *path,
          The reason we get here is that the adm crawler doesn't report
          file externals.
       */
-      remember_skipped_tree(eb, fb->local_abspath, pool);
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
 
@@ -3263,7 +3263,7 @@ open_file(const char *path,
     if (is_root)
       {
         /* Just skip this node; a future update will handle it */
-        remember_skipped_tree(eb, fb->local_abspath, pool);
+        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
         fb->skip_this = TRUE;
         fb->already_notified = TRUE;
 

@@ -482,8 +482,8 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__node_is_status_not_present(&not_present, wc_ctx,
-                                                  this_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_is_not_present(&not_present, NULL, NULL, wc_ctx,
+                                          this_abspath, scratch_pool));
 
       if (!not_present)
         continue;

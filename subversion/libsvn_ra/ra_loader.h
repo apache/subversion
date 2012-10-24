@@ -330,6 +330,10 @@ typedef struct svn_ra__vtable_t {
 struct svn_ra_session_t {
   const svn_ra__vtable_t *vtable;
 
+  /* Cancellation handlers consumers may want to use. */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
   /* Pool used to manage this session. */
   apr_pool_t *pool;
 

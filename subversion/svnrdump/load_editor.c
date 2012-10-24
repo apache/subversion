@@ -704,6 +704,7 @@ new_node_record(void **node_baton,
       apr_size_t residual_close_count;
       apr_array_header_t *residual_open_path;
       int i;
+      apr_size_t n;
 
       /* Before attempting to handle the action, call open_directory
          for all the path components and set the directory baton
@@ -720,7 +721,7 @@ new_node_record(void **node_baton,
 
       /* First close all as many directories as there are after
          skip_ancestor, and then open fresh directories */
-      for (i = 0; i < residual_close_count; i ++)
+      for (n = 0; n < residual_close_count; n ++)
         {
           /* Don't worry about destroying the actual rb->db object,
              since the pool we're using has the lifetime of one

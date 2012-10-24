@@ -127,6 +127,11 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 					       const char *author,
 					       void *baton);
 
+/* thunked commit editor callback2. */
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
+                                                void *baton,
+                                                apr_pool_t *pool);
+
 /* thunked repos_history callback. */
 svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
                                             const char *path,

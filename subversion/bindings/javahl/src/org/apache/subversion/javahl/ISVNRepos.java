@@ -113,6 +113,9 @@ public interface ISVNRepos {
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract void hotcopy(File path, File targetPath,
+			boolean cleanLogs, boolean incremental) throws ClientException;
+
+	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
 
 	/**

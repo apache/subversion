@@ -88,7 +88,7 @@ svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
  * the @a seperator at each third place.
  */
 char *
-svn__i64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
+svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
 
 /** @} */
 
