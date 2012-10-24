@@ -380,6 +380,14 @@ add_file(const char *local_abspath,
  * versioned parent to determine the svn:inheritable-auto-props which DIR_ABSPATH
  * will inherit once added.
  *
+ * If IGNORES is not NULL, then it is an array of const char * ignore patterns
+ * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
+ * the passed in value of IGNORES (if any) is itself ignored and this function
+ * will gather all ignore patterns applicable to DIR_ABSPATH itself.  Any
+ * recursive calls to this function get the refreshed ignore patterns.  If
+ * IGNORES is NULL and REFRESH_IGNORES is FALSE, then all children of DIR_ABSPATH
+ * are unconditionally added.
+ *
  * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
  * the user to cancel the operation.
  *
@@ -392,13 +400,14 @@ add_dir_recursive(const char *dir_abspath,
                   svn_boolean_t no_ignore,
                   svn_magic__cookie_t *magic_cookie,
                   apr_hash_t **config_autoprops,
+                  svn_boolean_t refresh_ignores,
+                  apr_array_header_t *ignores,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   apr_pool_t *iterpool;
-  apr_array_header_t *ignores;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   svn_boolean_t entry_exists = FALSE;
@@ -409,6 +418,11 @@ add_dir_recursive(const char *dir_abspath,
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   iterpool = svn_pool_create(scratch_pool);
+
+  if (refresh_ignores)
+    SVN_ERR(svn_client__get_all_ignores(&ignores, dir_abspath,
+                                        no_ignore, ctx, scratch_pool,
+                                        scratch_pool));
 
   /* Add this directory to revision control. */
   err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
@@ -427,20 +441,20 @@ add_dir_recursive(const char *dir_abspath,
         }
     }
 
-  /* Grab the inherited svn:inheritable-auto-props and config file
-     auto-props for the roots of any unversioned trees. */
+  /* For the root of any unversioned subtree, get some or all of the
+     following:
+
+       1) Explicit and inherited svn:inheritable-auto-props properties on
+          DIR_ABSPATH
+       2) Explicit and inherited svn:inheritabled-ignores properties on
+          DIR_ABSPATH
+       3) auto-props from the CTX->CONFIG hash */
   if (!entry_exists && *config_autoprops == NULL)
     {
       SVN_ERR(svn_client__get_all_auto_props(config_autoprops, dir_abspath,
                                              ctx, result_pool,
                                              scratch_pool));
       found_unversioned_root = TRUE;
-    }
-
-  if (!no_ignore)
-    {
-      SVN_ERR(svn_wc_get_ignores2(&ignores, ctx->wc_ctx, dir_abspath,
-                                  ctx->config, scratch_pool, iterpool));
     }
 
   SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE, scratch_pool,
@@ -465,7 +479,8 @@ add_dir_recursive(const char *dir_abspath,
       if (svn_wc_is_adm_dir(name, iterpool))
         continue;
 
-      if ((!no_ignore) && svn_wc_match_ignore_list(name, ignores, iterpool))
+      if (ignores
+          && svn_wc_match_ignore_list(name, ignores, iterpool))
         continue;
 
       /* Construct the full path of the entry. */
@@ -478,10 +493,17 @@ add_dir_recursive(const char *dir_abspath,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
+          /* When DIR_ABSPATH is the root of an unversioned subtree then
+             it and all of its children have the same set of ignores.  So
+             save any recursive calls the extra work of finding the same
+             set of ignores. */
+          if (refresh_ignores && !entry_exists)
+            refresh_ignores = FALSE;
+
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
                                     force, no_ignore, magic_cookie,
-                                    config_autoprops, ctx, iterpool,
-                                    iterpool));
+                                    config_autoprops, refresh_ignores,
+                                    ignores, ctx, iterpool, iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
@@ -795,6 +817,144 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
+                                               const char *path_or_url,
+                                               svn_client_ctx_t *ctx,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool)
+{
+  svn_opt_revision_t rev;
+  apr_hash_t *explicit_ignores;
+  apr_array_header_t *inherited_ignores;
+  svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
+  svn_string_t *explicit_prop;
+  int i;
+
+  if (target_is_url)
+    rev.kind = svn_opt_revision_head;
+  else
+    rev.kind = svn_opt_revision_working;
+
+  SVN_ERR(svn_client_propget5(&explicit_ignores, &inherited_ignores,
+                              SVN_PROP_INHERITABLE_IGNORES, path_or_url,
+                              &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
+                              scratch_pool, scratch_pool));
+
+  explicit_prop = apr_hash_get(explicit_ignores, path_or_url,
+                               APR_HASH_KEY_STRING);
+
+  if (explicit_prop)
+    {
+      svn_prop_inherited_item_t *new_iprop =
+        apr_palloc(scratch_pool, sizeof(*new_iprop));
+      new_iprop->path_or_url = path_or_url;
+      new_iprop->prop_hash = apr_hash_make(scratch_pool);
+      apr_hash_set(new_iprop->prop_hash,
+                   SVN_PROP_INHERITABLE_IGNORES,
+                   APR_HASH_KEY_STRING,
+                   explicit_prop);
+      APR_ARRAY_PUSH(inherited_ignores,
+                     svn_prop_inherited_item_t *) = new_iprop;
+    }
+
+  *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
+
+  for (i = 0; i < inherited_ignores->nelts; i++)
+    {
+      svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
+        inherited_ignores, i, svn_prop_inherited_item_t *);
+      svn_string_t *ignore_val = apr_hash_get(elt->prop_hash,
+                                              SVN_PROP_INHERITABLE_IGNORES,
+                                              APR_HASH_KEY_STRING);
+      if (ignore_val)
+        svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
+                                 FALSE, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
+                                         const char *local_abspath,
+                                         svn_boolean_t no_ignore,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
+{
+  apr_hash_t *explicit_ignores;
+  apr_array_header_t *inherited_ignores;
+  svn_error_t *err = NULL;
+  svn_string_t *explicit_prop;
+  int i;
+  svn_opt_revision_t rev;
+
+  rev.kind = svn_opt_revision_working;
+
+  /* LOCAL_ABSPATH might be unversioned, in which case we find its
+     nearest versioned parent. */
+  while (err == NULL)
+    {
+      err = svn_client_propget5(&explicit_ignores, &inherited_ignores,
+                                SVN_PROP_INHERITABLE_IGNORES, local_abspath,
+                                &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
+                                scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          err = NULL;
+          SVN_ERR(find_existing_parent(&local_abspath, ctx, local_abspath,
+                                       scratch_pool, scratch_pool));
+        }
+      else
+        {
+          break;
+        }
+    }
+
+  explicit_prop = apr_hash_get(explicit_ignores, local_abspath,
+                               APR_HASH_KEY_STRING);
+
+  if (explicit_prop)
+    {
+      svn_prop_inherited_item_t *new_iprop =
+        apr_palloc(scratch_pool, sizeof(*new_iprop));
+      new_iprop->path_or_url = local_abspath;
+      new_iprop->prop_hash = apr_hash_make(scratch_pool);
+      apr_hash_set(new_iprop->prop_hash,
+                   SVN_PROP_INHERITABLE_IGNORES,
+                   APR_HASH_KEY_STRING,
+                   explicit_prop);
+      APR_ARRAY_PUSH(inherited_ignores,
+                     svn_prop_inherited_item_t *) = new_iprop;
+    }
+
+  /* Now that we are sure we have an existing parent, get the config ignore
+     and the local ignore patterns... */
+  if (!no_ignore)
+    SVN_ERR(svn_wc_get_ignores2(ignores, ctx->wc_ctx, local_abspath,
+                                ctx->config, result_pool, scratch_pool));
+  else
+    *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
+
+  /* ...and add the inherited ignores to it. */
+  for (i = 0; i < inherited_ignores->nelts; i++)
+    {
+      svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
+        inherited_ignores, i, svn_prop_inherited_item_t *);
+      svn_string_t *ignore_val = apr_hash_get(elt->prop_hash,
+                                              SVN_PROP_INHERITABLE_IGNORES,
+                                              APR_HASH_KEY_STRING);
+      if (ignore_val)
+        svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
+                                 FALSE, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* The main logic of the public svn_client_add4.
  *
  * EXISTING_PARENT_ABSPATH is the absolute path to the first existing
@@ -813,6 +973,7 @@ add(const char *local_abspath,
   svn_error_t *err;
   svn_magic__cookie_t *magic_cookie;
   apr_hash_t *config_autoprops = NULL;
+  apr_array_header_t *ignores = NULL;
 
   svn_magic__init(&magic_cookie, scratch_pool);
 
@@ -864,8 +1025,8 @@ add(const char *local_abspath,
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(local_abspath, depth, force, no_ignore,
-                              magic_cookie, &config_autoprops, ctx,
-                              scratch_pool, scratch_pool);
+                              magic_cookie, &config_autoprops, TRUE, ignores,
+                              ctx, scratch_pool, scratch_pool);
     }
   else if (kind == svn_node_file)
     err = add_file(local_abspath, magic_cookie, config_autoprops, ctx,

@@ -390,6 +390,9 @@ svn_prop_name_is_valid(const char *prop_name);
 /** Property used to record inheritable configuration auto-props. */
 #define SVN_PROP_INHERITABLE_AUTO_PROPS SVN_PROP_INHERITABLE_PREFIX "auto-props"
 
+/** Property used to record inheritable configuration ignores. */
+#define SVN_PROP_INHERITABLE_IGNORES SVN_PROP_INHERITABLE_PREFIX "ignores"
+
 /** Meta-data properties.
  *
  * The following properties are used for storing meta-data about

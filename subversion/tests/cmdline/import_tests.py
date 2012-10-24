@@ -25,11 +25,13 @@
 ######################################################################
 
 # General modules
-import re, os.path
+import re, os.path, sys
 
 # Our testing module
 import svntest
 from svntest import wc
+from prop_tests import create_inherited_ignores_config
+from svntest.main import SVN_PROP_INHERITABLE_IGNORES
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -407,6 +409,163 @@ def import_into_foreign_repo(sbox):
                                      sbox.ospath('A/mu'), other_repo_url + '/f')
 
 #----------------------------------------------------------------------
+def import_inherited_ignores(sbox):
+  'import and inherited ignores'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create this config file:
+  #
+  #   [miscellany]
+  #   global-ignores = *.boo *.goo
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  create_inherited_ignores_config(config_dir)
+
+  # Set some ignore properties.
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.voo *.noo *.loo', '.')
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.yoo\t*.doo', 'A/B')
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.moo', 'A/D')
+  sbox.simple_propset('svn:ignore', '*.zoo\n*.foo\n*.poo', 'A/B/E')
+  sbox.simple_commit()
+
+  # Use this tree for importing:
+  #
+  # DIR1.noo
+  # DIR2.doo
+  #   file1.txt
+  # DIR3.foo
+  #   file2.txt
+  # DIR4.goo
+  #   file3.txt
+  #   file4.noo
+  # DIR5.moo
+  #   file5.txt
+  # DIR6
+  #   file6.foo
+  #   DIR7
+  #     file7.foo
+  #     DIR8.noo
+  import_tree_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                 'import_tests_data', 'import_tree')
+
+  # Relative WC paths of the imported tree.
+  dir1_path  = os.path.join('DIR1.noo')
+  dir2_path  = os.path.join('DIR2.doo')
+  file1_path = os.path.join('DIR2.doo', 'file1.txt')
+  dir3_path  = os.path.join('DIR3.foo')
+  file2_path = os.path.join('DIR3.foo', 'file2.txt')
+  dir4_path  = os.path.join('DIR4.goo')
+  file3_path = os.path.join('DIR4.goo', 'file3.txt')
+  file4_path = os.path.join('DIR4.goo', 'file4.txt')
+  dir5_path  = os.path.join('DIR5.moo')
+  file5_path = os.path.join('DIR5.moo', 'file5.txt')
+  dir6_path  = os.path.join('DIR6')
+  file6_path = os.path.join('DIR6', 'file6.foo')
+  dir7_path  = os.path.join('DIR6', 'DIR7')
+  file7_path = os.path.join('DIR6', 'DIR7', 'file7.foo')
+  dir8_path  = os.path.join('DIR6', 'DIR7', 'DIR8.noo')
+
+  # Import the tree to ^/A/B/E.
+  # We should never see any *.noo paths because those are blocked at the
+  # root of the repository by the svn:inheritable-ignores property.  Likewise
+  # *.doo paths are blocked by the svn:inheritable-ignores on ^/A/B.  Nor
+  # should we see and *.boo or *.goo paths, as those are blocked by the
+  # global-ignores config. Lastly, ^/A/B/E should not get any *.foo paths
+  # because of the svn:ignore property on ^/A/B/E, but non-immediate children
+  # of ^/A/B/E are permitted *.foo paths.
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     import_tree_dir,
+                                     sbox.repo_url + '/A/B/E',
+                                     '-m', 'import')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(E_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(E_path, file5_path) + '\n',
+     'A    ' + os.path.join(E_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(E_path, file6_path) + '\n',
+     'A    ' + os.path.join(E_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(E_path, file7_path) + '\n',
+     'Updated to revision 3.\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+
+  # Import the tree to ^/A/B/E/Z.  The only difference from above is that
+  # DIR3.foo and its child file2.txt are also imported.  Why? Because now
+  # we are creating a new directory in ^/A/B/E, so the svn:ignore property
+  # set on ^/A/B/E doesn't apply.
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     import_tree_dir,
+                                     sbox.repo_url + '/A/B/E/Z',
+                                     '-m', 'import')
+  Z_path = os.path.join(wc_dir, 'A', 'B', 'E', 'Z')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(Z_path)             + '\n',
+     'A    ' + os.path.join(Z_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file5_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file6_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file7_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir3_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file2_path) + '\n',
+     'Updated to revision 4.\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+
+  # Import the tree to ^/A/B/F with the --no-ignore option.
+  # Now only the ignores present in the svn:inheritable-ignores property
+  # should be considered.
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     '--no-ignore', import_tree_dir,
+                                     sbox.repo_url + '/A/B/F',
+                                     '-m', 'import')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(F_path, dir3_path)  + '\n',
+     'A    ' + os.path.join(F_path, file2_path) + '\n',
+     'A    ' + os.path.join(F_path, dir4_path)  + '\n',
+     'A    ' + os.path.join(F_path, file3_path) + '\n',
+     'A    ' + os.path.join(F_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(F_path, file5_path) + '\n',
+     'A    ' + os.path.join(F_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(F_path, file6_path) + '\n',
+     'A    ' + os.path.join(F_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(F_path, file7_path) + '\n',
+     'Updated to revision 5.\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+
+  # Try importing a single file into a directory which has svn:ignore set
+  # on it with a matching pattern of the imported file.  The import should
+  # be a no-op.
+  svntest.actions.run_and_verify_svn(None, [], [], 'import',
+                                     '--config-dir', config_dir,
+                                     os.path.join(import_tree_dir,
+                                                  'DIR6', 'file6.foo'), 
+                                     sbox.repo_url + '/A/B/E/file6.foo',
+                                     '-m', 'This import should fail!')
+
+  # Try the above, but this time with --no-ignore, this time the import
+  # should succeed.
+  svntest.actions.run_and_verify_svn(None, None, [], 'import', '--no-ignore',
+                                     '--config-dir', config_dir,
+                                     os.path.join(import_tree_dir,
+                                                  'DIR6', 'file6.foo'), 
+                                     sbox.repo_url + '/A/B/E/file6.foo',
+                                     '-m', 'import')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(E_path, 'file6.foo') + '\n',
+     'Updated to revision 6.\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -419,6 +578,7 @@ test_list = [ None,
               import_no_ignores,
               import_eol_style,
               import_into_foreign_repo,
+              import_inherited_ignores,
              ]
 
 if __name__ == '__main__':
