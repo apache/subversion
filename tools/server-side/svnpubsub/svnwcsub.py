@@ -267,13 +267,15 @@ class BackgroundWorker(threading.Thread):
 
         ### we need to move some of these args into the config. these are
         ### still specific to the ASF setup.
-        args = [self.svnbin, 'update',
+        args = [self.svnbin, 'switch',
                 '--quiet',
                 '--non-interactive',
                 '--trust-server-cert',
                 '--ignore-externals',
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
+                '--',
+                wc.url,
                 wc.path]
         subprocess.check_call(args, env=self.env)
 
