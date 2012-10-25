@@ -1725,25 +1725,6 @@ drive_changes(const struct editor_baton *eb,
 
   /* Get a sorted list of Ev1-relative paths.  */
   paths = get_sorted_paths(eb->changes, eb->base_relpath, scratch_pool);
-
-  /* We need to pass SVN_INVALID_REVNUM to the path_driver. It uses this
-     revision whenever it opens directory batons. If we specified a "real"
-     value, such as eb->root.base_revision, then it might use that for a
-     subdirectory *incorrectly*.
-
-     Specifically, log_tests 38 demonstrates that erroneous behavior when
-     it attempts to open "/A" at revision 0 (not there, of course).
-
-     All this said: passing SVN_INVALID_REVNUM to all of those
-     open_directory() calls is not the best behavior either, but it does
-     happen to magically work. (ugh)
-
-     Thankfully, we're moving away from this skitchy behavior to Ev2.
-
-     Final note: every other caller of svn_delta_path_driver() passes
-     SVN_INVALID_REVNUM, so we can't be the only goofball.
-
-     Note: dropping const on the callback_baton.  */
   SVN_ERR(svn_delta_path_driver2(eb->deditor, eb->dedit_baton, paths,
                                  apply_change, (void *)eb,
                                  scratch_pool));
