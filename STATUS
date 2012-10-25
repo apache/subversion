@@ -68,7 +68,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1399174
    Votes:
-     +1: stsp
+     +1: stsp, steveking
 
  * r1401915
    Ignore file externals with mergeinfo when merging.
@@ -78,7 +78,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1401915
    Votes:
-     +1: pburba
+     +1: pburba, steveking
 
 Veto-blocked changes:
 =====================
