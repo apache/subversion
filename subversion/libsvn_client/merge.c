@@ -10577,6 +10577,32 @@ merge_reintegrate_locked(const char *source,
                               &working_revision, NULL, svn_depth_infinity,
                               NULL, ctx, scratch_pool, scratch_pool));
 
+  if (apr_hash_count(subtrees_with_mergeinfo))
+    {
+      apr_hash_t *externals;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_wc__externals_defined_below(&externals, ctx->wc_ctx,
+                                              target_abspath, scratch_pool,
+                                              scratch_pool));
+
+      for (hi = apr_hash_first(scratch_pool, subtrees_with_mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *wc_path = svn__apr_hash_index_key(hi);
+
+          /* svn_client_propget4 picks up file externals with
+             mergeinfo, but we don't want those. */
+          if (apr_hash_get(externals, wc_path, APR_HASH_KEY_STRING))
+            {
+              apr_hash_set(subtrees_with_mergeinfo, wc_path,
+                           APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+        }
+    }
+
   /* Open two RA sessions, one to our source and one to our target. */
   no_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &rev2, &url2,
