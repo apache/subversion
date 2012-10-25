@@ -187,7 +187,7 @@ svn_client__get_paths_auto_props(apr_hash_t **properties,
                                  apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  svn_boolean_t have_executable;
+  svn_boolean_t have_executable = FALSE;
 
   *properties = apr_hash_make(result_pool);
   *mimetype = NULL;
