@@ -12810,7 +12810,7 @@ msgstr ""
 #~ "                                '{' DATE '}' 該日開始的修訂版\n"
 #~ "                                'HEAD'       檔案庫最新版本\n"
 #~ "                                'BASE'       該項目工作複本的基礎修訂版\n"
-#~ "                                'COMMITED'   位於或早於 BASE 的最後送交\n"
+#~ "                                'COMMITTED'  位於或早於 BASE 的最後送交\n"
 #~ "                                'PREV'       COMMITTED 之前的修訂版"
 
 #~ msgid "Error reading administrative log file in '%s'"
