@@ -1,5 +1,5 @@
 /*
- * tree_conflict_editor.c :  editing trees during tree-conflict resolution
+ * wc_db_update_move.c :  updating moves during tree-conflict resolution
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -612,15 +612,15 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
 }
 
 svn_error_t *
-svn_wc__update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                          const char *victim_abspath,
-                                          svn_wc__db_t *db,
-                                          svn_wc_notify_func2_t notify_func,
-                                          void *notify_baton,
-                                          svn_cancel_func_t cancel_func,
-                                          void *cancel_baton,
-                                          apr_pool_t *result_pool,
-                                          apr_pool_t *scratch_pool)
+svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
+                                             const char *victim_abspath,
+                                             svn_wc__db_t *db,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
+                                             svn_cancel_func_t cancel_func,
+                                             void *cancel_baton,
+                                             apr_pool_t *result_pool,
+                                             apr_pool_t *scratch_pool)
 {
   svn_editor_t *tc_editor;
   struct tc_editor_baton *b;
