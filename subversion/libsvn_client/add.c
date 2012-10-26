@@ -138,6 +138,8 @@ split_props(apr_array_header_t **props,
    NAME matches BATON->filename case insensitively then add the properties
    listed in VALUE into BATON->properties.
    BATON must point to an auto_props_baton_t.
+   Data in PROPERTIES must be allocated in RESULT_POOL (or a longer-lived
+   pool).
 */
 static void
 get_auto_props_for_pattern(apr_hash_t *properties,
@@ -146,8 +148,8 @@ get_auto_props_for_pattern(apr_hash_t *properties,
                            const char *filename,
                            const char *pattern,
                            apr_hash_t *propvals,
-                           apr_pool_t *scratch_pool,
-                           apr_pool_t *result_pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
 
@@ -162,8 +164,8 @@ get_auto_props_for_pattern(apr_hash_t *properties,
     {
       const char *propname = svn__apr_hash_index_key(hi);
       const char *propval = svn__apr_hash_index_val(hi);
-      svn_string_t *propval_str = apr_palloc(result_pool,
-                                             sizeof(*propval));
+      svn_string_t *propval_str = svn_string_create_empty(result_pool);
+
       propval_str->data = propval;
       propval_str->len = strlen(propval);
 
