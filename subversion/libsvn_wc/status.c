@@ -1008,7 +1008,6 @@ collect_ignore_patterns(apr_array_header_t **patterns,
   if (inherited_patterns)
     {
       apr_array_header_t *inherited_props;
-      int i;
 
       *inherited_patterns = apr_array_make(result_pool, 1,
                                            sizeof(const char *));
@@ -1110,10 +1109,10 @@ send_unversioned_item(const struct walk_status_baton *wb,
   svn_boolean_t is_mandatory_ignored;
   svn_boolean_t is_external;
   svn_wc_status3_t *status;
-  const char *basename = svn_dirent_basename(local_abspath, NULL);
+  const char *base_name = svn_dirent_basename(local_abspath, NULL);
 
-  is_ignored = svn_wc_match_ignore_list(basename, patterns, scratch_pool);
-  is_mandatory_ignored = svn_wc_match_ignore_list(basename,
+  is_ignored = svn_wc_match_ignore_list(base_name, patterns, scratch_pool);
+  is_mandatory_ignored = svn_wc_match_ignore_list(base_name,
                                                   inherited_patterns,
                                                   scratch_pool);
   SVN_ERR(assemble_unversioned(&status,
