@@ -7292,8 +7292,8 @@ msgstr ""
 "                                '{' DATA '}' revisão no início da data\n"
 "                                'HEAD'       último no repositório\n"
 "                                'BASE'       revisão base do item da cópia de trabalho\n"
-"                                'COMMITED'   último commit em ou antes de BASE\n"
-"                                'PREV'       revisão exatamente antes de COMMITED"
+"                                'COMMITTED'  último commit em ou antes de BASE\n"
+"                                'PREV'       revisão exatamente antes de COMMITTED"
 
 #: ../svn/main.c:140
 msgid "read log message from file ARG"
