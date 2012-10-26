@@ -134,12 +134,19 @@ split_props(apr_array_header_t **props,
   *props = temp_props;
 }
 
-/* For one auto-props config entry (NAME, VALUE), if the filename pattern
-   NAME matches BATON->filename case insensitively then add the properties
-   listed in VALUE into BATON->properties.
-   BATON must point to an auto_props_baton_t.
-   Data in PROPERTIES must be allocated in RESULT_POOL (or a longer-lived
-   pool).
+/* PROPVALS is a hash mapping char * property names to const char * property
+   values.  PROPERTIES can be empty but not NULL.
+
+   If FILENAME doesn't match the filename pattern PATTERN case insensitively,
+   the do nothing.  Otherwise for each 'name':'value' pair in PROPVALS, add
+   a new entry mappying 'name' to a svn_string_t * wrapping the 'value' in
+   PROPERTIES.  The svn_string_t is allocated in the pool used to allocate
+   PROPERTIES, but the char *'s from PROPVALS are re-used in PROPERTIES.
+   If PROPVALS contains a 'svn:mime-type' mapping, then set *MIMETYPE to
+   the mapped value.  Likewise if PROPVALS contains a mapping for
+   svn:executable, then set *HAVE_EXECUTABLE to TRUE.
+
+   Use SCRATCH_POOL for temporary allocations.
 */
 static void
 get_auto_props_for_pattern(apr_hash_t *properties,
@@ -148,7 +155,6 @@ get_auto_props_for_pattern(apr_hash_t *properties,
                            const char *filename,
                            const char *pattern,
                            apr_hash_t *propvals,
-                           apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
@@ -164,7 +170,8 @@ get_auto_props_for_pattern(apr_hash_t *properties,
     {
       const char *propname = svn__apr_hash_index_key(hi);
       const char *propval = svn__apr_hash_index_val(hi);
-      svn_string_t *propval_str = svn_string_create_empty(result_pool);
+      svn_string_t *propval_str =
+        svn_string_create_empty(apr_hash_pool_get(properties));
 
       propval_str->data = propval;
       propval_str->len = strlen(propval);
@@ -203,8 +210,7 @@ svn_client__get_paths_auto_props(apr_hash_t **properties,
 
       get_auto_props_for_pattern(*properties, mimetype, &have_executable,
                                  svn_dirent_basename(path, scratch_pool),
-                                 pattern, propvals, result_pool,
-                                 scratch_pool);
+                                 pattern, propvals, scratch_pool);
     }
 
   /* if mimetype has not been set check the file */
