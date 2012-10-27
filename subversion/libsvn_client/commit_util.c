@@ -1793,9 +1793,8 @@ svn_client__do_commit(const char *base_url,
   cb_baton.base_url = base_url;
 
   /* Drive the commit editor! */
-  SVN_ERR(svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                                paths, do_item_commit, &cb_baton,
-                                scratch_pool));
+  SVN_ERR(svn_delta_path_driver2(editor, edit_baton, paths, TRUE,
+                                 do_item_commit, &cb_baton, scratch_pool));
 
   /* Transmit outstanding text deltas. */
   for (hi = apr_hash_first(scratch_pool, file_mods);

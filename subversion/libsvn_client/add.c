@@ -1365,9 +1365,8 @@ mkdir_urls(const apr_array_header_t *urls,
                                     pool));
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                              targets, path_driver_cb_func,
-                              (void *)editor, pool);
+  err = svn_delta_path_driver2(editor, edit_baton, targets, TRUE,
+                               path_driver_cb_func, (void *)editor, pool);
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
