@@ -1983,7 +1983,8 @@ apply_textdelta(void *file_baton,
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
 
-  svn_txdelta_to_svndiff2(handler, handler_baton, ctx->stream, 0, pool);
+  svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream, 0,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   if (base_checksum)
     ctx->base_checksum = apr_pstrdup(ctx->pool, base_checksum);
