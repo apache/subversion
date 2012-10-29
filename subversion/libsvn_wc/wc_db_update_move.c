@@ -64,7 +64,7 @@ struct tc_editor_baton {
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
   apr_pool_t *result_pool;
-} tc_editor_baton;
+};
 
 static svn_error_t *
 tc_editor_add_directory(void *baton,
