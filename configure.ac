@@ -1017,6 +1017,11 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
+        dnl Put this flag behind -Wall:
+
+        CFLAGS="$CFLAGS_KEEP -Wno-format-nonliteral"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
       fi
