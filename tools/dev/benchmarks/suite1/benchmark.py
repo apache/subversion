@@ -925,7 +925,7 @@ def cmdline_compare(db, options, left_str, right_str):
     print "No timings for", right_kind.label
     exit(1)
 
-  label = 'Compare %s to %s' % (left_kind.label, right_kind.label)
+  label = 'Compare %s to %s' % (right_kind.label, left_kind.label)
 
   s = [label]
 
@@ -975,8 +975,10 @@ def cmdline_compare(db, options, left_str, right_str):
 # ------------------------------------------------------- charts
 
 def cmdline_chart_compare(db, options, *args):
+  import matplotlib
+  matplotlib.use('Agg')
   import numpy as np
-  import matplotlib.pyplot as plt
+  import matplotlib.pylab as plt
 
   labels = []
   timing_sets = []
@@ -993,9 +995,14 @@ def cmdline_chart_compare(db, options, *args):
     timing_sets.append(timings)
 
     if command_names:
-      for i in range(len(command_names)):
+      command_names_len = len(command_names)
+      i = 0
+      while i < command_names_len:
         if not command_names[i] in timings:
           del command_names[i]
+          command_names_len -= 1
+        else:
+          i += 1
     else:
       command_names = query.get_sorted_command_names()
 
