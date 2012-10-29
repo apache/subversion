@@ -32,6 +32,8 @@
  * in this file.
  */
 
+#define SVN_WC__I_AM_WC_DB
+
 #include "svn_checksum.h"
 #include "svn_dirent_uri.h"
 #include "svn_editor.h"
@@ -44,7 +46,7 @@
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
-#include "wc_db.h"
+#include "wc_db_private.h"
 #include "conflicts.h"
 #include "workqueue.h"
 
