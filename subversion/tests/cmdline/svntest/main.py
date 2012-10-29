@@ -958,12 +958,16 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
+  dump_failed = False
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
       logger.warn('ERROR:  dump failed: %s', dump_line.strip())
-      raise SVNRepositoryCopyFailure
-    expect_revision += 1
+      dump_failed = True
+    else:
+      expect_revision += 1
+  if dump_failed:
+    raise SVNRepositoryCopyFailure
   if expect_revision != head_revision + 1:
     logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
