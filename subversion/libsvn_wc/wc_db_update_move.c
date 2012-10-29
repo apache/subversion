@@ -58,6 +58,7 @@ struct tc_editor_baton {
   const char *src_abspath;
   const char *dst_abspath;
   svn_wc__db_t *db;
+  svn_wc__db_wcroot_t *wcroot;
   svn_skel_t **work_items;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
@@ -427,6 +428,7 @@ update_moved_away_file(svn_editor_t *tc_editor,
                        const char *moved_to_abspath,
                        const char *move_dst_op_root_abspath,
                        svn_wc__db_t *db,
+                       svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
@@ -493,6 +495,7 @@ update_moved_away_dir(svn_editor_t *tc_editor,
                       const char *moved_to_abspath,
                       const char *move_dst_op_root_abspath,
                       svn_wc__db_t *db,
+                      svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   /* ### notify */
@@ -510,6 +513,7 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
                           const char *moved_to_abspath,
                           const char *move_dst_op_root_abspath,
                           svn_wc__db_t *db,
+                          svn_wc__db_wcroot_t *wcroot,
                           apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *children;
@@ -517,7 +521,8 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   int i;
 
   SVN_ERR(update_moved_away_dir(tc_editor, src_abspath, moved_to_abspath,
-                                move_dst_op_root_abspath, db, scratch_pool));
+                                move_dst_op_root_abspath, db, wcroot,
+                                scratch_pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db, src_abspath,
                                        scratch_pool, scratch_pool));
@@ -553,12 +558,12 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
         SVN_ERR(update_moved_away_file(tc_editor, child_abspath,
                                        child_moved_to_abspath,
                                        move_dst_op_root_abspath,
-                                       db, iterpool));
+                                       db, wcroot, iterpool));
       else if (child_kind == svn_kind_dir)
         SVN_ERR(update_moved_away_subtree(tc_editor, child_abspath,
                                           child_moved_to_abspath,
                                           move_dst_op_root_abspath,
-                                          db, iterpool));
+                                          db, wcroot, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -575,6 +580,7 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                            svn_wc_conflict_version_t *old_version,
                            svn_wc_conflict_version_t *new_version,
                            svn_wc__db_t *db,
+                           svn_wc__db_wcroot_t *wcroot,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool)
@@ -603,10 +609,10 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
    */
   if (old_version->node_kind == svn_node_file)
     SVN_ERR(update_moved_away_file(tc_editor, src_abspath, dst_abspath,
-                                   dst_abspath, db, scratch_pool));
+                                   dst_abspath, db, wcroot, scratch_pool));
   else if (old_version->node_kind == svn_node_dir)
     SVN_ERR(update_moved_away_subtree(tc_editor, src_abspath, dst_abspath,
-                                      dst_abspath, db, scratch_pool));
+                                      dst_abspath, db, wcroot, scratch_pool));
 
   SVN_ERR(svn_editor_complete(tc_editor));
 
@@ -660,6 +666,7 @@ update_moved_away_conflict_victim(void *baton,
                       tc_editor_baton->dst_abspath,
                       b->db, scratch_pool, scratch_pool));
   tc_editor_baton->db = b->db;
+  tc_editor_baton->wcroot = wcroot;
   tc_editor_baton->work_items = b->work_items;
   tc_editor_baton->notify_func = b->notify_func;
   tc_editor_baton->notify_baton = b->notify_baton;
@@ -679,7 +686,8 @@ update_moved_away_conflict_victim(void *baton,
                                      local_change, incoming_change,
                                      tc_editor_baton->old_version,
                                      tc_editor_baton->new_version,
-                                     b->db, b->cancel_func, b->cancel_baton,
+                                     b->db, wcroot,
+                                     b->cancel_func, b->cancel_baton,
                                      scratch_pool));
 
   return SVN_NO_ERROR;
