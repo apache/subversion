@@ -624,10 +624,11 @@ struct update_moved_away_conflict_victim_baton {
   apr_pool_t *result_pool;
 };
 
-/* An implementation of svn_sqlite__transaction_callback_t. */
+/* An implementation of svn_wc__db_txn_callback_t. */
 static svn_error_t *
 update_moved_away_conflict_victim(void *baton,
-                                  svn_sqlite__db_t *sdb,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *victim_relpath,
                                   apr_pool_t *scratch_pool)
 {
   struct update_moved_away_conflict_victim_baton *b = baton;
@@ -714,9 +715,9 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
   b.cancel_baton = cancel_baton;
   b.result_pool = result_pool;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       update_moved_away_conflict_victim, &b,
-                                       scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              update_moved_away_conflict_victim, &b,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
