@@ -1060,7 +1060,7 @@ def cmdline_chart_compare(db, options, *args):
       deviations.append(this_max / this_min)
 
     rects = plot1.bar(ind + ofs, divs, width * (1.0 - dist),
-                      color=divs_color, bottom=100.0, edgecolor='none')
+                      color=divs_color, bottom=100.0, edgecolor='white')
 
     for i in range(len(rects)):
       x = rects[i].get_x() + width / 2.2
@@ -1073,7 +1073,7 @@ def cmdline_chart_compare(db, options, *args):
                  rotation=-90, family='monospace')
 
     rects = plot2.bar(ind + ofs, diffs, width * 0.9,
-                   color=divs_color, bottom=0.0, edgecolor='none')
+                   color=divs_color, bottom=0.0, edgecolor='white')
 
     for i in range(len(rects)):
       x = rects[i].get_x() + width / 2.2
