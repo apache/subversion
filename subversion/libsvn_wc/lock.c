@@ -1478,6 +1478,11 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
   return adm_access->pool;
 }
 
+apr_pool_t *
+svn_wc__adm_access_pool_internal(const svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->pool;
+}
 
 void
 svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
