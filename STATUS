@@ -52,7 +52,8 @@ Candidate changes:
    Notes: Needs a backport branch, noted here for completeness.
    Votes:
      +0: stsp (pending a proper conflict-free backport)
-     -0: julianfoad (Nice behaviour enhancement but what's the justification
+     -0: julianfoad, rhuijben
+           (Nice behaviour enhancement but what's the justification
             for back-porting this on its own without similar for other
             commands?  The log msg says it was done to maintain stable output
             with APR 1.4.6 random hash order, but it wasn't stable before
@@ -85,7 +86,7 @@ Candidate changes:
    Justification:
      Regression for users of the 1.6 API.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
