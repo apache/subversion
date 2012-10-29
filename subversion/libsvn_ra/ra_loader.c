@@ -1522,16 +1522,6 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
    implementation for svn_ra_foo_init which returns a "not implemented"
    error. */
 
-#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
-svn_error_t *
-svn_ra_dav_init(int abi_version,
-                apr_pool_t *pool,
-                apr_hash_t *hash)
-{
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
-#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_NEON */
-
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 svn_error_t *
 svn_ra_svn_init(int abi_version,
