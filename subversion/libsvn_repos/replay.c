@@ -781,6 +781,7 @@ path_driver_cb_func(void **dir_baton,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_EV2_IMPL
 static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
@@ -823,6 +824,7 @@ fetch_props_func(apr_hash_t **props,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 
