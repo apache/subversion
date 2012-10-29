@@ -48,6 +48,7 @@
 
 #include "svn_config.h"
 #include "ra_loader.h"
+#include "deprecated.h"
 
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
@@ -78,7 +79,7 @@ static const struct ra_lib_defn {
     svn_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
     svn_ra_svn__init,
-    svn_ra_svn_init
+    svn_ra_svn__deprecated_init
 #endif
   },
 
@@ -87,7 +88,7 @@ static const struct ra_lib_defn {
     local_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
     svn_ra_local__init,
-    svn_ra_local_init
+    svn_ra_local__deprecated_init
 #endif
   },
 
@@ -96,7 +97,7 @@ static const struct ra_lib_defn {
     dav_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SERF
     svn_ra_serf__init,
-    svn_ra_serf_init
+    svn_ra_serf__deprecated_init
 #endif
   },
 
