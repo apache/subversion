@@ -3213,10 +3213,12 @@ ensure_revprop_timeout(svn_fs_t *fs)
 /* Create an error object with the given MESSAGE and pass it to the
    WARNING member of FS. */
 static void
-log_revprop_cache_init_warning(svn_fs_t *fs, const char *message)
+log_revprop_cache_init_warning(svn_fs_t *fs,
+                               svn_error_t *underlying_err,
+                               const char *message)
 {
   svn_error_t *err = svn_error_createf(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
-                                       NULL,
+                                       underlying_err,
                                        message, fs->path);
 
   if (fs->warning)
@@ -3244,8 +3246,9 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
        * -> disable the revprop cache for good
        */
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled"
-                                         " because it would be inefficient.");
+      log_revprop_cache_init_warning(fs, NULL,
+                                     "Revprop caching for '%s' disabled"
+                                     " because it would be inefficient.");
       
       return FALSE;
     }
@@ -3256,12 +3259,11 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
     {
       /* failure -> disable revprop cache for good */
 
-      svn_error_clear(error);
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled "
-                                         "because SHM "
-                                         "infrastructure for revprop "
-                                         "caching failed to initialize.");
+      log_revprop_cache_init_warning(fs, error,
+                                     "Revprop caching for '%s' disabled "
+                                     "because SHM infrastructure for revprop "
+                                     "caching failed to initialize.");
 
       return FALSE;
     }
