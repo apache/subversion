@@ -384,6 +384,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
   apr_status_t apr_err;
   const char *shm_name, *lock_name;
   apr_shm_t *shared_mem;
+  int i;
 
   /* allocate the namespace data structure
    */
@@ -415,29 +416,45 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
    */
   SVN_ERR(lock(&new_ns->mutex));
 
-  /* First, look for an existing shared memory object.  If it doesn't
-   * exist, create one.
+  /* Attach to, or create, the shared memory segment.  Loop to limit
+   * the effect of races with other processes.  I've seen the first
+   * race happen in testing and I can imagine the second race
+   * happening.  It could race forever with a whole series of other
+   * processes but the timing would have to be just right.  Looping a
+   * few times should work in most cases.
    */
-  apr_err = apr_shm_attach(&shared_mem, shm_name, result_pool);
-  if (apr_err)
+  for (i = 0; i < 10; ++i)
     {
+      apr_err = apr_shm_attach(&shared_mem, shm_name, result_pool);
+      if (!apr_err)
+        {
+          new_ns->data = apr_shm_baseaddr_get(shared_mem);
+          break;
+        }
+
+      /* First race: failed to attach but another process could create. */
+
       apr_err = apr_shm_create(&shared_mem,
                                sizeof(*new_ns->data),
                                shm_name,
                                result_pool);
-      if (apr_err)
-        return unlock(&new_ns->mutex,
-                      svn_error_wrap_apr(apr_err,
+      if (!apr_err)
+        {
+          new_ns->data = apr_shm_baseaddr_get(shared_mem);
+
+          /* Zero all counters, values and names. */
+          memset(new_ns->data, 0, sizeof(*new_ns->data));
+          break;
+        }
+
+      /* Second race: failed to create but another process could delete. */
+    }
+
+  if (apr_err)
+    return unlock(&new_ns->mutex,
+                  svn_error_wrap_apr(apr_err,
                           _("Can't get shared memory for named atomics")));
 
-      new_ns->data = apr_shm_baseaddr_get(shared_mem);
-
-      /* Zero all counters, values and names.
-       */
-      memset(new_ns->data, 0, sizeof(*new_ns->data));
-    }
-  else
-    new_ns->data = apr_shm_baseaddr_get(shared_mem);
 
   /* Cache the number of existing, complete entries.  There can't be
    * incomplete ones from other processes because we hold the mutex.
