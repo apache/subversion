@@ -27,7 +27,7 @@
  * locally moved-away subtree, causing a tree-conflict to be flagged.
  * This editor transfers these changes from the moved-away part of the
  * working copy to the corresponding moved-here part of the working copy.
- * 
+ *
  * Both the driver and receiver components of the editor are implemented
  * in this file.
  */
@@ -162,7 +162,7 @@ tc_editor_alter_file(void *baton,
       svn_wc_notify_state_t content_state;
       svn_wc_notify_t *notify;
 
-      /* 
+      /*
        * Run a 3-way merge to update the file, using the pre-update
        * pristine text as the merge base, the post-update pristine
        * text as the merge-left version, and the current content of the
@@ -440,7 +440,7 @@ update_moved_away_file(svn_editor_t *tc_editor,
   const svn_checksum_t *moved_away_checksum;
   const char *dst_relpath;
 
-  /* 
+  /*
    * ### Currently doesn't work right if the moved-away node has been replaced.
    * ### Need to read info from the move op-root's op-depth, not WORKING, to
    * ### properly update shadowed nodes within multi-layer move destinations.
@@ -585,7 +585,7 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool)
 {
-  /* 
+  /*
    * Refuse to auto-resolve unsupported tree conflicts.
    */
   /* ### Only handle conflicts created by update/switch operations for now. */
@@ -596,14 +596,14 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                             svn_dirent_local_style(src_abspath,
                                                    scratch_pool));
 
-  /* 
+  /*
    * Drive the TC editor to transfer incoming changes from the move source
    * to the move destination.
    *
    * The pre-update tree is within dst at the op-depth of the move's op-root.
    * The post-update base tree is within src at op-depth zero.
    *
-   * We walk the move source (i.e. the post-update tree), comparing each node 
+   * We walk the move source (i.e. the post-update tree), comparing each node
    * with the equivalent node at the move destination and applying the update
    * to nodes at the move destination.
    */
@@ -638,7 +638,6 @@ update_moved_away_conflict_victim(void *baton,
                                   apr_pool_t *scratch_pool)
 {
   struct update_moved_away_conflict_victim_baton *b = baton;
-
   svn_editor_t *tc_editor;
   struct tc_editor_baton *tc_editor_baton;
   svn_wc_operation_t operation;
