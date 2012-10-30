@@ -349,7 +349,6 @@ get_tc_info(svn_wc_operation_t *operation,
             svn_wc_conflict_version_t **old_version,
             svn_wc_conflict_version_t **new_version,
             const char *src_abspath,
-            const char *dst_abspath,
             svn_wc__db_t *db,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
@@ -622,6 +621,11 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
 struct update_moved_away_conflict_victim_baton {
   svn_skel_t **work_items;
   const char *victim_relpath;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_version_t *old_version;
+  svn_wc_conflict_version_t *new_version;
   svn_wc__db_t *db;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -640,9 +644,6 @@ update_moved_away_conflict_victim(void *baton,
   struct update_moved_away_conflict_victim_baton *b = baton;
   svn_editor_t *tc_editor;
   struct tc_editor_baton *tc_editor_baton;
-  svn_wc_operation_t operation;
-  svn_wc_conflict_reason_t local_change;
-  svn_wc_conflict_action_t incoming_change;
   const char *dst_relpath;
 
   /* ### assumes wc write lock already held */
@@ -666,13 +667,8 @@ update_moved_away_conflict_victim(void *baton,
                                scratch_pool));
   tc_editor_baton->dst_abspath = svn_dirent_join(wcroot->abspath,
                                                  dst_relpath, scratch_pool);
-
-  SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
-                      &tc_editor_baton->old_version,
-                      &tc_editor_baton->new_version,
-                      tc_editor_baton->src_abspath,
-                      tc_editor_baton->dst_abspath,
-                      b->db, scratch_pool, scratch_pool));
+  tc_editor_baton->old_version= b->old_version;
+  tc_editor_baton->new_version= b->new_version;
   tc_editor_baton->db = b->db;
   tc_editor_baton->wcroot = wcroot;
   tc_editor_baton->work_items = b->work_items;
@@ -690,8 +686,8 @@ update_moved_away_conflict_victim(void *baton,
   SVN_ERR(drive_tree_conflict_editor(tc_editor,
                                      tc_editor_baton->src_abspath,
                                      tc_editor_baton->dst_abspath,
-                                     operation,
-                                     local_change, incoming_change,
+                                     b->operation,
+                                     b->local_change, b->incoming_change,
                                      tc_editor_baton->old_version,
                                      tc_editor_baton->new_version,
                                      b->db, wcroot,
@@ -716,6 +712,15 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
   struct update_moved_away_conflict_victim_baton b;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_version_t *old_version;
+  svn_wc_conflict_version_t *new_version;
+
+  SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
+                      &old_version, &new_version,
+                      victim_abspath, db, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, victim_abspath,
@@ -724,6 +729,11 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
 
   b.work_items = work_items;
   b.victim_relpath = local_relpath;
+  b.operation = operation;
+  b.local_change = local_change;
+  b.incoming_change = incoming_change;
+  b.old_version = old_version;
+  b.new_version = new_version;
   b.db = db;
   b.notify_func = notify_func;
   b.notify_baton = notify_baton;
