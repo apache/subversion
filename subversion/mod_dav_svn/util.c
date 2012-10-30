@@ -45,6 +45,9 @@ dav_svn__new_error(apr_pool_t *pool,
                    int error_id,
                    const char *desc)
 {
+  if (error_id == 0)
+    error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
 /*
  * Note: dav_new_error() in httpd 2.0/2.2 always treated
  * the errno field in dav_error as an apr_status_t when
@@ -70,6 +73,9 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        const char *namespace,
                        const char *tagname)
 {
+  if (error_id == 0)
+    error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
   return dav_new_error_tag(pool, status, error_id, 0,
                            desc, namespace, tagname);

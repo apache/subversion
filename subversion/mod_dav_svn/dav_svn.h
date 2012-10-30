@@ -759,7 +759,11 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
    processing.  See dav_new_error_tag for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error_tag()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
@@ -774,7 +778,11 @@ dav_svn__new_error_tag(apr_pool_t *pool,
    processing.  See dav_new_error for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
