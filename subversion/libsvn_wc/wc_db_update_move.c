@@ -621,7 +621,7 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
 
 struct update_moved_away_conflict_victim_baton {
   svn_skel_t **work_items;
-  const char *victim_abspath;
+  const char *victim_relpath;
   svn_wc__db_t *db;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -644,20 +644,29 @@ update_moved_away_conflict_victim(void *baton,
   svn_wc_operation_t operation;
   svn_wc_conflict_reason_t local_change;
   svn_wc_conflict_action_t incoming_change;
+  const char *dst_relpath;
 
   /* ### assumes wc write lock already held */
 
   /* Construct editor baton. */
   tc_editor_baton = apr_pcalloc(scratch_pool, sizeof(*tc_editor_baton));
-  tc_editor_baton->src_abspath = b->victim_abspath;
-  SVN_ERR(svn_wc__db_scan_deletion(NULL, &tc_editor_baton->dst_abspath,
-                                   NULL, NULL, b->db, b->victim_abspath,
-                                   scratch_pool, scratch_pool));
-  if (tc_editor_baton->dst_abspath == NULL)
+  tc_editor_baton->src_abspath = svn_dirent_join(wcroot->abspath,
+                                                 b->victim_relpath,
+                                                 scratch_pool);
+  SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &dst_relpath,
+                                            NULL, NULL, wcroot,
+                                            b->victim_relpath,
+                                            scratch_pool, scratch_pool));
+  if (dst_relpath == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("The node '%s' has not been moved away"),
-                             svn_dirent_local_style(b->victim_abspath,
-                                                    scratch_pool));
+                             svn_dirent_local_style(
+                               svn_dirent_join(wcroot->abspath,
+                                               b->victim_relpath,
+                                               scratch_pool),
+                               scratch_pool));
+  tc_editor_baton->dst_abspath = svn_dirent_join(wcroot->abspath,
+                                                 dst_relpath, scratch_pool);
 
   SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
                       &tc_editor_baton->old_version,
@@ -715,7 +724,7 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
   VERIFY_USABLE_WCROOT(wcroot);
 
   b.work_items = work_items;
-  b.victim_abspath = victim_abspath;
+  b.victim_relpath = local_relpath;
   b.db = db;
   b.notify_func = notify_func;
   b.notify_baton = notify_baton;
