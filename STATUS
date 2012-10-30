@@ -88,6 +88,27 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1403583
+   In ra_serf, treat marshaled errors with 0 error codes the same as
+   errors with no provided error code.
+   Justifications:
+     Fixes the cause of a client-side hang in ra_serf's handling of
+     Subversion's custom XML error tags.
+   Votes:
+     +1: cmpilato, danielsh
+
+ * r1403588, r1403691
+   Expand the scope of mod_dav_svn's validation of client-reported
+   and client-requested revisions during update operations.
+   Justifications:
+     mod_dav_svn should gracefully complain about revisions > HEAD 
+     in the update report all the time, not only when doing an
+     update operation that doesn't explicitly request a target
+     revision.
+   Votes:
+     +1: cmpilato
+
+
 Veto-blocked changes:
 =====================
 
