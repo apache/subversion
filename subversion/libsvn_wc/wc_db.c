@@ -12284,13 +12284,27 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_trace(svn_wc__db_read_conflict_internal(conflict, wcroot,
+                                                           local_relpath,
+                                                           result_pool,
+                                                           scratch_pool));
+}
+
+svn_error_t *
+svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   /* Check if we have a conflict in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
