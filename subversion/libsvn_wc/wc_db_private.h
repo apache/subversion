@@ -220,6 +220,15 @@ svn_wc__db_scan_deletion_internal(const char **base_del_relpath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_read_conflict(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
+svn_error_t *
+svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /* Transaction handling */
 
