@@ -427,9 +427,9 @@ get_tc_info(svn_wc_operation_t *operation,
 
 static svn_error_t *
 update_moved_away_file(svn_editor_t *tc_editor,
-                       const char *src_abspath,
-                       const char *moved_to_abspath,
-                       const char *move_dst_op_root_abspath,
+                       const char *src_relpath,
+                       const char *moved_to_relpath,
+                       const char *move_dst_op_root_relpath,
                        svn_wc__db_t *db,
                        svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
@@ -442,6 +442,18 @@ update_moved_away_file(svn_editor_t *tc_editor,
   svn_stream_t *post_update_contents;
   const svn_checksum_t *moved_away_checksum;
   const char *dst_relpath;
+
+  /* ### temporary */
+  const char *moved_to_abspath = svn_dirent_join(wcroot->abspath,
+                                                 moved_to_relpath,
+                                                 scratch_pool);
+  const char *src_abspath = svn_dirent_join(wcroot->abspath, src_relpath,
+                                            scratch_pool);
+  const char *move_dst_op_root_abspath = svn_dirent_join(
+                                           wcroot->abspath,
+                                           move_dst_op_root_relpath,
+                                           scratch_pool);
+                    
 
   /*
    * ### Currently doesn't work right if the moved-away node has been replaced.
@@ -462,12 +474,13 @@ update_moved_away_file(svn_editor_t *tc_editor,
     return SVN_NO_ERROR;
 
   /* Get kind, revision, and checksum of the moved-here node. */
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, &moved_here_revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, moved_to_abspath, scratch_pool,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_read_info_internal(NULL, &kind, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, &moved_here_revision,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL,
+                                        wcroot, moved_to_relpath,
+                                        scratch_pool, scratch_pool));
   /* ### check original revision against moved-here op-root revision? */
   if (kind != svn_kind_file)
     return SVN_NO_ERROR;
@@ -479,7 +492,7 @@ update_moved_away_file(svn_editor_t *tc_editor,
                                         db, src_abspath, scratch_pool,
                                         scratch_pool));
   SVN_ERR(svn_wc__db_pristine_read(&post_update_contents, NULL, db,
-                                   src_abspath, moved_away_checksum,
+                                   wcroot->abspath, moved_away_checksum,
                                    scratch_pool, scratch_pool));
   dst_relpath = svn_dirent_skip_ancestor(move_dst_op_root_abspath,
                                          moved_to_abspath);
@@ -494,9 +507,9 @@ update_moved_away_file(svn_editor_t *tc_editor,
 
 static svn_error_t *
 update_moved_away_dir(svn_editor_t *tc_editor,
-                      const char *src_abspath,
-                      const char *moved_to_abspath,
-                      const char *move_dst_op_root_abspath,
+                      const char *src_relpath,
+                      const char *moved_to_relpath,
+                      const char *move_dst_op_root_relpath,
                       svn_wc__db_t *db,
                       svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
@@ -512,9 +525,9 @@ update_moved_away_dir(svn_editor_t *tc_editor,
 
 static svn_error_t *
 update_moved_away_subtree(svn_editor_t *tc_editor,
-                          const char *src_abspath,
-                          const char *moved_to_abspath,
-                          const char *move_dst_op_root_abspath,
+                          const char *src_relpath,
+                          const char *moved_to_relpath,
+                          const char *move_dst_op_root_relpath,
                           svn_wc__db_t *db,
                           svn_wc__db_wcroot_t *wcroot,
                           apr_pool_t *scratch_pool)
@@ -523,49 +536,55 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   apr_pool_t *iterpool;
   int i;
 
-  SVN_ERR(update_moved_away_dir(tc_editor, src_abspath, moved_to_abspath,
-                                move_dst_op_root_abspath, db, wcroot,
+  SVN_ERR(update_moved_away_dir(tc_editor, src_relpath, moved_to_relpath,
+                                move_dst_op_root_relpath, db, wcroot,
                                 scratch_pool));
 
-  SVN_ERR(svn_wc__db_base_get_children(&children, db, src_abspath,
+  SVN_ERR(svn_wc__db_base_get_children(&children, db,
+                                       svn_dirent_join(wcroot->abspath,
+                                                       src_relpath,
+                                                       scratch_pool),
                                        scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < children->nelts; i++)
     {
-      const char *child_abspath;
+      const char *child_relpath;
       svn_kind_t child_kind;
-      const char *child_dst_op_root_abspath;
-      const char *child_moved_to_abspath;
+      const char *child_dst_op_root_relpath;
+      const char *child_moved_to_relpath;
 
       svn_pool_clear(iterpool);
 
-      child_abspath = svn_dirent_join(src_abspath,
-                                      APR_ARRAY_IDX(children, i, const char *),
-                                      iterpool);
+      child_relpath = svn_relpath_join(src_relpath,
+                                       APR_ARRAY_IDX(children, i, const char *),
+                                       iterpool);
 
       /* Is this child part of our move operation? */
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, &child_moved_to_abspath,
-                                       NULL, &child_dst_op_root_abspath,
-                                       db, child_abspath,
-                                       iterpool, iterpool));
-      if (child_dst_op_root_abspath == NULL ||
-          strcmp(child_dst_op_root_abspath, move_dst_op_root_abspath) != 0)
+      SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &child_moved_to_relpath,
+                                                NULL,
+                                                &child_dst_op_root_relpath,
+                                                wcroot, child_relpath,
+                                                iterpool, iterpool));
+      if (child_dst_op_root_relpath == NULL ||
+          strcmp(child_dst_op_root_relpath, move_dst_op_root_relpath) != 0)
         continue;
 
-      SVN_ERR(svn_wc__db_base_get_info(NULL, &child_kind, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, db,
-                                       child_abspath, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &child_kind,
+                                                NULL, NULL, NULL, NULL,
+                                                NULL, NULL, NULL, NULL,
+                                                NULL, NULL, NULL, NULL,
+                                                wcroot, child_relpath,
+                                                iterpool, iterpool));
 
       if (child_kind == svn_kind_file || child_kind == svn_kind_symlink)
-        SVN_ERR(update_moved_away_file(tc_editor, child_abspath,
-                                       child_moved_to_abspath,
-                                       move_dst_op_root_abspath,
+        SVN_ERR(update_moved_away_file(tc_editor, child_relpath,
+                                       child_moved_to_relpath,
+                                       move_dst_op_root_relpath,
                                        db, wcroot, iterpool));
       else if (child_kind == svn_kind_dir)
-        SVN_ERR(update_moved_away_subtree(tc_editor, child_abspath,
-                                          child_moved_to_abspath,
-                                          move_dst_op_root_abspath,
+        SVN_ERR(update_moved_away_subtree(tc_editor, child_relpath,
+                                          child_moved_to_relpath,
+                                          move_dst_op_root_relpath,
                                           db, wcroot, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -588,11 +607,6 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool)
 {
-  const char *src_abspath = svn_dirent_join(wcroot->abspath, src_relpath,
-                                            scratch_pool);
-  const char *dst_abspath = svn_dirent_join(wcroot->abspath, dst_relpath,
-                                            scratch_pool);
-
   /*
    * Refuse to auto-resolve unsupported tree conflicts.
    */
@@ -601,8 +615,10 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
       operation != svn_wc_operation_switch)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                             _("Cannot auto-resolve tree-conflict on '%s'"),
-                            svn_dirent_local_style(src_abspath,
-                                                   scratch_pool));
+                            svn_dirent_local_style(
+                              svn_dirent_join(wcroot->abspath,
+                                              src_relpath, scratch_pool),
+                              scratch_pool));
 
   /*
    * Drive the TC editor to transfer incoming changes from the move source
@@ -616,11 +632,11 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
    * to nodes at the move destination.
    */
   if (old_version->node_kind == svn_node_file)
-    SVN_ERR(update_moved_away_file(tc_editor, src_abspath, dst_abspath,
-                                   dst_abspath, db, wcroot, scratch_pool));
+    SVN_ERR(update_moved_away_file(tc_editor, src_relpath, dst_relpath,
+                                   dst_relpath, db, wcroot, scratch_pool));
   else if (old_version->node_kind == svn_node_dir)
-    SVN_ERR(update_moved_away_subtree(tc_editor, src_abspath, dst_abspath,
-                                      dst_abspath, db, wcroot, scratch_pool));
+    SVN_ERR(update_moved_away_subtree(tc_editor, src_relpath, dst_relpath,
+                                      dst_relpath, db, wcroot, scratch_pool));
 
   SVN_ERR(svn_editor_complete(tc_editor));
 
