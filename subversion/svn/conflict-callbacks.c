@@ -33,6 +33,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_types.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 
 #include "cl.h"
 #include "tree-conflicts.h"
@@ -41,22 +42,37 @@
 
 
 
+struct svn_cl__interactive_conflict_baton_t {
+  svn_cl__accept_t accept_which;
+  apr_hash_t *config;
+  const char *editor_cmd;
+  svn_boolean_t external_failed;
+  svn_cmdline_prompt_baton_t *pb;
+  const char *path_prefix;
+};
 
 svn_error_t *
-svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
-                            svn_cl__accept_t accept_which,
-                            apr_hash_t *config,
-                            const char *editor_cmd,
-                            svn_cmdline_prompt_baton_t *pb,
-                            apr_pool_t *pool)
+svn_cl__get_conflict_func_interactive_baton(
+  svn_cl__interactive_conflict_baton_t **b,
+  svn_cl__accept_t accept_which,
+  apr_hash_t *config,
+  const char *editor_cmd,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *result_pool)
 {
-  *b = apr_palloc(pool, sizeof(**b));
+  svn_cmdline_prompt_baton_t *pb = apr_palloc(result_pool, sizeof(*pb));
+  pb->cancel_func = cancel_func;
+  pb->cancel_baton = cancel_baton;
+
+  *b = apr_palloc(result_pool, sizeof(**b));
   (*b)->accept_which = accept_which;
   (*b)->config = config;
   (*b)->editor_cmd = editor_cmd;
   (*b)->external_failed = FALSE;
   (*b)->pb = pb;
-  SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", pool));
+  SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -180,7 +196,7 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
 static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
             const svn_wc_conflict_description2_t *desc,
-            svn_cl__conflict_baton_t *b,
+            svn_cl__interactive_conflict_baton_t *b,
             apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -232,7 +248,7 @@ open_editor(svn_boolean_t *performed_edit,
 static svn_error_t *
 launch_resolver(svn_boolean_t *performed_edit,
                 const svn_wc_conflict_description2_t *desc,
-                svn_cl__conflict_baton_t *b,
+                svn_cl__interactive_conflict_baton_t *b,
                 apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -272,7 +288,7 @@ launch_resolver(svn_boolean_t *performed_edit,
 static svn_error_t *
 handle_text_conflict(svn_wc_conflict_result_t *result,
                      const svn_wc_conflict_description2_t *desc,
-                     svn_cl__conflict_baton_t *b,
+                     svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *scratch_pool)
 {
   const char *answer;
@@ -461,7 +477,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (performed_edit)
             knows_something = TRUE;
         }
-      else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-M") == 0)
+      else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-g") == 0 ||
+               strcmp(answer, "=>-") == 0 || strcmp(answer, ":>.") == 0)
         {
           if (desc->kind != svn_wc_conflict_kind_text)
             {
@@ -533,7 +550,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 static svn_error_t *
 handle_prop_conflict(svn_wc_conflict_result_t *result,
                      const svn_wc_conflict_description2_t *desc,
-                     svn_cl__conflict_baton_t *b,
+                     svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *scratch_pool)
 {
   const char *answer;
@@ -610,13 +627,13 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
 /* Implement svn_wc_conflict_resolver_func2_t; resolves based on
    --accept option if given, else by prompting. */
 svn_error_t *
-svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
-                         const svn_wc_conflict_description2_t *desc,
-                         void *baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
+                                  const svn_wc_conflict_description2_t *desc,
+                                  void *baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
-  svn_cl__conflict_baton_t *b = baton;
+  svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
   apr_pool_t *subpool;
 
@@ -787,7 +804,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                                      desc->local_abspath,
                                                      subpool)));
       prompt = _("Select: (p) postpone, (mf) mine-full, "
-                 "(tf) theirs-full, (h) help:");
+                 "(tf) theirs-full, (h) help: ");
 
       while (1)
         {
@@ -839,7 +856,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                                      scratch_pool),
                    readable_desc));
 
-      prompt = _("Select: (p) postpone, (r) mark-resolved, (h) help: ");
+      prompt = _("Select: (p) postpone, (r) mark-resolved, "
+                 "(mc) mine-conflict,\n"
+                 "        (tc) theirs-conflict, (h) help: ");
 
       while (1)
         {
@@ -850,8 +869,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p) postpone      - resolve the conflict later\n"
-                "  (r) resolved      - accept current working tree\n")));
+              _("  (p) postpone         - resolve the conflict later\n"
+                "  (r) resolved         - accept current working copy state\n"
+                "  (mc) mine-conflict   - prefer local change\n"
+                "  (tc) theirs-conflict - prefer incoming change\n")));
             }
           if (strcmp(answer, "p") == 0 || strcmp(answer, ":-p") == 0)
             {
@@ -861,6 +882,16 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           else if (strcmp(answer, "r") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_merged;
+              break;
+            }
+          else if (strcmp(answer, "mc") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_mine_conflict;
+              break;
+            }
+          else if (strcmp(answer, "tc") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
               break;
             }
         }
@@ -875,15 +906,76 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   return SVN_NO_ERROR;
 }
 
+/* Implement svn_wc_conflict_resolver_func2_t; postpones all conflicts
+ * and remembers conflicted paths in BATON. */
 svn_error_t *
-svn_cl__resolve_conflicts(apr_array_header_t *targets,
-                          svn_depth_t depth,
-                          const svn_cl__opt_state_t *opt_state,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *scratch_pool)
+svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
+                               const svn_wc_conflict_description2_t *desc,
+                               void *baton,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
+  apr_hash_t *conflicted_paths = baton;
+  
+  apr_hash_set(conflicted_paths,
+               apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                           desc->local_abspath),
+               APR_HASH_KEY_STRING, "");
+
+  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                          NULL, result_pool);
+  return SVN_NO_ERROR;
+}
+
+void *
+svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool)
+{
+  return apr_hash_make(result_pool);
+}
+
+static apr_array_header_t *
+get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
+{
+  apr_hash_t *conflicted_paths = baton;
+  apr_array_header_t *sorted_array;
+  apr_array_header_t *result_array;
+  int i;
+
+  if (apr_hash_count(conflicted_paths) == 0)
+    return NULL;
+
+  sorted_array = svn_sort__hash(conflicted_paths,
+                                svn_sort_compare_items_as_paths,
+                                apr_hash_pool_get(conflicted_paths));
+  result_array = apr_array_make(result_pool, sorted_array->nelts,
+                                sizeof(const char *));
+  for (i = 0; i < sorted_array->nelts; i++)
+    {
+      svn_sort__item_t item;
+      
+      item = APR_ARRAY_IDX(sorted_array, i, svn_sort__item_t);
+      APR_ARRAY_PUSH(result_array, const char *) = apr_pstrdup(result_pool,
+                                                               item.key);
+    }
+
+  return result_array;
+}
+
+svn_error_t *
+svn_cl__resolve_postponed_conflicts(void *baton,
+                                    svn_depth_t depth,
+                                    svn_cl__accept_t accept_which,
+                                    const char *editor_cmd,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *targets;
   int i;
   apr_pool_t *iterpool;
+
+  targets = get_postponed_conflicted_paths(baton, scratch_pool);
+  if (targets == NULL)
+    return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -893,19 +985,25 @@ svn_cl__resolve_conflicts(apr_array_header_t *targets,
       const char *local_abspath;
       svn_wc_conflict_resolver_func2_t conflict_func2;
       void *conflict_baton2;
+      svn_cl__interactive_conflict_baton_t *b;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
 
-
       /* Store old state */
       conflict_func2 = ctx->conflict_func2;
       conflict_baton2 = ctx->conflict_baton2;
 
-      /* Store interactive resolver */
-      ctx->conflict_func2 = opt_state->conflict_func;
-      ctx->conflict_baton2 = opt_state->conflict_baton;
+      /* Set up the interactive resolver. */
+      ctx->conflict_func2 = svn_cl__conflict_func_interactive;
+      SVN_ERR(svn_cl__get_conflict_func_interactive_baton(&b, accept_which,
+                                                          ctx->config,
+                                                          editor_cmd,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          scratch_pool));
+      ctx->conflict_baton2 = b;
 
       err = svn_client_resolve(local_abspath, depth,
                                svn_wc_conflict_choose_unspecified,

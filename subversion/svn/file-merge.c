@@ -365,7 +365,7 @@ static const char *
 prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
-  int width;
+  size_t width;
   int line_width = LINE_DISPLAY_WIDTH;
   apr_pool_t *iterpool;
 

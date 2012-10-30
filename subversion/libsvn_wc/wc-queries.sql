@@ -102,8 +102,7 @@ ORDER BY op_depth
 LIMIT 1
 
 -- STMT_SELECT_ACTUAL_NODE
-SELECT changelist, properties, conflict_data,
-conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data
+SELECT changelist, properties, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
@@ -127,8 +126,7 @@ FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
-SELECT local_relpath, changelist, properties, conflict_data,
-conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data
+SELECT local_relpath, changelist, properties, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
@@ -149,9 +147,10 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
-  dav_cache, symlink_target, file_external, moved_to, moved_here)
+  dav_cache, symlink_target, file_external, moved_to, moved_here,
+  inherited_props)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
+        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
 
 -- STMT_SELECT_BASE_PRESENT
 SELECT local_relpath, kind FROM nodes n
@@ -246,7 +245,7 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND presence == 'not-present'
+  AND presence = 'not-present'
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
@@ -413,16 +412,11 @@ UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
 
 -- STMT_INSERT_ACTUAL_CONFLICT
-INSERT INTO actual_node (
-  wc_id, local_relpath, conflict_data,
-  conflict_old, conflict_new, conflict_working, prop_reject,
-  tree_conflict_data, parent_relpath)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_UPDATE_ACTUAL_CONFLICT
-UPDATE actual_node SET conflict_data = ?3,
-  conflict_old = ?4, conflict_new = ?5, conflict_working = ?6,
-  prop_reject = ?7, tree_conflict_data = ?8
+UPDATE actual_node SET conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_UPDATE_ACTUAL_CHANGELISTS
@@ -593,10 +587,6 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND properties IS NULL
   AND conflict_data IS NULL
-  AND conflict_old IS NULL
-  AND conflict_new IS NULL
-  AND prop_reject IS NULL
-  AND tree_conflict_data IS NULL
   AND changelist IS NULL
   AND text_mod IS NULL
   AND older_checksum IS NULL
@@ -609,10 +599,6 @@ WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND properties IS NULL
   AND conflict_data IS NULL
-  AND conflict_old IS NULL
-  AND conflict_new IS NULL
-  AND prop_reject IS NULL
-  AND tree_conflict_data IS NULL
   AND changelist IS NULL
   AND text_mod IS NULL
   AND older_checksum IS NULL
@@ -683,10 +669,6 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     conflict_data = NULL,
-    conflict_old = NULL,
-    conflict_new = NULL,
-    conflict_working = NULL,
-    prop_reject = NULL,
     tree_conflict_data = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
@@ -698,10 +680,6 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     conflict_data = NULL,
-    conflict_old = NULL,
-    conflict_new = NULL,
-    conflict_working = NULL,
-    prop_reject = NULL,
     tree_conflict_data = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
@@ -771,38 +749,7 @@ WHERE checksum = ?1 AND refcount = 0
 SELECT local_relpath, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND
-  NOT ((conflict_data IS NULL) AND (conflict_old IS NULL)
-       AND (conflict_new IS NULL) AND (conflict_working IS NULL)
-       AND (prop_reject IS NULL) AND (tree_conflict_data IS NULL))
-
--- STMT_SELECT_CONFLICT_MARKER_FILES1
-SELECT prop_reject
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND (prop_reject IS NOT NULL)
-
--- STMT_SELECT_CONFLICT_MARKER_FILES2
-SELECT prop_reject, conflict_old, conflict_new, conflict_working
-FROM actual_node
-WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND ((prop_reject IS NOT NULL) OR (conflict_old IS NOT NULL)
-       OR (conflict_new IS NOT NULL) OR (conflict_working IS NOT NULL))
-
--- STMT_CLEAR_TEXT_CONFLICT
-UPDATE actual_node SET
-  conflict_old = NULL,
-  conflict_new = NULL,
-  conflict_working = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_CLEAR_PROPS_CONFLICT
-UPDATE actual_node SET
-  prop_reject = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_CLEAR_TREE_CONFLICT
-UPDATE actual_node SET tree_conflict_data = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
+  NOT (conflict_data IS NULL)
 
 -- STMT_INSERT_WC_LOCK
 INSERT INTO wc_lock (wc_id, local_dir_relpath, locked_levels)
@@ -1093,15 +1040,17 @@ FROM nodes_current n
 WHERE (wc_id = ?1 AND local_relpath = ?2)
    OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
+-- STMT_PRAGMA_LOCKING_MODE
+PRAGMA locking_mode = exclusive
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
 
 -- STMT_INSERT_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
-  wc_id, local_relpath, parent_relpath, properties, changelist, conflict_data,
-  conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+  wc_id, local_relpath, parent_relpath, properties, changelist, conflict_data)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 
 /* ------------------------------------------------------------------------- */
 
@@ -1112,8 +1061,7 @@ UPDATE actual_node SET conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_INSERT_ACTUAL_CONFLICT_DATA
-INSERT INTO actual_node (
-  wc_id, local_relpath, conflict_data, parent_relpath)
+INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_SELECT_ALL_FILES
@@ -1191,10 +1139,6 @@ CREATE TEMPORARY TABLE revert_list (
    local_relpath TEXT NOT NULL,
    actual INTEGER NOT NULL,         /* 1 if an actual row, 0 if a nodes row */
    conflict_data BLOB,
-   conflict_old TEXT,
-   conflict_new TEXT,
-   conflict_working TEXT,
-   prop_reject TEXT,
    notify INTEGER,         /* 1 if an actual row had props or tree conflict */
    op_depth INTEGER,
    repos_id INTEGER,
@@ -1214,11 +1158,8 @@ CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
    INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_data,
-                                      conflict_old, conflict_new,
-                                      conflict_working, prop_reject, notify)
+                                      notify)
    SELECT OLD.local_relpath, 1, OLD.conflict_data,
-          OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
-          OLD.prop_reject,
           CASE
             WHEN OLD.properties IS NOT NULL
             THEN 1
@@ -1234,11 +1175,8 @@ CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
 BEFORE UPDATE ON actual_node
 BEGIN
    INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_data,
-                                      conflict_old, conflict_new,
-                                      conflict_working, prop_reject, notify)
+                                      notify)
    SELECT OLD.local_relpath, 1, OLD.conflict_data,
-          OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
-          OLD.prop_reject,
           CASE
             WHEN OLD.properties IS NOT NULL
             THEN 1
@@ -1256,8 +1194,7 @@ DROP TRIGGER trigger_revert_list_actual_delete;
 DROP TRIGGER trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
-SELECT actual, notify, kind, op_depth, repos_id, conflict_data,
-       conflict_old, conflict_new, conflict_working, prop_reject
+SELECT actual, notify, kind, op_depth, repos_id, conflict_data
 FROM revert_list
 WHERE local_relpath = ?1
 ORDER BY actual DESC
@@ -1487,7 +1424,41 @@ WHERE wc_id = ?1
 
 -- STMT_SELECT_ALL_NODES
 SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
-WHERE wc_id == ?1
+WHERE wc_id = ?1
+
+/* ------------------------------------------------------------------------- */
+
+/* Queries for cached inherited properties. */
+
+/* Select the inherited properties of a single base node. */
+-- STMT_SELECT_IPROPS
+SELECT inherited_props FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND op_depth = 0
+
+/* Update the inherited properties of a single base node. */
+-- STMT_UPDATE_IPROP
+UPDATE nodes
+SET inherited_props = ?3
+WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
+
+/* Select a single path if its base node has cached inherited properties. */
+-- STMT_SELECT_INODES
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND op_depth = 0
+  AND (inherited_props not null)
+
+/* Select all paths whose base nodes at or below a given path, which
+   have cached inherited properties. */
+-- STMT_SELECT_INODES_RECURSIVE
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND (inherited_props not null)
 
 /* ------------------------------------------------------------------------- */
 

@@ -475,6 +475,10 @@ CREATE TABLE NODES (
      ### anyway. */
   file_external  INTEGER,
 
+  /* serialized skel of this node's inherited properties. NULL if this
+     is not the BASE of a WC root node. */
+  inherited_props  BLOB,
+
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
@@ -574,6 +578,8 @@ CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
+
+/* ------------------------------------------------------------------------- */
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
@@ -789,8 +795,6 @@ UPDATE nodes SET presence = "server-excluded" WHERE presence = "absent";
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
-PRAGMA user_version = 30;
-
 -- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,
   conflict_old, conflict_working, conflict_new, prop_reject, tree_conflict_data
@@ -807,6 +811,38 @@ UPDATE actual_node SET conflict_data = ?3, conflict_old = NULL,
   conflict_working = NULL, conflict_new = NULL, prop_reject = NULL,
   tree_conflict_data = NULL
 WHERE wc_id = ?1 and local_relpath = ?2
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 31 adds the inherited_props column to the NODES table. C code then
+   initializes the update/switch roots to make sure future updates fetch the
+   inherited properties */
+-- STMT_UPGRADE_TO_31
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+PRAGMA user_version = 31;
+
+-- STMT_UPGRADE_31_SELECT_WCROOT_NODES
+/* Select all base nodes which are the root of a WC, including
+   switched subtrees, but excluding those which map to the root
+   of the repos.
+
+   ### IPROPS: Is this query horribly inefficient?  Quite likely,
+   ### but it only runs during an upgrade, so do we care? */
+SELECT l.wc_id, l.local_relpath FROM nodes as l
+LEFT OUTER JOIN nodes as r
+ON l.wc_id = r.wc_id
+   AND l.repos_id = r.repos_id
+   AND r.local_relpath = l.parent_relpath
+WHERE (l.local_relpath = '' AND l.repos_path != '')
+   OR (l.op_depth = 0
+       AND l.local_relpath != ''
+       AND l.repos_path != ltrim(r.repos_path
+                                 || '/'
+                                 || ltrim(substr(l.local_relpath,
+                                                 length(l.parent_relpath) + 1),
+                                          '/'),
+                                 '/'))
 
 /* ------------------------------------------------------------------------- */
 

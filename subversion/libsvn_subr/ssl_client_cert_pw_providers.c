@@ -83,7 +83,7 @@ svn_auth__ssl_client_cert_pw_get(svn_boolean_t *done,
       return SVN_NO_ERROR;
     }
   *done = FALSE;
-  return FALSE;
+  return SVN_NO_ERROR;
 }
 
 /* This implements the svn_auth__password_set_t interface.

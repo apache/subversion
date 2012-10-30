@@ -626,7 +626,13 @@ log_entry_receiver_xml(void *baton,
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
-                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
+                                    "kind", svn_cl__node_kind_str_xml(
+                                                     log_item->node_kind),
+                                    "text-mods", svn_tristate__to_word(
+                                                     log_item->text_modified),
+                                    "prop-mods", svn_tristate__to_word(
+                                                     log_item->props_modified),
+                                    NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -649,7 +655,7 @@ log_entry_receiver_xml(void *baton,
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
       SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
                                           FALSE, /* name_only */
-                                          pool));
+                                          FALSE, pool));
       svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 

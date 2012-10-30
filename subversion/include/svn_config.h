@@ -109,6 +109,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_USE_COMMIT_TIMES          "use-commit-times"
+/** @deprecated Not used by Subversion since 2003/r847039 (well before 1.0) */
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
@@ -118,6 +119,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
+/** @since New in 1.8. */
+#define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
 /** @} */
 
 /** @name Repository conf directory configuration files strings

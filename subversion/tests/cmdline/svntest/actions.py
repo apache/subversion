@@ -35,7 +35,7 @@ else:
   from cStringIO import StringIO
 
 import svntest
-from svntest import main, verify, tree, wc
+from svntest import main, verify, tree, wc, sandbox
 from svntest import Failure
 
 logger = logging.getLogger()
@@ -1266,9 +1266,9 @@ def run_and_verify_mergeinfo(error_re_string = None,
                              expected_output = [],
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_OUTPUT, which is either a list of string representations
-  of revisions expected in the output, or a plain string.
-  Raise an exception if an unexpected output is encountered."""
+  EXPECTED_OUTPUT, a list of string representations of revisions
+  expected in the output.  Raise an exception if an unexpected
+  output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
   mergeinfo_command.extend(args)
@@ -1281,36 +1281,23 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  if isinstance(expected_output, list):
-    out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
-    expected_output.sort()
-    extra_out = []
-    if out != expected_output:
-      exp_hash = dict.fromkeys(expected_output)
-      for rev in out:
-        if rev in exp_hash:
-          del(exp_hash[rev])
-        else:
-          extra_out.append(rev)
-      extra_exp = list(exp_hash.keys())
-      raise Exception("Unexpected 'svn mergeinfo' output:\n"
-                      "  expected but not found: %s\n"
-                      "  found but not expected: %s"
-                      % (', '.join([str(x) for x in extra_exp]),
-                         ', '.join([str(x) for x in extra_out])))
-  elif isinstance(expected_output, str):
-    out = "".join(out)
-    if out != expected_output:
-      raise Exception("Unexpected 'svn mergeinfo' output:\n"
-                      "  expected:\n%s\n"
-                      "  found:\n%s\n"
-                      "  diff:\n%s\n"
-                      % (expected_output, out,
-                         '\n'.join(difflib.unified_diff(
-                                     expected_output.splitlines(),
-                                     out.splitlines()))))
-  else:
-    raise Exception("expected_output has unexpected type")
+  out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
+  expected_output.sort()
+  extra_out = []
+  if out != expected_output:
+    exp_hash = dict.fromkeys(expected_output)
+    for rev in out:
+      if rev in exp_hash:
+        del(exp_hash[rev])
+      else:
+        extra_out.append(rev)
+    extra_exp = list(exp_hash.keys())
+    raise Exception("Unexpected 'svn mergeinfo' output:\n"
+                    "  expected but not found: %s\n"
+                    "  found but not expected: %s"
+                    % (', '.join([str(x) for x in extra_exp]),
+                       ', '.join([str(x) for x in extra_out])))
+
 
 def run_and_verify_switch(wc_dir_name,
                           wc_target,
@@ -1585,6 +1572,90 @@ def run_and_verify_status_xml(expected_entries = [],
     raise Failure('\n' + '\n'.join(difflib.ndiff(
           pprint.pformat(expected_entries).splitlines(),
           pprint.pformat(actual_entries).splitlines())))
+
+def run_and_verify_inherited_prop_xml(path_or_url,
+                                      expected_inherited_props,
+                                      expected_explicit_props,
+                                      propname=None,
+                                      peg_rev=None,
+                                      *args):
+  """If PROPNAME is None, then call run_and_verify_svn with proplist -v --xml
+  --show-inherited-props on PATH_OR_URL, otherwise call run_and_verify_svn
+  with propget PROPNAME --xml --show-inherited-props.
+
+  PATH_OR_URL is pegged at PEG_REV if the latter is not None.  If PEG_REV
+  is none, then PATH_OR_URL is pegged at HEAD if a url.
+
+  EXPECTED_INHERITED_PROPS is a (possibly empty) dict mapping working copy
+  paths or URLs to dicts of inherited properties. EXPECTED_EXPLICIT_PROPS is
+  a (possibly empty) dict of the explicit properties expected on PATH_OR_URL.
+
+  Returns on success, raises on failure if EXPECTED_INHERITED_PROPS or
+  EXPECTED_EXPLICIT_PROPS don't match the results of proplist/propget.
+  """
+
+  if peg_rev is None:
+    if sandbox.is_url(path_or_url):
+      path_or_url = path_or_url + '@HEAD'
+  else:
+    path_or_url = path_or_url + '@' + str(peg_rev)
+
+  if (propname):
+    exit_code, output, errput = svntest.actions.run_and_verify_svn(
+      None, None, [], 'propget', propname, '--xml',
+      '--show-inherited-props', path_or_url, *args)
+  else:
+    exit_code, output, errput = svntest.actions.run_and_verify_svn(
+      None, None, [], 'proplist', '-v', '--xml', '--show-inherited-props',
+      path_or_url, *args)
+
+  if len(errput) > 0:
+    raise Failure
+
+  # Props inherited from within the WC are keyed on absolute paths.
+  expected_iprops = {}
+  for x in expected_inherited_props:
+    if sandbox.is_url(x):
+      expected_iprops[x] = expected_inherited_props[x]    
+    else:
+      expected_iprops[os.path.abspath(x)] = expected_inherited_props[x]
+
+  actual_iprops = {}
+  actual_explicit_props = {}
+
+  doc = parseString(''.join(output))
+  targets = doc.getElementsByTagName('target')
+  for t in targets:
+
+    # Create actual inherited props.
+    iprops = t.getElementsByTagName('inherited_property')
+
+    if len(iprops) > 0:
+      actual_iprops[t.getAttribute('path')]={}
+
+    for i in iprops:
+      actual_iprops[t.getAttribute('path')][i.getAttribute('name')] = \
+        i.firstChild.nodeValue
+
+    # Create actual explicit props.
+    xprops = t.getElementsByTagName('property')
+
+    for x in xprops:
+      actual_explicit_props[x.getAttribute('name')] = x.firstChild.nodeValue
+
+  if expected_explicit_props != actual_explicit_props:
+    raise svntest.Failure(
+      'Actual and expected explicit props do not match\n' +
+      '\n'.join(difflib.ndiff(
+      pprint.pformat(expected_explicit_props).splitlines(),
+      pprint.pformat(actual_explicit_props).splitlines())))
+
+  if expected_iprops != actual_iprops:
+    raise svntest.Failure(
+      'Actual and expected inherited props do not match\n' +
+      '\n'.join(difflib.ndiff(
+      pprint.pformat(expected_iprops).splitlines(),
+      pprint.pformat(actual_iprops).splitlines())))
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,

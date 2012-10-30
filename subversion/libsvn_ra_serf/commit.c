@@ -1983,7 +1983,8 @@ apply_textdelta(void *file_baton,
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
 
-  svn_txdelta_to_svndiff2(handler, handler_baton, ctx->stream, 0, pool);
+  svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream, 0,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   if (base_checksum)
     ctx->base_checksum = apr_pstrdup(ctx->pool, base_checksum);
@@ -2113,7 +2114,7 @@ close_file(void *file_baton,
         {
           handler->body_delegate = create_put_body;
           handler->body_delegate_baton = ctx;
-          handler->body_type = "application/vnd.svn-svndiff";
+          handler->body_type = SVN_SVNDIFF_MIME_TYPE;
         }
 
       handler->header_delegate = setup_put_headers;
@@ -2269,6 +2270,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
+  svn_boolean_t supports_ephemeral_props;
 
   ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -2287,6 +2289,23 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
       apr_hash_this(hi, &key, &klen, &val);
       apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
                    svn_string_dup(val, pool));
+    }
+
+  /* If the server supports ephemeral properties, add some carrying
+     interesting version information. */
+  SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_ephemeral_props,
+                                      SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                                      pool));
+  if (supports_ephemeral_props)
+    {
+      apr_hash_set(ctx->revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(SVN_VER_NUMBER, pool));
+      apr_hash_set(ctx->revprop_table,
+                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(session->useragent, pool));
     }
 
   ctx->callback = callback;

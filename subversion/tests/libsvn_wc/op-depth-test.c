@@ -78,7 +78,8 @@ open_wc_db(svn_sqlite__db_t **sdb,
            apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_util_open_db(sdb, wc_root_abspath, "wc.db",
-                                  svn_sqlite__mode_readwrite, my_statements,
+                                  svn_sqlite__mode_readwrite,
+                                  FALSE /* exclusive */, my_statements,
                                   result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1284,7 +1285,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
                                         "not-even-a-uuid", revision,
                                         apr_hash_make(b->pool), revision,
                                         0, NULL, NULL, svn_depth_infinity,
-                                        NULL, NULL, FALSE, NULL, NULL,
+                                        NULL, NULL, FALSE, NULL, NULL, NULL,
                                         b->pool));
 
   after = apr_palloc(b->pool, sizeof(*after) * (apr_size_t)(num_before + num_added + 1));
@@ -4926,9 +4927,9 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A/B/C", "base-deleted", NO_COPY_FROM},
       {1, "X",     "normal",       1, "A", MOVED_HERE},
       {1, "X/B",   "not-present",  2, "A/B"},
-      {2, "X/B",   "normal",       2, "A/B", MOVED_HERE},
+      {2, "X/B",   "normal",       2, "A/B"},
       {2, "X/B/C", "not-present",  3, "A/B/C"},
-      {3, "X/B/C", "normal",       3, "A/B/C", MOVED_HERE},
+      {3, "X/B/C", "normal",       3, "A/B/C"},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));

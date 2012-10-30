@@ -35,6 +35,40 @@
 #include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
+svn_boolean_t
+svn_fs__is_canonical_abspath(const char *path)
+{
+  size_t path_len;
+  const char *end;
+
+  /* No PATH?  No problem. */
+  if (! path)
+    return TRUE;
+
+  /* Empty PATH?  That's just "/". */
+  if (! *path)
+    return FALSE;
+
+  /* No leading slash?  Fix that. */
+  if (*path != '/')
+    return FALSE;
+
+  /* check for trailing '/' */
+  path_len = strlen(path);
+  if (path_len == 1)
+    return TRUE;
+  if (path[path_len - 1] == '/')
+    return FALSE;
+
+  /* check for "//" */
+  end = path + path_len - 1;
+  for (; path != end; ++path)
+    if ((path[0] == '/') && (path[1] == '/'))
+      return FALSE;
+
+  return TRUE;
+}
+
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 {

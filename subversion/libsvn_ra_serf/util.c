@@ -691,6 +691,11 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (session->http10)
+      serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
+#endif
+
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
@@ -765,7 +770,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                         _("Error running context"));
             }
 
-          return svn_error_wrap_apr(status, _("Error running context"));
+          return svn_ra_serf__wrap_err(status, _("Error running context"));
         }
 
       /* Debugging purposes only! */
@@ -831,7 +836,12 @@ start_error(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
-      else
+
+      /* If there's no error code provided, or if the provided code is
+         0 (which can happen sometimes depending on how the error is
+         constructed on the server-side), just pick a generic error
+         code to run with. */
+      if (! ctx->error->apr_err)
         {
           ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }
@@ -948,7 +958,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 
   status = drain_bucket(response);
   if (status)
-    return svn_error_wrap_apr(status, NULL);
+    return svn_ra_serf__wrap_err(status, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1487,7 +1497,7 @@ handle_server_error(serf_request_t *request,
      surface. */
   err = drain_bucket(response);
   if (err && !SERF_BUCKET_READ_ERROR(err))
-    return svn_error_wrap_apr(err, NULL);
+    return svn_ra_serf__wrap_err(err, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1509,7 +1519,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return svn_error_wrap_apr(status, NULL);
+      return svn_ra_serf__wrap_err(status, NULL);
     }
 
   /* Woo-hoo.  Nothing here to see.  */
@@ -1561,7 +1571,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       ctx->read_size += len;
@@ -1582,7 +1592,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1626,7 +1636,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -1647,7 +1657,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               add_done_item(ctx);
             }
 
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       /* feed me! */
@@ -1837,7 +1847,7 @@ handle_response(serf_request_t *request,
           && handler->sline.code != 304)
         {
           err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                  svn_error_wrap_apr(status, NULL),
+                                  svn_ra_serf__wrap_err(status, NULL),
                                   _("Premature EOF seen from server"
                                     " (http status=%d)"),
                                   handler->sline.code);
@@ -2439,7 +2449,7 @@ expat_response_handler(serf_request_t *request,
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
-        return svn_error_wrap_apr(status, NULL);
+        return svn_ra_serf__wrap_err(status, NULL);
 
 #if 0
       /* ### move restart/skip into the core handler  */
@@ -2493,7 +2503,7 @@ expat_response_handler(serf_request_t *request,
 
       if (status && !SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
 

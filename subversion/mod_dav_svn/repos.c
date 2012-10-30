@@ -1502,7 +1502,7 @@ get_parentpath_resource(request_rec *r,
   repos->xslt_uri = dav_svn__get_xslt_uri(r);
   repos->autoversioning = dav_svn__get_autoversioning_flag(r);
   repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
-  repos->v2_protocol = dav_svn__get_v2_protocol_flag(r);
+  repos->v2_protocol = dav_svn__check_httpv2_support(r);
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
@@ -2082,7 +2082,7 @@ get_resource(request_rec *r,
   repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
 
   /* Are we advertising HTTP v2 protocol support? */
-  repos->v2_protocol = dav_svn__get_v2_protocol_flag(r);
+  repos->v2_protocol = dav_svn__check_httpv2_support(r);
 
   /* Path to activities database */
   repos->activities_db = dav_svn__get_activities_db(r);
@@ -2223,8 +2223,12 @@ get_resource(request_rec *r,
         }
 
       /* Configure hook script environment variables. */
-      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
-                             r->connection->pool, r->pool);
+      serr = svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
+                                    r->connection->pool, r->pool);
+      if (serr)
+        return dav_svn__sanitize_error(serr,
+                                       "Error settings hooks environment",
+                                       HTTP_INTERNAL_SERVER_ERROR, r);
     }
 
   /* cache the filesystem object */
@@ -3083,6 +3087,13 @@ set_headers(request_rec *r, const dav_resource *resource)
       if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
         {
           mimetype = SVN_SVNDIFF_MIME_TYPE;
+
+          /* Note the base that this svndiff is based on, and tell any
+             intermediate caching proxies that this header is
+             significant.  */
+          apr_table_setn(r->headers_out, "Vary", SVN_DAV_DELTA_BASE_HEADER);
+          apr_table_setn(r->headers_out, SVN_DAV_DELTA_BASE_HEADER,
+                         resource->info->delta_base);
         }
       svn_error_clear(serr);
     }
@@ -3164,7 +3175,7 @@ typedef struct diff_ctx_t {
 } diff_ctx_t;
 
 
-static svn_error_t *
+static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
@@ -3185,7 +3196,7 @@ write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 }
 
 
-static svn_error_t *
+static svn_error_t *  __attribute__((warn_unused_result))
 close_filter(void *baton)
 {
   diff_ctx_t *dc = baton;
@@ -3635,7 +3646,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           /* get a handler/baton for writing into the output stream */
           svn_txdelta_to_svndiff3(&handler, &h_baton,
                                   o_stream, resource->info->svndiff_version,
-                                  dav_svn__get_compression_level(),
+                                  dav_svn__get_compression_level(resource->info->r),
                                   resource->pool);
 
           /* got everything set up. read in delta windows and shove them into

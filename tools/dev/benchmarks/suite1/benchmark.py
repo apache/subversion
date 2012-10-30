@@ -17,24 +17,47 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Usage: benchmark.py run|list|compare|show|chart ...
+"""Usage: benchmark.py run|list|compare|show|chart <selection> ...
+
+SELECTING TIMINGS -- B@R,LxS
+ 
+In the subcommands below, a timings selection consists of a string with up to
+four elements:
+  <branch>@<revision>,<levels>x<spread> 
+abbreviated as:
+  B@R,LxS
+
+<branch> is a label of an svn branch, e.g. "1.7.x".
+<revision> is the last-changed-revision of above branch.
+<levels> is the number of directory levels created in the benchmark.
+<spread> is the number of child trees spreading off each dir level.
+
+<branch_name> and <revision> are simply used for labeling. Upon the actual
+test runs, you should enter labels matching the selected --svn-bin-dir.
+Later, you can select runs individually by using these labels.
+
+For <revision>, you can provide the keyword 'each', which has the same effect
+as entering each available revision in a separate timings selection.
+
+For all subcommands except 'run', you can omit some or all of the elements of
+a timings selection to combine all available timings sets. Try that out with
+the 'list' subcommand.
+
+Examples:
+  benchmark.py run 1.7.x@12345,5x5
+  benchmark.py show trunk@12345
+  benchmark.py compare 1.7.0,1x100 trunk@each,1x100
+
 
 RUN BENCHMARKS
 
-  benchmark.py run <branch>@<revision>,<levels>x<spread> [N] [options]
+  benchmark.py run B@R,LxS [N] [options]
 
 Test data is added to an sqlite database created automatically, by default
 'benchmark.db' in the current working directory. To specify a different path,
 use option -f <path_to_db>.
 
-<branch_name> is a label of the svn branch you're testing, e.g. "1.7.x".
-<revision> is the last-changed-revision of above branch.
-<levels> is the number of directory levels to create
-<spread> is the number of child trees spreading off each dir level
 If <N> is provided, the run is repeated N times.
-
-<branch_name> and <revision> are simply used for later reference. You
-should enter labels matching the selected --svn-bin-dir.
 
 <levels> and <spread> control the way the tested working copy is structured:
   <levels>: number of directory levels to create.
@@ -43,22 +66,21 @@ should enter labels matching the selected --svn-bin-dir.
 
 LIST WHAT IS ON RECORD
 
-  benchmark.py list [ <branch>@<rev>,<levels>x<spread> ]
+  benchmark.py list [B@R,LxS]
 
 Find entries in the database for the given constraints. Any arguments can
 be omitted. (To select only a rev, start with a '@', like '@123'; to select
 only spread, start with an 'x', like "x100".)
 
-Omit all args to get a listing of all available distinct entries.
+Call without arguments to get a listing of all available constraints.
 
 
 COMPARE TIMINGS
 
-  benchmark.py compare B@R,LxS B@R,LxS
+  benchmark.py compare B@R,LxS B@R,LxS [B@R,LxS [...]]
 
-Compare two kinds of timings (in text mode). Each B@R,LxS selects
-timings from branch, revision, WC-levels and -spread by the same labels as
-previously given for a 'run' call. Any elements can be omitted. For example:
+Compare any number of timings sets to the first provided set (in text mode).
+For example:
   benchmark.py compare 1.7.0 trunk@1349903
     Compare the total timings of all combined '1.7.0' branch runs to
     all combined runs of 'trunk'-at-revision-1349903.
@@ -66,38 +88,38 @@ previously given for a 'run' call. Any elements can be omitted. For example:
     Same as above, but only compare the working copy types with 5 levels
     and a spread of 5.
 
+Use the -c option to limit comparison to specific command names.
+
 
 SHOW TIMINGS
 
-  benchmark.py show <branch>@<rev>,<levels>x<spread>
+  benchmark.py show B@R,LxS [B@R,LxS [...]]
 
 Print out a summary of the timings selected from the given constraints.
-Any arguments can be omitted (like for the 'list' command).
 
 
 GENERATE CHARTS
 
   benchmark.py chart compare B@R,LxS B@R,LxS [ B@R,LxS ... ]
 
-Produce a bar chart that compares any number of sets of timings. Timing sets
-are supplied by B@R,LxS arguments (i.e. <branch>@<rev>,<levels>x<spread> as
-provided for a 'run' call), where any number of elements may be omitted. The
-less constraints you supply, the more timings are included (try it out with
-the 'list' command). The first set is taken as a reference point for 100% and
-+0 seconds. Each following dataset produces a set of labeled bar charts.
-So, at least two constraint arguments must be provided.
+Produce a bar chart that compares any number of sets of timings.  Like with
+the plain 'compare' command, the first set is taken as a reference point for
+100% and +-0 seconds. Each following dataset produces a set of labeled bar
+charts, grouped by svn command names. At least two timings sets must be
+provided.
 
-Use the -c option to limit charts to specific command names.
+Use the -c option to limit comparison to specific command names.
 
 
 EXAMPLES
 
-# Run 3 benchmarks on svn 1.7.0. Timings are saved in benchmark.db.
+# Run 3 benchmarks on svn 1.7.0 with 5 dir levels and 5 files and subdirs for
+# each level (spread). Timings are saved in ./benchmark.db.
 # Provide label '1.7.0' and its Last-Changed-Rev for later reference.
-# (You may also set your $PATH instead of using --svn-bin-dir.)
 ./benchmark.py run --svn-bin-dir ~/svn-prefix/1.7.0/bin 1.7.0@1181106,5x5 3
 
 # Record 3 benchmark runs on trunk, again naming its Last-Changed-Rev.
+# (You may also set your $PATH instead of using --svn-bin-dir.)
 ./benchmark.py run --svn-bin-dir ~/svn-prefix/trunk/bin trunk@1352725,5x5 3
 
 # Work with the results of above two runs
@@ -129,11 +151,17 @@ import random
 import shutil
 import stat
 import string
+from copy import copy
 
 IGNORE_COMMANDS = ('--version', )
 TOTAL_RUN = 'TOTAL RUN'
 
 j = os.path.join
+
+def bail(msg=None):
+  if msg:
+    print msg
+  exit(1)
 
 def time_str():
   return time.strftime('%Y-%m-%d %H:%M:%S');
@@ -227,6 +255,7 @@ class RunKind:
     if self.levels: self.levels = int(self.levels)
     if self.spread: self.spread = int(self.spread)
 
+  def label(self):
     label_parts = []
     if self.branch:
       label_parts.append(self.branch)
@@ -240,10 +269,38 @@ class RunKind:
       if self.spread:
         label_parts.append(RUN_KIND_SEPARATORS[2])
         label_parts.append(str(self.spread))
-    self.label = ''.join(label_parts)
+    return ''.join(label_parts)
 
   def args(self):
     return (self.branch, self.revision, self.levels, self.spread)
+
+
+def parse_timings_selections(db, *args):
+  run_kinds = []
+
+  for arg in args:
+    run_kind = RunKind(arg)
+
+    if run_kind.revision == 'each':
+      run_kind.revision = None
+      query = TimingQuery(db, run_kind)
+      for revision in query.get_sorted_revisions():
+        revision_run_kind = copy(run_kind)
+        revision_run_kind.revision = revision
+        run_kinds.append(revision_run_kind)
+    else:
+      run_kinds.append(run_kind)
+
+  return run_kinds
+  
+def parse_one_timing_selection(db, *args):
+  run_kinds = parse_timings_selections(db, *args)
+  if len(run_kinds) != 1:
+    bail("I need exactly one timings identifier, not '%s'"
+         % (' '.join(*args)))
+  return run_kinds[0]
+
+
 
 
 PATHNAME_VALID_CHARS = "-_.,@%s%s" % (string.ascii_letters, string.digits)
@@ -436,15 +493,19 @@ class TimingQuery:
               AND b.batch_id = r.batch_id
               AND r.aborted = 0
          """
-    self.append_constraint('k', 'branch', run_kind.branch)
-    self.append_constraint('k', 'revision', run_kind.revision)
-    self.append_constraint('k', 'wc_levels', run_kind.levels)
-    self.append_constraint('k', 'wc_spread', run_kind.spread)
-    self.label = run_kind.label
+    self.append_constraint('k.branch', run_kind.branch)
+    self.each_revision = False
+    if run_kind.revision == 'each':
+      self.each_revision = True
+    else:
+      self.append_constraint('k.revision', run_kind.revision)
+    self.append_constraint('k.wc_levels', run_kind.levels)
+    self.append_constraint('k.wc_spread', run_kind.spread)
+    self.label = run_kind.label()
 
-  def append_constraint(self, table, name, val):
+  def append_constraint(self, column_name, val):
     if val:
-      self.constraints.append('AND %s.%s = ?' % (table, name))
+      self.constraints.append('AND %s = ?' % column_name)
       self.values.append(val)
 
   def remove_last_constraint(self):
@@ -458,7 +519,6 @@ class TimingQuery:
     query.append('ORDER BY %s' % x)
     c = db.conn.cursor()
     try:
-      #print ' '.join(query)
       c.execute(' '.join(query), self.values)
       if n == 1:
         return [tpl[0] for tpl in c.fetchall()]
@@ -500,7 +560,7 @@ class TimingQuery:
                   max(t.timing),
                   avg(t.timing)""",
              self.FROM_WHERE ]
-    self.append_constraint('t', 'command', command)
+    self.append_constraint('t.command', command)
     try:
       query.extend(self.constraints)
       c = db.conn.cursor()
@@ -816,11 +876,12 @@ def perform_run(batch, run_kind,
 
     
 def cmdline_run(db, options, run_kind_str, N=1):
-  run_kind = RunKind(run_kind_str)
+  run_kind = parse_one_timing_selection(db, run_kind_str)
+    
   N = int(N)
 
   print 'Hi, going to run a Subversion benchmark series of %d runs...' % N
-  print 'Label is %s' % run_kind.label
+  print 'Label is %s' % run_kind.label()
 
   # can we run the svn binaries?
   svn_bin = j(options.svn_bin_dir, 'svn')
@@ -829,8 +890,7 @@ def cmdline_run(db, options, run_kind_str, N=1):
   for b in (svn_bin, svnadmin_bin):
     so,se = run_cmd([b, '--version'])
     if not so:
-      print "Can't run", b
-      exit(1)
+      bail("Can't run %s" % b)
 
     print ', '.join([s.strip() for s in so.split('\n')[:2]])
 
@@ -844,54 +904,55 @@ def cmdline_run(db, options, run_kind_str, N=1):
   batch.done()
 
 
-def cmdline_list(db, options, run_kind_str=None):
-  run_kind = RunKind(run_kind_str)
+def cmdline_list(db, options, *args):
+  run_kinds = parse_timings_selections(db, *args)
 
-  constraints = []
-  def add_if_not_none(name, val):
-    if val:
-      constraints.append('  %s = %s' % (name, val))
-  add_if_not_none('branch', run_kind.branch)
-  add_if_not_none('revision', run_kind.revision)
-  add_if_not_none('levels', run_kind.levels)
-  add_if_not_none('spread', run_kind.spread)
-  if constraints:
-    print 'For\n', '\n'.join(constraints)
-  print 'I found:'
+  for run_kind in run_kinds:
 
-  d = TimingQuery(db, run_kind)
-  
-  cmd_names = d.get_sorted_command_names()
-  if cmd_names:
-    print '\n%d command names:\n ' % len(cmd_names), '\n  '.join(cmd_names)
+    constraints = []
+    def add_if_not_none(name, val):
+      if val:
+        constraints.append('  %s = %s' % (name, val))
+    add_if_not_none('branch', run_kind.branch)
+    add_if_not_none('revision', run_kind.revision)
+    add_if_not_none('levels', run_kind.levels)
+    add_if_not_none('spread', run_kind.spread)
+    if constraints:
+      print 'For\n', '\n'.join(constraints)
+    print 'I found:'
 
-  branches = d.get_sorted_branches()
-  if branches and (len(branches) > 1 or branches[0] != run_kind.branch):
-    print '\n%d branches:\n ' % len(branches), '\n  '.join(branches)
+    d = TimingQuery(db, run_kind)
+    
+    cmd_names = d.get_sorted_command_names()
+    if cmd_names:
+      print '\n%d command names:\n ' % len(cmd_names), '\n  '.join(cmd_names)
 
-  revisions = d.get_sorted_revisions()
-  if revisions and (len(revisions) > 1 or revisions[0] != run_kind.revision):
-    print '\n%d revisions:\n ' % len(revisions), '\n  '.join(revisions)
+    branches = d.get_sorted_branches()
+    if branches and (len(branches) > 1 or branches[0] != run_kind.branch):
+      print '\n%d branches:\n ' % len(branches), '\n  '.join(branches)
 
-  levels_spread = d.get_sorted_levels_spread()
-  if levels_spread and (
-       len(levels_spread) > 1
-       or levels_spread[0] != (run_kind.levels, run_kind.spread)):
-    print '\n%d kinds of levels x spread:\n ' % len(levels_spread), '\n  '.join(
-            [ ('%dx%d' % (l, s)) for l,s in levels_spread ])
+    revisions = d.get_sorted_revisions()
+    if revisions and (len(revisions) > 1 or revisions[0] != run_kind.revision):
+      print '\n%d revisions:\n ' % len(revisions), '\n  '.join(revisions)
 
-  print "\n%d runs in %d batches.\n" % (d.count_runs_batches())
+    levels_spread = d.get_sorted_levels_spread()
+    if levels_spread and (
+         len(levels_spread) > 1
+         or levels_spread[0] != (run_kind.levels, run_kind.spread)):
+      print '\n%d kinds of levels x spread:\n ' % len(levels_spread), '\n  '.join(
+              [ ('%dx%d' % (l, s)) for l,s in levels_spread ])
+
+    print "\n%d runs in %d batches.\n" % (d.count_runs_batches())
 
 
 def cmdline_show(db, options, *run_kind_strings):
-  for run_kind_str in run_kind_strings:
-    run_kind = RunKind(run_kind_str)
-
+  run_kinds = parse_timings_selections(db, run_kind_strings)
+  for run_kind in run_kinds:
     q = TimingQuery(db, run_kind)
     timings = q.get_timings()
 
     s = []
-    s.append('Timings for %s' % run_kind.label)
+    s.append('Timings for %s' % run_kind.label())
     s.append('   N    min     max     avg   operation  (unit is seconds)')
 
     for command_name in q.get_sorted_command_names():
@@ -909,99 +970,111 @@ def cmdline_show(db, options, *run_kind_strings):
     print '\n'.join(s)
 
 
-def cmdline_compare(db, options, left_str, right_str):
-  left_kind = RunKind(left_str)
-  right_kind = RunKind(right_str)
+def cmdline_compare(db, options, *args):
+  run_kinds = parse_timings_selections(db, *args)
+  if len(run_kinds) < 2:
+    bail("Need at least two sets of timings to compare.")
 
+
+  left_kind = run_kinds[0]
   leftq = TimingQuery(db, left_kind)
   left = leftq.get_timings()
   if not left:
-    print "No timings for", left_kind.label
-    exit(1)
+    bail("No timings for %s" % left_kind.label())
 
-  rightq = TimingQuery(db, right_kind)
-  right = rightq.get_timings()
-  if not right:
-    print "No timings for", right_kind.label
-    exit(1)
+  for run_kind_idx in range(1, len(run_kinds)):
+    right_kind = run_kinds[run_kind_idx]
 
-  label = 'Compare %s to %s' % (left_kind.label, right_kind.label)
+    rightq = TimingQuery(db, right_kind)
+    right = rightq.get_timings()
+    if not right:
+      print "No timings for %s" % right_kind.label()
+      continue
 
-  s = [label]
+    label = 'Compare %s to %s' % (right_kind.label(), left_kind.label())
 
-  verbose = options.verbose
-  if not verbose:
-    s.append('       N        avg         operation')
-  else:
-    s.append('       N        min              max              avg         operation')
+    s = [label]
 
-  command_names = [name for name in leftq.get_sorted_command_names()
-                   if name in right]
-  if options.command_names:
-    command_names = [name for name in command_names
-                     if name in options.command_names]
-
-  for command_name in command_names:
-    left_N, left_min, left_max, left_avg = left[command_name]
-    right_N, right_min, right_max, right_avg = right[command_name]
-
-    N_str = '%s/%s' % (n_label(left_N), n_label(right_N))
-    avg_str = '%7.2f|%+7.3f' % (do_div(left_avg, right_avg),
-                                do_diff(left_avg, right_avg))
-
+    verbose = options.verbose
     if not verbose:
-      s.append('%9s %-16s  %s' % (N_str, avg_str, command_name))
+      s.append('       N        avg         operation')
     else:
-      min_str = '%7.2f|%+7.3f' % (do_div(left_min, right_min),
-                                  do_diff(left_min, right_min))
-      max_str = '%7.2f|%+7.3f' % (do_div(left_max, right_max),
-                                  do_diff(left_max, right_max))
+      s.append('       N        min              max              avg         operation')
 
-      s.append('%9s %-16s %-16s %-16s  %s' % (N_str, min_str, max_str, avg_str,
-                                          command_name))
+    command_names = [name for name in leftq.get_sorted_command_names()
+                     if name in right]
+    if options.command_names:
+      command_names = [name for name in command_names
+                       if name in options.command_names]
 
-  s.extend([
-    '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
-    ' factor < 1 and seconds < 0 means \'%s\' is faster.'
-    % right_kind.label,
-    ' "2/3" means: \'%s\' has 2 timings on record, the other has 3.)'
-    % left_kind.label
-    ])
+    for command_name in command_names:
+      left_N, left_min, left_max, left_avg = left[command_name]
+      right_N, right_min, right_max, right_avg = right[command_name]
+
+      N_str = '%s/%s' % (n_label(left_N), n_label(right_N))
+      avg_str = '%7.2f|%+7.3f' % (do_div(left_avg, right_avg),
+                                  do_diff(left_avg, right_avg))
+
+      if not verbose:
+        s.append('%9s %-16s  %s' % (N_str, avg_str, command_name))
+      else:
+        min_str = '%7.2f|%+7.3f' % (do_div(left_min, right_min),
+                                    do_diff(left_min, right_min))
+        max_str = '%7.2f|%+7.3f' % (do_div(left_max, right_max),
+                                    do_diff(left_max, right_max))
+
+        s.append('%9s %-16s %-16s %-16s  %s' % (N_str, min_str, max_str, avg_str,
+                                            command_name))
+
+    s.extend([
+      '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
+      ' factor < 1 and seconds < 0 means \'%s\' is faster.'
+      % right_kind.label(),
+      ' "2/3" means: \'%s\' has 2 timings on record, the other has 3.)'
+      % left_kind.label()
+      ])
 
 
-  print '\n'.join(s)
+    print '\n'.join(s)
 
 
 # ------------------------------------------------------- charts
 
 def cmdline_chart_compare(db, options, *args):
+  import matplotlib
+  matplotlib.use('Agg')
   import numpy as np
-  import matplotlib.pyplot as plt
+  import matplotlib.pylab as plt
 
   labels = []
   timing_sets = []
   command_names = None
 
-  for arg in args:
-    run_kind = RunKind(arg)
+  run_kinds = parse_timings_selections(db, *args)
+
+  all_command_names = set()
+
+  # iterate the timings selections and accumulate data
+  for run_kind in run_kinds:
     query = TimingQuery(db, run_kind)
     timings = query.get_timings()
     if not timings:
-      print "No timings for", run_kind.label
-      exit(1)
-    labels.append(run_kind.label)
+      print "No timings for %s" % run_kind.label()
+      continue
+    labels.append(run_kind.label())
     timing_sets.append(timings)
 
-    if command_names:
-      for i in range(len(command_names)):
-        if not command_names[i] in timings:
-          del command_names[i]
-    else:
-      command_names = query.get_sorted_command_names()
+    all_command_names.update( query.get_sorted_command_names() )
+
+  if len(timing_sets) < 2:
+    bail("Not enough timings")
 
   if options.command_names:
-    command_names = [name for name in command_names
+    command_names = [name for name in all_command_names
                      if name in options.command_names]
+  else:
+    command_names = list(all_command_names)
+  command_names = sorted(command_names)
 
   chart_path = options.chart_path
   if not chart_path:
@@ -1012,95 +1085,122 @@ def cmdline_chart_compare(db, options, *args):
   print '\nwriting chart file:', chart_path
 
   N = len(command_names)
-  M = len(timing_sets) - 1
+  M = len(timing_sets) - 1 
+  if M < 2:
+    M = 2
 
-  ind = np.arange(N)  # the x locations for the groups
-  width = 1. / (1.2 + M)     # the width of the bars
-  dist = 0.15
+  group_positions = np.arange(N)  # the y locations for the groups
+  dist = 0.1
+  height = (1. - dist) / (1. + M)     # the height of the bars
 
-  fig = plt.figure(figsize=(0.33*N*M,12))
-  plot1 = fig.add_subplot(211)
-  plot2 = fig.add_subplot(212)
+  fig = plt.figure(figsize=(12, 5 + 0.21*N*M))
+  plot1 = fig.add_subplot(121)
+  plot2 = fig.add_subplot(122)
 
-  # invisible lines that make sure the scale doesn't get minuscule
-  plot1.axhline(y=101, color='white', linewidth=0.01)
-  plot1.axhline(y=95.0, color='white', linewidth=0.01)
-  plot2.axhline(y=0.1, color='white', linewidth=0.01)
-  plot2.axhline(y=-0.5, color='white', linewidth=0.01)
+  left = timing_sets[0]
 
-  reference = timing_sets[0]
+  ofs = (dist + height) / 2.
 
-  ofs = 0
-
+  # Iterate timing sets. Each loop produces one bar for each command name
+  # group.
   for label_i in range(1, len(labels)):
-    timings = timing_sets[label_i]
+    right = timing_sets[label_i]
     divs = []
     diffs = []
     divs_color = []
     deviations = []
     for command_name in command_names:
-      ref_N, ref_min, ref_max, ref_avg = reference[command_name]
-      this_N, this_min, this_max, this_avg = timings[command_name]
+      left_N, left_min, left_max, left_avg = left[command_name]
+      right_N, right_min, right_max, right_avg = right[command_name]
 
-      val = 100. * (do_div(ref_avg, this_avg) - 1.0)
+      val = 100. * (do_div(left_avg, right_avg) - 1.0)
       if val < 0:
         col = '#55dd55'
       else:
         col = '#dd5555'
       divs.append(val)
       divs_color.append(col)
-      diffs.append( do_diff(ref_avg, this_avg) )
-      deviations.append(this_max / this_min)
+      diffs.append( do_diff(left_avg, right_avg) )
+      deviations.append(right_max / right_min)
 
-    rects = plot1.bar(ind + ofs, divs, width * (1.0 - dist),
-                      color=divs_color, bottom=100.0, edgecolor='none')
+    rects = plot1.barh((group_positions + ofs), divs, height * (1.0 - dist),
+                      color=divs_color, left=0.0, edgecolor='white')
 
     for i in range(len(rects)):
-      x = rects[i].get_x() + width / 2.2
+      y = rects[i].get_y() + height/10.
       div = divs[i]
       label = labels[label_i]
 
-      plot1.text(x, 100.,
-                 ' %+5.1f%% %s' % (div,label),
-                 ha='center', va='top', size='small',
-                 rotation=-90, family='monospace')
+      plot1.text(-1., y,
+                 '%s %+5.1f%%' % (label, div),
+                 ha='right', va='top', size='small',
+                 rotation=0, family='monospace')
 
-    rects = plot2.bar(ind + ofs, diffs, width * 0.9,
-                   color=divs_color, bottom=0.0, edgecolor='none')
+    rects = plot2.barh((group_positions + ofs), diffs, height * 0.9,
+                   color=divs_color, edgecolor='white')
 
     for i in range(len(rects)):
-      x = rects[i].get_x() + width / 2.2
+      y = rects[i].get_y() + height/10.
       diff = diffs[i]
       label = labels[label_i]
 
-      plot2.text(x, 0.,
-                 ' %+5.2fs %s' % (diff,label),
-                 ha='center', va='top', size='small',
-                 rotation=-90, family='monospace')
+      plot2.text(-.5, y,
+                 '%s %+6.2fs' % (label, diff),
+                 ha='right', va='top', size='small',
+                 rotation=0, family='monospace')
 
-    ofs += width
+    ofs += height
 
-  plot1.set_title('Speed change compared to %s [%%]' % labels[0])
-  plot1.set_xticks(ind + (width / 2.))
-  plot1.set_xticklabels(command_names, rotation=-55,
-                        horizontalalignment='left',
-                        size='x-small', weight='bold')
-  plot1.axhline(y=100.0, color='#555555', linewidth=0.2)
-  plot2.set_title('[seconds]')
-  plot2.set_xticks(ind + (width / 2.))
-  plot2.set_xticklabels(command_names, rotation=-55,
-                        horizontalalignment='left',
-                        size='medium', weight='bold')
-  plot2.axhline(y=0.0, color='#555555', linewidth=0.2)
+  plot1.set_title('Avg. runtime change from %s in %%' % labels[0],
+                  size='medium')
+  #plot1.axvline(x=0.0, color='#555555', linewidth=0.2)
+  plot1.set_xticks((0,))
+  plot1.set_xticklabels(('+-0%',), rotation=0)
 
-  margin = 1.5/(N*M)
-  fig.subplots_adjust(bottom=0.1, top=0.97,
-                      left=margin,
-                      right=1.0-(margin / 2.))
+  for p in (plot1, plot2):
+    p.set_ylim((len(command_names), 0))
+    xlim = list(p.get_xlim())
+    if xlim[1] < 2.:
+      xlim[1] = 2.
+    # make sure the zero line is far enough left so that the annotations
+    # fit inside the chart. About half the width should suffice.
+    if xlim[0] > -xlim[1]:
+      xlim[0] = -xlim[1]
+    p.set_xlim(*xlim)
+    p.set_yticks(group_positions + (height / 2.))
+    p.set_yticklabels(())
+    p.grid()
 
-  #plot1.legend( (rects1[0], rects2[0]), (left_label, right_label) )
 
-  #plt.show()
+  plot2.set_title('Avg. runtime change from %s in seconds' % labels[0],
+                  size='medium')
+  #plot2.axvline(x=0.0, color='#555555', linewidth=0.2)
+  plot2.set_xticks((0,))
+  plot2.set_xticklabels(('+-0s',), rotation=0)
+
+  margin = 1./(2 + N*M)
+  print margin
+  fig.subplots_adjust(left=0.005, right=0.995, wspace=0.3, bottom=margin,
+                      top=1.0-margin)
+
+  ystep = (1.0 - 2.*margin) / len(command_names)
+
+  for idx in range(len(command_names)):
+    ylabel = '%s\nvs. %.1fs' % (
+                     command_names[idx],
+                     left[command_names[idx]][3])
+
+    ypos=1.0 - margin - 0.2*ystep - ystep * idx
+    plt.figtext(0.5, ypos,
+                command_names[idx],
+                ha='center', va='top',
+                size='medium', weight='bold')
+    plt.figtext(0.5, ypos - ystep/(M+1),
+                '%s\n= %.2fs' % (
+                  labels[0], left[command_names[idx]][3]),
+                ha='center', va='top',
+                size='small')
+
   plt.savefig(chart_path)
 
 # ------------------------------------------------------------ main
@@ -1154,7 +1254,7 @@ if __name__ == '__main__':
     if msg:
       print
       print msg
-    exit(1)
+    bail()
 
   # there should be at least one arg left: the sub-command
   if not args:

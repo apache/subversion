@@ -182,11 +182,12 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
                           skel->children->next->next->next->next));
   kind = (svn_node_kind_t)n;
 
-  *version_info = svn_wc_conflict_version_create(repos_root,
-                                                 repos_relpath,
-                                                 peg_rev,
-                                                 kind,
-                                                 result_pool);
+  *version_info = svn_wc_conflict_version_create2(repos_root,
+                                                  NULL,
+                                                  repos_relpath,
+                                                  peg_rev,
+                                                  kind,
+                                                  result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -472,7 +473,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__read_conflicts(&conflicts,
-                                 wc_ctx->db, local_abspath,
+                                 wc_ctx->db, local_abspath, FALSE,
                                  scratch_pool, scratch_pool));
 
   if (!conflicts || conflicts->nelts == 0)

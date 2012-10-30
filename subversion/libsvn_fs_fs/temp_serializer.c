@@ -1211,3 +1211,152 @@ svn_fs_fs__deserialize_changes(void **out,
 
   return SVN_NO_ERROR;
 }
+
+/* Auxiliary structure representing the content of a svn_mergeinfo_t hash.
+   This structure is much easier to (de-)serialize than an APR array.
+ */
+typedef struct mergeinfo_data_t
+{
+  /* number of paths in the hash */
+  unsigned count;
+  
+  /* COUNT keys (paths) */
+  const char **keys;
+  
+  /* COUNT keys lengths (strlen of path) */
+  apr_ssize_t *key_lengths;
+  
+  /* COUNT entries, each giving the number of ranges for the key */
+  int *range_counts;
+
+  /* all ranges in a single, concatenated buffer */
+  svn_merge_range_t *ranges;
+} mergeinfo_data_t;
+
+svn_error_t *
+svn_fs_fs__serialize_mergeinfo(void **data,
+                               apr_size_t *data_len,
+                               void *in,
+                               apr_pool_t *pool)
+{
+  svn_mergeinfo_t mergeinfo = in;
+  mergeinfo_data_t merges;
+  svn_temp_serializer__context_t *context;
+  svn_stringbuf_t *serialized;
+  apr_hash_index_t *hi;
+  unsigned i;
+  int k;
+  apr_size_t range_count;
+
+  /* initialize our auxiliary data structure */
+  merges.count = apr_hash_count(mergeinfo);
+  merges.keys = apr_palloc(pool, sizeof(*merges.keys) * merges.count);
+  merges.key_lengths = apr_palloc(pool, sizeof(*merges.key_lengths) *
+                                        merges.count);
+  merges.range_counts = apr_palloc(pool, sizeof(*merges.range_counts) *
+                                         merges.count);
+
+  i = 0;
+  range_count = 0;
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi), ++i)
+    {
+      svn_rangelist_t *ranges;
+      apr_hash_this(hi, (const void**)&merges.keys[i],
+                        &merges.key_lengths[i],
+                        (void **)&ranges);
+      merges.range_counts[i] = ranges->nelts;
+      range_count += ranges->nelts;
+    }
+
+  merges.ranges = apr_palloc(pool, sizeof(*merges.ranges) * range_count);
+
+  i = 0;
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      svn_rangelist_t *ranges = svn__apr_hash_index_val(hi);
+      for (k = 0; k < ranges->nelts; ++k, ++i)
+        merges.ranges[i] = *APR_ARRAY_IDX(ranges, k, svn_merge_range_t*);
+    }
+  
+  /* serialize it and all its elements */
+  context = svn_temp_serializer__init(&merges,
+                                      sizeof(merges),
+                                      range_count * 30,
+                                      pool);
+
+  /* keys array */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&merges.keys,
+                            merges.count * sizeof(*merges.keys));
+
+  for (i = 0; i < merges.count; ++i)
+    svn_temp_serializer__add_string(context, &merges.keys[i]);
+
+  svn_temp_serializer__pop(context);
+
+  /* key lengths array */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&merges.key_lengths,
+                            merges.count * sizeof(*merges.key_lengths));
+  svn_temp_serializer__pop(context);
+
+  /* range counts array */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&merges.range_counts,
+                            merges.count * sizeof(*merges.range_counts));
+  svn_temp_serializer__pop(context);
+
+  /* ranges */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&merges.ranges,
+                            range_count * sizeof(*merges.ranges));
+  svn_temp_serializer__pop(context);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_mergeinfo(void **out,
+                                 void *data,
+                                 apr_size_t data_len,
+                                 apr_pool_t *pool)
+{
+  unsigned i;
+  int k, n;
+  mergeinfo_data_t *merges = (mergeinfo_data_t *)data;
+  svn_mergeinfo_t mergeinfo;
+  
+  /* de-serialize our auxiliary data structure */
+  svn_temp_deserializer__resolve(merges, (void**)&merges->keys);
+  svn_temp_deserializer__resolve(merges, (void**)&merges->key_lengths);
+  svn_temp_deserializer__resolve(merges, (void**)&merges->range_counts);
+  svn_temp_deserializer__resolve(merges, (void**)&merges->ranges);
+
+  /* de-serialize keys and add entries to the result */
+  n = 0;
+  mergeinfo = svn_hash__make(pool);
+  for (i = 0; i < merges->count; ++i)
+    {
+      svn_rangelist_t *ranges = apr_array_make(pool,
+                                               merges->range_counts[i],
+                                               sizeof(svn_merge_range_t*));
+      for (k = 0; k < merges->range_counts[i]; ++k, ++n)
+        APR_ARRAY_PUSH(ranges, svn_merge_range_t*) = &merges->ranges[n];
+      
+      svn_temp_deserializer__resolve((void*)merges->keys,
+                                     (void**)&merges->keys[i]);
+      apr_hash_set(mergeinfo, merges->keys[i], merges->key_lengths[i], ranges);
+    }
+
+  /* done */
+  *out = mergeinfo;
+
+  return SVN_NO_ERROR;
+}
+

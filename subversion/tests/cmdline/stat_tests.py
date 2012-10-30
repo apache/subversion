@@ -986,16 +986,15 @@ def status_ignored_dir(sbox):
 
 #----------------------------------------------------------------------
 
-@Issue(2030)
-def status_unversioned_dir(sbox):
-  "status on unversioned dir"
+def status_unversioned_dir_in_wc(sbox):
+  "status on unversioned dir in working copy"
   sbox.build(read_only = True)
 
   # Create two unversioned directories within the test working copy
   path = sbox.ospath('1/2')
   os.makedirs(path)
 
-  expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
+  expected_err = "svn: warning: (W155007|W155010): .*'.*(/|\\\\)" + \
                  os.path.basename(path) + \
                  "' was not found"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
@@ -1878,14 +1877,6 @@ def status_nested_wc_old_format(sbox):
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
 
-########################################################################
-# Run the tests
-
-
-def simple_lock(sbox, relpath):
-  path = os.path.join(sbox.wc_dir, relpath)
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock', path)
-
 #----------------------------------------------------------------------
 # Regression test for issue #3855 "status doesn't show 'K' on a locked
 # deleted node".
@@ -1897,7 +1888,8 @@ def status_locked_deleted(sbox):
   iota_path = sbox.ospath('iota')
 
   sbox.simple_rm('iota')
-  simple_lock(sbox, 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+                                     os.path.join(sbox.wc_dir, 'iota'))
   svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
                                      'status', iota_path)
 
@@ -2031,6 +2023,19 @@ def status_not_present(sbox):
                                      sbox.ospath('A/mu'),
                                      sbox.ospath('no-file'))
 
+# Skip this test is a .svn dir exists in the root directory
+@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name())) 
+def status_unversioned_dir(sbox):
+  "status on unversioned dir"
+  sbox.build(read_only = True, create_wc = False)
+
+  # Run svn status on "/", which we assume exists and isn't a WC.
+  # This should work on UNIX-like systems and Windows systems
+  expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
+                 "' is not a working copy"
+  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+                                      "status", "/")
+
 ########################################################################
 # Run the tests
 
@@ -2055,7 +2060,7 @@ test_list = [ None,
               missing_dir_in_anchor,
               status_in_xml,
               status_ignored_dir,
-              status_unversioned_dir,
+              status_unversioned_dir_in_wc,
               status_missing_dir,
               status_nonrecursive_update_different_cwd,
               status_add_plus_conflict,
@@ -2075,6 +2080,7 @@ test_list = [ None,
               wclock_status,
               modified_modulo_translation,
               status_not_present,
+              status_unversioned_dir,
              ]
 
 if __name__ == '__main__':

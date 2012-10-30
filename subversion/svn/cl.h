@@ -236,10 +236,8 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
+  svn_boolean_t show_inherited_props; /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
-
-  svn_wc_conflict_resolver_func2_t conflict_func;
-  void *conflict_baton;
 } svn_cl__opt_state_t;
 
 
@@ -332,37 +330,58 @@ svn_cl__check_cancel(void *baton);
 
 /* Various conflict-resolution callbacks. */
 
-typedef struct svn_cl__conflict_baton_t {
-  svn_cl__accept_t accept_which;
-  apr_hash_t *config;
-  const char *editor_cmd;
-  svn_boolean_t external_failed;
-  svn_cmdline_prompt_baton_t *pb;
-  const char *path_prefix;
-} svn_cl__conflict_baton_t;
+/* Opaque baton type for svn_cl__conflict_func_interactive(). */
+typedef struct svn_cl__interactive_conflict_baton_t
+  svn_cl__interactive_conflict_baton_t;
 
-/* Create and return a conflict baton in *B, allocated from POOL, with the
- * values ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named
- * fields of the baton, and its 'external_failed' field initialised to FALSE. */
+/* Create and return an baton for use with svn_cl__conflict_func_interactive
+ * in *B, allocated from RESULT_POOL, and initialised with the values
+ * ACCEPT_WHICH, CONFIG, EDITOR_CMD, CANCEL_FUNC and CANCEL_BATON. */
 svn_error_t *
-svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
-                            svn_cl__accept_t accept_which,
-                            apr_hash_t *config,
-                            const char *editor_cmd,
-                            svn_cmdline_prompt_baton_t *pb,
-                            apr_pool_t *pool);
+svn_cl__get_conflict_func_interactive_baton(
+  svn_cl__interactive_conflict_baton_t **b,
+  svn_cl__accept_t accept_which,
+  apr_hash_t *config,
+  const char *editor_cmd,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *result_pool);
 
 /* A conflict-resolution callback which prompts the user to choose
    one of the 3 fulltexts, edit the merged file on the spot, or just
    skip the conflict (to be resolved later).
    Implements @c svn_wc_conflict_resolver_func_t. */
 svn_error_t *
-svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
-                         const svn_wc_conflict_description2_t *desc,
-                         void *baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
+svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
+                                  const svn_wc_conflict_description2_t *desc,
+                                  void *baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
+/* Create an return a baton for use with svn_cl__conflict_func_postpone(),
+ * allocated in RESULT_POOL. */
+void *
+svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool);
+
+/* A conflict-resolution callback which postpones all conflicts and
+ * remembers conflicted paths in BATON. */
+svn_error_t *
+svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
+                               const svn_wc_conflict_description2_t *desc,
+                               void *baton,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Run the interactive conflict resolver, obtained internally from
+ * svn_cl__get_conflict_func_interactive(), on any conflicted paths
+ * stored in the BATON obtained from svn_cl__get_conflict_func_postpone(). */
+svn_error_t *
+svn_cl__resolve_postponed_conflicts(void *baton,
+                                    svn_depth_t depth,
+                                    svn_cl__accept_t accept_which,
+                                    const char *editor_cmd,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *scratch_pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/
@@ -459,12 +478,15 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
-/* Same as svn_cl__print_prop_hash(), only output xml to *OUTSTR.  If *OUTSTR is
-   NULL, allocate it first from POOL, otherwise append to it. */
+/* Similar to svn_cl__print_prop_hash(), only output xml to *OUTSTR.
+   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
+   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
+   allocate it first from POOL, otherwise append to it. */
 svn_error_t *
 svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             apr_hash_t *prop_hash,
                             svn_boolean_t names_only,
+                            svn_boolean_t inherited_props,
                             apr_pool_t *pool);
 
 /* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it
@@ -616,14 +638,6 @@ svn_cl__notifier_mark_export(void *baton);
  */
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
-
-/* Return TRUE if any conflicts were detected during notification. */
-svn_boolean_t
-svn_cl__notifier_check_conflicts(void *baton);
-
-/* Return a sorted array of conflicted paths detected during notification. */
-apr_array_header_t *
-svn_cl__notifier_get_conflicted_paths(void *baton, apr_pool_t *result_pool);
 
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
@@ -871,15 +885,6 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
                                         const svn_opt_revision_t *revision2,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
-
-/* Run the conflict resolver for all targets in the TARGETS list with
- * the specified DEPTH. */
-svn_error_t *
-svn_cl__resolve_conflicts(apr_array_header_t *targets,
-                          svn_depth_t depth,
-                          const svn_cl__opt_state_t *opt_state,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -107,7 +107,7 @@ static svn_boolean_t
 receive_from_gpg_agent(int sd, char *buf, size_t n)
 {
   int i = 0;
-  int recvd;
+  size_t recvd;
   char c;
 
   /* Clear existing buffer content before reading response. */
@@ -323,7 +323,6 @@ get_password_via_agent(svn_boolean_t *done,
   display = getenv("DISPLAY");
   if (display != NULL)
     {
-      request = apr_psprintf(pool, "OPTION display=%s\n", display);
       if (!send_option(sd, buffer, BUFFER_SIZE, "display", display, pool))
         {
           close(sd);
@@ -333,8 +332,8 @@ get_password_via_agent(svn_boolean_t *done,
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
      to other password caching mechanisms. */
-  svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
-               pool);
+  SVN_ERR(svn_checksum(&digest, svn_checksum_md5, realmstring,
+                       strlen(realmstring), pool));
   cache_id = svn_checksum_to_cstring(digest, pool);
 
   request = apr_psprintf(pool, 

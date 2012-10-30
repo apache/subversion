@@ -97,13 +97,78 @@ class SubversionCoreTestCase(unittest.TestCase):
       # will be passed through.
       rec.e = svn.core.SubversionException("No fields except message.")
       # e.apr_err is None but should be an int
-      self.assertRaises(TypeError, svn.client.info2, args)
+      self.assertRaises(TypeError, svn.client.info2, *args)
     finally:
       # This would happen without the finally block as well, but we expliticly
       # order the operations so that the cleanup is not hindered by any open
       # handles.
       del ctx
       t.cleanup()
+
+  def test_config_enumerate2(self):
+    cfg = svn.core.svn_config_create(False)
+    entries = {
+      'one': 'one-value',
+      'two': 'two-value',
+      'three': 'three-value'
+    }
+
+    for (name, value) in entries.iteritems():
+      svn.core.svn_config_set(cfg, "section", name, value)
+
+    received_entries = {}
+    def enumerator(name, value, pool):
+      received_entries[name] = value
+      return len(received_entries) < 2
+
+    svn.core.svn_config_enumerate2(cfg, "section", enumerator)
+
+    self.assertEqual(len(received_entries), 2)
+    for (name, value) in received_entries.iteritems():
+      self.assert_(name in entries)
+      self.assertEqual(value, entries[name])
+
+  def test_config_enumerate2_exception(self):
+    cfg = svn.core.svn_config_create(False)
+    svn.core.svn_config_set(cfg, "section", "one", "one-value")
+    svn.core.svn_config_set(cfg, "section", "two", "two-value")
+
+    def enumerator(name, value, pool):
+      raise Exception
+    
+    # the exception will be swallowed, but enumeration must be stopped
+    self.assertEqual(
+      svn.core.svn_config_enumerate2(cfg, "section", enumerator), 1)
+
+  def test_config_enumerate_sections2(self):
+    cfg = svn.core.svn_config_create(False)
+    sections = ['section-one', 'section-two', 'section-three']
+
+    for section in sections:
+      svn.core.svn_config_set(cfg, section, "name", "value")
+
+    received_sections = []
+    def enumerator(section, pool):
+      received_sections.append(section)
+      return len(received_sections) < 2
+
+    svn.core.svn_config_enumerate_sections2(cfg, enumerator)
+
+    self.assertEqual(len(received_sections), 2)
+    for section in received_sections:
+      self.assert_(section in sections)
+
+  def test_config_enumerate_sections2_exception(self):
+    cfg = svn.core.svn_config_create(False)
+    svn.core.svn_config_set(cfg, "section-one", "name", "value")
+    svn.core.svn_config_set(cfg, "section-two", "name", "value")
+
+    def enumerator(section, pool):
+      raise Exception
+
+    # the exception will be swallowed, but enumeration must be stopped
+    self.assertEqual(
+      svn.core.svn_config_enumerate_sections2(cfg, enumerator), 1)
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(

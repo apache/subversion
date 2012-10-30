@@ -307,9 +307,9 @@ load_config(svn_ra_serf__session_t *session,
                                      session->pool);
       if (status)
         {
-          return svn_error_wrap_apr(status,
-                                    _("Could not resolve proxy server '%s'"),
-                                    proxy_host);
+          return svn_ra_serf__wrap_err(
+                   status, _("Could not resolve proxy server '%s'"),
+                   proxy_host);
         }
       session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
@@ -399,8 +399,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
-  serf_sess->http10 = TRUE;  /* until we confirm HTTP/1.1  */
-  serf_sess->http10 = FALSE; /* ### don't change behavior yet  */
+  /* We have to assume that the server only supports HTTP/1.0. Once it's clear
+     HTTP/1.1 is supported, we can upgrade. */
+  serf_sess->http10 = TRUE;
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
@@ -416,7 +417,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",
                                        client_string, (char *)NULL);
   else
     serf_sess->useragent = USER_AGENT;
@@ -430,7 +431,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             svn_ra_serf__conn_closed, serf_sess->conns[0],
                             serf_sess->pool);
   if (status)
-    return svn_error_wrap_apr(status, NULL);
+    return svn_ra_serf__wrap_err(status, NULL);
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
@@ -1149,7 +1150,8 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
   svn_ra_serf__get_deleted_rev,
-  svn_ra_serf__register_editor_shim_callbacks
+  svn_ra_serf__register_editor_shim_callbacks,
+  svn_ra_serf__get_inherited_props
 };
 
 svn_error_t *

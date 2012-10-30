@@ -475,12 +475,16 @@ switch_file_external(const char *local_abspath,
        ### We can't enable this now, because that would move the external
        ### information into the wrong working copy */
     const char *definition_abspath = svn_dirent_dirname(local_abspath,subpool);
+    apr_array_header_t *inherited_props;
 
     /* Open an RA session to 'source' URL */
     SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
                                               url, dir_abspath,
                                               peg_revision, revision,
                                               ctx, subpool));
+    /* Get the external file's iprops. */
+    SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
+                                       switch_loc->rev, subpool, subpool));
 
     SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, subpool),
                             subpool));
@@ -492,6 +496,7 @@ switch_file_external(const char *local_abspath,
                                              switch_loc->url,
                                              switch_loc->repos_root_url,
                                              switch_loc->repos_uuid,
+                                             inherited_props,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
                                              definition_abspath /* def */,

@@ -1163,7 +1163,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL
-        ""                                                                   NL;
+        ""                                                                   NL
+        "### Section for configuring working copies."                        NL
+        "[working-copy]"                                                     NL
+        "### Set to true to enable exclusive SQLite locking.  Some clients"  NL
+        "### may not support exclusive locking."                             NL
+        "# exclusive-locking = false"                                        NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),

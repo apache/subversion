@@ -304,9 +304,6 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 /* for the repository referred to by this request, are bulk updates allowed? */
 svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 
-/* for the repository referred to by this request, should httpv2 be advertised? */
-svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
-
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
@@ -327,6 +324,17 @@ authz_svn__subreq_bypass_func_t dav_svn__get_pathauthz_bypass(request_rec *r);
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
+
+/* For the repository referred to by this request, should HTTPv2
+   protocol support be advertised?  Note that this also takes into
+   account the support level expected of based on the specified
+   master server version (if provided via SVNMasterVersion).  */
+svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
+
+/* For the repository referred to by this request, should ephemeral
+   txnprop support be advertised?  */
+svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
+
 
 
 /* SPECIAL URI
@@ -376,6 +384,11 @@ const char *dav_svn__get_xslt_uri(request_rec *r);
 /* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_master_uri(request_rec *r);
 
+/* Return the version of the master server (used for mirroring) iff a
+   master URI is in place for this location; otherwise, return NULL.
+   Comes from the <SVNMasterVersion> directive. */
+svn_version_t *dav_svn__get_master_version(request_rec *r);
+
 /* Return the disk path to the activities db.
    Comes from the <SVNActivitiesDB> directive. */
 const char *dav_svn__get_activities_db(request_rec *r);
@@ -386,7 +399,7 @@ const char *dav_svn__get_activities_db(request_rec *r);
 const char *dav_svn__get_root_dir(request_rec *r);
 
 /* Return the data compression level to be used over the wire. */
-int dav_svn__get_compression_level(void);
+int dav_svn__get_compression_level(request_rec *r);
 
 /* Return the hook script environment parsed from the configuration. */
 const char *dav_svn__get_hooks_env(request_rec *r);
@@ -627,6 +640,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "replay-report" },
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
+  { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
   { NULL, NULL },
 };
 
@@ -674,6 +688,10 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
 
+dav_error *
+dav_svn__get_inherited_props_report(const dav_resource *resource,
+                                    const apr_xml_doc *doc,
+                                    ap_filter_t *output);
 
 /*** posts/ ***/
 
@@ -741,7 +759,11 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
    processing.  See dav_new_error_tag for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error_tag()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
@@ -756,7 +778,11 @@ dav_svn__new_error_tag(apr_pool_t *pool,
    processing.  See dav_new_error for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,

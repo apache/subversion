@@ -217,40 +217,6 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute URL, a peg revision PEG_REVISION, and a desired revision
-   REVISION, create an RA connection to that object as it exists in
-   that revision, following copy history if necessary.  If REVISION is
-   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
-   that it is the same node in both PEG_REVISION and REVISION.  If it
-   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
-
-   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   and should only be used if PATH_OR_URL is a url
-     ### else NULL? what's it for?
-
-   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
-   for a URL or 'working' for a WC path.  If REVISION->kind is
-   'unspecified', the operative revision is the peg revision.
-
-   Store the resulting ra_session in *RA_SESSION_P.  Store the final
-   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
-   may be NULL if not wanted.
-
-   Use authentication baton cached in CTX to authenticate against the
-   repository.
-
-   Use POOL for all allocations. */
-svn_error_t *
-svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
-                                 svn_client__pathrev_t **resolved_loc_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.
    Store the previous session URL in *OLD_SESSION_URL (so that if the
@@ -360,21 +326,88 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from CTX->config.
+/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
+   is is a hash as per svn_client__get_all_auto_props.
+
    Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values), or if
-   auto-props are disabled, set *PROPERTIES to NULL.
+   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
+   may be an empty hash, but will not be NULL.
+
    Set *MIMETYPE to the mimetype, if any, or to NULL.
+
    If MAGIC_COOKIE is not NULL and no mime-type can be determined
    via CTX->config try to detect the mime-type with libmagic.
-   Allocate the hash table, keys, values, and mimetype in POOL. */
-svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
-                                        const char **mimetype,
-                                        const char *path,
-                                        svn_magic__cookie_t *magic_cookie,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool);
 
+   Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
+   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *svn_client__get_paths_auto_props(
+  apr_hash_t **properties,
+  const char **mimetype,
+  const char *path,
+  svn_magic__cookie_t *magic_cookie,
+  apr_hash_t *autoprops,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Gather all auto-props from CTX->config (or none if auto-props are
+   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
+   by PATH_OR_URL.
+
+   If PATH_OR_URL is an unversioned WC path then gather the
+   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
+   parent.
+
+   If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
+   path as sfor the working properties.
+
+   Store both types of auto-props in *AUTOPROPS, a hash mapping const
+   char * file patterns to another hash which maps const char * property
+   names to const char *property values.
+
+   If a given property name exists for the same pattern in both the config
+   file and in an a svn:inheritable-auto-props property, the latter overrides the
+   former.  If a given property name exists for the same pattern in two
+   different inherited svn:inheritable-auto-props, then the closer path-wise
+   property overrides the more distant. svn:inheritable-auto-props explicitly set
+   on PATH_OR_URL have the highest precedence and override inherited props
+   and config file settings.
+
+   Allocate *AUTOPROPS in RESULT_POOL.  Use SCRATCH_POOL for temporary
+   allocations. */
+svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
+                                            const char *path_or_url,
+                                            svn_client_ctx_t *ctx,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool);
+
+/* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
+   patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
+   svn:inheritable-ignores properties set on, or inherited by, LOCAL_ABSPATH.
+   If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
+   then find its nearest versioned parent path, if any, and return the ignore
+   patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
+   LOCAL_ABSPATH is neither a versioned working copy path nor an unversioned
+   path within a working copy.  Store the collected patterns as const char *
+   elements in the array *IGNORES.  Allocate *IGNORES and its contents in
+   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
+                                         const char *local_abspath,
+                                         svn_boolean_t no_ignore,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/* Get a list of ignore patterns defined by the svn:inheritable-ignores
+   properties set on, or inherited by, PATH_OR_URL.  Store the collected
+   patterns as const char * elements in the array *IGNORES.  Allocate
+   *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
+   temporary allocations. */
+svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
+                                               const char *path_or_url,
+                                               svn_client_ctx_t *ctx,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from CTX->WC_CTX.  If PATH (or any item below a directory PATH) is
@@ -559,6 +592,34 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
+
+/* ---------------------------------------------------------------- */
+
+/*** Inheritable Properties ***/
+
+/* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
+   as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
+   RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
+   const char * absolute working copy paths to depth-first ordered arrays
+   of svn_prop_inherited_item_t * structures.
+
+   If LOCAL_ABSPATH has no base then do nothing.
+
+   RA_SESSION should be an open RA session pointing at the URL of PATH,
+   or NULL, in which case this function will open its own temporary session.
+
+   Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations.
+*/
+svn_error_t *
+svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
+                                  const char *local_abspath,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -1032,21 +1093,6 @@ svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
-
-/* Return true if KIND is a revision kind that is dependent on the working
- * copy. Otherwise, return false. */
-#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
-  ((kind) == svn_opt_revision_base ||                                      \
-   (kind) == svn_opt_revision_previous ||                                  \
-   (kind) == svn_opt_revision_working ||                                   \
-   (kind) == svn_opt_revision_committed)                                   \
-
-/* Return true if KIND is a revision kind that the WC can supply without
- * contacting the repository. Otherwise, return false. */
-#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
-  ((kind) == svn_opt_revision_base ||                                      \
-   (kind) == svn_opt_revision_working ||                                   \
-   (kind) == svn_opt_revision_committed)
 
 /* Return REVISION unless its kind is 'unspecified' in which case return
  * a pointer to a statically allocated revision structure of kind 'head'

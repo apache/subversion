@@ -199,6 +199,18 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY, APR_HASH_KEY_STRING,
                        capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INHERITED_PROPS, vals))
+        {
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_INHERITED_PROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
+        {
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
+                       capability_yes);
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
@@ -317,6 +329,10 @@ options_response_handler(serf_request_t *request,
                    APR_HASH_KEY_STRING, capability_no);
       apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                    APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                   APR_HASH_KEY_STRING, capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
@@ -325,7 +341,7 @@ options_response_handler(serf_request_t *request,
       opt_ctx->headers_processed = TRUE;
     }
 
-  /* Execute the 'real' response handler to XML-parse the repsonse body. */
+  /* Execute the 'real' response handler to XML-parse the response body. */
   return opt_ctx->inner_handler(request, response, opt_ctx->inner_baton, pool);
 }
 

@@ -1093,3 +1093,44 @@ svn__i64toa(char * dest, apr_int64_t number)
   *dest = '-';
   return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
 }
+
+static void
+ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
+{
+  apr_size_t length = svn__ui64toa(buffer, number);
+  apr_size_t i;
+
+  for (i = length; i > 3; i -= 3)
+    {
+      memmove(&buffer[i - 2], &buffer[i - 3], length - i + 3);
+      buffer[i-3] = seperator;
+      length++;
+    }
+
+  buffer[length] = 0;
+}
+
+char *
+svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool)
+{
+  char buffer[2 * SVN_INT64_BUFFER_SIZE];
+  ui64toa_sep(number, seperator, buffer);
+
+  return apr_pstrdup(pool, buffer);
+}
+
+char *
+svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
+{
+  char buffer[2 * SVN_INT64_BUFFER_SIZE];
+  if (number < 0)
+    {
+      buffer[0] = '-';
+      ui64toa_sep((apr_uint64_t)(-number), seperator, &buffer[1]);
+    }
+  else
+    ui64toa_sep((apr_uint64_t)(number), seperator, buffer);
+
+  return apr_pstrdup(pool, buffer);
+}
+
