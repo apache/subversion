@@ -410,16 +410,6 @@ scan_addition(svn_wc__db_status_t *status,
               apr_pool_t *scratch_pool);
 
 static svn_error_t *
-scan_deletion(const char **base_del_relpath,
-              const char **moved_to_relpath,
-              const char **work_del_relpath,
-              const char **moved_to_op_root_relpath,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool);
-
-static svn_error_t *
 convert_to_working_status(svn_wc__db_status_t *working_status,
                           svn_wc__db_status_t status);
 
@@ -3784,9 +3774,10 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       const char *base_del_relpath, *work_del_relpath;
 
-      SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
-                            NULL, wcroot, local_relpath, scratch_pool,
-                            scratch_pool));
+      SVN_ERR(svn_wc__db_scan_deletion_internal(&base_del_relpath, NULL,
+                                                &work_del_relpath,
+                                                NULL, wcroot, local_relpath,
+                                                scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
           const char *op_root_relpath;
@@ -8561,9 +8552,12 @@ read_url_txn(void *baton,
           const char *base_del_relpath;
           const char *work_del_relpath;
 
-          SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
-                                NULL, wcroot, local_relpath,
-                                scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_scan_deletion_internal(&base_del_relpath, NULL,
+                                                    &work_del_relpath,
+                                                    NULL, wcroot,
+                                                    local_relpath,
+                                                    scratch_pool,
+                                                    scratch_pool));
 
           if (base_del_relpath)
             {
@@ -9543,9 +9537,12 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       if (status == svn_wc__db_status_deleted)
         {
           const char *work_del_relpath;
-          SVN_ERR(scan_deletion(NULL, NULL, &work_del_relpath, NULL,
-                                wcroot, local_dir_relpath,
-                                scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, NULL,
+                                                    &work_del_relpath, NULL,
+                                                    wcroot, local_dir_relpath,
+                                                    scratch_pool,
+                                                    scratch_pool));
           if (work_del_relpath)
             {
               /* Deleted within a copy/move */
@@ -11409,17 +11406,15 @@ scan_deletion_txn(void *baton,
 }
 
 
-/* Like svn_wc__db_scan_deletion(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
-static svn_error_t *
-scan_deletion(const char **base_del_relpath,
-              const char **moved_to_relpath,
-              const char **work_del_relpath,
-              const char **moved_to_op_root_relpath,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_scan_deletion_internal(const char **base_del_relpath,
+                                  const char **moved_to_relpath,
+                                  const char **work_del_relpath,
+                                  const char **moved_to_op_root_relpath,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   struct scan_deletion_baton_t sd_baton;
 
@@ -11456,9 +11451,12 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_deletion(&base_del_relpath, &moved_to_relpath,
-                        &work_del_relpath, &moved_to_op_root_relpath, wcroot,
-                        local_relpath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_scan_deletion_internal(&base_del_relpath,
+                                            &moved_to_relpath,
+                                            &work_del_relpath,
+                                            &moved_to_op_root_relpath, wcroot,
+                                            local_relpath, scratch_pool,
+                                            scratch_pool));
 
   if (base_del_abspath)
     {
