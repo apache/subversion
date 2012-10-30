@@ -5516,7 +5516,7 @@ def update_to_HEAD_plus_1(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, None,
-                                        ".*No such revision",
+                                        ".*E160006",
                                         None, None,
                                         None, None, None, wc_dir, '-r', '2')
 
