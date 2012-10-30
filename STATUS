@@ -61,16 +61,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1399174
-   Fix a diff parser bug that prevents some patch files from being applied.
-   Justification:
-     Prevents users from applying certain patches with 'svn patch', see
-     http://svn.haxx.se/users/archive-2012-10/0081.shtml
-   Branch:
-     ^/subversion/branches/1.7.x-r1399174
-   Votes:
-     +1: stsp, steveking
-
  * r1401915
    Ignore file externals with mergeinfo when merging.
    Justification:
@@ -88,15 +78,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1403583
-   In ra_serf, treat marshaled errors with 0 error codes the same as
-   errors with no provided error code.
-   Justifications:
-     Fixes the cause of a client-side hang in ra_serf's handling of
-     Subversion's custom XML error tags.
-   Votes:
-     +1: cmpilato, danielsh
-
  * r1403588, r1403691
    Expand the scope of mod_dav_svn's validation of client-reported
    and client-requested revisions during update operations.
@@ -106,7 +87,7 @@ Candidate changes:
      update operation that doesn't explicitly request a target
      revision.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
 
 Veto-blocked changes:
@@ -114,3 +95,22 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1399174
+   Fix a diff parser bug that prevents some patch files from being applied.
+   Justification:
+     Prevents users from applying certain patches with 'svn patch', see
+     http://svn.haxx.se/users/archive-2012-10/0081.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-r1399174
+   Votes:
+     +1: stsp, steveking, rhuijben
+
+ * r1403583
+   In ra_serf, treat marshaled errors with 0 error codes the same as
+   errors with no provided error code.
+   Justifications:
+     Fixes the cause of a client-side hang in ra_serf's handling of
+     Subversion's custom XML error tags.
+   Votes:
+     +1: cmpilato, danielsh, rhuijben
