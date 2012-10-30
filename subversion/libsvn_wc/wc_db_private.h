@@ -220,6 +220,29 @@ svn_wc__db_scan_deletion_internal(const char **base_del_relpath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
+svn_error_t *
+svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
+                                  svn_kind_t *kind,
+                                  svn_revnum_t *revision,
+                                  const char **repos_relpath,
+                                  apr_int64_t *repos_id,
+                                  svn_revnum_t *changed_rev,
+                                  apr_time_t *changed_date,
+                                  const char **changed_author,
+                                  svn_depth_t *depth,
+                                  const svn_checksum_t **checksum,
+                                  const char **target,
+                                  svn_wc__db_lock_t **lock,
+                                  svn_boolean_t *had_props,
+                                  svn_boolean_t *update_root,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+
 /* Like svn_wc__db_read_conflict(), but with WCROOT+LOCAL_RELPATH instead of
    DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 svn_error_t *
