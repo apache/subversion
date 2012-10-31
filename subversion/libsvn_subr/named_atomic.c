@@ -462,10 +462,15 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   if (!err && new_ns->data)
     {
+      /* Sanitize (in case of data corruption)
+       */
+      if (new_ns->data->count > MAX_ATOMIC_COUNT)
+        new_ns->data->count = MAX_ATOMIC_COUNT;
+
       /* Cache the number of existing, complete entries.  There can't be
        * incomplete ones from other processes because we hold the mutex.
        * Our process will also not access this information since we are
-       * wither being called from within svn_atomic__init_once or by
+       * either being called from within svn_atomic__init_once or by
        * svn_atomic_namespace__create for a new object.
        */
       new_ns->min_used = new_ns->data->count;
@@ -538,7 +543,7 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
   /* We only need to check for new entries.
    */
   for (i = count; i < ns->data->count; ++i)
-    if (strcmp(ns->data->atomics[i].name, name) == 0)
+    if (strncmp(ns->data->atomics[i].name, name, len + 1) == 0)
       {
         return_atomic(atomic, ns, i);
 
