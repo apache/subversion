@@ -185,7 +185,7 @@ struct named_atomic_data_t
  */
 struct shared_data_t
 {
-  volatile apr_int32_t count;
+  volatile apr_uint32_t count;
   char padding [sizeof(struct named_atomic_data_t) - sizeof(apr_int32_t)];
 
   struct named_atomic_data_t atomics[MAX_ATOMIC_COUNT];
@@ -505,7 +505,7 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
                       const char *name,
                       svn_boolean_t auto_create)
 {
-  apr_int32_t i, count;
+  apr_uint32_t i, count;
   svn_error_t *error = SVN_NO_ERROR;
   apr_size_t len = strlen(name);
 
