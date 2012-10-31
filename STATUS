@@ -95,12 +95,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1403583
-   In ra_serf, treat marshaled errors with 0 error codes the same as
-   errors with no provided error code.
-   Justifications:
-     Fixes the cause of a client-side hang in ra_serf's handling of
-     Subversion's custom XML error tags.
-   Votes:
-     +1: cmpilato, danielsh, rhuijben
