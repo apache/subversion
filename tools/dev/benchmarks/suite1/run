@@ -141,6 +141,5 @@ done
 echo ""
 echo "Had started at $started,"
 echo "       done at $(date)"
-pwd
 } 2>&1 | tee results.txt
 
