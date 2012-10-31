@@ -1211,8 +1211,8 @@ def cmdline_chart_compare(db, options, *args):
                 size='small')
 
   if options.title:
-    plt.figtext(0.5, 1. - titlemargin/15, options.title, ha='center', va='top',
-                weight='bold')
+    plt.figtext(0.5, 1. - titlemargin/2, options.title, ha='center',
+                va='center', weight='bold')
 
   plt.savefig(chart_path)
   print 'wrote chart file:', chart_path
