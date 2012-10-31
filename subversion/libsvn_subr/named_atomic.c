@@ -24,7 +24,7 @@
 #include "private/svn_named_atomic.h"
 
 #include <apr_global_mutex.h>
-#include <apr_shm.h>
+#include <apr_mmap.h>
 
 #include "svn_private_config.h"
 #include "private/svn_atomic.h"
@@ -35,13 +35,16 @@
 
 /* Implementation aspects.
  *
- * We use a single shared memory block that will be created by the first
- * user and merely mapped by all subsequent ones. The memory block contains
- * an short header followed by a fixed-capacity array of named atomics. The
- * number of entries currently in use is stored in the header part.
+ * We use a single shared memory block (memory mapped file) that will be
+ * created by the first user and merely mapped by all subsequent ones.
+ * The memory block contains an short header followed by a fixed-capacity
+ * array of named atomics. The number of entries currently in use is stored
+ * in the header part.
  *
- * Finding / creating the SHM object as well as adding new array entries
- * is being guarded by an APR global mutex.
+ * Finding / creating the MMAP object as well as adding new array entries
+ * is being guarded by an APR global mutex. Since releasing the MMAP
+ * structure and closing the underlying does not affect other users of the
+ * same, cleanup will not be synchronized.
  *
  * The array is append-only.  Once a process mapped the block into its
  * address space, it may freely access any of the used entries.  However,
@@ -382,9 +385,13 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                              apr_pool_t *result_pool)
 {
   apr_status_t apr_err;
+  svn_error_t *err;
+  apr_file_t *file;
+  apr_mmap_t *mmap;
   const char *shm_name, *lock_name;
-  apr_shm_t *shared_mem;
-  int i;
+  svn_node_kind_t kind;
+
+  apr_pool_t *sub_pool = svn_pool_create(result_pool);
 
   /* allocate the namespace data structure
    */
@@ -392,8 +399,8 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* construct the names of the system objects that we need
    */
-  shm_name = apr_pstrcat(result_pool, name, SHM_NAME_SUFFIX, NULL);
-  lock_name = apr_pstrcat(result_pool, name, MUTEX_NAME_SUFFIX, NULL);
+  shm_name = apr_pstrcat(sub_pool, name, SHM_NAME_SUFFIX, NULL);
+  lock_name = apr_pstrcat(sub_pool, name, MUTEX_NAME_SUFFIX, NULL);
 
   /* initialize the lock objects
    */
@@ -416,45 +423,42 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
    */
   SVN_ERR(lock(&new_ns->mutex));
 
-  /* Attach to, or create, the shared memory segment.  Loop to limit
-   * the effect of races with other processes.  I've seen the first
-   * race happen in testing and I can imagine the second race
-   * happening.  It could race forever with a whole series of other
-   * processes but the timing would have to be just right.  Looping a
-   * few times should work in most cases.
+  /* First, make sure that the underlying file exists.  If it doesn't
+   * exist, create one and initialize its content.
    */
-  for (i = 0; i < 10; ++i)
+  err = svn_io_check_path(shm_name, &kind, sub_pool);
+  if (!err && kind != svn_node_file)
     {
-      apr_err = apr_shm_attach(&shared_mem, shm_name, result_pool);
-      if (!apr_err)
+      err = svn_io_file_open(&file, shm_name,
+                             APR_READ | APR_WRITE | APR_CREATE,
+                             APR_OS_DEFAULT,
+                             result_pool);
+      if (!err)
         {
-          new_ns->data = apr_shm_baseaddr_get(shared_mem);
-          break;
+           /* Zero all counters, values and names.
+            */
+           struct shared_data_t initial_data;
+           memset(&initial_data, 0, sizeof(initial_data));
+           err = svn_io_file_write_full(file, &initial_data,
+                                        sizeof(initial_data), NULL,
+                                        sub_pool);
         }
-
-      /* First race: failed to attach but another process could create. */
-
-      apr_err = apr_shm_create(&shared_mem,
-                               sizeof(*new_ns->data),
-                               shm_name,
-                               result_pool);
-      if (!apr_err)
-        {
-          new_ns->data = apr_shm_baseaddr_get(shared_mem);
-
-          /* Zero all counters, values and names. */
-          memset(new_ns->data, 0, sizeof(*new_ns->data));
-          break;
-        }
-
-      /* Second race: failed to create but another process could delete. */
+    }
+  else
+    {
+      err = svn_io_file_open(&file, shm_name,
+                             APR_READ | APR_WRITE, APR_OS_DEFAULT,
+                             result_pool);
     }
 
-  if (apr_err)
-    return unlock(&new_ns->mutex,
-                  svn_error_wrap_apr(apr_err,
-                          _("Can't get shared memory for named atomics")));
+  /* Now, map it into memory.
+   */
+  apr_err = apr_mmap_create(&mmap, file, 0, sizeof(*new_ns->data),
+                            APR_MMAP_READ | APR_MMAP_WRITE , result_pool);
+  if (!apr_err)
+    new_ns->data = mmap->mm;
 
+  svn_pool_destroy(sub_pool);
 
   /* Cache the number of existing, complete entries.  There can't be
    * incomplete ones from other processes because we hold the mutex.
@@ -468,6 +472,23 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
    */
   *ns = new_ns;
   return unlock(&new_ns->mutex, SVN_NO_ERROR);
+}
+
+svn_error_t *
+svn_atomic_namespace__cleanup(const char *name,
+                              apr_pool_t *pool)
+{
+  const char *shm_name, *lock_name;
+
+  /* file names used for the specified namespace */
+  shm_name = apr_pstrcat(pool, name, SHM_NAME_SUFFIX, NULL);
+  lock_name = apr_pstrcat(pool, name, MUTEX_NAME_SUFFIX, NULL);
+
+  /* remove these files if they exist */
+  SVN_ERR(svn_io_remove_file2(shm_name, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(lock_name, TRUE, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

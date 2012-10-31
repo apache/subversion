@@ -3160,6 +3160,16 @@ ensure_revprop_namespace(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
+/* Make sure the revprop_namespace member in FS is set. */
+static svn_error_t *
+cleanup_revprop_namespace(svn_fs_t *fs)
+{
+  const char* name = svn_dirent_join(fs->path,
+                                     ATOMIC_REVPROP_NAMESPACE,
+                                     fs->pool);
+  return svn_error_trace(svn_atomic_namespace__cleanup(name, fs->pool));
+}
+
 /* Make sure the revprop_generation member in FS is set and, if necessary,
  * initialized with the latest value stored on disk.
  */
@@ -11035,13 +11045,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                  PATH_TXN_CURRENT, pool));
 
   /* If a revprop generation file exists in the source filesystem,
-   * force a fresh revprop caching namespace for the destination by
-   * setting the generation to zero. We have no idea if the revprops
-   * we copied above really belong to the currently cached generation. */
+   * reset it to zero (since this is on a different path, it will not
+   * overlap with data already in cache).  Also, clean up stale files
+   * used for the named atomics implementation. */
   SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
                             &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
+  SVN_ERR(cleanup_revprop_namespace(dst_fs));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
