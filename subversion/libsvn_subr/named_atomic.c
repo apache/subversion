@@ -186,7 +186,7 @@ struct named_atomic_data_t
 struct shared_data_t
 {
   volatile apr_uint32_t count;
-  char padding [sizeof(struct named_atomic_data_t) - sizeof(apr_int32_t)];
+  char padding [sizeof(struct named_atomic_data_t) - sizeof(apr_uint32_t)];
 
   struct named_atomic_data_t atomics[MAX_ATOMIC_COUNT];
 };
