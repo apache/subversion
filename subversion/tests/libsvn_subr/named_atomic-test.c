@@ -112,6 +112,20 @@ proc_found(const char *proc, apr_pool_t *pool)
   return result == svn_tristate_true;
 }
 
+/* Remove temporary files from disk.
+ */
+static apr_status_t
+cleanup_test_shm(void *arg)
+{
+  apr_pool_t *pool = arg;
+  
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace1, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace2, pool));
+
+  return 0;
+}
+
 /* Bring shared memory to a defined state. This is very useful in case of
  * lingering problems from previous tests or test runs.
  */
@@ -150,6 +164,11 @@ init_test_shm(apr_pool_t *pool)
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
                               "user has insufficient privileges");
 
+  /* destroy temp files after usage */
+
+  apr_pool_cleanup_register(pool, pool,
+                            cleanup_test_shm, apr_pool_cleanup_null);
+
   /* get the two I/O atomics for this thread */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, scratch));
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
@@ -170,20 +189,6 @@ init_test_shm(apr_pool_t *pool)
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
   apr_pool_clear(scratch);
-
-  /* done */
-
-  return SVN_NO_ERROR;
-}
-
-/* Remove temporary files from disk.
- */
-static svn_error_t *
-cleanup_test_shm(apr_pool_t *pool)
-{
-  SVN_ERR(svn_atomic_namespace__cleanup(name_namespace, pool));
-  SVN_ERR(svn_atomic_namespace__cleanup(name_namespace1, pool));
-  SVN_ERR(svn_atomic_namespace__cleanup(name_namespace2, pool));
 
   /* done */
 
@@ -533,8 +538,6 @@ test_basics(apr_pool_t *pool)
   SVN_ERR(svn_named_atomic__read(&value, atomic));
   SVN_TEST_ASSERT(value == 42);
 
-  SVN_ERR(cleanup_test_shm(pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -582,8 +585,6 @@ test_bignums(apr_pool_t *pool)
   SVN_TEST_ASSERT(value == 17 * HUGE_VALUE);
   SVN_ERR(svn_named_atomic__read(&value, atomic));
   SVN_TEST_ASSERT(value == 98 * HUGE_VALUE);
-
-  SVN_ERR(cleanup_test_shm(pool));
 
   return SVN_NO_ERROR;
 }
@@ -647,8 +648,6 @@ test_multiple_atomics(apr_pool_t *pool)
   SVN_TEST_ASSERT(value1 == 4 * HUGE_VALUE);
   SVN_TEST_ASSERT(value2 == 98 * HUGE_VALUE);
 
-  SVN_ERR(cleanup_test_shm(pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -698,8 +697,6 @@ test_namespaces(apr_pool_t *pool)
   SVN_ERR(svn_named_atomic__read(&value, atomic2_alias));
   SVN_TEST_ASSERT(value == 42 * HUGE_VALUE);
 
-  SVN_ERR(cleanup_test_shm(pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -713,8 +710,6 @@ test_multithreaded(apr_pool_t *pool)
 
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
   SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
-
-  SVN_ERR(cleanup_test_shm(pool));
 
   return SVN_NO_ERROR;
 #else
@@ -736,7 +731,6 @@ test_multiprocess(apr_pool_t *pool)
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
   SVN_ERR(run_procs(pool, TEST_PROC, hw_thread_count, suggested_iterations));
 
-  SVN_ERR(cleanup_test_shm(pool));
   return SVN_NO_ERROR;
 }
 
