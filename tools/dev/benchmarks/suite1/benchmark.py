@@ -962,7 +962,7 @@ def cmdline_list(db, options, *args):
 
 
 def cmdline_show(db, options, *run_kind_strings):
-  run_kinds = parse_timings_selections(db, run_kind_strings)
+  run_kinds = parse_timings_selections(db, *run_kind_strings)
   for run_kind in run_kinds:
     q = TimingQuery(db, run_kind)
     timings = q.get_timings()
