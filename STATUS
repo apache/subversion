@@ -89,6 +89,14 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
+ * r1403964
+   Make fs_fs properly cleanup after a failed transmission of a representation.
+   Justification:
+     Read errors can create problems for users of the WANdisco replicator
+     which does retry requests.  Can result in garbage representations in the
+     rev file.  
+   Votes:
+     +1: breser
 
 Veto-blocked changes:
 =====================
