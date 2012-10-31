@@ -389,7 +389,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
   apr_file_t *file;
   apr_mmap_t *mmap;
   const char *shm_name, *lock_name;
-  svn_node_kind_t kind;
+  apr_finfo_t finfo;
 
   apr_pool_t *subpool = svn_pool_create(result_pool);
 
@@ -426,14 +426,14 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
   /* First, make sure that the underlying file exists.  If it doesn't
    * exist, create one and initialize its content.
    */
-  err = svn_io_check_path(shm_name, &kind, subpool);
-  if (!err && kind != svn_node_file)
+  err = svn_io_file_open(&file, shm_name,
+                          APR_READ | APR_WRITE | APR_CREATE,
+                          APR_OS_DEFAULT,
+                          result_pool);
+  if (!err)
     {
-      err = svn_io_file_open(&file, shm_name,
-                             APR_READ | APR_WRITE | APR_CREATE,
-                             APR_OS_DEFAULT,
-                             result_pool);
-      if (!err)
+      err = svn_io_stat(&finfo, shm_name, APR_FINFO_SIZE, subpool);
+      if (!err && finfo.size < sizeof(struct shared_data_t))
         {
            /* Zero all counters, values and names.
             */
@@ -443,12 +443,6 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                                         sizeof(initial_data), NULL,
                                         subpool);
         }
-    }
-  else
-    {
-      err = svn_io_file_open(&file, shm_name,
-                             APR_READ | APR_WRITE, APR_OS_DEFAULT,
-                             result_pool);
     }
 
   /* Now, map it into memory.
