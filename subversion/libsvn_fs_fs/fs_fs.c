@@ -7086,21 +7086,33 @@ static apr_status_t
 rep_write_cleanup(void *data)
 {
   struct rep_write_baton *b = data;
-  char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
+  const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
   svn_error_t *err;
   
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
   if (err)
-    return err->apr_err;
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
   err = svn_io_file_close(b->file, b->pool);
   if (err)
-    return err->apr_err;
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
 
   /* Remove our lock */
   err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
   if (err)
-    return err->apr_err;
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
 
   return APR_SUCCESS;
 }
