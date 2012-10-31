@@ -3164,7 +3164,7 @@ ensure_revprop_namespace(svn_fs_t *fs)
 static svn_error_t *
 cleanup_revprop_namespace(svn_fs_t *fs)
 {
-  const char* name = svn_dirent_join(fs->path,
+  const char *name = svn_dirent_join(fs->path,
                                      ATOMIC_REVPROP_NAMESPACE,
                                      fs->pool);
   return svn_error_trace(svn_atomic_namespace__cleanup(name, fs->pool));
