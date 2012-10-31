@@ -391,7 +391,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
   const char *shm_name, *lock_name;
   svn_node_kind_t kind;
 
-  apr_pool_t *sub_pool = svn_pool_create(result_pool);
+  apr_pool_t *subpool = svn_pool_create(result_pool);
 
   /* allocate the namespace data structure
    */
@@ -399,8 +399,8 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* construct the names of the system objects that we need
    */
-  shm_name = apr_pstrcat(sub_pool, name, SHM_NAME_SUFFIX, NULL);
-  lock_name = apr_pstrcat(sub_pool, name, MUTEX_NAME_SUFFIX, NULL);
+  shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, NULL);
+  lock_name = apr_pstrcat(subpool, name, MUTEX_NAME_SUFFIX, NULL);
 
   /* initialize the lock objects
    */
@@ -426,7 +426,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
   /* First, make sure that the underlying file exists.  If it doesn't
    * exist, create one and initialize its content.
    */
-  err = svn_io_check_path(shm_name, &kind, sub_pool);
+  err = svn_io_check_path(shm_name, &kind, subpool);
   if (!err && kind != svn_node_file)
     {
       err = svn_io_file_open(&file, shm_name,
@@ -441,7 +441,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
            memset(&initial_data, 0, sizeof(initial_data));
            err = svn_io_file_write_full(file, &initial_data,
                                         sizeof(initial_data), NULL,
-                                        sub_pool);
+                                        subpool);
         }
     }
   else
@@ -453,25 +453,34 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* Now, map it into memory.
    */
-  apr_err = apr_mmap_create(&mmap, file, 0, sizeof(*new_ns->data),
-                            APR_MMAP_READ | APR_MMAP_WRITE , result_pool);
-  if (!apr_err)
-    new_ns->data = mmap->mm;
+  if (!err)
+    {
+      apr_err = apr_mmap_create(&mmap, file, 0, sizeof(*new_ns->data),
+                                APR_MMAP_READ | APR_MMAP_WRITE , result_pool);
+      if (!apr_err)
+        new_ns->data = mmap->mm;
+      else
+        err = svn_error_createf(apr_err, NULL,
+                                _("MMAP failed for file '%s'"), shm_name);
+    }
 
-  svn_pool_destroy(sub_pool);
+  svn_pool_destroy(subpool);
 
-  /* Cache the number of existing, complete entries.  There can't be
-   * incomplete ones from other processes because we hold the mutex.
-   * Our process will also not access this information since we are
-   * wither being called from within svn_atomic__init_once or by
-   * svn_atomic_namespace__create for a new object.
-   */
-  new_ns->min_used = new_ns->data->count;
+  if (!err && new_ns->data)
+    {
+      /* Cache the number of existing, complete entries.  There can't be
+       * incomplete ones from other processes because we hold the mutex.
+       * Our process will also not access this information since we are
+       * wither being called from within svn_atomic__init_once or by
+       * svn_atomic_namespace__create for a new object.
+       */
+      new_ns->min_used = new_ns->data->count;
+      *ns = new_ns;
+    }
 
   /* Unlock to allow other processes may access the shared memory as well.
    */
-  *ns = new_ns;
-  return unlock(&new_ns->mutex, SVN_NO_ERROR);
+  return unlock(&new_ns->mutex, err);
 }
 
 svn_error_t *
