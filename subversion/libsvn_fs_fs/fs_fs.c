@@ -9067,7 +9067,7 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t missing = TRUE;
       if (!packed_revprop_available(&missing, fs, max_rev, pool))
-	{
+        {
           if (missing)
             {
               return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -10215,17 +10215,17 @@ svn_fs_fs__verify(svn_fs_t *fs,
     svn_revnum_t i;
     for (i = start; i <= end; i++)
       {
-      	svn_fs_root_t *root;
+        svn_fs_root_t *root;
 
         svn_pool_clear(iterpool);
 
-      	/* ### TODO: Make sure caches are disabled.
+        /* ### TODO: Make sure caches are disabled.
 
-      	   When this code is called in the library, we want to ensure we
-      	   use the on-disk data --- rather than some data that was read
-      	   in the possibly-distance past and cached since. */
-      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
-      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
+           When this code is called in the library, we want to ensure we
+           use the on-disk data --- rather than some data that was read
+           in the possibly-distance past and cached since. */
+        SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
+        SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
       }
   }
 
