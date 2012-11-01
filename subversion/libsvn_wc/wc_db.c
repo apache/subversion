@@ -109,25 +109,6 @@
 #define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
                  (svn_sqlite__column_bytes(stmt, i) > 2)
 
-/* Calculates the depth of the relpath below "" */
-APR_INLINE static int
-relpath_depth(const char *relpath)
-{
-  int n = 1;
-  if (*relpath == '\0')
-    return 0;
-
-  do
-  {
-    if (*relpath == '/')
-      n++;
-  }
-  while (*(++relpath));
-
-  return n;
-}
-
-
 int
 svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
 {
