@@ -524,6 +524,8 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
                                            iterpool);
 
       /* Is this child part of our move operation? */
+      /* ### need to handle children which were newly added or removed
+       * ### during the update */
       SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &child_dst_relpath, NULL,
                                                 &child_dst_op_root_relpath,
                                                 wcroot, child_src_relpath,
