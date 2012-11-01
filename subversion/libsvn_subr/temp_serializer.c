@@ -333,7 +333,7 @@ svn_temp_serializer__get_length(svn_temp_serializer__context_t *context)
   return context->buffer->len;
 }
 
-/* Return the data buffer that receives the serialialized data from
+/* Return the data buffer that receives the serialized data from
  * the given serialization CONTEXT.
  */
 svn_stringbuf_t *
