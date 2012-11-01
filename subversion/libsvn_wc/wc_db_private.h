@@ -148,6 +148,24 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
     (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
 
+/* Calculates the depth of the relpath below "" */
+APR_INLINE static int
+relpath_depth(const char *relpath)
+{
+  int n = 1;
+  if (*relpath == '\0')
+    return 0;
+
+  do
+  {
+    if (*relpath == '/')
+      n++;
+  }
+  while (*(++relpath));
+
+  return n;
+}
+
 
 /* */
 svn_error_t *
