@@ -1309,7 +1309,8 @@ class TestRunner:
 
   def list(self, milestones_dict=None):
     """Print test doc strings.  MILESTONES_DICT is an optional mapping
-    of issue numbers to target milestones."""
+    of issue numbers to an list containing target milestones and who
+    the issue is assigned to."""
     if options.mode_filter.upper() == 'ALL' \
        or options.mode_filter.upper() == self.pred.list_mode().upper() \
        or (options.mode_filter.upper() == 'PASS' \
@@ -1319,6 +1320,7 @@ class TestRunner:
       if self.pred.issues:
         if not options.milestone_filter or milestones_dict is None:
           issues = self.pred.issues
+          tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
         else: # Limit listing by requested target milestone(s).
           filter_issues = []
           matches_filter = False
@@ -1327,13 +1329,16 @@ class TestRunner:
           # If any one of them matches the MILESTONE_FILTER then we'll print
           # them all.
           for issue in self.pred.issues:
-            # A safe starting assumption.
+            # Some safe starting assumptions.
             milestone = 'unknown'
+            assigned_to = 'unknown'
             if milestones_dict:
               if milestones_dict.has_key(str(issue)):
-                milestone = milestones_dict[str(issue)]
+                milestone = milestones_dict[str(issue)][0]
+                assigned_to = milestones_dict[str(issue)][1]
 
-            filter_issues.append(str(issue) + '(' + milestone + ')')
+            filter_issues.append(
+              str(issue) + '(' + milestone + '/' + assigned_to + ')')
             pattern = re.compile(options.milestone_filter)
             if pattern.match(milestone):
               matches_filter = True
@@ -1341,9 +1346,12 @@ class TestRunner:
           # Did at least one of the associated issues meet our filter?
           if matches_filter:
             issues = filter_issues
-
-        tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
-
+          # Wrap the issue#/target-milestone/assigned-to string
+          # to the next line and add a line break to enhance
+          # readability.
+          tail += "\n               %s" % '\n               '.join(
+            ['#%s' % str(i) for i in issues])
+          tail += '\n'
       # If there is no filter or this test made if through
       # the filter then print it!
       if options.milestone_filter is None or len(issues):
@@ -1680,7 +1688,12 @@ def run_tests(test_list, serial_only = False):
 
   sys.exit(execute_tests(test_list, serial_only))
 
-def get_target_milestones_for_issues(issue_numbers):
+def get_issue_details(issue_numbers):
+  """For each issue number in ISSUE_NUMBERS query the issue
+     tracker and determine what the target milestone is and
+     who the issue is assigned to.  Return this information
+     as a dictionary mapping issue numbers to a list
+     [target_milestone, assigned_to]"""
   xml_url = "http://subversion.tigris.org/issues/xml.cgi?id="
   issue_dict = {}
 
@@ -1708,14 +1721,17 @@ def get_target_milestones_for_issues(issue_numbers):
     xmldoc = xml.dom.minidom.parse(issue_xml_f)
     issue_xml_f.close()
 
-    # Get the target milestone for each issue.
+    # For each issue: Get the target milestone and who
+    #                 the issue is assigned to.
     issue_element = xmldoc.getElementsByTagName('issue')
     for i in issue_element:
       issue_id_element = i.getElementsByTagName('issue_id')
       issue_id = issue_id_element[0].childNodes[0].nodeValue
       milestone_element = i.getElementsByTagName('target_milestone')
       milestone = milestone_element[0].childNodes[0].nodeValue
-      issue_dict[issue_id] = milestone
+      assignment_element = i.getElementsByTagName('assigned_to')
+      assignment = assignment_element[0].childNodes[0].nodeValue
+      issue_dict[issue_id] = [milestone, assignment]
   except:
     print "ERROR: Unable to parse target milestones from issue tracker"
     raise
@@ -1908,10 +1924,13 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                 options.mode_filter.upper() == test_mode or
                 (options.mode_filter.upper() == 'PASS' and test_mode == '')):
               issues_dict[issue]=issue
-      milestones_dict = get_target_milestones_for_issues(issues_dict.keys())
+      milestones_dict = get_issue_details(issues_dict.keys())
 
-    header = "Test #  Mode   Test Description\n" \
-             "------  -----  ----------------"
+    header = "Test #  Mode   Test Description\n"
+    if options.milestone_filter:
+      header += "               Issue#(Target Mileston/Assigned To)\n"
+    header += "------  -----  ----------------"
+
     printed_header = False
     for testnum in testnums:
       test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
