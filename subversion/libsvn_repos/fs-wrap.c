@@ -760,7 +760,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
       apr_hash_t *parent_properties;
 
       svn_pool_clear(iterpool);
-      parent_path = svn_fspath__dirname(parent_path, iterpool);
+      parent_path = svn_fspath__dirname(parent_path, scratch_pool);
 
       if (authz_read_func)
         SVN_ERR(authz_read_func(&allowed, root, parent_path,
