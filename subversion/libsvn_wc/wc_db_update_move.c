@@ -132,22 +132,24 @@ tc_editor_alter_file(void *baton,
                      apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  const char *moved_to_abspath = svn_dirent_join_many(scratch_pool,
-                                                      b->wcroot->abspath,
-                                                      b->dst_relpath,
-                                                      dst_relpath, NULL);
   const svn_checksum_t *moved_here_checksum;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
   svn_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &moved_here_checksum, NULL,
-                               &original_repos_relpath, NULL, NULL,
-                               &original_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, b->db, moved_to_abspath,
-                               scratch_pool, scratch_pool));
+  /* Get kind, revision, and checksum of the moved-here node. */
+  /* 
+   * ### Currently doesn't work right if the moved-away node has been replaced.
+   * ### Need to read info from the move op-root's op-depth, not WORKING, to
+   * ### properly update shadowed nodes within multi-layer move destinations.
+   */
+  SVN_ERR(svn_wc__db_read_info_internal(NULL, &kind, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, &moved_here_checksum,
+                                        NULL, &original_repos_relpath, NULL,
+                                        &original_revision, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, b->wcroot, dst_relpath,
+                                        scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(original_revision == expected_moved_here_revision);
 
   /* ### check original revision against moved-here op-root revision? */
@@ -157,6 +159,9 @@ tc_editor_alter_file(void *baton,
   /* ### what if checksum kind differs?*/
   if (!svn_checksum_match(moved_away_checksum, moved_here_checksum))
     {
+      const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
+                                                     dst_relpath,
+                                                     scratch_pool);
       const char *pre_update_pristine_abspath;
       const char *post_update_pristine_abspath;
       svn_skel_t *conflict_skel;
@@ -428,75 +433,30 @@ get_tc_info(svn_wc_operation_t *operation,
 static svn_error_t *
 update_moved_away_file(svn_editor_t *tc_editor,
                        const char *src_relpath,
-                       const char *moved_to_relpath,
+                       const char *dst_relpath,
                        const char *move_dst_op_root_relpath,
+                       svn_revnum_t move_dst_op_root_revision,
                        svn_wc__db_t *db,
                        svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
-  const char *op_root_abspath;
-  const char *moved_from_abspath;
   svn_kind_t kind;
-  svn_revnum_t moved_here_revision;
   svn_stream_t *post_update_contents;
   const svn_checksum_t *moved_away_checksum;
-  const char *dst_relpath;
-
-  /* ### temporary */
-  const char *moved_to_abspath = svn_dirent_join(wcroot->abspath,
-                                                 moved_to_relpath,
-                                                 scratch_pool);
-  const char *src_abspath = svn_dirent_join(wcroot->abspath, src_relpath,
-                                            scratch_pool);
-  const char *move_dst_op_root_abspath = svn_dirent_join(
-                                           wcroot->abspath,
-                                           move_dst_op_root_relpath,
-                                           scratch_pool);
                     
-
-  /*
-   * ### Currently doesn't work right if the moved-away node has been replaced.
-   * ### Need to read info from the move op-root's op-depth, not WORKING, to
-   * ### properly update shadowed nodes within multi-layer move destinations.
-   * ### Requires a new wc_db API.
-   */
-
-  /* Is this moved-here node part of our move operation? */
-  SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   &moved_from_abspath, NULL,
-                                   db, moved_to_abspath,
-                                   scratch_pool, scratch_pool));
-  if (status != svn_wc__db_status_moved_here ||
-      strcmp(moved_from_abspath, src_abspath) != 0 ||
-      strcmp(move_dst_op_root_abspath, op_root_abspath) != 0)
-    return SVN_NO_ERROR;
-
-  /* Get kind, revision, and checksum of the moved-here node. */
-  SVN_ERR(svn_wc__db_read_info_internal(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, &moved_here_revision,
-                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL,
-                                        wcroot, moved_to_relpath,
-                                        scratch_pool, scratch_pool));
-  /* ### check original revision against moved-here op-root revision? */
-  if (kind != svn_kind_file)
-    return SVN_NO_ERROR;
-
   /* Read post-update contents from the updated moved-away file and tell
    * the editor to merge them into the moved-here file. */
   SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &moved_away_checksum, NULL, NULL,
-                                        db, src_abspath, scratch_pool,
-                                        scratch_pool));
+                                        &moved_away_checksum, NULL, NULL, db,
+                                        svn_dirent_join(wcroot->abspath,
+                                                        src_relpath,
+                                                        scratch_pool),
+                                        scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_pristine_read(&post_update_contents, NULL, db,
                                    wcroot->abspath, moved_away_checksum,
                                    scratch_pool, scratch_pool));
-  dst_relpath = svn_dirent_skip_ancestor(move_dst_op_root_abspath,
-                                         moved_to_abspath);
-  SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath, moved_here_revision,
+  SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
+                                move_dst_op_root_revision,
                                 NULL, /* ### TODO props */
                                 moved_away_checksum,
                                 post_update_contents));
@@ -508,8 +468,9 @@ update_moved_away_file(svn_editor_t *tc_editor,
 static svn_error_t *
 update_moved_away_dir(svn_editor_t *tc_editor,
                       const char *src_relpath,
-                      const char *moved_to_relpath,
+                      const char *dst_relpath,
                       const char *move_dst_op_root_relpath,
+                      svn_revnum_t move_dst_op_root_revision,
                       svn_wc__db_t *db,
                       svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
@@ -526,8 +487,9 @@ update_moved_away_dir(svn_editor_t *tc_editor,
 static svn_error_t *
 update_moved_away_subtree(svn_editor_t *tc_editor,
                           const char *src_relpath,
-                          const char *moved_to_relpath,
+                          const char *dst_relpath,
                           const char *move_dst_op_root_relpath,
+                          svn_revnum_t move_dst_op_root_revision,
                           svn_wc__db_t *db,
                           svn_wc__db_wcroot_t *wcroot,
                           apr_pool_t *scratch_pool)
@@ -536,9 +498,10 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   apr_pool_t *iterpool;
   int i;
 
-  SVN_ERR(update_moved_away_dir(tc_editor, src_relpath, moved_to_relpath,
-                                move_dst_op_root_relpath, db, wcroot,
-                                scratch_pool));
+  SVN_ERR(update_moved_away_dir(tc_editor, src_relpath, dst_relpath,
+                                move_dst_op_root_relpath,
+                                move_dst_op_root_revision,
+                                db, wcroot, scratch_pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db,
                                        svn_dirent_join(wcroot->abspath,
@@ -580,11 +543,13 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
         SVN_ERR(update_moved_away_file(tc_editor, child_relpath,
                                        child_moved_to_relpath,
                                        move_dst_op_root_relpath,
+                                       move_dst_op_root_revision,
                                        db, wcroot, iterpool));
       else if (child_kind == svn_kind_dir)
         SVN_ERR(update_moved_away_subtree(tc_editor, child_relpath,
                                           child_moved_to_relpath,
                                           move_dst_op_root_relpath,
+                                          move_dst_op_root_revision,
                                           db, wcroot, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -633,10 +598,12 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
    */
   if (old_version->node_kind == svn_node_file)
     SVN_ERR(update_moved_away_file(tc_editor, src_relpath, dst_relpath,
-                                   dst_relpath, db, wcroot, scratch_pool));
+                                   dst_relpath, old_version->peg_rev,
+                                   db, wcroot, scratch_pool));
   else if (old_version->node_kind == svn_node_dir)
     SVN_ERR(update_moved_away_subtree(tc_editor, src_relpath, dst_relpath,
-                                      dst_relpath, db, wcroot, scratch_pool));
+                                      dst_relpath, old_version->peg_rev,
+                                      db, wcroot, scratch_pool));
 
   SVN_ERR(svn_editor_complete(tc_editor));
 
