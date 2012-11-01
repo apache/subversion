@@ -8797,9 +8797,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
      stored in the representation. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = data_rep->expanded_size
-                  ? data_rep->expanded_size
-                  : data_rep->size;
+  baton.remaining = data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -10988,7 +10986,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       iterpool));
 
       /* After completing a full shard, update 'current'. */
-      if (!max_files_per_dir || rev % max_files_per_dir == 0)
+      if (max_files_per_dir && rev % max_files_per_dir == 0)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
