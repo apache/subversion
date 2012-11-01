@@ -4995,6 +4995,46 @@ choose_delta_base(representation_t **rep,
   return SVN_NO_ERROR;
 }
 
+/* Something went wrong and the pool for the rep write is being
+   cleared before we've finished writing the rep.  So we need
+   to remove the rep from the protorevfile and we need to unlock
+   the protorevfile. */
+static apr_status_t
+rep_write_cleanup(void *data)
+{
+  struct rep_write_baton *b = data;
+  const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
+  svn_error_t *err;
+  
+  /* Truncate and close the protorevfile. */
+  err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+  err = svn_io_file_close(b->file, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+
+  /* Remove our lock */
+  err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+
+  return APR_SUCCESS;
+}
+
+
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
@@ -5056,6 +5096,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(get_file_offset(&b->delta_start, file, b->pool));
+
+  /* Cleanup in case something goes wrong. */
+  apr_pool_cleanup_register(b->pool, b, rep_write_cleanup,
+                            apr_pool_cleanup_null);
 
   /* Prepare to write the svndiff data. */
   if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
@@ -5135,6 +5179,9 @@ rep_write_contents_close(void *baton)
 
       b->noderev->data_rep = rep;
     }
+
+  /* Remove cleanup callback. */
+  apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
 
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
