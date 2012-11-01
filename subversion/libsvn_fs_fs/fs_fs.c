@@ -7510,7 +7510,7 @@ get_next_revision_ids(const char **node_id,
 
   *node_id = apr_pstrdup(pool, str);
 
-  str = svn_cstring_tokenize(" ", &buf);
+  str = svn_cstring_tokenize(" \n", &buf);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Corrupt 'current' file"));
