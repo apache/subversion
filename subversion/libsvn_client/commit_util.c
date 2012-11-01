@@ -1643,6 +1643,7 @@ svn_client__do_commit(const char *base_url,
       unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
       /* Get the next entry. */
@@ -1671,12 +1672,23 @@ svn_client__do_commit(const char *base_url,
         fulltext = TRUE;
 
       dir_path = svn_path_dirname(item->path, iterpool);
-      SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  iterpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
-                                           digest, item->path,
-                                           item_access, fulltext, editor,
-                                           file_baton, iterpool));
+      err = svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
+                                iterpool);
+      if (err)
+        {
+          svn_pool_destroy(iterpool);
+          return err;
+        }
+      err = svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
+                                         digest, item->path,
+                                         item_access, fulltext, editor,
+                                         file_baton, iterpool);
+      if (err)
+        {
+          svn_pool_destroy(iterpool);
+          return err;
+        }
+
       if (tempfiles && tempfile)
         {
           tempfile = apr_pstrdup(pool, tempfile);
