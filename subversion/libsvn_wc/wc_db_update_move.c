@@ -511,22 +511,22 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < children->nelts; i++)
     {
-      const char *child_relpath;
+      const char *child_src_relpath;
       svn_kind_t child_kind;
       const char *child_dst_op_root_relpath;
-      const char *child_moved_to_relpath;
+      const char *child_dst_relpath;
 
       svn_pool_clear(iterpool);
 
-      child_relpath = svn_relpath_join(src_relpath,
-                                       APR_ARRAY_IDX(children, i, const char *),
-                                       iterpool);
+      child_src_relpath = svn_relpath_join(src_relpath,
+                                           APR_ARRAY_IDX(children, i,
+                                                         const char *),
+                                           iterpool);
 
       /* Is this child part of our move operation? */
-      SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &child_moved_to_relpath,
-                                                NULL,
+      SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &child_dst_relpath, NULL,
                                                 &child_dst_op_root_relpath,
-                                                wcroot, child_relpath,
+                                                wcroot, child_src_relpath,
                                                 iterpool, iterpool));
       if (child_dst_op_root_relpath == NULL ||
           strcmp(child_dst_op_root_relpath, move_dst_op_root_relpath) != 0)
@@ -536,18 +536,18 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
                                                 NULL, NULL, NULL, NULL,
                                                 NULL, NULL, NULL, NULL,
                                                 NULL, NULL, NULL, NULL,
-                                                wcroot, child_relpath,
+                                                wcroot, child_src_relpath,
                                                 iterpool, iterpool));
 
       if (child_kind == svn_kind_file || child_kind == svn_kind_symlink)
-        SVN_ERR(update_moved_away_file(tc_editor, child_relpath,
-                                       child_moved_to_relpath,
+        SVN_ERR(update_moved_away_file(tc_editor, child_src_relpath,
+                                       child_dst_relpath,
                                        move_dst_op_root_relpath,
                                        move_dst_op_root_revision,
                                        db, wcroot, iterpool));
       else if (child_kind == svn_kind_dir)
-        SVN_ERR(update_moved_away_subtree(tc_editor, child_relpath,
-                                          child_moved_to_relpath,
+        SVN_ERR(update_moved_away_subtree(tc_editor, child_src_relpath,
+                                          child_dst_relpath,
                                           move_dst_op_root_relpath,
                                           move_dst_op_root_revision,
                                           db, wcroot, iterpool));
