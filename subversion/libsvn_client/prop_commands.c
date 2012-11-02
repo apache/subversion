@@ -337,11 +337,9 @@ svn_client_propset_local(const char *propname,
 
               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
-
-          svn_error_clear(err);
         }
-      else
-        SVN_ERR(err);
+
+      SVN_ERR(err);
 
       SVN_WC__CALL_WITH_WRITE_LOCK(
         svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,

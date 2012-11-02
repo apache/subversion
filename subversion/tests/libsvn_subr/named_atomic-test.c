@@ -112,6 +112,20 @@ proc_found(const char *proc, apr_pool_t *pool)
   return result == svn_tristate_true;
 }
 
+/* Remove temporary files from disk.
+ */
+static apr_status_t
+cleanup_test_shm(void *arg)
+{
+  apr_pool_t *pool = arg;
+  
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace1, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace2, pool));
+
+  return 0;
+}
+
 /* Bring shared memory to a defined state. This is very useful in case of
  * lingering problems from previous tests or test runs.
  */
@@ -149,6 +163,11 @@ init_test_shm(apr_pool_t *pool)
   if (!svn_named_atomic__is_supported())
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
                               "user has insufficient privileges");
+
+  /* destroy temp files after usage */
+
+  apr_pool_cleanup_register(pool, pool,
+                            cleanup_test_shm, apr_pool_cleanup_null);
 
   /* get the two I/O atomics for this thread */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, scratch));

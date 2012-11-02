@@ -5731,11 +5731,16 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
   svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
+  apr_hash_t *externals;
 
   SVN_ERR(svn_client_propget5(subtrees_with_mergeinfo, NULL,
                               SVN_PROP_MERGEINFO, target_abspath,
                               &working_revision, &working_revision, NULL,
                               depth, NULL, ctx, result_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__externals_defined_below(&externals, ctx->wc_ctx,
+                                          target_abspath, scratch_pool,
+                                          scratch_pool));
 
   /* Convert property values to svn_mergeinfo_t. */
   for (hi = apr_hash_first(scratch_pool, *subtrees_with_mergeinfo);
@@ -5746,6 +5751,15 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
       svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
       svn_mergeinfo_t mergeinfo;
       svn_error_t *err;
+
+      /* svn_client_propget5 picks up file externals with
+         mergeinfo, but we don't want those. */
+      if (apr_hash_get(externals, wc_path, APR_HASH_KEY_STRING))
+        {
+          apr_hash_set(*subtrees_with_mergeinfo, wc_path,
+                       APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
 
       svn_pool_clear(iterpool);
 

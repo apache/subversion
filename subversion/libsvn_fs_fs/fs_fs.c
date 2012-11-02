@@ -3160,6 +3160,16 @@ ensure_revprop_namespace(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
+/* Make sure the revprop_namespace member in FS is set. */
+static svn_error_t *
+cleanup_revprop_namespace(svn_fs_t *fs)
+{
+  const char *name = svn_dirent_join(fs->path,
+                                     ATOMIC_REVPROP_NAMESPACE,
+                                     fs->pool);
+  return svn_error_trace(svn_atomic_namespace__cleanup(name, fs->pool));
+}
+
 /* Make sure the revprop_generation member in FS is set and, if necessary,
  * initialized with the latest value stored on disk.
  */
@@ -3213,10 +3223,12 @@ ensure_revprop_timeout(svn_fs_t *fs)
 /* Create an error object with the given MESSAGE and pass it to the
    WARNING member of FS. */
 static void
-log_revprop_cache_init_warning(svn_fs_t *fs, const char *message)
+log_revprop_cache_init_warning(svn_fs_t *fs,
+                               svn_error_t *underlying_err,
+                               const char *message)
 {
   svn_error_t *err = svn_error_createf(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
-                                       NULL,
+                                       underlying_err,
                                        message, fs->path);
 
   if (fs->warning)
@@ -3244,8 +3256,9 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
        * -> disable the revprop cache for good
        */
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled"
-                                         " because it would be inefficient.");
+      log_revprop_cache_init_warning(fs, NULL,
+                                     "Revprop caching for '%s' disabled"
+                                     " because it would be inefficient.");
       
       return FALSE;
     }
@@ -3256,12 +3269,11 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
     {
       /* failure -> disable revprop cache for good */
 
-      svn_error_clear(error);
       ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, "Revprop caching for '%s' disabled "
-                                         "because SHM "
-                                         "infrastructure for revprop "
-                                         "caching failed to initialize.");
+      log_revprop_cache_init_warning(fs, error,
+                                     "Revprop caching for '%s' disabled "
+                                     "because SHM infrastructure for revprop "
+                                     "caching failed to initialize.");
 
       return FALSE;
     }
@@ -7076,6 +7088,46 @@ choose_delta_base(representation_t **rep,
   return SVN_NO_ERROR;
 }
 
+/* Something went wrong and the pool for the rep write is being
+   cleared before we've finished writing the rep.  So we need
+   to remove the rep from the protorevfile and we need to unlock
+   the protorevfile. */
+static apr_status_t
+rep_write_cleanup(void *data)
+{
+  struct rep_write_baton *b = data;
+  const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
+  svn_error_t *err;
+  
+  /* Truncate and close the protorevfile. */
+  err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+  err = svn_io_file_close(b->file, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+
+  /* Remove our lock */
+  err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+
+  return APR_SUCCESS;
+}
+
+
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
@@ -7138,6 +7190,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(get_file_offset(&b->delta_start, file, b->pool));
+
+  /* Cleanup in case something goes wrong. */
+  apr_pool_cleanup_register(b->pool, b, rep_write_cleanup,
+                            apr_pool_cleanup_null);
 
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&wh,
@@ -7310,6 +7366,9 @@ rep_write_contents_close(void *baton)
       b->noderev->data_rep = rep;
     }
 
+  /* Remove cleanup callback. */
+  apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
+
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
@@ -7451,7 +7510,7 @@ get_next_revision_ids(const char **node_id,
 
   *node_id = apr_pstrdup(pool, str);
 
-  str = svn_cstring_tokenize(" ", &buf);
+  str = svn_cstring_tokenize(" \n", &buf);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Corrupt 'current' file"));
@@ -8912,7 +8971,10 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* First, we need to know the largest revision in the filesystem. */
+  /* Lose potentially corrupted data in temp files */
+  SVN_ERR(cleanup_revprop_namespace(fs));
+
+  /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
 
   /* Get the expected youngest revision */
@@ -9005,7 +9067,7 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t missing = TRUE;
       if (!packed_revprop_available(&missing, fs, max_rev, pool))
-	{
+        {
           if (missing)
             {
               return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -10153,17 +10215,17 @@ svn_fs_fs__verify(svn_fs_t *fs,
     svn_revnum_t i;
     for (i = start; i <= end; i++)
       {
-      	svn_fs_root_t *root;
+        svn_fs_root_t *root;
 
         svn_pool_clear(iterpool);
 
-      	/* ### TODO: Make sure caches are disabled.
+        /* ### TODO: Make sure caches are disabled.
 
-      	   When this code is called in the library, we want to ensure we
-      	   use the on-disk data --- rather than some data that was read
-      	   in the possibly-distance past and cached since. */
-      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
-      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
+           When this code is called in the library, we want to ensure we
+           use the on-disk data --- rather than some data that was read
+           in the possibly-distance past and cached since. */
+        SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
+        SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
       }
   }
 
@@ -10924,7 +10986,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       iterpool));
 
       /* After completing a full shard, update 'current'. */
-      if (rev % max_files_per_dir == 0)
+      if (max_files_per_dir && rev % max_files_per_dir == 0)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -10986,13 +11048,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                  PATH_TXN_CURRENT, pool));
 
   /* If a revprop generation file exists in the source filesystem,
-   * force a fresh revprop caching namespace for the destination by
-   * setting the generation to zero. We have no idea if the revprops
-   * we copied above really belong to the currently cached generation. */
+   * reset it to zero (since this is on a different path, it will not
+   * overlap with data already in cache).  Also, clean up stale files
+   * used for the named atomics implementation. */
   SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
                             &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
+  SVN_ERR(cleanup_revprop_namespace(dst_fs));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),

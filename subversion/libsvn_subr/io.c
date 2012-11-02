@@ -138,6 +138,14 @@
 #endif
 #endif
 
+/* Forward declaration */
+static apr_status_t
+dir_is_empty(const char *dir, apr_pool_t *pool);
+static APR_INLINE svn_error_t *
+do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
+                           const char *msg, const char *msg_no_name,
+                           apr_pool_t *pool);
+
 /* Local wrapper of svn_path_cstring_to_utf8() that does no copying on
  * operating systems where APR always uses utf-8 as native path format */
 static svn_error_t *
@@ -2077,11 +2085,6 @@ svn_io_file_lock2(const char *lock_file,
 
 /* Data consistency/coherency operations. */
 
-static APR_INLINE svn_error_t *
-do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
-                           const char *msg, const char *msg_no_name,
-                           apr_pool_t *pool);
-
 svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
@@ -3722,11 +3725,6 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
-/* Forward declaration */
-static apr_status_t
-dir_is_empty(const char *dir, apr_pool_t *pool);
-
 
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)

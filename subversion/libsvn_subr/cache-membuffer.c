@@ -108,7 +108,7 @@
  */
 #define GROUP_SIZE 16
 
-/* For more efficient copy operations, let'a align all data items properly.
+/* For more efficient copy operations, let's align all data items properly.
  * Must be a power of 2.
  */
 #define ITEM_ALIGNMENT 16
@@ -281,7 +281,7 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
   return SVN_NO_ERROR;
 }
 
-/* Reoccuring code snippets.
+/* Reoccurring code snippets.
  */
 
 #define DEBUG_CACHE_MEMBUFFER_TAG_ARG entry_tag_t *tag,
@@ -357,7 +357,7 @@ typedef struct entry_t
 #endif
 } entry_t;
 
-/* We group dictionary entries to make this GROUP-SIZE-way assicative.
+/* We group dictionary entries to make this GROUP-SIZE-way associative.
  */
 typedef struct entry_group_t
 {
@@ -483,7 +483,7 @@ struct svn_membuffer_t
  */
 #define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
 
-/* If locking is supported for CACHE, aquire a read lock for it.
+/* If locking is supported for CACHE, acquire a read lock for it.
  */
 static svn_error_t *
 read_lock_cache(svn_membuffer_t *cache)
@@ -794,7 +794,7 @@ get_group_index(svn_membuffer_t **cache,
   return key[1] % segment0->group_count;
 }
 
-/* Reduce the hit count of ENTRY and update the accumunated hit info
+/* Reduce the hit count of ENTRY and update the accumulated hit info
  * in CACHE accordingly.
  */
 static APR_INLINE void
@@ -806,8 +806,8 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
   entry->hit_count -= hits_removed;
 }
 
-/* Returns 0 if the entry group idenified by GROUP_INDEX in CACHE has not
- * been intialized, yet. In that case, this group can not data. Otherwise,
+/* Returns 0 if the entry group identified by GROUP_INDEX in CACHE has not
+ * been initialized, yet. In that case, this group can not data. Otherwise,
  * a non-zero value is returned.
  */
 static APR_INLINE unsigned char
@@ -822,7 +822,7 @@ is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
 }
 
 /* Initializes the section of the directory in CACHE that contains
- * the entry group indentified by GROUP_INDEX. */
+ * the entry group identified by GROUP_INDEX. */
 static void
 initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
 {
@@ -923,7 +923,7 @@ find_entry(svn_membuffer_t *cache,
               entry = &group->entries[i];
 
           /* for the entries that don't have been removed,
-           * reduce their hitcounts to put them at a relative
+           * reduce their hit counts to put them at a relative
            * disadvantage the next time.
            */
           for (i = 0; i < GROUP_SIZE; ++i)
@@ -959,7 +959,7 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* Move the entry to the start of the empty / insertion section
    * (if it isn't there already). Size-aligned moves are legal
-   * since all offsets and block sizes share this same aligment.
+   * since all offsets and block sizes share this same alignment.
    * Size-aligned moves tend to be faster than non-aligned ones
    * because no "odd" bytes at the end need to special treatment.
    */
@@ -1233,7 +1233,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                  ? MAX_ITEM_SIZE
                  : data_size / 4;
 
-  /* to keep the entries small, we use 32 bit indices only
+  /* to keep the entries small, we use 32 bit indexes only
    * -> we need to ensure that no more then 4G entries exist.
    *
    * Note, that this limit could only be exceeded in a very
@@ -1438,7 +1438,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
-/* Try to insert the ITEM and use the KEY to unqiuely identify it.
+/* Try to insert the ITEM and use the KEY to uniquely identify it.
  * However, there is no guarantee that it will actually be put into
  * the cache. If there is already some data associated to the KEY,
  * it will be removed from the cache even if the new data cannot
@@ -1817,11 +1817,11 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
  * Because membuffer caches tend to be very large, there will be rather few
  * of them (usually only one). Thus, the same instance shall be used as the
  * backend to many application-visible svn_cache__t instances. This should
- * also achive global resource usage fairness.
+ * also achieve global resource usage fairness.
  *
- * To accomodate items from multiple resources, the individual keys must be
- * unique over all sources. This is achived by simply adding a prefix key
- * that unambigously identifies the item's context (e.g. path to the
+ * To accommodate items from multiple resources, the individual keys must be
+ * unique over all sources. This is achieved by simply adding a prefix key
+ * that unambiguously identifies the item's context (e.g. path to the
  * respective repository). The prefix will be set upon construction of the
  * svn_cache__t instance.
  */
@@ -2148,11 +2148,11 @@ svn_membuffer_cache_get_info(void *cache_void,
   svn_membuffer_cache_t *cache = cache_void;
   apr_uint32_t i;
 
-  /* cache frontend specific data */
+  /* cache front-end specific data */
 
   info->id = apr_pstrdup(result_pool, cache->full_prefix);
 
-  /* collect info from shared cache backend */
+  /* collect info from shared cache back-end */
 
   info->data_size = 0;
   info->used_size = 0;

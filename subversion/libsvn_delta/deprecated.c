@@ -39,15 +39,10 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *callback_baton,
                       apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *sorted;
-
   /* REVISION is dropped on the floor.  */
 
-  /* Construct a copy of PATHS, then sort them in a depth-first order.  */
-  sorted = apr_array_copy(scratch_pool, paths);
-  qsort(sorted->elts, sorted->nelts, sorted->elt_size, svn_sort_compare_paths);
-
-  return svn_error_trace(svn_delta_path_driver2(editor, edit_baton, sorted,
+  return svn_error_trace(svn_delta_path_driver2(editor, edit_baton, paths,
+                                                TRUE,
                                                 callback_func, callback_baton,
                                                 scratch_pool));
 }
