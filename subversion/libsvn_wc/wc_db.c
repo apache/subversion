@@ -11921,7 +11921,7 @@ svn_wc__db_temp_get_format(int *format,
      directory to not be a working copy.  */
   if (err)
     {
-      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+      if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         return svn_error_trace(err);
       svn_error_clear(err);
 
