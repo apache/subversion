@@ -98,7 +98,8 @@ svn_wc__internal_check_wc(int *wc_format,
       svn_node_kind_t kind;
 
       if (err->apr_err != SVN_ERR_WC_MISSING &&
-          err->apr_err != SVN_ERR_WC_UNSUPPORTED_FORMAT)
+          err->apr_err != SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+          err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
         return svn_error_trace(err);
       svn_error_clear(err);
 
