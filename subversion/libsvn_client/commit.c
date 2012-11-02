@@ -1428,14 +1428,14 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 
   /* Easy part of applying DEPTH to externals. */
   if (depth == svn_depth_empty)
-     {
-       /* Don't recurse. */
-       return SVN_NO_ERROR;
-     }
-   else if (depth != svn_depth_infinity)
-     {
-       include_dir_externals = FALSE;
-       /* We slip in dir externals as explicit targets. When we do that,
+    {
+      /* Don't recurse. */
+      return SVN_NO_ERROR;
+    }
+  else if (depth != svn_depth_infinity)
+    {
+      include_dir_externals = FALSE;
+      /* We slip in dir externals as explicit targets. When we do that,
        * depth_immediates should become depth_empty for dir externals targets.
        * But adding the dir external to the list of targets makes it get
        * handled with depth_immediates itself, and thus will also include the
@@ -1450,7 +1450,7 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
        * ### --depth=immediates --include-externals', commit dir externals
        * ### (only immediate children of a target) with depth_empty instead of
        * ### not at all. No other effect. So not doing that for now. */
-     }
+    }
 
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;

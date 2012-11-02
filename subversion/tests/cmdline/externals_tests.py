@@ -2554,10 +2554,12 @@ def include_externals(sbox):
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
 
+@Issue(4252)
 @XFail()
 def include_immediate_dir_externals(sbox):
   "commit --include-externals --depth=immediates"
-  # See also comment inside svn_client_commit6().
+  # See also comment in append_externals_as_explicit_targets() in
+  # libsvn_client/commit.c, from r1198765.
 
   #   svntest.factory.make(sbox,"""
   #     svn mkdir X
