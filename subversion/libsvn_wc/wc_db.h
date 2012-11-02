@@ -2792,6 +2792,23 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
                                 const char *repos_root_url,
                                 apr_pool_t *scratch_pool);
 
+/* Upgrade the metadata concerning the WC at WCROOT_ABSPATH, in DB,
+ * to the SVN_WC__VERSION format.
+ *
+ * This function is used for upgrading wc-ng working copies to a newer
+ * wc-ng format. If a pre-1.7 working copy is found, this function
+ * returns SVN_ERR_WC_UPGRADE_REQUIRED.
+ *
+ * Upgrading subdirectories of a working copy is not supported.
+ * If WCROOT_ABSPATH is not a working copy root SVN_ERR_WC_INVALID_OP_ON_CWD
+ * is returned.
+ */
+svn_error_t *
+svn_wc__db_bump_format(int *result_format,
+                       const char *wcroot_abspath,
+                       svn_wc__db_t *db,
+                       apr_pool_t *scratch_pool);
+
 /* @} */
 
 
