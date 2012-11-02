@@ -14025,3 +14025,36 @@ svn_wc__db_verify(svn_wc__db_t *db,
   SVN_ERR(verify_wcroot(wcroot, scratch_pool));
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_bump_format(int *result_format,
+                       const char *wcroot_abspath,
+                       svn_wc__db_t *db,
+                       apr_pool_t *scratch_pool)
+{
+
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, wcroot_abspath,
+                                                scratch_pool, scratch_pool));
+
+  /* This function is indirectly called from the upgrade code, so we
+     can't verify the wcroot here. Just check that it is not NULL */
+  SVN_ERR_ASSERT(wcroot != NULL);
+
+  /* Reject attempts to upgrade subdirectories of a working copy. */
+  if (strcmp(wcroot_abspath, wcroot->abspath) != 0)
+    return svn_error_createf(
+             SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+              _("Can't upgrade '%s' as it is not a working copy root,"
+                " the root is '%s'"),
+              svn_dirent_local_style(wcroot_abspath, scratch_pool),
+              svn_dirent_local_style(wcroot->abspath, scratch_pool));
+
+  SVN_ERR(svn_wc__upgrade_sdb(result_format, wcroot->abspath,
+                              wcroot->sdb, wcroot->format,
+                              scratch_pool));
+  return SVN_NO_ERROR;
+}

@@ -1892,6 +1892,9 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = XXX;
         /* FALLTHROUGH  */
 #endif
+      case SVN_WC__VERSION:
+        /* already upgraded */
+        *result_format = SVN_WC__VERSION;
     }
 
 #ifdef SVN_DEBUG
@@ -2019,7 +2022,7 @@ is_old_wcroot(const char *local_abspath,
     {
       return svn_error_createf(
         SVN_ERR_WC_INVALID_OP_ON_CWD, err,
-        _("Can't upgrade '%s' as it is not a pre-1.7 working copy directory"),
+        _("Can't upgrade '%s' as it is not a working copy"),
         svn_dirent_local_style(local_abspath, scratch_pool));
     }
   else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
@@ -2068,7 +2071,7 @@ is_old_wcroot(const char *local_abspath,
 
   return svn_error_createf(
     SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-    _("Can't upgrade '%s' as it is not a pre-1.7 working copy root,"
+    _("Can't upgrade '%s' as it is not a working copy root,"
       " the root is '%s'"),
     svn_dirent_local_style(local_abspath, scratch_pool),
     svn_dirent_local_style(parent_abspath, scratch_pool));
@@ -2128,6 +2131,34 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   apr_hash_t *entries;
   const char *root_adm_abspath;
   upgrade_working_copy_baton_t cb_baton;
+  svn_error_t *err;
+  int result_format;
+
+  /* Try upgrading a wc-ng-style working copy. */
+  SVN_ERR(svn_wc__db_open(&db, NULL /* ### config */, TRUE, FALSE,
+                          scratch_pool, scratch_pool));
+
+  err = svn_wc__db_bump_format(&result_format, local_abspath, db,
+                               scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) /* pre-1.7 WC */
+        {
+          svn_error_clear(err);
+          SVN_ERR(svn_wc__db_close(db));
+        }
+      else
+        return svn_error_trace(err);
+    }
+  else
+    {
+      /* Auto-upgrade worked! */
+      SVN_ERR(svn_wc__db_close(db));
+
+      SVN_ERR_ASSERT(result_format == SVN_WC__VERSION);
+
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(is_old_wcroot(local_abspath, scratch_pool));
 
@@ -2141,7 +2172,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
      upgrade. */
 
   SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* ### config */, FALSE, FALSE,
+                          NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__read_entries_old(&entries, local_abspath,

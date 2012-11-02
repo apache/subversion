@@ -331,7 +331,7 @@ pool_cleanup_locked(void *p)
          run, but the subpools will NOT be destroyed)  */
       scratch_pool = svn_pool_create(lock->pool);
 
-      err = svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+      err = svn_wc__db_open(&db, NULL /* ### config. need! */, FALSE, TRUE,
                             scratch_pool, scratch_pool);
       if (!err)
         {
@@ -781,7 +781,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
          do it here.  */
       /* ### we could optimize around levels_to_lock==0, but much of this
          ### is going to be simplified soon anyways.  */
-      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, FALSE, TRUE,
                               pool, pool));
       db_provided = FALSE;
     }
@@ -811,7 +811,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       /* Ugh. Too bad about having to open a DB.  */
       SVN_ERR(svn_wc__db_open(&db,
-                              NULL /* ### config */, TRUE, TRUE, pool, pool));
+                              NULL /* ### config */, FALSE, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
@@ -1157,7 +1157,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
      ### given that we need DB for format detection, may as well keep this.
      ### in any case, much of this is going to be simplified soon anyways.  */
   if (!db_provided)
-    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ TRUE, TRUE,
+    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ FALSE, TRUE,
                             pool, pool));
 
   if (svn_path_is_empty(path)
