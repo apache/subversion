@@ -1,4 +1,3 @@
-
 /*
  * svn_private_config.hw : Template for svn_private_config.h on Win32.
  *
@@ -32,11 +31,7 @@
 
 
 /* Define to a Windows-specific equivalent of config.guess output */
-#ifdef _WIN64
-#define SVN_BUILD_HOST "x64-microsoft-windows"
-#else
 #define SVN_BUILD_HOST "x86-microsoft-windows"
-#endif
 
 /* The minimal version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR    4
