@@ -265,7 +265,7 @@ def basic_upgrade(sbox):
   # 'not a working copy root' error. Upgrade on something without any
   # versioned parent gives a 'not a working copy' error.
   # Both cases use the same error code.
-  not_wc = ".*E155019.*%s'.*not a working copy.*"
+  not_wc = ".*(E155007|E155019).*%s'.*not a working copy.*"
   os.mkdir(sbox.ospath('X'))
   svntest.actions.run_and_verify_svn(None, None, not_wc % 'X',
                                      'upgrade', sbox.ospath('X'))
