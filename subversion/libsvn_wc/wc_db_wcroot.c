@@ -670,7 +670,8 @@ try_symlink_as_dir:
                             sdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+      if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
+                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
           kind == svn_kind_symlink)
         {
           /* We found an unsupported WC after traversing upwards from a
