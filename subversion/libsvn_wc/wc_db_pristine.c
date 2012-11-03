@@ -302,6 +302,30 @@ typedef struct pristine_install_baton_t
 } pristine_install_baton_t;
 
 
+/* Compress a complete file into a stringbuf. */
+static svn_error_t *
+file_to_compressed_buffer(const char *path,
+                          svn_stringbuf_t **buffer,
+                          apr_pool_t *pool)
+{
+  apr_file_t *file;
+  svn_stream_t *stream_in, *stream_out;
+
+  *buffer = NULL;
+
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ, APR_OS_DEFAULT, pool));
+  stream_in = svn_stream_from_aprfile2(file, FALSE, pool);
+  
+  *buffer = svn_stringbuf_create_empty(pool);
+  stream_out = svn_stream_compressed(svn_stream_from_stringbuf(*buffer,
+                                                               pool),
+                                     pool);
+  /* Copy and close the streams. */
+  SVN_ERR(svn_stream_copy3(stream_in, stream_out,
+                           NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
 /* Install the pristine text described by BATON into the pristine store of
  * SDB.  If it is already stored then just delete the new file
  * BATON->tempfile_abspath.
