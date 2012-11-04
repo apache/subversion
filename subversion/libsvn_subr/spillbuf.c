@@ -290,7 +290,7 @@ read_data(struct memblock_t **mem,
   *mem = get_buffer(buf);
   /* NOTE: mem's size/next are uninitialized.  */
 
-  if (buf->spill_size < buf->blocksize)
+  if ((apr_uint64_t)buf->spill_size < (apr_uint64_t)buf->blocksize)
     (*mem)->size = (apr_size_t)buf->spill_size;
   else
     (*mem)->size = buf->blocksize;  /* The size of (*mem)->data  */

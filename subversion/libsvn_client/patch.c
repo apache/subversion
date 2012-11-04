@@ -542,7 +542,7 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
 
   str = svn_stringbuf_create_ensure(80, result_pool);
 
-  if (b->offset >= b->value->len)
+  if ((apr_uint64_t)b->offset >= (apr_uint64_t)b->value->len)
     {
       *eol_str = NULL;
       *eof = TRUE;
