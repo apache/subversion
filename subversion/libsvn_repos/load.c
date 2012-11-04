@@ -336,7 +336,7 @@ parse_text_block(svn_stream_t *stream,
      need to read it. */
   while (content_length)
     {
-      if (content_length >= buflen)
+      if (content_length >= (svn_filesize_t)buflen)
         rlen = buflen;
       else
         rlen = (apr_size_t) content_length;
@@ -659,7 +659,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
           /* Consume remaining bytes in this content block */
           while (remaining > 0)
             {
-              if (remaining >= buflen)
+              if (remaining >= (svn_filesize_t)buflen)
                 rlen = buflen;
               else
                 rlen = (apr_size_t) remaining;
