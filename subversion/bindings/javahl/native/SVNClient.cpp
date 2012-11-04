@@ -195,7 +195,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(target.error_occured(), );
 
     apr_array_header_t *ranges =
-        apr_array_make(subPool.getPool(), (int)logRanges.size(),
+        apr_array_make(subPool.getPool(), static_cast<int>(logRanges.size()),
                        sizeof(svn_opt_revision_range_t *));
 
     std::vector<RevisionRange>::const_iterator it;
@@ -207,8 +207,8 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
             == svn_opt_revision_unspecified)
         {
             svn_opt_revision_range_t *range =
-                (svn_opt_revision_range_t *)apr_pcalloc(subPool.getPool(),
-                                                        sizeof(*range));
+                reinterpret_cast<svn_opt_revision_range_t *>
+                    (apr_pcalloc(subPool.getPool(), sizeof(*range)));
             range->start.kind = svn_opt_revision_number;
             range->start.value.number = 1;
             range->end.kind = svn_opt_revision_head;
@@ -644,7 +644,8 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
 
     apr_array_header_t *ranges =
-      apr_array_make(subPool.getPool(), (int)rangesToMerge.size(),
+      apr_array_make(subPool.getPool(),
+                     static_cast<int>(rangesToMerge.size()),
                      sizeof(const svn_opt_revision_range_t *));
 
     std::vector<RevisionRange>::const_iterator it;
@@ -656,8 +657,8 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
             == svn_opt_revision_unspecified)
         {
             svn_opt_revision_range_t *range =
-                (svn_opt_revision_range_t *)apr_pcalloc(subPool.getPool(),
-                                                        sizeof(*range));
+                reinterpret_cast<svn_opt_revision_range_t *>
+                    (apr_pcalloc(subPool.getPool(), sizeof(*range)));
             range->start.kind = svn_opt_revision_number;
             range->start.value.number = 1;
             range->end.kind = svn_opt_revision_head;
@@ -762,9 +763,10 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         void *val;
         apr_hash_this(hi, &path, NULL, &val);
 
-        jstring jpath = JNIUtil::makeJString((const char *) path);
+        jstring jpath =
+            JNIUtil::makeJString(reinterpret_cast<const char *>(path));
         jobject jranges =
-            CreateJ::RevisionRangeList((svn_rangelist_t *) val);
+            CreateJ::RevisionRangeList(reinterpret_cast<svn_rangelist_t *>(val));
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
@@ -848,13 +850,14 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
         return NULL; // no property with this name
 
     svn_string_t *propval;
-    apr_hash_this(hi, NULL, NULL, (void**)&propval);
+    apr_hash_this(hi, NULL, NULL, reinterpret_cast<void**>(&propval));
 
     if (propval == NULL)
         return NULL;
 
-    return JNIUtil::makeJByteArray((const signed char *)propval->data,
-                                   (int)propval->len);
+    return JNIUtil::makeJByteArray
+              (reinterpret_cast<const signed char *>(propval->data),
+               static_cast<int>(propval->len));
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
@@ -890,8 +893,10 @@ void SVNClient::propertySetLocal(Targets &targets, const char *name,
     if (value.isNull())
       val = NULL;
     else
-      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
-                               subPool.getPool());
+      val = svn_string_ncreate
+               (reinterpret_cast<const char *>(value.getBytes()),
+                value.getLength(),
+                subPool.getPool());
 
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
@@ -918,8 +923,10 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
     if (value.isNull())
       val = NULL;
     else
-      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
-                               subPool.getPool());
+      val = svn_string_ncreate
+               (reinterpret_cast<const char *>(value.getBytes()),
+                value.getLength(),
+                subPool.getPool());
 
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
@@ -1157,8 +1164,9 @@ jbyteArray SVNClient::revProperty(const char *path,
     if (propval == NULL)
         return NULL;
 
-    return JNIUtil::makeJByteArray((const signed char *)propval->data,
-                                   (int)propval->len);
+    return JNIUtil::makeJByteArray
+              (reinterpret_cast<const signed char *>(propval->data),
+               static_cast<int>(propval->len));
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
                          bool ignoreExternals)
@@ -1269,8 +1277,9 @@ void SVNClient::unlock(Targets &targets, bool force)
     const apr_array_header_t *targetsApr = targets.array(subPool);
     SVN_JNI_ERR(targets.error_occured(), );
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
-    SVN_JNI_ERR(svn_client_unlock((apr_array_header_t*)targetsApr, force,
-                                  ctx, subPool.getPool()), );
+    SVN_JNI_ERR(svn_client_unlock(
+        const_cast<apr_array_header_t*>(targetsApr), force,
+        ctx, subPool.getPool()), );
 }
 void SVNClient::setRevProperty(const char *path,
                                const char *name, Revision &rev,

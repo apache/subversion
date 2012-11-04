@@ -206,9 +206,10 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
         POP_AND_RETURN_NULL;
     }
 
-  jbyteArray jdigest = JNIUtil::makeJByteArray(
-                            (const signed char *)checksum->digest,
-                            (int)svn_checksum_size(checksum));
+  jbyteArray jdigest
+    = JNIUtil::makeJByteArray(
+        reinterpret_cast<const signed char *>(checksum->digest),
+        static_cast<int>(svn_checksum_size(checksum)));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1026,15 +1027,18 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
       const char *key;
       svn_string_t *val;
 
-      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+      apr_hash_this(hi,
+                    reinterpret_cast<const void **>(&key),
+                    NULL,
+                    reinterpret_cast<void **>(&val));
 
       jstring jpropName = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
       jbyteArray jpropVal = JNIUtil::makeJByteArray(
-                                    (const signed char *)val->data,
-                                    (int)val->len);
+                              reinterpret_cast<const signed char *>(val->data),
+                              static_cast<int>(val->len));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
