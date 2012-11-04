@@ -40,13 +40,13 @@ Targets::Targets(const char *path, SVN::Pool &in_pool)
     : m_subpool(in_pool)
 {
   m_strArray = NULL;
-  m_targets.push_back (apr_pstrdup(m_subpool.getPool(), path));
+  m_targets.push_back(apr_pstrdup(m_subpool.getPool(), path));
   m_error_occured = NULL;
 }
 
 void Targets::add(const char *path)
 {
-  m_targets.push_back (path);
+  m_targets.push_back(path);
 }
 
 const apr_array_header_t *Targets::array(const SVN::Pool &pool)
@@ -72,9 +72,9 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
   std::vector<const char*>::const_iterator it;
 
   apr_pool_t *apr_pool = pool.getPool();
-  apr_array_header_t *apr_targets = apr_array_make (apr_pool,
-                                                    (int)m_targets.size(),
-                                                    sizeof(const char *));
+  apr_array_header_t *apr_targets = apr_array_make(apr_pool,
+                                                   (int)m_targets.size(),
+                                                   sizeof(const char *));
 
   for (it = m_targets.begin(); it != m_targets.end(); ++it)
     {
