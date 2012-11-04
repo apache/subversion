@@ -195,7 +195,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(target.error_occured(), );
 
     apr_array_header_t *ranges =
-        apr_array_make(subPool.getPool(), logRanges.size(),
+        apr_array_make(subPool.getPool(), (int)logRanges.size(),
                        sizeof(svn_opt_revision_range_t *));
 
     std::vector<RevisionRange>::const_iterator it;
@@ -644,7 +644,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
 
     apr_array_header_t *ranges =
-      apr_array_make(subPool.getPool(), rangesToMerge.size(),
+      apr_array_make(subPool.getPool(), (int)rangesToMerge.size(),
                      sizeof(const svn_opt_revision_range_t *));
 
     std::vector<RevisionRange>::const_iterator it;
@@ -854,7 +854,7 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
         return NULL;
 
     return JNIUtil::makeJByteArray((const signed char *)propval->data,
-                                   propval->len);
+                                   (int)propval->len);
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
@@ -1158,7 +1158,7 @@ jbyteArray SVNClient::revProperty(const char *path,
         return NULL;
 
     return JNIUtil::makeJByteArray((const signed char *)propval->data,
-                                   propval->len);
+                                   (int)propval->len);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
                          bool ignoreExternals)
