@@ -667,7 +667,7 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
     {
       void *val;
       apr_hash_this(hi, NULL, NULL, &val);
-      svn_lock_t *lock = (svn_lock_t *)val;
+      svn_lock_t *lock = reinterpret_cast<svn_lock_t *>(val);
       jobject jLock = CreateJ::Lock(lock);
 
       jlocks.push_back(jLock);
