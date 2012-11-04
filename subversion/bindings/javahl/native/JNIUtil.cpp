@@ -240,7 +240,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
-  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+  if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
       err = svn_wc_set_adm_dir("_svn", g_pool);
       if (err)
