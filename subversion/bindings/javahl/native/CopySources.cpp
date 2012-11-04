@@ -95,7 +95,7 @@ CopySources::array(SVN::Pool &pool)
   std::vector<jobject> sources = m_copySources.vector();
 
   apr_array_header_t *copySources =
-    apr_array_make(p, sources.size(), sizeof(svn_client_copy_source_t *));
+    apr_array_make(p, (int)sources.size(), sizeof(svn_client_copy_source_t *));
   for (std::vector<jobject>::const_iterator it = sources.begin();
         it < sources.end(); ++it)
     {
