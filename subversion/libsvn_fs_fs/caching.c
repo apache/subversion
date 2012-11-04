@@ -83,11 +83,19 @@ read_config(svn_memcache_t **memcache_p,
    * Revprop caching significantly speeds up operations like
    * svn ls -v. However, it requires synchronization that may
    * not be available or efficient in the current server setup.
+   * 
+   * If the caller chose option "2", enable revprop caching if
+   * the required API support is there to make it efficient.
    */
-  *cache_revprops
-    = svn_hash__get_bool(fs->config,
-                         SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                         FALSE);
+  if (strcmp(svn_hash__get_cstring(fs->config,
+                                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                                   ""), "2"))
+    *cache_revprops
+      = svn_hash__get_bool(fs->config,
+                          SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                          FALSE);
+  else
+    *cache_revprops = svn_named_atomic__is_efficient();
 
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
