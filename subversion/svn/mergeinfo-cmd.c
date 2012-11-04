@@ -152,7 +152,7 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
       col_width[col] = 0;
       for (row = 0; row < ROWS; row++)
         {
-          if (g[row][col] && (strlen(g[row][col]) > col_width[col]))
+          if (g[row][col] && ((int)strlen(g[row][col]) > col_width[col]))
             col_width[col] = (int)strlen(g[row][col]);
         }
     }
