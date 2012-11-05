@@ -340,7 +340,7 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
-  SVN_ERR(svn_wc__db_open(db, NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
   SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;

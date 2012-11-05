@@ -903,7 +903,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
-      parent_url = svn_uri_dirname(parent_url, iterpool);
+      parent_url = svn_uri_dirname(parent_url, scratch_pool);
       SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
       err = session->vtable->get_dir(session, NULL, NULL,
                                      &parent_props, "",

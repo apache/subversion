@@ -67,16 +67,16 @@
 #include "svn_private_config.h"
 
 struct interval {
-  int first;
-  int last;
+  apr_uint32_t first;
+  apr_uint32_t last;
 };
 
 /* auxiliary function for binary search in interval table */
 static int
-bisearch(apr_uint32_t ucs, const struct interval *table, int max)
+bisearch(apr_uint32_t ucs, const struct interval *table, apr_uint32_t max)
 {
-  int min = 0;
-  int mid;
+  apr_uint32_t min = 0;
+  apr_uint32_t mid;
 
   if (ucs < table[0].first || ucs > table[max].last)
     return 0;
@@ -85,7 +85,7 @@ bisearch(apr_uint32_t ucs, const struct interval *table, int max)
     if (ucs > table[mid].last)
       min = mid + 1;
     else if (ucs < table[mid].first)
-      max = mid - 1;
+      max = mid - 1; /* this is safe because ucs >= table[0].first */
     else
       return 1;
   }

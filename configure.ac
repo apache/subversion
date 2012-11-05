@@ -1017,6 +1017,11 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
+        dnl Put this flag behind -Wall:
+
+        CFLAGS="$CFLAGS_KEEP -Wno-format-nonliteral"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
       fi
@@ -1387,6 +1392,10 @@ rm -f .swig_checked
 dnl Provide ${host} for use in compiled code (for svn --version)
 AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",
                    [Defined to the config.guess name of the build system])
+
+dnl Provide ${target} for use in compiled code (for user-agent string)
+AC_DEFINE_UNQUOTED([SVN_BUILD_TARGET], "${target}",
+                   [Defined to the config.guess name of the build target])
 
 AC_OUTPUT
 

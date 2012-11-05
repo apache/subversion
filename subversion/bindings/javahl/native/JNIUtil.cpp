@@ -211,7 +211,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     GetModuleFileNameW(moduleHandle, ucs2_path, inwords);
     inwords = lstrlenW(ucs2_path);
     outbytes = outlength = 3 * (inwords + 1);
-    utf8_path = (char *)apr_palloc(pool, outlength);
+    utf8_path = reinterpret_cast<char *>(apr_palloc(pool, outlength));
     apr_err = apr_conv_ucs2_to_utf8((const apr_wchar_t *) ucs2_path,
                                     &inwords, utf8_path, &outbytes);
     if (!apr_err && (inwords > 0 || outbytes == 0))
@@ -240,7 +240,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
-  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+  if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
       err = svn_wc_set_adm_dir("_svn", g_pool);
       if (err)

@@ -1327,7 +1327,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
   /* Load an entries hash, and cache it into DIR_ACCESS. Go ahead and
      fetch all entries here (optimization) since we know how to filter
      out a "hidden" node.  */
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
+  SVN_ERR(svn_wc__entries_read_internal(&entries, dir_access, TRUE, pool));
   *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
 
   if (!show_hidden && *entry != NULL)

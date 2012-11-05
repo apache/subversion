@@ -77,7 +77,7 @@ typedef struct import_ctx_t
   svn_magic__cookie_t *magic_cookie;
 
   /* Collection of all possible configuration file dictated auto-props and
-     svn:inheritable-auto-props.  A hash mapping const char * file patterns to a
+     svn:auto-props.  A hash mapping const char * file patterns to a
      second hash which maps const char * property names to const char *
      property values.  Properties which don't have a value, e.g. svn:executable,
      simply map the property name to an empty string. */
@@ -613,7 +613,7 @@ import_dir(const svn_delta_editor_t *editor,
  * the import (values are unused).
  *
  * AUTOPROPS is hash of all config file autoprops and
- * svn:inheritable-auto-props inherited by the import target, see the
+ * svn:auto-props inherited by the import target, see the
  * IMPORT_CTX member of the same name.
  *
  * LOCAL_IGNORES is an array of const char * ignore patterns which
@@ -622,7 +622,7 @@ import_dir(const svn_delta_editor_t *editor,
  * target should be ignored and not imported.
  *
  * MANDATORY_IGNORES is an array of const char * ignore patterns which
- * correspond to the svn:inheritable-ignores properties (if any) set on
+ * correspond to the svn:global-ignores properties (if any) set on
  * the root of the repository target or inherited by it.
  *
  * If NO_IGNORE is FALSE, don't import files or directories that match
@@ -1029,7 +1029,7 @@ svn_client_import5(const char *path,
                                     commit_baton, NULL, TRUE,
                                     scratch_pool));
 
-  /* Get inherited svn:inheritable-auto-props, svn:inheritable-ignores, and
+  /* Get inherited svn:auto-props, svn:global-ignores, and
      svn:ignores for the location we are importing to. */
   SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
                                          scratch_pool, iterpool));
@@ -1428,14 +1428,14 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 
   /* Easy part of applying DEPTH to externals. */
   if (depth == svn_depth_empty)
-     {
-       /* Don't recurse. */
-       return SVN_NO_ERROR;
-     }
-   else if (depth != svn_depth_infinity)
-     {
-       include_dir_externals = FALSE;
-       /* We slip in dir externals as explicit targets. When we do that,
+    {
+      /* Don't recurse. */
+      return SVN_NO_ERROR;
+    }
+  else if (depth != svn_depth_infinity)
+    {
+      include_dir_externals = FALSE;
+      /* We slip in dir externals as explicit targets. When we do that,
        * depth_immediates should become depth_empty for dir externals targets.
        * But adding the dir external to the list of targets makes it get
        * handled with depth_immediates itself, and thus will also include the
@@ -1450,7 +1450,7 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
        * ### --depth=immediates --include-externals', commit dir externals
        * ### (only immediate children of a target) with depth_empty instead of
        * ### not at all. No other effect. So not doing that for now. */
-     }
+    }
 
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;

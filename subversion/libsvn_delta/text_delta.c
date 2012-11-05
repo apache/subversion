@@ -801,7 +801,8 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */
-      if (ab->sbuf_offset + ab->sbuf_len > window->sview_offset)
+      if (  (apr_size_t)ab->sbuf_offset + ab->sbuf_len
+          > (apr_size_t)window->sview_offset)
         {
           apr_size_t start =
             (apr_size_t)(window->sview_offset - ab->sbuf_offset);

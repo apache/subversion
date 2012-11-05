@@ -1324,8 +1324,9 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  * Each path in @a paths is a const char *. The editor drive will be
  * performed in the same order as @a paths. The paths should be sorted
  * using something like svn_sort_compare_paths to ensure that a depth-first
- * pattern is observed for directory/file baton creation. Some callers may
- * need further customization of the order (ie. libsvn_delta/compat.c).
+ * pattern is observed for directory/file baton creation. If @a sort_paths
+ * is set, the function will sort the paths for you. Some callers may need
+ * further customization of the order (ie. libsvn_delta/compat.c).
  *
  * Use @a scratch_pool for all necessary allocations.
  *
@@ -1335,6 +1336,7 @@ svn_error_t *
 svn_delta_path_driver2(const svn_delta_editor_t *editor,
                        void *edit_baton,
                        const apr_array_header_t *paths,
+                       svn_boolean_t sort_paths,
                        svn_delta_path_driver_cb_func_t callback_func,
                        void *callback_baton,
                        apr_pool_t *scratch_pool);
