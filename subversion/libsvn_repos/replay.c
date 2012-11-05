@@ -781,6 +781,7 @@ path_driver_cb_func(void **dir_baton,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_EV2_IMPL
 static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
@@ -823,6 +824,7 @@ fetch_props_func(apr_hash_t **props,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 
@@ -946,9 +948,9 @@ svn_repos_replay2(svn_fs_root_t *root,
     }
 
   /* Call the path-based editor driver. */
-  return svn_delta_path_driver(editor, edit_baton,
-                               SVN_INVALID_REVNUM, paths,
-                               path_driver_cb_func, &cb_baton, pool);
+  return svn_delta_path_driver2(editor, edit_baton,
+                                paths, TRUE,
+                                path_driver_cb_func, &cb_baton, pool);
 #else
   svn_editor_t *editorv2;
   struct svn_delta__extra_baton *exb;

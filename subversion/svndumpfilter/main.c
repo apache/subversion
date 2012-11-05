@@ -45,7 +45,12 @@
 
 #include "private/svn_mergeinfo_private.h"
 
-
+#ifdef _WIN32
+typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
+#else
+typedef apr_status_t (*open_fn_t)(apr_file_t **, apr_pool_t *);
+#endif
+
 /*** Code. ***/
 
 /* Helper to open stdio streams */
@@ -62,8 +67,7 @@
 */
 static svn_error_t *
 create_stdio_stream(svn_stream_t **stream,
-                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
-                                                      apr_pool_t *),
+                    open_fn_t open_fn,
                     apr_pool_t *pool)
 {
   apr_file_t *stdio_file;

@@ -469,8 +469,8 @@ def import_inherited_ignores(sbox):
 
   # Import the tree to ^/A/B/E.
   # We should never see any *.noo paths because those are blocked at the
-  # root of the repository by the svn:inheritable-ignores property.  Likewise
-  # *.doo paths are blocked by the svn:inheritable-ignores on ^/A/B.  Nor
+  # root of the repository by the svn:global-ignores property.  Likewise
+  # *.doo paths are blocked by the svn:global-ignores on ^/A/B.  Nor
   # should we see and *.boo or *.goo paths, as those are blocked by the
   # global-ignores config. Lastly, ^/A/B/E should not get any *.foo paths
   # because of the svn:ignore property on ^/A/B/E, but non-immediate children
@@ -517,7 +517,7 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
 
   # Import the tree to ^/A/B/F with the --no-ignore option.
-  # Now only the ignores present in the svn:inheritable-ignores property
+  # Now only the ignores present in the svn:global-ignores property
   # should be considered.
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--config-dir', config_dir,

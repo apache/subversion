@@ -56,7 +56,7 @@ svn_config__win_config_path(const char **folder, int system_path,
                      | CSIDL_FLAG_CREATE);
 
   WCHAR folder_ucs2[MAX_PATH];
-  apr_size_t inwords, outbytes, outlength;
+  int inwords, outbytes, outlength;
   char *folder_utf8;
 
   if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
@@ -109,7 +109,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
   svn_stringbuf_ensure(value, SVN_REG_DEFAULT_VALUE_SIZE);
   for (index = 0; ; ++index)
     {
-      option_len = option->blocksize;
+      option_len = (DWORD)option->blocksize;
       err = RegEnumValue(hkey, index, option->data, &option_len,
                          NULL, &type, NULL, NULL);
       if (err == ERROR_NO_MORE_ITEMS)
@@ -128,7 +128,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
          http://subversion.tigris.org/issues/show_bug.cgi?id=671 */
       if (type == REG_SZ && option->data[0] != '#')
         {
-          DWORD value_len = value->blocksize;
+          DWORD value_len = (DWORD)value->blocksize;
           err = RegQueryValueEx(hkey, option->data, NULL, NULL,
                                 (LPBYTE)value->data, &value_len);
           if (err == ERROR_MORE_DATA)
@@ -214,7 +214,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   svn_stringbuf_ensure(section, SVN_REG_DEFAULT_NAME_SIZE);
   for (index = 0; ; ++index)
     {
-      DWORD section_len = section->blocksize;
+      DWORD section_len = (DWORD)section->blocksize;
       FILETIME last_write_time;
       HKEY sub_hkey;
 

@@ -1425,6 +1425,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 37,
              "failed to parse version number string")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_CORRUPTED_ATOMIC_STORAGE,
+             SVN_ERR_MISC_CATEGORY_START + 38,
+             "Atomic data storage is corrupt")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

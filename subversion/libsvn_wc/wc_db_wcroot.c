@@ -27,6 +27,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_version.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -294,9 +295,24 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION && auto_upgrade)
-    SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
-                                scratch_pool));
+  if (format < SVN_WC__VERSION)
+    {
+      if (auto_upgrade)
+        {
+          if (format >= SVN_WC__WC_NG_VERSION)
+            SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
+                                        scratch_pool));
+        }
+      else
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d). You need to "
+                                   "upgrade the working copy first.\n"),
+                                   svn_dirent_local_style(wcroot_abspath,
+                                   scratch_pool), format, SVN_VERSION,
+                                   SVN_WC__VERSION);
+    }
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
@@ -654,7 +670,8 @@ try_symlink_as_dir:
                             sdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+      if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
+                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
           kind == svn_kind_symlink)
         {
           /* We found an unsupported WC after traversing upwards from a

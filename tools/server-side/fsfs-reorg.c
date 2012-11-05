@@ -724,8 +724,13 @@ key_matches(svn_string_t *string, const char *key)
 static int
 compare_noderev_offsets(const void *data, const void *key)
 {
-  return (*(const noderev_t **)data)->original.offset
-       - *(const apr_size_t *)key;
+  apr_ssize_t diff = (*(const noderev_t **)data)->original.offset
+                   - *(const apr_size_t *)key;
+
+  /* sizeof(int) may be < sizeof(ssize_t) */
+  if (diff < 0)
+    return -1;
+  return diff > 0 ? 1 : 0;
 }
 
 static svn_error_t *
@@ -800,8 +805,13 @@ parse_pred(noderev_t **result,
 static int
 compare_representation_offsets(const void *data, const void *key)
 {
-  return (*(const representation_t **)data)->original.offset
-       - *(const apr_size_t *)key;
+  apr_ssize_t diff = (*(const representation_t **)data)->original.offset
+                   - *(const apr_size_t *)key;
+
+  /* sizeof(int) may be < sizeof(ssize_t) */
+  if (diff < 0)
+    return -1;
+  return diff > 0 ? 1 : 0;
 }
 
 static representation_t *

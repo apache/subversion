@@ -836,7 +836,12 @@ start_error(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
-      else
+
+      /* If there's no error code provided, or if the provided code is
+         0 (which can happen sometimes depending on how the error is
+         constructed on the server-side), just pick a generic error
+         code to run with. */
+      if (! ctx->error->apr_err)
         {
           ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }

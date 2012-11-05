@@ -83,6 +83,17 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                              const char *name,
                              apr_pool_t *result_pool);
 
+/** Removes persistent data structures (files in particular) that got
+ * created for the namespace given by @a name.  Use @a pool for temporary
+ * allocations.
+ *
+ * @note You must not call this while the respective namespace is still
+ * in use. Calling this multiple times for the same namespace is safe.
+ */
+svn_error_t *
+svn_atomic_namespace__cleanup(const char *name,
+                              apr_pool_t *pool);
+
 /** Find the atomic with the specified @a name in namespace @a ns and
  * return it in @a *atomic.  If no object with that name can be found, the
  * behavior depends on @a auto_create.  If it is @c FALSE, @a *atomic will

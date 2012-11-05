@@ -1726,7 +1726,7 @@ drive_changes(const struct editor_baton *eb,
   /* Get a sorted list of Ev1-relative paths.  */
   paths = get_sorted_paths(eb->changes, eb->base_relpath, scratch_pool);
   SVN_ERR(svn_delta_path_driver2(eb->deditor, eb->dedit_baton, paths,
-                                 apply_change, (void *)eb,
+                                 FALSE, apply_change, (void *)eb,
                                  scratch_pool));
 
   return SVN_NO_ERROR;

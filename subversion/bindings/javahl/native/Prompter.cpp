@@ -429,7 +429,7 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
 {
   Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_simple_t *ret =
-    (svn_auth_cred_simple_t*)apr_pcalloc(pool, sizeof(*ret));
+    reinterpret_cast<svn_auth_cred_simple_t*>(apr_pcalloc(pool, sizeof(*ret)));
   if (!that->prompt(realm, username, may_save ? true : false))
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("User canceled dialog"));
@@ -462,7 +462,7 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
 {
   Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_username_t *ret =
-    (svn_auth_cred_username_t*)apr_pcalloc(pool, sizeof(*ret));
+    reinterpret_cast<svn_auth_cred_username_t*>(apr_pcalloc(pool, sizeof(*ret)));
   const char *user = that->askQuestion(realm, _("Username: "), true,
                                        may_save ? true : false);
   if (user == NULL)
@@ -486,7 +486,7 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
 {
   Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_server_trust_t *ret =
-    (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
+    reinterpret_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*ret)));
 
   std::string question = _("Error validating server certificate for ");
   question += realm;
@@ -552,7 +552,7 @@ Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
 {
   Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_client_cert_t *ret =
-    (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
+    reinterpret_cast<svn_auth_cred_ssl_client_cert_t*>(apr_pcalloc(pool, sizeof(*ret)));
   const char *cert_file =
     that->askQuestion(realm, _("client certificate filename: "), true,
                       may_save ? true : false);
@@ -574,7 +574,7 @@ Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
 {
   Prompter *that = static_cast<Prompter *>(baton);
   svn_auth_cred_ssl_client_cert_pw_t *ret =
-    (svn_auth_cred_ssl_client_cert_pw_t*)apr_pcalloc(pool, sizeof(*ret));
+    reinterpret_cast<svn_auth_cred_ssl_client_cert_pw_t*>(apr_pcalloc(pool, sizeof(*ret)));
   const char *info = that->askQuestion(realm,
                                        _("client certificate passphrase: "),
                                        false, may_save ? true : false);

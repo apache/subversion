@@ -911,7 +911,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       && dirent[len - 1] != '/')
     {
       int segments = 0;
-      int i;
+      apr_size_t i;
       for (i = len; i >= 2; i--)
         {
           if (dirent[i] == '/')

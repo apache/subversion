@@ -1,7 +1,5 @@
-/*
- * deprecated.c:  holding file for all deprecated APIs.
- *                "we can't lose 'em, but we can shun 'em!"
- *
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -20,29 +18,42 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
  */
 
-/* We define this here to remove any further warnings about the usage of
-   deprecated functions in this file. */
-#define SVN_DEPRECATED
+
 
-#include "svn_delta.h"
-#include "svn_sorts.h"
+#ifndef DEPRECATED_H
+#define DEPRECATED_H
 
+#include <apr_hash.h>
 
+#include "svn_editor.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Non-deprecated wrapper around svn_ra_local_init. */
 svn_error_t *
-svn_delta_path_driver(const svn_delta_editor_t *editor,
-                      void *edit_baton,
-                      svn_revnum_t revision,
-                      const apr_array_header_t *paths,
-                      svn_delta_path_driver_cb_func_t callback_func,
-                      void *callback_baton,
-                      apr_pool_t *scratch_pool)
-{
-  /* REVISION is dropped on the floor.  */
+svn_ra_local__deprecated_init(int abi_version,
+                              apr_pool_t *pool,
+                              apr_hash_t *hash);
 
-  return svn_error_trace(svn_delta_path_driver2(editor, edit_baton, paths,
-                                                TRUE,
-                                                callback_func, callback_baton,
-                                                scratch_pool));
+/* Non-deprecated wrapper around svn_ra_svn_init. */
+svn_error_t *
+svn_ra_svn__deprecated_init(int abi_version,
+                            apr_pool_t *pool,
+                            apr_hash_t *hash);
+
+/* Non-deprecated wrapper around svn_ra_serf_init. */
+svn_error_t *
+svn_ra_serf__deprecated_init(int abi_version,
+                             apr_pool_t *pool,
+                             apr_hash_t *hash);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* DEPRECATED_H */

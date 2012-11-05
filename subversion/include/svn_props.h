@@ -384,14 +384,11 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_MERGEINFO SVN_PROP_PREFIX "mergeinfo"
 
-/** Prefix for all Subersion inhertiable properties. */
-#define SVN_PROP_INHERITABLE_PREFIX SVN_PROP_PREFIX "inheritable-"
-
 /** Property used to record inheritable configuration auto-props. */
-#define SVN_PROP_INHERITABLE_AUTO_PROPS SVN_PROP_INHERITABLE_PREFIX "auto-props"
+#define SVN_PROP_INHERITABLE_AUTO_PROPS SVN_PROP_PREFIX "auto-props"
 
 /** Property used to record inheritable configuration ignores. */
-#define SVN_PROP_INHERITABLE_IGNORES SVN_PROP_INHERITABLE_PREFIX "ignores"
+#define SVN_PROP_INHERITABLE_IGNORES SVN_PROP_PREFIX "global-ignores"
 
 /** Meta-data properties.
  *
