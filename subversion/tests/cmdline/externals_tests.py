@@ -2671,6 +2671,18 @@ def include_immediate_dir_externals(sbox):
     'X/XE'              : Item(verb='Sending'),
   })
 
+  # Currently this fails because nothing is committed.
+  #
+  #   >svn st
+  #   X       X\XE
+  #   
+  #   Performing status on external item at 'X\XE':
+  #    M      C:\SVN\src-trunk\...\externals_tests-37\X\XE
+  #   M       C:\SVN\src-trunk\...\externals_tests-37\X\XE\alpha
+  #
+  #   >svn ci -m "m" --include-externals --depth immediates X
+  #
+  #   >
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
     None, '--include-externals', '--depth=immediates', X)
 
