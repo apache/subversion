@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file ConflictResolverCallback.cpp
- * @brief Implementation of the class ConflictResolverCallback.
+ * @file CreateJ.cpp
+ * @brief Implementation of the class CreateJ.
  */
 
 #include "svn_error.h"

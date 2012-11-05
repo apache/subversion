@@ -21,7 +21,7 @@
  * @endcopyright
  *
  * @file JNIThreadData.h
- * @brief Interface of the class JNIData
+ * @brief Interface of the class JNIThreadData
  */
 
 #ifndef JNITHREADDATA_H
