@@ -1393,6 +1393,10 @@ dnl Provide ${host} for use in compiled code (for svn --version)
 AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",
                    [Defined to the config.guess name of the build system])
 
+dnl Provide ${target} for use in compiled code (for user-agent string)
+AC_DEFINE_UNQUOTED([SVN_BUILD_TARGET], "${target}",
+                   [Defined to the config.guess name of the build target])
+
 AC_OUTPUT
 
 # ==== Print final messages to user ==========================================
