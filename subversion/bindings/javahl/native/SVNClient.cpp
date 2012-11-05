@@ -1274,8 +1274,7 @@ void SVNClient::unlock(Targets &targets, bool force)
     SVN_JNI_ERR(targets.error_occured(), );
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     SVN_JNI_ERR(svn_client_unlock(
-        const_cast<apr_array_header_t*>(targetsApr), force,
-        ctx, subPool.getPool()), );
+        targetsApr, force, ctx, subPool.getPool()), );
 }
 void SVNClient::setRevProperty(const char *path,
                                const char *name, Revision &rev,
