@@ -52,6 +52,22 @@
 #define UTF8PROC_H
 
 
+/*
+ * Define UTF8PROC_INLINE and include utf8proc.c to embed a static
+ * version of utf8proc in your program or library without exporting
+ * any of its symbols.
+ */
+#ifdef UTF8PROC_INLINE
+#define UTF8PROC_API static
+#undef  UTF8PROC_DATA_EXPORT
+#define UTF8PROC_DATA static
+#else
+#define UTF8PROC_API
+#define UTF8PROC_DATA_EXPORT
+#define UTF8PROC_DATA
+#endif
+
+
 #include <stdlib.h>
 #include <sys/types.h>
 #ifdef _MSC_VER
@@ -235,15 +251,20 @@ typedef struct utf8proc_property_struct {
 #define UTF8PROC_DECOMP_TYPE_FRACTION 15
 #define UTF8PROC_DECOMP_TYPE_COMPAT   16
 
+#ifdef UTF8PROC_DATA_EXPORT
 extern const int8_t utf8proc_utf8class[256];
+#endif
 
+UTF8PROC_API
 const char *utf8proc_version(void);
 
+UTF8PROC_API
 const char *utf8proc_errmsg(ssize_t errcode);
 /*
  *  Returns a static error string for the given error code.
  */
 
+UTF8PROC_API
 ssize_t utf8proc_iterate(const uint8_t *str, ssize_t strlen, int32_t *dst);
 /*
  *  Reads a single char from the UTF-8 sequence being pointed to by 'str'.
@@ -255,11 +276,13 @@ ssize_t utf8proc_iterate(const uint8_t *str, ssize_t strlen, int32_t *dst);
  *  negative error code is returned.
  */
 
+UTF8PROC_API
 bool utf8proc_codepoint_valid(int32_t uc);
 /*
  *  Returns 1, if the given unicode code-point is valid, otherwise 0.
  */
 
+UTF8PROC_API
 ssize_t utf8proc_encode_char(int32_t uc, uint8_t *dst);
 /*
  *  Encodes the unicode char with the code point 'uc' as an UTF-8 string in
@@ -270,6 +293,7 @@ ssize_t utf8proc_encode_char(int32_t uc, uint8_t *dst);
  *  This function does not check if 'uc' is a valid unicode code point.
  */
 
+UTF8PROC_API
 const utf8proc_property_t *utf8proc_get_property(int32_t uc);
 /*
  *  Returns a pointer to a (constant) struct containing information about
@@ -280,6 +304,7 @@ const utf8proc_property_t *utf8proc_get_property(int32_t uc);
  *           0x10FFFF, otherwise the program might crash!
  */
 
+UTF8PROC_API
 ssize_t utf8proc_decompose_char(
   int32_t uc, int32_t *dst, ssize_t bufsize,
   int options, int *last_boundclass
@@ -308,6 +333,7 @@ ssize_t utf8proc_decompose_char(
  *           0x10FFFF, otherwise the program might crash!
  */
 
+UTF8PROC_API
 ssize_t utf8proc_decompose(
   const uint8_t *str, ssize_t strlen,
   int32_t *buffer, ssize_t bufsize, int options
@@ -326,6 +352,7 @@ ssize_t utf8proc_decompose(
  *  buffer size is returned.
  */
 
+UTF8PROC_API
 ssize_t utf8proc_reencode(int32_t *buffer, ssize_t length, int options);
 /*
  *  Reencodes the sequence of unicode characters given by the pointer
@@ -349,6 +376,7 @@ ssize_t utf8proc_reencode(int32_t *buffer, ssize_t length, int options);
  *           crash!
  */
 
+UTF8PROC_API
 ssize_t utf8proc_map(
   const uint8_t *str, ssize_t strlen, uint8_t **dstptr, int options
 );
@@ -368,9 +396,13 @@ ssize_t utf8proc_map(
  *          'malloc', and has theirfore to be freed with 'free'.
  */
 
+UTF8PROC_API
 uint8_t *utf8proc_NFD(const uint8_t *str);
+UTF8PROC_API
 uint8_t *utf8proc_NFC(const uint8_t *str);
+UTF8PROC_API
 uint8_t *utf8proc_NFKD(const uint8_t *str);
+UTF8PROC_API
 uint8_t *utf8proc_NFKC(const uint8_t *str);
 /*
  *  Returns a pointer to newly allocated memory of a NFD, NFC, NFKD or NFKC

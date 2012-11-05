@@ -42,6 +42,7 @@
  */
 
 
+UTF8PROC_DATA
 const int32_t utf8proc_sequences[] = {
   97, -1, 98, -1, 99, -1, 100, 
   -1, 101, -1, 102, -1, 103, -1, 104, 
@@ -1483,6 +1484,7 @@ const int32_t utf8proc_sequences[] = {
   -1, 40709, -1, 40719, -1, 40726, -1, 173568, 
   -1, };
 
+UTF8PROC_DATA
 const uint16_t utf8proc_stage1table[] = {
   0, 256, 512, 768, 1024, 1280, 1536, 
   1792, 2048, 2304, 2560, 2816, 3072, 3328, 3584, 
@@ -2030,6 +2032,7 @@ const uint16_t utf8proc_stage1table[] = {
   15104, 15104, 15104, 15104, 15104, 15104, 15104, 15104, 
   23040, };
 
+UTF8PROC_DATA
 const uint16_t utf8proc_stage2table[] = {
   1, 1, 1, 1, 1, 1, 1, 
   1, 1, 2, 3, 2, 4, 3, 1, 
@@ -4945,6 +4948,7 @@ const uint16_t utf8proc_stage2table[] = {
   3440, 3440, 3440, 3440, 3440, 3440, 3440, 0, 
   0, };
 
+UTF8PROC_DATA
 const utf8proc_property_t utf8proc_properties[] = {
   {0, 0, 0, 0, NULL, false, -1, -1, -1, -1, -1, false},
   {UTF8PROC_CATEGORY_CC, 0, UTF8PROC_BIDI_CLASS_BN, 0, NULL, false, -1, -1, -1, -1, -1, false, true, true, false, NULL},
@@ -10566,6 +10570,7 @@ const utf8proc_property_t utf8proc_properties[] = {
   {UTF8PROC_CATEGORY_LO, 0, UTF8PROC_BIDI_CLASS_L, 0, utf8proc_sequences + 11502, false, -1, -1, -1, -1, -1, false, false, false, false, NULL},
 };
 
+UTF8PROC_DATA
 const int32_t utf8proc_combinations[] = {
   192, 193, 194, 195, 196, 197, -1, 
   256, 258, 260, 550, 461, -1, -1, 512, 
