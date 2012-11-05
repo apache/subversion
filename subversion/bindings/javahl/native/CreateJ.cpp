@@ -1019,9 +1019,8 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
     POP_AND_RETURN_NULL;
 
   apr_hash_index_t *hi;
-  int i = 0;
   for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
-       hi; hi = apr_hash_next(hi), ++i)
+       hi; hi = apr_hash_next(hi))
     {
       const char *key;
       svn_string_t *val;
