@@ -351,11 +351,11 @@ svn_error_t *svn_client__get_paths_auto_props(
   apr_pool_t *scratch_pool);
 
 /* Gather all auto-props from CTX->config (or none if auto-props are
-   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
+   disabled) and all svn:auto-props explicitly set on or inherited
    by PATH_OR_URL.
 
    If PATH_OR_URL is an unversioned WC path then gather the
-   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
+   svn:auto-props inherited by PATH_OR_URL's nearest versioned
    parent.
 
    If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
@@ -366,10 +366,10 @@ svn_error_t *svn_client__get_paths_auto_props(
    names to const char *property values.
 
    If a given property name exists for the same pattern in both the config
-   file and in an a svn:inheritable-auto-props property, the latter overrides the
+   file and in an a svn:auto-props property, the latter overrides the
    former.  If a given property name exists for the same pattern in two
-   different inherited svn:inheritable-auto-props, then the closer path-wise
-   property overrides the more distant. svn:inheritable-auto-props explicitly set
+   different inherited svn:auto-props, then the closer path-wise
+   property overrides the more distant. svn:auto-props explicitly set
    on PATH_OR_URL have the highest precedence and override inherited props
    and config file settings.
 
@@ -383,7 +383,7 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
 /* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
    patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
-   svn:inheritable-ignores properties set on, or inherited by, LOCAL_ABSPATH.
+   svn:global-ignores properties set on, or inherited by, LOCAL_ABSPATH.
    If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
    then find its nearest versioned parent path, if any, and return the ignore
    patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
@@ -398,7 +398,7 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* Get a list of ignore patterns defined by the svn:inheritable-ignores
+/* Get a list of ignore patterns defined by the svn:global-ignores
    properties set on, or inherited by, PATH_OR_URL.  Store the collected
    patterns as const char * elements in the array *IGNORES.  Allocate
    *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
