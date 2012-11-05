@@ -2651,7 +2651,7 @@ def inheritable_ignores(sbox):
   os.chdir(saved_wd)
 
   # Now revert and try the add with the --no-ignore flag, only the
-  # svn:inheritable-ignores should be enforced.
+  # svn:global-ignores should be enforced.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_dir, '-R')
   saved_wd = os.getcwd()
   os.chdir(sbox.wc_dir)

@@ -385,7 +385,7 @@ def check_inheritable_autoprops(sbox, auto_props_enabled):
 #----------------------------------------------------------------------
 def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
                                do_import_or_add=True):
-  """configurable autoprops and svn:inheritable-auto-props test.
+  """configurable autoprops and svn:auto-props test.
 
      CMD is the subcommand to test: 'import' or 'add'
      if CFGENABLE is true, enable autoprops in the config file, else disable
@@ -438,7 +438,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   else:
     files_wc_dir = wc_dir
 
-  # Set differing svn:inheritable-auto-props properties on various
+  # Set differing svn:auto-props properties on various
   # directories.
   sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.c = svn:eol-style=CRLF\n'
@@ -590,10 +590,10 @@ def svn_prop_inheritable_autoprops_imp_yes_no(sbox):
   inheritable_autoprops_test(sbox, 'import', 1, -1, '')
 
 #----------------------------------------------------------------------
-# Test svn:inheritable-auto-props when 'svn add' targets an already versioned
+# Test svn:auto-props when 'svn add' targets an already versioned
 # target.
 def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
-  "svn:inheritable-auto-props and versioned target"
+  "svn:auto-props and versioned target"
 
   config_dir = inheritable_autoprops_test(sbox, 'add', 1, 0, '', False)
 
@@ -612,9 +612,9 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   check_inheritable_autoprops(sbox, True)
 
 #----------------------------------------------------------------------
-# Can't set svn:inheritable-auto-props on files.
+# Can't set svn:auto-props on files.
 def svn_prop_inheritable_autoprops_propset_file_target(sbox):
-  "svn:inheritable-auto-props can't be set on files"
+  "svn:auto-props can't be set on files"
 
   sbox.build()
   svntest.actions.run_and_verify_svn(
@@ -634,7 +634,7 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
   foo_path = sbox.ospath('A/D/Z/foo.c')
   bar_path = sbox.ospath('A/B/Y/bar.c')
 
-  # Set svn:inheritable-auto-props properties on two directories.
+  # Set svn:auto-props properties on two directories.
   svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
   svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
