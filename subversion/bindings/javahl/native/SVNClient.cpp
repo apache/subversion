@@ -855,9 +855,7 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
     if (propval == NULL)
         return NULL;
 
-    return JNIUtil::makeJByteArray
-              (reinterpret_cast<const signed char *>(propval->data),
-               static_cast<int>(propval->len));
+    return JNIUtil::makeJByteArray(propval);
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
@@ -1164,9 +1162,7 @@ jbyteArray SVNClient::revProperty(const char *path,
     if (propval == NULL)
         return NULL;
 
-    return JNIUtil::makeJByteArray
-              (reinterpret_cast<const signed char *>(propval->data),
-               static_cast<int>(propval->len));
+    return JNIUtil::makeJByteArray(propval);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
                          bool ignoreExternals)

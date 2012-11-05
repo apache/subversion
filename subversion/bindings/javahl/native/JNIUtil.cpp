@@ -795,7 +795,7 @@ jobject JNIUtil::createDate(apr_time_t time)
  * @param data      the character array
  * @param length    the number of characters in the array
  */
-jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
+jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
 {
   if (data == NULL)
     {
@@ -824,6 +824,15 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
     return NULL;
 
   return ret;
+}
+
+/**
+ * Create a Java byte array from an svn_string_t.
+ * @param str       the string
+ */
+jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
+{
+  return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
 }
 
 /**
