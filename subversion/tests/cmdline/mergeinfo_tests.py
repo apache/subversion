@@ -720,8 +720,8 @@ def natural_history_is_not_eligible_nor_merged(sbox):
 # ranges as partially merged".
 @Issue(4050)
 @SkipUnless(server_has_mergeinfo)
-def noninheritabled_mergeinfo_not_always_eligible(sbox):
-  "noninheritabled mergeinfo not always eligible"
+def noninheritable_mergeinfo_not_always_eligible(sbox):
+  "noninheritable mergeinfo not always eligible"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -779,7 +779,7 @@ test_list = [ None,
               mergeinfo_on_pegged_wc_path,
               wc_target_inherits_mergeinfo_from_repos,
               natural_history_is_not_eligible_nor_merged,
-              noninheritabled_mergeinfo_not_always_eligible,
+              noninheritable_mergeinfo_not_always_eligible,
              ]
 
 if __name__ == '__main__':
