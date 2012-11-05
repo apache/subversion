@@ -395,7 +395,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
     return;
 
   char *tmp_path;
-  char *path = svn_relpath_dirname(err->file, err->pool);
+  char *path = svn_dirent_dirname(err->file, err->pool);
   while (tmp_path = strchr(path, '/'))
     *tmp_path = '.';
 
@@ -403,7 +403,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   if (isJavaExceptionThrown())
     return;
 
-  jstring jfileName = makeJString(svn_relpath_basename(err->file, err->pool));
+  jstring jfileName = makeJString(svn_dirent_basename(err->file, err->pool));
   if (isJavaExceptionThrown())
     return;
 
