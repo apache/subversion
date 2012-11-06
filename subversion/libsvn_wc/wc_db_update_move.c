@@ -138,23 +138,14 @@ tc_editor_alter_file(void *baton,
   svn_kind_t kind;
 
   /* Get kind, revision, and checksum of the moved-here node. */
-  /* 
-   * ### Currently doesn't work right if the moved-away node has been replaced.
-   * ### Need to read info from the move op-root's op-depth, not WORKING, to
-   * ### properly update shadowed nodes within multi-layer move destinations.
-   */
-  SVN_ERR(svn_wc__db_read_info_internal(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, &moved_here_checksum,
-                                        NULL, &original_repos_relpath, NULL,
-                                        &original_revision, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, b->wcroot, dst_relpath,
-                                        scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, &kind, &original_revision,
+                                    &original_repos_relpath, NULL, NULL, NULL,
+                                    NULL, NULL, &moved_here_checksum, NULL,
+                                    NULL, b->wcroot, dst_relpath,
+                                    relpath_depth(b->dst_relpath),
+                                    scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(original_revision == expected_moved_here_revision);
-
-  /* ### check original revision against moved-here op-root revision? */
-  if (kind != svn_kind_file)
-    return SVN_NO_ERROR;
+  SVN_ERR_ASSERT(kind == svn_kind_file);
 
   /* ### what if checksum kind differs?*/
   if (!svn_checksum_match(moved_away_checksum, moved_here_checksum))
