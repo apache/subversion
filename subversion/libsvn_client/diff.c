@@ -262,7 +262,7 @@ compare_two_trees(svn_tree_t *tree1,
           SVN_ERR(svn_prop_diffs(&propchanges, props1, props2, scratch_pool));
 
           SVN_ERR(callbacks->file_added(NULL, NULL, NULL,
-                                        relpath1, empty_file, tmpfile2,
+                                        relpath2, empty_file, tmpfile2,
                                         rev, rev, NULL, NULL,
                                         NULL, SVN_INVALID_REVNUM, /* cp-from */
                                         propchanges, props1,
@@ -284,12 +284,12 @@ compare_two_trees(svn_tree_t *tree1,
           break;
         }
         case svn_kind_symlink:
-          SVN_DBG(("compare_two_trees: added symlink '%s'\n", relpath1));
+          SVN_DBG(("compare_two_trees: added symlink '%s'\n", relpath2));
           break;
         default:
           /* Unknown node kind. */
           SVN_DBG(("compare_two_trees: added '%s': unknown node kind %d\n",
-                   relpath1, kind1));
+                   relpath2, kind2));
           break;
         }
     }

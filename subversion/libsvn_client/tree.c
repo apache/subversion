@@ -741,11 +741,15 @@ svn_client__open_tree(svn_tree_t **tree,
   else
     {
       const char *abspath;
-      int wc_format;
+      svn_error_t *err;
+      svn_node_kind_t kind;
 
+      /* Read the working node kind just to find out whether it is in fact
+       * a versioned node. */
       SVN_ERR(svn_dirent_get_absolute(&abspath, path, scratch_pool));
-      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, abspath, scratch_pool));
-      if (wc_format > 0)
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, abspath,
+                             TRUE /* show_hidden */, scratch_pool);
+      if (! err)
         {
           if (revision->kind == svn_opt_revision_working)
             SVN_ERR(svn_client__wc_working_tree(tree, abspath, ctx,
@@ -753,8 +757,16 @@ svn_client__open_tree(svn_tree_t **tree,
           else
             SVN_ERR(svn_client__wc_base_tree(tree, abspath, ctx, result_pool));
         }
+      else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+               || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          svn_error_clear(err);
+          SVN_ERR(svn_client__disk_tree(tree, abspath, result_pool));
+        }
       else
-        SVN_ERR(svn_client__disk_tree(tree, abspath, result_pool));
+        {
+          SVN_ERR(err);
+        }
     }
 
   return SVN_NO_ERROR;
