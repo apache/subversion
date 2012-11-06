@@ -1045,7 +1045,7 @@ typedef struct svn_patch_t {
   const char *new_filename;
 
   /**
-   * An array containing an svn_diff_hunk_t object for each hunk parsed
+   * An array containing an svn_diff_hunk_t * for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 
@@ -1063,12 +1063,12 @@ typedef struct svn_patch_t {
   svn_boolean_t reverse;
 } svn_patch_t;
 
-/* An opaque type representing an open patch file.
+/** An opaque type representing an open patch file.
  *
  * @since New in 1.7. */
 typedef struct svn_patch_file_t svn_patch_file_t;
 
-/* Open @a patch_file at @a local_abspath.
+/** Open @a patch_file at @a local_abspath.
  * Allocate @a patch_file in @a result_pool.
  *
  * @since New in 1.7. */

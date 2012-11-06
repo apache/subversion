@@ -33,6 +33,8 @@
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="Configuration">
     <ConfigurationType>[config_type]</ConfigurationType>
     <UseDebugLibraries>[is configs.name "Debug"]true[else]false[end]</UseDebugLibraries>
+[is configs.name "Release"]    <WholeProgramOptimization>true</WholeProgramOptimization>
+[end]    <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -55,8 +57,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
-[end]      <AdditionalIncludeDirectories>[for includes][includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines];[end]_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+[end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <BrowseInformation>true</BrowseInformation>

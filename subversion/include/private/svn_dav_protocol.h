@@ -1,7 +1,6 @@
 /*
  * svn_dav_protocol.h: Declarations of the protocol shared by the
- * mod_dav_svn backend for httpd's mod_dav, and its ra_neon and
- * ra_serf RA DAV clients.
+ * mod_dav_svn backend for httpd's mod_dav and its ra_serf RA DAV clients.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -33,6 +32,7 @@ extern "C" {
 /** Names for the custom HTTP REPORTs understood by mod_dav_svn, sans
     namespace. */
 #define SVN_DAV__MERGEINFO_REPORT "mergeinfo-report"
+#define SVN_DAV__INHERITED_PROPS_REPORT "inherited-props-report"
 
 /** Names for XML child elements of the custom HTTP REPORTs understood
     by mod_dav_svn, sans namespace. */
@@ -45,6 +45,10 @@ extern "C" {
 #define SVN_DAV__REVISION "revision"
 #define SVN_DAV__INCLUDE_DESCENDANTS "include-descendants"
 #define SVN_DAV__VERSION_NAME "version-name"
+#define SVN_DAV__IPROP_ITEM "iprop-item"
+#define SVN_DAV__IPROP_PATH "iprop-path"
+#define SVN_DAV__IPROP_PROPNAME "iprop-propname"
+#define SVN_DAV__IPROP_PROPVAL "iprop-propval"
 
 /** Names of XML elements attributes and tags for svn_ra_change_rev_prop2()'s
     extension of PROPPATCH.  */

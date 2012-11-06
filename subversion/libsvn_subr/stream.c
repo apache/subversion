@@ -42,8 +42,10 @@
 #include "svn_utf.h"
 #include "svn_checksum.h"
 #include "svn_path.h"
+#include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
+#include "private/svn_subr_private.h"
 
 
 struct svn_stream_t {
@@ -138,7 +140,7 @@ svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
   SVN_ERR_ASSERT(stream->read_fn != NULL);
-  return stream->read_fn(stream->baton, buffer, len);
+  return svn_error_trace(stream->read_fn(stream->baton, buffer, len));
 }
 
 
@@ -146,9 +148,10 @@ svn_error_t *
 svn_stream_skip(svn_stream_t *stream, apr_size_t len)
 {
   if (stream->skip_fn == NULL)
-    return skip_default_handler(stream->baton, len, stream->read_fn);
+    return svn_error_trace(
+            skip_default_handler(stream->baton, len, stream->read_fn));
 
-  return stream->skip_fn(stream->baton, len);
+  return svn_error_trace(stream->skip_fn(stream->baton, len));
 }
 
 
@@ -156,7 +159,7 @@ svn_error_t *
 svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 {
   SVN_ERR_ASSERT(stream->write_fn != NULL);
-  return stream->write_fn(stream->baton, data, len);
+  return svn_error_trace(stream->write_fn(stream->baton, data, len));
 }
 
 
@@ -180,7 +183,7 @@ svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
   if (stream->mark_fn == NULL)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
 
-  return stream->mark_fn(stream->baton, mark, pool);
+  return svn_error_trace(stream->mark_fn(stream->baton, mark, pool));
 }
 
 svn_error_t *
@@ -189,7 +192,7 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
   if (stream->seek_fn == NULL)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
 
-  return stream->seek_fn(stream->baton, mark);
+  return svn_error_trace(stream->seek_fn(stream->baton, mark));
 }
 
 svn_boolean_t
@@ -206,9 +209,17 @@ svn_stream_close(svn_stream_t *stream)
 {
   if (stream->close_fn == NULL)
     return SVN_NO_ERROR;
-  return stream->close_fn(stream->baton);
+  return svn_error_trace(stream->close_fn(stream->baton));
 }
 
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str)
+{
+  apr_size_t len;
+  len = strlen(str);
+  return svn_error_trace(svn_stream_write(stream, str, &len));
+}
 
 svn_error_t *
 svn_stream_printf(svn_stream_t *stream,
@@ -218,14 +229,12 @@ svn_stream_printf(svn_stream_t *stream,
 {
   const char *message;
   va_list ap;
-  apr_size_t len;
 
   va_start(ap, fmt);
   message = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  len = strlen(message);
-  return svn_stream_write(stream, message, &len);
+  return svn_error_trace(svn_stream_puts(stream, message));
 }
 
 
@@ -238,7 +247,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
 {
   const char *message, *translated;
   va_list ap;
-  apr_size_t len;
 
   va_start(ap, fmt);
   message = apr_pvsprintf(pool, fmt, ap);
@@ -247,9 +255,7 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated, message, encoding,
                                         pool));
 
-  len = strlen(translated);
-
-  return svn_stream_write(stream, translated, &len);
+  return svn_error_trace(svn_stream_puts(stream, translated));
 }
 
 /* Size that 90% of the lines we encounter will be not longer than.
@@ -409,7 +415,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   /* Move the stream read pointer to the first position behind the EOL.
    */
   SVN_ERR(svn_stream_seek(stream, mark));
-  return svn_stream_skip(stream, total_parsed);
+  return svn_error_trace(svn_stream_skip(stream, total_parsed));
 }
 
 /* Guts of svn_stream_readline().
@@ -678,31 +684,31 @@ svn_stream_tee(svn_stream_t *out1,
 static svn_error_t *
 read_handler_disown(void *baton, char *buffer, apr_size_t *len)
 {
-  return svn_stream_read(baton, buffer, len);
+  return svn_error_trace(svn_stream_read(baton, buffer, len));
 }
 
 static svn_error_t *
 skip_handler_disown(void *baton, apr_size_t len)
 {
-  return svn_stream_skip(baton, len);
+  return svn_error_trace(svn_stream_skip(baton, len));
 }
 
 static svn_error_t *
 write_handler_disown(void *baton, const char *buffer, apr_size_t *len)
 {
-  return svn_stream_write(baton, buffer, len);
+  return svn_error_trace(svn_stream_write(baton, buffer, len));
 }
 
 static svn_error_t *
 mark_handler_disown(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
-  return svn_stream_mark(baton, mark, pool);
+  return svn_error_trace(svn_stream_mark(baton, mark, pool));
 }
 
 static svn_error_t *
 seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
 {
-  return svn_stream_seek(baton, mark);
+  return svn_error_trace(svn_stream_seek(baton, mark));
 }
 
 static svn_boolean_t
@@ -763,7 +769,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
     err = svn_io_file_read_full2(btn->file, buffer, *len, len,
                                  &eof, btn->pool);
 
-  return err;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *
@@ -772,7 +778,8 @@ skip_handler_apr(void *baton, apr_size_t len)
   struct baton_apr *btn = baton;
   apr_off_t offset = len;
 
-  return svn_io_file_seek(btn->file, APR_CUR, &offset, btn->pool);
+  return svn_error_trace(
+            svn_io_file_seek(btn->file, APR_CUR, &offset, btn->pool));
 }
 
 static svn_error_t *
@@ -790,7 +797,7 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
   else
     err = svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
 
-  return err;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *
@@ -798,7 +805,7 @@ close_handler_apr(void *baton)
 {
   struct baton_apr *btn = baton;
 
-  return svn_io_file_close(btn->file, btn->pool);
+  return svn_error_trace(svn_io_file_close(btn->file, btn->pool));
 }
 
 static svn_error_t *
@@ -955,59 +962,6 @@ zfree(voidpf opaque, voidpf address)
   /* Empty, since we allocate on the pool */
 }
 
-/* Converts a zlib error to an svn_error_t. zerr is the error code,
-   function is the function name, and stream is the z_stream we are
-   using.  */
-static svn_error_t *
-zerr_to_svn_error(int zerr, const char *function, z_stream *stream)
-{
-  apr_status_t status;
-  const char *message;
-
-  if (zerr == Z_OK)
-    return SVN_NO_ERROR;
-
-  switch (zerr)
-    {
-    case Z_STREAM_ERROR:
-      status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "stream error";
-      break;
-
-    case Z_MEM_ERROR:
-      status = APR_ENOMEM;
-      message = "out of memory";
-      break;
-
-    case Z_BUF_ERROR:
-      status = APR_ENOMEM;
-      message = "buffer error";
-      break;
-
-    case Z_VERSION_ERROR:
-      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "version error";
-      break;
-
-    case Z_DATA_ERROR:
-      status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "corrupted data";
-      break;
-
-    default:
-      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "error";
-      break;
-    }
-
-  if (stream->msg != NULL)
-    return svn_error_createf(status, NULL, "zlib (%s): %s: %s", function,
-                             message, stream->msg);
-  else
-    return svn_error_createf(status, NULL, "zlib (%s): %s", function,
-                             message);
-}
-
 /* Helper function to figure out the sync mode */
 static svn_error_t *
 read_helper_gz(svn_read_fn_t read_fn,
@@ -1055,11 +1009,11 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
                              &btn->in->avail_in, &btn->read_flush));
 
       zerr = inflateInit(btn->in);
-      SVN_ERR(zerr_to_svn_error(zerr, "inflateInit", btn->in));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "inflateInit", btn->in->msg));
     }
 
   btn->in->next_out = (Bytef *) buffer;
-  btn->in->avail_out = *len;
+  btn->in->avail_out = (uInt) *len;
 
   while (btn->in->avail_out > 0)
     {
@@ -1082,7 +1036,8 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
       if (zerr == Z_STREAM_END)
         break;
       else if (zerr != Z_OK)
-        return zerr_to_svn_error(zerr, "inflate", btn->in);
+        return svn_error_trace(svn_error__wrap_zlib(zerr, "inflate",
+                                                    btn->in->msg));
     }
 
   *len -= btn->in->avail_out;
@@ -1107,7 +1062,7 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
       btn->out->opaque =  btn->pool;
 
       zerr = deflateInit(btn->out, Z_DEFAULT_COMPRESSION);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflateInit", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflateInit", btn->out->msg));
     }
 
   /* The largest buffer we should need is 0.1% larger than the
@@ -1117,15 +1072,15 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
   write_buf = apr_palloc(subpool, buf_size);
 
   btn->out->next_in = (Bytef *) buffer;  /* Casting away const! */
-  btn->out->avail_in = *len;
+  btn->out->avail_in = (uInt) *len;
 
   while (btn->out->avail_in > 0)
     {
       btn->out->next_out = write_buf;
-      btn->out->avail_out = buf_size;
+      btn->out->avail_out = (uInt) buf_size;
 
       zerr = deflate(btn->out, Z_NO_FLUSH);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflate", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflate", btn->out->msg));
       write_len = buf_size - btn->out->avail_out;
       if (write_len > 0)
         SVN_ERR(btn->write(btn->subbaton, write_buf, &write_len));
@@ -1146,7 +1101,7 @@ close_handler_gz(void *baton)
   if (btn->in != NULL)
     {
       zerr = inflateEnd(btn->in);
-      SVN_ERR(zerr_to_svn_error(zerr, "inflateEnd", btn->in));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "inflateEnd", btn->in->msg));
     }
 
   if (btn->out != NULL)
@@ -1163,7 +1118,8 @@ close_handler_gz(void *baton)
 
           zerr = deflate(btn->out, Z_FINISH);
           if (zerr != Z_STREAM_END && zerr != Z_OK)
-            return zerr_to_svn_error(zerr, "deflate", btn->out);
+            return svn_error_trace(svn_error__wrap_zlib(zerr, "deflate",
+                                                        btn->out->msg));
           write_len = ZBUFFER_SIZE - btn->out->avail_out;
           if (write_len > 0)
             SVN_ERR(btn->write(btn->subbaton, buf, &write_len));
@@ -1172,11 +1128,11 @@ close_handler_gz(void *baton)
         }
 
       zerr = deflateEnd(btn->out);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflateEnd", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflateEnd", btn->out->msg));
     }
 
   if (btn->close != NULL)
-    return btn->close(btn->subbaton);
+    return svn_error_trace(btn->close(btn->subbaton));
   else
     return SVN_NO_ERROR;
 }
@@ -1251,7 +1207,7 @@ write_handler_checksum(void *baton, const char *buffer, apr_size_t *len)
   if (btn->write_checksum && *len > 0)
     SVN_ERR(svn_checksum_update(btn->write_ctx, buffer, *len));
 
-  return svn_stream_write(btn->proxy, buffer, len);
+  return svn_error_trace(svn_stream_write(btn->proxy, buffer, len));
 }
 
 
@@ -1280,7 +1236,7 @@ close_handler_checksum(void *baton)
   if (btn->write_ctx)
     SVN_ERR(svn_checksum_final(btn->write_checksum, btn->write_ctx, btn->pool));
 
-  return svn_stream_close(btn->proxy);
+  return svn_error_trace(svn_stream_close(btn->proxy));
 }
 
 
@@ -1336,21 +1292,21 @@ static svn_error_t *
 read_handler_md5(void *baton, char *buffer, apr_size_t *len)
 {
   struct md5_stream_baton *btn = baton;
-  return svn_stream_read(btn->proxy, buffer, len);
+  return svn_error_trace(svn_stream_read(btn->proxy, buffer, len));
 }
 
 static svn_error_t *
 skip_handler_md5(void *baton, apr_size_t len)
 {
   struct md5_stream_baton *btn = baton;
-  return svn_stream_skip(btn->proxy, len);
+  return svn_error_trace(svn_stream_skip(btn->proxy, len));
 }
 
 static svn_error_t *
 write_handler_md5(void *baton, const char *buffer, apr_size_t *len)
 {
   struct md5_stream_baton *btn = baton;
-  return svn_stream_write(btn->proxy, buffer, len);
+  return svn_error_trace(svn_stream_write(btn->proxy, buffer, len));
 }
 
 static svn_error_t *
@@ -1691,4 +1647,161 @@ svn_string_from_stream(svn_string_t **result,
   (*result)->len = work->len;
 
   return SVN_NO_ERROR;
+}
+
+
+/* These are somewhat arbirary, if we ever get good empirical data as to
+   actually valid values, feel free to update them. */
+#define BUFFER_BLOCK_SIZE 1024
+#define BUFFER_MAX_SIZE 100000
+
+svn_stream_t *
+svn_stream_buffered(apr_pool_t *result_pool)
+{
+  return svn_stream__from_spillbuf(BUFFER_BLOCK_SIZE, BUFFER_MAX_SIZE,
+                                   result_pool);
+}
+
+
+
+/*** Lazyopen Streams ***/
+
+/* Custom baton for lazyopen-style wrapper streams. */
+typedef struct lazyopen_baton_t {
+
+  /* Callback function and baton for opening the wrapped stream. */
+  svn_stream_lazyopen_func_t open_func;
+  void *open_baton;
+
+  /* The wrapped stream, or NULL if the stream hasn't yet been
+     opened. */
+  svn_stream_t *real_stream;
+  apr_pool_t *pool;
+
+} lazyopen_baton_t;
+
+
+/* Use B->open_func/baton to create and set B->real_stream iff it
+   isn't already set. */
+static svn_error_t *
+lazyopen_if_unopened(lazyopen_baton_t *b)
+{
+  if (b->real_stream == NULL)
+    {
+      svn_stream_t *stream;
+      apr_pool_t *scratch_pool = svn_pool_create(b->pool);
+
+      SVN_ERR(b->open_func(&stream, b->open_baton,
+                           b->pool, scratch_pool));
+
+      svn_pool_destroy(scratch_pool);
+
+      b->real_stream = stream;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_read_fn_t */
+static svn_error_t *
+read_handler_lazyopen(void *baton,
+                      char *buffer,
+                      apr_size_t *len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_read(b->real_stream, buffer, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_skip_fn_t */
+static svn_error_t *
+skip_handler_lazyopen(void *baton,
+                      apr_size_t len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_skip(b->real_stream, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_write_fn_t */
+static svn_error_t *
+write_handler_lazyopen(void *baton,
+                       const char *data,
+                       apr_size_t *len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_write(b->real_stream, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_close_fn_t */
+static svn_error_t *
+close_handler_lazyopen(void *baton)
+{
+  lazyopen_baton_t *b = baton;
+
+  if (b->real_stream != NULL)
+    SVN_ERR(svn_stream_close(b->real_stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_mark_fn_t */
+static svn_error_t *
+mark_handler_lazyopen(void *baton,
+                      svn_stream_mark_t **mark,
+                      apr_pool_t *pool)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_mark(b->real_stream, mark, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_seek_fn_t */
+static svn_error_t *
+seek_handler_lazyopen(void *baton,
+                      const svn_stream_mark_t *mark)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_seek(b->real_stream, mark));
+
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
+                           void *open_baton,
+                           apr_pool_t *result_pool)
+{
+  lazyopen_baton_t *lob = apr_pcalloc(result_pool, sizeof(*lob));
+  svn_stream_t *stream;
+
+  lob->open_func = open_func;
+  lob->open_baton = open_baton;
+  lob->real_stream = NULL;
+  lob->pool = result_pool;
+
+  stream = svn_stream_create(lob, result_pool);
+  svn_stream_set_read(stream, read_handler_lazyopen);
+  svn_stream_set_skip(stream, skip_handler_lazyopen);
+  svn_stream_set_write(stream, write_handler_lazyopen);
+  svn_stream_set_close(stream, close_handler_lazyopen);
+  svn_stream_set_mark(stream, mark_handler_lazyopen);
+  svn_stream_set_seek(stream, seek_handler_lazyopen);
+  
+  return stream;
 }

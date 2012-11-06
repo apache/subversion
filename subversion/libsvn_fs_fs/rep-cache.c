@@ -56,24 +56,9 @@ rep_has_been_born(representation_t *rep,
                   svn_fs_t *fs,
                   apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest;
-
   SVN_ERR_ASSERT(rep);
 
-  youngest = ffd->youngest_rev_cache;
-  if (youngest < rep->revision)
-  {
-    /* Stale cache. */
-    SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
-
-    /* Fresh cache. */
-    if (youngest < rep->revision)
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Youngest revision is r%ld, but "
-                                 "rep-cache contains r%ld"),
-                               youngest, rep->revision);
-  }
+  SVN_ERR(svn_fs_fs__revision_exists(rep->revision, fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -141,11 +126,13 @@ svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,
-                                                     svn_fs_t *, 
+                                                     svn_fs_t *,
                                                      apr_pool_t *),
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -161,9 +148,25 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
-  /* Get the statement. (There are no arguments to bind.) */
+  /* Check global invariants. */
+  if (start == 0)
+    {
+      svn_sqlite__stmt_t *stmt2;
+      svn_revnum_t max;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt2, ffd->rep_cache_db,
+                                        STMT_GET_MAX_REV));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt2));
+      max = svn_sqlite__column_revnum(stmt2, 0);
+      if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
+        SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
+      SVN_ERR(svn_sqlite__reset(stmt2));
+    }
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
-                                    STMT_GET_ALL_REPS));
+                                    STMT_GET_REPS_FOR_RANGE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "rr",
+                            start, end));
 
   /* Walk the cache entries. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -171,7 +174,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
     {
       representation_t *rep;
       const char *sha1_digest;
-      
+
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
         svn_pool_clear(iterpool);
@@ -190,10 +193,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       rep->offset = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
-
-      /* Sanity check. */
-      if (rep)
-        SVN_ERR(rep_has_been_born(rep, fs, iterpool));
 
       /* Walk. */
       SVN_ERR(walker(rep, walker_baton, fs, iterpool));
@@ -328,6 +327,41 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
              to flag this? */
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t youngest,
+                             apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_DEL_REPS_YOUNGER_THAN_REV));
+  SVN_ERR(svn_sqlite__bindf(stmt, "r", youngest));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__lock_rep_cache(svn_fs_t *fs,
+                          apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db, STMT_LOCK_REP));
 
   return SVN_NO_ERROR;
 }

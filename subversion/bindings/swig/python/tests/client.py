@@ -374,6 +374,29 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.assertEqual(readme_text, 'This is a test.\n')
 
+  def test_platform_providers(self):
+    providers = core.svn_auth_get_platform_specific_client_providers(None, None)
+    # Not much more we can test in this minimal environment.
+    self.assert_(isinstance(providers, list))
+    self.assert_(not filter(lambda x:
+                             not isinstance(x, core.svn_auth_provider_object_t),
+                            providers))
+
+  def testGnomeKeyring(self):
+    if not hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
+      # gnome-keying not compiled in, do nothing
+      return
+
+    # This tests setting the gnome-keyring unlock prompt function as an
+    # auth baton parameter. It doesn't actually call gnome-keyring
+    # stuff, since that would require having a gnome-keyring running. We
+    # just test if this doesn't error out, there's not even a return
+    # value to test.
+    def prompt_func(realm_string, pool):
+      return "Foo"
+
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionClientTestCase)

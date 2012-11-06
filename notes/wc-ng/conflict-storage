@@ -200,7 +200,7 @@ Tree conflicts
 Tree conflicts exist on files or directories.
 
 ### JAF: And symlinks, I presume - or, if not, why not?
-### stsp: Symlinks are resolved before retreiving conflict information.,
+### stsp: Symlinks are resolved before retreiving conflict information.
 
 The following information is stored if there is a tree conflict on the node:
 
@@ -212,8 +212,18 @@ The following information is stored if there is a tree conflict on the node:
 
 LOCAL_CHANGE is the local change which conflicted with the
 incoming change during the operation. Possible values are "edit", "add",
-"delete", "rename", "replace", "obstructed", "missing", and "unversioned"
-(### possibly collapse "unversioned" with "obstructed"?).
+"delete", "rename", "replace", "obstructed", "missing", "unversioned",
+"moved-away", "moved-here", and "copied-here".
+
+### possibly collapse "unversioned" with "obstructed"?
+
+### what is "replace"? we should probably have "replace-add",
+### "replace-moved-away", "replace-moved-here", and "replace-copied-here"
+### hrm. this probably isn't the right representation. "replace-add"
+### says how the new node arrived, but not how the original departed.
+### was it a deleted or moved-away? for example, a local-deleted
+### followed by an add, followed by an incoming-delete should probably
+### be deemed "no conflict".
 
 ORIGINAL_NODE_KIND is the kind of the node in the BASE tree.
 MINE_NODE_KIND is the kind of the node from the WORKING tree at the
@@ -221,7 +231,9 @@ time the conflict was flagged.
 
 INCOMING_CHANGE is the incoming change which conflicted with the
 local change during the operation. Possible values are "edit", "add",
-"delete", "rename", and "replace".
+"delete", "rename", "replace", "moved-away", "moved-here", and
+"copied-here".
+### see concerns above about LOCAL_CHANGE.
 
 The *_SHA1 sum fields are only present if {ORIGINAL,MINE,INCOMING}_NODE_KIND
 is "file".

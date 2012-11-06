@@ -92,7 +92,7 @@ svn_fs_bdb__miscellaneous_set(svn_fs_t *fs,
   if (val == NULL)
     {
       svn_fs_base__trail_debug(trail, "miscellaneous", "del");
-      return BDB_WRAP(fs, "deleting record from 'miscellaneous' table",
+      return BDB_WRAP(fs, N_("deleting record from 'miscellaneous' table"),
                       bfd->miscellaneous->del(bfd->miscellaneous,
                                               trail->db_txn, &key, 0));
     }
@@ -100,7 +100,7 @@ svn_fs_bdb__miscellaneous_set(svn_fs_t *fs,
     {
       svn_fs_base__str_to_dbt(&value, val);
       svn_fs_base__trail_debug(trail, "miscellaneous", "add");
-      return BDB_WRAP(fs, "storing miscellaneous record",
+      return BDB_WRAP(fs, N_("storing miscellaneous record"),
                       bfd->miscellaneous->put(bfd->miscellaneous,
                                               trail->db_txn,
                                               &key, &value, 0));
@@ -128,7 +128,7 @@ svn_fs_bdb__miscellaneous_get(const char **val,
 
   if (db_err != DB_NOTFOUND)
     {
-      SVN_ERR(BDB_WRAP(fs, "fetching miscellaneous record", db_err));
+      SVN_ERR(BDB_WRAP(fs, N_("fetching miscellaneous record"), db_err));
       *val = apr_pstrmemdup(pool, value.data, value.size);
     }
   return SVN_NO_ERROR;

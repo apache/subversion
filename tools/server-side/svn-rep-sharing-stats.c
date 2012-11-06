@@ -42,8 +42,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svn-rep-sharing-stats", TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svn-rep-sharing-stats", TRUE, FALSE, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -91,8 +91,8 @@ check_lib_versions(void)
       { "svn_fs",     svn_fs_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 
@@ -421,7 +421,6 @@ int
 main(int argc, const char *argv[])
 {
   const char *repos_path;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_boolean_t prop = FALSE, data = FALSE;
   svn_boolean_t quiet = FALSE;
@@ -446,13 +445,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();

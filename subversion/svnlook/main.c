@@ -380,8 +380,8 @@ check_lib_versions(void)
       { "svn_diff",  svn_diff_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -445,7 +445,6 @@ generate_delta_tree(svn_repos_node_t **tree,
                     svn_repos_t *repos,
                     svn_fs_root_t *root,
                     svn_revnum_t base_rev,
-                    svn_boolean_t use_copy_history,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *base_root;
@@ -462,7 +461,7 @@ generate_delta_tree(svn_repos_node_t **tree,
                                 base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, FALSE,
+  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, TRUE,
                             editor, edit_baton, NULL, NULL, edit_pool));
 
   /* Return the tree we just built. */
@@ -784,11 +783,16 @@ generate_label(const char **label,
    If TOKEN is empty, or is already terminated by an EOL marker,
    return TOKEN unmodified. Else, return a new string consisting
    of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL. */
+   The new string is allocated from POOL.
+   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
 static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
+                 apr_pool_t *pool)
 {
   const char *curp;
+
+  if (had_eol)
+    *had_eol = FALSE;
 
   if (token->len == 0)
     return token;
@@ -796,6 +800,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
   curp = token->data + token->len - 1;
   if (*curp == '\r')
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
   else if (*curp != '\n')
@@ -804,6 +810,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
   else
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
 }
@@ -860,19 +868,20 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
+        svn_boolean_t val_has_eol;
 
         SVN_ERR(svn_stream_for_stdout(&out, pool));
 
         /* The last character in a property is often not a newline.
-           Since the diff is not useful anyway for patching properties an
-           eol character is appended when needed to remove those pescious
-           ' \ No newline at end of file' lines. */
-        tmp = orig_value ? orig_value : svn_string_create("", pool);
-        orig = maybe_append_eol(tmp, pool);
+           An eol character is appended to prevent the diff API to add a
+           ' \ No newline at end of file' line. We add
+           ' \ No newline at end of property' manually if needed. */
+        tmp = orig_value ? orig_value : svn_string_create_empty(pool);
+        orig = maybe_append_eol(tmp, NULL, pool);
 
         tmp = pc->value ? pc->value :
-                                  svn_string_create("", pool);
-        val = maybe_append_eol(tmp, pool);
+                                  svn_string_create_empty(pool);
+        val = maybe_append_eol(tmp, &val_has_eol, pool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
 
@@ -888,6 +897,11 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
                                            svn_dirent_local_style(path, pool),
                                            svn_cmdline_output_encoding(pool),
                                            orig, val, pool));
+        if (!val_has_eol)
+          {
+            const char *s = "\\ No newline at end of property" APR_EOL_STR;
+            SVN_ERR(svn_stream_puts(out, s));
+          }
       }
     }
   return svn_cmdline_fflush(stdout);
@@ -921,7 +935,7 @@ print_diff_tree(svn_fs_root_t *root,
   if (! node)
     return SVN_NO_ERROR;
 
-  header = svn_stringbuf_create("", pool);
+  header = svn_stringbuf_create_empty(pool);
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM(node->copyfrom_rev))
@@ -1268,6 +1282,30 @@ print_tree(svn_fs_root_t *root,
 }
 
 
+/* Set *BASE_REV to the revision on which the target root specified in
+   C is based, or to SVN_INVALID_REVNUM when C represents "revision
+   0" (because that revision isn't based on another revision). */
+static svn_error_t *
+get_base_rev(svn_revnum_t *base_rev, svnlook_ctxt_t *c, apr_pool_t *pool)
+{
+  if (c->is_revision)
+    {
+      *base_rev = c->rev_id - 1;
+    }
+  else
+    {
+      *base_rev = svn_fs_txn_base_revision(c->txn);
+
+      if (! SVN_IS_VALID_REVNUM(*base_rev))
+        return svn_error_createf
+          (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+           _("Transaction '%s' is not based on a revision; how odd"),
+           c->txn_name);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Subcommand handlers. ***/
 
@@ -1374,19 +1412,11 @@ do_dirs_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
-
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_dirs_changed_tree(tree, "", pool));
 
@@ -1480,19 +1510,11 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
-
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_changed_tree(tree, "", c->copy_info, pool));
 
@@ -1509,19 +1531,11 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR(get_root(&root, c, pool));
-  if (c->is_revision)
-    base_rev_id = c->rev_id - 1;
-  else
-    base_rev_id = svn_fs_txn_base_revision(c->txn);
+  SVN_ERR(get_base_rev(&base_rev_id, c, pool));
+  if (base_rev_id == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
-  if (! SVN_IS_VALID_REVNUM(base_rev_id))
-    return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       _("Transaction '%s' is not based on a revision; how odd"),
-       c->txn_name);
-
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     {
       const char *tmpdir;
@@ -1778,7 +1792,7 @@ do_plist(svnlook_ctxt_t *c,
       if (verbose)
         {
           if (xml)
-            svn_cmdline__print_xml_prop(&sb, pname, propval, pool);
+            svn_cmdline__print_xml_prop(&sb, pname, propval, FALSE, pool);
           else
             {
               const char *pname_stdout;
@@ -2035,9 +2049,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help3(os, "svnlook",
+  SVN_ERR(svn_opt_print_help4(os, "svnlook",
                               opt_state ? opt_state->version : FALSE,
                               opt_state ? opt_state->quiet : FALSE,
+                              opt_state ? opt_state->verbose : FALSE,
                               version_footer->data,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
@@ -2239,7 +2254,6 @@ main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -2256,13 +2270,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -2440,7 +2448,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnlook__version,  /* must accept its own option */
-                   'q',
+                   'q', 'v',
                   } };
 
               subcommand = &pseudo_cmd;

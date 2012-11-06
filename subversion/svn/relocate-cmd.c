@@ -50,7 +50,7 @@ svn_cl__relocate(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   svn_boolean_t ignore_externals = opt_state->ignore_externals;
   apr_array_header_t *targets;
-  const char *from = NULL, *to = NULL, *path;
+  const char *from, *to, *path;
 
   /* We've got two different syntaxes to support:
 

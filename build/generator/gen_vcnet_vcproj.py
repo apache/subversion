@@ -115,6 +115,7 @@ class Generator(gen_win.WinGeneratorBase):
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       'version' : self.vcproj_version,
+      'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
       }
 
     if self.vcproj_extension == '.vcproj':
@@ -122,10 +123,6 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
       self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
-
-  def find_rootpath(self):
-    "Gets the root path as understand by the project system"
-    return "$(SolutionDir)"
 
   def write(self):
     "Write a Solution (.sln)"
@@ -141,14 +138,14 @@ class Generator(gen_win.WinGeneratorBase):
                                    key=lambda t: t[0]):
       sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
                           source=sqlfile[0].replace('/', '\\'),
-                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]],
-                          svn_python=sys.executable))
+                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]]))
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
     self.move_proj_file(self.projfilesdir,
                         'svn_config' + self.vcproj_extension,
                           (
+                            ('svn_python', sys.executable),
                             ('sql', sql),
                             ('project_guid', self.makeguid('__CONFIG__')),
                           )
@@ -159,7 +156,6 @@ class Generator(gen_win.WinGeneratorBase):
                           ('project_guid', self.makeguid('svn_locale')),
                         ))
     self.write_zlib_project_file('zlib' + self.vcproj_extension)
-    self.write_neon_project_file('neon' + self.vcproj_extension)
     self.write_serf_project_file('serf' + self.vcproj_extension)
 
     install_targets = self.get_install_targets()
@@ -202,7 +198,8 @@ class Generator(gen_win.WinGeneratorBase):
         if depends[i].fname.startswith(self.projfilesdir):
           path = depends[i].fname[len(self.projfilesdir) + 1:]
         else:
-          path = '$(SolutionDir)' + depends[i].fname
+          path = os.path.join(os.path.relpath('.', self.projfilesdir),
+                              depends[i].fname)
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,

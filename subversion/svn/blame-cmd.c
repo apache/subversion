@@ -203,11 +203,11 @@ blame_receiver(void *baton,
          we may need to adjust this. */
       if (merged_revision < revision)
         {
-          SVN_ERR(svn_stream_printf(out, pool, "G "));
+          SVN_ERR(svn_stream_puts(out, "G "));
           use_merged = TRUE;
         }
       else
-        SVN_ERR(svn_stream_printf(out, pool, "  "));
+        SVN_ERR(svn_stream_puts(out, "  "));
     }
 
   if (use_merged)
@@ -283,7 +283,7 @@ svn_cl__blame(apr_getopt_t *os,
   if (! opt_state->xml)
     SVN_ERR(svn_stream_for_stdout(&bl.out, pool));
   else
-    bl.sbuf = svn_stringbuf_create("", pool);
+    bl.sbuf = svn_stringbuf_create_empty(pool);
 
   bl.opt_state = opt_state;
 

@@ -160,7 +160,7 @@ def commit_one_file(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  omega_path = sbox.ospath('A/D/H/omega')
 
   # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
@@ -186,7 +186,7 @@ def commit_one_new_file(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  gloo_path = sbox.ospath('A/D/H/gloo')
 
   # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
@@ -212,7 +212,7 @@ def commit_one_new_binary_file(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  gloo_path = sbox.ospath('A/D/H/gloo')
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', gloo_path)
 
@@ -241,12 +241,12 @@ def commit_multiple_targets(sbox):
   # This test will commit three targets:  psi, B, and pi.  In that order.
 
   # Make local mods to many files.
-  AB_path = os.path.join(wc_dir, 'A', 'B')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  AB_path = sbox.ospath('A/B')
+  lambda_path = sbox.ospath('A/B/lambda')
+  rho_path = sbox.ospath('A/D/G/rho')
+  pi_path = sbox.ospath('A/D/G/pi')
+  omega_path = sbox.ospath('A/D/H/omega')
+  psi_path = sbox.ospath('A/D/H/psi')
   svntest.main.file_append(lambda_path, 'new appended text for lambda')
   svntest.main.file_append(rho_path, 'new appended text for rho')
   svntest.main.file_append(pi_path, 'new appended text for pi')
@@ -255,7 +255,7 @@ def commit_multiple_targets(sbox):
 
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
-  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  ADG_path = sbox.ospath('A/D/G')
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Create expected output tree for 'svn ci'.  We should see changes
@@ -295,12 +295,12 @@ def commit_multiple_targets_2(sbox):
   # This test will commit four targets:  psi, B, omega and pi.  In that order.
 
   # Make local mods to many files.
-  AB_path = os.path.join(wc_dir, 'A', 'B')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  AB_path = sbox.ospath('A/B')
+  lambda_path = sbox.ospath('A/B/lambda')
+  rho_path = sbox.ospath('A/D/G/rho')
+  pi_path = sbox.ospath('A/D/G/pi')
+  omega_path = sbox.ospath('A/D/H/omega')
+  psi_path = sbox.ospath('A/D/H/psi')
   svntest.main.file_append(lambda_path, 'new appended text for lambda')
   svntest.main.file_append(rho_path, 'new appended text for rho')
   svntest.main.file_append(pi_path, 'new appended text for pi')
@@ -309,7 +309,7 @@ def commit_multiple_targets_2(sbox):
 
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
-  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  ADG_path = sbox.ospath('A/D/G')
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Created expected output tree for 'svn ci'.  We should see changes
@@ -350,7 +350,7 @@ def commit_inclusive_dir(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path = sbox.ospath('A/D')
 
   # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
@@ -440,7 +440,7 @@ def commit_unversioned_thing(sbox):
   wc_dir = sbox.wc_dir
 
   # Create an unversioned file in the wc.
-  svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see")
+  svntest.main.file_append(sbox.ospath('blorg'), "nothing to see")
 
   # Commit a non-existent file and *expect* failure:
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -459,7 +459,7 @@ def nested_dir_replacements(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_D = os.path.join(wc_dir, 'A', 'D')
+  A_D = sbox.ospath('A/D')
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', A_D)
@@ -542,7 +542,7 @@ def hudson_part_1(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
@@ -593,7 +593,7 @@ def hudson_part_1_variation_1(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove H from the working copy.
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  H_path = sbox.ospath('A/D/H')
   svntest.main.run_svn(None, 'rm', H_path)
 
   # Create expected commit output.
@@ -644,7 +644,7 @@ def hudson_part_1_variation_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
@@ -703,8 +703,8 @@ def hudson_part_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  D_path = sbox.ospath('A/D')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
@@ -751,8 +751,8 @@ def hudson_part_2_1(sbox):
   wc_dir = sbox.wc_dir
 
   # Move all the files in H to G
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  H_path = sbox.ospath('A/D/H')
+  G_path = sbox.ospath('A/D/G')
   chi_path = os.path.join(H_path, 'chi')
   psi_path = os.path.join(H_path, 'psi')
   omega_path = os.path.join(H_path, 'omega')
@@ -842,7 +842,7 @@ fp.close()"""
                                          hook_format % "post_commit_hook")
 
   # Modify iota just so there is something to commit.
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, no output expected.
@@ -880,10 +880,10 @@ def merge_mixed_revisions(sbox):
   wc_dir = sbox.wc_dir
 
   # Make some convenient paths.
-  iota_path = os.path.join(wc_dir, 'iota')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  iota_path = sbox.ospath('iota')
+  H_path = sbox.ospath('A/D/H')
+  chi_path = sbox.ospath('A/D/H/chi')
+  omega_path = sbox.ospath('A/D/H/omega')
 
   # Here's the reproduction formula, in 5 parts.
   # Hoo, what a buildup of state!
@@ -1029,15 +1029,15 @@ def commit_uri_unsafe(sbox):
     nasty_name = '#![]{}()<>%'
 
   # Make some convenient paths.
-  hash_dir = os.path.join(wc_dir, '#hash#')
+  hash_dir = sbox.ospath('#hash#')
   nasty_dir = os.path.join(wc_dir, nasty_name)
-  space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
-  bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
-  bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
-  brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
+  space_path = sbox.ospath('A/D/space path')
+  bang_path = sbox.ospath('A/D/H/bang!')
+  bracket_path = sbox.ospath('A/D/H/bra[ket')
+  brace_path = sbox.ospath('A/D/H/bra{e')
   angle_path = os.path.join(wc_dir, 'A', 'D', 'H', angle_name)
-  paren_path = os.path.join(wc_dir, 'A', 'D', 'pare)(theses')
-  percent_path = os.path.join(wc_dir, '#hash#', 'percen%')
+  paren_path = sbox.ospath('A/D/pare)(theses')
+  percent_path = sbox.ospath('#hash#/percen%')
   nasty_path = os.path.join(wc_dir, 'A', nasty_name)
 
   os.mkdir(hash_dir)
@@ -1099,8 +1099,8 @@ def commit_deleted_edited(sbox):
   wc_dir = sbox.wc_dir
 
   # Make some convenient paths.
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
 
   # Edit the files.
   svntest.main.file_append(iota_path, "This file has been edited.")
@@ -1134,21 +1134,28 @@ def commit_in_dir_scheduled_for_addition(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = os.path.join(wc_dir, 'A')
-  Z_path = os.path.join(wc_dir, 'Z')
-  mu_path = os.path.join(wc_dir, 'Z', 'mu')
+  A_path = sbox.ospath('A')
+  Z_path = sbox.ospath('Z')
+  Z_abspath = os.path.abspath(Z_path)
+  mu_path = sbox.ospath('Z/mu')
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
+
+  # Make sure mu is a committable
+  svntest.main.file_write(mu_path, "xxxx")
 
   # Commit a copied thing inside an added-with-history directory,
   # expecting a specific error to occur!
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the",
                                         mu_path)
 
-  Q_path = os.path.join(wc_dir, 'Q')
+  Q_path = sbox.ospath('Q')
+  Q_abspath = os.path.abspath(Q_path)
   bloo_path = os.path.join(Q_path, 'bloo')
 
   os.mkdir(Q_path)
@@ -1160,8 +1167,23 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "svn: E200009: '" +
+                                        re.escape(Q_abspath) +
+                                        "' is not known to exist in the",
                                         bloo_path)
+
+  R_path = sbox.ospath('Z/B/R')
+  sbox.simple_mkdir('Z/B/R')
+
+  # Commit a d added thing inside an added directory,
+  # expecting a specific error to occur!
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the.*",
+                                        R_path)
 
 #----------------------------------------------------------------------
 
@@ -1171,7 +1193,7 @@ def commit_rmd_and_deleted_file(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   # 'svn remove' mu
   svntest.main.run_svn(None, 'rm', mu_path)
@@ -1192,7 +1214,7 @@ def commit_add_file_twice(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a file
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  gloo_path = sbox.ospath('A/D/H/gloo')
   svntest.main.file_append(gloo_path, "hello")
   svntest.main.run_svn(None, 'add', gloo_path)
 
@@ -1244,7 +1266,7 @@ def commit_from_long_dir(sbox):
   abs_wc_dir = os.path.realpath(os.path.join(was_dir, wc_dir))
 
   # something to commit
-  svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
+  svntest.main.file_append(sbox.ospath('iota'), "modified iota")
 
   # Create expected output tree.
   expected_output = svntest.wc.State('', {
@@ -1275,7 +1297,7 @@ def commit_with_lock(sbox):
   # modify gamma and lock its directory
   wc_dir = sbox.wc_dir
 
-  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path = sbox.ospath('A/D')
   gamma_path = os.path.join(D_path, 'gamma')
   svntest.main.file_append(gamma_path, "modified gamma")
   svntest.actions.lock_admin_dir(D_path)
@@ -1353,7 +1375,7 @@ def failed_commit(sbox):
   svntest.actions.duplicate_dir(wc_dir, other_wc_dir)
 
   # Make different changes in the two working copies
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   other_iota_path = os.path.join(other_wc_dir, "iota")
@@ -1392,7 +1414,7 @@ def commit_multiple_wc_nested(sbox):
   wc_dir = sbox.wc_dir
 
   # Checkout a second working copy
-  wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
+  wc2_dir = sbox.ospath('A/wc2')
   url = sbox.repo_url
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      svntest.verify.AnyOutput, [],
@@ -1400,7 +1422,7 @@ def commit_multiple_wc_nested(sbox):
                                      url, wc2_dir)
 
   # Modify both working copies
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
   lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
   svntest.main.file_append(lambda2_path, 'appended lambda2 text')
@@ -1437,8 +1459,8 @@ def commit_multiple_wc(sbox):
   svntest.sandbox._cleanup_test_path(wc_dir)
 
   # Checkout two wcs
-  wc1_dir = os.path.join(wc_dir, 'wc1')
-  wc2_dir = os.path.join(wc_dir, 'wc2')
+  wc1_dir = sbox.ospath('wc1')
+  wc2_dir = sbox.ospath('wc2')
   url = sbox.repo_url
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      svntest.verify.AnyOutput, [],
@@ -1493,8 +1515,8 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.sandbox._cleanup_test_path(wc_dir)
 
   # Checkout two wcs
-  wc1_dir = os.path.join(wc_dir, 'wc1')
-  wc2_dir = os.path.join(wc_dir, 'wc2')
+  wc1_dir = sbox.ospath('wc1')
+  wc2_dir = sbox.ospath('wc2')
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      svntest.verify.AnyOutput, [],
                                      'checkout',
@@ -1769,7 +1791,7 @@ def commit_out_of_date_deletions(sbox):
   wc_dir = sbox.wc_dir
 
   # Need another empty dir
-  I_path = os.path.join(wc_dir, 'A', 'I')
+  I_path = sbox.ospath('A/I')
   os.mkdir(I_path)
   svntest.main.run_svn(None, 'add', I_path)
   svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
@@ -1780,19 +1802,19 @@ def commit_out_of_date_deletions(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Edits in wc 1
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  C_path = sbox.ospath('A/C')
+  omega_path = sbox.ospath('A/D/H/omega')
+  alpha_path = sbox.ospath('A/B/E/alpha')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
   svntest.main.file_append(omega_path, 'appended omega text')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', alpha_path)
 
   # Deletions in wc 1
-  I_path = os.path.join(wc_dir, 'A', 'I')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  I_path = sbox.ospath('A/I')
+  F_path = sbox.ospath('A/B/F')
+  chi_path = sbox.ospath('A/D/H/chi')
+  beta_path = sbox.ospath('A/B/E/beta')
+  psi_path = sbox.ospath('A/D/H/psi')
   svntest.main.run_svn(None, 'rm', I_path, F_path, chi_path, beta_path,
                        psi_path)
 
@@ -1849,8 +1871,8 @@ def commit_with_bad_log_message(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message')
+  iota_path = sbox.ospath('iota')
+  log_msg_path = sbox.ospath('log-message')
 
   # Make a random change, so there's something to commit.
   svntest.main.file_append(iota_path, 'fish')
@@ -1873,8 +1895,8 @@ def commit_with_mixed_line_endings(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message')
+  iota_path = sbox.ospath('iota')
+  log_msg_path = sbox.ospath('log-message')
 
   # Make a random change, so there's something to commit.
   svntest.main.file_append(iota_path, 'kebab')
@@ -1897,8 +1919,8 @@ def commit_with_mixed_line_endings_in_ignored_part(sbox):
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message')
+  iota_path = sbox.ospath('iota')
+  log_msg_path = sbox.ospath('log-message')
 
   # Make a random change, so there's something to commit.
   svntest.main.file_append(iota_path, 'cheeseburger')
@@ -1968,7 +1990,7 @@ def mods_in_schedule_delete(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule a delete, then put in local mods
-  C_path = os.path.join(wc_dir, 'A', 'C')
+  C_path = sbox.ospath('A/C')
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'rm', C_path)
 
@@ -2004,8 +2026,8 @@ def tab_test(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  tab_file = os.path.join(wc_dir, 'A', "tab\tfile")
-  tab_dir  = os.path.join(wc_dir, 'A', "tab\tdir")
+  tab_file = sbox.ospath('A/tab\tfile')
+  tab_dir  = sbox.ospath('A/tab\tdir')
   source_url = sbox.repo_url + "/source_dir"
   tab_url = sbox.repo_url + "/tab%09dir"
 
@@ -2069,30 +2091,30 @@ def local_mods_are_not_commits(sbox):
   # copy wc->wc
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'cp', '-m', 'log msg',
-                                     os.path.join(wc_dir, 'iota'),
-                                     os.path.join(wc_dir, 'iota2'))
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('iota2'))
 
   # copy repos->wc
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'cp', '-m', 'log msg',
                                      sbox.repo_url + "/iota",
-                                     os.path.join(wc_dir, 'iota2'))
+                                     sbox.ospath('iota2'))
 
   # delete
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'rm', '-m', 'log msg',
-                                     os.path.join(wc_dir, 'A', 'D', 'gamma'))
+                                     sbox.ospath('A/D/gamma'))
 
   # mkdir
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log msg',
-                                     os.path.join(wc_dir, 'newdir'))
+                                     sbox.ospath('newdir'))
 
   # rename
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'cp', '-m', 'log msg',
-                                     os.path.join(wc_dir, 'A', 'mu'),
-                                     os.path.join(wc_dir, 'A', 'yu'))
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('A/yu'))
 
 
 #----------------------------------------------------------------------
@@ -2114,7 +2136,7 @@ def post_commit_hook_test(sbox):
   svntest.actions.create_failing_hook(repo_dir, "post-commit", error_msg)
 
   # Modify iota just so there is something to commit.
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "lakalakalakalaka")
 
   # Now, commit and examine the output (we happen to know that the
@@ -2141,7 +2163,7 @@ def commit_same_folder_in_targets(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   svntest.main.file_append(iota_path, "added extra line to file iota")
 
@@ -2174,8 +2196,8 @@ def commit_inconsistent_eol(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
 
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
   svntest.main.file_append_binary(iota_path,
@@ -2241,8 +2263,8 @@ def commit_with_revprop(sbox):
   wc_dir = sbox.wc_dir
   expected_status = make_standard_slew_of_changes(wc_dir)
 
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  omega_path = sbox.ospath('A/D/H/omega')
+  gloo_path = sbox.ospath('A/D/H/gloo')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/omega' : Item(verb='Sending'),
     'A/D/H/gloo' : Item(verb='Adding'),
@@ -2274,8 +2296,8 @@ def import_with_revprop(sbox):
   "set revision props during import"
 
   sbox.build()
-  local_dir = os.path.join(sbox.wc_dir, 'folder')
-  local_file = os.path.join(sbox.wc_dir, 'folder', 'file')
+  local_dir = sbox.ospath('folder')
+  local_file = sbox.ospath('folder/file')
   os.mkdir(local_dir)
   svntest.main.file_write(local_file, "xxxx")
 
@@ -2323,7 +2345,7 @@ def copy_WC2R_with_revprop(sbox):
 
   sbox.build()
   remote_dir = sbox.repo_url + "/dir"
-  local_dir = os.path.join(sbox.wc_dir, 'folder')
+  local_dir = sbox.ospath('folder')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mkdir', local_dir)
 
@@ -2496,7 +2518,7 @@ def start_commit_hook_test(sbox):
   svntest.actions.create_failing_hook(repo_dir, "start-commit", error_msg)
 
   # Modify iota just so there is something to commit.
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
@@ -2536,7 +2558,7 @@ def pre_commit_hook_test(sbox):
   svntest.actions.create_failing_hook(repo_dir, "pre-commit", error_msg)
 
   # Modify iota just so there is something to commit.
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
@@ -2602,9 +2624,9 @@ def changelist_near_conflict(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
-  iota_path = os.path.join(wc_dir, "iota")
-  mu_path = os.path.join(wc_dir, "A", "mu")
-  gloo_path = os.path.join(wc_dir, "A", "D", "H", "gloo")
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+  gloo_path = sbox.ospath('A/D/H/gloo')
 
   expected_status = make_standard_slew_of_changes(wc_dir)
 
@@ -2643,7 +2665,7 @@ def commit_out_of_date_file(sbox):
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  pi_path = sbox.ospath('A/D/G/pi')
   backup_pi_path = os.path.join(wc_backup, 'A', 'D', 'G', 'pi')
 
   svntest.main.file_append(pi_path, "new line\n")
@@ -2686,7 +2708,7 @@ def start_commit_detect_capabilities(sbox):
   svntest.main.create_python_hook_script(start_commit_hook, hook_text)
 
   # Commit something.
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
   svntest.main.file_append(iota_path, "More stuff in iota")
   svntest.actions.run_and_verify_svn(None, [], [], 'ci', '--quiet',
                                      '-m', 'log msg', wc_dir)
@@ -2708,9 +2730,9 @@ def commit_added_missing(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  a_path = os.path.join(wc_dir, 'A', 'a.txt')
-  b_path = os.path.join(wc_dir, 'A', 'b.txt')
+  mu_path = sbox.ospath('A/mu')
+  a_path = sbox.ospath('A/a.txt')
+  b_path = sbox.ospath('A/b.txt')
 
   # Make two copies of mu: a and b
   svntest.main.run_svn(None, 'cp', mu_path, a_path)
@@ -2743,9 +2765,9 @@ def tree_conflicts_block_commit(sbox):
 
   svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
-  A = os.path.join(wc_dir, 'A')
-  D = os.path.join(wc_dir, 'A', 'D')
-  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  A = sbox.ospath('A')
+  D = sbox.ospath('A/D')
+  G = sbox.ospath('A/D/G')
 
   error_re = "remains in conflict"
   commit_fails_at_path(wc_dir, wc_dir, error_re)
@@ -2770,7 +2792,7 @@ def tree_conflicts_resolved(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
 
   # Mark the tree conflict victims as resolved
-  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  G = sbox.ospath('A/D/G')
   victims = [ os.path.join(G, v) for v in ['pi', 'rho', 'tau'] ]
   svntest.actions.run_and_verify_resolved(victims)
 
@@ -2796,14 +2818,130 @@ def commit_multiple_nested_deletes(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A = os.path.join(wc_dir, 'A')
+  A = sbox.ospath('A')
   A_B = os.path.join(A, 'B')
 
   sbox.simple_rm('A')
 
   svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
 
+@Issue(4042)
+def commit_incomplete(sbox):
+  "commit an incomplete dir"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('pname', 'pval', 'A/B')
+  svntest.actions.set_incomplete(sbox.ospath('A/B'), 1)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B' : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',  status='! ', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+# Reported here:
+#   Message-ID: <4EBF0FC9.300@gmail.com>
+#   Date: Sun, 13 Nov 2011 13:31:05 +1300
+#   From: Fergus Slorach <sugref@gmail.com>
+#   Subject: svn commit --targets behaviour change in 1.7?
+@Issue(4059)
+def commit_add_subadd(sbox):
+  "committing add with explicit subadd targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  targets_file = sbox.ospath('targets') # ### better tempdir?
+  targets_file = os.path.abspath(targets_file)
+
+  # prepare targets file
+  targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
+  open(targets_file, 'w').write("\n".join(targets))
+
+  # r2: rm A/D
+  sbox.simple_rm('A/D')
+  sbox.simple_commit(message='rm')
+
+  # r3: revert r2, with specific invocation
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '-c', '-2', './')
+  svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
+
+def commit_danglers(sbox):
+  "verify committing some dangling children fails"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('A','A_copied')
+
+  A_copied = sbox.ospath('A_copied')
+  mu_copied = sbox.ospath('A_copied/mu')
+
+  svntest.main.file_write(mu_copied, "xxxx")  
+
+  # We already test for this problem for some time
+  expected_error = "svn: E200009: '.*A_copied' .*exist.*yet.* '.*mu'.*part"
+  svntest.actions.run_and_verify_commit(mu_copied,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        mu_copied)
+
+  # But now do the same thing via changelist filtering
+  svntest.main.run_svn(None, 'changelist', 'L', mu_copied, sbox.ospath('A/mu'))
+
+  # And try to commit A_copied itself with changelist filtering
+  svntest.actions.run_and_verify_commit(A_copied,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        A_copied, '--cl', 'L')
+
+  # And on the wcroot
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        wc_dir, '--cl', 'L')
+
+#----------------------------------------------------------------------
+# Test for issue 4203: Commit of moved dir with modified file in
+# dir/subdir should bump LastChangedRev of subdir in originating WC
+@XFail()
+@Issue(4203)
+def commit_moved_dir_with_nested_mod_in_subdir(sbox):
+  "commit of moved dir with nested mod in subdir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move('A/B','A/B_copied')
+
+  B_copied = sbox.ospath('A/B_copied')
+  E_copied = sbox.ospath('A/B_copied/E')
+  alpha_copied = sbox.ospath('A/B_copied/E/alpha')
+
+  svntest.main.file_write(alpha_copied, "xxxx") 
+  
+  svntest.main.run_svn(None, 'commit', wc_dir, '-mm')
+
+  expected = {'Revision'          : '2',
+              'Last Changed Rev'  : '2',
+             }
+  svntest.actions.run_and_verify_info([expected], E_copied)
+  
+  
 ########################################################################
 # Run the tests
 
@@ -2871,6 +3009,10 @@ test_list = [ None,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
+              commit_incomplete,
+              commit_add_subadd,
+              commit_danglers,
+              commit_moved_dir_with_nested_mod_in_subdir,
              ]
 
 if __name__ == '__main__':

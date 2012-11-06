@@ -42,13 +42,21 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
                                apr_pool_t *pool);
 
-/* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
-   Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
-                                const char *dst_path,
-                                apr_pool_t *pool);
+/* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
+ * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
+ * exists in DST_FS. Use POOL for temporary allocations. */
+svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
+                                 svn_fs_t *dst_fs,
+                                 const char *src_path,
+                                 const char *dst_path,
+                                 svn_boolean_t incremental,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *pool);
 
 /* Recover the fsfs associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
@@ -100,6 +108,12 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
+/* Return an error iff REV does not exist in FS. */
+svn_error_t *
+svn_fs_fs__revision_exists(svn_revnum_t rev,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
+
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
@@ -117,14 +131,16 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
-   by NODEREV in filesystem FS.  The returned object is allocated in POOL,
-   which is also used for temporary allocations. */
+   by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
+   be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
+   used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
                                   const char *name,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.
@@ -132,6 +148,20 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
 svn_error_t *svn_fs_fs__get_contents(svn_stream_t **contents,
                                      svn_fs_t *fs,
                                      node_revision_t *noderev,
+                                     apr_pool_t *pool);
+
+/* Attempt to fetch the text representation of node-revision NODEREV as
+   seen in filesystem FS and pass it along with the BATON to the PROCESSOR.
+   Set *SUCCESS only of the data could be provided and the processing
+   had been called.
+   Use POOL for all allocations.
+ */
+svn_error_t *
+svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
+                                     svn_fs_t *fs,
+                                     node_revision_t *noderev,
+                                     svn_fs_process_contents_func_t processor,
+                                     void* baton,
                                      apr_pool_t *pool);
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
@@ -339,12 +369,6 @@ svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
 svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
-
-/* Store the uuid of the repository FS in *UUID.  Allocate space in
-   POOL. */
-svn_error_t *svn_fs_fs__get_uuid(svn_fs_t *fs,
-                                 const char **uuid,
-                                 apr_pool_t *pool);
 
 /* Set the uuid of repository FS to UUID, if UUID is not NULL;
    otherwise, set the uuid of FS to a newly generated UUID.  Perform

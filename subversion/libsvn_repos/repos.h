@@ -85,6 +85,11 @@ extern "C" {
 /* The extension added to the names of example hook scripts. */
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
 
+/* The file which contains a custom set of environment variables
+ * passed inherited to hook scripts, in the repository conf directory. */
+#define SVN_REPOS__CONF_HOOKS_ENV "hooks-env"
+/* The name of the default section in the hooks-env config file. */
+#define SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION "default"
 
 /* The configuration file for svnserve, in the repository conf directory. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
@@ -140,6 +145,18 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
+
+  /* The environment inherited to hook scripts. If NULL, hooks run
+   * in an empty environment.
+   *
+   * This is a nested hash table.
+   * The entry with name SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION contains the
+   * default environment for all hooks in form of an apr_hash_t with keys
+   * and values describing the names and values of environment variables.
+   * Defaults can be overridden by an entry matching the name of a hook.
+   * E.g. an entry with the name SVN_REPOS__HOOK_PRE_COMMIT provides the
+   * environment specific to the pre-commit hook. */
+  apr_hash_t *hooks_env;
 };
 
 
@@ -149,14 +166,19 @@ struct svn_repos_t
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
    USER is the authenticated name of the user starting the commit.
+
    CAPABILITIES is a list of 'const char *' capability names (using
    SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
    there is no guarantee the client is telling the truth: the hook
-   should not make security assumptions based on the capabilities. */
+   should not make security assumptions based on the capabilities.
+
+   TXN_NAME is the name of the commit transaction that's just been
+   created. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
                               const apr_array_header_t *capabilities,
+                              const char *txn_name,
                               apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
@@ -175,6 +197,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
 svn_error_t *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
                              svn_revnum_t rev,
+                             const char *txn_name,
                              apr_pool_t *pool);
 
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any

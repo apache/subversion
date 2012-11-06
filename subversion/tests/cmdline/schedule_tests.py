@@ -26,7 +26,9 @@
 ######################################################################
 
 # General modules
-import os
+import os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -256,8 +258,8 @@ def check_reversion(files, output):
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    print("Expected output: %s" % expected_output)
-    print("Actual output:   %s" % output)
+    logger.warn("Expected output: %s", expected_output)
+    logger.warn("Actual output:   %s", output)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -561,6 +563,7 @@ def status_add_deleted_directory(sbox):
 # Regression test for issue #939:
 # Recursive 'svn add' should still traverse already-versioned dirs.
 @Issue(939)
+@Issue(4241)
 def add_recursive_already_versioned(sbox):
   "'svn add' should traverse already-versioned dirs"
 
@@ -590,8 +593,8 @@ def add_recursive_already_versioned(sbox):
   ### or else Subversion will think you're trying to add the working copy
   ### to its parent directory, and will (possibly, if the parent directory
   ### isn't versioned) fail.
-  #svntest.main.run_svn(None, 'add', '--force', wc_dir)
-  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.run_svn(None, 'add', '--force', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now revert, and do the adds again from inside the working copy.
   svntest.main.run_svn(None, 'revert', '--recursive', wc_dir)

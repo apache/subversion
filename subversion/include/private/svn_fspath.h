@@ -55,6 +55,9 @@ svn_fspath__is_canonical(const char *fspath);
  * The returned fspath may be statically allocated or allocated from
  * @a pool.
  *
+ * This is similar to svn_fs__canonicalize_abspath() but also treats "."
+ * segments as special.
+ *
  * @since New in 1.7.
  */
 const char *
@@ -123,23 +126,6 @@ svn_boolean_t
 svn_fspath__is_root(const char *fspath,
                     apr_size_t len);
 
-/** Test if @a child_fspath is a child of @a parent_fspath.  If not, return
- * NULL.  If so, return the relpath which, if joined to @a parent_fspath,
- * would yield @a child_fspath.
- *
- * If @a child_fspath is the same as @a parent_fspath, it is not considered
- * a child, so the result is NULL; an empty string is never returned.
- *
- * If @a pool is NULL, a pointer into @a child_fspath will be returned to
- * identify the remainder fspath.
- *
- * @since New in 1.7.
- */
-const char *
-svn_fspath__is_child(const char *parent_fspath,
-                     const char *child_fspath,
-                     apr_pool_t *pool);
-
 /** Return the relative path part of @a child_fspath that is below
  * @a parent_fspath, or just "" if @a parent_fspath is equal to
  * @a child_fspath. If @a child_fspath is not below @a parent_fspath
@@ -150,15 +136,6 @@ svn_fspath__is_child(const char *parent_fspath,
 const char *
 svn_fspath__skip_ancestor(const char *parent_fspath,
                           const char *child_fspath);
-
-/** Return TRUE if @a parent_fspath is an ancestor of @a child_fspath or
- * the fspaths are equal, and FALSE otherwise.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_fspath__is_ancestor(const char *parent_fspath,
-                        const char *child_fspath);
 
 /** Return the longest common path shared by two fspaths, @a fspath1 and
  * @a fspath2.  If there's no common ancestor, return "/".
@@ -179,9 +156,7 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
 #define svn_urlpath__basename             svn_fspath__basename
 #define svn_urlpath__dirname              svn_fspath__dirname
 #define svn_urlpath__get_longest_ancestor svn_fspath__get_longest_ancestor
-#define svn_urlpath__is_ancestor          svn_fspath__is_ancestor
 #define svn_urlpath__is_canonical         svn_fspath__is_canonical
-#define svn_urlpath__is_child             svn_fspath__is_child
 #define svn_urlpath__is_root              svn_fspath__is_root
 #define svn_urlpath__join                 svn_fspath__join
 #define svn_urlpath__skip_ancestor        svn_fspath__skip_ancestor

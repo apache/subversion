@@ -57,7 +57,8 @@ LogMessageCallback::callback(void *baton,
                              apr_pool_t *pool)
 {
   if (baton)
-    return ((LogMessageCallback *)baton)->singleMessage(log_entry, pool);
+    return static_cast<LogMessageCallback *>(baton)->singleMessage(
+            log_entry, pool);
 
   return SVN_NO_ERROR;
 }
@@ -101,9 +102,10 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path = (const char *) svn__apr_hash_index_key(hi);
+          const char *path =
+            reinterpret_cast<const char *>(svn__apr_hash_index_key(hi));
           svn_log_changed_path2_t *log_item =
-                    (svn_log_changed_path2_t *) svn__apr_hash_index_val(hi);
+            reinterpret_cast<svn_log_changed_path2_t *>(svn__apr_hash_index_val(hi));
 
           jobject cp = CreateJ::ChangedPath(path, log_item);
 

@@ -88,7 +88,7 @@ fetch_repos_info(const char **repos_root,
   svn_ra_session_t *ra_session;
 
   /* The same info is likely to retrieved multiple times (e.g. externals) */
-  if (ri->last_repos && svn_uri__is_child(ri->last_repos, url, scratch_pool))
+  if (ri->last_repos && svn_uri__is_ancestor(ri->last_repos, url))
     {
       *repos_root = apr_pstrdup(result_pool, ri->last_repos);
       *repos_uuid = apr_pstrdup(result_pool, ri->last_uuid);
@@ -144,8 +144,9 @@ svn_client_upgrade(const char *path,
      upgrade to avoid that errors in the externals causes the wc upgrade to
      fail. Thanks to caching the performance penalty of walking the wc a
      second time shouldn't be too severe */
-  SVN_ERR(svn_client_propget4(&externals, SVN_PROP_EXTERNALS, local_abspath,
-                              &rev, &rev, NULL, svn_depth_infinity, NULL, ctx,
+  SVN_ERR(svn_client_propget5(&externals, NULL, SVN_PROP_EXTERNALS,
+                              local_abspath, &rev, &rev, NULL,
+                              svn_depth_infinity, NULL, ctx,
                               scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);

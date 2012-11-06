@@ -1467,7 +1467,7 @@ stream_translated(svn_stream_t *stream,
     = create_translation_baton(eol_str, translated_eol, repair, keywords,
                                expand, result_pool);
   baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create("", result_pool);
+  baton->readbuf = svn_stringbuf_create_empty(result_pool);
   baton->readbuf_off = 0;
   baton->iterpool = svn_pool_create(result_pool);
   baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
@@ -1522,7 +1522,7 @@ translate_cstring(const char **dst,
     }
 
   /* Create a stringbuf and wrapper stream to hold the output. */
-  dst_stringbuf = svn_stringbuf_create("", pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
   dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
 
   if (translated_eol)
@@ -1613,7 +1613,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   if (! strncmp(identifier, SVN_SUBST__SPECIAL_LINK_STR " ",
-                strlen(SVN_SUBST__SPECIAL_LINK_STR " ")))
+                sizeof(SVN_SUBST__SPECIAL_LINK_STR " ")-1))
     {
       /* For symlinks, the type specific data is just a filesystem
          path that the symlink should reference. */
@@ -1813,7 +1813,7 @@ svn_subst_create_specialfile(svn_stream_t **stream,
   /* SCRATCH_POOL may not exist after the function returns. */
   baton->pool = result_pool;
 
-  baton->write_content = svn_stringbuf_create("", result_pool);
+  baton->write_content = svn_stringbuf_create_empty(result_pool);
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content,
                                                   result_pool);
 
@@ -1852,7 +1852,7 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
       baton->read_stream = NULL;
     }
 
-  baton->write_content = svn_stringbuf_create("", pool);
+  baton->write_content = svn_stringbuf_create_empty(pool);
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content, pool);
 
   *stream = svn_stream_create(baton, pool);

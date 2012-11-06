@@ -36,7 +36,7 @@
 struct svn_wc__db_t {
   /* We need the config whenever we run into a new WC directory, in order
      to figure out where we should look for the corresponding datastore. */
-  const svn_config_t *config;
+  svn_config_t *config;
 
   /* Should we attempt to automatically upgrade the database when it is
      opened, and found to be not-current?  */
@@ -54,7 +54,7 @@ struct svn_wc__db_t {
   struct
   {
     svn_stringbuf_t *abspath;
-    svn_node_kind_t kind;
+    svn_kind_t kind;
   } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
@@ -148,6 +148,24 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
     (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
 
+/* Calculates the depth of the relpath below "" */
+APR_INLINE static int
+relpath_depth(const char *relpath)
+{
+  int n = 1;
+  if (*relpath == '\0')
+    return 0;
+
+  do
+  {
+    if (*relpath == '/')
+      n++;
+  }
+  while (*(++relpath));
+
+  return n;
+}
+
 
 /* */
 svn_error_t *
@@ -170,9 +188,108 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
+                        svn_boolean_t exclusive,
                         const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_read_info(), but taking WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
+svn_error_t *
+svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
+                              svn_kind_t *kind,
+                              svn_revnum_t *revision,
+                              const char **repos_relpath,
+                              apr_int64_t *repos_id,
+                              svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_depth_t *depth,
+                              const svn_checksum_t **checksum,
+                              const char **target,
+                              const char **original_repos_relpath,
+                              apr_int64_t *original_repos_id,
+                              svn_revnum_t *original_revision,
+                              svn_wc__db_lock_t **lock,
+                              svn_filesize_t *recorded_size,
+                              apr_time_t *recorded_mod_time,
+                              const char **changelist,
+                              svn_boolean_t *conflicted,
+                              svn_boolean_t *op_root,
+                              svn_boolean_t *had_props,
+                              svn_boolean_t *props_mod,
+                              svn_boolean_t *have_base,
+                              svn_boolean_t *have_more_work,
+                              svn_boolean_t *have_work,
+                              svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_scan_deletion(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
+svn_error_t *
+svn_wc__db_scan_deletion_internal(const char **base_del_relpath,
+                                  const char **moved_to_relpath,
+                                  const char **work_del_relpath,
+                                  const char **moved_to_op_root_relpath,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
+svn_error_t *
+svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
+                                  svn_kind_t *kind,
+                                  svn_revnum_t *revision,
+                                  const char **repos_relpath,
+                                  apr_int64_t *repos_id,
+                                  svn_revnum_t *changed_rev,
+                                  apr_time_t *changed_date,
+                                  const char **changed_author,
+                                  svn_depth_t *depth,
+                                  const svn_checksum_t **checksum,
+                                  const char **target,
+                                  svn_wc__db_lock_t **lock,
+                                  svn_boolean_t *had_props,
+                                  svn_boolean_t *update_root,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
+ * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
+ * information about, and outputting REPOS_ID instead of URL+UUID. */
+svn_error_t *
+svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
+                          svn_kind_t *kind,
+                          svn_revnum_t *revision,
+                          const char **repos_relpath,
+                          apr_int64_t *repos_id,
+                          svn_revnum_t *changed_rev,
+                          apr_time_t *changed_date,
+                          const char **changed_author,
+                          svn_depth_t *depth,
+                          const svn_checksum_t **checksum,
+                          const char **target,
+                          svn_boolean_t *had_props,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          int op_depth,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_read_conflict(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
+svn_error_t *
+svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Transaction handling */

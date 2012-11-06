@@ -2225,7 +2225,7 @@ msgstr "Nieznany typ systemu plików: '%s'"
 #: ../libsvn_fs/fs-loader.c:313
 #, c-format
 msgid "Can't allocate FS mutex"
-msgstr "Nie udało się utworzyć semefora FS"
+msgstr "Nie udało się utworzyć semafora FS"
 
 #: ../libsvn_fs/fs-loader.c:348
 #, c-format
@@ -3675,7 +3675,7 @@ msgstr "Uzyskano nierozpoznane kodowanie: '%s'"
 #: ../libsvn_ra_neon/get_locks.c:425 ../libsvn_ra_neon/get_locks.c:429
 #: ../libsvn_ra_serf/locks.c:566
 msgid "Server does not support locking features"
-msgstr "Serwer nie obsługuje blokowania zatwiedzeń"
+msgstr "Serwer nie obsługuje blokowania zatwierdzeń"
 
 #: ../libsvn_ra_neon/lock.c:196
 msgid "Invalid creation date header value in response."
@@ -3703,7 +3703,7 @@ msgstr "'%s' nie jest zablokowane w repozytorium"
 
 #: ../libsvn_ra_neon/lock.c:553
 msgid "Failed to fetch lock information"
-msgstr "Nieudało się pobrać informacji o blokadzie"
+msgstr "Nie udało się pobrać informacji o blokadzie"
 
 #: ../libsvn_ra_neon/log.c:169 ../libsvn_ra_serf/log.c:228
 #, c-format
@@ -4751,7 +4751,7 @@ msgstr "Błąd podczas zamykania pliku null"
 #: ../libsvn_repos/hooks.c:379
 #, c-format
 msgid "Failed to run '%s' hook; broken symlink"
-msgstr "Niepowiodło się uruchomienie skryptu hook '%s'; uszkodzone dowiązanie symboliczne"
+msgstr "Nie powiodło się uruchomienie skryptu hook '%s'; uszkodzone dowiązanie symboliczne"
 
 #: ../libsvn_repos/hooks.c:589
 msgid ""
@@ -4863,7 +4863,7 @@ msgstr "Brak uprawnień do otwarcia katalogu głównego edycji"
 #: ../libsvn_repos/reporter.c:1234
 #, c-format
 msgid "Target path '%s' does not exist"
-msgstr "Docelowa śieżka '%s' nie istnieje"
+msgstr "Docelowa ścieżka '%s' nie istnieje"
 
 #: ../libsvn_repos/reporter.c:1242
 msgid "Cannot replace a directory from within"
@@ -5215,7 +5215,7 @@ msgstr "W pliku '%s' w linii %d: asercja nie udała się (%s)"
 #: ../libsvn_subr/error.c:602
 #, c-format
 msgid "In file '%s' line %d: internal malfunction"
-msgstr "W pliku '%s' w linii %d: wewnątrzne niepoprawne funkcjonowanie"
+msgstr "W pliku '%s' w linii %d: wewnętrzne niepoprawne funkcjonowanie"
 
 #: ../libsvn_subr/io.c:169
 #, c-format
@@ -5230,7 +5230,7 @@ msgstr "Nie można sprawdzić ścieżki '%s'"
 #: ../libsvn_subr/io.c:457 ../libsvn_subr/io.c:3771
 #, c-format
 msgid "Can't open '%s'"
-msgstr "Nie mozna otworzyć '%s'"
+msgstr "Nie można otworzyć '%s'"
 
 #: ../libsvn_subr/io.c:483 ../libsvn_subr/io.c:569
 #, c-format
@@ -6280,7 +6280,7 @@ msgstr "Format logów zbyt stary. Proszę użyć Subversion 1.6 lub wcześniejsz
 
 #: ../libsvn_wc/conflicts.c:299
 msgid "Invalid 'conflict_result' argument"
-msgstr "Błądny argument 'conflict_result'"
+msgstr "Błędny argument 'conflict_result'"
 
 #: ../libsvn_wc/conflicts.c:409
 #, c-format
@@ -6731,7 +6731,7 @@ msgstr "Nieprawidłowy atrybut %s dla '%s': nie można używać URL-u '%s' jako 
 #: ../libsvn_wc/props.c:2643
 #, c-format
 msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
-msgstr "Błędny atrybut %s dla '%s': cel '%s' jest ścieżką bezwględną albo wykorzystuje '..'"
+msgstr "Błędny atrybut %s dla '%s': cel '%s' jest ścieżką bezwzględną albo wykorzystuje '..'"
 
 #: ../libsvn_wc/questions.c:203
 #, fuzzy, c-format
@@ -8245,7 +8245,7 @@ msgstr ""
 "\n"
 "OSTRZEŻENIE: Dla kompatybilności z poprzednimi wersjami Subversion kopiowania\n"
 "wykonywane pomiędzy dwoma ścieżkami kopii roboczej (KR -> KR) nie kontaktują\n"
-"się z reporytorium. W związku z tym nie mogą domyślnie propagować informacji\n"
+"się z repozytorium. W związku z tym nie mogą domyślnie propagować informacji\n"
 "o łączeniach zmian ze źródła kopii do celu.\n"
 
 #: ../svn/main.c:505
@@ -8673,7 +8673,7 @@ msgstr ""
 "    E  Istniały (Existed)\n"
 "    R  Zastąpiony (Replaced)\n"
 "\n"
-"  Znaki w pierwszej kolumnia informują o samym obiekcie. Znaki w drugiej\n"
+"  Znaki w pierwszej kolumnie informują o samym obiekcie. Znaki w drugiej\n"
 "  kolumnie informują o atrybutach obiektu. 'C' w trzeciej kolumnie wskazuje\n"
 "  na konflikt drzewny, podczas gdy 'C' w pierwszej i drugiej kolumnie\n"
 "  wskazuje odpowiednio na konflikt tekstowy w plikach i w atrybutach plików.\n"
@@ -9663,7 +9663,7 @@ msgstr "Opis zmian jest ścieżką (chciano użyć -F?); użyj --force-log, by w
 
 #: ../svn/main.c:2065
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
-msgstr "Opis blokady jest ścieżką (chciano użyć -F?); użyj --force-log, bywymusić użycie takiego opisu"
+msgstr "Opis blokady jest ścieżką (chciano użyć -F?); użyj --force-log, by wymusić użycie takiego opisu"
 
 #: ../svn/main.c:2079
 msgid "--relocate and --depth are mutually exclusive"

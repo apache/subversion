@@ -80,6 +80,13 @@ typedef struct svn_sort__item_t {
      apr_array_header_t *array;
      array = svn_sort__hash(hsh, svn_sort_compare_items_as_paths, pool);
    @endcode
+ *
+ * This function works like svn_sort_compare_items_lexically() except that it
+ * orders children in subdirectories directly after their parents. This allows
+ * using the given ordering for a depth first walk, but at a performance
+ * penalty. Code that doesn't need this special behavior for children, e.g. when
+ * sorting files at a single directory level should use
+ * svn_sort_compare_items_lexically() instead.
  */
 int
 svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
@@ -112,9 +119,9 @@ svn_sort_compare_revisions(const void *a,
 
 
 /**
- * Compare two @c const char * paths, returning an integer greater
- * than, equal to, or less than 0, using the same comparison rules as
- * are used by svn_path_compare_paths().
+ * Compare two @c const char * paths, @a *a and @a *b, returning an
+ * integer greater than, equal to, or less than 0, using the same
+ * comparison rules as are used by svn_path_compare_paths().
  *
  * This function is compatible for use with qsort().
  *
@@ -125,13 +132,13 @@ svn_sort_compare_paths(const void *a,
                        const void *b);
 
 /**
- * Compare two @c svn_merge_range_t *'s, returning an integer greater
- * than, equal to, or less than 0 if the first range is greater than,
- * equal to, or less than, the second range.
+ * Compare two @c svn_merge_range_t *'s, @a *a and @a *b, returning an
+ * integer greater than, equal to, or less than 0 if the first range is
+ * greater than, equal to, or less than, the second range.
  *
  * Both @c svn_merge_range_t *'s must describe forward merge ranges.
  *
- * If @a a and @a b intersect then the range with the lower start revision
+ * If @a *a and @a *b intersect then the range with the lower start revision
  * is considered the lesser range.  If the ranges' start revisions are
  * equal then the range with the lower end revision is considered the
  * lesser range.
@@ -164,29 +171,38 @@ svn_sort__hash(apr_hash_t *ht,
                                       const svn_sort__item_t *),
                apr_pool_t *pool);
 
-/* Return the lowest index at which the element *KEY should be inserted into
-   the array ARRAY, according to the ordering defined by COMPARE_FUNC.
-   The array must already be sorted in the ordering defined by COMPARE_FUNC.
-   COMPARE_FUNC is defined as for the C stdlib function bsearch(). */
+/* Return the lowest index at which the element @a *key should be inserted into
+ * the array @a array, according to the ordering defined by @a compare_func.
+ * The array must already be sorted in the ordering defined by @a compare_func.
+ * @a compare_func is defined as for the C stdlib function bsearch().
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
 int
 svn_sort__bsearch_lower_bound(const void *key,
                               const apr_array_header_t *array,
                               int (*compare_func)(const void *, const void *));
 
-/* Insert a shallow copy of *NEW_ELEMENT into the array ARRAY at the index
-   INSERT_INDEX, growing the array and shuffling existing elements along to
-   make room. */
+/* Insert a shallow copy of @a *new_element into the array @a array at the index
+ * @a insert_index, growing the array and shuffling existing elements along to
+ * make room.
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
 void
 svn_sort__array_insert(const void *new_element,
                        apr_array_header_t *array,
                        int insert_index);
 
 
-/* Remove ELEMENTS_TO_DELETE elements starting  at DELETE_INDEX from the
-   array ARR. If DELETE_INDEX is not a valid element of ARR,
-   ELEMENTS_TO_DELETE is not greater than zero, or
-   DELETE_INDEX + ELEMENTS_TO_DELETE is greater than ARR->NELTS, then do
-   nothing. */
+/* Remove @a elements_to_delete elements starting at @a delete_index from the
+ * array @a arr. If @a delete_index is not a valid element of @a arr,
+ * @a elements_to_delete is not greater than zero, or
+ * @a delete_index + @a elements_to_delete is greater than @a arr->nelts,
+ * then do nothing.
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
 void
 svn_sort__array_delete(apr_array_header_t *arr,
                        int delete_index,

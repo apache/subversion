@@ -102,5 +102,5 @@ svn_fs_bdb__wrap_db(svn_fs_t *fs, const char *operation, int db_err)
   return svn_fs_bdb__dberrf
     (bfd->bdb, db_err,
      _("Berkeley DB error for filesystem '%s' while %s:\n"),
-     fs->path ? fs->path : "(none)", operation);
+     fs->path ? fs->path : "(none)", _(operation));
 }

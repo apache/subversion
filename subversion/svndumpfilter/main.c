@@ -45,7 +45,12 @@
 
 #include "private/svn_mergeinfo_private.h"
 
-
+#ifdef _WIN32
+typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
+#else
+typedef apr_status_t (*open_fn_t)(apr_file_t **, apr_pool_t *);
+#endif
+
 /*** Code. ***/
 
 /* Helper to open stdio streams */
@@ -62,8 +67,7 @@
 */
 static svn_error_t *
 create_stdio_stream(svn_stream_t **stream,
-                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
-                                                      apr_pool_t *),
+                    open_fn_t open_fn,
                     apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
@@ -79,7 +83,7 @@ create_stdio_stream(svn_stream_t **stream,
 
 /* Writes a property in dumpfile format to given stringbuf. */
 static void
-write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
+write_prop_to_stringbuf(svn_stringbuf_t *strbuf,
                         const char *name,
                         const svn_string_t *value)
 {
@@ -89,7 +93,39 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 
   /* Output name length, then name. */
   namelen = strlen(name);
-  svn_stringbuf_appendbytes(*strbuf, "K ", 2);
+  svn_stringbuf_appendbytes(strbuf, "K ", 2);
+
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
+  svn_stringbuf_appendbytes(strbuf, buf, bytes_used);
+  svn_stringbuf_appendbyte(strbuf, '\n');
+
+  svn_stringbuf_appendbytes(strbuf, name, namelen);
+  svn_stringbuf_appendbyte(strbuf, '\n');
+
+  /* Output value length, then value. */
+  svn_stringbuf_appendbytes(strbuf, "V ", 2);
+
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
+  svn_stringbuf_appendbytes(strbuf, buf, bytes_used);
+  svn_stringbuf_appendbyte(strbuf, '\n');
+
+  svn_stringbuf_appendbytes(strbuf, value->data, value->len);
+  svn_stringbuf_appendbyte(strbuf, '\n');
+}
+
+
+/* Writes a property deletion in dumpfile format to given stringbuf. */
+static void
+write_propdel_to_stringbuf(svn_stringbuf_t **strbuf,
+                           const char *name)
+{
+  int bytes_used;
+  size_t namelen;
+  char buf[SVN_KEYLINE_MAXLEN];
+
+  /* Output name length, then name. */
+  namelen = strlen(name);
+  svn_stringbuf_appendbytes(*strbuf, "D ", 2);
 
   bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
@@ -97,20 +133,13 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 
   svn_stringbuf_appendbytes(*strbuf, name, namelen);
   svn_stringbuf_appendbyte(*strbuf, '\n');
-
-  /* Output value length, then value. */
-  svn_stringbuf_appendbytes(*strbuf, "V ", 2);
-
-  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
-  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
-
-  svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
 }
 
 
-/* Prefix matching function to compare node-path with set of prefixes. */
+/* Compare the node-path PATH with the (const char *) prefixes in PFXLIST.
+ * Return TRUE if any prefix is a prefix of PATH (matching whole path
+ * components); FALSE otherwise.
+ * PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
@@ -125,7 +154,7 @@ ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
       if (path_len < pfx_len)
         continue;
       if (strncmp(path, pfx, pfx_len) == 0
-          && (path[pfx_len] == '\0' || path[pfx_len] == '/'))
+          && (pfx_len == 1 || path[pfx_len] == '\0' || path[pfx_len] == '/'))
         return TRUE;
     }
 
@@ -134,7 +163,8 @@ ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 
 
 /* Check whether we need to skip this PATH based on its presence in
-   the PREFIXES list, and the DO_EXCLUDE option. */
+   the PREFIXES list, and the DO_EXCLUDE option.
+   PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
 static APR_INLINE svn_boolean_t
 skip_path(const char *path, const apr_array_header_t *prefixes,
           svn_boolean_t do_exclude, svn_boolean_t glob)
@@ -183,6 +213,7 @@ struct parse_baton_t
   svn_boolean_t do_renumber_revs;
   svn_boolean_t preserve_revprops;
   svn_boolean_t skip_missing_merge_sources;
+  svn_boolean_t allow_deltas;
   apr_array_header_t *prefixes;
 
   /* Input and output streams. */
@@ -246,11 +277,35 @@ struct node_baton_t
   /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
   svn_stringbuf_t *props;
+
+  /* Expect deltas? */
+  svn_boolean_t has_prop_delta;
+  svn_boolean_t has_text_delta;
+
+  /* We might need the node path in a parse error message. */
+  char *node_path;
 };
 
 
 
 /* Filtering vtable members */
+
+/* File-format stamp. */
+static svn_error_t *
+magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
+{
+  struct parse_baton_t *pb = parse_baton;
+
+  if (version >= SVN_REPOS_DUMPFILE_FORMAT_VERSION_DELTAS)
+    pb->allow_deltas = TRUE;
+
+  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
+                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
+                            version));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* New revision: set up revision_baton, decide if we skip it. */
 static svn_error_t *
@@ -271,7 +326,7 @@ new_revision_record(void **revision_baton,
   rb->has_props = FALSE;
   rb->had_dropped_nodes = FALSE;
   rb->writing_begun = FALSE;
-  rb->header = svn_stringbuf_create("", pool);
+  rb->header = svn_stringbuf_create_empty(pool);
   rb->props = apr_hash_make(pool);
 
   header_stream = svn_stream_from_stringbuf(rb->header, pool);
@@ -322,7 +377,7 @@ output_revision(struct revision_baton_t *rb)
   char buf[SVN_KEYLINE_MAXLEN];
   apr_hash_index_t *hi;
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
-  svn_stringbuf_t *props = svn_stringbuf_create("", hash_pool);
+  svn_stringbuf_t *props = svn_stringbuf_create_empty(hash_pool);
   apr_pool_t *subpool = svn_pool_create(hash_pool);
 
   rb->writing_begun = TRUE;
@@ -360,7 +415,7 @@ output_revision(struct revision_baton_t *rb)
           const char *pname = svn__apr_hash_index_key(hi);
           const svn_string_t *pval = svn__apr_hash_index_val(hi);
 
-          write_prop_to_stringbuf(&props, pname, pval);
+          write_prop_to_stringbuf(props, pname, pval);
         }
       svn_stringbuf_appendcstr(props, "PROPS-END\n");
       svn_stringbuf_appendcstr(rb->header,
@@ -549,10 +604,13 @@ new_node_record(void **node_baton,
 
       nb->has_props = FALSE;
       nb->has_text = FALSE;
+      nb->has_prop_delta = FALSE;
+      nb->has_text_delta = FALSE;
       nb->writing_begun = FALSE;
       nb->tcl = tcl ? svn__atoui64(tcl) : 0;
-      nb->header = svn_stringbuf_create("", pool);
-      nb->props = svn_stringbuf_create("", pool);
+      nb->header = svn_stringbuf_create_empty(pool);
+      nb->props = svn_stringbuf_create_empty(pool);
+      nb->node_path = apr_pstrdup(pool, node_path);
 
       /* Now we know for sure that we have a node that will not be
          skipped, flush the revision if it has not already been done. */
@@ -564,6 +622,14 @@ new_node_record(void **node_baton,
         {
           const char *key = svn__apr_hash_index_key(hi);
           const char *val = svn__apr_hash_index_val(hi);
+
+          if ((!strcmp(key, SVN_REPOS_DUMPFILE_PROP_DELTA))
+              && (!strcmp(val, "true")))
+            nb->has_prop_delta = TRUE;
+
+          if ((!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_DELTA))
+              && (!strcmp(val, "true")))
+            nb->has_text_delta = TRUE;
 
           if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
@@ -704,7 +770,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
 
       /* Determine whether the merge_source is a part of the prefix. */
@@ -787,10 +853,12 @@ set_node_property(void *node_baton,
   if (nb->do_skip)
     return SVN_NO_ERROR;
 
-  if (!nb->has_props)
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            _("Delta property block detected - "
-                              "not supported by svndumpfilter"));
+  if (! (nb->has_props || nb->has_prop_delta))
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Delta property block detected, but deltas "
+                               "are not enabled for node '%s' in original "
+                               "revision %ld"),
+                             nb->node_path, rb->rev_orig);
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
@@ -800,7 +868,31 @@ set_node_property(void *node_baton,
       value = filtered_mergeinfo;
     }
 
-  write_prop_to_stringbuf(&(nb->props), name, value);
+  nb->has_props = TRUE;
+  write_prop_to_stringbuf(nb->props, name, value);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_node_property(void *node_baton, const char *name)
+{
+  struct node_baton_t *nb = node_baton;
+  struct revision_baton_t *rb = nb->rb;
+
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  if (!nb->has_prop_delta)
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Delta property block detected, but deltas "
+                               "are not enabled for node '%s' in original"
+                               "revision %ld"),
+                             nb->node_path, rb->rev_orig);
+ 
+  nb->has_props = TRUE;
+  write_propdel_to_stringbuf(&(nb->props), name);
 
   return SVN_NO_ERROR;
 }
@@ -874,14 +966,15 @@ close_revision(void *revision_baton)
 
 
 /* Filtering vtable */
-svn_repos_parse_fns2_t filtering_vtable =
+svn_repos_parse_fns3_t filtering_vtable =
   {
-    new_revision_record,
+    magic_header_record,
     uuid_record,
+    new_revision_record,
     new_node_record,
     set_revision_property,
     set_node_property,
-    NULL,
+    delete_node_property,
     remove_node_props,
     set_fulltext,
     NULL,
@@ -1027,17 +1120,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->renumber_history = apr_hash_make(pool);
   baton->last_live_revision = SVN_INVALID_REVNUM;
   baton->oldest_original_rev = SVN_INVALID_REVNUM;
-
-  /* This is non-ideal: We should pass through the version of the
-   * input dumpstream.  However, our API currently doesn't allow that.
-   * Hardcoding version 2 is acceptable because:
-   *   - We currently do not accept version 3 or greater.
-   *   - Dumpstream version 1 is so ancient as to be ignorable
-   *     (0.17.x and earlier)
-   */
-  SVN_ERR(svn_stream_printf(baton->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            2));
+  baton->allow_deltas = FALSE;
 
   *pb = baton;
   return SVN_NO_ERROR;
@@ -1056,11 +1139,12 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "\n"
       "Available subcommands:\n");
 
-  SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
+  SVN_ERR(svn_opt_print_help4(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              opt_state ? opt_state->quiet : FALSE, NULL,
-                              header, cmd_table, options_table, NULL,
-                              NULL, pool));
+                              opt_state ? opt_state->quiet : FALSE,
+                              /*###opt_state ? opt_state->verbose :*/ FALSE,
+                              NULL, header, cmd_table, options_table,
+                              NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1077,8 +1161,8 @@ check_lib_versions(void)
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -1140,8 +1224,8 @@ do_filter(apr_getopt_t *os,
     }
 
   SVN_ERR(parse_baton_initialize(&pb, opt_state, do_exclude, pool));
-  SVN_ERR(svn_repos_parse_dumpstream2(pb->in_stream, &filtering_vtable, pb,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_parse_dumpstream3(pb->in_stream, &filtering_vtable, pb,
+                                      TRUE, NULL, NULL, pool));
 
   /* The rest of this is just reporting.  If we aren't reporting, get
      outta here. */
@@ -1258,7 +1342,6 @@ main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -1276,13 +1359,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-   return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();
@@ -1453,6 +1530,8 @@ main(int argc, const char *argv[])
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
           const char *utf8_targets_file;
+          apr_array_header_t *targets = apr_array_make(pool, 0,
+                                                       sizeof(const char *));
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
@@ -1465,10 +1544,18 @@ main(int argc, const char *argv[])
                                                pool));
           SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 
-          opt_state.prefixes = apr_array_append(pool,
-                                    svn_cstring_split(buffer_utf8->data, "\n\r",
-                                                      TRUE, pool),
-                                    opt_state.prefixes);
+          targets = apr_array_append(pool,
+                         svn_cstring_split(buffer_utf8->data, "\n\r",
+                                           TRUE, pool),
+                         targets);
+
+          for (i = 0; i < targets->nelts; i++)
+            {
+              const char *prefix = APR_ARRAY_IDX(targets, i, const char *);
+              if (prefix[0] != '/')
+                prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
+              APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
+            }
         }
 
       if (apr_is_empty_array(opt_state.prefixes))

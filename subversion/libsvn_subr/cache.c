@@ -212,14 +212,14 @@ svn_cache__format_info(const svn_cache__info_t *info,
   enum { _1MB = 1024 * 1024 };
 
   apr_uint64_t misses = info->gets - info->hits;
-  double hit_rate = (100.0 * info->hits)
-                  / (info->gets ? info->gets : 1);
-  double write_rate = (100.0 * info->sets)
-                    / (misses ? misses : 1);
-  double data_usage_rate = (100.0 * info->used_size)
-                         / (info->data_size ? info->data_size : 1);
-  double data_entry_rate = (100.0 * info->used_entries)
-                         / (info->total_entries ? info->total_entries : 1);
+  double hit_rate = (100.0 * (double)info->hits)
+                  / (double)(info->gets ? info->gets : 1);
+  double write_rate = (100.0 * (double)info->sets)
+                    / (double)(misses ? misses : 1);
+  double data_usage_rate = (100.0 * (double)info->used_size)
+                         / (double)(info->data_size ? info->data_size : 1);
+  double data_entry_rate = (100.0 * (double)info->used_entries)
+                 / (double)(info->total_entries ? info->total_entries : 1);
 
   return svn_string_createf(result_pool,
 

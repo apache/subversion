@@ -45,14 +45,31 @@
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+    #pragma GCC diagnostic ignored "-Wunused-function"
+  #endif
   #include <sqlite3.c>
 #else
   #include <sqlite3.h>
 #endif
 
-#if !SQLITE_VERSION_AT_LEAST(3,6,18)
-#error SQLite is too old -- version 3.6.18 is the minimum required version
+#if !SQLITE_VERSION_AT_LEAST(3,7,12)
+#error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
+
+const char *
+svn_sqlite__compiled_version(void)
+{
+  static const char sqlite_version[] = SQLITE_VERSION;
+  return sqlite_version;
+}
+
+const char *
+svn_sqlite__runtime_version(void)
+{
+  return sqlite3_libversion();
+}
+
 
 INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
 
@@ -84,7 +101,6 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
-  unsigned savepoint_nr;
 };
 
 struct svn_sqlite__stmt_t
@@ -120,16 +136,17 @@ struct svn_sqlite__value_t
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, sqlite3_errmsg((db)->db3));    \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s",                 \
+                             sqlite3_errmsg((db)->db3));         \
 } while (0)
 
 #define SQLITE_ERR_MSG(x, msg) do                                \
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, msg);                          \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s", (msg));         \
 } while (0)
 
 
@@ -203,6 +220,29 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Like svn_sqlite__get_statement but gets an internal statement.
+
+   All internal statements that use this api are executed with step_done(),
+   so we don't need the fallback reset handling here or in the pool cleanup */
+static svn_error_t *
+get_internal_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                       int stmt_idx)
+{
+  /* The internal statements are stored after the registered statements */
+  int prep_idx = db->nbr_statements + stmt_idx;
+  SVN_ERR_ASSERT(stmt_idx < STMT_INTERNAL_LAST);
+
+  if (db->prepared_stmts[prep_idx] == NULL)
+    SVN_ERR(prepare_statement(&db->prepared_stmts[prep_idx], db,
+                              internal_statements[stmt_idx],
+                              db->state_pool));
+
+  *stmt = db->prepared_stmts[prep_idx];
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 step_with_expectation(svn_sqlite__stmt_t* stmt,
                       svn_boolean_t expecting_row)
@@ -245,8 +285,8 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
     {
       svn_error_t *err1, *err2;
 
-      err1 = svn_error_create(SQLITE_ERROR_CODE(sqlite_result), NULL,
-                              sqlite3_errmsg(stmt->db->db3));
+      err1 = svn_error_createf(SQLITE_ERROR_CODE(sqlite_result), NULL,
+                               "sqlite: %s", sqlite3_errmsg(stmt->db->db3));
       err2 = svn_sqlite__reset(stmt);
       return svn_error_compose_create(err1, err2);
     }
@@ -299,7 +339,13 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
                                           va_arg(ap, const char *)));
             break;
 
+          case 'd':
+            SVN_ERR(svn_sqlite__bind_int(stmt, count,
+                                         va_arg(ap, int)));
+            break;
+
           case 'i':
+          case 'L':
             SVN_ERR(svn_sqlite__bind_int64(stmt, count,
                                            va_arg(ap, apr_int64_t)));
             break;
@@ -433,6 +479,27 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
 }
 
 svn_error_t *
+svn_sqlite__bind_iprops(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        const apr_array_header_t *inherited_props,
+                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *skel;
+  svn_stringbuf_t *properties;
+
+  if (inherited_props == NULL)
+    return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
+
+  SVN_ERR(svn_skel__unparse_iproplist(&skel, inherited_props,
+                                      scratch_pool));
+  properties = svn_skel__unparse(skel, scratch_pool);
+  return svn_error_trace(svn_sqlite__bind_blob(stmt,
+                                               slot,
+                                               properties->data,
+                                               properties->len));
+}
+
+svn_error_t *
 svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
                           int slot,
                           const svn_checksum_t *checksum,
@@ -538,6 +605,31 @@ svn_sqlite__column_properties(apr_hash_t **props,
 }
 
 svn_error_t *
+svn_sqlite__column_iprops(apr_array_header_t **iprops,
+                          svn_sqlite__stmt_t *stmt,
+                          int column,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  apr_size_t len;
+  const void *val;
+
+  /* svn_skel__parse_iprops copies everything needed to result_pool */
+  val = svn_sqlite__column_blob(stmt, column, &len, NULL);
+  if (val == NULL)
+    {
+      *iprops = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_skel__parse_iprops(iprops,
+                                 svn_skel__parse(val, len, scratch_pool),
+                                 result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__column_checksum(const svn_checksum_t **checksum,
                             svn_sqlite__stmt_t *stmt, int column,
                             apr_pool_t *result_pool)
@@ -606,12 +698,12 @@ static volatile svn_atomic_t sqlite_init_state = 0;
 static svn_error_t *
 init_sqlite(void *baton, apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+  if (sqlite3_libversion_number() < SVN_SQLITE_MIN_VERSION_NUMBER)
     {
       return svn_error_createf(
                     SVN_ERR_SQLITE_ERROR, NULL,
                     _("SQLite compiled for %s, but running with %s"),
-                    SQLITE_VERSION, sqlite3_libversion());
+                    SVN_SQLITE_MIN_VERSION, sqlite3_libversion());
     }
 
 #if APR_HAS_THREADS
@@ -656,23 +748,14 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     else
       SVN_ERR_MALFUNCTION();
 
-    /* If this flag is defined (3.6.x), then let's turn off SQLite's mutexes.
-       All svn objects are single-threaded, so we can already guarantee that
-       our use of the SQLite handle will be serialized properly.
+    /* Turn off SQLite's mutexes. All svn objects are single-threaded,
+       so we can already guarantee that our use of the SQLite handle
+       will be serialized properly.
 
        Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
        so this is probably redundant, but if we are running in a process where
        somebody initialized SQLite before us it is needed anyway.  */
-#ifdef SQLITE_OPEN_NOMUTEX
     flags |= SQLITE_OPEN_NOMUTEX;
-#endif
-
-    /* SQLite 3.5 allows sharing cache instances, even in a multithreaded
-       environment. This allows sharing cached data when we open a database
-       more than once.
-
-       OS X 10.7 doesn't support sqlite3_enable_shared_cache. */
-    flags |= SQLITE_OPEN_SHAREDCACHE;
 
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
@@ -685,14 +768,15 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
       int err_code = sqlite3_open_v2(path, db3, flags, NULL);
       if (err_code != SQLITE_OK)
         {
+          /* Save the error message before closing the SQLite handle. */
           char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
 
           /* We don't catch the error here, since we care more about the open
              error than the close error at this point. */
           sqlite3_close(*db3);
 
-          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", (char *)NULL);
-          return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+          return svn_error_createf(SQLITE_ERROR_CODE(err_code), NULL,
+                                   "sqlite: %s: '%s'", msg, path);
         }
     }
   }
@@ -723,8 +807,32 @@ close_apr(void *data)
   for (i = 0; i < db->nbr_statements; i++)
     {
       if (db->prepared_stmts[i])
-        err = svn_error_compose_create(
+        {
+          if (db->prepared_stmts[i]->needs_reset)
+            {
+#ifdef SVN_DEBUG
+              const char *stmt_text = db->statement_strings[i];
+              stmt_text = stmt_text; /* Provide value for debugger */
+
+              SVN_ERR_MALFUNCTION_NO_RETURN();
+#else
+              err = svn_error_compose_create(
+                            err,
+                            svn_sqlite__reset(db->prepared_stmts[i]));
+#endif
+            }
+          err = svn_error_compose_create(
                         svn_sqlite__finalize(db->prepared_stmts[i]), err);
+        }
+    }
+  /* And finalize any used internal statements */
+  for (; i < db->nbr_statements + STMT_INTERNAL_LAST; i++)
+    {
+      if (db->prepared_stmts[i])
+        {
+          err = svn_error_compose_create(
+                        svn_sqlite__finalize(db->prepared_stmts[i]), err);
+        }
     }
 
   result = sqlite3_close(db->db3);
@@ -766,23 +874,9 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-  /* Work around a bug in SQLite 3.7.7.  The bug was fixed in SQLite 3.7.7.1.
-
-     See:
-
-       Date: Sun, 26 Jun 2011 18:52:14 -0400
-       From: Richard Hipp <drh@sqlite.org>
-       To: General Discussion of SQLite Database <sqlite-users@sqlite.org>
-       Cc: dev@subversion.apache.org
-       Subject: Re: [sqlite] PRAGMA bug in 3.7.7 (but fine in 3.7.6.3)
-       Message-ID: <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com>
-   */
+  /* ### simplify this. remnants of some old SQLite compat code.  */
   {
     int ignored_err = SQLITE_OK;
-#if !SQLITE_VERSION_AT_LEAST(3,7,8) && defined(SQLITE_SCHEMA)
-    if (!strcmp(sqlite3_libversion(), "3.7.7"))
-      ignored_err = SQLITE_SCHEMA;
-#endif
 
     SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
   }
@@ -806,7 +900,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  Requires SQLite >= 3.6.18  */
               "PRAGMA recursive_triggers=ON;"));
 
-#if SQLITE_VERSION_AT_LEAST(3,6,19) && defined(SVN_DEBUG)
+#if defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
      constraints.  This has possible performance implications, so we don't
      bother to do it for production...for now. */
@@ -828,11 +922,19 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
           statements++;
           (*db)->nbr_statements++;
         }
-      (*db)->prepared_stmts = apr_pcalloc(result_pool, (*db)->nbr_statements
+
+      (*db)->prepared_stmts = apr_pcalloc(
+                                  result_pool,
+                                  ((*db)->nbr_statements + STMT_INTERNAL_LAST)
                                                 * sizeof(svn_sqlite__stmt_t *));
     }
   else
-    (*db)->nbr_statements = 0;
+    {
+      (*db)->nbr_statements = 0;
+      (*db)->prepared_stmts = apr_pcalloc(result_pool,
+                                          (0 + STMT_INTERNAL_LAST)
+                                                * sizeof(svn_sqlite__stmt_t *));
+    }
 
   (*db)->state_pool = result_pool;
   apr_pool_cleanup_register(result_pool, *db, close_apr, apr_pool_cleanup_null);
@@ -881,6 +983,7 @@ with_transaction(svn_sqlite__db_t *db,
                  void *cb_baton,
                  apr_pool_t *scratch_pool /* NULL allowed */)
 {
+  svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
 
   err = cb_func(cb_baton, db, scratch_pool);
@@ -888,7 +991,12 @@ with_transaction(svn_sqlite__db_t *db,
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_t *err2 = exec_sql(db, "ROLLBACK TRANSACTION;");
+      svn_error_t *err2;
+
+      err2 = get_internal_statement(&stmt, db,
+                                    STMT_INTERNAL_ROLLBACK_TRANSACTION);
+      if (!err2)
+        err2 = svn_sqlite__step_done(stmt);
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -913,7 +1021,7 @@ with_transaction(svn_sqlite__db_t *db,
 
           err2 = reset_all_statements(db, err2);
           err2 = svn_error_compose_create(
-                      exec_sql(db, "ROLLBACK TRANSACTION;"),
+                      svn_sqlite__step_done(stmt),
                       err2);
         }
 
@@ -921,7 +1029,8 @@ with_transaction(svn_sqlite__db_t *db,
                                       err2);
     }
 
-  return svn_error_trace(exec_sql(db, "COMMIT TRANSACTION;"));
+  SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_COMMIT_TRANSACTION));
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 svn_error_t *
@@ -930,7 +1039,10 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              void *cb_baton,
                              apr_pool_t *scratch_pool /* NULL allowed */)
 {
-  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
+  svn_sqlite__stmt_t *stmt;
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                           scratch_pool));
 }
@@ -942,7 +1054,10 @@ svn_sqlite__with_immediate_transaction(
   void *cb_baton,
   apr_pool_t *scratch_pool /* NULL allowed */)
 {
-  SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
+  svn_sqlite__stmt_t *stmt;
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_IMMEDIATE_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                           scratch_pool));
 }
@@ -954,20 +1069,21 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  int savepoint = db->savepoint_nr++;
-  /* This buffer is plenty big to hold the SAVEPOINT and RELEASE commands. */
-  char buf[32];
+  svn_sqlite__stmt_t *stmt;
 
-  snprintf(buf, sizeof(buf), "SAVEPOINT s%u", savepoint);
-  SVN_ERR(exec_sql(db, buf));
+  SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_SAVEPOINT_SVN));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   err = cb_func(cb_baton, db, scratch_pool);
 
   if (err)
     {
       svn_error_t *err2;
 
-      snprintf(buf, sizeof(buf), "ROLLBACK TO s%u", savepoint);
-      err2 = exec_sql(db, buf);
+      err2 = get_internal_statement(&stmt, db,
+                                    STMT_INTERNAL_ROLLBACK_TO_SAVEPOINT_SVN);
+
+      if (!err2)
+        err2 = svn_sqlite__step_done(stmt);
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -978,17 +1094,23 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
                  further details */
 
           err2 = reset_all_statements(db, err2);
-          err2 = svn_error_compose_create(exec_sql(db, buf), err2);
+          err2 = svn_error_compose_create(svn_sqlite__step_done(stmt), err2);
         }
 
-      snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
-      err2 = svn_error_compose_create(exec_sql(db, buf), err2);
+      err = svn_error_compose_create(err, err2);
+      err2 = get_internal_statement(&stmt, db,
+                                    STMT_INTERNAL_RELEASE_SAVEPOINT_SVN);
+
+      if (!err2)
+        err2 = svn_sqlite__step_done(stmt);
 
       return svn_error_trace(svn_error_compose_create(err, err2));
     }
 
-  snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
-  return svn_error_trace(exec_sql(db, buf));
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_RELEASE_SAVEPOINT_SVN));
+
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 svn_error_t *
@@ -999,7 +1121,7 @@ svn_sqlite__hotcopy(const char *src_path,
   svn_sqlite__db_t *src_db;
 
   SVN_ERR(svn_sqlite__open(&src_db, src_path, svn_sqlite__mode_readonly,
-                           internal_statements, 0, NULL,
+                           NULL, 0, NULL,
                            scratch_pool, scratch_pool));
 
   {
@@ -1057,12 +1179,14 @@ wrapped_func(sqlite3_context *context,
              sqlite3_value *values[])
 {
   struct function_wrapper_baton_t *fwb = sqlite3_user_data(context);
-  svn_sqlite__context_t sctx = { context };
+  svn_sqlite__context_t sctx;
   svn_sqlite__value_t **local_vals =
                             apr_palloc(fwb->scratch_pool,
                                        sizeof(svn_sqlite__value_t *) * argc);
   svn_error_t *err;
   int i;
+
+  sctx.context = context;
 
   for (i = 0; i < argc; i++)
     {

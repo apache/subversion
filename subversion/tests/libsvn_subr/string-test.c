@@ -39,7 +39,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
-
+#include "private/svn_string_private.h"
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -419,7 +419,7 @@ test15(apr_pool_t *pool)
 static svn_error_t *
 test16(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("", pool);
+  a = svn_stringbuf_create_empty(pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -511,6 +511,107 @@ test23(apr_pool_t *pool)
   return test_stringbuf_unequal("abc", "abb", pool);
 }
 
+static svn_error_t *
+test24(apr_pool_t *pool)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t length;
+
+  length = svn__i64toa(buffer, 0);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__i64toa(buffer, 0x8000000000000000ll);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
+
+  length = svn__i64toa(buffer, 0x7fffffffffffffffll);
+  SVN_TEST_ASSERT(length == 19);
+  SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
+
+  length = svn__ui64toa(buffer, 0ull);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
+
+  return test_stringbuf_unequal("abc", "abb", pool);
+}
+
+static svn_error_t *
+expect_stringbuf_equal(const svn_stringbuf_t* str1,
+                       const char* str2,
+                       apr_pool_t *pool)
+{
+  if (svn_stringbuf_compare(str1, svn_stringbuf_create(str2, pool)))
+    return SVN_NO_ERROR;
+  else
+    return fail(pool, "test failed");
+}
+
+static svn_error_t *
+test_stringbuf_insert(apr_pool_t *pool)
+{
+  a = svn_stringbuf_create("st , ", pool);
+
+  svn_stringbuf_insert(a, 0, "teflon", 2);
+  SVN_TEST_STRING_ASSERT(a->data, "test , ");
+
+  svn_stringbuf_insert(a, 5, "hllo", 4);
+  SVN_TEST_STRING_ASSERT(a->data, "test hllo, ");
+
+  svn_stringbuf_insert(a, 6, a->data + 1, 1);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, ");
+  
+  svn_stringbuf_insert(a, 12, "world class", 5);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world");
+
+  svn_stringbuf_insert(a, 1200, "!", 1);
+  return expect_stringbuf_equal(a, "test hello, world!", pool);
+}
+
+static svn_error_t *
+test_stringbuf_remove(apr_pool_t *pool)
+{
+  a = svn_stringbuf_create("test hello, world!", pool);
+
+  svn_stringbuf_remove(a, 0, 2);
+  SVN_TEST_STRING_ASSERT(a->data, "st hello, world!");
+
+  svn_stringbuf_remove(a, 2, 2);
+  SVN_TEST_STRING_ASSERT(a->data, "stello, world!");
+
+  svn_stringbuf_remove(a, 5, 200);
+  SVN_TEST_STRING_ASSERT(a->data, "stell");
+
+  svn_stringbuf_remove(a, 1200, 393);
+  return expect_stringbuf_equal(a, "stell", pool);
+}
+
+static svn_error_t *
+test_stringbuf_replace(apr_pool_t *pool)
+{
+  a = svn_stringbuf_create("odd with some world?", pool);
+
+  svn_stringbuf_replace(a, 0, 3, "tester", 4);
+  SVN_TEST_STRING_ASSERT(a->data, "test with some world?");
+
+  svn_stringbuf_replace(a, 5, 10, "hllo, coder", 6);
+  SVN_TEST_STRING_ASSERT(a->data, "test hllo, world?");
+
+  svn_stringbuf_replace(a, 6, 0, a->data + 1, 1);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world?");
+
+  svn_stringbuf_replace(a, 17, 10, "!", 1);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world!");
+
+  svn_stringbuf_replace(a, 1200, 199, "!!", 2);
+
+  return expect_stringbuf_equal(a, "test hello, world!!!", pool);
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -568,5 +669,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare stringbufs; different lengths"),
     SVN_TEST_PASS2(test23,
                    "compare stringbufs; same length, different content"),
+    SVN_TEST_PASS2(test24,
+                   "verify i64toa"),
+    SVN_TEST_PASS2(test_stringbuf_insert,
+                   "check inserting into svn_stringbuf_t"),
+    SVN_TEST_PASS2(test_stringbuf_remove,
+                   "check deletion from svn_stringbuf_t"),
+    SVN_TEST_PASS2(test_stringbuf_replace,
+                   "check replacement in svn_stringbuf_t"),
     SVN_TEST_NULL
   };

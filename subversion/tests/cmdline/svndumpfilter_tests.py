@@ -33,8 +33,10 @@ import tempfile
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
-# Get some helper routines from svnadmin_tests
-from svnadmin_tests import load_and_verify_dumpstream, test_create
+# Get some helper routines
+from svnadmin_tests import (load_and_verify_dumpstream, load_dumpstream,
+                            test_create)
+from svntest.main import run_svn, run_svnadmin
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -103,8 +105,7 @@ def reflect_dropped_renumbered_revs(sbox):
       "--drop-empty-revs",
       "--renumber-revs", "--quiet")
 
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
-                             "--ignore-uuid")
+  load_dumpstream(sbox, filtered_out, "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -124,8 +125,7 @@ def reflect_dropped_renumbered_revs(sbox):
       "--drop-empty-revs",
       "--renumber-revs", "--quiet")
 
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
-                             "--ignore-uuid")
+  load_dumpstream(sbox, filtered_out, "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   expected_output = svntest.verify.UnorderedOutput([
@@ -151,7 +151,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
                                                         "trunk", "branch1",
                                                         "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+  load_dumpstream(sbox, filtered_out)
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -164,6 +164,9 @@ def svndumpfilter_loses_mergeinfo(sbox):
 
 
 def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
+  """Run svndumpfilter with arguments DUMPARGS, taking input from DUMPFILE.
+     Check that the output consists of the standard Greek tree excluding
+     all paths that start with 'A/B/E', 'A/D/G' or 'A/D/H'."""
   wc_dir = sbox.wc_dir
 
   filtered_output, filtered_err = filter_and_return_output(dumpfile, 0,
@@ -171,8 +174,7 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
                                                            *dumpargs)
 
   # Setup our expectations
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_output, '--ignore-uuid')
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha')
   expected_disk.remove('A/B/E/beta')
@@ -346,8 +348,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
       "include", "trunk", "branches",
       "--skip-missing-merge-sources",
       "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile2, '--ignore-uuid')
   # Check the resulting mergeinfo.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
@@ -374,8 +375,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, skeleton_dumpfile,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, skeleton_dumpfile, '--ignore-uuid')
   partial_dump2 = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
@@ -477,9 +477,8 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 
   # Now actually load the filtered dump into the skeleton repository
   # and then check the resulting mergeinfo.
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
-                             '--parent-dir', '/Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile2,
+                  '--parent-dir', '/Projects/Project-X', '--ignore-uuid')
 
   url = sbox.repo_url + "/Projects/Project-X/branches"
   expected_output = svntest.verify.UnorderedOutput([
@@ -565,8 +564,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
       "--skip-missing-merge-sources", "--drop-empty-revs")
 
   # Now load the filtered dump into an empty repository.
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile, '--ignore-uuid')
 
   # The mergeinfo in the newly loaded repos should have no references to the
   # dropped branch and the remaining merge source revs should be remapped to
@@ -596,6 +594,118 @@ def dropped_but_not_renumbered_empty_revs(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+#----------------------------------------------------------------------
+def match_empty_prefix(sbox):
+  "svndumpfilter with an empty prefix"
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = open(dumpfile_location).read()
+
+  def test(sbox, dumpfile, *dumpargs):
+    """Run svndumpfilter with DUMPFILE as the input lines, load
+       the result and check it matches EXPECTED_DISK, EXPECTED_OUTPUT,
+       EXPECTED_STATUS."""
+
+    # Filter the Greek tree dump
+    filtered_output, filtered_err = filter_and_return_output(dumpfile, 0,
+                                                             '--quiet',
+                                                             *dumpargs)
+    if filtered_err:
+      raise verify.UnexpectedStderr(filtered_err)
+
+    # Load the filtered dump into a repo and check the result
+    test_create(sbox)
+    load_dumpstream(sbox, filtered_output, '--ignore-uuid')
+    svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status)
+
+  # Test excluding everything
+  expected_disk = svntest.wc.State(sbox.wc_dir, {})
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+                      '': Item(status='  ', wc_rev=1) })
+
+  test(sbox, dumpfile, 'exclude', '')
+
+  # Test including everything
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.main.greek_state.copy().tweak(status='A ')
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  test(sbox, dumpfile, 'include', '', '/A/D/G')
+
+  # Note: We also ought to test the '--pattern' option, including or
+  # excluding a pattern of '*'.  However, passing a wildcard parameter
+  # is troublesome on Windows: it may be expanded, depending on whether
+  # the svndumpfilter executable was linked with 'setargv.obj', and there
+  # doesn't seem to be a consistent way to quote such an argument to
+  # prevent expansion.
+
+@Issue(2760)
+def accepts_deltas(sbox):
+  "accepts deltas in the input"
+  # Accept format v3 (as created by 'svnadmin --deltas' or svnrdump).
+
+  test_create(sbox)
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'simple_v3.dump')
+  dump_in = open(dumpfile_location).read()
+
+  dump_out, err = filter_and_return_output(dump_in, 0, "include",
+                                                        "trunk", "--quiet")
+
+  expected_revs = [
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'story': 'Yada yada yada...'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    ]
+
+  load_and_verify_dumpstream(sbox, [], [], expected_revs, True, dump_out,
+                             '--ignore-uuid')
+
+  
+
+@Issue(4234)
+def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
+  "dumpfilter targets expect leading '/' in prefixes"
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=4234. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = open(dumpfile_location).read()
+
+  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  try:
+    targets = open(targets_file, 'w')
+
+    # Removing the leading slash in path prefixes should work.
+    targets.write('A/D/H\n')
+    targets.write('A/D/G\n')
+    targets.close()
+    _simple_dumpfilter_test(sbox, dumpfile,
+                            'exclude', '/A/B/E', '--targets', targets_file)
+  finally:
+    os.close(fd)
+    os.remove(targets_file)
+
+
 ########################################################################
 # Run the tests
 
@@ -608,6 +718,9 @@ test_list = [ None,
               dumpfilter_with_patterns,
               filter_mergeinfo_revs_outside_of_dump_stream,
               dropped_but_not_renumbered_empty_revs,
+              match_empty_prefix,
+              accepts_deltas,
+              dumpfilter_targets_expect_leading_slash_prefixes,
               ]
 
 if __name__ == '__main__':

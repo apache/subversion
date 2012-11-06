@@ -32,6 +32,8 @@
 
 #include "svn_private_config.h"
 
+#include "repos.h"
+
 
 
 
@@ -46,8 +48,8 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool)
@@ -63,7 +65,7 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                  svn_string_create(log_msg, pool));
   return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
                                       repos_url, base_path, revprop_table,
-                                      callback, callback_baton,
+                                      commit_callback, commit_baton,
                                       authz_callback, authz_baton, pool);
 }
 
@@ -248,6 +250,41 @@ svn_repos_begin_report(void **report_baton,
                                  edit_baton,
                                  authz_read_func,
                                  authz_read_baton,
+                                 pool);
+}
+
+svn_error_t *
+svn_repos_begin_report2(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *target,
+                        const char *tgt_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
+{
+  return svn_repos_begin_report3(report_baton,
+                                 revnum,
+                                 repos,
+                                 fs_base,
+                                 target,
+                                 tgt_path,
+                                 text_deltas,
+                                 depth,
+                                 ignore_ancestry,
+                                 send_copyfrom_args,
+                                 editor,
+                                 edit_baton,
+                                 authz_read_func,
+                                 authz_read_baton,
+                                 0,     /* disable zero-copy code path */
                                  pool);
 }
 
@@ -570,8 +607,7 @@ repos_notify_handler(void *baton,
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      len = strlen(notify->warning_str);
-      svn_error_clear(svn_stream_write(feedback_stream, notify->warning_str, &len));
+      svn_error_clear(svn_stream_puts(feedback_stream, notify->warning_str));
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -715,6 +751,28 @@ svn_repos_verify_fs(svn_repos_t *repos,
 /*** From load.c ***/
 
 svn_error_t *
+svn_repos_load_fs3(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs4(repos, dumpstream,
+                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            uuid_action, parent_dir,
+                            use_pre_commit_hook, use_post_commit_hook,
+                            validate_props, notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
 svn_repos_load_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
@@ -752,6 +810,27 @@ fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
   return fns;
 }
 
+static svn_repos_parser_fns2_t *
+fns2_from_fns3(const svn_repos_parse_fns3_t *fns3,
+              apr_pool_t *pool)
+{
+  svn_repos_parser_fns2_t *fns2;
+
+  fns2 = apr_palloc(pool, sizeof(*fns2));
+  fns2->new_revision_record = fns3->new_revision_record;
+  fns2->uuid_record = fns3->uuid_record;
+  fns2->new_node_record = fns3->new_node_record;
+  fns2->set_revision_property = fns3->set_revision_property;
+  fns2->set_node_property = fns3->set_node_property;
+  fns2->remove_node_props = fns3->remove_node_props;
+  fns2->set_fulltext = fns3->set_fulltext;
+  fns2->close_node = fns3->close_node;
+  fns2->close_revision = fns3->close_revision;
+  fns2->delete_node_property = fns3->delete_node_property;
+  fns2->apply_textdelta = fns3->apply_textdelta;
+  return fns2;
+}
+
 static svn_repos_parse_fns2_t *
 fns2_from_fns(const svn_repos_parser_fns_t *fns,
               apr_pool_t *pool)
@@ -771,6 +850,42 @@ fns2_from_fns(const svn_repos_parser_fns_t *fns,
   fns2->delete_node_property = NULL;
   fns2->apply_textdelta = NULL;
   return fns2;
+}
+
+static svn_repos_parse_fns3_t *
+fns3_from_fns2(const svn_repos_parser_fns2_t *fns2,
+               apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *fns3;
+
+  fns3 = apr_palloc(pool, sizeof(*fns3));
+  fns3->magic_header_record = NULL;
+  fns3->uuid_record = fns2->uuid_record;
+  fns3->new_revision_record = fns2->new_revision_record;
+  fns3->new_node_record = fns2->new_node_record;
+  fns3->set_revision_property = fns2->set_revision_property;
+  fns3->set_node_property = fns2->set_node_property;
+  fns3->remove_node_props = fns2->remove_node_props;
+  fns3->set_fulltext = fns2->set_fulltext;
+  fns3->close_node = fns2->close_node;
+  fns3->close_revision = fns2->close_revision;
+  fns3->delete_node_property = fns2->delete_node_property;
+  fns3->apply_textdelta = fns2->apply_textdelta;
+  return fns3;
+}
+
+svn_error_t *
+svn_repos_parse_dumpstream2(svn_stream_t *stream,
+                            const svn_repos_parser_fns2_t *parse_fns,
+                            void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *fns3 = fns3_from_fns2(parse_fns, pool);
+
+  return svn_repos_parse_dumpstream3(stream, fns3, parse_baton, FALSE,
+                                     cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *
@@ -800,6 +915,31 @@ svn_repos_load_fs(svn_repos_t *repos,
   return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
                             uuid_action, parent_dir, FALSE, FALSE,
                             cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool)
+{
+  const svn_repos_parse_fns3_t *fns3;
+
+  SVN_ERR(svn_repos_get_fs_build_parser4(&fns3, parse_baton, repos,
+                                         SVN_INVALID_REVNUM,
+                                         SVN_INVALID_REVNUM,
+                                         use_history, validate_props,
+                                         uuid_action, parent_dir,
+                                         notify_func, notify_baton, pool));
+
+  *callbacks = fns2_from_fns3(fns3, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -835,5 +975,34 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
                                          parent_dir, pool));
 
   *parser_callbacks = fns_from_fns2(fns2, pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
+                                  svn_repos_t *repos,
+                                  svn_revnum_t rev,
+                                  const char *author,
+                                  apr_pool_t *pool)
+{
+  /* ### someday, we might run a read-hook here. */
+
+  /* Begin the transaction. */
+  SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev, 0, pool));
+
+  /* We pass the author to the filesystem by adding it as a property
+     on the txn. */
+
+  /* User (author). */
+  if (author)
+    {
+      svn_string_t val;
+      val.data = author;
+      val.len = strlen(author);
+      SVN_ERR(svn_fs_change_txn_prop(*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                     &val, pool));
+    }
+
   return SVN_NO_ERROR;
 }

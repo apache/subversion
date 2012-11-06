@@ -16,6 +16,10 @@
 :: under the License.
 
 @ECHO OFF
+
+ECHO.THIS SCRIPT IS CURRENTLY OUTDATED.
+GOTO :EOF
+
 SETLOCAL EnableDelayedExpansion
 
 :: Where are the svn binaries you want to benchmark?

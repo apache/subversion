@@ -29,7 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>]
-            [--config-file=<file>]
+            [--config-file=<file>] [--ssl-cert=<file>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -43,10 +43,9 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-LINE_LENGTH = 45
 SVN_VER_MINOR = 8
 
-import os, re, subprocess, sys, imp
+import os, re, subprocess, sys, imp, threading
 from datetime import datetime
 
 import getopt
@@ -72,6 +71,49 @@ class TextColors:
     cls.SUCCESS = ''
 
 
+def _get_term_width():
+  'Attempt to discern the width of the terminal'
+  # This may not work on all platforms, in which case the default of 80
+  # characters is used.  Improvements welcomed.
+
+  def ioctl_GWINSZ(fd):
+    try:
+      import fcntl, termios, struct, os
+      cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+    except:
+      return None
+    return cr
+
+  cr = None
+  if not cr:
+    try:
+      cr = (os.environ['SVN_MAKE_CHECK_LINES'],
+            os.environ['SVN_MAKE_CHECK_COLUMNS'])
+    except:
+      cr = None
+  if not cr:
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+  if not cr:
+    try:
+      fd = os.open(os.ctermid(), os.O_RDONLY)
+      cr = ioctl_GWINSZ(fd)
+      os.close(fd)
+    except:
+      pass
+  if not cr:
+    try:
+      cr = (os.environ['LINES'], os.environ['COLUMNS'])
+    except:
+      cr = None
+  if not cr:
+    # Default
+    if sys.platform == 'win32':
+      cr = (25, 79)
+    else:
+      cr = (25, 80)
+  return int(cr[1])
+
+
 class TestHarness:
   '''Test harness for Subversion tests.
   '''
@@ -82,7 +124,7 @@ class TestHarness:
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
-               milestone_filter=None):
+               milestone_filter=None, set_log_level=None, ssl_cert=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -129,9 +171,11 @@ class TestHarness:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
     self.milestone_filter = milestone_filter
+    self.set_log_level = set_log_level
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
+    self.ssl_cert = ssl_cert
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -273,6 +317,12 @@ class TestHarness:
       print("WARNING: no failures, but '%s' exists from a previous run."
             % self.faillogfile)
 
+    # Summary.
+    if failed or xpassed or failed_list:
+      print("SUMMARY: Some tests failed.\n")
+    else:
+      print("SUMMARY: All tests successful.\n")
+
     self._close_log()
     return failed
 
@@ -333,12 +383,13 @@ class TestHarness:
     # This has to be class-scoped for use in the progress_func()
     self.dots_written = 0
     def progress_func(completed):
+      if not self.log or self.dots_written >= dot_count:
+        return
       dots = (completed * dot_count) / total
-
+      if dots > dot_count:
+        dots = dot_count
       dots_to_write = dots - self.dots_written
-      if self.log:
-        os.write(sys.stdout.fileno(), '.' * dots_to_write)
-
+      os.write(sys.stdout.fileno(), '.' * dots_to_write)
       self.dots_written = dots
 
     tests_completed = 0
@@ -361,6 +412,10 @@ class TestHarness:
         progress_func(tests_completed)
 
       line = prog.stdout.readline()
+
+    # If we didn't run any tests, still print out the dots
+    if not tests_completed:
+      os.write(sys.stdout.fileno(), '.' * dot_count)
 
     prog.wait()
     return prog.returncode
@@ -405,6 +460,13 @@ class TestHarness:
       svntest.main.options.list_tests = True
     if self.milestone_filter is not None:
       svntest.main.options.milestone_filter = self.milestone_filter
+    if self.set_log_level is not None:
+      # Somehow the logger is not setup correctly from win-tests.py, so
+      # setting the log level would fail. ### Please fix
+      if svntest.main.logger is None:
+        import logging
+        svntest.main.logger = logging.getLogger()
+      svntest.main.logger.setLevel(self.set_log_level)
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin
     if self.fsfs_sharding is not None:
@@ -413,6 +475,8 @@ class TestHarness:
       svntest.main.options.fsfs_packing = self.fsfs_packing
     if self.mode_filter is not None:
       svntest.main.options.mode_filter = self.mode_filter
+    if self.ssl_cert is not None:
+      svntest.main.options.ssl_cert = self.ssl_cert
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -421,21 +485,28 @@ class TestHarness:
       sys.stdout.flush()
       sys.stderr.flush()
       self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
-      os.dup2(self.log.fileno(), 1)
-      os.dup2(self.log.fileno(), 2)
+      old_stdout = os.dup(sys.stdout.fileno())
+      old_stderr = os.dup(sys.stderr.fileno())
+      os.dup2(self.log.fileno(), sys.stdout.fileno())
+      os.dup2(self.log.fileno(), sys.stderr.fileno())
 
-    # This has to be class-scoped for use in the progress_func()
+    # These have to be class-scoped for use in the progress_func()
     self.dots_written = 0
+    self.progress_lock = threading.Lock()
     def progress_func(completed, total):
+      """Report test suite progress. Can be called from multiple threads
+         in parallel mode."""
+      if not self.log:
+        return
       dots = (completed * dot_count) / total
-
-      dots_to_write = dots - self.dots_written
-      if self.log:
+      if dots > dot_count:
+        dots = dot_count
+      self.progress_lock.acquire()
+      if self.dots_written < dot_count:
+        dots_to_write = dots - self.dots_written
+        self.dots_written = dots
         os.write(old_stdout, '.' * dots_to_write)
-
-      self.dots_written = dots
+      self.progress_lock.release()
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
 
@@ -468,8 +539,8 @@ class TestHarness:
     if self.log:
       sys.stdout.flush()
       sys.stderr.flush()
-      os.dup2(old_stdout, 1)
-      os.dup2(old_stderr, 2)
+      os.dup2(old_stdout, sys.stdout.fileno())
+      os.dup2(old_stderr, sys.stderr.fileno())
       os.close(old_stdout)
       os.close(old_stderr)
 
@@ -511,14 +582,17 @@ class TestHarness:
 
     progabs = os.path.abspath(os.path.join(self.srcdir, prog))
     old_cwd = os.getcwd()
+    line_length = _get_term_width()
+    dots_needed = line_length \
+                    - len(test_info) \
+                    - len('Running tests in ') \
+                    - len('success')
     try:
       os.chdir(progdir)
       if progbase[-3:] == '.py':
-        failed = self._run_py_test(progabs, test_nums,
-                                   (LINE_LENGTH - len(test_info)))
+        failed = self._run_py_test(progabs, test_nums, dots_needed)
       else:
-        failed = self._run_c_test(prog, test_nums,
-                                  (LINE_LENGTH - len(test_info)))
+        failed = self._run_c_test(prog, test_nums, dots_needed)
     except:
       os.chdir(old_cwd)
       raise
@@ -566,7 +640,7 @@ def main():
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
-                            'mode-filter='])
+                            'mode-filter=', 'set-log-level=', 'ssl-cert='])
   except getopt.GetoptError:
     args = []
 
@@ -576,9 +650,10 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter= \
+    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
+    set_log_level, ssl_cert = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None
+            None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -610,6 +685,10 @@ def main():
       milestone_filter = val
     elif opt in ['--mode-filter']:
       mode_filter = val
+    elif opt in ['--set-log-level']:
+      set_log_level = val
+    elif opt in ['--ssl-cert']:
+      ssl_cert = val
     else:
       raise getopt.GetoptError
 
@@ -624,7 +703,8 @@ def main():
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing, list_tests,
-                   mode_filter=mode_filter, milestone_filter=milestone_filter)
+                   mode_filter=mode_filter, milestone_filter=milestone_filter,
+                   set_log_level=set_log_level, ssl_cert=ssl_cert)
 
   failed = th.run(args[2:])
   if failed:

@@ -85,7 +85,7 @@ def sqlite_extractor(parser, include_file):
 
 extractors = {
   'SVN' : svn_extractor,
-  'SQLITE' : sqlite_extractor,
+  # 'SQLITE' : sqlite_extractor, # not used
   }
 
 def usage_and_exit(msg):

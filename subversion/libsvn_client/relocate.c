@@ -139,16 +139,11 @@ relocate_externals(const char *local_abspath,
                    apr_array_header_t *ext_desc,
                    const char *old_parent_repos_root_url,
                    const char *new_parent_repos_root_url,
-                   svn_boolean_t ignore_externals,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  const char *url;
   apr_pool_t *iterpool;
   int i;
-
-  SVN_ERR(svn_client_url_from_path2(&url, local_abspath, ctx,
-                                    scratch_pool, scratch_pool));
 
   /* Parse an externals definition into an array of external items. */
 
@@ -185,8 +180,8 @@ relocate_externals(const char *local_abspath,
                                                       ext_item->target_dir,
                                                       iterpool),
                                       iterpool));
-      err = svn_client_root_url_from_path(&target_repos_root_url,
-                                          target_abspath, ctx, iterpool);
+      err = svn_client_get_repos_root(&target_repos_root_url, NULL /* uuid */,
+                                      target_abspath, ctx, iterpool, iterpool);
 
       /* Ignore externals that aren't present in the working copy.
        * This can happen if an external is deleted from disk accidentally,
@@ -203,7 +198,7 @@ relocate_externals(const char *local_abspath,
         SVN_ERR(svn_client_relocate2(target_abspath,
                                      old_parent_repos_root_url,
                                      new_parent_repos_root_url,
-                                     ignore_externals, ctx, iterpool));
+                                     FALSE, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -248,16 +243,16 @@ svn_client_relocate2(const char *wcroot_dir,
     }
 
   /* Fetch our current root URL. */
-  SVN_ERR(svn_client_root_url_from_path(&old_repos_root_url, local_abspath,
-                                        ctx, pool));
+  SVN_ERR(svn_client_get_repos_root(&old_repos_root_url, NULL /* uuid */,
+                                    local_abspath, ctx, pool, pool));
 
   /* Perform the relocation. */
   SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from_prefix, to_prefix,
                            validator_func, &vb, pool));
 
   /* Now fetch new current root URL. */
-  SVN_ERR(svn_client_root_url_from_path(&new_repos_root_url, local_abspath,
-                                        ctx, pool));
+  SVN_ERR(svn_client_get_repos_root(&new_repos_root_url, NULL /* uuid */,
+                                    local_abspath, ctx, pool, pool));
 
 
   /* Relocate externals, too (if any). */
@@ -285,8 +280,7 @@ svn_client_relocate2(const char *wcroot_dir,
                                                   iterpool));
       if (ext_desc->nelts)
         SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
-                                   new_repos_root_url, ignore_externals, ctx,
-                                   iterpool));
+                                   new_repos_root_url, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);

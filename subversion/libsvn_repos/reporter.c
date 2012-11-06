@@ -36,6 +36,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_string_private.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -102,13 +103,15 @@ typedef struct revision_info_t
    driven by the client as it describes its working copy revisions. */
 typedef struct report_baton_t
 {
-  /* Parameters remembered from svn_repos_begin_report2 */
+  /* Parameters remembered from svn_repos_begin_report3 */
   svn_repos_t *repos;
   const char *fs_base;         /* fspath corresponding to wc anchor */
   const char *s_operand;       /* anchor-relative wc target (may be empty) */
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
+  apr_size_t zero_copy_limit;  /* Max item size that will be sent using
+                                  the zero-copy code path. */
 
   /* If the client requested a specific depth, record it here; if the
      client did not, then this is svn_depth_unknown, and the depth of
@@ -135,8 +138,10 @@ typedef struct report_baton_t
 
   /* Cache for revision properties. This is used to eliminate redundant
      revprop fetching. */
-  apr_hash_t* revision_infos;
+  apr_hash_t *revision_infos;
 
+  /* This will not change. So, fetch it once and reuse it. */
+  svn_string_t *repos_uuid;
   apr_pool_t *pool;
 } report_baton_t;
 
@@ -513,25 +518,29 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                 void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props;
+  apr_hash_t *s_props = NULL, *t_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
-  const char *uuid;
-  svn_string_t *cr_str;
-  revision_info_t* revision_info;
+  revision_info_t *revision_info;
   svn_boolean_t changed;
   const svn_prop_t *pc;
   svn_lock_t *lock;
+  apr_hash_index_t *hi;
 
   /* Fetch the created-rev and send entry props. */
   SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
   if (SVN_IS_VALID_REVNUM(crev))
     {
+      /* convert committed-rev to  string */
+      char buf[SVN_INT64_BUFFER_SIZE];
+      svn_string_t cr_str;
+      cr_str.data = buf;
+      cr_str.len = svn__i64toa(buf, crev);
+
       /* Transmit the committed-rev. */
-      cr_str = svn_string_createf(pool, "%ld", crev);
       SVN_ERR(change_fn(b, object,
-                        SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
+                        SVN_PROP_ENTRY_COMMITTED_REV, &cr_str, pool));
 
       SVN_ERR(get_revision_info(b, crev, &revision_info, pool));
 
@@ -546,9 +555,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                           revision_info->author, pool));
 
       /* Transmit the UUID. */
-      SVN_ERR(svn_fs_get_uuid(b->repos->fs, &uuid, pool));
       SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_UUID,
-                        svn_string_create(uuid, pool), pool));
+                        b->repos_uuid, pool));
     }
 
   /* Update lock properties. */
@@ -575,22 +583,82 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* If so, go ahead and get the source path's properties. */
       SVN_ERR(svn_fs_node_proplist(&s_props, s_root, s_path, pool));
     }
-  else
-    s_props = apr_hash_make(pool);
 
   /* Get the target path's properties */
   SVN_ERR(svn_fs_node_proplist(&t_props, b->t_root, t_path, pool));
 
-  /* Now transmit the differences. */
-  SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
-  for (i = 0; i < prop_diffs->nelts; i++)
+  if (s_props && apr_hash_count(s_props))
     {
-      pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-      SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
+      /* Now transmit the differences. */
+      SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
+      for (i = 0; i < prop_diffs->nelts; i++)
+        {
+          pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+          SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
+        }
+    }
+  else if (apr_hash_count(t_props))
+    {
+      /* So source, i.e. all new.  Transmit all target props. */
+      for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          SVN_ERR(change_fn(b, object, key, val, pool));
+        }
     }
 
   return SVN_NO_ERROR;
 }
+
+/* Baton type to be passed into send_zero_copy_delta.
+ */
+typedef struct zero_copy_baton_t
+{
+  /* don't process data larger than this limit */
+  apr_size_t zero_copy_limit;
+
+  /* window handler and baton to send the data to */
+  svn_txdelta_window_handler_t dhandler;
+  void *dbaton;
+
+  /* return value: will be set to TRUE, if the data was processed. */
+  svn_boolean_t zero_copy_succeeded;
+} zero_copy_baton_t;
+
+/* Implement svn_fs_process_contents_func_t.  If LEN is smaller than the
+ * limit given in *BATON, send the CONTENTS as an delta windows to the
+ * handler given in BATON and set the ZERO_COPY_SUCCEEDED flag in that
+ * BATON.  Otherwise, reset it to FALSE.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+send_zero_copy_delta(const unsigned char *contents,
+                     apr_size_t len,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  zero_copy_baton_t *zero_copy_baton = baton;
+
+  /* if the item is too large, the caller must revert to traditional
+     streaming code. */
+  if (len > zero_copy_baton->zero_copy_limit)
+    {
+      zero_copy_baton->zero_copy_succeeded = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_txdelta_send_contents(contents, len,
+                                    zero_copy_baton->dhandler,
+                                    zero_copy_baton->dbaton, pool));
+
+  /* all fine now */
+  zero_copy_baton->zero_copy_succeeded = TRUE;
+  return SVN_NO_ERROR;
+}
+
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in S_REV/S_PATH to those in B->t_root/T_PATH,
@@ -640,14 +708,40 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   /* Send the delta stream if desired, or just a NULL window if not. */
   SVN_ERR(b->editor->apply_textdelta(file_baton, s_hex_digest, pool,
                                      &dhandler, &dbaton));
-  if (b->text_deltas)
+
+  if (dhandler != svn_delta_noop_window_handler)
     {
-      SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
-                                           b->t_root, t_path, pool));
-      return svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool);
+      if (b->text_deltas)
+        {
+          /* if we send deltas against empty streams, we may use our
+             zero-copy code. */
+          if (b->zero_copy_limit > 0 && s_path == NULL)
+            {
+              zero_copy_baton_t baton = { b->zero_copy_limit
+                                        , dhandler
+                                        , dbaton
+                                        , FALSE};
+              svn_boolean_t called = FALSE;
+              SVN_ERR(svn_fs_try_process_file_contents(&called,
+                                                       b->t_root, t_path,
+                                                       send_zero_copy_delta,
+                                                       &baton, pool));
+
+              /* data has been available and small enough,
+                 i.e. been processed? */
+              if (called && baton.zero_copy_succeeded)
+                return SVN_NO_ERROR;
+            }
+
+          SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
+                                               b->t_root, t_path, pool));
+          SVN_ERR(svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool));
+        }
+      else
+        SVN_ERR(dhandler(NULL, dbaton));
     }
-  else
-    return dhandler(NULL, dbaton);
+
+  return SVN_NO_ERROR;
 }
 
 /* Determine if the user is authorized to view B->t_root/PATH. */
@@ -898,6 +992,21 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root), t_path,
                                     s_rev, b->t_rev, &deleted_rev,
                                     pool));
+
+      if (!SVN_IS_VALID_REVNUM(deleted_rev))
+        {
+          /* Two possibilities: either the thing doesn't exist in S_REV; or
+             it wasn't deleted between S_REV and B->T_REV.  In the first case,
+             I think we should leave DELETED_REV as SVN_INVALID_REVNUM, but
+             in the second, it should be set to B->T_REV-1 for the call to
+             delete_entry() below. */
+          svn_node_kind_t kind;
+
+          SVN_ERR(svn_fs_check_path(&kind, b->t_root, t_path, pool));
+          if (kind != svn_node_none)
+            deleted_rev = b->t_rev - 1;
+        }
+
       SVN_ERR(b->editor->delete_entry(e_path, deleted_rev, dir_baton,
                                       pool));
       s_path = NULL;
@@ -1442,7 +1551,7 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_repos_begin_report2(void **report_baton,
+svn_repos_begin_report3(void **report_baton,
                         svn_revnum_t revnum,
                         svn_repos_t *repos,
                         const char *fs_base,
@@ -1456,13 +1565,17 @@ svn_repos_begin_report2(void **report_baton,
                         void *edit_baton,
                         svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
+                        apr_size_t zero_copy_limit,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
+  const char *uuid;
 
   if (depth == svn_depth_exclude)
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
                             _("Request depth 'exclude' not supported"));
+
+  SVN_ERR(svn_fs_get_uuid(repos->fs, &uuid, pool));
 
   /* Build a reporter baton.  Copy strings in case the caller doesn't
      keep track of them. */
@@ -1474,6 +1587,7 @@ svn_repos_begin_report2(void **report_baton,
   b->t_path = switch_path ? svn_fspath__canonicalize(switch_path, pool)
                           : svn_fspath__join(b->fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
+  b->zero_copy_limit = zero_copy_limit;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
   b->send_copyfrom_args = send_copyfrom_args;
@@ -1487,6 +1601,7 @@ svn_repos_begin_report2(void **report_baton,
   b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
                                           1000000 /* maxsize */,
                                           pool);
+  b->repos_uuid = svn_string_create(uuid, pool);
 
   /* Hand reporter back to client. */
   *report_baton = b;

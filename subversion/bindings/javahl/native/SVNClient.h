@@ -46,6 +46,7 @@ class LogMessageCallback;
 class InfoCallback;
 class CommitCallback;
 class ListCallback;
+class ImportFilterCallback;
 class StatusCallback;
 class OutputStream;
 class PatchCallback;
@@ -107,7 +108,8 @@ class SVNClient :public SVNBase
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, CommitMessage *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
-                RevpropTable &revprops, CommitCallback *callback);
+                RevpropTable &revprops, ImportFilterCallback *ifCallback,
+                CommitCallback *commitCallback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
@@ -171,19 +173,20 @@ class SVNClient :public SVNBase
                          bool lastChanged);
   void upgrade(const char *path);
   jbyteArray propertyGet(const char *path, const char *name,
-                         Revision &revision, Revision &pegRevision);
+                         Revision &revision, Revision &pegRevision,
+                         StringArray &changelists);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, StringArray &changelists,
@@ -196,7 +199,7 @@ class SVNClient :public SVNBase
   ClientContext &getClientContext();
 
   const char *getLastPath();
-  void dispose();
+  void dispose(jobject jthis);
   static SVNClient *getCppObject(jobject jthis);
   SVNClient(jobject jthis_in);
   virtual ~SVNClient();
@@ -212,7 +215,7 @@ class SVNClient :public SVNBase
             OutputStream &outputStream, svn_depth_t depth,
             StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
 
   Path m_lastPath;
   ClientContext context;

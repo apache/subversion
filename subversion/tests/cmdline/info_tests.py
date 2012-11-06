@@ -27,7 +27,9 @@
 # See basic-tests.py for more svn info tests.
 
 # General modules
-import shutil, stat, re, os
+import shutil, stat, re, os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -74,9 +76,9 @@ def verify_xml_elements(lines, exprs):
     str = str[m.end():] # skip xml version tag
   (unmatched_str, unmatched_exprs) = match_xml_element(str, exprs)
   if unmatched_exprs:
-    print("Failed to find the following expressions:")
+    logger.warn("Failed to find the following expressions:")
     for expr in unmatched_exprs:
-      print(expr)
+      logger.warn(expr)
     raise svntest.tree.SVNTreeUnequal
 
 def match_xml_element(str, exprs):
@@ -115,7 +117,7 @@ def match_xml_element(str, exprs):
     content_re = re.compile(content_re_str % name, re.DOTALL)
     m = content_re.match(str)
     if not m:
-      print("No XML end-tag for '%s' found in '%s...'" % (name, str[:100]))
+      logger.warn("No XML end-tag for '%s' found in '%s...'" % (name, str[:100]))
       raise(svntest.tree.SVNTreeUnequal)
     content = m.group('content')
     str = str[m.end():]
@@ -299,13 +301,13 @@ def info_wcroot_abspaths(sbox):
       target = "(UNKNOWN)"
 
     if path is None:
-      print "No WC root path for '%s'" % (target)
+      logger.warn("No WC root path for '%s'", target)
       raise svntest.Failure
 
     if path != wcroot_abspath:
-      print("For target '%s'..." % (target))
-      print("   Reported WC root path: %s" % (path))
-      print("   Expected WC root path: %s" % (wcroot_abspath))
+      logger.warn("For target '%s'...", target)
+      logger.warn("   Reported WC root path: %s", path)
+      logger.warn("   Expected WC root path: %s", wcroot_abspath)
       raise svntest.Failure
 
   sbox.build(read_only=True)
@@ -469,7 +471,7 @@ def info_show_exclude(sbox):
 
   sbox.simple_rm('iota')
   sbox.simple_commit()
-  
+
   expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)

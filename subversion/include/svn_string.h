@@ -129,6 +129,12 @@ typedef struct svn_stringbuf_t
 svn_string_t *
 svn_string_create(const char *cstring, apr_pool_t *pool);
 
+/** Create a truely empty string object (length is 0)
+ * @since New in 1.8.
+ */
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool);
+
 /** Create a new bytestring containing a generic string of bytes
  * (NOT NULL-terminated) */
 svn_string_t *
@@ -194,11 +200,17 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 
+/** Create a new, empty bytestring.
+ * @since New in 1.8.
+ */
+svn_stringbuf_t *
+svn_stringbuf_create_empty(apr_pool_t *pool);
+
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * The allocated string buffer will be one byte larger than @a minimum_size
- * to account for a final '\\0'.
+ * The allocated string buffer will be at least one byte larger than
+ * @a minimum_size to account for a final '\\0'.
  *
  * @since New in 1.6.
  */
@@ -223,10 +235,16 @@ svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
   __attribute__((format(printf, 2, 0)));
 
-/** Make sure that the string @a str has at least @a minimum_size bytes of
- * space available in the memory block.
+/** Make sure that the stringbuf @a str has at least @a minimum_size
+ * bytes of space available in the memory block.
  *
- * (@a minimum_size should include space for the terminating NULL character.)
+ * The allocated string buffer will be at least one byte larger than
+ * @a minimum_size to account for a final '\\0'.
+ *
+ * @note: Before Subversion 1.8 this function did not ensure space for
+ * one byte more than @a minimum_size.  If compatibility with pre-1.8
+ * behaviour is required callers must assume space for only
+ * @a minimum_size-1 data bytes plus a final '\\0'.
  */
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size);
@@ -288,6 +306,45 @@ svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
 void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
                          const char *cstr);
+
+/** Read @a count bytes from @a bytes and insert them into @a str at
+ * position @a pos and following.  The resulting string will be
+ * @c count+str->len bytes long.  If @c pos is larger or equal to the
+ * number of bytes currently used in @a str,  simply append @a bytes.
+ *
+ * Reallocs if necessary. @a str is affected, nothing else is.
+ *
+ * @note The inserted string may be a sub-range if @a str.
+ */
+void
+svn_stringbuf_insert(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     const char *bytes,
+                     apr_size_t count);
+
+/** Removes @a count bytes from @a str, starting at position @a pos.
+ * If that range exceeds the current string data,  @a str gets truncated
+ * at @a pos.  If the latter is larger or equal to @c str->pos, this will
+ * be a no-op.  Otherwise, the resulting string will be @c str->len-count
+ * bytes long.
+ */
+void
+svn_stringbuf_remove(svn_stringbuf_t *str,
+                     apr_size_t pos,
+                     apr_size_t count);
+
+/** Faster but functionally equivalent to the following sequence:
+ * @code
+ *   svn_stringbuf_remove(str, pos, old_count);
+ *   svn_stringbuf_insert(str, pos, bytes, new_count);
+ * @endcode
+ */
+void
+svn_stringbuf_replace(svn_stringbuf_t *str,
+                      apr_size_t pos,
+                      apr_size_t old_count,
+                      const char *bytes,
+                      apr_size_t new_count);
 
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
@@ -369,6 +426,20 @@ svn_cstring_match_glob_list(const char *str, const apr_array_header_t *list);
  */
 svn_boolean_t
 svn_cstring_match_list(const char *str, const apr_array_header_t *list);
+
+/**
+ * Get the next token from @a *str interpreting any char from @a sep as a
+ * token separator.  Separators at the beginning of @a str will be skipped.
+ * Returns a pointer to the beginning of the first token in @a *str or NULL
+ * if no token is left.  Modifies @a str such that the next call will return
+ * the next token.
+ *
+ * Note that the content of @a *str may be modified by this function.
+ *
+ * @since New in 1.8.
+ */
+char *
+svn_cstring_tokenize(const char *sep, char **str);
 
 /**
  * Return the number of line breaks in @a msg, allowing any kind of newline

@@ -130,12 +130,46 @@
   :type 'boolean
   :group 'dsvn)
 
-(defun svn-call-process (program buffer &rest args)
+(defcustom svn-diff-args '("-x" "-p")
+  "*Additional arguments used for all invocations of `svn diff'."
+  :type '(repeat string)
+  :group 'dsvn)
+
+;; start-file-process and process-file are needed for tramp but only appeared
+;; in Emacs 23 and 22 respectively.
+(setq svn-start-file-process
+  (if (fboundp 'start-file-process) 'start-file-process 'start-process))
+(setq svn-process-file
+  (if (fboundp 'process-file) 'process-file 'call-process))
+
+;; Run svn with default (US-English) messages, since we are going to
+;; parse them.
+(setq svn-process-environment '("LC_MESSAGES=C"))
+
+(defun svn-call-in-svn-environment (func)
+  ;; Dynamic rebinding of process-environment
+  (let ((process-environment
+         (append svn-process-environment process-environment)))
+    (funcall func)))
+
+(defun svn-start-svn-process (buffer args)
+  "Start an svn process associated to BUFFER, with command-line
+arguments ARGS. Return the process object for it."
+  (svn-call-in-svn-environment
+   (lambda ()
+     (apply svn-start-file-process "svn" buffer svn-program args))))
+
+(defun svn-call-svn (infile buffer display args)
+  "Call svn synchronously. Arguments are like process-file."
+  (svn-call-in-svn-environment
+   (lambda ()
+     (apply svn-process-file svn-program infile buffer display args))))
+
+(defun svn-call-process (buffer &rest args)
   "Run svn and wait for it to finish.
-Argument PROGRAM is the svn binary to run.
 Argument BUFFER is the buffer in which to insert output.
 Optional argument ARGS are the arguments to svn."
-  (let ((proc (apply 'start-process "svn" buffer program args)))
+  (let ((proc (svn-start-svn-process buffer args)))
     (set-process-coding-system proc 'utf-8)
     (set-process-filter proc 'svn-output-filter)
     (while (eq (process-status proc) 'run)
@@ -159,9 +193,7 @@ Return non-NIL if there was any output."
         (fundamental-mode))
       (setq default-directory dir)
       (setq buffer-read-only t)
-      (let ((cmd `(,svn-program ,subcommand ,@args))
-            proc)
-        (setq proc (apply 'start-process "svn" buf cmd))
+      (let ((proc (svn-start-svn-process buf (cons subcommand args))))
         (set-process-coding-system proc 'utf-8)
         (set-process-filter proc 'svn-output-filter)
         (while (eq (process-status proc) 'run)
@@ -184,7 +216,7 @@ Returns the buffer that holds the output from 'svn'."
     (with-current-buffer buf
       (erase-buffer)
       (setq default-directory dir))
-    (apply 'call-process svn-program nil buf nil (symbol-name command) args)
+    (svn-call-svn nil buf nil (cons (symbol-name command) args))
     buf))
 
 (defun svn-run-for-stdout (command args)
@@ -192,8 +224,8 @@ Returns the buffer that holds the output from 'svn'."
 Argument COMMAND is the svn subcommand to run.
 Optional argument ARGS is a list of arguments."
   (let ((output-buffer (generate-new-buffer "*svn-stdout*")))
-    (apply 'call-process svn-program nil (list output-buffer nil) nil
-	   (symbol-name command) args)
+    (svn-call-svn nil (list output-buffer nil) nil
+                  (cons (symbol-name command) args))
     (let ((stdout (with-current-buffer output-buffer (buffer-string))))
       (kill-buffer output-buffer)
       stdout)))
@@ -255,8 +287,7 @@ buffer to describe what is going on."
             args (cons "-v" args)))
     (unless (memq command svn-noninteractive-blacklist)
       (setq args (cons "--non-interactive" args)))
-    (setq proc (apply 'start-process "svn" (current-buffer)
-                      svn-program command-s args))
+    (setq proc (svn-start-svn-process (current-buffer) (cons command-s args)))
     (if (fboundp filter-func)
         (set-process-filter proc filter-func)
       (set-process-filter proc 'svn-default-filter))
@@ -325,23 +356,59 @@ during the run."
   "Run `svn diff'.
 Argument ARG are the command line arguments."
   (interactive "ssvn diff arguments: ")
-  (svn-run-with-output "diff" (split-string arg) 'diff-mode))
+  (svn-run-with-output "diff"
+		       (append svn-diff-args (split-string arg))
+		       'diff-mode))
+
+(defun svn-add-unversioned-files-p (files)
+  "Ask the user whether FILES should be added; return the answer."
+  (let ((buf (get-buffer-create "*svn-unversioned-files*")))
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert (mapconcat (lambda (f) f) files "\n"))
+      (setq buffer-read-only t)
+      (goto-char (point-min))
+      (save-selected-window
+        (pop-to-buffer buf)
+        (shrink-window-if-larger-than-buffer)
+        (let* ((n (length files))
+               (add-them (y-or-n-p
+                          (if (= n 1)
+                              "Add this item first? "
+                            (format "Add these %d items first? " n)))))
+          (let ((win (get-buffer-window buf)))
+            (if win
+                (condition-case nil
+                    (delete-window win)
+                  (error nil))))
+          (bury-buffer buf)
+          add-them)))))
 
 (defun svn-commit ()
   "Commit changes to one or more files."
   (interactive)
   (save-some-buffers)
-  (let ((status-buf (current-buffer))
-        (commit-buf (get-buffer-create "*svn commit*"))
-        (window-conf (and svn-restore-windows (current-window-configuration)))
-        (listfun (lambda () (with-current-buffer log-edit-parent-buffer
-                              (svn-action-files)))))
-    (log-edit 'svn-confirm-commit t
-              (if (< emacs-major-version 23)
-                  listfun
-                (list (cons 'log-edit-listfun listfun)))
-              commit-buf)
-    (set (make-local-variable 'saved-window-configuration) window-conf)))
+  (let ((unversioned-files (svn-action-files
+                            (lambda (pos) (eq (svn-file-status pos) ?\?)))))
+    (if unversioned-files
+        (if (svn-add-unversioned-files-p unversioned-files)
+            (progn
+              (message "Adding unversioned items. Please re-commit when ready.")
+              (svn-run 'add unversioned-files "Adding files"))
+          (message "Files not added; nothing committed."))
+      (let ((status-buf (current-buffer))
+            (commit-buf (get-buffer-create "*svn commit*"))
+            (window-conf (and svn-restore-windows
+                              (current-window-configuration)))
+            (listfun (lambda () (with-current-buffer log-edit-parent-buffer
+                                  (svn-action-files)))))
+        (log-edit 'svn-confirm-commit t
+                  (if (< emacs-major-version 23)
+                      listfun
+                    (list (cons 'log-edit-listfun listfun)))
+                  commit-buf)
+        (set (make-local-variable 'saved-window-configuration) window-conf)))))
 
 (defun svn-confirm-commit ()
   "Commit changes with the current buffer as commit message."
@@ -546,8 +613,8 @@ VERBOSE-P."
       (setq buffer-read-only t)
       (erase-buffer)
       (setq default-directory dir)
-      (svn-call-process svn-program diff-buf
-                        "diff" "-r"
+      (svn-call-process diff-buf
+                        "diff" "-x" "-p" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
 (defun svn-log-edit-files (commit-id)
@@ -575,7 +642,9 @@ VERBOSE-P."
   "Run `svn diff' for the current log entry."
   (interactive)
   (let ((commit-id (svn-log-current-commit)))
-    (svn-run-with-output "diff" (list "-c" (number-to-string commit-id))
+    (svn-run-with-output "diff"
+			 (append svn-diff-args
+				 (list "-c" (number-to-string commit-id)))
                          'diff-mode)))
 
 (defun svn-log-edit ()
@@ -1057,19 +1126,24 @@ outside."
       (goto-char (point-max))
       (insert str)
       (goto-char svn-output-marker)
-      (while (cond ((looking-at
-                     "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
-                    (let ((status (match-string 1))
-                          (filename (svn-normalise-path (match-string 2))))
-                      (delete-region (match-beginning 0)
-                                     (match-end 0))
-                      (svn-insert-file filename status))
-                    t)
-                   ((looking-at
-                     "\n\\|Performing status on external item at .*\n")
-                    (delete-region (match-beginning 0)
-                                   (match-end 0))
-                    t))))))
+      (while
+	 (cond
+	  ((looking-at
+	    "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
+	   (let ((status (match-string 1))
+		 (filename (svn-normalise-path (match-string 2))))
+	     (delete-region (match-beginning 0) (match-end 0))
+	     (svn-insert-file filename status))
+	   t)
+	  ((looking-at "\n\\|Performing status on external item at .*\n")
+	   (delete-region (match-beginning 0) (match-end 0))
+	   t)
+	  ((looking-at "      > +\\([^ ].*\\)\n")
+	   (let ((tree-conflict (match-string 1)))
+	     (delete-region (match-beginning 0) (match-end 0))
+	     (svn-update-status-msg svn-last-inserted-marker "TConflict")
+	     (svn-update-conflict-msg svn-last-inserted-marker tree-conflict))
+	   t))))))
 
 (defun svn-status-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -1084,15 +1158,23 @@ outside."
       (goto-char (point-max))
       (insert str)
       (goto-char svn-output-marker)
-      (while (looking-at
-              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
-        (let ((status (match-string 1))
-              (filename (svn-normalise-path (match-string 6))))
-          (delete-region (match-beginning 0)
-                         (match-end 0))
-	  (when (or (not svn-file-filter)
-		    (member filename svn-file-filter))
-	    (svn-insert-file filename status)))))))
+      (while
+	  (cond
+	   ((looking-at
+	     "\\(?:\\(\\?.....\\)\\|\\([ ACDGIMRX!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? [* ] +[^ ]+ +[^ ]+ +[^ ]+\\) +\\([^ ].*\\)\n")
+	    (let ((status (or (match-string 1) (match-string 2)))
+		  (filename (svn-normalise-path (match-string 3))))
+	      (delete-region (match-beginning 0) (match-end 0))
+	      (when (or (not svn-file-filter)
+			(member filename svn-file-filter))
+		(svn-insert-file filename status)))
+	    t)
+	   ((looking-at "      > +\\([^ ].*\\)\n")
+	    (let ((tree-conflict (match-string 1)))
+	      (delete-region (match-beginning 0) (match-end 0))
+	      (svn-update-status-msg svn-last-inserted-marker "TConflict")
+	      (svn-update-conflict-msg svn-last-inserted-marker tree-conflict))
+	    t))))))
 
 (defun svn-status-v-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -1154,7 +1236,8 @@ With prefix arg, prompt for REVISION."
     (?D . "Deleted")
     (?U . "Updated")
     (?G . "Merged")
-    (?C . "Conflict")))
+    (?C . "Conflict")
+    (?E . "Existed")))
 
 (defvar svn-merging nil)
 
@@ -1182,11 +1265,12 @@ With prefix arg, prompt for REVISION."
       (goto-char svn-output-marker)
       (while (not nomore)
         (cond ((looking-at
-                "\\([ ADUCG][ ADUCG][ B]\\)  \\(.*\\)\n")
+                "\\([ ADUCGE][ ADUCGE][ B]\\)\\([ C]?\\) \\([^ ].*\\)\n")
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
-                      (filename (svn-normalise-path (match-string 2))))
+		      (tree-status (match-string 2))
+                      (filename (svn-normalise-path (match-string 3))))
                  (delete-region (match-beginning 0)
                                 (match-end 0))
                  (svn-insert-file
@@ -1196,7 +1280,9 @@ With prefix arg, prompt for REVISION."
                           (svn-remap-update-to-status file-status)
                           (svn-remap-update-to-status prop-status))
                   ;; Optimize for some common cases
-                  (cond ((= prop-status ?\ )
+                  (cond ((string= tree-status "C")
+			 "TConflict")
+			((= prop-status ?\ )
                          (cdr (assq file-status svn-update-flag-name)))
                         ((= file-status ?\ )
                          (let ((s (format "P %s"
@@ -1211,6 +1297,8 @@ With prefix arg, prompt for REVISION."
               ((looking-at "At revision \\([0-9]+\\)\\.\n")
                (svn-update-label svn-revision-label (match-string 1))
                (forward-line 1))
+              ((looking-at "Updating '.*':\n")
+               (delete-region (match-beginning 0) (match-end 0)))
               ((and (not svn-merging)
                     (looking-at "Updated to revision \\([0-9]+\\)\\.\n"))
                (svn-update-label svn-revision-label (match-string 1))
@@ -1589,27 +1677,24 @@ Set it if MARK is non-NIL, and clear it if MARK is NIL."
   "Return a list of lists (FILE POS) to act on.
 Optional argument PRED is a predicate function that is called with POS as
 argument."
-  (let ((files ())
-        (pos (next-single-property-change (point-min) 'svn-file)))
-    (while pos
-      (when (and (get-text-property pos 'svn-mark)
-                 (or (not pred)
-                     (funcall pred pos)))
-        (setq files (cons (list (get-text-property pos 'svn-file)
-                                pos)
-                          files)))
-      (setq pos (next-single-property-change pos 'svn-file)))
-    (if (null files)
-        (let ((file (svn-getprop (point) 'file)))
-          (unless file
-            (error "No file on this line"))
-          (when (and pred
-                     (not (funcall pred (line-beginning-position))))
-            (error "Invalid file"))
-          (list (list file
-                      (save-excursion
-                        (beginning-of-line)
-                        (point)))))
+  (let ((positions ()))
+    (let ((pos (next-single-property-change (point-min) 'svn-file)))
+      (while pos
+        (when (get-text-property pos 'svn-mark)
+          (setq positions (cons pos positions)))
+        (setq pos (next-single-property-change pos 'svn-file))))
+    (when (null positions)
+      (unless (svn-getprop (point) 'file)
+        (error "No file on this line"))
+      (setq positions (list (line-beginning-position))))
+
+    (let ((files ()))
+      (mapc (lambda (pos)
+              (when (or (not pred) (funcall pred pos))
+                (setq files (cons (list (get-text-property pos 'svn-file)
+                                        pos)
+                                  files))))
+            (reverse positions))
       (reverse files))))
 
 (defun svn-action-files (&optional pred)
@@ -1912,7 +1997,8 @@ files instead."
                  (list (or (svn-getprop (point) 'file)
                            (svn-getprop (point) 'dir)
                            (error "No file on line"))))))
-    (unless (svn-run-with-output "diff" files 'diff-mode)
+    (unless (svn-run-with-output "diff" (append svn-diff-args files)
+				 'diff-mode)
       (message "No difference found"))))
 
 (defun svn-previous-file (arg)
@@ -2075,7 +2161,14 @@ Argument MSG is the character to use."
   (save-excursion
     (goto-char (+ pos svn-status-msg-col))
     (delete-char 9)
-    (insert-and-inherit (format "%9s" msg))))
+    (insert-and-inherit (format "%-9s" msg))))
+
+(defun svn-update-conflict-msg (pos msg)
+  (save-excursion
+    (let ((filename (svn-getprop pos 'file)))
+      (goto-char (+ pos svn-status-file-col (length filename)))
+      (delete-char (- (line-end-position) (point)))
+      (insert-and-inherit (concat " -- " msg)))))
 
 (defun svn-foreach-svn-buffer (file-name function)
   "Call FUNCTION for each svn status buffer that contains FILE-NAME.

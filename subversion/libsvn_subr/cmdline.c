@@ -226,7 +226,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* Create a pool for use by the UTF-8 routines.  It will be cleaned
      up by APR at exit time. */
   pool = svn_pool_create(NULL);
-  svn_utf_initialize(pool);
+  svn_utf_initialize2(pool, FALSE);
 
   if ((err = svn_nls_init()))
     {
@@ -526,6 +526,13 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
+      svn_boolean_t ssl_client_cert_file_prompt;
+
+      SVN_ERR(svn_config_get_bool(cfg, &ssl_client_cert_file_prompt,
+                                  SVN_CONFIG_SECTION_AUTH,
+                                  SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT,
+                                  FALSE));
+
       /* Two basic prompt providers: username/password, and just username. */
       svn_auth_get_simple_prompt_provider(&provider,
                                           svn_cmdline_auth_simple_prompt,
@@ -539,19 +546,23 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
          2, /* retry limit */ pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      /* Three ssl prompt providers, for server-certs, client-certs,
-         and client-cert-passphrases.  */
+      /* SSL prompt providers: server-certs and client-cert-passphrases.  */
       svn_auth_get_ssl_server_trust_prompt_provider
         (&provider, svn_cmdline_auth_ssl_server_trust_prompt, pb, pool);
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-      svn_auth_get_ssl_client_cert_prompt_provider
-        (&provider, svn_cmdline_auth_ssl_client_cert_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_ssl_client_cert_pw_prompt_provider
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* If configuration allows, add a provider for client-cert path
+         prompting, too. */
+      if (ssl_client_cert_file_prompt)
+        {
+          svn_auth_get_ssl_client_cert_prompt_provider
+            (&provider, svn_cmdline_auth_ssl_client_cert_prompt, pb, 2, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        }
     }
   else if (trust_server_cert)
     {
@@ -631,13 +642,14 @@ void
 svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
                             const char* propname,
                             svn_string_t *propval,
+                            svn_boolean_t inherited_prop,
                             apr_pool_t *pool)
 {
   const char *xml_safe;
   const char *encoding = NULL;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   if (svn_xml_is_xml_safe(propval->data, propval->len))
     {
@@ -654,16 +666,22 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
     }
 
   if (encoding)
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname,
-                          "encoding", encoding, NULL);
+    svn_xml_make_open_tag(
+      outstr, pool, svn_xml_protect_pcdata,
+      inherited_prop ? "inherited_property" : "property",
+      "name", propname,
+      "encoding", encoding, NULL);
   else
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname, NULL);
+    svn_xml_make_open_tag(
+      outstr, pool, svn_xml_protect_pcdata,
+      inherited_prop ? "inherited_property" : "property",
+      "name", propname, NULL);
 
   svn_stringbuf_appendcstr(*outstr, xml_safe);
 
-  svn_xml_make_close_tag(outstr, pool, "property");
+  svn_xml_make_close_tag(
+    outstr, pool,
+    inherited_prop ? "inherited_property" : "property");
 
   return;
 }

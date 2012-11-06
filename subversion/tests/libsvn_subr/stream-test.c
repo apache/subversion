@@ -67,7 +67,7 @@ test_stream_from_string(apr_pool_t *pool)
       apr_size_t len;
 
       inbuf = svn_stringbuf_create(strings[i], subpool);
-      outbuf = svn_stringbuf_create("", subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
       stream = svn_stream_from_stringbuf(inbuf, subpool);
       len = TEST_BUF_SIZE;
       while (len == TEST_BUF_SIZE)
@@ -94,7 +94,7 @@ test_stream_from_string(apr_pool_t *pool)
       apr_size_t amt_read, len;
 
       inbuf = svn_stringbuf_create(strings[i], subpool);
-      outbuf = svn_stringbuf_create("", subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
       stream = svn_stream_from_stringbuf(outbuf, subpool);
       amt_read = 0;
       while (amt_read < inbuf->len)
@@ -125,7 +125,7 @@ test_stream_from_string(apr_pool_t *pool)
 static svn_stringbuf_t *
 generate_test_bytes(int num_bytes, apr_pool_t *pool)
 {
-  svn_stringbuf_t *buffer = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *buffer = svn_stringbuf_create_empty(pool);
   int total, repeat, repeat_iter;
   char c;
 
@@ -138,7 +138,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
         {
           if (c == 127)
             repeat++;
-          c = (c + 1) % 127;
+          c = (char)((c + 1) % 127);
           repeat_iter = repeat;
         }
     }
@@ -189,8 +189,8 @@ test_stream_compressed(apr_pool_t *pool)
       apr_size_t len;
 
       origbuf = bufs[i];
-      inbuf = svn_stringbuf_create("", subpool);
-      outbuf = svn_stringbuf_create("", subpool);
+      inbuf = svn_stringbuf_create_empty(subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
 
       stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf,
                                                                subpool),
@@ -232,8 +232,8 @@ static svn_error_t *
 test_stream_tee(apr_pool_t *pool)
 {
   svn_stringbuf_t *test_bytes = generate_test_bytes(100, pool);
-  svn_stringbuf_t *output_buf1 = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *output_buf2 = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *output_buf1 = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *output_buf2 = svn_stringbuf_create_empty(pool);
   svn_stream_t *source_stream = svn_stream_from_stringbuf(test_bytes, pool);
   svn_stream_t *output_stream1 = svn_stream_from_stringbuf(output_buf1, pool);
   svn_stream_t *output_stream2 = svn_stream_from_stringbuf(output_buf2, pool);
@@ -538,8 +538,8 @@ static svn_error_t *
 test_stream_base64(apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  svn_stringbuf_t *actual = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *expected = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
   int i;
   static const char *strings[] = {
     "fairly boring test data... blah blah",
@@ -568,6 +568,165 @@ test_stream_base64(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* This test doesn't test much unless run under valgrind when it
+   triggers the problem reported here:
+
+   http://mail-archives.apache.org/mod_mbox/subversion-dev/201202.mbox/%3C87sjik3m8q.fsf@stat.home.lan%3E
+
+   The two data writes caused the base 64 code to allocate a buffer
+   that was a byte short but exactly matched a stringbuf blocksize.
+   That meant the stringbuf didn't overallocate and a write beyond
+   the end of the buffer occured.
+ */
+static svn_error_t *
+test_stream_base64_2(apr_pool_t *pool)
+{
+  const struct data_t {
+    const char *encoded1;
+    const char *encoded2;
+  } data[] = {
+    {
+      "MTI",
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "A23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "B23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "C23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "D23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "E23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "F23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "G23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "H23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "I23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D123456789E"
+      "623456789A123456789B123456789C123456789D123456789E"
+      "723456789A123456789B123456789C123456789D123456789E"
+      "823456789A123456789B123456789C123456789D123456789E"
+      "923456789A123456789B123456789C123456789D123456789E"
+      "J23456789A123456789B123456789C123456789D123456789E"
+      "123456789A123456789B123456789C123456789D123456789E"
+      "223456789A123456789B123456789C123456789D123456789E"
+      "323456789A123456789B123456789C123456789D123456789E"
+      "423456789A123456789B123456789C123456789D123456789E"
+      "523456789A123456789B123456789C123456789D12345"
+    },
+    {
+      NULL,
+      NULL,
+    },
+  };
+  int i;
+
+  for (i = 0; data[i].encoded1; i++)
+    {
+      apr_size_t len1 = strlen(data[i].encoded1);
+
+      svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
+
+      stream = svn_base64_encode(stream, pool);
+      stream = svn_base64_decode(stream, pool);
+
+      SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
+      svn_stringbuf_appendbytes(expected, data[i].encoded1, len1);
+
+      if (data[i].encoded2)
+        {
+          apr_size_t len2 = strlen(data[i].encoded2);
+          SVN_ERR(svn_stream_write(stream, data[i].encoded2, &len2));
+          svn_stringbuf_appendbytes(expected, data[i].encoded2, len2);
+        }
+
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -591,5 +750,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test compressed streams with empty files"),
     SVN_TEST_PASS2(test_stream_base64,
                    "test base64 encoding/decoding streams"),
+    SVN_TEST_PASS2(test_stream_base64_2,
+                   "base64 decoding allocation problem"),
     SVN_TEST_NULL
   };

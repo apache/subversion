@@ -41,18 +41,11 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum loc_state_e {
+enum loc_state_e {
+  INITIAL = 0,
   REPORT,
-  LOCATION,
-} loc_state_e;
-
-typedef struct loc_state_list_t {
-  /* The current state that we are in now. */
-  loc_state_e state;
-
-  /* The previous state we were in. */
-  struct loc_state_list_t *prev;
-} loc_state_list_t;
+  LOCATION
+};
 
 typedef struct loc_context_t {
   /* pool to allocate memory from */
@@ -66,114 +59,49 @@ typedef struct loc_context_t {
   /* Returned location hash */
   apr_hash_t *paths;
 
-  /* Current state we're in */
-  loc_state_list_t *state;
-  loc_state_list_t *free_state;
-
-  int status_code;
-
-  svn_boolean_t done;
 } loc_context_t;
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t getloc_ttable[] = {
+  { INITIAL, S_, "get-locations-report", REPORT,
+    FALSE, { NULL }, FALSE },
+
+  { REPORT, S_, "location", LOCATION,
+    FALSE, { "?rev", "?path", NULL }, TRUE },
+
+  { 0 }
+};
+
 
-static void
-push_state(loc_context_t *loc_ctx, loc_state_e state)
-{
-  loc_state_list_t *new_state;
-
-  if (!loc_ctx->free_state)
-    {
-      new_state = apr_palloc(loc_ctx->pool, sizeof(*loc_ctx->state));
-    }
-  else
-    {
-      new_state = loc_ctx->free_state;
-      loc_ctx->free_state = loc_ctx->free_state->prev;
-    }
-  new_state->state = state;
-
-  /* Add it to the state chain. */
-  new_state->prev = loc_ctx->state;
-  loc_ctx->state = new_state;
-}
-
-static void pop_state(loc_context_t *loc_ctx)
-{
-  loc_state_list_t *free_state;
-  free_state = loc_ctx->state;
-  /* advance the current state */
-  loc_ctx->state = loc_ctx->state->prev;
-  free_state->prev = loc_ctx->free_state;
-  loc_ctx->free_state = free_state;
-}
-
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_getloc(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
-             svn_ra_serf__dav_props_t name,
-             const char **attrs)
+getloc_closed(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int leaving_state,
+              const svn_string_t *cdata,
+              apr_hash_t *attrs,
+              apr_pool_t *scratch_pool)
 {
-  loc_context_t *loc_ctx = userData;
+  loc_context_t *loc_ctx = baton;
+  const char *revstr;
+  const char *path;
 
-  if (!loc_ctx->state && strcmp(name.name, "get-locations-report") == 0)
+  SVN_ERR_ASSERT(leaving_state == LOCATION);
+
+  revstr = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
+  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+  if (revstr != NULL && path != NULL)
     {
-      push_state(loc_ctx, REPORT);
-    }
-  else if (loc_ctx->state &&
-           loc_ctx->state->state == REPORT &&
-           strcmp(name.name, "location") == 0)
-    {
-      svn_revnum_t rev = SVN_INVALID_REVNUM;
-      const char *revstr, *path;
-
-      revstr = svn_xml_get_attr_value("rev", attrs);
-      if (revstr)
-        {
-          rev = SVN_STR_TO_REV(revstr);
-        }
-
-      path = svn_xml_get_attr_value("path", attrs);
-
-      if (SVN_IS_VALID_REVNUM(rev) && path)
-        {
-          apr_hash_set(loc_ctx->paths,
-                       apr_pmemdup(loc_ctx->pool, &rev, sizeof(rev)),
-                       sizeof(rev),
-                       apr_pstrdup(loc_ctx->pool, path));
-        }
+      svn_revnum_t rev = SVN_STR_TO_REV(revstr);
+      apr_hash_set(loc_ctx->paths,
+                   apr_pmemdup(loc_ctx->pool, &rev, sizeof(rev)), sizeof(rev),
+                   apr_pstrdup(loc_ctx->pool, path));
     }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-end_getloc(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
-           svn_ra_serf__dav_props_t name)
-{
-  loc_context_t *loc_ctx = userData;
-  loc_state_list_t *cur_state;
-
-  if (!loc_ctx->state)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  cur_state = loc_ctx->state;
-
-  if (cur_state->state == REPORT &&
-      strcmp(name.name, "get-locations-report") == 0)
-    {
-      pop_state(loc_ctx);
-    }
-  else if (cur_state->state == LOCATION &&
-           strcmp(name.name, "location") == 0)
-    {
-      pop_state(loc_ctx);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
@@ -228,8 +156,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   loc_context_t *loc_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url, *req_url;
+  svn_ra_serf__xml_context_t *xmlctx;
+  const char *req_url;
   svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
@@ -237,18 +165,20 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   loc_ctx->path = path;
   loc_ctx->peg_revision = peg_revision;
   loc_ctx->location_revisions = location_revisions;
-  loc_ctx->done = FALSE;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
 
   *locations = loc_ctx->paths;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, peg_revision, NULL,
-                                         pool));
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, peg_revision,
+                                      pool, pool));
 
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
-
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,
+                                           NULL, getloc_closed, NULL,
+                                           loc_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -258,26 +188,12 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = loc_ctx;
-  parser_ctx->start = start_getloc;
-  parser_ctx->end = end_getloc;
-  parser_ctx->status_code = &loc_ctx->status_code;
-  parser_ctx->done = &loc_ctx->done;
-
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
-
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
+  err = svn_ra_serf__context_run_one(handler, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(loc_ctx->status_code,
+              svn_ra_serf__error_on_status(handler->sline.code,
                                            req_url,
-                                           parser_ctx->location),
+                                           handler->location),
               err));
 
   return SVN_NO_ERROR;

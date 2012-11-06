@@ -95,7 +95,7 @@ prompt(const char **result,
   apr_file_t *fp;
   char c;
 
-  svn_stringbuf_t *strbuf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_empty(pool);
 
   status = apr_file_open_stdin(&fp, pool);
   if (status)

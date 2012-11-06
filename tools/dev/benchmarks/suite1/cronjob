@@ -22,15 +22,15 @@
 # This is the cronjob as run on our ASF box aka svn-qavm.
 # It uses neels' mad bash script magic called 'pat' to update and
 # build the latest trunk, invokes a benchmark and sends as mail.
+#
+# A word on 'pat': this is a grown-out-of-proportions bash script that holds
+# all the small and large tasks that I do while developing on Subversion.
+# While it works for me, it's not particularly beautifully coded --
+# wouldn't publish it in Subversion's trunk, but if you want to find out
+# what it does: http://hofmeyr.de/pat/
 
-#EMAILS=your@email.addresses
-EMAILS=""
-
-if [ "$USER" = "neels" ]; then
-  # I don't want to keep editing files after every update. ~Neels
-  EMAILS=dev@subversion.apache.org
-fi
-
+#EMAILS=your@ema.il add@ress.es
+EMAILS=dev@subversion.apache.org
 
 echo
 echo "--------------------------------------------------------------------"
@@ -39,12 +39,16 @@ echo
 
 results="$(tempfile)"
 
+benchdir=/home/neels/svnbench
+patbin=/home/neels/bin/pat
+patbase=/home/neels/pat
+
 
 # first update trunk to HEAD and rebuild.
 # update/build is logged to the cronjob log (via stdout)
 
-cd /home/neels/pat/trunk
-/home/neels/bin/pat update
+cd "$patbase/trunk"
+"$patbin" update
 
 if [ "$?" -ne "0" ]; then
   subject="Failed to update to HEAD."
@@ -52,14 +56,14 @@ if [ "$?" -ne "0" ]; then
   echo "$subject"
 else
 
-  rev="$(svn info /home/neels/pat/trunk/src | grep Revision)"
+  rev="$("$patbase"/stable/prefix/bin/svn info "$patbase"/trunk/src | grep Revision)"
   if [ -z "$rev" ]; then
     subject="Working copy problem."
     echo "$subject" > "$results"
     echo "$subject"
   else
 
-    /home/neels/bin/pat remake
+    NONMAINTAINER=1 "$patbin" remake
     if [ "$?" -ne "0" ]; then
       subject="Failed to build $rev."
       echo "$subject" > "$results"
@@ -70,10 +74,10 @@ else
       # updating and building succeeded!
       # run the benchmark:
 
-      compiled="$(/home/neels/pat/trunk/prefix/bin/svn --version | grep "compiled")"
+      compiled="$("$patbase"/trunk/prefix/bin/svn --version | grep "compiled")"
       subject="$rev$compiled"
 
-      cd /home/neels/svnbench/
+      cd "$benchdir"
 
       # make more or less sure that runs don't leak into each other via
       # I/O caching.
@@ -82,8 +86,8 @@ else
       # basically, just run it. But also, I want to
       # - append output to stdout, for cronjob logging.
       # - send output as mail, but only this run's output less update&build
-      "$(which time)" -p ./run 2>&1 | tee "$results"
-
+      time -p ./run 2>&1 | tee "$results"
+      time -p ./generate_charts 2>&1 | tee -a "$results"
     fi
   fi
 fi

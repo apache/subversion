@@ -871,7 +871,7 @@ test_path_remove_component(apr_pool_t *pool)
   int i;
   svn_stringbuf_t *buf;
 
-  buf = svn_stringbuf_create("", pool);
+  buf = svn_stringbuf_create_empty(pool);
 
   i = 0;
   while (tests[i].path)

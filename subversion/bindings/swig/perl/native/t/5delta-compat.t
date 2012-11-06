@@ -33,11 +33,13 @@ open my $aresult, '>', \$result;
 
 my $txstream = SVN::TxDelta::new($source, $target);
 
+# TEST
 isa_ok($txstream, '_p_svn_txdelta_stream_t');
 open my $asource, '<', \$srctext;
 my $handle = [SVN::TxDelta::apply($asource, $aresult, undef, undef)];
 
 SVN::TxDelta::send_txstream($txstream, @$handle);
 
+# TEST
 is($result, $tgttext, 'delta self test');
 

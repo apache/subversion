@@ -230,8 +230,21 @@ public class SVNClient implements ISVNClient
                                 boolean noIgnore,
                                 boolean ignoreUnknownNodeTypes,
                                 Map<String, String> revpropTable,
-                                CommitMessageCallback handler, CommitCallback callback)
+                                ImportFilterCallback importFilterCallback,
+                                CommitMessageCallback handler,
+                                CommitCallback commitCallback)
             throws ClientException;
+
+    public void doImport(String path, String url, Depth depth, boolean noIgnore,
+                         boolean ignoreUnknownNodeTypes,
+                         Map<String, String> revpropTable,
+                         CommitMessageCallback handler,
+                         CommitCallback callback)
+            throws ClientException
+    {
+        doImport(path, url, depth, noIgnore, ignoreUnknownNodeTypes,
+                 revpropTable, null, handler, callback);
+    }
 
     public native Set<String> suggestMergeSources(String path,
                                                   Revision pegRevision)
@@ -278,7 +291,7 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target1, revision1, target2, revision2, relativeToDir,
                  stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds);
+                 force, copiesAsAdds, false, false);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -289,7 +302,8 @@ public class SVNClient implements ISVNClient
                             OutputStream stream, Depth depth,
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
+                            boolean force, boolean copiesAsAdds,
+                            boolean ignoreProps, boolean propsOnly)
             throws ClientException;
 
     public void diff(String target, Revision pegRevision,
@@ -304,7 +318,7 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target, pegRevision, startRevision, endRevision,
                  relativeToDir, stream, depth, changelists, ignoreAncestry,
-                 noDiffDeleted, force, copiesAsAdds);
+                 noDiffDeleted, force, copiesAsAdds, false, false);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -315,7 +329,8 @@ public class SVNClient implements ISVNClient
                             String relativeToDir, OutputStream stream,
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
+                            boolean force, boolean copiesAsAdds,
+                            boolean ignoreProps, boolean propsOnly)
             throws ClientException;
 
     public native void diffSummarize(String target1, Revision revision1,
@@ -364,8 +379,16 @@ public class SVNClient implements ISVNClient
                                       boolean force)
             throws ClientException;
 
+    public byte[] propertyGet(String path, String name,
+                              Revision revision, Revision pegRevision)
+            throws ClientException
+    {
+        return propertyGet(path, name, revision, pegRevision, null);
+    }
+
     public native byte[] propertyGet(String path, String name,
-                                     Revision revision, Revision pegRevision)
+                                     Revision revision, Revision pegRevision,
+                                     Collection<String> changelists)
             throws ClientException;
 
     public byte[] fileContent(String path, Revision revision,

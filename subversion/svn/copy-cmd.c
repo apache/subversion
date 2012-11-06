@@ -76,7 +76,18 @@ svn_cl__copy(apr_getopt_t *os,
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = source;
     }
 
-  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
+  /* Get DST_PATH (the target path or URL) and check that no peg revision is
+   * specified for it. */
+  {
+    const char *tgt = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
+    svn_opt_revision_t peg;
+
+    SVN_ERR(svn_opt_parse_path(&peg, &dst_path, tgt, pool));
+    if (peg.kind != svn_opt_revision_unspecified)
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("'%s': a peg revision is not allowed here"),
+                               tgt);
+  }
 
   /* Figure out which type of notification to use.
      (There is no need to check that the src paths are homogeneous;
@@ -84,8 +95,6 @@ svn_cl__copy(apr_getopt_t *os,
      error if they are not.) */
   src_path = APR_ARRAY_IDX(targets, 0, const char *);
   srcs_are_urls = svn_path_is_url(src_path);
-  dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
-  apr_array_pop(targets);
   dst_is_url = svn_path_is_url(dst_path);
 
   if ((! srcs_are_urls) && (! dst_is_url))
@@ -127,7 +136,8 @@ svn_cl__copy(apr_getopt_t *os,
   err = svn_client_copy6(sources, dst_path, TRUE,
                          opt_state->parents, opt_state->ignore_externals,
                          opt_state->revprop_table,
-                         svn_cl__print_commit_info, NULL,
+                         (opt_state->quiet ? NULL : svn_cl__print_commit_info),
+                         NULL,
                          ctx, pool);
 
   if (ctx->log_msg_func3)

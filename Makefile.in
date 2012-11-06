@@ -42,7 +42,6 @@ SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
 
 SCHEMA_DIR = subversion/svn/schema
 
-NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
@@ -70,7 +69,6 @@ gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
 gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
-neon_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
 includedir = @includedir@
@@ -99,6 +97,10 @@ javahl_libdir = @libdir@
 javahl_test_rootdir=$(abs_builddir)/subversion/bindings/javahl/test-work
 javahl_test_srcdir=$(abs_srcdir)/subversion/bindings/javahl
 
+gnome_auth_dir = $(abs_builddir)/subversion/libsvn_auth_gnome_keyring/.libs
+kwallet_auth_dir = $(abs_builddir)/subversion/libsvn_auth_kwallet/.libs
+auth_plugin_dirs = $(gnome_auth_dir):$(kwallet_auth_dir)
+
 MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
 MSGMERGE = @MSGMERGE@
@@ -125,7 +127,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
-           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ @SVN_NEON_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
@@ -214,7 +216,6 @@ libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
 libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
 libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
 libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
-libsvn_ra_neon_LDFLAGS = @libsvn_ra_neon_LDFLAGS@
 libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
 libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
 libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
@@ -241,7 +242,6 @@ INSTALL_GPG_AGENT_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_GSSAPI_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
-INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
@@ -250,6 +250,7 @@ INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVATION@
 INSTALL_DATA = $(INSTALL) -m 644
 INSTALL_LOCALE = $(INSTALL_DATA)
+INSTALL_APACHE_MODS = @INSTALL_APACHE_MODS@
 
 ### this isn't correct yet
 INSTALL_SWIG_PY = $(INSTALL_LIB)
@@ -280,6 +281,19 @@ INSTALL_EXTRA_SWIG_PY=\
     compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
     "$(swig_pydir_extra)");'
 
+# export an env variable so that the tests can run without being installed
+TEST_SHLIB_VAR_SWIG_PY=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+
 # The path to generated and complementary source files for the SWIG
 # bindings.
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
@@ -293,8 +307,11 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
+JAVAHL_MANIFEST_IN = $(abs_srcdir)/subversion/bindings/javahl/Manifest.in
+JAVAHL_MANIFEST = subversion/bindings/javahl/Manifest
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	$(JAR) cf $(JAVAHL_JAR) -C subversion/bindings/javahl/classes org; \
+	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST); \
+	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org; \
 	$(INSTALL_DATA) $(JAVAHL_JAR) $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
@@ -307,6 +324,19 @@ INSTALL_EXTRA_SWIG_RB=\
     $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn; \
   done
 
+# export an env variable so that the tests can run without being installed
+TEST_SHLIB_VAR_SWIG_RB=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_PY_DIR)/libsvn_swig_rb $(SWIG_PY_DIR)/../../../libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+ 
 APXS = @APXS@ 
 
 PYTHON = @PYTHON@
@@ -374,16 +404,18 @@ fast-clean: doc-clean
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
 
-# clean all but bulky test output, returning to before './configure' was run.
+# clean everything, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
-fast-distclean: fast-clean
-	rm -fr Makefile config.cache config.log config.nice config.status \
-	libtool mkmf.log subversion/svn_private_config.h \
-	subversion/bindings/javahl/classes subversion/bindings/javahl/include \
+local-distclean: local-clean
+	rm -fr config.cache config.log config.nice config.status \
+	  libtool mkmf.log subversion/svn_private_config.h \
+	  subversion/bindings/javahl/classes \
+	  subversion/bindings/javahl/include \
 	$(SVN_CONFIG_SCRIPT_FILES)
+	rm -f Makefile
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extraclean-javahl
+local-extraclean: extraclean-bindings local-distclean
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -401,10 +433,7 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extra
 
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig clean-ctypes-python clean-javahl
-
-# clean everything, including test output.
-local-distclean: fast-distclean check-clean
+local-clean: check-clean clean-bindings fast-clean
 
 local-install: @INSTALL_RULES@
 
@@ -430,17 +459,22 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
 
-extraclean-javahl: clean-javahl
+check-tigris-javahl: javahl-compat
+	@FIX_JAVAHL_LIB@
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
-check-javahl: javahl javahl-compat
+check-apache-javahl: javahl
 	@FIX_JAVAHL_LIB@
 	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+
+check-javahl: check-apache-javahl
+
+check-all-javahl: check-apache-javahl check-tigris-javahl
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
@@ -477,50 +511,57 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	    flags="--list --milestone-filter=$(MILESTONE_FILTER)             \
 		   --mode-filter=$(MODE_FILTER) --log-to-stdout $$flags";    \
 	  fi;                                                                \
+	  if test "$(SET_LOG_LEVEL)" != ""; then                             \
+	    flags="--set-log-level $(SET_LOG_LEVEL) $$flags";                \
+	  fi;                                                                \
+	  if test "$(SSL_CERT)" != ""; then                                  \
+	    flags="--ssl-cert $(SSL_CERT) $$flags";                          \
+	  fi;                                                                \
+	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
 	            $$flags                                                  \
 	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
-	  echo "make check: Python 2.4 or greater is required,";             \
+	  echo "make check: Python 2.5 or greater is required,";             \
 	  echo "            but was not detected during configure";          \
 	  exit 1;                                                            \
 	fi;
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
-	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
+	@APXS=$(APXS) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
-svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@env PYTHON=$(PYTHON) THREADED=$(THREADED) \
 	  $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
 
-svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://\[::1\]
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
-svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
@@ -560,8 +601,9 @@ external-all external-install:
         done;
 
 ### apr-util relies on generated files in apr, so reverse the
-### list so that it is cleaned before apr.
-external-clean external-distclean:
+### list so that it is cleaned before apr. also note that Neon does
+### not have an extraclean target, so get "close" with distclean
+external-clean external-distclean external-extraclean:
 	@target=`echo $@ | sed s/external-//`;          \
         list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
         for i in $$list; do                             \
@@ -571,25 +613,6 @@ external-clean external-distclean:
             echo "------ making $$target in $$i";       \
             (cd $$i && $(MAKE) $$target) || exit 1;     \
             echo "------ completed $$target in $$i";    \
-        done;
-
-### temporary hack. Neon does not have an "extraclean" and neither does db
-### If we don't have extraclean -- do the next best thing.
-external-extraclean:
-	@list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';                         \
-        for i in $$list; do                                              \
-            revlist="$$i $$revlist";                                     \
-        done;                                                            \
-        for i in $$revlist; do                                           \
-            if test "$$i" = "neon" || test "$$i" = "db/dist"; then       \
-                echo "------ making distclean(no extraclean) in $$i";    \
-                (cd $$i && $(MAKE) distclean) || exit 1;                 \
-                echo "------ completed distclean(no extraclean) in $$i"; \
-            else                                                         \
-                echo "------ making extraclean in $$i";                  \
-                (cd $$i && $(MAKE) extraclean) || exit 1;                \
-                echo "------ completed extraclean in $$i";               \
-            fi;                                                          \
         done;
 
 
@@ -714,10 +737,15 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+clean-bindings: clean-swig clean-ctypes-python clean-javahl
+
+extraclean-bindings: clean-swig extraclean-swig-headers \
+			extraclean-swig-py extraclean-swig-rb \
+			extraclean-swig-pl \
+			clean-ctypes-python clean-javahl \
+
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 	@rm -f .swig_checked
-extraclean-swig: extraclean-swig-headers extraclean-swig-py \
-                 extraclean-swig-rb extraclean-swig-pl
 
 EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_SRC_DIR)/proxy/*.swg
 
@@ -789,6 +817,7 @@ copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
 swig-py: autogen-swig-py copy-swig-py
 
 check-swig-py: swig-py
+	$(TEST_SHLIB_VAR_SWIG_PY) \
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
@@ -811,6 +840,7 @@ extraclean-swig-py: clean-swig-py
 swig-rb: autogen-swig-rb
 
 check-swig-rb: swig-rb svnserve
+	$(TEST_SHLIB_VAR_SWIG_RB) \
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
 	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
@@ -851,9 +881,15 @@ clean-ctypes-python:
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(PYTHON) setup.py clean --all
 
-extraclean-ctypes-python: clean-ctypes-python
-
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-checks.sql
+
+# Compatibility symlink.
+# This runs after the target of the same name in build-outputs.mk.
+INSTALL_EXTRA_TOOLS=\
+  $(MKDIR) $(DESTDIR)$(bindir); \
+  test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
+  ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
+  ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT)

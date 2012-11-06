@@ -95,12 +95,13 @@ CopySources::array(SVN::Pool &pool)
   std::vector<jobject> sources = m_copySources.vector();
 
   apr_array_header_t *copySources =
-    apr_array_make(p, sources.size(), sizeof(svn_client_copy_source_t *));
+    apr_array_make(p, static_cast<int>(sources.size()),
+                   sizeof(svn_client_copy_source_t *));
   for (std::vector<jobject>::const_iterator it = sources.begin();
         it < sources.end(); ++it)
     {
       svn_client_copy_source_t *src =
-        (svn_client_copy_source_t *) apr_palloc(p, sizeof(*src));
+        reinterpret_cast<svn_client_copy_source_t *>(apr_palloc(p, sizeof(*src)));
 
       // Extract the path or URL from the copy source.
       static jmethodID getPath = 0;
@@ -141,10 +142,8 @@ CopySources::array(SVN::Pool &pool)
 
       // TODO: Default this to svn_opt_revision_undefined (or HEAD)
       Revision rev(jrev);
-      src->revision = (const svn_opt_revision_t *)
-        apr_palloc(p, sizeof(*src->revision));
-      memcpy((void *) src->revision, rev.revision(),
-             sizeof(*src->revision));
+      src->revision = reinterpret_cast<const svn_opt_revision_t *>
+        (apr_pmemdup(p, rev.revision(), sizeof(*src->revision)));
       env->DeleteLocalRef(jrev);
 
       // Extract pegRevision from the copy source.
@@ -161,10 +160,8 @@ CopySources::array(SVN::Pool &pool)
         return NULL;
 
       Revision pegRev(jPegRev, true);
-      src->peg_revision = (const svn_opt_revision_t *)
-        apr_palloc(p, sizeof(*src->peg_revision));
-      memcpy((void *) src->peg_revision, pegRev.revision(),
-             sizeof(*src->peg_revision));
+      src->peg_revision = reinterpret_cast<const svn_opt_revision_t *>
+        (apr_pmemdup(p, pegRev.revision(), sizeof(*src->peg_revision)));
       env->DeleteLocalRef(jPegRev);
 
       APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;

@@ -28,6 +28,8 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include <zlib.h>
+
 #include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -194,9 +196,14 @@ svn_error_wrap_apr(apr_status_t status,
       va_start(ap, fmt);
       msg = apr_pvsprintf(err->pool, fmt, ap);
       va_end(ap);
-      err->message = apr_psprintf(err->pool, "%s%s%s", msg,
-                                  (msg_apr) ? ": " : "",
-                                  (msg_apr) ? msg_apr : "");
+      if (msg_apr)
+        {
+          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr, NULL);
+        }
+      else
+        {
+          err->message = msg;
+        }
     }
 
   return err;
@@ -212,6 +219,28 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
   return svn_error_create(child->apr_err,
                           child,
                           new_msg);
+}
+
+
+svn_error_t *
+svn_error__trace(const char *file, long line, svn_error_t *err)
+{
+#ifndef SVN_DEBUG
+
+  /* We shouldn't even be here, but whatever. Just return the error as-is.  */
+  return err;
+
+#else
+
+  /* Only do the work when an error occurs.  */
+  if (err)
+    {
+      svn_error__locate(file, line);
+      return svn_error_quick_wrap(err, SVN_ERR__TRACED);
+    }
+  return SVN_NO_ERROR;
+
+#endif
 }
 
 
@@ -672,4 +701,53 @@ svn_error__malfunction(svn_boolean_t can_return,
                        const char *expr)
 {
   return malfunction_handler(can_return, file, line, expr);
+}
+
+svn_error_t *
+svn_error__wrap_zlib(int zerr, const char *function, const char *message)
+{
+  apr_status_t status;
+  const char *zmsg;
+
+  if (zerr == Z_OK)
+    return SVN_NO_ERROR;
+
+  switch (zerr)
+    {
+    case Z_STREAM_ERROR:
+      status = SVN_ERR_STREAM_MALFORMED_DATA;
+      zmsg = _("stream error");
+      break;
+
+    case Z_MEM_ERROR:
+      status = APR_ENOMEM;
+      zmsg = _("out of memory");
+      break;
+
+    case Z_BUF_ERROR:
+      status = APR_ENOMEM;
+      zmsg = _("buffer error");
+      break;
+
+    case Z_VERSION_ERROR:
+      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
+      zmsg = _("version error");
+      break;
+
+    case Z_DATA_ERROR:
+      status = SVN_ERR_STREAM_MALFORMED_DATA;
+      zmsg = _("corrupt data");
+      break;
+
+    default:
+      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
+      zmsg = _("unknown error");
+      break;
+    }
+
+  if (message != NULL)
+    return svn_error_createf(status, NULL, "zlib (%s): %s: %s", function,
+                             zmsg, message);
+  else
+    return svn_error_createf(status, NULL, "zlib (%s): %s", function, zmsg);
 }

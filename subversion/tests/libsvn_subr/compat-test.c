@@ -24,10 +24,12 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_version.h"
 
 #include "../svn_test.h"
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 
 #ifndef SVN_DISABLE_FULL_VERSION_MATCH
 #define FALSE_IF_FULL FALSE
@@ -100,11 +102,121 @@ test_version_compatibility(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_version_parsing(apr_pool_t *pool)
+{
+  unsigned int i;
+  apr_pool_t *iterpool;
+
+  struct version_pair {
+    const char *str;
+    svn_boolean_t malformed;
+    svn_version_t version;
+  } versions[] = {
+    /*  str          malformed        version   */
+    { "1.8",           FALSE,     { 1,  8,  0, ""} },
+    { "1.8-dev",        TRUE,     { 0,  0,  0, ""} },
+    { "1.1.0",         FALSE,     { 1,  1,  0, ""} },
+    { "1.1.3",         FALSE,     { 1,  1,  3, ""} },
+    { "2.10.0",        FALSE,     { 2, 10,  0, ""} },
+    { "1.8.0-dev",     FALSE,     { 1,  8,  0, "dev"} },
+    { "1.7.0-beta1",   FALSE,     { 1,  7,  0, "beta1"} },
+    { "1a.8.0",         TRUE,     { 0,  0,  0, ""} },
+    { "1a.8.0",         TRUE,     { 0,  0,  0, ""} },
+    { "1.a8.0",         TRUE,     { 0,  0,  0, ""} },
+    { "1.8.0a",         TRUE,     { 0,  0,  0, ""} },
+    { "1.8.0.1",        TRUE,     { 0,  0,  0, ""} },
+  };
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < sizeof(versions)/sizeof(versions[0]); ++i)
+    {
+      svn_version_t *version;
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+
+      err = svn_version__parse_version_string(&version, versions[i].str,
+                                              iterpool);
+      if (err && (err->apr_err != SVN_ERR_MALFORMED_VERSION_STRING))
+        return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                                "Unexpected error code");
+      if (err)
+        {
+          if (! versions[i].malformed)
+            return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                                    "Unexpected parsing error returned");
+          else
+            svn_error_clear(err);
+        }
+      else
+        {
+          if (versions[i].malformed)
+            return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                    "Parsing error expected; none returned");
+          if (! svn_ver_equal(version, &(versions[i].version)))
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                     "Parsed version of '%s' doesn't match "
+                                     "expected", versions[i].str);
+        }
+    }
+  svn_pool_destroy(iterpool);
+  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_version_at_least(apr_pool_t *pool)
+{
+  unsigned int i;
+
+  struct version_pair {
+    svn_version_t version;
+    int major;
+    int minor;
+    int patch;
+    svn_boolean_t at_least;
+  } versions[] = {
+    /* maj  min  pat     version   at_least */
+    { { 1, 3, 3, ""},    1, 3, 3,    TRUE },
+    { { 1, 3, 3, ""},    1, 3, 4,    FALSE },
+    { { 1, 3, 3, ""},    1, 4, 3,    FALSE },
+    { { 1, 3, 3, ""},    0, 4, 3,    TRUE },
+    { { 1, 3, 3, ""},    2, 0, 0,    FALSE },
+    { { 1, 3, 3, ""},    1, 3, 2,    TRUE },
+    { { 1, 3, 3, ""},    1, 2, 4,    TRUE },
+    { { 1, 3, 3, "dev"}, 1, 3, 2,    TRUE },
+    { { 1, 3, 3, "dev"}, 1, 3, 3,    FALSE },
+    { { 1, 3, 3, ""},    0, 4, 3,    TRUE },
+  };
+
+  for (i = 0; i < sizeof(versions)/sizeof(versions[0]); ++i)
+    {
+      svn_boolean_t at_least = svn_version__at_least(&(versions[i].version),
+                                                     versions[i].major,
+                                                     versions[i].minor,
+                                                     versions[i].patch);
+      if (at_least && (! versions[i].at_least))
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Expected at-least to be FALSE; got TRUE");
+      if ((! at_least) && versions[i].at_least)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Expected at-least to be TRUE; got FALSE");
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_version_compatibility,
                    "svn_ver_compatible"),
+    SVN_TEST_PASS2(test_version_parsing,
+                   "svn_version__parse_version_string"),
+    SVN_TEST_PASS2(test_version_at_least,
+                   "svn_version__at_least"),
     SVN_TEST_NULL
   };

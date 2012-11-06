@@ -58,6 +58,38 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
  *  with APR 0.9 */
 apr_status_t
 svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
+
+/** Number of chars needed to represent signed (19 places + sign + NUL) or
+ * unsigned (20 places + NUL) integers as strings.
+ */
+#define SVN_INT64_BUFFER_SIZE 21
+
+/** Writes the @a number as string into @a dest. The latter must provide
+ * space for at least #SVN_INT64_BUFFER_SIZE characters. Returns the number
+ * chars written excluding the terminating NUL.
+ */
+apr_size_t
+svn__ui64toa(char * dest, apr_uint64_t number);
+
+/** Writes the @a number as string into @a dest. The latter must provide
+ * space for at least #SVN_INT64_BUFFER_SIZE characters. Returns the number
+ * chars written excluding the terminating NUL.
+ */
+apr_size_t
+svn__i64toa(char * dest, apr_int64_t number);
+
+/** Returns a decimal string for @a number allocated in @a pool.  Put in
+ * the @a seperator at each third place.
+ */
+char *
+svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
+
+/** Returns a decimal string for @a number allocated in @a pool.  Put in
+ * the @a seperator at each third place.
+ */
+char *
+svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
+
 /** @} */
 
 /** @} */

@@ -35,6 +35,7 @@ my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 
+# TEST
 ok($repos = SVN::Repos::create("$repospath", undef, undef, undef, undef),
    "create repository at $repospath");
 
@@ -60,6 +61,7 @@ SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
 
 $editor->close_edit();
 
+# TEST
 cmp_ok($fs->youngest_rev, '==', 1);
 {
 $editor = SVN::Delta::Editor->
@@ -73,6 +75,7 @@ my $subdirbaton = $editor->add_directory('tags/foo', $dirbaton,
 
 $editor->close_edit();
 }
+# TEST
 cmp_ok($fs->youngest_rev, '==', 2);
 
 my @history;
@@ -80,6 +83,7 @@ my @history;
 SVN::Repos::history($fs, 'tags/foo/filea',
                     sub {push @history, [@_[0,1]]}, 0, 2, 1);
 
+# TEST
 is_deeply(\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
           'repos_history');
 
@@ -97,8 +101,10 @@ $editor->delete_entry('tags', 2, $rootbaton);
 
 $editor->close_edit();
 }
+# TEST
 ok($main::something_destroyed, 'callback properly destroyed');
 
+# TEST
 cmp_ok($fs->youngest_rev, '==', 3);
 
 END {

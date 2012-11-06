@@ -270,101 +270,6 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* A helper for reading a line of text from a range in the patch file.
- *
- * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
- * Reading stops either after a line-terminator was found or after MAX_LEN
- * bytes have been read. The line-terminator is not stored in *STRINGBUF.
- *
- * The line-terminator is detected automatically and stored in *EOL
- * if EOL is not NULL. If EOF is reached and FILE does not end
- * with a newline character, and EOL is not NULL, *EOL is set to NULL.
- *
- * SCRATCH_POOL is used for temporary allocations.
- */
-static svn_error_t *
-readline(apr_file_t *file,
-         svn_stringbuf_t **stringbuf,
-         const char **eol,
-         svn_boolean_t *eof,
-         apr_size_t max_len,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *str;
-  const char *eol_str;
-  apr_size_t numbytes;
-  char c;
-  apr_size_t len;
-  svn_boolean_t found_eof;
-
-  str = svn_stringbuf_create_ensure(80, result_pool);
-
-  /* Read bytes into STR up to and including, but not storing,
-   * the next EOL sequence. */
-  eol_str = NULL;
-  numbytes = 1;
-  len = 0;
-  found_eof = FALSE;
-  while (!found_eof)
-    {
-      if (len < max_len)
-        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                       &found_eof, scratch_pool));
-      len++;
-      if (numbytes != 1 || len > max_len)
-        {
-          found_eof = TRUE;
-          break;
-        }
-
-      if (c == '\n')
-        {
-          eol_str = "\n";
-        }
-      else if (c == '\r')
-        {
-          eol_str = "\r";
-
-          if (!found_eof && len < max_len)
-            {
-              apr_off_t pos;
-
-              /* Check for "\r\n" by peeking at the next byte. */
-              pos = 0;
-              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
-              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                             &found_eof, scratch_pool));
-              if (numbytes == 1 && c == '\n')
-                {
-                  eol_str = "\r\n";
-                  len++;
-                }
-              else
-                {
-                  /* Pretend we never peeked. */
-                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
-                  found_eof = FALSE;
-                  numbytes = 1;
-                }
-            }
-        }
-      else
-        svn_stringbuf_appendbyte(str, c);
-
-      if (eol_str)
-        break;
-    }
-
-  if (eol)
-    *eol = eol_str;
-  if (eof)
-    *eof = found_eof;
-  *stringbuf = str;
-
-  return SVN_NO_ERROR;
-}
-
 /* Read a line of original or modified hunk text from the specified
  * RANGE within FILE. FILE is expected to contain unidiff text.
  * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
@@ -396,7 +301,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 
@@ -406,8 +311,8 @@ hunk_readline_original_or_modified(apr_file_t *file,
   do
     {
       max_len = range->end - range->current;
-      SVN_ERR(readline(file, &str, eol, eof, max_len,
-                       result_pool, scratch_pool));
+      SVN_ERR(svn_io_file_readline(file, &str, eol, eof, max_len,
+                                   result_pool, scratch_pool));
       range->current = 0;
       SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, scratch_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
@@ -490,7 +395,7 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 
@@ -499,7 +404,8 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET,
                            &hunk->diff_text_range.current, scratch_pool));
   max_len = hunk->diff_text_range.end - hunk->diff_text_range.current;
-  SVN_ERR(readline(hunk->apr_file, &line, eol, eof, max_len, result_pool,
+  SVN_ERR(svn_io_file_readline(hunk->apr_file, &line, eol, eof, max_len,
+                               result_pool,
                    scratch_pool));
   hunk->diff_text_range.current = 0;
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
@@ -590,11 +496,19 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
+  apr_off_t original_end;
+  apr_off_t modified_end;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
   svn_boolean_t changed_line_seen;
+  enum {
+    noise_line,
+    original_line,
+    modified_line,
+    context_line
+  } last_line_type;
   apr_pool_t *iterpool;
 
   *prop_operation = svn_diff_op_unchanged;
@@ -615,11 +529,16 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   leading_context = 0;
   trailing_context = 0;
   changed_line_seen = FALSE;
+  original_end = 0;
+  modified_end = 0;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
   SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+
+  /* Start out assuming noise. */
+  last_line_type = noise_line;
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -629,20 +548,60 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
-                       iterpool, iterpool));
+      SVN_ERR(svn_io_file_readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
+                                   iterpool, iterpool));
 
-      if (! eof)
-        {
-          /* Update line offset for next iteration. */
-          pos = 0;
-          SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
-        }
+      /* Update line offset for next iteration. */
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
 
       /* Lines starting with a backslash are comments, such as
        * "\ No newline at end of file". */
       if (line->data[0] == '\\')
-        continue;
+        {
+          if (in_hunk &&
+              ((!*is_property &&
+                strcmp(line->data, "\\ No newline at end of file") == 0) ||
+               (*is_property &&
+                strcmp(line->data, "\\ No newline at end of property") == 0)))
+            {
+              char eolbuf[2];
+              apr_size_t len;
+              apr_off_t off;
+              apr_off_t hunk_text_end;
+
+              /* Comment terminates the hunk text and says the hunk text
+               * has no trailing EOL. Snip off trailing EOL which is part
+               * of the patch file but not part of the hunk text. */
+              off = last_line - 2;
+              SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &off, iterpool));
+              len = sizeof(eolbuf);
+              SVN_ERR(svn_io_file_read_full2(apr_file, eolbuf, len, &len,
+                                             &eof, iterpool));
+              if (eolbuf[0] == '\r' && eolbuf[1] == '\n')
+                hunk_text_end = last_line - 2;
+              else if (eolbuf[1] == '\n' || eolbuf[1] == '\r')
+                hunk_text_end = last_line - 1;
+              else
+                hunk_text_end = last_line;
+
+              if (last_line_type == original_line && original_end == 0)
+                original_end = hunk_text_end;
+              else if (last_line_type == modified_line && modified_end == 0)
+                modified_end = hunk_text_end;
+              else if (last_line_type == context_line)
+                {
+                  if (original_end == 0)
+                    original_end = hunk_text_end;
+                  if (modified_end == 0)
+                    modified_end = hunk_text_end;
+                }
+
+              SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
+            }
+
+          continue;
+        }
 
       if (in_hunk)
         {
@@ -673,6 +632,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context++;
               else
                 leading_context++;
+              last_line_type = context_line;
             }
           else if (original_lines > 0 && c == del)
             {
@@ -686,6 +646,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context = 0;
 
               original_lines--;
+              last_line_type = original_line;
             }
           else if (modified_lines > 0 && c == add)
             {
@@ -699,13 +660,26 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context = 0;
 
               modified_lines--;
+              last_line_type = modified_line;
             }
           else
             {
-              /* The start of the current line marks the first byte
-               * after the hunk text. */
-              end = last_line;
+              if (eof)
+                {
+                  /* The hunk ends at EOF. */
+                  end = pos;
+                }
+              else
+                {
+                  /* The start of the current line marks the first byte
+                   * after the hunk text. */
+                  end = last_line;
+                }
 
+              if (original_end == 0)
+                original_end = end;
+              if (modified_end == 0)
+                modified_end = end;
               break; /* Hunk was empty or has been read. */
             }
         }
@@ -785,10 +759,10 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       (*hunk)->diff_text_range.end = end;
       (*hunk)->original_text_range.start = start;
       (*hunk)->original_text_range.current = start;
-      (*hunk)->original_text_range.end = end;
+      (*hunk)->original_text_range.end = original_end;
       (*hunk)->modified_text_range.start = start;
       (*hunk)->modified_text_range.current = start;
-      (*hunk)->modified_text_range.end = end;
+      (*hunk)->modified_text_range.end = modified_end;
     }
   else
     /* Something went wrong, just discard the result. */
@@ -1295,8 +1269,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(readline(patch_file->apr_file, &line, NULL, &eof,
-                       APR_SIZE_MAX, iterpool, iterpool));
+      SVN_ERR(svn_io_file_readline(patch_file->apr_file, &line, NULL, &eof,
+                                   APR_SIZE_MAX, iterpool, iterpool));
 
       if (! eof)
         {
@@ -1309,8 +1283,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       /* Run the state machine. */
       for (i = 0; i < (sizeof(transitions) / sizeof(transitions[0])); i++)
         {
-          if (line->len > strlen(transitions[i].expected_input)
-              && starts_with(line->data, transitions[i].expected_input)
+          if (starts_with(line->data, transitions[i].expected_input)
               && state == transitions[i].required_state)
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
@@ -1327,19 +1300,24 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
         }
       else if (state == state_git_tree_seen && line_after_tree_header_read)
         {
-          /* We have a valid diff header for a patch with only tree changes.
-           * Rewind to the start of the line just read, so subsequent calls
-           * to this function don't end up skipping the line -- it may
-           * contain a patch. */
-          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
-                                   scratch_pool));
-          break;
+          /* git patches can contain an index line after the file mode line */
+          if (!starts_with(line->data, "index "))
+          {
+            /* We have a valid diff header for a patch with only tree changes.
+             * Rewind to the start of the line just read, so subsequent calls
+             * to this function don't end up skipping the line -- it may
+             * contain a patch. */
+            SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                    scratch_pool));
+            break;
+          }
         }
       else if (state == state_git_tree_seen)
         {
           line_after_tree_header_read = TRUE;
         }
-      else if (! valid_header_line && state != state_start)
+      else if (! valid_header_line && state != state_start
+               && !starts_with(line->data, "index "))
         {
           /* We've encountered an invalid diff header.
            *

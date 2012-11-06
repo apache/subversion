@@ -149,43 +149,162 @@ mergeinfo for the merge is set on the deepest directories present.</p>
 
 </ul>
 
+<h3>Rationale</h3>
+
+<p><em>[JAF] The above may be the actual behaviour but sounds too simplistic
+  to be the desired behaviour.  Although a simple depth attribute is
+  recorded for each dir in the WC, the ambient depth of a dir in the WC is
+  not simply one of empty/files/immediates/infinity, but rather is a tree in
+  which different branches are populated to different depths.  Surely the
+  merge ought to respond to the ambient depth rather than the simple depth
+  attribute.</em></p>
+
+<p><em>[JAF] It's not clear whether an incoming addition should be honoured
+  if the added node would fall outside the ambient depth.  The sparse-
+  directories design doesn't seem to address this case for updates, let
+  alone merges.  It would be silly if a merge could delete such a node (that
+  was present in the WC despite being outside its parent's 'depth'
+  attribute) and could not then re-add a node of the same name in order to
+  perform both halves of an incoming replacement.  <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=4164" >Issue
+  #4164 "inconsistencies in merge handling of adds vs. edits in shallow
+  targets"</a> is related.</em></p>
+
+<p>See <a href="../sparse-directories.txt">sparse-directories design</a>.</p>
+
 </div>  <!-- sparse-checkouts -->
 
 <div class="h2" id="switched-paths">
 <h2>Switched Paths</h2>
 
-<p>Switched paths are treated as the root of the working copy regarding
-merge info inheritance and elision, specifically:</p>
+<p>Switched paths are treated as the root of a working copy regarding
+mergeinfo inheritance, recording, and elision.  Specifically, for a
+merge target with an arbitrary switched subtree:</p>
+
+<pre>
+  WC-Root
+     |
+  Target
+     |
+    SSP
+     | \
+     |  \
+    SS   SSS
+
+  Target - The WC target of the merge operation (may be same as WC-Root)
+  SSP    - Switched Subtree Parent (may be same as Target)
+  SSPS   - Switched Subtree Sibling (zero or more)
+  SS     - Switched Subtree</pre>
+
+<p>Note: If SS is itself the target of the merge, then the no special
+handling is needed, the merge takes place as if SS is the root of the WC.</p>
 
 <ul>
- <li>Merge rev N to switched PATH which has no explicit merge info: PATH
-   does not inherit merge info from its working copy ancestors.  PATH gets
-   merge info for rev N plus any inherited mergeinfo from the repository.</li>
+ <li><strong>Inheritance:</strong> If SS has no explicit mergeinfo of its
+   own, it inherits mergeinfo not from its WC parent (SSP) but from its
+   repository parent:</li>
 
- <li>Merge rev N to PATH with switched CHILD:  If CHILD has no explicit
-   mergeinfo it does not inherit merge info from its working copy ancestors.
-   Instead CHILD gets merge info for rev N plus any inherited mergeinfo from
-   the repository.  Regardless of wether CHILD has explicit mergeinfo,
-   CHILD's immediate PARENT (which may be the same as PATH) gets
-   non-inheritable mergeinfo added for rev N.  If PARENT didn't have
-   pre-existing mergeinfo it will have mergeinfo added.  If CHILD has an
-   unswitched SIBLING, then SIBLING will get a full set of mergeinfo since
-   SIBLING and CHILD's common PARENT gets non-inheritable mergeinfo for this
-   merge.  Again,  like PARENT, if SIBLING does not have pre-existing
-   mergeinfo it will have mergeinfo added.
-   </li>
+<pre>
+      WC-Root
+         |
+      Target
+         |
+         V
+        SSP
+SSRP..   | \
+      \  |  \
+       V x   V
+        SS  SSS
 
- <li>Elision: Merge info on switched paths never elides.</li>
+SSRP - Switched subtree's repository parent
+-->    Mergeinfo inheritance
+--x    No mergeinfo inheritance</pre>
 
- <li>Switch PATH which has <em>committed</em> merge info or switch PATH which
-   has a CHILD with <em>committed</em> mergeinfo: PATH's / CHILD's mergeinfo
-   is <em>replaced</em> by the explicit mergeinfo from the repository.</li>
+ <li><strong>Recording a Merge:</strong> If we merge revision N from ^/SRC,
+   mergeinfo is recorded like so (note that mergeinfo source '/SRC' is not
+   literal for children of 'Target' but would be adjusted for the path-wise
+   differences between the root of the merge target and the subtree in
+   question):</li>
 
- <li>Switch PATH which has <em>local</em> merge info or switch PATH which has
-   a CHILD with <em>local</em> mergeinfo: PATH's / CHILDS's local mergeinfo
-   is <em>merged</em> with explicit or inherited mergeinfo from the repository.
-   </li>
+<pre>
+  WC-Root
+     |
+  Target ('/SRC:N')
+     |
+    SSP('/SRC:N*')
+     | \
+     |  \
+     |   SSS('/SRC:N')
+     |
+    SS('/SRC:N' and possibly the mergeinfo
+                inherited from SSRP if SS
+                had no pre-existing explicit
+                mergeinfo)</pre>
+
+ <li><strong>Elision:</strong> Mergeinfo on switched paths never elides to
+   its working copy parents:</li>
+
+<pre>
+      WC-Root
+         ^
+         |
+      Target
+         ^
+         |
+        SSP
+         x ^
+         |  \
+         |   \
+        SS   SSS
+
+-->    Mergeinfo elision possible
+--x    No mergeinfo elision possible</pre>
+
 </ul>
+
+<h3>Delete</h3>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=4163"
+  >Issue #4163 "merged deletion of switched subtrees records non-inheritable
+  mergeinfo"</a>: If a merge deletes the path SS, the desired behaviour
+  is currently undefined and the actual behaviour is that a commit will
+  delete <strong>both</strong> SS (from SSRP) and SS@BASE (from SSP).</p>
+
+<h3>Rationale</h3>
+
+<p>Why does merging work this way with switched subtrees?</p>
+
+<p>If a subtree (SS) is switched, that means the user has chosen for
+  the time being to work with a substitute for the original subtree
+  (SS@BASE), knowing that any modifications made in SS can be
+  committed only to the repository location of SS and the original
+  subtree SS@BASE remains hidden and unaffected.</p>
+
+<p>The general semantics of a merge is to apply local modifications
+  to the working copy and record the merge as having been applied
+  to the tree that is represented by the working copy.</p>
+
+<p>Merge tracking should ensure that the subtree of the merge that
+  goes into SS is recorded as being applied to SS, while the
+  subtree SS@BASE should be recorded as not having received that
+  merge.</p>
+
+<p>Since the working copy represents parts of two different branches,
+  two parts of the merge are thus applied to the two different
+  branches, and recorded as such when the user commits the result.</p>
+
+<p>If the user is doing a merge that may affect SS, it is reasonable
+  to assume that SS is an alternative variant of SS@BASE rather than
+  some totally unrelated item.  So, in terms of Subversion's loose
+  branching semantics, SS is a 'branch' of SS@BASE.  If the user
+  chooses to merge when the assumption is false and SS doesn't have
+  a sensible branching relationship with SS@BASE, the result will be
+  nonsensical or, in concrete terms, there will be merge conflicts.</p>
+
+<p>Note:  Many typical branching policies would forbid committing to
+  two branches at once, let alone committing merges to two branches
+  at once.  However, the user may have reasons for doing this merge
+  without intending to commit the result as-is.</p>
 
 </div>  <!-- switched-paths -->
 
@@ -553,7 +672,7 @@ Whitespace fixes.  No functional change.
 
   <p>The <code>--verbose</code> flag also triggers additional information.
   In addition to the date of the revision, <code>--verbose</code>, in
-  combination with <code>-g</code>, also displays the the original path, relative
+  combination with <code>-g</code>, also displays the original path, relative
   to the repository root, where the modifications were made.  Given the above
   example, <code>svn blame -g --verbose</code> will be something like this:</p>
   <pre>

@@ -27,6 +27,7 @@ from libsvn.wc import *
 from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_wc_')
 _unprefix_names(locals(), 'SVN_WC_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 

@@ -592,8 +592,8 @@ svn_client_blame5(const char *target,
 {
   struct file_rev_baton frb;
   svn_ra_session_t *ra_session;
-  const char *url;
   svn_revnum_t start_revnum, end_revnum;
+  svn_client__pathrev_t *end_loc;
   struct blame *walk, *walk_merged = NULL;
   apr_pool_t *iterpool;
   svn_stream_t *last_stream;
@@ -611,10 +611,10 @@ svn_client_blame5(const char *target,
     SVN_ERR(svn_dirent_get_absolute(&target_abspath_or_url, target, pool));
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, NULL,
-                                           peg_revision, end,
-                                           ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &end_loc,
+                                            target, NULL, peg_revision, end,
+                                            ctx, pool));
+  end_revnum = end_loc->rev;
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,

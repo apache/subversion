@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, sys, re, os, stat
 import time
 
 # Our testing module
@@ -42,6 +42,7 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
+from merge_tests import expected_merge_output
 
 # 'svn resolve --accept [ base | mine-full | theirs-full ]' was segfaulting
 # on 1.6.x.  Prior to this test, the bug was only caught by the Ruby binding
@@ -69,12 +70,10 @@ def automatic_conflict_resolution(sbox):
                                        'revert', '--recursive', A_COPY_path)
     svntest.actions.run_and_verify_svn(
       None,
-      "(--- Merging r3 into .*A_COPY':\n)|"
-      "(C    .*psi\n)|"
-      "(--- Recording mergeinfo for merge of r3 into .*A_COPY':\n)|"
-      "( U   .*A_COPY\n)|"
-      "(Summary of conflicts:\n)|"
-      "(  Text conflicts: 1\n)",
+      expected_merge_output([[3]], [
+        "C    %s\n" % psi_COPY_path,
+        " U   %s\n" % A_COPY_path],
+        target=A_COPY_path, text_conflicts=1),
       [], 'merge', '-c3', '--allow-mixed-revisions',
       sbox.repo_url + '/A',
       A_COPY_path)
@@ -107,7 +106,6 @@ def automatic_conflict_resolution(sbox):
 # Test for issue #3707 'property conflicts not handled correctly by
 # svn resolve'.
 @Issue(3707)
-@XFail()
 def prop_conflict_resolution(sbox):
   "resolving prop conflicts"
 
@@ -226,8 +224,8 @@ def prop_conflict_resolution(sbox):
   #   2) 'A/mu' - An incoming prop edit on a local prop modification.
   #   3) 'A/D/gamma' - An local, non-conflicted prop edit
   #
-  # This currently fails because svn resolve --accept=[theirs-conflict |
-  # theirs-full] removes the conflicts, but doesn't install 'their' version
+  # Previously this failed because svn resolve --accept=[theirs-conflict |
+  # theirs-full] removed the conflicts, but didn't install 'their' version
   # of the conflicted properties.
   do_prop_conflicting_up_and_resolve('mine-full',
                                      ['local_edit\n'],
@@ -245,6 +243,35 @@ def prop_conflict_resolution(sbox):
                                      [], # Prop deleted
                                      ['incoming-conflict\n'])
 
+@SkipUnless(svntest.main.is_posix_os)
+def auto_resolve_executable_file(sbox):
+  "resolve file with executable bit set"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Mark iota as executable
+  sbox.simple_propset("svn:executable", '*', 'iota')
+  sbox.simple_commit() # r2
+
+  # Make a change to iota in r3
+  svntest.main.file_write(sbox.ospath('iota'), "boo\n")
+  sbox.simple_commit() # r3
+
+  # Update back to r2, and tweak iota to provoke a text conflict
+  sbox.simple_update(revision=2)
+  svntest.main.file_write(sbox.ospath('iota'), "bzzt\n")
+
+  # Get permission bits of iota
+  mode = os.stat(sbox.ospath('iota'))[stat.ST_MODE]
+
+  # Update back to r3, and auto-resolve the text conflict.
+  svntest.main.run_svn(False, 'update', wc_dir, '--accept', 'theirs-full')
+
+  # permission bits of iota should be unaffected
+  if mode != os.stat(sbox.ospath('iota'))[stat.ST_MODE]:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -252,6 +279,7 @@ def prop_conflict_resolution(sbox):
 test_list = [ None,
               automatic_conflict_resolution,
               prop_conflict_resolution,
+              auto_resolve_executable_file,
              ]
 
 if __name__ == '__main__':

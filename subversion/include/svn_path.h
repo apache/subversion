@@ -106,8 +106,8 @@ svn_path_local_style(const char *path, apr_pool_t *pool);
  * for the base.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_join(), svn_uri_join(),
- * svn_relpath_join() or svn_fspath__join().
+ * New code should use svn_dirent_join(), svn_relpath_join() or
+ * svn_fspath__join().
  */
 SVN_DEPRECATED
 char *
@@ -296,6 +296,10 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
 /** Return an integer greater than, equal to, or less than 0, according
  * as @a path1 is greater than, equal to, or less than @a path2.
+ *
+ * This function works like strcmp() except that it orders children in
+ * subdirectories directly after their parents. This allows using the
+ * given ordering for a depth first walk.
  */
 int
 svn_path_compare_paths(const char *path1, const char *path2);
@@ -509,8 +513,9 @@ svn_path_is_dotpath_present(const char *path);
  *       identify the remainder path.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_is_child(), svn_uri_is_child(),
- * svn_relpath_is_child() or svn_fspath__is_child().
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_dirent_is_child(), svn_uri_skip_ancestor(), and
+ * svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 const char *
@@ -522,8 +527,8 @@ svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_is_ancestor(), svn_uri_is_ancestor(),
- * svn_relpath_is_ancestor() or svn_fspath__is_ancestor().
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_uri_skip_ancestor(), and svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 svn_boolean_t

@@ -1,3 +1,11 @@
+###
+###
+### THIS FILE IS HISTORICAL ONLY. FOR CURRENT INFORMATION, PLEASE SEE:
+###     include/svn_editor.h
+###
+###
+
+
 NOTES on a revamped editor interface
 
 -- all paths are relpaths

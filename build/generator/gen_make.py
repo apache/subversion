@@ -141,6 +141,7 @@ class Generator(gen_base.GeneratorBase):
     data.bdb_test_progs = self.bdb_test_progs + self.bdb_scripts
     data.test_deps = self.test_deps + self.scripts
     data.test_progs = self.test_progs + self.scripts
+    data.test_helpers = self.test_helpers
 
     # write list of all manpages
     data.manpages = self.manpages
@@ -288,6 +289,7 @@ class Generator(gen_base.GeneratorBase):
                             add_deps=target_ob.add_deps,
                             objects=objects,
                             deps=deps,
+                            when=target_ob.when,
                             )
       data.target.append(ezt_target)
 
@@ -369,18 +371,21 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      ezt_area = _eztdata(type=area, files=[ ], extra_install=None)
+      ezt_area = _eztdata(type=area, files=[ ], apache_files=[ ],
+                          extra_install=None)
 
+      def apache_file_to_eztdata(file):
+          # cd to dirname before install to work around libtool 1.4.2 bug.
+          dirname, fname = build_path_splitfile(file.filename)
+          base, ext = os.path.splitext(fname)
+          name = base.replace('mod_', '')
+          return _eztdata(fullname=file.filename, dirname=dirname,
+                          name=name, filename=fname, when=file.when)
       if area == 'apache-mod':
         data.areas.append(ezt_area)
 
         for file in files:
-          # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = build_path_splitfile(file)
-          base, ext = os.path.splitext(fname)
-          name = base.replace('mod_', '')
-          ezt_area.files.append(_eztdata(fullname=file, dirname=dirname,
-                                         name=name, filename=fname))
+          ezt_area.files.append(apache_file_to_eztdata(file))
 
       elif area != 'test' and area != 'bdb-test':
         data.areas.append(ezt_area)
@@ -390,11 +395,20 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.varname = area_var
         ezt_area.uppervar = upper_var
 
+        # ### TODO: This is a hack.  See discussion here:
+        # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
+        apache_files = [gen_base.FileInfo(t.filename, t.when)
+                        for t in inst_targets
+                        if isinstance(t, gen_base.TargetApacheMod)]
+
+        files = [f for f in files if f not in apache_files]
+        for file in apache_files:
+          ezt_area.apache_files.append(apache_file_to_eztdata(file))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = build_path_splitfile(file)
-          ezt_file = _eztdata(dirname=dirname, fullname=file,
-                              filename=fname)
+          dirname, fname = build_path_splitfile(file.filename)
+          ezt_file = _eztdata(dirname=dirname, fullname=file.filename,
+                              filename=fname, when=file.when)
           if area == 'locale':
             lang, objext = os.path.splitext(fname)
             installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
@@ -410,7 +424,8 @@ class Generator(gen_base.GeneratorBase):
         # in Makefile.in
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
-           area[:7] == 'javahl-':
+           area[:7] == 'javahl-' \
+           or area == 'tools':
           ezt_area.extra_install = 'yes'
 
     ########################################
@@ -443,6 +458,7 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in obj_deps:
       dep = _eztdata(name=str(objname),
+                     when=objname.when,
                      deps=list(map(str, sources)),
                      cmd=objname.compile_cmd,
                      source=str(sources[0]))

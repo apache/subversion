@@ -3529,7 +3529,7 @@ get_file_checksum(svn_checksum_t **checksum,
 
 /* Return a pseudo-random number in the range [0,SCALAR) i.e. return
    a number N such that 0 <= N < SCALAR */
-static int my_rand(int scalar, apr_uint32_t *seed)
+static int my_rand(apr_uint64_t scalar, apr_uint32_t *seed)
 {
   static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
   /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
@@ -3555,7 +3555,7 @@ random_data_to_buffer(char *buf,
 
   int ds_off = 0;
   const char *dataset = "0123456789";
-  int dataset_size = strlen(dataset);
+  apr_size_t dataset_size = strlen(dataset);
 
   if (full)
     {
@@ -4176,12 +4176,12 @@ check_related(const svn_test_opts_t *opts,
             int related = 0;
 
             /* Get the ID for the first path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr1.rev, pool));
-            SVN_ERR(svn_fs_node_id(&id1, rev_root, pr1.path, pool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr1.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id1, rev_root, pr1.path, subpool));
 
             /* Get the ID for the second path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr2.rev, pool));
-            SVN_ERR(svn_fs_node_id(&id2, rev_root, pr2.path, pool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr2.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id2, rev_root, pr2.path, subpool));
 
             /* <exciting> Now, run the relationship check! </exciting> */
             related = svn_fs_check_related(id1, id2) ? 1 : 0;

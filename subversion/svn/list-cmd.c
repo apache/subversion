@@ -56,6 +56,13 @@ print_dirent(void *baton,
 {
   struct print_baton *pb = baton;
   const char *entryname;
+  static const char *time_format_long = NULL;
+  static const char *time_format_short = NULL;
+
+  if (time_format_long == NULL)
+    time_format_long = _("%b %d %H:%M");
+  if (time_format_short == NULL)
+    time_format_short = _("%b %d  %Y");
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
@@ -90,12 +97,12 @@ print_dirent(void *baton,
           && apr_time_sec(dirent->time - now) < (365 * 86400 / 2))
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 _("%b %d %H:%M"), &exp_time);
+                                 time_format_long, &exp_time);
         }
       else
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 _("%b %d  %Y"), &exp_time);
+                                 time_format_short, &exp_time);
         }
 
       /* if that failed, just zero out the string and print nothing */
@@ -156,7 +163,7 @@ print_dirent_xml(void *baton,
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
 
-  sb = svn_stringbuf_create("", pool);
+  sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
@@ -276,7 +283,7 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "list",
                                 "path", truepath[0] == '\0' ? "." : truepath,
                                 NULL);
@@ -308,7 +315,7 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }

@@ -50,6 +50,8 @@ struct status_baton
 {
   /* These fields all correspond to the ones in the
      svn_cl__print_status() interface. */
+  const char *cwd_abspath;
+  svn_boolean_t suppress_externals_placeholders;
   svn_boolean_t detailed;
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
@@ -106,7 +108,7 @@ print_conflict_stats(struct status_baton *sb, apr_pool_t *pool)
 static svn_error_t *
 print_start_target_xml(const char *target, apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                         "path", target, NULL);
@@ -122,7 +124,7 @@ static svn_error_t *
 print_finish_target_xml(svn_revnum_t repos_rev,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   if (SVN_IS_VALID_REVNUM(repos_rev))
     {
@@ -149,9 +151,12 @@ print_status_normal_or_xml(void *baton,
   struct status_baton *sb = baton;
 
   if (sb->xml_mode)
-    return svn_cl__print_status_xml(path, status, sb->ctx, pool);
+    return svn_cl__print_status_xml(sb->cwd_abspath, path, status,
+                                    sb->ctx, pool);
   else
-    return svn_cl__print_status(path, status, sb->detailed,
+    return svn_cl__print_status(sb->cwd_abspath, path, status,
+                                sb->suppress_externals_placeholders,
+                                sb->detailed,
                                 sb->show_last_committed,
                                 sb->skip_unrecognized,
                                 sb->repos_locks,
@@ -298,6 +303,9 @@ svn_cl__status(apr_getopt_t *os,
                                   "mode"));
     }
 
+  SVN_ERR(svn_dirent_get_absolute(&(sb.cwd_abspath), "", scratch_pool));
+  sb.suppress_externals_placeholders = (opt_state->quiet
+                                        && (! opt_state->verbose));
   sb.detailed = (opt_state->verbose || opt_state->update);
   sb.show_last_committed = opt_state->verbose;
   sb.skip_unrecognized = opt_state->quiet;
@@ -341,7 +349,7 @@ svn_cl__status(apr_getopt_t *os,
                           NULL, opt_state->quiet,
                           /* not versioned: */
                           SVN_ERR_WC_NOT_WORKING_COPY,
-                          SVN_NO_ERROR));
+                          SVN_ERR_WC_PATH_NOT_FOUND));
 
       if (opt_state->xml)
         SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
@@ -355,7 +363,7 @@ svn_cl__status(apr_getopt_t *os,
       svn_stringbuf_t *buf;
 
       if (opt_state->xml)
-        buf = svn_stringbuf_create("", scratch_pool);
+        buf = svn_stringbuf_create_empty(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
@@ -369,7 +377,7 @@ svn_cl__status(apr_getopt_t *os,
              ### non-changelist entries. */
           if (opt_state->xml)
             {
-              svn_stringbuf_set(buf, "");
+              svn_stringbuf_setempty(buf);
               svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                                     "changelist", "name", changelist_name,
                                     NULL);
@@ -390,7 +398,7 @@ svn_cl__status(apr_getopt_t *os,
 
           if (opt_state->xml)
             {
-              svn_stringbuf_set(buf, "");
+              svn_stringbuf_setempty(buf);
               svn_xml_make_close_tag(&buf, scratch_pool, "changelist");
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }

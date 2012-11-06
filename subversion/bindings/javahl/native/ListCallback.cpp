@@ -57,8 +57,8 @@ ListCallback::callback(void *baton,
                        apr_pool_t *pool)
 {
   if (baton)
-    return ((ListCallback *)baton)->doList(path, dirent, lock, abs_path,
-                                           pool);
+    return static_cast<ListCallback *>(baton)->doList(
+            path, dirent, lock, abs_path, pool);
 
   return SVN_NO_ERROR;
 }

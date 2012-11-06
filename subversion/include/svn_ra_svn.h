@@ -62,6 +62,10 @@ extern "C" {
 #define SVN_RA_SVN_CAP_PARTIAL_REPLAY "partial-replay"
 /* maps to SVN_RA_CAPABILITY_ATOMIC_REVPROPS */
 #define SVN_RA_SVN_CAP_ATOMIC_REVPROPS "atomic-revprops"
+/* maps to SVN_RA_CAPABILITY_INHERITED_PROPERTIES: */
+#define SVN_RA_SVN_CAP_INHERITED_PROPS "inherited-props"
+/* maps to SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS */
+#define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
@@ -157,14 +161,105 @@ typedef struct svn_ra_svn_item_t
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
+/**
+ * List of all commands supported by the SVN:// protocol.
+ *
+ * @since New in 1.8
+ */
+typedef enum svn_ra_svn_cmd_t
+{
+  svn_ra_svn_cmd_target_rev,
+  svn_ra_svn_cmd_open_root,
+  svn_ra_svn_cmd_delete_entry,
+  svn_ra_svn_cmd_add_dir,
+  svn_ra_svn_cmd_open_dir,
+  svn_ra_svn_cmd_change_dir_prop,
+  svn_ra_svn_cmd_close_dir,
+  svn_ra_svn_cmd_absent_dir,
+  svn_ra_svn_cmd_add_file,
+  svn_ra_svn_cmd_open_file,
+  svn_ra_svn_cmd_change_file_prop,
+  svn_ra_svn_cmd_close_file,
+  svn_ra_svn_cmd_absent_file,
+  svn_ra_svn_cmd_textdelta_chunk,
+  svn_ra_svn_cmd_textdelta_end,
+  svn_ra_svn_cmd_apply_textdelta,
+  svn_ra_svn_cmd_close_edit,
+  svn_ra_svn_cmd_abort_edit,
+  
+  svn_ra_svn_cmd_set_path,
+  svn_ra_svn_cmd_delete_path,
+  svn_ra_svn_cmd_link_path,
+  svn_ra_svn_cmd_finish_report,
+  svn_ra_svn_cmd_abort_report,
+
+  svn_ra_svn_cmd_reparent,
+  svn_ra_svn_cmd_get_latest_rev,
+  svn_ra_svn_cmd_get_dated_rev,
+  svn_ra_svn_cmd_change_rev_prop2,
+  svn_ra_svn_cmd_change_rev_prop,
+  svn_ra_svn_cmd_rev_proplist,
+  svn_ra_svn_cmd_rev_prop,
+  svn_ra_svn_cmd_get_file,
+  svn_ra_svn_cmd_update,
+  svn_ra_svn_cmd_switch,
+  svn_ra_svn_cmd_status,
+  svn_ra_svn_cmd_diff,
+  svn_ra_svn_cmd_check_path,
+  svn_ra_svn_cmd_stat,
+  svn_ra_svn_cmd_get_file_revs,
+  svn_ra_svn_cmd_lock,
+  svn_ra_svn_cmd_unlock,
+  svn_ra_svn_cmd_get_lock,
+  svn_ra_svn_cmd_get_locks,
+  svn_ra_svn_cmd_replay,
+  svn_ra_svn_cmd_replay_range,
+  svn_ra_svn_cmd_get_deleted_rev,
+  svn_ra_svn_cmd_get_iprops,
+  svn_ra_svn_cmd_finish_replay,
+
+  svn_ra_svn_cmd__last
+} svn_ra_svn_cmd_t;
+
+/**
+ * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
+ *
+ * @note This is a private API, external consumers should not use it.
+ */
+svn_error_t *
+svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
+                               svn_delta_shim_callbacks_t *shim_callbacks);
+
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
- * Specify the desired network data compression level (zlib) from
- * 0 (no compression) to 9 (best but slowest).
+ * @a compression_level specifies the desired network data compression
+ * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ *
+ * To reduce the overhead of checking for cancellation requests from the
+ * data receiver, set @a error_check_interval to some non-zero value.
+ * It defines the number of bytes that must have been sent since the last
+ * check before the next check will be made.
+ *
+ * Allocate the result in @a pool.
+ *
+ * @since New in 1.8
+ */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
+                                           apr_pool_t *pool);
+
+/** Similar to svn_ra_svn_create_conn3() but disables the zero copy code
+ * path and sets the error checking interval to 0.
  *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
@@ -173,7 +268,7 @@ svn_ra_svn_create_conn2(apr_socket_t *sock,
                         int compression_level,
                         apr_pool_t *pool);
 
-/** Similar to svn_ra_svn_create_conn2() but uses default
+/** Similar to svn_ra_svn_create_conn2() but uses the default
  * compression level (#SVN_DELTA_COMPRESSION_LEVEL_DEFAULT) for network
  * transmissions.
  *
@@ -209,6 +304,13 @@ svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
+
+/** Return the zero-copy data block limit to use for network transmissions
+ *
+ * @since New in 1.8.
+ */
+apr_size_t
+svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */
@@ -439,12 +541,27 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 
 /** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ * Use svn_ra_svn_write_templated_cmd instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
                      const char *cmdname,
                      const char *fmt, ...);
+
+/** Write a command of type @a cmd over the network connection @a conn.
+ * The parameters to be provided are command-specific.  @a pool will be
+ * used for allocations.
+ * 
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               svn_ra_svn_cmd_t cmd, ...);
 
 /** Write a successful command response over the network, using the
  * same format string notation as svn_ra_svn_write_tuple().  Do not use

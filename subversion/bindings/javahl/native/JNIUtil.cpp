@@ -37,9 +37,13 @@
 #include <apr_lib.h>
 
 #include "svn_pools.h"
+#include "svn_fs.h"
+#include "svn_ra.h"
+#include "svn_utf.h"
 #include "svn_wc.h"
 #include "svn_dso.h"
 #include "svn_path.h"
+#include "svn_cache_config.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
@@ -175,6 +179,19 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       apr_allocator_max_free_set(allocator, 1);
     }
 
+  svn_utf_initialize(g_pool); /* Optimize character conversions */
+  svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
+  svn_ra_initialize(g_pool);
+
+  /* We shouldn't fill the JVMs memory with FS cache data unless explictly
+     requested. */
+  {
+    svn_cache_config_t settings = *svn_cache_config_get();
+    settings.cache_size = 0;
+    settings.file_handle_count = 0;
+    settings.single_threaded = FALSE;
+    svn_cache_config_set(&settings);
+  }
 
 #ifdef ENABLE_NLS
 #ifdef WIN32
@@ -194,7 +211,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     GetModuleFileNameW(moduleHandle, ucs2_path, inwords);
     inwords = lstrlenW(ucs2_path);
     outbytes = outlength = 3 * (inwords + 1);
-    utf8_path = (char *)apr_palloc(pool, outlength);
+    utf8_path = reinterpret_cast<char *>(apr_palloc(pool, outlength));
     apr_err = apr_conv_ucs2_to_utf8((const apr_wchar_t *) ucs2_path,
                                     &inwords, utf8_path, &outbytes);
     if (!apr_err && (inwords > 0 || outbytes == 0))
@@ -223,7 +240,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
-  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+  if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
       err = svn_wc_set_adm_dir("_svn", g_pool);
       if (err)
@@ -239,6 +256,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         }
     }
 #endif
+
+  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
 
   // Build all mutexes.
   g_finalizedObjectsMutex = new JNIMutex(g_pool);
@@ -376,7 +395,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
     return;
 
   char *tmp_path;
-  char *path = svn_relpath_dirname(err->file, err->pool);
+  char *path = svn_dirent_dirname(err->file, err->pool);
   while (tmp_path = strchr(path, '/'))
     *tmp_path = '.';
 
@@ -384,7 +403,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   if (isJavaExceptionThrown())
     return;
 
-  jstring jfileName = makeJString(svn_relpath_basename(err->file, err->pool));
+  jstring jfileName = makeJString(svn_dirent_basename(err->file, err->pool));
   if (isJavaExceptionThrown())
     return;
 
@@ -776,7 +795,7 @@ jobject JNIUtil::createDate(apr_time_t time)
  * @param data      the character array
  * @param length    the number of characters in the array
  */
-jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
+jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
 {
   if (data == NULL)
     {
@@ -805,6 +824,15 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
     return NULL;
 
   return ret;
+}
+
+/**
+ * Create a Java byte array from an svn_string_t.
+ * @param str       the string
+ */
+jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
+{
+  return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
 }
 
 /**

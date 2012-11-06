@@ -340,30 +340,17 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 /* Quickly determine whether there is a eol char in CHUNK.
  * (mainly copy-n-paste from eol.c#svn_eol__find_eol_start).
  */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-#if APR_SIZEOF_VOIDP == 8
-#  define LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
-#  define BIT_7_SET       0x8080808080808080
-#  define R_MASK          0x0a0a0a0a0a0a0a0a
-#  define N_MASK          0x0d0d0d0d0d0d0d0d
-#else
-#  define LOWER_7BITS_SET 0x7f7f7f7f
-#  define BIT_7_SET       0x80808080
-#  define R_MASK          0x0a0a0a0a
-#  define N_MASK          0x0d0d0d0d
-#endif
-#endif
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
 static svn_boolean_t contains_eol(apr_uintptr_t chunk)
 {
-  apr_uintptr_t r_test = chunk ^ R_MASK;
-  apr_uintptr_t n_test = chunk ^ N_MASK;
+  apr_uintptr_t r_test = chunk ^ SVN__R_MASK;
+  apr_uintptr_t n_test = chunk ^ SVN__N_MASK;
 
-  r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
-  n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
+  r_test |= (r_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
+  n_test |= (n_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
 
-  return (r_test & n_test & BIT_7_SET) != BIT_7_SET;
+  return (r_test & n_test & SVN__BIT_7_SET) != SVN__BIT_7_SET;
 }
 #endif
 
@@ -432,15 +419,15 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
       is_match = TRUE;
       for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
         {
-          apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
+          apr_uintptr_t chunk = *(const apr_uintptr_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
             break;
 
           for (i = 1; i < file_len; i++)
-            if (chunk != *(const apr_size_t *)(file[i].curp + delta))
+            if (chunk != *(const apr_uintptr_t *)(file[i].curp + delta))
               {
                 is_match = FALSE;
-                delta -= sizeof(apr_size_t);
+                delta -= sizeof(apr_uintptr_t);
                 break;
               }
         }
@@ -470,8 +457,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
          too many for the \r. */
       svn_boolean_t ended_at_nonmatching_newline = FALSE;
       for (i = 0; i < file_len; i++)
-        ended_at_nonmatching_newline = ended_at_nonmatching_newline
-                                       || *file[i].curp == '\n';
+        if (file[i].curp < file[i].endp)
+          ended_at_nonmatching_newline = ended_at_nonmatching_newline
+                                         || *file[i].curp == '\n';
       if (ended_at_nonmatching_newline)
         {
           lines--;
@@ -591,9 +579,9 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   had_nl = FALSE;
   while (is_match)
     {
+#if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
-#if SVN_UNALIGNED_ACCESS_IS_OK
       svn_boolean_t can_read_word;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
@@ -616,14 +604,13 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
 
+#if SVN_UNALIGNED_ACCESS_IS_OK
 
       min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
                   ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
                   : file_for_suffix[0].buffer + 1;
       for (i = 1; i < file_len; i++)
         min_curp[i] = file_for_suffix[i].buffer + 1;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
@@ -1167,9 +1154,12 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
                             apr_pool_t *pool)
 {
   apr_getopt_t *os;
-  struct opt_parsing_error_baton_t opt_parsing_error_baton = { NULL, pool };
+  struct opt_parsing_error_baton_t opt_parsing_error_baton;
   /* Make room for each option (starting at index 1) plus trailing NULL. */
   const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
+
+  opt_parsing_error_baton.err = NULL;
+  opt_parsing_error_baton.pool = pool;
 
   argv[0] = "";
   memcpy((void *) (argv + 1), args->elts, sizeof(char*) * args->nelts);
@@ -1756,9 +1746,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.header_encoding = header_encoding;
       baton.path[0] = original_path;
       baton.path[1] = modified_path;
-      baton.hunk = svn_stringbuf_create("", pool);
+      baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
-      baton.extra_context = svn_stringbuf_create("", pool);
+      baton.extra_context = svn_stringbuf_create_empty(pool);
       baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
 
       c = apr_array_push(baton.extra_skip_match);
@@ -2043,8 +2033,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
 static svn_error_t *
 output_marker_eol(svn_diff3__file_output_baton_t *btn)
 {
-  apr_size_t len = strlen(btn->marker_eol);
-  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
+  return svn_stream_puts(btn->output_stream, btn->marker_eol);
 }
 
 static svn_error_t *
@@ -2127,7 +2116,7 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   if (btn->output_stream == btn->context_saver->stream)
     {
       if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
-        SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
+        SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
 
@@ -2179,7 +2168,6 @@ output_conflict(void *baton,
                 svn_diff_t *diff)
 {
   svn_diff3__file_output_baton_t *file_baton = baton;
-  apr_size_t len;
 
   svn_diff_conflict_display_style_t style = file_baton->conflict_style;
 
@@ -2201,33 +2189,28 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_modified_latest ||
       style == svn_diff_conflict_display_modified_original_latest)
     {
-      len = strlen(file_baton->conflict_modified);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_modified,
-                               &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                               file_baton->conflict_modified));
       SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
 
       if (style == svn_diff_conflict_display_modified_original_latest)
         {
-          len = strlen(file_baton->conflict_original);
-          SVN_ERR(svn_stream_write(file_baton->output_stream,
-                                   file_baton->conflict_original, &len));
+          SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                                   file_baton->conflict_original));
           SVN_ERR(output_marker_eol(file_baton));
           SVN_ERR(output_hunk(baton, 0, original_start, original_length));
         }
 
-      len = strlen(file_baton->conflict_separator);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_separator, &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                              file_baton->conflict_separator));
       SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
 
-      len = strlen(file_baton->conflict_latest);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_latest, &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                              file_baton->conflict_latest));
       SVN_ERR(output_marker_eol(file_baton));
     }
   else if (style == svn_diff_conflict_display_modified)

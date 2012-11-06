@@ -68,6 +68,12 @@ void svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
                             const char *new_data,
                             apr_pool_t *pool);
 
+/* Remove / truncate the last delta ops spanning the last MAX_LEN bytes
+   from the delta window being built via BUILD_BATON starting.  Return the
+   number of bytes that were actually removed. */
+apr_size_t
+svn_txdelta__remove_copy(svn_txdelta__ops_baton_t *build_baton,
+                         apr_size_t max_len);
 
 /* Allocate a delta window from POOL. */
 svn_txdelta_window_t *

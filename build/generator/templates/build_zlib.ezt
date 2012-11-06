@@ -55,7 +55,7 @@ set OBJA=contrib\masmx86\gvmat32c.obj contrib\masmx86\gvmat32.obj contrib\masmx8
 set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
 [else]
 if /i "%2" == "Win32" (
-  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj" "AS=ml -safeseh"
 ) else if /i "%2" == "x64" (
   set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.obj" AS=ml64 
 )
@@ -108,7 +108,7 @@ set BUILD_OPTS=%ASM_OPTS%
 [end]
 @echo nmake /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
 nmake /nologo /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
-if not errorlevel 0 goto err
+if errorlevel 1 goto err
 goto end
 
 @rem **************************************************************************

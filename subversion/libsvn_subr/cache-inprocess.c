@@ -201,7 +201,7 @@ inprocess_cache_get_internal(char **buffer,
 
       *size = entry->size;
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -213,16 +213,17 @@ inprocess_cache_get(void **value_p,
                     apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
-  char* buffer;
+  char* buffer = NULL;
   apr_size_t size;
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       inprocess_cache_get_internal(&buffer,
-                                                    &size,
-                                                    cache,
-                                                    key,
-                                                    result_pool));
-    
+  if (key)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         inprocess_cache_get_internal(&buffer,
+                                                      &size,
+                                                      cache,
+                                                      key,
+                                                      result_pool));
+
   /* deserialize the buffer content. Usually, this will directly
      modify the buffer content directly.
    */
@@ -303,7 +304,7 @@ inprocess_cache_set_internal(inprocess_cache_t *cache,
       cache->data_size -= existing_entry->size;
       if (value)
         {
-          SVN_ERR(cache->serialize_func((char **)&existing_entry->value,
+          SVN_ERR(cache->serialize_func(&existing_entry->value,
                                         &existing_entry->size,
                                         value,
                                         page->page_pool));
@@ -355,7 +356,7 @@ inprocess_cache_set_internal(inprocess_cache_t *cache,
     new_entry->key = duplicate_key(cache, key, page->page_pool);
     if (value)
       {
-        SVN_ERR(cache->serialize_func((char **)&new_entry->value,
+        SVN_ERR(cache->serialize_func(&new_entry->value,
                                       &new_entry->size,
                                       value,
                                       page->page_pool));
@@ -400,11 +401,12 @@ inprocess_cache_set(void *cache_void,
 {
   inprocess_cache_t *cache = cache_void;
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       inprocess_cache_set_internal(cache,
-                                                    key,
-                                                    value,
-                                                    scratch_pool));
+  if (key)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         inprocess_cache_set_internal(cache,
+                                                      key,
+                                                      value,
+                                                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -443,7 +445,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
   b.user_baton = user_baton;
 
   SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       svn_iter_apr_hash(completed, cache->hash, 
+                       svn_iter_apr_hash(completed, cache->hash,
                                          iter_cb, &b, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -482,14 +484,17 @@ inprocess_cache_get_partial(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       inprocess_cache_get_partial_internal(value_p,
-                                                            found,
-                                                            cache,
-                                                            key,
-                                                            func,
-                                                            baton,
-                                                            result_pool));
+  if (key)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         inprocess_cache_get_partial_internal(value_p,
+                                                              found,
+                                                              cache,
+                                                              key,
+                                                              func,
+                                                              baton,
+                                                              result_pool));
+  else
+    *found = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -507,10 +512,10 @@ inprocess_cache_set_partial_internal(inprocess_cache_t *cache,
       SVN_ERR(move_page_to_front(cache, entry->page));
 
       cache->data_size -= entry->size;
-      SVN_ERR(func((char **)&entry->value,
-                  &entry->size,
-                  baton,
-                  entry->page->page_pool));
+      SVN_ERR(func(&entry->value,
+                   &entry->size,
+                   baton,
+                   entry->page->page_pool));
       cache->data_size += entry->size;
     }
 
@@ -526,12 +531,13 @@ inprocess_cache_set_partial(void *cache_void,
 {
   inprocess_cache_t *cache = cache_void;
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       inprocess_cache_set_partial_internal(cache,
-                                                            key,
-                                                            func,
-                                                            baton,
-                                                            scratch_pool));
+  if (key)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         inprocess_cache_set_partial_internal(cache,
+                                                              key,
+                                                              func,
+                                                              baton,
+                                                              scratch_pool));
 
   return SVN_NO_ERROR;
 }

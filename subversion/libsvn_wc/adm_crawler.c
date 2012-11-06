@@ -420,9 +420,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_relpath__is_child(dir_repos_relpath,
-                                                        ths->repos_relpath,
-                                                        NULL);
+          const char *childname
+            = svn_relpath_skip_ancestor(dir_repos_relpath, ths->repos_relpath);
 
           if (childname == NULL || strcmp(childname, child) != 0)
             {
@@ -495,9 +494,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
         {
           svn_boolean_t is_incomplete;
           svn_boolean_t start_empty;
+          svn_depth_t report_depth = ths->depth;
 
           is_incomplete = (ths->status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;
+
+          if (!SVN_DEPTH_IS_RECURSIVE(depth))
+            report_depth = svn_depth_empty;
 
           /* When a <= 1.6 working copy is upgraded without some of its
              subdirectories we miss some information in the database. If we
@@ -526,7 +529,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                 dir_repos_root,
                                                 ths->repos_relpath, iterpool),
                                             ths->revnum,
-                                            ths->depth,
+                                            report_depth,
                                             start_empty,
                                             ths->lock ? ths->lock->token
                                                       : NULL,
@@ -535,7 +538,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                 SVN_ERR(reporter->set_path(report_baton,
                                            this_report_relpath,
                                            ths->revnum,
-                                           ths->depth,
+                                           report_depth,
                                            start_empty,
                                            ths->lock ? ths->lock->token : NULL,
                                            iterpool));
@@ -549,7 +552,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                               dir_repos_root,
                                               ths->repos_relpath, iterpool),
                                           ths->revnum,
-                                          ths->depth,
+                                          report_depth,
                                           start_empty,
                                           ths->lock ? ths->lock->token : NULL,
                                           iterpool));
@@ -562,7 +565,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                    || (dir_depth == svn_depth_immediates
                        && ths->depth != svn_depth_empty)
                    || (ths->depth < svn_depth_infinity
-                       && depth == svn_depth_infinity))
+                       && SVN_DEPTH_IS_RECURSIVE(depth)))
             {
               /* ... or perhaps just a differing revision, lock token,
                  incomplete subdir, the mere presence of the directory
@@ -573,7 +576,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               SVN_ERR(reporter->set_path(report_baton,
                                          this_report_relpath,
                                          ths->revnum,
-                                         ths->depth,
+                                         report_depth,
                                          start_empty,
                                          ths->lock ? ths->lock->token : NULL,
                                          iterpool));
@@ -688,11 +691,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       return SVN_NO_ERROR;
     }
-
-  if (! repos_relpath)
-    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
 
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
@@ -1208,7 +1206,10 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
   apr_array_header_t *propmods;
   svn_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, iterpool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_hidden */,
+                               iterpool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,

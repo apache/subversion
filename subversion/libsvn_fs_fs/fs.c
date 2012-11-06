@@ -38,6 +38,7 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
+#include "rep-cache.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -73,7 +74,8 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      know of a better way of associating such data with the
      repository. */
 
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
+  SVN_ERR_ASSERT(fs->uuid);
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
@@ -92,7 +94,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
@@ -122,6 +124,46 @@ fs_set_errcall(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+struct fs_freeze_baton_t {
+  svn_fs_t *fs;
+  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
+  void *baton;
+};
+
+static svn_error_t *
+fs_freeze_body(void *baton,
+               apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t *b = baton;
+  svn_boolean_t exists;
+
+  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, b->fs, pool));
+  if (exists)
+    SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
+
+  SVN_ERR(b->freeze_body(b->baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_freeze(svn_fs_t *fs,
+          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+          void *baton,
+          apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t b;
+
+  b.fs = fs;
+  b.freeze_body = freeze_body;
+  b.baton = baton;
+
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
@@ -130,7 +172,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__revision_prop,
   svn_fs_fs__revision_proplist,
   svn_fs_fs__change_rev_prop,
-  svn_fs_fs__get_uuid,
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
@@ -143,6 +184,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
+  fs_freeze,
   fs_set_errcall
 };
 
@@ -243,6 +285,8 @@ static svn_error_t *
 fs_verify(svn_fs_t *fs, const char *path,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
+          svn_revnum_t start,
+          svn_revnum_t end,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
@@ -251,7 +295,7 @@ fs_verify(svn_fs_t *fs, const char *path,
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
-  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, pool);
+  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, start, end, pool);
 }
 
 static svn_error_t *
@@ -261,13 +305,14 @@ fs_pack(svn_fs_t *fs,
         void *notify_baton,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
-        apr_pool_t *pool)
+        apr_pool_t *pool,
+        apr_pool_t *common_pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
   SVN_ERR(initialize_fs_struct(fs));
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  SVN_ERR(fs_serialized_init(fs, pool, pool));
+  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
   return svn_fs_fs__pack(fs, notify_func, notify_baton,
                          cancel_func, cancel_baton, pool);
 }
@@ -276,16 +321,36 @@ fs_pack(svn_fs_t *fs,
 
 
 /* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
-   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   possibly live Subversion filesystem SRC_FS from SRC_PATH to a
+   DST_FS at DEST_PATH. If INCREMENTAL is TRUE, make an effort not to
+   re-copy data which already exists in DST_FS.
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
-fs_hotcopy(const char *src_path,
-           const char *dest_path,
+fs_hotcopy(svn_fs_t *src_fs,
+           svn_fs_t *dst_fs,
+           const char *src_path,
+           const char *dst_path,
            svn_boolean_t clean_logs,
+           svn_boolean_t incremental,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            apr_pool_t *pool)
 {
-  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
+  SVN_ERR(svn_fs__check_fs(src_fs, FALSE));
+  SVN_ERR(initialize_fs_struct(src_fs));
+  SVN_ERR(svn_fs_fs__open(src_fs, src_path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(src_fs, pool));
+  SVN_ERR(fs_serialized_init(src_fs, pool, pool));
+
+  SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
+  SVN_ERR(initialize_fs_struct(dst_fs));
+  /* In INCREMENTAL mode, svn_fs_fs__hotcopy() will open DST_FS.
+     Otherwise, it's not an FS yet --- possibly just an empty dir --- so
+     can't be opened.
+   */
+  return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
+                            incremental, cancel_func, cancel_baton, pool);
 }
 
 

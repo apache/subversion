@@ -25,12 +25,16 @@
 ######################################################################
 
 # General modules
-import sys, re, os, stat, subprocess
+import sys, re, os, stat, subprocess, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
 
 from svntest.main import SVN_PROP_MERGEINFO
+from svntest.main import SVN_PROP_INHERITABLE_IGNORES
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -365,7 +369,7 @@ def update_conflict_props(sbox):
                                         None, None, 1)
 
   if len(extra_files) != 0:
-    print("didn't get expected conflict files")
+    logger.warn("didn't get expected conflict files")
     raise svntest.verify.SVNUnexpectedOutput
 
   # Resolve the conflicts
@@ -776,9 +780,9 @@ def copy_inherits_special_props(sbox):
 
   expected_stdout = [orig_mime_type + '\n']
   if actual_stdout != expected_stdout:
-    print("svn pg svn:mime-type output does not match expected.")
-    print("Expected standard output:  %s\n" % expected_stdout)
-    print("Actual standard output:  %s\n" % actual_stdout)
+    logger.warn("svn pg svn:mime-type output does not match expected.")
+    logger.warn("Expected standard output:  %s\n", expected_stdout)
+    logger.warn("Actual standard output:  %s\n", actual_stdout)
     raise svntest.verify.SVNUnexpectedOutput
 
   # Check the svn:executable value.
@@ -789,9 +793,9 @@ def copy_inherits_special_props(sbox):
 
     expected_stdout = ['*\n']
     if actual_stdout != expected_stdout:
-      print("svn pg svn:executable output does not match expected.")
-      print("Expected standard output:  %s\n" % expected_stdout)
-      print("Actual standard output:  %s\n" % actual_stdout)
+      logger.warn("svn pg svn:executable output does not match expected.")
+      logger.warn("Expected standard output:  %s\n", expected_stdout)
+      logger.warn("Actual standard output:  %s\n", actual_stdout)
       raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
@@ -893,8 +897,7 @@ def prop_value_conversions(sbox):
   svntest.actions.set_prop('svn:executable', '*', lambda_path)
   for pval in ('      ', '', 'no', 'off', 'false'):
     svntest.actions.set_prop('svn:executable', pval, mu_path,
-                             ["svn: warning: To turn off the svn:executable property, use 'svn propdel';\n",
-                              "setting the property to '" + pval + "' will not turn it off.\n"])
+                             "svn: warning: W125005.*use 'svn propdel'")
 
   # Anything else should be untouched
   svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path)
@@ -1039,8 +1042,8 @@ def binary_props(sbox):
 # expected_out, and that errput is empty.
 def verify_output(expected_out, output, errput):
   if errput != []:
-    print('Error: stderr:')
-    print(errput)
+    logger.warn('Error: stderr:')
+    logger.warn(errput)
     raise svntest.Failure
   output.sort()
   ln = 0
@@ -1049,8 +1052,8 @@ def verify_output(expected_out, output, errput):
       continue
     if ((line.find(expected_out[ln]) == -1) or
         (line != '' and expected_out[ln] == '')):
-      print('Error: expected keywords:  %s' % expected_out)
-      print('       actual full output: %s' % output)
+      logger.warn('Error: expected keywords:  %s', expected_out)
+      logger.warn('       actual full output: %s', output)
       raise svntest.Failure
     ln = ln + 1
   if ln != len(expected_out):
@@ -1739,11 +1742,9 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  # serf/neon/mod_dav_svn splits the "svn: hook failed" line
-  expected_error = svntest.verify.RegexOutput([
-    '(svn: E165001: |)post-revprop-change hook failed',
-    error_msg + "\n",
-  ], match_all = False)
+  # serf/neon/mod_dav_svn give SVN_ERR_RA_DAV_REQUEST_FAILED
+  # file/svn give SVN_ERR_REPOS_HOOK_FAILURE
+  expected_error = 'svn: (E175002|E165001).*post-revprop-change hook failed'
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
@@ -1985,7 +1986,7 @@ def prop_reject_grind(sbox):
       if match:
         # The last line in the list is always an empty string.
         if msg_lines[i + 1] == "":
-          #print("found message %i in file at line %i" % (n, j))
+          #logger.info("found message %i in file at line %i" % (n, j))
           break
         i += 1
       else:
@@ -2048,7 +2049,7 @@ def atomic_over_ra(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
 
-  # From this point on, similar to ../libsvn_fs-fs-test.c:revision_props().
+  # From this point on, similar to ../libsvn_fs/fs-test.c:revision_props().
   s1 = "violet"
   s2 = "wrong value"
 
@@ -2269,7 +2270,7 @@ def propget_redirection(sbox):
 
   # Run propget -vR svn:mergeinfo, redirecting the stdout to a file.
   arglist = [svntest.main.svn_binary, 'propget', SVN_PROP_MERGEINFO, '-vR',
-             wc_dir]
+             '--config-dir', svntest.main.default_config_dir, wc_dir]
   redir_file = open(redirect_file, 'wb')
   pg_proc = subprocess.Popen(arglist, stdout=redir_file)
   pg_proc.wait()
@@ -2467,7 +2468,7 @@ def file_matching_dir_prop_reject(sbox):
                                         extra_files,
                                         None, None, True, '-r', '2', wc_dir)
   if len(extra_files) != 0:
-    print("didn't get expected conflict files")
+    logger.warn("didn't get expected conflict files")
     raise svntest.verify.SVNUnexpectedOutput
 
   # Revert and update to check that conflict files are removed
@@ -2507,6 +2508,167 @@ def pristine_props_listed(sbox):
   # And now we see no property at all
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'proplist', '-R', wc_dir, '-r', 'BASE')
+
+def create_inherited_ignores_config(config_dir):
+  "create config stuffs for inherited ignores tests"
+
+  # contents of the file 'config'
+  config_contents = '''\
+[miscellany]
+global-ignores = *.boo *.goo
+'''
+
+  svntest.main.create_config_dir(config_dir, config_contents)
+
+def inheritable_ignores(sbox):
+  "inheritable ignores with svn:ignores and config"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  create_inherited_ignores_config(config_dir)
+
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.doo', 'A/B')
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.moo', 'A/D')
+  sbox.simple_propset('svn:ignore', '*.foo', 'A/B/E')
+  sbox.simple_commit()
+
+  # Some directories and files that should be added because they don't
+  # match any applicable ignores.
+  X_dir_path = os.path.join(wc_dir, 'ADD-ME-DIR-X')
+  Y_dir_path = os.path.join(wc_dir, 'A', 'ADD-ME-DIR-Y.doo')
+  Z_dir_path = os.path.join(wc_dir, 'A', 'D', 'G', 'ADD-ME-DIR-Z.doo')
+  os.mkdir(X_dir_path)
+  os.mkdir(Y_dir_path)
+  os.mkdir(Z_dir_path)
+
+  # Some directories and files that should be ignored when adding
+  # because they match an ignore pattern (unless of course they are
+  # the direct target of an add, which we always add).
+  boo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo')
+  goo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo', 'IGNORE-ME-DIR.goo')
+  doo_dir_path = os.path.join(wc_dir, 'A', 'B', 'IGNORE-ME-DIR.doo')
+  moo_dir_path = os.path.join(wc_dir, 'A', 'D', 'IGNORE-ME-DIR.moo')
+  foo_dir_path = os.path.join(wc_dir, 'A', 'B', 'E', 'IGNORE-ME-DIR.foo')
+  os.mkdir(boo_dir_path)
+  os.mkdir(goo_dir_path)
+  os.mkdir(doo_dir_path)
+  os.mkdir(moo_dir_path)
+  os.mkdir(foo_dir_path)
+  boo_file_path = sbox.ospath('ADD-ME-DIR-X/ignore-me-file.boo')
+  goo_file_path = sbox.ospath('A/D/G/ignore-me-file.goo')
+  doo_file_path = sbox.ospath('A/B/IGNORE-ME-DIR.doo/ignore-me-file.doo')
+  doo_file2_path = sbox.ospath('A/B/E/ignore-me-file.doo')
+  moo_file_path = sbox.ospath('A/D/ignore-me-file.moo')
+  foo_file_path = sbox.ospath('A/B/E/ignore-me-file.foo')
+  svntest.main.file_write(boo_file_path, 'I should not be versioned!\n')
+  svntest.main.file_write(goo_file_path, 'I should not be versioned!\n')
+  svntest.main.file_write(doo_file_path, 'I should not be versioned!\n')
+  svntest.main.file_write(doo_file2_path, 'I should not be versioned!\n')
+  svntest.main.file_write(moo_file_path, 'I should not be versioned!\n')
+  svntest.main.file_write(foo_file_path, 'I should not be versioned!\n')
+
+  # Some directories and files that don't match any ignore pattern
+  # but are located within a subtree that does match and so shouldn't
+  # be added.
+  roo_file_path = sbox.ospath('A/B/IGNORE-ME-DIR.doo/ignore-me-file.roo')
+  svntest.main.file_write(roo_file_path, 'I should not be versioned!\n')
+
+  # Check (non-verbose) status with the custom config. We should only see
+  # the three unversioned directories which don't match any of the ignore
+  # patterns and aren't proper subtrees of an unversioned or ignored
+  # subtree.
+  expected_output = svntest.verify.UnorderedOutput(
+    ['?       ' + X_dir_path + '\n',
+     '?       ' + Y_dir_path + '\n',
+     '?       ' + Z_dir_path + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'st',
+                                     '--config-dir', config_dir, wc_dir)
+
+  # Check status without the custom config.
+  # Should be the same as above except the *.boo and *.goo paths
+  # now show up as unversioned '?'.
+  expected_output = svntest.verify.UnorderedOutput(
+    ['?       ' + X_dir_path    + '\n',
+     '?       ' + Y_dir_path    + '\n',
+     '?       ' + Z_dir_path    + '\n',
+     '?       ' + boo_dir_path  + '\n',
+     '?       ' + goo_file_path + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'st', wc_dir)
+
+  # Check status with the custom config and --no-ignore.
+  expected_output = svntest.verify.UnorderedOutput(
+    ['?       ' + X_dir_path     + '\n',
+     '?       ' + Y_dir_path     + '\n',
+     '?       ' + Z_dir_path     + '\n',
+     'I       ' + boo_dir_path   + '\n',
+     'I       ' + doo_dir_path   + '\n',
+     'I       ' + doo_file2_path + '\n',
+     'I       ' + moo_dir_path   + '\n',
+     'I       ' + foo_dir_path   + '\n',
+     'I       ' + goo_file_path  + '\n',
+     'I       ' + moo_file_path  + '\n',
+     'I       ' + foo_file_path  + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'st',
+                                     '--config-dir', config_dir,
+                                     '--no-ignore', wc_dir)
+
+  # Check status without the custom config and --no-ignore.
+  # Should be the same as above except the *.boo and *.goo paths
+  # are reported as unversioned '?' rather than ignored 'I'.
+  expected_output = svntest.verify.UnorderedOutput(
+    ['?       ' + X_dir_path     + '\n',
+     '?       ' + Y_dir_path     + '\n',
+     '?       ' + Z_dir_path     + '\n',
+     '?       ' + boo_dir_path   + '\n',
+     'I       ' + doo_dir_path   + '\n',
+     'I       ' + doo_file2_path + '\n',
+     'I       ' + moo_dir_path   + '\n',
+     'I       ' + foo_dir_path   + '\n',
+     '?       ' + goo_file_path  + '\n',
+     'I       ' + moo_file_path  + '\n',
+     'I       ' + foo_file_path  + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'st',
+                                     '--no-ignore', wc_dir)
+
+  # Perform the add with the --force flag, targeting the root of the WC.
+  ### Note: You have to be inside the working copy or else Subversion
+  ### will think you're trying to add the working copy to its parent
+  ### directory, and will (possibly, if the parent directory isn't
+  ### versioned) fail -- see also schedule_tests.py 11 "'svn add'
+  ### should traverse already-versioned dirs"
+  saved_wd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  expected = svntest.verify.UnorderedOutput(
+    ['A         ' + 'ADD-ME-DIR-X\n',
+     'A         ' + os.path.join('A', 'ADD-ME-DIR-Y.doo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'G', 'ADD-ME-DIR-Z.doo') + '\n'])
+  svntest.actions.run_and_verify_svn("Adds in spite of ignores", expected,
+                                     [], 'add', '.', '--force',
+                                     '--config-dir', config_dir)
+  os.chdir(saved_wd)
+
+  # Now revert and try the add with the --no-ignore flag, only the
+  # svn:global-ignores should be enforced.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_dir, '-R')
+  saved_wd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  expected = svntest.verify.UnorderedOutput(
+    ['A         ' + 'ADD-ME-DIR-X\n',
+     'A         ' + os.path.join('A', 'ADD-ME-DIR-Y.doo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'G', 'ADD-ME-DIR-Z.doo') + '\n',
+     'A         ' + os.path.join('ADD-ME-DIR-X', 'ignore-me-file.boo') + '\n',
+     'A         ' + 'IGNORE-ME-DIR.boo' + '\n',
+     'A         ' + os.path.join('IGNORE-ME-DIR.boo',
+                                 'IGNORE-ME-DIR.goo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'E', 'IGNORE-ME-DIR.foo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'E', 'ignore-me-file.foo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'G', 'ignore-me-file.goo') + '\n'])
+  svntest.actions.run_and_verify_svn("Adds in spite of ignores", expected,
+                                     [], 'add', '.', '--force','--no-ignore',
+                                     '--config-dir', config_dir)
 
 ########################################################################
 # Run the tests
@@ -2550,6 +2712,7 @@ test_list = [ None,
               propget_redirection,
               file_matching_dir_prop_reject,
               pristine_props_listed,
+              inheritable_ignores,
              ]
 
 if __name__ == '__main__':

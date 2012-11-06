@@ -155,12 +155,6 @@ svn_io_check_path(const char *path,
                   svn_node_kind_t *kind,
                   apr_pool_t *pool);
 
-/* */
-svn_error_t *
-svn_io_check_path2(const char *path,
-                   svn_kind_t *kind,
-                   apr_pool_t *pool);
-
 /**
  * Like svn_io_check_path(), but also set *is_special to @c TRUE if
  * the path is not a normal file.
@@ -598,14 +592,14 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 void
 svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool);
 
-/** Set @a *different_p to non-zero if @a file1 and @a file2 have different
- * sizes, else set to zero.  Both @a file1 and @a file2 are utf8-encoded.
+/** Set @a *different_p to TRUE if @a file1 and @a file2 have different
+ * sizes, else set to FALSE.  Both @a file1 and @a file2 are utf8-encoded.
  *
  * Setting @a *different_p to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
  * definitely different.  That is, if the size of one or both files
  * cannot be determined, then the sizes are not known to be different,
- * so @a *different_p is set to 0.
+ * so @a *different_p is set to FALSE.
  */
 svn_error_t *
 svn_io_filesizes_different_p(svn_boolean_t *different_p,
@@ -613,6 +607,25 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
                              const char *file2,
                              apr_pool_t *pool);
 
+/** Set @a *different_p12 to non-zero if @a file1 and @a file2 have different
+ * sizes, else set to zero.  Do the similar for @a *different_p23 with
+ * @a file2 and @a file3, and @a *different_p13 for @a file1 and @a file3.
+ * The filenames @a file1, @a file2 and @a file3 are utf8-encoded.
+ *
+ * Setting @a *different_p12 to zero does not mean the files definitely
+ * have the same size, it merely means that the sizes are not
+ * definitely different.  That is, if the size of one or both files
+ * cannot be determined (due to stat() returning an error), then the sizes
+ * are not known to be different, so @a *different_p12 is set to 0.
+ */
+svn_error_t *
+svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
+                                   svn_boolean_t *different_p23,
+                                   svn_boolean_t *different_p13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool);
 
 /** Return in @a *checksum the checksum of type @a kind of @a file
  * Use @a pool for temporary allocations and to allocate @a *checksum.
@@ -647,6 +660,20 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              const char *file1,
                              const char *file2,
                              apr_pool_t *pool);
+
+/** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
+ * contents, else set it to FALSE.  Do the similar for @a *same23 
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
+ * file3.  Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_io_files_contents_three_same_p(svn_boolean_t *same12,
+                                   svn_boolean_t *same23,
+                                   svn_boolean_t *same13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool);
 
 /** Create file at utf8-encoded @a file with contents @a contents.
  * @a file must not already exist.
@@ -688,6 +715,39 @@ svn_io_file_lock2(const char *lock_file,
                   svn_boolean_t exclusive,
                   svn_boolean_t nonblocking,
                   apr_pool_t *pool);
+
+/**
+ * Lock the file @a lockfile_handle. If @a exclusive is TRUE,
+ * obtain exclusive lock, otherwise obtain shared lock.
+ *
+ * If @a nonblocking is TRUE, do not wait for the lock if it
+ * is not available: throw an error instead.
+ *
+ * Lock will be automatically released when @a pool is cleared or destroyed.
+ * You may also explicitly call @ref svn_io_unlock_open_file.
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_lock_open_file(apr_file_t *lockfile_handle,
+                      svn_boolean_t exclusive,
+                      svn_boolean_t nonblocking,
+                      apr_pool_t *pool);
+
+/**
+ * Unlock the file @a lockfile_handle.
+ *
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_unlock_open_file(apr_file_t *lockfile_handle,
+                        apr_pool_t *pool);
+
 /**
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  * memory allocations.
@@ -995,6 +1055,16 @@ svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
+/** Return a generic stream which implements buffered reads and writes.
+ *  The stream will preferentially store data in-memory, but may use
+ *  disk storage as backup if the amount of data is large.
+ *  Allocate the stream in @a result_pool
+ *
+ * @since New in 1.8.
+ */
+svn_stream_t *
+svn_stream_buffered(apr_pool_t *result_pool);
+
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on
@@ -1085,9 +1155,9 @@ svn_stream_write(svn_stream_t *stream,
 svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
-/** Reset a generic stream back to its origin. E.g. On a file this would be
+/** Reset a generic stream back to its origin. (E.g. On a file this would be
  * implemented as a seek to position 0).  This function returns a
- * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
  * @since New in 1.7.
@@ -1142,6 +1212,14 @@ svn_stream_tee(svn_stream_t *out1,
                svn_stream_t *out2,
                apr_pool_t *pool);
 
+/** Write NULL-terminated string @a str to @a stream.
+ *
+ * @since New in 1.8.
+ *
+ */
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str);
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.
@@ -1283,6 +1361,36 @@ svn_string_from_stream(svn_string_t **result,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
+
+/** A function type provided for use as a callback from
+ * @c svn_stream_lazyopen_create().
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_stream_lazyopen_func_t)(svn_stream_t **stream,
+                              void *baton,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/** Return a generic stream which wraps another primary stream,
+ * delaying the "opening" of that stream until the first time the
+ * stream is accessed.
+ *
+ * @a open_func and @a open_baton are a callback function/baton pair
+ * invoked upon the first read of @a *stream which are used to open the
+ * "real" source stream.
+ *
+ * @note If the only "access" the returned stream gets is to close it,
+ * @a open_func will not be called.
+ *
+ * @since New in 1.8.
+ */
+svn_stream_t *
+svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
+                           void *open_baton,
+                           apr_pool_t *result_pool);
 
 /** @} */
 
@@ -1527,10 +1635,35 @@ svn_io_dir_walk(const char *dirname,
  * Otherwise, the invoked program runs with an empty environment and @a cmd
  * must be an absolute path.
  *
+ * If @a inherit is FALSE and @a env is not NULL, the invoked program
+ * inherits the environment defined by @a env, instead of an empty
+ * environment or the caller's environment.
+ *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
+                               const char *path,
+                               const char *cmd,
+                               const char *const *args,
+                               const char *const *env,
+                               svn_boolean_t inherit,
+                               svn_boolean_t infile_pipe,
+                               apr_file_t *infile,
+                               svn_boolean_t outfile_pipe,
+                               apr_file_t *outfile,
+                               svn_boolean_t errfile_pipe,
+                               apr_file_t *errfile,
+                               apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_io_start_cmd3() but with @a env always set to NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
@@ -2066,6 +2199,36 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
+
+/** Read a line of text from a file, up to a specified length.
+ *
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
+ * from @a file. Reading stops either after a line-terminator was found
+ * or after @a max_len bytes have been read.
+ *
+ * If end-of-file is reached or @a max_len bytes have been read, and @a eof
+ * is not NULL, then set @a *eof to @c TRUE.
+ *
+ * The line-terminator is not stored in @a *stringbuf.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL. If EOF is reached and @a file does not end
+ * with a newline character, and @a eol is not NULL, @ *eol is set to NULL.
+ *
+ * @a scratch_pool is used for temporary allocations.
+ *
+ * Hint: To read all data until a line-terminator is hit, pass APR_SIZE_MAX
+ * for @a max_len.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_file_readline(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char **eol,
+                     svn_boolean_t *eof,
+                     apr_size_t max_len,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /** @} */
 

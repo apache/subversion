@@ -259,34 +259,34 @@
 /* -----------------------------------------------------------------------
    input rangelist
 */
-%apply apr_array_header_t *RANGELIST {
-  apr_array_header_t *rangeinput,
-  const apr_array_header_t *rangelist,
-  apr_array_header_t *from,
-  apr_array_header_t *to,
-  apr_array_header_t *changes,
-  apr_array_header_t *eraser,
-  apr_array_header_t *whiteboard,
-  apr_array_header_t *rangelist1,
-  apr_array_header_t *rangelist2
+%apply svn_rangelist_t *RANGELIST {
+  svn_rangelist_t *rangeinput,
+  const svn_rangelist_t *rangelist,
+  svn_rangelist_t *from,
+  svn_rangelist_t *to,
+  svn_rangelist_t *changes,
+  svn_rangelist_t *eraser,
+  svn_rangelist_t *whiteboard,
+  svn_rangelist_t *rangelist1,
+  svn_rangelist_t *rangelist2
 }
 
 /* -----------------------------------------------------------------------
    output rangelist
 */
-%apply apr_array_header_t **RANGELIST {
-  apr_array_header_t **rangelist,
-  apr_array_header_t **inheritable_rangelist,
-  apr_array_header_t **deleted,
-  apr_array_header_t **added,
-  apr_array_header_t **output
+%apply svn_rangelist_t **RANGELIST {
+  svn_rangelist_t **rangelist,
+  svn_rangelist_t **inheritable_rangelist,
+  svn_rangelist_t **deleted,
+  svn_rangelist_t **added,
+  svn_rangelist_t **output
 }
 
 /* -----------------------------------------------------------------------
    input and output rangelist
 */
-%apply apr_array_header_t **RANGELIST_INOUT {
-  apr_array_header_t **rangelist_inout
+%apply svn_rangelist_t **RANGELIST_INOUT {
+  svn_rangelist_t **rangelist_inout
 }
 
 /* -----------------------------------------------------------------------
@@ -351,12 +351,17 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
-    if (!PyInt_Check($input)) {
+    if (PyLong_Check($input)) {
+        temp = PyLong_AsLong($input);
+    }
+    else if (PyInt_Check($input)) {
+        temp = PyInt_AsLong($input);
+    }
+    else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
         SWIG_fail;
     }
-    temp = PyInt_AsLong($input);
     if (temp < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "buffer size must be a positive integer");
@@ -653,14 +658,14 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
                   )
 #endif
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(svn_config_enumerator2_t callback, void *baton,
-                  ,
+                  svn_swig_py_config_enumerator2,
                   ,
                   svn_swig_rb_config_enumerator)
 
 %callback_typemap(svn_config_section_enumerator2_t callback, void *baton,
-                  ,
+                  svn_swig_py_config_section_enumerator2,
                   ,
                   svn_swig_rb_config_section_enumerator)
 #endif
@@ -698,6 +703,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %authprompt_callback_typemap(ssl_server_trust)
 %authprompt_callback_typemap(ssl_client_cert)
 %authprompt_callback_typemap(ssl_client_cert_pw)
+%authprompt_callback_typemap(gnome_keyring_unlock)
 
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference
@@ -780,6 +786,34 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_dirent_uri_h.swg
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
+
+
+
+#ifdef SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC
+%inline %{
+/* Helper function to set the gnome-keyring unlock prompt function. This
+ * C function accepts an auth baton, a function and a prompt baton, but
+ * the below callback_typemap uses both the function and the prompt
+ * baton, so the resulting binding has just two arguments: The auth
+ * baton and the prompt function.
+ * The prompt function should again have two arguments: The keyring name
+ * (string) and a pool (except for the ruby version, which doesn't have
+ * the pool argument). It should return the entered password (string).
+ * This binding generated for this function generates a reference to the
+ * prompt function that was passed into this. The caller should store
+ * that reference somewhere, to prevent the function from being garbage
+ * collected...
+ */
+static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
+                                                          svn_auth_gnome_keyring_unlock_prompt_func_t prompt_func,
+                                                          void *prompt_baton) {
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                           prompt_func);
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                           prompt_baton);
+}
+%}
+#endif
 
 #if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg
@@ -1111,15 +1145,15 @@ svn_swig_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
 }
 
 static svn_error_t *
-svn_swig_rangelist_merge(apr_array_header_t **rangelist_inout,
-                         apr_array_header_t *changes,
+svn_swig_rangelist_merge(svn_rangelist_t **rangelist_inout,
+                         svn_rangelist_t *changes,
                          apr_pool_t *pool)
 {
   return svn_rangelist_merge(rangelist_inout, changes, pool);
 }
 
 static svn_error_t *
-svn_swig_rangelist_reverse(apr_array_header_t **rangelist_inout,
+svn_swig_rangelist_reverse(svn_rangelist_t **rangelist_inout,
                            apr_pool_t *pool)
 {
   return svn_rangelist_reverse(*rangelist_inout, pool);

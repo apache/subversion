@@ -114,8 +114,8 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err = svn_client__get_repos_root(&tmp_root_url, NULL, truepath,
-                                   ctx, pool, pool);
+  err = svn_client_get_repos_root(&tmp_root_url, NULL, truepath,
+                                  ctx, pool, pool);
 
   if (err)
     {
@@ -168,7 +168,6 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
   int i;
   svn_boolean_t rel_url_found = FALSE;
   const char *root_url = NULL;
-  svn_error_t *err = SVN_NO_ERROR;
   apr_array_header_t *input_targets =
     apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
   apr_array_header_t *output_targets =
@@ -347,7 +346,12 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
        */
       if (root_url == NULL)
         {
-          err = svn_client_root_url_from_path(&root_url, "", ctx, pool);
+          const char *current_abspath;
+          svn_error_t *err;
+
+          SVN_ERR(svn_dirent_get_absolute(&current_abspath, "", pool));
+          err = svn_client_get_repos_root(&root_url, NULL /* uuid */,
+                                          current_abspath, ctx, pool, pool);
           if (err || root_url == NULL)
             return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err,
                                     _("Resolving '^/': no repository root "
@@ -387,11 +391,17 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
   else
     *targets_p = output_targets;
 
-  if (reserved_names && ! err)
-    for (i = 0; i < reserved_names->nelts; ++i)
-      err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, err,
-                              _("'%s' ends in a reserved name"),
-                              APR_ARRAY_IDX(reserved_names, i, const char *));
+  if (reserved_names)
+    {
+      svn_error_t *err = SVN_NO_ERROR;
 
-  return svn_error_trace(err);
+      for (i = 0; i < reserved_names->nelts; ++i)
+        err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, err,
+                                _("'%s' ends in a reserved name"),
+                                APR_ARRAY_IDX(reserved_names, i,
+                                              const char *));
+      return svn_error_trace(err);
+    }
+
+  return SVN_NO_ERROR;
 }

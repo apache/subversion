@@ -46,8 +46,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum lock_state_e {
-  NONE = 0,
+enum {
+  INITIAL = 0,
   REPORT,
   LOCK,
   PATH,
@@ -55,20 +55,8 @@ typedef enum lock_state_e {
   OWNER,
   COMMENT,
   CREATION_DATE,
-  EXPIRATION_DATE,
-} lock_state_e;
-
-typedef struct lock_info_t {
-  /* Temporary pool */
-  apr_pool_t *pool;
-
-  svn_lock_t *lock;
-
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-
-} lock_info_t;
+  EXPIRATION_DATE
+};
 
 typedef struct lock_context_t {
   apr_pool_t *pool;
@@ -80,107 +68,55 @@ typedef struct lock_context_t {
   /* return hash */
   apr_hash_t *hash;
 
-  /* are we done? */
-  svn_boolean_t done;
-
 } lock_context_t;
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t getlocks_ttable[] = {
+  { INITIAL, S_, "get-locks-report", REPORT,
+    FALSE, { NULL }, FALSE },
+
+  { REPORT, S_, "lock", LOCK,
+    FALSE, { NULL }, TRUE },
+
+  { LOCK, S_, "path", PATH,
+    TRUE, { NULL }, TRUE },
+
+  { LOCK, S_, "token", TOKEN,
+    TRUE, { NULL }, TRUE },
+
+  { LOCK, S_, "owner", OWNER,
+    TRUE, { NULL }, TRUE },
+
+  { LOCK, S_, "comment", COMMENT,
+    TRUE, { NULL }, TRUE },
+
+  { LOCK, S_, SVN_DAV__CREATIONDATE, CREATION_DATE,
+    TRUE, { NULL }, TRUE },
+
+  { LOCK, S_, "expirationdate", EXPIRATION_DATE,
+    TRUE, { NULL }, TRUE },
+
+  { 0 }
+};
+
 
-static lock_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           lock_context_t *lock_ctx,
-           lock_state_e state)
-{
-  svn_ra_serf__xml_push_state(parser, state);
-
-  if (state == LOCK)
-    {
-      lock_info_t *info;
-
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
-
-      info->pool = lock_ctx->pool;
-      info->lock = svn_lock_create(lock_ctx->pool);
-      info->lock->path =
-
-      parser->state->private = info;
-    }
-
-  return parser->state->private;
-}
-
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_getlocks(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
-               svn_ra_serf__dav_props_t name,
-               const char **attrs)
+getlocks_closed(svn_ra_serf__xml_estate_t *xes,
+                void *baton,
+                int leaving_state,
+                const svn_string_t *cdata,
+                apr_hash_t *attrs,
+                apr_pool_t *scratch_pool)
 {
-  lock_context_t *lock_ctx = userData;
-  lock_state_e state;
+  lock_context_t *lock_ctx = baton;
 
-  state = parser->state->current_state;
-
-  if (state == NONE &&
-      strcmp(name.name, "get-locks-report") == 0)
+  if (leaving_state == LOCK)
     {
-      push_state(parser, lock_ctx, REPORT);
-    }
-  else if (state == REPORT &&
-           strcmp(name.name, "lock") == 0)
-    {
-      push_state(parser, lock_ctx, LOCK);
-    }
-  else if (state == LOCK)
-    {
-      if (strcmp(name.name, "path") == 0)
-        {
-          push_state(parser, lock_ctx, PATH);
-        }
-      else if (strcmp(name.name, "token") == 0)
-        {
-          push_state(parser, lock_ctx, TOKEN);
-        }
-      else if (strcmp(name.name, "owner") == 0)
-        {
-          push_state(parser, lock_ctx, OWNER);
-        }
-      else if (strcmp(name.name, "comment") == 0)
-        {
-          push_state(parser, lock_ctx, COMMENT);
-        }
-      else if (strcmp(name.name, SVN_DAV__CREATIONDATE) == 0)
-        {
-          push_state(parser, lock_ctx, CREATION_DATE);
-        }
-      else if (strcmp(name.name, "expirationdate") == 0)
-        {
-          push_state(parser, lock_ctx, EXPIRATION_DATE);
-        }
-    }
+      const char *path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+      svn_boolean_t save_lock = FALSE;
 
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-end_getlocks(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
-             svn_ra_serf__dav_props_t name)
-{
-  lock_context_t *lock_ctx = userData;
-  lock_state_e state;
-  lock_info_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == REPORT &&
-      strcmp(name.name, "get-locks-report") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == LOCK &&
-           strcmp(name.name, "lock") == 0)
-    {
       /* Filter out unwanted paths.  Since Subversion only allows
          locks on files, we can treat depth=immediates the same as
          depth=files for filtering purposes.  Meaning, we'll keep
@@ -191,106 +127,81 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
          c) we've asked for depth=files or depth=immediates, and this
             lock is on an immediate child of our query path.
       */
-      if ((strcmp(lock_ctx->path, info->lock->path) == 0)
-          || (lock_ctx->requested_depth == svn_depth_infinity))
+      if (strcmp(lock_ctx->path, path) == 0
+          || lock_ctx->requested_depth == svn_depth_infinity)
         {
-          apr_hash_set(lock_ctx->hash, info->lock->path,
-                       APR_HASH_KEY_STRING, info->lock);
+          save_lock = TRUE;
         }
-      else if ((lock_ctx->requested_depth == svn_depth_files) ||
-               (lock_ctx->requested_depth == svn_depth_immediates))
+      else if (lock_ctx->requested_depth == svn_depth_files
+               || lock_ctx->requested_depth == svn_depth_immediates)
         {
-          const char *rel_path = svn_fspath__is_child(lock_ctx->path,
-                                                      info->lock->path,
-                                                      info->pool);
-          if (rel_path && (svn_path_component_count(rel_path) == 1))
-            apr_hash_set(lock_ctx->hash, info->lock->path,
-                         APR_HASH_KEY_STRING, info->lock);
+          const char *relpath = svn_fspath__skip_ancestor(lock_ctx->path,
+                                                          path);
+          if (relpath && (svn_path_component_count(relpath) == 1))
+            save_lock = TRUE;
         }
 
-      svn_ra_serf__xml_pop_state(parser);
+      if (save_lock)
+        {
+          /* We get to put the structure on the stack rather than using
+             svn_lock_create(). Bwahahaha....   */
+          svn_lock_t lock = { 0 };
+          const char *date;
+          svn_lock_t *result_lock;
+
+          /* Note: these "attributes" came from child elements. Some of
+             them may have not been sent, so the value will be NULL.  */
+
+          lock.path = path;
+          lock.token = apr_hash_get(attrs, "token", APR_HASH_KEY_STRING);
+          lock.owner = apr_hash_get(attrs, "owner", APR_HASH_KEY_STRING);
+          lock.comment = apr_hash_get(attrs, "comment", APR_HASH_KEY_STRING);
+
+          date = apr_hash_get(attrs, SVN_DAV__CREATIONDATE,
+                              APR_HASH_KEY_STRING);
+          if (date)
+            SVN_ERR(svn_time_from_cstring(&lock.creation_date, date,
+                                          scratch_pool));
+
+          date = apr_hash_get(attrs, "expirationdate",
+                              APR_HASH_KEY_STRING);
+          if (date)
+            SVN_ERR(svn_time_from_cstring(&lock.expiration_date, date,
+                                          scratch_pool));
+
+          result_lock = svn_lock_dup(&lock, lock_ctx->pool);
+          apr_hash_set(lock_ctx->hash, result_lock->path, APR_HASH_KEY_STRING,
+                       result_lock);
+        }
     }
-  else if (state == PATH &&
-           strcmp(name.name, "path") == 0)
+  else
     {
-      info->lock->path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == TOKEN &&
-           strcmp(name.name, "token") == 0)
-    {
-      info->lock->token = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == OWNER &&
-           strcmp(name.name, "owner") == 0)
-    {
-      info->lock->owner = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == COMMENT &&
-           strcmp(name.name, "comment") == 0)
-    {
-      info->lock->comment = apr_pstrmemdup(info->pool,
-                                           info->tmp, info->tmp_len);
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == CREATION_DATE &&
-           strcmp(name.name, SVN_DAV__CREATIONDATE) == 0)
-    {
-      SVN_ERR(svn_time_from_cstring(&info->lock->creation_date,
-                                    info->tmp, info->pool));
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == EXPIRATION_DATE &&
-           strcmp(name.name, "expirationdate") == 0)
-    {
-      SVN_ERR(svn_time_from_cstring(&info->lock->expiration_date,
-                                    info->tmp, info->pool));
-      info->tmp_len = 0;
-      svn_ra_serf__xml_pop_state(parser);
+      const char *name;
+
+      SVN_ERR_ASSERT(cdata != NULL);
+
+      if (leaving_state == PATH)
+        name = "path";
+      else if (leaving_state == TOKEN)
+        name = "token";
+      else if (leaving_state == OWNER)
+        name = "owner";
+      else if (leaving_state == COMMENT)
+        name = "comment";
+      else if (leaving_state == CREATION_DATE)
+        name = SVN_DAV__CREATIONDATE;
+      else if (leaving_state == EXPIRATION_DATE)
+        name = "expirationdate";
+      else
+        SVN_ERR_MALFUNCTION();
+
+      /* Store the lock information onto the LOCK elemstate.  */
+      svn_ra_serf__xml_note(xes, LOCK, name, cdata->data);
     }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-cdata_getlocks(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
-               const char *data,
-               apr_size_t len)
-{
-  lock_context_t *lock_ctx = userData;
-  lock_state_e state;
-  lock_info_t *info;
-
-  UNUSED_CTX(lock_ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  switch (state)
-    {
-    case PATH:
-    case TOKEN:
-    case OWNER:
-    case COMMENT:
-    case CREATION_DATE:
-    case EXPIRATION_DATE:
-        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
-        break;
-      default:
-        break;
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
@@ -323,9 +234,8 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_context_t *lock_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url, *rel_path;
-  int status_code;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
@@ -336,9 +246,12 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
   lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
-  lock_ctx->done = FALSE;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  xmlctx = svn_ra_serf__xml_context_create(getlocks_ttable,
+                                           NULL, getlocks_closed, NULL,
+                                           lock_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -346,25 +259,12 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = lock_ctx;
-  parser_ctx->start = start_getlocks;
-  parser_ctx->end = end_getlocks;
-  parser_ctx->cdata = cdata_getlocks;
-  parser_ctx->done = &lock_ctx->done;
-  parser_ctx->status_code = &status_code;
-
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
 
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
+  /* ### use svn_ra_serf__error_on_status() ?  */
 
-  svn_ra_serf__request_create(handler);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
   *locks = lock_ctx->hash;
 

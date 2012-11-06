@@ -87,7 +87,7 @@ extern "C" {
  * receiver editing its tree to the target state defined by the driver.
  *
  *
- * HISTORY
+ * <h3>History</h3>
  *
  * Classically, Subversion had a notion of a "tree delta" which could be
  * passed around as an independent entity. Theory implied this delta was an
@@ -117,11 +117,50 @@ extern "C" {
  * the most common functionality (cancellation and debugging) have been
  * integrated directly into this new editor system.
  *
+ *
+ * <h3>Implementation Plan</h3>
+ * @note This section can be removed after Ev2 is fully implemented.
+ *
+ * The delta editor is pretty engrained throughout Subversion, so attempting
+ * to replace it in situ is somewhat akin to performing open heart surgery
+ * while the patient is running a marathon.  However, a viable plan should
+ * make things a bit easier, and help parallelize the work.
+ *
+ * In short, the following items need to be done:
+ *  -# Implement backward compatibility wrappers ("shims")
+ *  -# Use shims to update editor consumers to Ev2
+ *  -# Update editor producers to drive Ev2
+ *     - This will largely involve rewriting the RA layers to accept and
+ *       send Ev2 commands
+ *  -# Optimize consumers and producers to leverage the features of Ev2
+ *
+ * The shims are largely self-contained, and as of this writing, are almost
+ * complete.  They can be released without much ado.  However, they do add
+ * <em>significant</em> performance regressions, which make releasing code
+ * which is half-delta-editor and half-Ev2 inadvisable.  As such, the updating
+ * of producers and consumers to Ev2 will probably need to wait until 1.9,
+ * though it could be largely parallelized.
+ *
+ *
  * @defgroup svn_editor The editor interface
  * @{
  */
 
 /** An abstract object that edits a target tree.
+ *
+ * @note The term "follow" means at any later time in the editor drive.
+ * Terms such as "must", "must not", "required", "shall", "shall not",
+ * "should", "should not", "recommended", "may", and "optional" in this
+ * document are to be interpreted as described in RFC 2119.
+ *
+ * @note The editor objects are *not* reentrant. The receiver should not
+ * directly or indirectly invoke an editor API with the same object unless
+ * it has been marked as explicitly supporting reentrancy during a
+ * receiver's callback. This limitation extends to the cancellation
+ * callback, too. (This limitation is due to the scratch_pool shared by
+ * all callbacks, and cleared after each callback; a reentrant call could
+ * clear the outer call's pool). Note that the code itself is reentrant, so
+ * there is no problem using the APIs on different editor objects.
  *
  * \n
  * <h3>Life-Cycle</h3>
@@ -146,12 +185,13 @@ extern "C" {
  *      svn_editor_setcb_add_file() \n
  *      svn_editor_setcb_add_symlink() \n
  *      svn_editor_setcb_add_absent() \n
- *      svn_editor_setcb_set_props() \n
- *      svn_editor_setcb_set_text() \n
- *      svn_editor_setcb_set_target() \n
+ *      svn_editor_setcb_alter_directory() \n
+ *      svn_editor_setcb_alter_file() \n
+ *      svn_editor_setcb_alter_symlink() \n
  *      svn_editor_setcb_delete() \n
  *      svn_editor_setcb_copy() \n
  *      svn_editor_setcb_move() \n
+ *      svn_editor_setcb_rotate() \n
  *      svn_editor_setcb_complete() \n
  *      svn_editor_setcb_abort()
  *
@@ -168,12 +208,13 @@ extern "C" {
  *      svn_editor_add_file() \n
  *      svn_editor_add_symlink() \n
  *      svn_editor_add_absent() \n
- *      svn_editor_set_props() \n
- *      svn_editor_set_text() \n
- *      svn_editor_set_target() \n
+ *      svn_editor_alter_directory() \n
+ *      svn_editor_alter_file() \n
+ *      svn_editor_alter_symlink() \n
  *      svn_editor_delete() \n
  *      svn_editor_copy() \n
- *      svn_editor_move()
+ *      svn_editor_move() \n
+ *      svn_editor_rotate()
  *    \n\n
  *    Just before each callback invocation is carried out, the @a cancel_func
  *    that was passed to svn_editor_create() is invoked to poll any
@@ -205,39 +246,36 @@ extern "C" {
  * In order to reduce complexity of callback receivers, the editor callbacks
  * must be driven in adherence to these rules:
  *
+ * - If any path is added (with add_*) or deleted/moved/rotated, then
+ *   an svn_editor_alter_directory() call must be made for its parent
+ *   directory with the target/eventual set of children.
+ *
  * - svn_editor_add_directory() -- Another svn_editor_add_*() call must
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
  *
- * - svn_editor_set_props()
- *   - The @a complete argument must be TRUE if no more calls will follow on
- *     the same path. @a complete must always be TRUE for directories.
- *   - If @a complete is FALSE, and:
- *     - if @a relpath is a file, this must (at some point) be followed by
- *       an svn_editor_set_text() call on the same path.
- *     - if @a relpath is a symlink, this must (at some point) be followed by
- *       an svn_editor_set_target() call on the same path.
+ * - For each node created with add_*, if its parent was created using
+ *   svn_editor_add_directory(), then the new child node MUST have been
+ *   mentioned in the @a children parameter of the parent's creation.
+ *   This allows the parent directory to properly mark the child as
+ *   "incomplete" until the child's add_* call arrives.
  *
- * - svn_editor_set_text() and svn_editor_set_target() must always occur
- *   @b after an svn_editor_set_props() call on the same path, if any.
- *
- *   In other words, if there are two calls coming in on the same path, the
- *   first of them has to be svn_editor_set_props().
- *
- * - Other than the above two pairs of linked operations, a path should
- *   never be referenced more than once by the add_* and set_* and the
- *   delete operations (the "Once Rule"). The source path of a copy (and
+ * - A path should never be referenced more than once by the add_*, alter_*,
+ *   and delete operations (the "Once Rule"). The source path of a copy (and
  *   its children, if a directory) may be copied many times, and are
  *   otherwise subject to the Once Rule. The destination path of a copy
- *   or move may have set_* operations applied, but not add_* or delete.
- *   If the destination path of a copy or move is a directory, then its
- *   children are subject to the Once Rule. The source path of a move
- *   (and its child paths) may be referenced in add_*, or as the
- *   destination of a copy (where these new, copied nodes are subject to
- *   the Once Rule).
+ *   or move may have alter_* operations applied, but not add_* or delete.
+ *   If the destination path of a copy, move, or rotate is a directory,
+ *   then its children are subject to the Once Rule. The source path of
+ *   a move (and its child paths) may be referenced in add_*, or as the
+ *   destination of a copy (where these new or copied nodes are subject
+ *   to the Once Rule). Paths listed in a rotation are both sources and
+ *   destinations, so they may not be referenced again in an add_* or a
+ *   deletion; these paths may have alter_* operations applied.
  *
- * - The ancestor of an added or modified node may not be deleted. The
- *   ancestor may not be moved (instead: perform the move, *then* the edits).
+ * - The ancestor of an added, copied-here, moved-here, rotated, or
+ *   modified node may not be deleted. The ancestor may not be moved
+ *   (instead: perform the move, *then* the edits).
  *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
@@ -258,6 +296,10 @@ extern "C" {
  *   by a delete... that is fine. It is simply that svn_editor_move()
  *   should be used to describe a semantic move.
  *
+ * - Paths mentioned in svn_editor_rotate() may have their properties
+ *   and contents edited (via alter_* calls) by a previous or later call,
+ *   but they may not be subject to a later move, rotate, or deletion.
+ *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
  *   exactly once, which must be the final call the driver invokes.
  *   Invoking svn_editor_complete() must imply that the set of changes has
@@ -265,18 +307,16 @@ extern "C" {
  *   svn_editor_abort() must imply that the transformation was not completed
  *   successfully.
  *
- * - If any callback invocation returns with an error, the driver must
- *   invoke svn_editor_abort() and stop transmitting operations.
+ * - If any callback invocation (besides svn_editor_complete()) returns
+ *   with an error, the driver must invoke svn_editor_abort() and stop
+ *   transmitting operations.
  * \n\n
  *
  * <h3>Receiving Restrictions</h3>
- * All callbacks must complete their handling of a path before they
- * return, except for the following pairs, where a change must be completed
- * when receiving the second callback in each pair:
- *  - svn_editor_set_props() (if @a complete is FALSE) and
- *    svn_editor_set_text() (if the node is a file)
- *  - svn_editor_set_props() (if @a complete is FALSE) and
- *    svn_editor_set_target() (if the node is a symbolic link)
+ *
+ * All callbacks must complete their handling of a path before they return.
+ * Since future callbacks will never reference this path again (due to the
+ * Once Rule), the changes can and should be completed.
  *
  * This restriction is not recursive -- a directory's children may remain
  * incomplete until later callback calls are received.
@@ -290,16 +330,34 @@ extern "C" {
  * for these items are invoked.
  * \n\n
  *
+ * <h3>Timing and State</h3>
+ * The calls made by the driver to alter the state in the receiver are
+ * based on the receiver's *current* state, which includes all prior changes
+ * made during the edit.
+ *
+ * Example: copy A to B; set-props on A; copy A to C. The props on C
+ * should reflect the updated properties of A.
+ *
+ * Example: mv A@N to B; mv C@M to A. The second move cannot be marked as
+ * a "replacing" move since it is not replacing A. The node at A was moved
+ * away. The second operation is simply moving C to the now-empty path
+ * known as A.
+ *
  * <h3>Paths</h3>
  * Each driver/receiver implementation of this editor interface must
- * establish the expected root path for the paths sent and received via the
- * callbacks' @a relpath arguments.
+ * establish the expected root for all the paths sent and received via
+ * the callbacks' @a relpath arguments.
  *
- * For example, during an "update", the driver has a working copy checked
- * out at a specific repository URL. The receiver sees the repository as a
- * whole. Here, the receiver could tell the driver which repository
- * URL the working copy refers to, and thus the driver could send
- * @a relpath arguments that are relative to the receiver's working copy.
+ * For example, during an "update", the driver is the repository, as a
+ * whole. The receiver may have just a portion of that repository. Here,
+ * the receiver could tell the driver which repository URL the working
+ * copy refers to, and thus the driver could send @a relpath arguments
+ * that are relative to the receiver's working copy.
+ *
+ * @note Because the source of a copy may be located *anywhere* in the
+ * repository, editor drives should typically use the repository root
+ * as the negotiated root. This allows the @a src_relpath argument in
+ * svn_editor_copy() to specify any possible source.
  * \n\n
  *
  * <h3>Pool Usage</h3>
@@ -336,15 +394,18 @@ extern "C" {
  * context.
  *
  *
- * @todo ### TODO anything missing? -- allow text and prop change to follow
- * a move or copy. -- set_text() vs. apply_text_delta()? -- If a
- * set_props/set_text/set_target/copy/move/delete in a merge source is
- * applied to a different branch, which side will REVISION arguments reflect
- * and is there still a problem?
+ * @todo ### TODO anything missing?
  *
  * @since New in 1.8.
  */
 typedef struct svn_editor_t svn_editor_t;
+
+/** The kind of the checksum to be used throughout the #svn_editor_t APIs.
+ *
+ * @note ### This may change before Ev2 is official released, so just like
+ * everything else in this file, please don't rely upon it until then.
+ */
+#define SVN_EDITOR_CHECKSUM_KIND svn_checksum_sha1
 
 
 /** These function types define the callback functions a tree delta consumer
@@ -411,39 +472,41 @@ typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
 typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   void *baton,
   const char *relpath,
-  svn_node_kind_t kind,
+  svn_kind_t kind,
   svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor_set_props(), svn_editor_t.
+/** @see svn_editor_alter_directory(), svn_editor_t.
  * @since New in 1.8.
  */
-typedef svn_error_t *(*svn_editor_cb_set_props_t)(
+typedef svn_error_t *(*svn_editor_cb_alter_directory_t)(
+  void *baton,
+  const char *relpath,
+  svn_revnum_t revision,
+  const apr_array_header_t *children,
+  apr_hash_t *props,
+  apr_pool_t *scratch_pool);
+
+/** @see svn_editor_alter_file(), svn_editor_t.
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_editor_cb_alter_file_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
   apr_hash_t *props,
-  svn_boolean_t complete,
-  apr_pool_t *scratch_pool);
-
-/** @see svn_editor_set_text(), svn_editor_t.
- * @since New in 1.8.
- */
-typedef svn_error_t *(*svn_editor_cb_set_text_t)(
-  void *baton,
-  const char *relpath,
-  svn_revnum_t revision,
   const svn_checksum_t *checksum,
   svn_stream_t *contents,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor_set_target(), svn_editor_t.
+/** @see svn_editor_alter_symlink(), svn_editor_t.
  * @since New in 1.8.
  */
-typedef svn_error_t *(*svn_editor_cb_set_target_t)(
+typedef svn_error_t *(*svn_editor_cb_alter_symlink_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
+  apr_hash_t *props,
   const char *target,
   apr_pool_t *scratch_pool);
 
@@ -476,6 +539,15 @@ typedef svn_error_t *(*svn_editor_cb_move_t)(
   svn_revnum_t src_revision,
   const char *dst_relpath,
   svn_revnum_t replaces_rev,
+  apr_pool_t *scratch_pool);
+
+/** @see svn_editor_rotate(), svn_editor_t.
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_editor_cb_rotate_t)(
+  void *baton,
+  const apr_array_header_t *relpaths,
+  const apr_array_header_t *revisions,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_complete(), svn_editor_t.
@@ -516,6 +588,17 @@ svn_editor_create(svn_editor_t **editor,
                   void *cancel_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
+
+
+/** Return an editor's private baton.
+ *
+ * In some cases, the baton is required outside of the callbacks. This
+ * function returns the private baton for use.
+ *
+ * @since New in 1.8.
+ */
+void *
+svn_editor_get_baton(const svn_editor_t *editor);
 
 
 /** Sets the #svn_editor_cb_add_directory_t callback in @a editor
@@ -562,38 +645,38 @@ svn_editor_setcb_add_absent(svn_editor_t *editor,
                             svn_editor_cb_add_absent_t callback,
                             apr_pool_t *scratch_pool);
 
-/** Sets the #svn_editor_cb_set_props_t callback in @a editor
+/** Sets the #svn_editor_cb_alter_directory_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
  * @since New in 1.8.
  */
 svn_error_t *
-svn_editor_setcb_set_props(svn_editor_t *editor,
-                           svn_editor_cb_set_props_t callback,
-                           apr_pool_t *scratch_pool);
+svn_editor_setcb_alter_directory(svn_editor_t *editor,
+                                 svn_editor_cb_alter_directory_t callback,
+                                 apr_pool_t *scratch_pool);
 
-/** Sets the #svn_editor_cb_set_text_t callback in @a editor
+/** Sets the #svn_editor_cb_alter_file_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
  * @since New in 1.8.
  */
 svn_error_t *
-svn_editor_setcb_set_text(svn_editor_t *editor,
-                          svn_editor_cb_set_text_t callback,
-                          apr_pool_t *scratch_pool);
-
-/** Sets the #svn_editor_cb_set_target_t callback in @a editor
- * to @a callback.
- * @a scratch_pool is used for temporary allocations (if any).
- * @see also svn_editor_setcb_many().
- * @since New in 1.8.
- */
-svn_error_t *
-svn_editor_setcb_set_target(svn_editor_t *editor,
-                            svn_editor_cb_set_target_t callback,
+svn_editor_setcb_alter_file(svn_editor_t *editor,
+                            svn_editor_cb_alter_file_t callback,
                             apr_pool_t *scratch_pool);
+
+/** Sets the #svn_editor_cb_alter_symlink_t callback in @a editor
+ * to @a callback.
+ * @a scratch_pool is used for temporary allocations (if any).
+ * @see also svn_editor_setcb_many().
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_setcb_alter_symlink(svn_editor_t *editor,
+                               svn_editor_cb_alter_symlink_t callback,
+                               apr_pool_t *scratch_pool);
 
 /** Sets the #svn_editor_cb_delete_t callback in @a editor
  * to @a callback.
@@ -627,6 +710,17 @@ svn_error_t *
 svn_editor_setcb_move(svn_editor_t *editor,
                       svn_editor_cb_move_t callback,
                       apr_pool_t *scratch_pool);
+
+/** Sets the #svn_editor_cb_rotate_t callback in @a editor
+ * to @a callback.
+ * @a scratch_pool is used for temporary allocations (if any).
+ * @see also svn_editor_setcb_many().
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_setcb_rotate(svn_editor_t *editor,
+                        svn_editor_cb_rotate_t callback,
+                        apr_pool_t *scratch_pool);
 
 /** Sets the #svn_editor_cb_complete_t callback in @a editor
  * to @a callback.
@@ -662,12 +756,13 @@ typedef struct svn_editor_cb_many_t
   svn_editor_cb_add_file_t cb_add_file;
   svn_editor_cb_add_symlink_t cb_add_symlink;
   svn_editor_cb_add_absent_t cb_add_absent;
-  svn_editor_cb_set_props_t cb_set_props;
-  svn_editor_cb_set_text_t cb_set_text;
-  svn_editor_cb_set_target_t cb_set_target;
+  svn_editor_cb_alter_directory_t cb_alter_directory;
+  svn_editor_cb_alter_file_t cb_alter_file;
+  svn_editor_cb_alter_symlink_t cb_alter_symlink;
   svn_editor_cb_delete_t cb_delete;
   svn_editor_cb_copy_t cb_copy;
   svn_editor_cb_move_t cb_move;
+  svn_editor_cb_rotate_t cb_rotate;
   svn_editor_cb_complete_t cb_complete;
   svn_editor_cb_abort_t cb_abort;
 
@@ -699,21 +794,14 @@ svn_editor_setcb_many(svn_editor_t *editor,
  * Create a new directory at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
  *
- * Set the properties of the new directory to @a props, which is an
- * apr_hash_t holding key-value pairs. Each key is a const char* of a
- * property name, each value is a const svn_string_t*. If no properties are
- * being set on the new directory, @a props must be NULL.
- *
- * If this add is expected to replace a previously existing file or
- * directory at @a relpath, the revision number of the node to be replaced
- * must be given in @a replaces_rev. Otherwise, @a replaces_rev must be
- * SVN_INVALID_REVNUM.  Note: it is not allowed to call a "delete" followed
- * by an "add" on the same path. Instead, an "add" with @a replaces_rev set
- * accordingly MUST be used.
+ * For descriptions of @a props and @a replaces_rev, see
+ * svn_editor_add_file().
  *
  * A complete listing of the immediate children of @a relpath that will be
  * added subsequently is given in @a children. @a children is an array of
- * const char*s, each giving the basename of an immediate child.
+ * const char*s, each giving the basename of an immediate child. It is an
+ * error to pass NULL for @a children; use an empty array to indicate
+ * the new directory will have no children.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  */
@@ -730,17 +818,18 @@ svn_editor_add_directory(svn_editor_t *editor,
  * is expected to exist.
  *
  * The file's contents are specified in @a contents which has a checksum
- * matching @a checksum.
+ * matching @a checksum. Both values must be non-NULL.
  *
  * Set the properties of the new file to @a props, which is an
  * apr_hash_t holding key-value pairs. Each key is a const char* of a
  * property name, each value is a const svn_string_t*. If no properties are
- * being set on the new file, @a props must be NULL.
+ * being set on the new file, @a props must be the empty hash. It is an
+ * error to pass NULL for @a props.
  *
- * If this add is expected to replace a previously existing file or
+ * If this add is expected to replace a previously existing file, symlink or
  * directory at @a relpath, the revision number of the node to be replaced
  * must be given in @a replaces_rev. Otherwise, @a replaces_rev must be
- * SVN_INVALID_REVNUM.  Note: it is not allowed to call a "delete" followed
+ * #SVN_INVALID_REVNUM.  Note: it is not allowed to call a "delete" followed
  * by an "add" on the same path. Instead, an "add" with @a replaces_rev set
  * accordingly MUST be used.
  *
@@ -778,6 +867,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
  * Create an "absent" node of kind @a kind at @a relpath. The immediate
  * parent of @a relpath is expected to exist.
  * ### TODO @todo explain "absent".
+ * ### JAF: What are the allowed values of 'kind'?
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
@@ -787,66 +877,96 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
+                      svn_kind_t kind,
                       svn_revnum_t replaces_rev);
 
-/** Drive @a editor's #svn_editor_cb_set_props_t callback.
+/** Drive @a editor's #svn_editor_cb_alter_directory_t callback.
  *
- * Set or change properties on the existing node at @a relpath.  This
- * function sends *all* properties, both existing and changes.
- * ### TODO @todo What is REVISION for?
- * ### HKW: This is puzzling to me as well...
- * ###
- * ### what about "entry props"? will these still be handled via
- * ### the general prop function?
+ * Alter the properties of the directory at @a relpath.
  *
- * @a complete must be FALSE if and only if
- * - @a relpath is a file and an svn_editor_set_text() call will follow on
- *   the same path, or
- * - @a relpath is a symbolic link and an svn_editor_set_target() call will
- *   follow on the same path.
+ * @a revision specifies the expected revision of the directory and is
+ * used to catch attempts at altering out-of-date directories. If the
+ * directory does not have a corresponding revision in the repository
+ * (e.g. it has not yet been committed), then @a revision should be
+ * #SVN_INVALID_REVNUM.
+ *
+ * If any changes to the set of children will be made in the future of
+ * the edit drive, then @a children MUST specify the resulting set of
+ * children. See svn_editor_add_directory() for the format of @a children.
+ * If not changes will be made, then NULL may be specified.
+ *
+ * For a description of @a props, see svn_editor_add_file(). If no changes
+ * to the properties will be made (ie. only future changes to the set of
+ * children), then @a props may be NULL.
+ *
+ * It is an error to pass NULL for both @a children and @a props.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
  */
 svn_error_t *
-svn_editor_set_props(svn_editor_t *editor,
-                     const char *relpath,
-                     svn_revnum_t revision,
-                     apr_hash_t *props,
-                     svn_boolean_t complete);
+svn_editor_alter_directory(svn_editor_t *editor,
+                           const char *relpath,
+                           svn_revnum_t revision,
+                           const apr_array_header_t *children,
+                           apr_hash_t *props);
 
-/** Drive @a editor's #svn_editor_cb_set_text_t callback.
+/** Drive @a editor's #svn_editor_cb_alter_file_t callback.
  *
- * Set/change the text content of a file at @a relpath to @a contents
- * with checksum @a checksum.
- * ### TODO @todo Does this send the *complete* content, always?
- * ### TODO @todo What is REVISION for?
+ * Alter the properties and/or the contents of the file at @a relpath
+ * with @a revision as its expected revision. See svn_editor_alter_directory()
+ * for more information about @a revision.
  *
- * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.8.
- */
-svn_error_t *
-svn_editor_set_text(svn_editor_t *editor,
-                    const char *relpath,
-                    svn_revnum_t revision,
-                    const svn_checksum_t *checksum,
-                    svn_stream_t *contents);
-
-/** Drive @a editor's #svn_editor_cb_set_target_t callback.
+ * If @a props is non-NULL, then the properties will be applied.
  *
- * Set/change the link target that a symbolic link at @a relpath points at
- * to @a target.
- * ### TODO @todo What is REVISION for?
+ * If @a contents is non-NULL, then the stream will be copied to
+ * the file, and its checksum must match @a checksum (which must also
+ * be non-NULL). If @a contents is NULL, then @a checksum must also
+ * be NULL, and no change will be applied to the file's contents.
+ *
+ * The properties and/or the contents must be changed. It is an error to
+ * pass NULL for @a props, @a checksum, and @a contents.
+ *
+ * For a description of @a checksum, and @a contents see
+ * svn_editor_add_file(). This functions allows @a props to be NULL, but
+ * the parameter is otherwise described by svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
  */
 svn_error_t *
-svn_editor_set_target(svn_editor_t *editor,
+svn_editor_alter_file(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      const char *target);
+                      apr_hash_t *props,
+                      const svn_checksum_t *checksum,
+                      svn_stream_t *contents);
+
+/** Drive @a editor's #svn_editor_cb_alter_symlink_t callback.
+ *
+ * Alter the properties and/or the target of the symlink at @a relpath
+ * with @a revision as its expected revision. See svn_editor_alter_directory()
+ * for more information about @a revision.
+ *
+ * If @a props is non-NULL, then the properties will be applied.
+ *
+ * If @a target is non-NULL, then the symlink's target will be updated.
+ *
+ * The properties and/or the target must be changed. It is an error to
+ * pass NULL for @a props and @a target.
+ *
+ * This functions allows @a props to be NULL, but the parameter is
+ * otherwise described by svn_editor_add_file().
+ *
+ * For all restrictions on driving the editor, see #svn_editor_t.
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_alter_symlink(svn_editor_t *editor,
+                         const char *relpath,
+                         svn_revnum_t revision,
+                         apr_hash_t *props,
+                         const char *target);
 
 /** Drive @a editor's #svn_editor_cb_delete_t callback.
  *
@@ -868,6 +988,11 @@ svn_editor_delete(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
+ * @note See the general instructions on paths for this API. Since the
+ * @a src_relpath argument must generally be able to reference any node
+ * in the repository, the implication is that the editor's root must be
+ * the repository root.
+ *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
  */
@@ -884,19 +1009,8 @@ svn_editor_copy(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
- * ### stsp: How would I describe a merge of revision range rA-rB,
- * ###   within which a file foo.c was delete in rN, re-created in rM,
- * ###   and then renamed to bar.c in rX?
- * ###   Would the following be valid?
- * ###   svn_editor_add_file(ed, "foo.c", props, rN);
- * ###   svn_editor_move(ed, "foo.c", rM, "bar.c", rN);
- * ###
- * ### gstein: An editor is used to make changes to a tree rather than
- * ###   model *how* the tree changed. If the receiver's tree is at
- * ###   revision N-1, then the operations would be:
- * ###     svn_editor_delete(ed, "foo.c", N-1);
- * ###     svn_editor_copy(ed, "foo.c", M, "bar.c", SVN_INVALID_REVNUM);
- * ###   That edits the tree to the appropriate state.
+ * ### what happens if one side of this move is not "within" the receiver's
+ * ### set of paths?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -907,6 +1021,36 @@ svn_editor_move(svn_editor_t *editor,
                 svn_revnum_t src_revision,
                 const char *dst_relpath,
                 svn_revnum_t replaces_rev);
+
+/** Drive @a editor's #svn_editor_cb_rotate_t callback.
+ *
+ * Perform a rotation among multiple nodes in the target tree.
+ *
+ * The @a relpaths and @a revisions arrays (pair-wise) specify nodes in the
+ * tree which are located at a path and expected to be at a specific
+ * revision. These nodes are simultaneously moved in a rotation pattern.
+ * For example, the node at index 0 of @a relpaths and @a revisions will
+ * be moved to the relpath specified at index 1 of @a relpaths. The node
+ * at index 1 will be moved to the location at index 2. The node at index
+ * N-1 will be moved to the relpath specifed at index 0.
+ *
+ * The simplest form of this operation is to swap nodes A and B. One may
+ * think to move A to a temporary location T, then move B to A, then move
+ * T to B. However, this last move violations the Once Rule by moving T
+ * (which had already by edited by the move from A). In order to keep the
+ * restrictions against multiple moves of a single node, the rotation
+ * operation is needed for certain types of tree edits.
+ *
+ * ### what happens if one of the paths of the rotation is not "within" the
+ * ### receiver's set of paths?
+ *
+ * For all restrictions on driving the editor, see #svn_editor_t.
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_rotate(svn_editor_t *editor,
+                  const apr_array_header_t *relpaths,
+                  const apr_array_header_t *revisions);
 
 /** Drive @a editor's #svn_editor_cb_complete_t callback.
  *

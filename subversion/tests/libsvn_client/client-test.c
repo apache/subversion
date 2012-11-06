@@ -28,10 +28,12 @@
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
+#include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
+#include "private/svn_wc_private.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -102,26 +104,28 @@ test_elide_mergeinfo_catalog(apr_pool_t *pool)
        i < sizeof(elide_testcases) / sizeof(elide_testcases[0]);
        i++)
     {
-      apr_hash_t *catalog;
+      svn_mergeinfo_catalog_t mergeinfo_catalog;
       mergeinfo_catalog_item *item;
 
       svn_pool_clear(iterpool);
 
-      catalog = apr_hash_make(iterpool);
+      mergeinfo_catalog = apr_hash_make(iterpool);
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo;
+          svn_mergeinfo_t mergeinfo;
 
           SVN_ERR(svn_mergeinfo_parse(&mergeinfo, item->unparsed_mergeinfo,
                                       iterpool));
-          apr_hash_set(catalog, item->path, APR_HASH_KEY_STRING, mergeinfo);
+          apr_hash_set(mergeinfo_catalog, item->path, APR_HASH_KEY_STRING,
+                       mergeinfo);
         }
 
-      SVN_ERR(svn_client__elide_mergeinfo_catalog(catalog, iterpool));
+      SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_catalog,
+                                                  iterpool));
 
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo = apr_hash_get(catalog, item->path,
+          apr_hash_t *mergeinfo = apr_hash_get(mergeinfo_catalog, item->path,
                                                APR_HASH_KEY_STRING);
           if (item->remains && !mergeinfo)
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -569,7 +573,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-copy-crash", opts, pool));
 
-  svn_client_create_context(&ctx, pool);
+  SVN_ERR(svn_client_create_context(&ctx, pool));
 
   rev.kind = svn_opt_revision_head;
   dest = svn_path_url_add_component2(repos_url, "A/E", pool);
@@ -648,6 +652,158 @@ test_16k_add(const svn_test_opts_t *opts,
 }
 #endif
 
+static svn_error_t *
+test_youngest_common_ancestor(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  const char *repos_url;
+  const char *repos_uuid = "fake-uuid";  /* the functions we call don't care */
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
+  svn_opt_revision_t zero_rev = { svn_opt_revision_number, { 0 } };
+  svn_client_copy_source_t source;
+  apr_array_header_t *sources;
+  const char *dest;
+  svn_client__pathrev_t *yc_ancestor;
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
+
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Copy a file into dir 'A', keeping its own basename. */
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  source.path = svn_path_url_add_component2(repos_url, "iota", pool);
+  source.peg_revision = &head_rev;
+  source.revision = &head_rev;
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+  dest = svn_path_url_add_component2(repos_url, "A", pool);
+  SVN_ERR(svn_client_copy6(sources, dest, TRUE /* copy_as_child */,
+                           FALSE /* make_parents */,
+                           FALSE /* ignore_externals */,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Test: YCA(iota@2, A/iota@2) is iota@1. */
+  SVN_ERR(svn_client__get_youngest_common_ancestor(
+            &yc_ancestor,
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 2, "iota", pool),
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 2, "A/iota", pool),
+            NULL, ctx, pool, pool));
+  SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool),
+                         "iota");
+  SVN_TEST_ASSERT(yc_ancestor->rev == 1);
+
+  /* Copy the root directory (at revision 0) into A as 'ROOT'. */
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  source.path = repos_url;
+  source.peg_revision = &zero_rev;
+  source.revision = &zero_rev;
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+  dest = svn_path_url_add_component2(repos_url, "A/ROOT", pool);
+  SVN_ERR(svn_client_copy6(sources, dest, FALSE /* copy_as_child */,
+                           FALSE /* make_parents */,
+                           FALSE /* ignore_externals */,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Test: YCA(''@0, A/ROOT@3) is ''@0 (handled as a special case). */
+  SVN_ERR(svn_client__get_youngest_common_ancestor(
+            &yc_ancestor,
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 0, "", pool),
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 3, "A/ROOT", pool),
+            NULL, ctx, pool, pool));
+  SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool), "");
+  SVN_TEST_ASSERT(yc_ancestor->rev == 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  int i;
+  struct external_info
+    {
+      const char *line;
+      const char *url;
+      const char *local_path;
+      svn_revnum_t peg_rev;
+      svn_revnum_t rev;
+      
+    } items[] = {
+        {
+            "dir http://server/svn/a",
+            "http://server/svn/a",
+            "dir"
+        },
+        {
+            "/svn/home dir",
+            "u://svr/svn/home",
+            "dir"
+        },
+        {
+            "//server/home dir",
+            "u://server/home",
+            "dir"
+        },
+        {
+            "../../../../home dir",
+            "u://svr/svn/home",
+            "dir",
+        },
+        {
+            "^/../repB/tools/scripts scripts",
+            "u://svr/svn/cur/repB/tools/scripts",
+            "scripts"
+        },
+        { 
+            "^/../repB/tools/README.txt scripts/README.txt",
+            "u://svr/svn/cur/repB/tools/README.txt",
+            "scripts/README.txt"
+        },
+    };
+  
+
+  for (i = 0; i < sizeof(items) / sizeof(items[0]); i++)
+    {
+      apr_array_header_t *results;
+      svn_wc_external_item2_t *external_item;
+      const char *resolved_url;
+      SVN_ERR(svn_wc_parse_externals_description3(&results, "/my/current/dir",
+                                                  items[i].line, FALSE, pool));
+
+      SVN_TEST_ASSERT(results && results->nelts == 1);
+
+      external_item = APR_ARRAY_IDX(results, 0, svn_wc_external_item2_t *);
+
+      SVN_ERR(svn_wc__resolve_relative_external_url(&resolved_url,
+                                                    external_item,
+                                                    "u://svr/svn/cur/dir",
+                                                    "u://svr/svn/cur/dir/sd/fl",
+                                                    pool, pool));
+
+      SVN_TEST_STRING_ASSERT(resolved_url, items[i].url);
+      SVN_TEST_STRING_ASSERT(external_item->target_dir, items[i].local_path);
+
+      if (items[i].peg_rev != 0)
+        SVN_TEST_ASSERT(external_item->peg_revision.value.number
+                                == items[i].peg_rev);
+      if (items[i].rev != 0)
+        SVN_TEST_ASSERT(external_item->revision.value.number == items[i].rev);
+      SVN_TEST_ASSERT(svn_uri_is_canonical(resolved_url, pool));
+    }
+
+
+  return SVN_NO_ERROR;
+
+}
+
+
+
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -663,5 +819,7 @@ struct svn_test_descriptor_t test_funcs[] =
 #ifdef TEST16K_ADD
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
+    SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
+    SVN_TEST_OPTS_PASS(test_externals_parse, "test svn_wc_parse_externals_description3"),
     SVN_TEST_NULL
   };

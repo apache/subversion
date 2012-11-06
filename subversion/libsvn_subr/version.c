@@ -26,7 +26,9 @@
 #include "svn_error.h"
 #include "svn_version.h"
 
+#include "sysinfo.h"
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 
 const svn_version_t *
 svn_subr_version(void)
@@ -95,4 +97,182 @@ svn_ver_check_list(const svn_version_t *my_version,
     }
 
   return err;
+}
+
+
+struct svn_version_extended_t
+{
+  const char *build_date;       /* Compilation date */
+  const char *build_time;       /* Compilation time */
+  const char *build_host;       /* Build canonical host name */
+  const char *copyright;        /* Copyright notice (localized) */
+  const char *runtime_host;     /* Runtime canonical host name */
+  const char *runtime_osname;   /* Running OS release name */
+
+  /* Array of svn_version_ext_linked_lib_t describing dependent
+     libraries. */
+  const apr_array_header_t *linked_libs;
+
+  /* Array of svn_version_ext_loaded_lib_t describing loaded shared
+     libraries. */
+  const apr_array_header_t *loaded_libs;
+};
+
+
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool)
+{
+  svn_version_extended_t *info = apr_pcalloc(pool, sizeof(*info));
+
+  info->build_date = __DATE__;
+  info->build_time = __TIME__;
+  info->build_host = SVN_BUILD_HOST;
+  info->copyright = apr_pstrdup
+    (pool, _("Copyright (C) 2012 The Apache Software Foundation.\n"
+             "This software consists of contributions made by many people;\n"
+             "see the NOTICE file for more information.\n"
+             "Subversion is open source software, see "
+             "http://subversion.apache.org/\n"));
+
+  if (verbose)
+    {
+      info->runtime_host = svn_sysinfo__canonical_host(pool);
+      info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->linked_libs = svn_sysinfo__linked_libs(pool);
+      info->loaded_libs = svn_sysinfo__loaded_libs(pool);
+    }
+
+  return info;
+}
+
+
+const char *
+svn_version_ext_build_date(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_date;
+}
+
+const char *
+svn_version_ext_build_time(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_time;
+}
+
+const char *
+svn_version_ext_build_host(const svn_version_extended_t *ext_info)
+{
+  return ext_info->build_host;
+}
+
+const char *
+svn_version_ext_copyright(const svn_version_extended_t *ext_info)
+{
+  return ext_info->copyright;
+}
+
+const char *
+svn_version_ext_runtime_host(const svn_version_extended_t *ext_info)
+{
+  return ext_info->runtime_host;
+}
+
+const char *
+svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info)
+{
+  return ext_info->runtime_osname;
+}
+
+const apr_array_header_t *
+svn_version_ext_linked_libs(const svn_version_extended_t *ext_info)
+{
+  return ext_info->linked_libs;
+}
+
+const apr_array_header_t *
+svn_version_ext_loaded_libs(const svn_version_extended_t *ext_info)
+{
+  return ext_info->loaded_libs;
+}
+
+svn_error_t *
+svn_version__parse_version_string(svn_version_t **version_p,
+                                  const char *version_string,
+                                  apr_pool_t *result_pool)
+{
+  svn_error_t *err;
+  svn_version_t *version;
+  apr_array_header_t *pieces = 
+    svn_cstring_split(version_string, ".", FALSE, result_pool);
+
+  if ((pieces->nelts < 2) || (pieces->nelts > 3))
+    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, NULL, NULL);
+
+  version = apr_pcalloc(result_pool, sizeof(*version));
+  version->tag = "";
+
+  /* Parse the major and minor integers strictly. */
+  err = svn_cstring_atoi(&(version->major),
+                         APR_ARRAY_IDX(pieces, 0, const char *));
+  if (err)
+    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+  err = svn_cstring_atoi(&(version->minor),
+                         APR_ARRAY_IDX(pieces, 1, const char *));
+  if (err)
+    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+
+  /* If there's a third component, we'll parse it, too.  But we don't
+     require that it be present. */
+  if (pieces->nelts == 3)
+    {
+      const char *piece = APR_ARRAY_IDX(pieces, 2, const char *);
+      char *hyphen = strchr(piece, '-');
+      if (hyphen)
+        {
+          version->tag = apr_pstrdup(result_pool, hyphen + 1);
+          *hyphen = '\0';
+        }
+      err = svn_cstring_atoi(&(version->patch), piece);
+      if (err)
+        return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING,
+                                err, NULL);
+    }
+
+  *version_p = version;
+  return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_version__at_least(svn_version_t *version,
+                      int major,
+                      int minor,
+                      int patch)
+{
+  /* Compare major versions. */
+  if (version->major < major)
+    return FALSE;
+  if (version->major > major)
+    return TRUE;
+
+  /* Major versions are the same.  Compare minor versions. */
+  if (version->minor < minor)
+    return FALSE;
+  if (version->minor > minor)
+    return TRUE;
+
+  /* Major and minor versions are the same.  Compare patch
+     versions. */
+  if (version->patch < patch)
+    return FALSE;
+  if (version->patch > patch)
+    return TRUE;
+
+  /* Major, minor, and patch versions are identical matches.  But tags
+     in our schema are always used for versions not yet quite at the
+     given patch level. */
+  if (version->tag && version->tag[0])
+    return FALSE;
+
+  return TRUE;
 }

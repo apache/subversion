@@ -57,7 +57,8 @@ struct txdelta_baton {
   svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for input data. */
 
-  svn_checksum_ctx_t *context;  /* Context for computing the checksum. */
+  svn_checksum_ctx_t *context;  /* If not NULL, the context for computing
+                                   the checksum. */
   svn_checksum_t *checksum;     /* If non-NULL, the checksum of TARGET. */
 
   apr_pool_t *result_pool;      /* For results (e.g. checksum) */
@@ -150,7 +151,7 @@ compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
   svn_txdelta_window_t *window;
 
   /* Compute the delta operations. */
-  build_baton.new_data = svn_stringbuf_create("", pool);
+  build_baton.new_data = svn_stringbuf_create_empty(pool);
 
   if (source_len == 0)
     svn_txdelta__insert_op(&build_baton, svn_txdelta_new, 0, target_len, data,
@@ -276,6 +277,48 @@ svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
   ++build_baton->num_ops;
 }
 
+apr_size_t
+svn_txdelta__remove_copy(svn_txdelta__ops_baton_t *build_baton,
+                         apr_size_t max_len)
+{
+  svn_txdelta_op_t *op;
+  apr_size_t len = 0;
+
+  /* remove ops back to front */
+  while (build_baton->num_ops > 0)
+    {
+      op = &build_baton->ops[build_baton->num_ops-1];
+
+      /*  we can't modify svn_txdelta_target ops -> stop there */
+      if (op->action_code == svn_txdelta_target)
+        break;
+
+      /*  handle the case that we cannot remove the op entirely */
+      if (op->length + len > max_len)
+        {
+          /* truncate only insertions. Copies don't benefit
+             from being truncated. */
+          if (op->action_code == svn_txdelta_new)
+            {
+               build_baton->new_data->len -= max_len - len;
+               op->length -= max_len - len;
+               len = max_len;
+            }
+
+          break;
+        }
+
+      /* drop the op entirely */
+      if (op->action_code == svn_txdelta_new)
+        build_baton->new_data->len -= op->length;
+
+      len += op->length;
+      --build_baton->num_ops;
+    }
+
+  return len;
+}
+
 
 
 /* Generic delta stream functions. */
@@ -363,6 +406,10 @@ txdelta_md5_digest(void *baton)
   if (b->more)
     return NULL;
 
+  /* If checksumming has not been activated, there will be no digest. */
+  if (b->context == NULL)
+    return NULL;
+
   /* The checksum should be there. */
   return b->checksum->digest;
 }
@@ -421,10 +468,11 @@ svn_txdelta_run(svn_stream_t *source,
 
 
 void
-svn_txdelta(svn_txdelta_stream_t **stream,
-            svn_stream_t *source,
-            svn_stream_t *target,
-            apr_pool_t *pool)
+svn_txdelta2(svn_txdelta_stream_t **stream,
+             svn_stream_t *source,
+             svn_stream_t *target,
+             svn_boolean_t calculate_checksum,
+             apr_pool_t *pool)
 {
   struct txdelta_baton *b = apr_pcalloc(pool, sizeof(*b));
 
@@ -433,11 +481,22 @@ svn_txdelta(svn_txdelta_stream_t **stream,
   b->more_source = TRUE;
   b->more = TRUE;
   b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
-  b->context = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->context = calculate_checksum
+             ? svn_checksum_ctx_create(svn_checksum_md5, pool)
+             : NULL;
   b->result_pool = pool;
 
   *stream = svn_txdelta_stream_create(b, txdelta_next_window,
                                       txdelta_md5_digest, pool);
+}
+
+void
+svn_txdelta(svn_txdelta_stream_t **stream,
+            svn_stream_t *source,
+            svn_stream_t *target,
+            apr_pool_t *pool)
+{
+  svn_txdelta2(stream, source, target, TRUE, pool);
 }
 
 
@@ -742,7 +801,8 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */
-      if (ab->sbuf_offset + ab->sbuf_len > window->sview_offset)
+      if (  (apr_size_t)ab->sbuf_offset + ab->sbuf_len
+          > (apr_size_t)window->sview_offset)
         {
           apr_size_t start =
             (apr_size_t)(window->sview_offset - ab->sbuf_offset);
@@ -862,29 +922,54 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
                                      unsigned char *digest,
                                      apr_pool_t *pool)
 {
-  svn_txdelta_stream_t *txstream;
-  svn_error_t *err;
+  svn_txdelta_window_t delta_window = { 0 };
+  svn_txdelta_op_t delta_op;
+  svn_string_t window_data;
+  char read_buf[SVN__STREAM_CHUNK_SIZE + 1];
+  svn_checksum_ctx_t *md5_checksum_ctx;
 
-  /* ### this is a hack. we should simply read from the stream, construct
-     ### some windows, and pass those to the handler. there isn't any reason
-     ### to crank up a full "diff" algorithm just to copy a stream.
-     ###
-     ### will fix RSN. */
+  if (digest)
+    md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
-  /* Create a delta stream which converts an *empty* bytestream into the
-     target bytestream. */
-  svn_txdelta(&txstream, svn_stream_empty(pool), stream, pool);
-  err = svn_txdelta_send_txstream(txstream, handler, handler_baton, pool);
-
-  if (digest && (! err))
+  while (1)
     {
-      const unsigned char *result_md5;
-      result_md5 = svn_txdelta_md5_digest(txstream);
-      /* Since err is null, result_md5 "cannot" be null. */
-      memcpy(digest, result_md5, APR_MD5_DIGESTSIZE);
-    }
+      apr_size_t read_len = SVN__STREAM_CHUNK_SIZE;
+      
+      SVN_ERR(svn_stream_read(stream, read_buf, &read_len));
+      if (read_len == 0)
+        break;
+      
+      window_data.data = read_buf;
+      window_data.len = read_len;
+      
+      delta_op.action_code = svn_txdelta_new;
+      delta_op.offset = 0;
+      delta_op.length = read_len;
+      
+      delta_window.tview_len = read_len;
+      delta_window.num_ops = 1;
+      delta_window.ops = &delta_op;
+      delta_window.new_data = &window_data;
+      
+      SVN_ERR(handler(&delta_window, handler_baton));
 
-  return err;
+      if (digest)
+        SVN_ERR(svn_checksum_update(md5_checksum_ctx, read_buf, read_len));
+      
+      if (read_len < SVN__STREAM_CHUNK_SIZE)
+        break;
+    }
+  SVN_ERR(handler(NULL, handler_baton));
+
+  if (digest)
+    {
+      svn_checksum_t *md5_checksum;
+
+      SVN_ERR(svn_checksum_final(&md5_checksum, md5_checksum_ctx, pool));
+      memcpy(digest, md5_checksum->digest, APR_MD5_DIGESTSIZE);
+    }
+  
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
@@ -914,3 +999,42 @@ svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_txdelta_send_contents(const unsigned char *contents,
+                          apr_size_t len,
+                          svn_txdelta_window_handler_t handler,
+                          void *handler_baton,
+                          apr_pool_t *pool)
+{
+  svn_string_t new_data;
+  svn_txdelta_op_t op = { svn_txdelta_new, 0, 0 };
+  svn_txdelta_window_t window = { 0, 0, 0, 1, 0 };
+  window.ops = &op;
+  window.new_data = &new_data;
+
+  /* send CONTENT as a series of max-sized windows */
+  while (len > 0)
+    {
+      /* stuff next chunk into the window */
+      window.tview_len = len < SVN_DELTA_WINDOW_SIZE
+                       ? len
+                       : SVN_DELTA_WINDOW_SIZE;
+      op.length = window.tview_len;
+      new_data.len = window.tview_len;
+      new_data.data = (const char*)contents;
+
+      /* update remaining */
+      contents += window.tview_len;
+      len -= window.tview_len;
+
+      /* shove it at the handler */
+      SVN_ERR((*handler)(&window, handler_baton));
+    }
+
+  /* indicate end of stream */
+  SVN_ERR((*handler)(NULL, handler_baton));
+
+  return SVN_NO_ERROR;
+}
+

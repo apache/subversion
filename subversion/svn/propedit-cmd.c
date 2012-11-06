@@ -39,8 +39,6 @@
 #include "svn_props.h"
 #include "cl.h"
 
-#include "private/svn_wc_private.h"
-
 #include "svn_private_config.h"
 
 
@@ -122,7 +120,7 @@ svn_cl__propedit(apr_getopt_t *os,
 
       if (! propval)
         {
-          propval = svn_string_create("", pool);
+          propval = svn_string_create_empty(pool);
           /* This is how we signify to svn_client_revprop_set2() that
              we want it to check that the original value hasn't
              changed, but that that original value was non-existent: */
@@ -230,7 +228,7 @@ svn_cl__propedit(apr_getopt_t *os,
           peg_revision.kind = svn_opt_revision_unspecified;
 
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget4(&props, pname_utf8, abspath_or_url,
+          SVN_ERR(svn_client_propget5(&props, NULL, pname_utf8, abspath_or_url,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       &base_rev, svn_depth_empty,
@@ -239,7 +237,7 @@ svn_cl__propedit(apr_getopt_t *os,
           /* Get the property value. */
           propval = apr_hash_get(props, abspath_or_url, APR_HASH_KEY_STRING);
           if (! propval)
-            propval = svn_string_create("", subpool);
+            propval = svn_string_create_empty(subpool);
 
           if (svn_path_is_url(target))
             {

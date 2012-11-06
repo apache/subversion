@@ -31,19 +31,25 @@
    ### remain in the code. at that point, we can rejigger this header.  */
 #ifdef SVN_DEBUG
 
-#include <stdio.h>
+#define APR_WANT_STDIO
+#include <apr_want.h>
+#include <apr_hash.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* A couple helper functions for the macros below.  */
+/* A few helper functions for the macros below.  */
 void
 svn_dbg__preamble(const char *file, long line, FILE *output);
 void
 svn_dbg__printf(const char *fmt, ...)
   __attribute__((format(printf, 1, 2)));
-
+void
+svn_dbg__print_props(apr_hash_t *props,
+                     const char *header_fmt,
+                     ...)
+  __attribute__((format(printf, 2, 3)));
 
 /* Print to stdout. Edit this line if you need stderr.  */
 #define SVN_DBG_OUTPUT stdout
@@ -55,6 +61,7 @@ svn_dbg__printf(const char *fmt, ...)
 #ifdef SVN_DBG_QUIET
 
 #define SVN_DBG(ARGS) svn_dbg__preamble(__FILE__, __LINE__, NULL)
+#define SVN_DBG_PROPS(ARGS) svn_dbg__preamble(__FILE__, __LINE__, NULL)
 
 #else
 
@@ -77,6 +84,9 @@ svn_dbg__printf(const char *fmt, ...)
  */
 #define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
                        svn_dbg__printf ARGS)
+#define SVN_DBG_PROPS(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, \
+                                               SVN_DBG_OUTPUT), \
+                             svn_dbg__print_props ARGS)
 
 #endif
 

@@ -191,10 +191,9 @@ update_internal(svn_revnum_t *result_rev,
   void *update_edit_baton;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *anchor_url;
   const char *corrected_url;
   const char *target;
-  const char *repos_root;
+  svn_client__pathrev_t *anchor_loc;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
@@ -202,15 +201,20 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   svn_boolean_t clean_checkout = FALSE;
   const char *diff3_cmd;
+  apr_hash_t *wcroot_iprops;
+  svn_opt_revision_t opt_rev;
   svn_ra_session_t *ra_session;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
+
+  if (result_rev)
+    *result_rev = SVN_INVALID_REVNUM;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -221,39 +225,34 @@ update_internal(svn_revnum_t *result_rev,
   else
     target = "";
 
-  /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
-                               pool, pool));
-  if (! anchor_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(anchor_abspath, pool));
+  /* Check if our anchor exists in BASE. If it doesn't we can't update. */
+  SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
+                                       ctx->wc_ctx, pool, pool));
 
-  /* Check if our anchor exists in BASE. If it doesn't we can't update.
-     ### For performance reasons this should be handled with the same query
-     ### as retrieving the anchor url. */
-  SVN_ERR(svn_wc__node_get_base_rev(&revnum, ctx->wc_ctx, anchor_abspath,
-                                    pool));
-
-  /* It does not make sense to update tree-conflict victims. */
-  err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+  /* It does not make sense to update conflict victims. */
+  err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                             &tree_conflicted,
                              ctx->wc_ctx, local_abspath, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
+      text_conflicted = FALSE;
+      prop_conflicted = FALSE;
       tree_conflicted = FALSE;
     }
   else
     SVN_ERR(err);
 
-  if (!SVN_IS_VALID_REVNUM(revnum) || tree_conflicted)
+  if (! anchor_loc
+      || text_conflicted || prop_conflicted || tree_conflicted)
     {
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *nt;
 
           nt = svn_wc_create_notify(local_abspath,
-                                    tree_conflicted
+                                    (text_conflicted || prop_conflicted
+                                                     || tree_conflicted)
                                       ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
                                     pool);
@@ -330,35 +329,44 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               anchor_url,
+                                               anchor_loc->url,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
   if (corrected_url)
     {
-      const char *current_repos_root;
-      const char *current_uuid;
+      const char *new_repos_root_url;
 
       /* To relocate everything inside our repository we need the old and new
-         repos root. ### And we should only perform relocates on the wcroot */
-      SVN_ERR(svn_wc__node_get_repos_info(&current_repos_root, &current_uuid,
-                                          ctx->wc_ctx, anchor_abspath,
-                                          pool, pool));
+         repos root. */
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
 
-      /* ### Check uuid here before calling relocate? */
-      SVN_ERR(svn_client_relocate2(anchor_abspath, current_repos_root,
-                                   repos_root, ignore_externals, ctx, pool));
-      anchor_url = corrected_url;
+      /* svn_client_relocate2() will check the uuid */
+      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_loc->url,
+                                   new_repos_root_url, ignore_externals,
+                                   ctx, pool));
+
+      /* Store updated repository root for externals */
+      anchor_loc->repos_root_url = new_repos_root_url;
+      /* ### We should update anchor_loc->repos_uuid too, although currently
+       * we don't use it. */
+      anchor_loc->url = corrected_url;
     }
+
+  /* Resolve unspecified REVISION now, because we need to retrieve the
+     correct inherited props prior to the editor drive and we need to
+     use the same value of HEAD for both. */
+  opt_rev.kind = revision->kind;
+  opt_rev.value = revision->value;
+  if (opt_rev.kind == svn_opt_revision_unspecified)
+    opt_rev.kind = svn_opt_revision_head;
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
-                                          local_abspath, ra_session, revision,
+                                          local_abspath, ra_session, &opt_rev,
                                           pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -366,14 +374,33 @@ update_internal(svn_revnum_t *result_rev,
 
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
-  dfb.anchor_url = anchor_url;
+  dfb.anchor_url = anchor_loc->url;
+
+  err = svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
+                                          revnum, depth, ra_session, ctx,
+                                          pool, pool);
+
+  /* We might be trying to update to a non-existant path-rev. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
+  SVN_ERR(svn_wc__get_update_editor(&update_editor, &update_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, use_commit_times, depth,
-                                    depth_is_sticky, allow_unver_obstructions,
+                                    target, wcroot_iprops, use_commit_times,
+                                    depth, depth_is_sticky,
+                                    allow_unver_obstructions,
                                     adds_as_modification,
                                     server_supports_depth,
                                     clean_checkout,
@@ -389,7 +416,9 @@ update_internal(svn_revnum_t *result_rev,
      invalid revnum, that means RA will use the latest revision.  */
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
                             revnum, target,
-                            depth_is_sticky ? depth : svn_depth_unknown,
+                            (!server_supports_depth || depth_is_sticky
+                             ? depth
+                             : svn_depth_unknown),
                             FALSE, update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
@@ -426,7 +455,7 @@ update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           repos_root, local_abspath,
+                                           anchor_loc->repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }
@@ -565,7 +594,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
 
@@ -588,12 +617,12 @@ svn_client_update4(apr_array_header_t **result_revs,
       const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
@@ -601,7 +630,8 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         adds_as_modification,
                                         make_parents,
                                         FALSE, &sleep,
-                                        ctx, subpool);
+                                        ctx,
+                                        iterpool);
 
       if (err)
         {
@@ -618,15 +648,15 @@ svn_client_update4(apr_array_header_t **result_revs,
               svn_wc_notify_t *notify;
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_skip,
-                                            subpool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+                                            iterpool);
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
         }
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
+  svn_pool_destroy(iterpool);
 
-  svn_pool_destroy(subpool);
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 

@@ -61,6 +61,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
@@ -1494,9 +1495,8 @@ window_handler(svn_txdelta_window_t *window,
 
   if (!window)
     {
-      fb->result_checksum = svn_checksum__from_digest(whb->result_digest,
-                                                      svn_checksum_md5,
-                                                      fb->pool);
+      fb->result_checksum = svn_checksum__from_digest_md5(whb->result_digest,
+                                                          fb->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1856,7 +1856,7 @@ close_edit(void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         void **edit_baton,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,
@@ -1880,6 +1880,9 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
+  struct svn_wc__shim_fetch_baton_t *sfb;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
@@ -1931,8 +1934,19 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                             edit_baton,
                                             result_pool));
 
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = wc_ctx->db;
+  sfb->base_abspath = eb->anchor_abspath;
+  sfb->fetch_base = TRUE;
+
+  shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
+  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_baton = sfb;
+
+
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, shim_callbacks,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;

@@ -47,6 +47,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -541,7 +542,7 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
 
   str = svn_stringbuf_create_ensure(80, result_pool);
 
-  if (b->offset >= b->value->len)
+  if ((apr_uint64_t)b->offset >= (apr_uint64_t)b->value->len)
     {
       *eol_str = NULL;
       *eof = TRUE;
@@ -670,7 +671,7 @@ init_prop_target(prop_patch_target_t **prop_target,
     }
   content->existed = (value != NULL);
   new_prop_target->value = value;
-  new_prop_target->patched_value = svn_stringbuf_create("", result_pool);
+  new_prop_target->patched_value = svn_stringbuf_create_empty(result_pool);
 
 
   /* Wire up the read and write callbacks. */
@@ -811,12 +812,19 @@ write_file(void *baton, const char *buf, apr_size_t len,
  * with the fewest path components, the shortest basename, and the shortest
  * total file name length (in that order). In case of a tie, return the new
  * filename. This heuristic is also used by Larry Wall's UNIX patch (except
- * that it prompts for a filename in case of a tie). */
+ * that it prompts for a filename in case of a tie).
+ * Additionally, for compatibility with git, if one of the filenames
+ * is "/dev/null", use the other filename. */
 static const char *
 choose_target_filename(const svn_patch_t *patch)
 {
   apr_size_t old;
   apr_size_t new;
+
+  if (strcmp(patch->old_filename, "/dev/null") == 0)
+    return patch->new_filename;
+  if (strcmp(patch->new_filename, "/dev/null") == 0)
+    return patch->old_filename;
 
   old = svn_path_component_count(patch->old_filename);
   new = svn_path_component_count(patch->new_filename);
@@ -1012,6 +1020,7 @@ readline(target_content_t *content,
 {
   svn_stringbuf_t *line_raw;
   const char *eol_str;
+  svn_linenum_t max_line = (svn_linenum_t)content->lines->nelts + 1;
 
   if (content->eof || content->readline == NULL)
     {
@@ -1019,8 +1028,8 @@ readline(target_content_t *content,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_ASSERT(content->current_line <= content->lines->nelts + 1);
-  if (content->current_line == content->lines->nelts + 1)
+  SVN_ERR_ASSERT(content->current_line <= max_line);
+  if (content->current_line == max_line)
     {
       apr_off_t offset;
 
@@ -1065,7 +1074,7 @@ seek_to_line(target_content_t *content, svn_linenum_t line,
   saved_line = content->current_line;
   saved_eof = content->eof;
 
-  if (line <= content->lines->nelts)
+  if (line <= (svn_linenum_t)content->lines->nelts)
     {
       apr_off_t offset;
 
@@ -1692,7 +1701,7 @@ apply_hunk(patch_target_t *target, target_content_t *content,
                                                    &eol_str, &eof,
                                                    iterpool, iterpool));
       lines_read++;
-      if (! eof && lines_read > hi->fuzz &&
+      if (lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
           apr_size_t len;
@@ -2711,7 +2720,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
   empty_dirs = apr_hash_make(scratch_pool);
   non_empty_dirs = apr_hash_make(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < targets_info->nelts; i++)
+  for (i = 0; i < deleted_targets->nelts; i++)
     {
       svn_boolean_t parent_empty;
       patch_target_info_t *target_info;
@@ -2722,7 +2731,8 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
+      target_info = APR_ARRAY_IDX(deleted_targets, i, patch_target_info_t *);
+
       parent = svn_dirent_dirname(target_info->local_abspath, iterpool);
 
       if (apr_hash_get(non_empty_dirs, parent, APR_HASH_KEY_STRING))
@@ -2825,54 +2835,36 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-/* Baton for apply_patches(). */
-typedef struct apply_patches_baton_t {
-  /* The path to the patch file. */
-  const char *patch_abspath;
-
-  /* The abspath to the working copy the patch should be applied to. */
-  const char *abs_wc_path;
-
-  /* Indicates whether we're doing a dry run. */
-  svn_boolean_t dry_run;
-
-  /* Number of leading components to strip from patch target paths. */
-  int strip_count;
-
-  /* Whether to apply the patch in reverse. */
-  svn_boolean_t reverse;
-
-  /* Indicates whether we should ignore whitespace when matching context
-   * lines */
-  svn_boolean_t ignore_whitespace;
-
-  /* As in svn_client_patch(). */
-  svn_boolean_t remove_tempfiles;
-
-  /* As in svn_client_patch(). */
-  svn_client_patch_func_t patch_func;
-  void *patch_baton;
-
-  /* The client context. */
-  svn_client_ctx_t *ctx;
-} apply_patches_baton_t;
-
-/* Callback for use with svn_wc__call_with_write_lock().
- * This function is the main entry point into the patch code. */
+/* This function is the main entry point into the patch code. */
 static svn_error_t *
-apply_patches(void *baton,
-              apr_pool_t *result_pool,
+apply_patches(/* The path to the patch file. */
+              const char *patch_abspath,
+              /* The abspath to the working copy the patch should be applied to. */
+              const char *abs_wc_path,
+              /* Indicates whether we're doing a dry run. */
+              svn_boolean_t dry_run,
+              /* Number of leading components to strip from patch target paths. */
+              int strip_count,
+              /* Whether to apply the patch in reverse. */
+              svn_boolean_t reverse,
+              /* Whether to ignore whitespace when matching context lines. */
+              svn_boolean_t ignore_whitespace,
+              /* As in svn_client_patch(). */
+              svn_boolean_t remove_tempfiles,
+              /* As in svn_client_patch(). */
+              svn_client_patch_func_t patch_func,
+              void *patch_baton,
+              /* The client context. */
+              svn_client_ctx_t *ctx,
               apr_pool_t *scratch_pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
   svn_patch_file_t *patch_file;
   apr_array_header_t *targets_info;
-  apply_patches_baton_t *btn = baton;
 
   /* Try to open the patch file. */
-  SVN_ERR(svn_diff_open_patch_file(&patch_file, btn->patch_abspath,
-                                   scratch_pool));
+  SVN_ERR(svn_diff_open_patch_file(&patch_file, patch_abspath, scratch_pool));
 
   /* Apply patches. */
   targets_info = apr_array_make(scratch_pool, 0,
@@ -2882,23 +2874,21 @@ apply_patches(void *baton,
     {
       svn_pool_clear(iterpool);
 
-      if (btn->ctx->cancel_func)
-        SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
-                                        btn->reverse, btn->ignore_whitespace,
+                                        reverse, ignore_whitespace,
                                         iterpool, iterpool));
       if (patch)
         {
           patch_target_t *target;
 
-          SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
-                                  btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->ignore_whitespace,
-                                  btn->remove_tempfiles,
-                                  btn->patch_func, btn->patch_baton,
-                                  btn->ctx->cancel_func,
-                                  btn->ctx->cancel_baton,
+          SVN_ERR(apply_one_patch(&target, patch, abs_wc_path,
+                                  ctx->wc_ctx, strip_count,
+                                  ignore_whitespace, remove_tempfiles,
+                                  patch_func, patch_baton,
+                                  ctx->cancel_func, ctx->cancel_baton,
                                   iterpool, iterpool));
           if (! target->filtered)
             {
@@ -2908,35 +2898,32 @@ apply_patches(void *baton,
               target_info->local_abspath = apr_pstrdup(scratch_pool,
                                                        target->local_abspath);
               target_info->deleted = target->deleted;
-              APR_ARRAY_PUSH(targets_info,
-                             patch_target_info_t *) = target_info;
 
               if (! target->skipped)
                 {
+                  APR_ARRAY_PUSH(targets_info,
+                                 patch_target_info_t *) = target_info;
+
                   if (target->has_text_changes
                       || target->added
                       || target->deleted)
-                    SVN_ERR(install_patched_target(target, btn->abs_wc_path,
-                                                   btn->ctx, btn->dry_run,
-                                                   iterpool));
+                    SVN_ERR(install_patched_target(target, abs_wc_path,
+                                                   ctx, dry_run, iterpool));
 
                   if (target->has_prop_changes && (!target->deleted))
-                    SVN_ERR(install_patched_prop_targets(target, btn->ctx,
-                                                         btn->dry_run,
-                                                         iterpool));
+                    SVN_ERR(install_patched_prop_targets(target, ctx,
+                                                         dry_run, iterpool));
 
-                  SVN_ERR(write_out_rejected_hunks(target, btn->dry_run,
-                                                   iterpool));
+                  SVN_ERR(write_out_rejected_hunks(target, dry_run, iterpool));
                 }
-              SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
+              SVN_ERR(send_patch_notification(target, ctx, iterpool));
             }
         }
     }
   while (patch);
 
   /* Delete directories which are empty after patching, if any. */
-  SVN_ERR(delete_empty_dirs(targets_info, btn->ctx, btn->dry_run,
-                            scratch_pool));
+  SVN_ERR(delete_empty_dirs(targets_info, ctx, dry_run, scratch_pool));
 
   SVN_ERR(svn_diff_close_patch_file(patch_file, iterpool));
   svn_pool_destroy(iterpool);
@@ -2957,7 +2944,6 @@ svn_client_patch(const char *patch_abspath,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
-  apply_patches_baton_t baton;
   svn_node_kind_t kind;
 
   if (strip_count < 0)
@@ -2994,19 +2980,10 @@ svn_client_patch(const char *patch_abspath,
                              svn_dirent_local_style(wc_dir_abspath,
                                                     scratch_pool));
 
-  baton.patch_abspath = patch_abspath;
-  baton.abs_wc_path = wc_dir_abspath;
-  baton.dry_run = dry_run;
-  baton.ctx = ctx;
-  baton.strip_count = strip_count;
-  baton.reverse = reverse;
-  baton.ignore_whitespace = ignore_whitespace;
-  baton.remove_tempfiles = remove_tempfiles;
-  baton.patch_func = patch_func;
-  baton.patch_baton = patch_baton;
-
-  return svn_error_trace(
-           svn_wc__call_with_write_lock(apply_patches, &baton,
-                                        ctx->wc_ctx, wc_dir_abspath, FALSE,
-                                        scratch_pool, scratch_pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    apply_patches(patch_abspath, wc_dir_abspath, dry_run, strip_count,
+                  reverse, ignore_whitespace, remove_tempfiles,
+                  patch_func, patch_baton, ctx, scratch_pool),
+    ctx->wc_ctx, wc_dir_abspath, FALSE /* lock_anchor */, scratch_pool);
+  return SVN_NO_ERROR;
 }

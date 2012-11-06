@@ -29,5 +29,8 @@ IF ERRORLEVEL 1 (
   EXIT /B 0
 )
 
-msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__JAVAHL__ /t:__SWIG_PYTHON__ /t:__SWIG_PERL__ /t:__JAVAHL_TESTS__
+msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=win32 /t:__JAVAHL__ /t:__JAVAHL_TESTS__
+IF ERRORLEVEL 1 EXIT /B 1 
+
+msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__
 IF ERRORLEVEL 1 EXIT /B 1 

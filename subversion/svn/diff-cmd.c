@@ -89,7 +89,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   /* Full path to the object being diffed.  This is created by taking the
    * baton, and appending the target's relative path. */
   const char *path = *(const char **)baton;
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -171,6 +171,10 @@ svn_cl__diff(apr_getopt_t *os,
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
+  svn_boolean_t show_copies_as_adds =
+    opt_state->diff.patch_compatible || opt_state->diff.show_copies_as_adds;
+  svn_boolean_t ignore_properties =
+    opt_state->diff.patch_compatible || opt_state->diff.ignore_properties;
   int i;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
@@ -190,14 +194,14 @@ svn_cl__diff(apr_getopt_t *os,
       svn_stringbuf_t *sb;
 
       /* Check that the --summarize is passed as well. */
-      if (!opt_state->summarize)
+      if (!opt_state->diff.summarize)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'--xml' option only valid with "
                                   "'--summarize' option"));
 
       SVN_ERR(svn_cl__xml_print_header("diff", pool));
 
-      sb = svn_stringbuf_create("", pool);
+      sb = svn_stringbuf_create_empty(pool);
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", NULL);
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
@@ -245,6 +249,12 @@ svn_cl__diff(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
                                                           ctx, FALSE, pool));
+
+      /* Check if either or both targets were skipped (e.g. because they
+       * were .svn directories). */
+      if (tmp2->nelts < 2)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
+
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
@@ -339,14 +349,14 @@ svn_cl__diff(apr_getopt_t *os,
           else
             target2 = svn_dirent_join(new_target, path, iterpool);
 
-          if (opt_state->summarize)
+          if (opt_state->diff.summarize)
             SVN_ERR(svn_client_diff_summarize2
                     (target1,
                      &opt_state->start_revision,
                      target2,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
+                     ! opt_state->diff.notice_ancestry,
                      opt_state->changelists,
                      summarize_func, &target1,
                      ctx, iterpool));
@@ -359,11 +369,13 @@ svn_cl__diff(apr_getopt_t *os,
                      &(opt_state->end_revision),
                      NULL,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
-                     opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
+                     ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_deleted,
+                     show_copies_as_adds,
                      opt_state->force,
-                     opt_state->use_git_diff_format,
+                     ignore_properties,
+                     opt_state->diff.properties_only,
+                     opt_state->diff.use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,
@@ -384,14 +396,14 @@ svn_cl__diff(apr_getopt_t *os,
             peg_revision.kind = svn_path_is_url(path)
               ? svn_opt_revision_head : svn_opt_revision_working;
 
-          if (opt_state->summarize)
+          if (opt_state->diff.summarize)
             SVN_ERR(svn_client_diff_summarize_peg2
                     (truepath,
                      &peg_revision,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
+                     ! opt_state->diff.notice_ancestry,
                      opt_state->changelists,
                      summarize_func, &truepath,
                      ctx, iterpool));
@@ -404,11 +416,13 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->end_revision,
                      NULL,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
-                     opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
+                     ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_deleted,
+                     show_copies_as_adds,
                      opt_state->force,
-                     opt_state->use_git_diff_format,
+                     ignore_properties,
+                     opt_state->diff.properties_only,
+                     opt_state->diff.use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,
@@ -419,7 +433,7 @@ svn_cl__diff(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
-      svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+      svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
       svn_xml_make_close_tag(&sb, pool, "paths");
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
       SVN_ERR(svn_cl__xml_print_footer("diff", pool));

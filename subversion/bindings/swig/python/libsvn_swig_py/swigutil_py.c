@@ -650,17 +650,29 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_string, NULL, NULL);
 }
 
-static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
+static PyObject *convert_pointerlist(void *value, void *ctx, PyObject *py_pool)
 {
   int i;
   PyObject *list;
   apr_array_header_t *array = value;
 
   list = PyList_New(0);
+  if (list == NULL)
+    return NULL;
+
   for (i = 0; i < array->nelts; i++)
     {
-      svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
-      if (PyList_Append(list, convert_to_swigtype(range, ctx, py_pool)) == -1)
+      void *ptr = APR_ARRAY_IDX(array, i, void *);
+      PyObject *obj;
+      int result;
+
+      obj = convert_to_swigtype(ptr, ctx, py_pool);
+      if (obj == NULL)
+        goto error;
+
+      result = PyList_Append(list, obj);
+      Py_DECREF(obj);
+      if (result == -1)
         goto error;
     }
   return list;
@@ -669,18 +681,18 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
   return NULL;
 }
 
-PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
-                                        swig_type_info *type,
-                                        PyObject *py_pool)
+PyObject *svn_swig_py_pointerlist_to_list(apr_array_header_t *list,
+                                          swig_type_info *type,
+                                          PyObject *py_pool)
 {
-  return convert_rangelist(rangelist, type, py_pool);
+  return convert_pointerlist(list, type, py_pool);
 }
 
 PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
-  return convert_hash(hash, convert_rangelist, type, py_pool);
+  return convert_hash(hash, convert_pointerlist, type, py_pool);
 }
 
 static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
@@ -976,7 +988,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *pathname = make_string_from_ob(key, pool);
-      const apr_array_header_t *ranges = svn_swig_py_seq_to_array(value,
+      const svn_rangelist_t *ranges = svn_swig_py_seq_to_array(value,
         sizeof(const svn_merge_range_t *),
         svn_swig_py_unwrap_struct_ptr,
         svn_swig_TypeQuery("svn_merge_range_t *"),
@@ -2147,6 +2159,24 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
   return stream;
 }
 
+PyObject *
+svn_swig_py_convert_txdelta_op_c_array(int num_ops,
+                                       svn_txdelta_op_t *ops,
+                                       swig_type_info *op_type_info,
+                                       PyObject *parent_pool)
+{
+  PyObject *result = PyList_New(num_ops);
+  int i;
+
+  if (!result) return NULL;
+
+  for (i = 0; i < num_ops; ++i)
+      PyList_SET_ITEM(result, i,
+                      svn_swig_NewPointerObj(ops + i, op_type_info,
+                                             parent_pool, NULL));
+
+  return result;
+}
 
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
@@ -2790,6 +2820,41 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
   svn_swig_py_release_py_lock();
   return err;
 }
+
+svn_error_t *
+svn_swig_py_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
+                                                  const char *keyring_name,
+                                                  void *baton,
+                                                  apr_pool_t *pool)
+{
+  /* The baton is the actual prompt function passed from python */
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  *keyring_passwd = NULL;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      keyring_name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      *keyring_passwd = make_string_from_ob(result, pool);
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 
 svn_error_t *
 svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
@@ -4127,18 +4192,98 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   return callbacks;
 }
 
-PyObject *
-svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
-                                     swig_type_info * op_type_info,
-                                     PyObject *window_pool)
+svn_boolean_t
+svn_swig_py_config_enumerator2(const char *name,
+                               const char *value,
+                               void *baton,
+                               apr_pool_t *pool)
 {
-  PyObject *result = PyList_New(window->num_ops);
-  int i;
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
 
-  for (i = 0; i < window->num_ops; ++i)
-      PyList_SET_ITEM(result, i,
-                      svn_swig_NewPointerObj(window->ops + i, op_type_info,
-                                             window_pool, NULL));
+  svn_swig_py_acquire_py_lock();
 
-  return result;
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"ssO&",
+                                      name,
+                                      value,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
+}
+
+svn_boolean_t
+svn_swig_py_config_section_enumerator2(const char *name,
+                                       void *baton,
+                                       apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
 }

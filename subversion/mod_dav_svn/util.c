@@ -45,6 +45,9 @@ dav_svn__new_error(apr_pool_t *pool,
                    int error_id,
                    const char *desc)
 {
+  if (error_id == 0)
+    error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
 /*
  * Note: dav_new_error() in httpd 2.0/2.2 always treated
  * the errno field in dav_error as an apr_status_t when
@@ -53,9 +56,11 @@ dav_svn__new_error(apr_pool_t *pool,
  * > 2.2 below perpetuates this.
  */
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  /* old code assumed errno was valid; keep assuming */
-  return dav_new_error(pool, status, error_id, errno, desc);
+  return dav_new_error(pool, status, error_id, 0, desc);
 #else
+
+  errno = 0; /* For the same reason as in dav_svn__new_error_tag */
+
   return dav_new_error(pool, status, error_id, desc);
 #endif
 }
@@ -68,6 +73,9 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        const char *namespace,
                        const char *tagname)
 {
+  if (error_id == 0)
+    error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
   return dav_new_error_tag(pool, status, error_id, 0,
                            desc, namespace, tagname);
@@ -525,11 +533,23 @@ dav_svn__sanitize_error(svn_error_t *serr,
   svn_error_t *safe_err = serr;
   if (new_msg != NULL)
     {
+      /* Purge error tracing from the error chain. */
+      svn_error_t *purged_serr = svn_error_purge_tracing(serr);
+
       /* Sanitization is necessary.  Create a new, safe error and
            log the original error. */
-        safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                      "%s", serr->message);
+      safe_err = svn_error_create(purged_serr->apr_err, NULL, new_msg);
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                    "%s", purged_serr->message);
+
+      /* Log the entire error chain. */
+      while (purged_serr->child)
+        {
+          purged_serr = purged_serr->child;
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", purged_serr->message);
+        }
+
         svn_error_clear(serr);
       }
     return dav_svn__convert_err(safe_err, http_status,
@@ -620,6 +640,31 @@ dav_svn__final_flush_or_error(request_rec *r,
   return derr;
 }
 
+void dav_svn__log_err(request_rec *r,
+                      dav_error *err,
+                      int level)
+{
+    dav_error *errscan;
+
+    /* Log the errors */
+    /* ### should have a directive to log the first or all */
+    for (errscan = err; errscan != NULL; errscan = errscan->prev) {
+        apr_status_t status;
+
+        if (errscan->desc == NULL)
+            continue;
+
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+        status = errscan->aprerr;
+#else
+        status = errscan->save_errno;
+#endif
+
+        ap_log_rerror(APLOG_MARK, level, status, r,
+                      "%s  [%d, #%d]",
+                      errscan->desc, errscan->status, errscan->error_id);
+    }
+}
 
 int
 dav_svn__error_response_tag(request_rec *r,
@@ -639,8 +684,10 @@ dav_svn__error_response_tag(request_rec *r,
   if (err->namespace != NULL)
     ap_rprintf(r, " xmlns:C=\"%s\">" DEBUG_CR "<C:%s/>" DEBUG_CR,
                err->namespace, err->tagname);
-  else
+  else if (err->tagname != NULL)
     ap_rprintf(r, ">" DEBUG_CR "<D:%s/>" DEBUG_CR, err->tagname);
+  else
+    ap_rputs(">" DEBUG_CR, r);
 
   /* here's our mod_dav specific tag: */
   if (err->desc != NULL)
@@ -709,7 +756,7 @@ request_body_to_string(svn_string_t **request_str,
     }
   else
     {
-      buf = svn_stringbuf_create("", pool);
+      buf = svn_stringbuf_create_empty(pool);
     }
 
   brigade = apr_brigade_create(r->pool, r->connection->bucket_alloc);
@@ -765,7 +812,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create("", pool);
+  *request_str = svn_string_create_empty(pool);
   (*request_str)->data = buf->data;
   (*request_str)->len = buf->len;
   return OK;

@@ -29,8 +29,9 @@
 
 #include <apr_pools.h>
 
-#include "svn_repos.h"
 #include "svn_types.h"
+#include "svn_repos.h"
+#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,14 @@ extern "C" {
  * @c SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @note This function is used to implement server-side validation.
+ * Consequently, if you make this function stricter in what it accepts, you
+ * (a) break svnsync'ing of existing repositories that contain now-invalid
+ * properties, (b) do not preclude such invalid values from entering the
+ * repository via tools that use the svn_fs_* API directly (possibly
+ * including svnadmin and svnlook).  This has happened before and there
+ * are known (documented, but unsupported) upgrade paths in some cases.
  *
  * @since New in 1.7.
  */
@@ -72,6 +81,38 @@ svn_repos__validate_prop(const char *name,
 const char *
 svn_repos__post_commit_error_str(svn_error_t *err,
                                  apr_pool_t *pool);
+
+/* A repos version of svn_fs_type */
+svn_error_t *
+svn_repos__fs_type(const char **fs_type,
+                   const char *repos_path,
+                   apr_pool_t *pool);
+
+
+/* Create a commit editor for REPOS, based on REVISION.  */
+svn_error_t *
+svn_repos__get_commit_ev2(svn_editor_t **editor,
+                          svn_repos_t *repos,
+                          svn_authz_t *authz,
+                          const char *authz_repos_name,
+                          const char *authz_user,
+                          apr_hash_t *revprops,
+                          svn_commit_callback2_t commit_cb,
+                          void *commit_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_repos__replay_ev2(svn_fs_root_t *root,
+                      const char *base_dir,
+                      svn_revnum_t low_water_mark,
+                      svn_editor_t *editor,
+                      svn_repos_authz_func_t authz_read_func,
+                      void *authz_read_baton,
+                      apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

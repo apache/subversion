@@ -124,7 +124,7 @@ void JNIThreadData::pushNewThreadData()
     }
   JNIThreadData *newData = new JNIThreadData();
   newData->m_previous =data;
-  apr_err = apr_threadkey_private_set (newData, g_key);
+  apr_err = apr_threadkey_private_set(newData, g_key);
   if (apr_err)
     {
       JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
@@ -151,7 +151,7 @@ void JNIThreadData::popThreadData()
 
   JNIThreadData *oldData = data->m_previous;
   delete data;
-  apr_err = apr_threadkey_private_set (oldData, g_key);
+  apr_err = apr_threadkey_private_set(oldData, g_key);
   if (apr_err)
     {
       JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");

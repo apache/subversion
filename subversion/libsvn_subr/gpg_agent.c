@@ -107,8 +107,12 @@ static svn_boolean_t
 receive_from_gpg_agent(int sd, char *buf, size_t n)
 {
   int i = 0;
-  int recvd;
+  size_t recvd;
   char c;
+
+  /* Clear existing buffer content before reading response. */
+  if (n > 0)
+    *buf = '\0';
 
   /* Require the message to fit into the buffer and be terminated
    * with a newline. */
@@ -154,8 +158,9 @@ send_option(int sd, char *buf, size_t n, const char *option, const char *value,
 
 /* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
-static svn_boolean_t
-password_get_gpg_agent(const char **password,
+static svn_error_t *
+password_get_gpg_agent(svn_boolean_t *done,
+                       const char **password,
                        apr_hash_t *creds,
                        const char *realmstring,
                        const char *username,
@@ -168,7 +173,7 @@ password_get_gpg_agent(const char **password,
   const char *p = NULL;
   char *ep = NULL;
   char *buffer;
-  
+
   apr_array_header_t *socket_details;
   const char *request = NULL;
   const char *cache_id = NULL;
@@ -182,6 +187,8 @@ password_get_gpg_agent(const char **password,
   char *password_prompt;
   char *realm_prompt;
 
+  *done = FALSE;
+
   gpg_agent_info = getenv("GPG_AGENT_INFO");
   if (gpg_agent_info != NULL)
     {
@@ -190,7 +197,7 @@ password_get_gpg_agent(const char **password,
       socket_name = APR_ARRAY_IDX(socket_details, 0, const char *);
     }
   else
-    return FALSE;
+    return SVN_NO_ERROR;
 
   if (socket_name != NULL)
     {
@@ -200,29 +207,29 @@ password_get_gpg_agent(const char **password,
 
       sd = socket(AF_UNIX, SOCK_STREAM, 0);
       if (sd == -1)
-        return FALSE;
-    
+        return SVN_NO_ERROR;
+
       if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         {
           close(sd);
-          return FALSE;
+          return SVN_NO_ERROR;
         }
     }
   else
-    return FALSE;
+    return SVN_NO_ERROR;
 
   /* Receive the connection status from the gpg-agent daemon. */
   buffer = apr_palloc(pool, BUFFER_SIZE);
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   if (strncmp(buffer, "OK", 2) != 0)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   /* The GPG-Agent documentation says:
@@ -232,19 +239,19 @@ password_get_gpg_agent(const char **password,
   if (write(sd, request, strlen(request)) == -1)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
   if (!p)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   ep = strchr(p, '\n');
   if (ep != NULL)
@@ -252,18 +259,18 @@ password_get_gpg_agent(const char **password,
   if (strcmp(socket_name, p) != 0)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   /* The agent will terminate its response with "OK". */
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   if (strncmp(buffer, "OK", 2) != 0)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   /* Send TTY_NAME to the gpg-agent daemon. */
@@ -273,13 +280,13 @@ password_get_gpg_agent(const char **password,
       if (!send_option(sd, buffer, BUFFER_SIZE, "ttyname", tty_name, pool))
         {
           close(sd);
-          return FALSE;
+          return SVN_NO_ERROR;
         }
     }
   else
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   /* Send TTY_TYPE to the gpg-agent daemon. */
@@ -289,13 +296,13 @@ password_get_gpg_agent(const char **password,
       if (!send_option(sd, buffer, BUFFER_SIZE, "ttytype", tty_type, pool))
         {
           close(sd);
-          return FALSE;
+          return SVN_NO_ERROR;
         }
     }
   else
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   /* Compute LC_CTYPE. */
@@ -311,7 +318,7 @@ password_get_gpg_agent(const char **password,
       if (!send_option(sd, buffer, BUFFER_SIZE, "lc-ctype", lc_ctype, pool))
         {
           close(sd);
-          return FALSE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -319,19 +326,17 @@ password_get_gpg_agent(const char **password,
   display = getenv("DISPLAY");
   if (display != NULL)
     {
-      request = apr_psprintf(pool, "OPTION display=%s\n", display);
       if (!send_option(sd, buffer, BUFFER_SIZE, "display", display, pool))
         {
           close(sd);
-          return FALSE;
+          return SVN_NO_ERROR;
         }
     }
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
      to other password caching mechanisms. */
-  digest = svn_checksum_create(svn_checksum_md5, pool);
-  svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
-               pool);
+  SVN_ERR(svn_checksum(&digest, svn_checksum_md5, realmstring,
+                       strlen(realmstring), pool));
   cache_id = svn_checksum_to_cstring(digest, pool);
 
   password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
@@ -348,25 +353,25 @@ password_get_gpg_agent(const char **password,
   if (write(sd, request, strlen(request)) == -1)
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
-      return FALSE;
+      return SVN_NO_ERROR;
     }
 
   close(sd);
 
   if (strncmp(buffer, "ERR", 3) == 0)
-    return FALSE;
-  
+    return SVN_NO_ERROR;
+
   p = NULL;
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
 
   if (!p)
-    return FALSE;
+    return SVN_NO_ERROR;
 
   ep = strchr(p, '\n');
   if (ep != NULL)
@@ -374,14 +379,20 @@ password_get_gpg_agent(const char **password,
 
   *password = p;
 
-  return TRUE;
+  *done = TRUE;
+  return SVN_NO_ERROR;
 }
 
 
-/* Implementation of svn_auth__password_set_t that stores the password in
-   GPG Agent. */
-static svn_boolean_t
-password_set_gpg_agent(apr_hash_t *creds,
+/* Implementation of svn_auth__password_set_t that would store the
+   password in GPG Agent if that's how this particular integration
+   worked.  But it isn't.  GPG Agent stores the password provided by
+   the user via the pinentry program immediately upon its provision
+   (and regardless of its accuracy as passwords go), so there's
+   nothing really to do here.  */
+static svn_error_t *
+password_set_gpg_agent(svn_boolean_t *done,
+                       apr_hash_t *creds,
                        const char *realmstring,
                        const char *username,
                        const char *password,
@@ -389,7 +400,9 @@ password_set_gpg_agent(apr_hash_t *creds,
                        svn_boolean_t non_interactive,
                        apr_pool_t *pool)
 {
-  return TRUE;
+  *done = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -402,12 +415,11 @@ simple_gpg_agent_first_creds(void **credentials,
                              const char *realmstring,
                              apr_pool_t *pool)
 {
-  return svn_auth__simple_first_creds_helper(credentials,
-                                             iter_baton, provider_baton,
-                                             parameters, realmstring,
-                                             password_get_gpg_agent,
-                                             SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                             pool);
+  return svn_auth__simple_creds_cache_get(credentials, iter_baton,
+                                          provider_baton, parameters,
+                                          realmstring, password_get_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 
@@ -420,12 +432,11 @@ simple_gpg_agent_save_creds(svn_boolean_t *saved,
                             const char *realmstring,
                             apr_pool_t *pool)
 {
-  return svn_auth__simple_save_creds_helper(saved, credentials,
-                                            provider_baton, parameters,
-                                            realmstring,
-                                            password_set_gpg_agent,
-                                            SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                            pool);
+  return svn_auth__simple_creds_cache_set(saved, credentials,
+                                          provider_baton, parameters,
+                                          realmstring, password_set_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 

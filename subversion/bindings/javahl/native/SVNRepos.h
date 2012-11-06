@@ -58,7 +58,7 @@ class SVNRepos : public SVNBase
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(File &path, MessageReceiver &messageReceiver);
-  void hotcopy(File &path, File &targetPath, bool cleanLogs);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental);
   void dump(File &path, OutputStream &dataOut, Revision &revsionStart,
             Revision &RevisionEnd, bool incremental, bool useDeltas,
             ReposNotifyCallback *notifyCallback);
@@ -69,7 +69,7 @@ class SVNRepos : public SVNBase
   void pack(File &path, ReposNotifyCallback *callback);
   SVNRepos();
   virtual ~SVNRepos();
-  void dispose();
+  void dispose(jobject jthis);
   static SVNRepos *getCppObject(jobject jthis);
 
   static svn_error_t *checkCancel(void *cancelBaton);

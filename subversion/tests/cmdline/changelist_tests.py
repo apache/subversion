@@ -129,9 +129,6 @@ def verify_changelist_output(output, expected_adds=None,
   if not expected_skips:
     output = [line for line in output if (not _re_cl_skip.match(line))]
 
-  if len(output) != num_expected:
-    raise svntest.Failure("Unexpected number of 'svn changelist' output lines")
-
   for line in output:
     line = line.rstrip()
     match = _re_cl_rem.match(line)
@@ -156,6 +153,10 @@ def verify_changelist_output(output, expected_adds=None,
     elif match:
       raise svntest.Failure("Unexpected changelist skip line: " + line)
     raise svntest.Failure("Unexpected line: " + line)
+
+  if len(output) != num_expected:
+    raise svntest.Failure("Unexpected number of 'svn changelist' output " +
+                          "lines (%d vs %d)" % (len(output), num_expected))
 
 def verify_pget_output(output, expected_props):
   """Compare lines of OUTPUT from 'svn propget' against EXPECTED_PROPS
@@ -220,15 +221,15 @@ def add_remove_changelists(sbox):
 
   # all dirs in the Greek tree
   expected_skips_all = dict([(x, None) for x in [
-        os.path.join(wc_dir),
-    os.path.join(wc_dir, 'A'),
-    os.path.join(wc_dir, 'A', 'B'),
-    os.path.join(wc_dir, 'A', 'B', 'E'),
-    os.path.join(wc_dir, 'A', 'B', 'F'),
-    os.path.join(wc_dir, 'A', 'C'),
-    os.path.join(wc_dir, 'A', 'D'),
-    os.path.join(wc_dir, 'A', 'D', 'G'),
-    os.path.join(wc_dir, 'A', 'D', 'H'),
+    sbox.ospath(''),
+    sbox.ospath('A'),
+    sbox.ospath('A/B'),
+    sbox.ospath('A/B/E'),
+    sbox.ospath('A/B/F'),
+    sbox.ospath('A/C'),
+    sbox.ospath('A/D'),
+    sbox.ospath('A/D/G'),
+    sbox.ospath('A/D/H'),
     ]])
 
   expected_skips_wc_dir = { wc_dir : None }
@@ -254,17 +255,17 @@ def add_remove_changelists(sbox):
                                                    "--depth", "infinity",
                                                    wc_dir)
   expected_adds = {
-    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'foo',
-    os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'foo',
-    os.path.join(wc_dir, 'A', 'B', 'lambda') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'G', 'tau') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'foo',
-    os.path.join(wc_dir, 'A', 'D', 'gamma') : 'foo',
-    os.path.join(wc_dir, 'A', 'mu') : 'foo',
+      sbox.ospath('A/B/E/alpha') : 'foo',
+      sbox.ospath('A/B/E/beta') : 'foo',
+      sbox.ospath('A/B/lambda') : 'foo',
+      sbox.ospath('A/D/G/pi') : 'foo',
+      sbox.ospath('A/D/G/rho') : 'foo',
+      sbox.ospath('A/D/G/tau') : 'foo',
+      sbox.ospath('A/D/H/chi') : 'foo',
+      sbox.ospath('A/D/H/omega') : 'foo',
+      sbox.ospath('A/D/H/psi') : 'foo',
+      sbox.ospath('A/D/gamma') : 'foo',
+      sbox.ospath('A/mu') : 'foo',
     }
   verify_changelist_output(output, expected_adds)
 
@@ -273,16 +274,15 @@ def add_remove_changelists(sbox):
   # svn changelist bar WC_DIR/A/D --depth infinity
   exit_code, output, errput = svntest.main.run_svn(".*", "changelist", "bar",
                                                    "--depth", "infinity",
-                                                   os.path.join(wc_dir,
-                                                                'A', 'D'))
+                                                   sbox.ospath('A/D'))
   expected_adds = {
-    os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'G', 'tau') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'gamma') : 'bar',
+      sbox.ospath('A/D/G/pi') : 'bar',
+      sbox.ospath('A/D/G/rho') : 'bar',
+      sbox.ospath('A/D/G/tau') : 'bar',
+      sbox.ospath('A/D/H/chi') : 'bar',
+      sbox.ospath('A/D/H/omega') : 'bar',
+      sbox.ospath('A/D/H/psi') : 'bar',
+      sbox.ospath('A/D/gamma') : 'bar',
     }
   expected_removals = expected_adds
   verify_changelist_output(output, expected_adds, expected_removals)
@@ -290,12 +290,11 @@ def add_remove_changelists(sbox):
   # svn changelist baz WC_DIR/A/D/H --depth infinity
   exit_code, output, errput = svntest.main.run_svn(".*", "changelist", "baz",
                                                    "--depth", "infinity",
-                                                   os.path.join(wc_dir, 'A',
-                                                                'D', 'H'))
+                                                   sbox.ospath('A/D/H'))
   expected_adds = {
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : 'baz',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'baz',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'baz',
+      sbox.ospath('A/D/H/chi') : 'baz',
+      sbox.ospath('A/D/H/omega') : 'baz',
+      sbox.ospath('A/D/H/psi') : 'baz',
     }
   expected_removals = expected_adds
   verify_changelist_output(output, expected_adds, expected_removals)
@@ -309,11 +308,11 @@ def add_remove_changelists(sbox):
                                                    "--changelist", "foo",
                                                    wc_dir)
   expected_adds = {
-    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'foo-rename',
-    os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'foo-rename',
-    os.path.join(wc_dir, 'A', 'B', 'lambda') : 'foo-rename',
-    os.path.join(wc_dir, 'A', 'mu') : 'foo-rename',
-    os.path.join(wc_dir, 'iota') : 'foo-rename',
+      sbox.ospath('A/B/E/alpha') : 'foo-rename',
+      sbox.ospath('A/B/E/beta') : 'foo-rename',
+      sbox.ospath('A/B/lambda') : 'foo-rename',
+      sbox.ospath('A/mu') : 'foo-rename',
+      sbox.ospath('iota') : 'foo-rename',
     }
   expected_removals = expected_adds
   verify_changelist_output(output, expected_adds, expected_removals)
@@ -325,14 +324,14 @@ def add_remove_changelists(sbox):
     "--changelist", "foo-rename", "--changelist", "baz", wc_dir)
 
   expected_adds = {
-    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'bar',
-    os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'bar',
-    os.path.join(wc_dir, 'A', 'B', 'lambda') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'bar',
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'bar',
-    os.path.join(wc_dir, 'A', 'mu') : 'bar',
-    os.path.join(wc_dir, 'iota') : 'bar',
+      sbox.ospath('A/B/E/alpha') : 'bar',
+      sbox.ospath('A/B/E/beta') : 'bar',
+      sbox.ospath('A/B/lambda') : 'bar',
+      sbox.ospath('A/D/H/chi') : 'bar',
+      sbox.ospath('A/D/H/omega') : 'bar',
+      sbox.ospath('A/D/H/psi') : 'bar',
+      sbox.ospath('A/mu') : 'bar',
+      sbox.ospath('iota') : 'bar',
     }
   expected_removals = expected_adds
   verify_changelist_output(output, expected_adds, expected_removals)
@@ -360,17 +359,17 @@ def add_remove_changelists(sbox):
                                                    "--depth", "infinity",
                                                    wc_dir)
   expected_removals = {
-    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : None,
-    os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : None,
-    os.path.join(wc_dir, 'A', 'B', 'lambda') : None,
-    os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : None,
-    os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : None,
-    os.path.join(wc_dir, 'A', 'D', 'G', 'tau') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : None,
-    os.path.join(wc_dir, 'A', 'D', 'gamma') : None,
-    os.path.join(wc_dir, 'A', 'mu') : None,
+      sbox.ospath('A/B/E/alpha') : None,
+      sbox.ospath('A/B/E/beta') : None,
+      sbox.ospath('A/B/lambda') : None,
+      sbox.ospath('A/D/G/pi') : None,
+      sbox.ospath('A/D/G/rho') : None,
+      sbox.ospath('A/D/G/tau') : None,
+      sbox.ospath('A/D/H/chi') : None,
+      sbox.ospath('A/D/H/omega') : None,
+      sbox.ospath('A/D/H/psi') : None,
+      sbox.ospath('A/D/gamma') : None,
+      sbox.ospath('A/mu') : None,
     }
   verify_changelist_output(output, None, expected_removals)
 
@@ -387,12 +386,12 @@ def add_remove_changelists(sbox):
                                                    "--changelist", "a",
                                                    wc_dir)
   expected_removals = {
-    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : None,
-    os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : None,
-    os.path.join(wc_dir, 'A', 'B', 'lambda') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : None,
-    os.path.join(wc_dir, 'A', 'D', 'gamma') : None,
-    os.path.join(wc_dir, 'iota') : None,
+      sbox.ospath('A/B/E/alpha') : None,
+      sbox.ospath('A/B/E/beta') : None,
+      sbox.ospath('A/B/lambda') : None,
+      sbox.ospath('A/D/H/omega') : None,
+      sbox.ospath('A/D/gamma') : None,
+      sbox.ospath('iota') : None,
     }
   verify_changelist_output(output, None, expected_removals)
 
@@ -405,10 +404,10 @@ def add_remove_changelists(sbox):
                                                    "--changelist", "o",
                                                    wc_dir)
   expected_removals = {
-    os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : None,
-    os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : None,
-    os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : None,
+      sbox.ospath('A/D/G/pi') : None,
+      sbox.ospath('A/D/G/rho') : None,
+      sbox.ospath('A/D/H/chi') : None,
+      sbox.ospath('A/D/H/psi') : None,
     }
   verify_changelist_output(output, None, expected_removals)
 

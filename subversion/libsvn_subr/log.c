@@ -121,7 +121,7 @@ svn_log__get_mergeinfo(const apr_array_header_t *paths,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create_empty(pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -210,8 +210,8 @@ svn_log__log(const apr_array_header_t *paths,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *options = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *options = svn_stringbuf_create_empty(pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -264,7 +264,7 @@ svn_log__get_locations(const char *path, svn_revnum_t peg_revision,
 {
   const svn_revnum_t *revision_ptr, *revision_ptr_start, *revision_ptr_end;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *space_separated_revnums = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *space_separated_revnums = svn_stringbuf_create_empty(pool);
 
   revision_ptr_start = (const svn_revnum_t *)location_revisions->elts;
   revision_ptr = revision_ptr_start;
@@ -311,7 +311,7 @@ svn_log__lock(const apr_array_header_t *paths,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create_empty(pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -334,7 +334,7 @@ svn_log__unlock(const apr_array_header_t *paths,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *space_separated_paths = svn_stringbuf_create_empty(pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -379,4 +379,18 @@ svn_log__replay(const char *path, svn_revnum_t rev, apr_pool_t *pool)
   else
     log_path = "/";
   return apr_psprintf(pool, "replay %s r%ld", log_path, rev);
+}
+
+const char *
+svn_log__get_inherited_props(const char *path,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
+{
+  const char *log_path;
+
+  if (path && path[0] != '\0')
+    log_path = svn_path_uri_encode(path, pool);
+  else
+    log_path = "/";
+  return apr_psprintf(pool, "get-inherited-props %s r%ld", log_path, rev);
 }

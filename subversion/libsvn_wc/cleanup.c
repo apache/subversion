@@ -142,7 +142,7 @@ cleanup_internal(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   int wc_format;
-  const char *cleanup_abspath;
+  svn_boolean_t is_wcroot;
 
   /* Can we even work with this directory?  */
   SVN_ERR(can_be_cleaned(&wc_format, db, dir_abspath, scratch_pool));
@@ -157,8 +157,7 @@ cleanup_internal(svn_wc__db_t *db,
     SVN_ERR(svn_wc__wq_run(db, dir_abspath, cancel_func, cancel_baton,
                            scratch_pool));
 
-  SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, dir_abspath,
-                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, dir_abspath, scratch_pool));
 
 #ifdef SVN_DEBUG
   SVN_ERR(svn_wc__db_verify(db, dir_abspath, scratch_pool));
@@ -169,7 +168,7 @@ cleanup_internal(svn_wc__db_t *db,
      svn_wc__check_wcroot() as that function, will just return true
      once we start sharing databases with externals.
    */
-  if (strcmp(cleanup_abspath, dir_abspath) == 0)
+  if (is_wcroot)
     {
     /* Cleanup the tmp area of the admin subdir, if running the log has not
        removed it!  The logs have been run, so anything left here has no hope
@@ -207,7 +206,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
   /* We need a DB that allows a non-empty work queue (though it *will*
      auto-upgrade). We'll handle everything manually.  */
   SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* ### config */, TRUE, FALSE,
+                          NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,

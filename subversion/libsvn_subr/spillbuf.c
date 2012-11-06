@@ -184,8 +184,14 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
      in memory.  */
   if (buf->spill != NULL)
     {
-      /* NOTE: we assume the file position is at the END. The caller should
-         ensure this, so that we will append.  */
+      apr_off_t output_unused = 0;  /* ### stupid API  */
+
+      /* Seek to the end of the spill file. We don't know if a read has
+         occurred since our last write, and moved the file position.  */
+      SVN_ERR(svn_io_file_seek(buf->spill,
+                               APR_END, &output_unused,
+                               scratch_pool));
+
       SVN_ERR(svn_io_file_write_full(buf->spill, data, len,
                                      NULL, scratch_pool));
       buf->spill_size += len;
@@ -284,8 +290,8 @@ read_data(struct memblock_t **mem,
   *mem = get_buffer(buf);
   /* NOTE: mem's size/next are uninitialized.  */
 
-  if (buf->spill_size < buf->blocksize)
-    (*mem)->size = buf->spill_size;
+  if ((apr_uint64_t)buf->spill_size < (apr_uint64_t)buf->blocksize)
+    (*mem)->size = (apr_size_t)buf->spill_size;
   else
     (*mem)->size = buf->blocksize;  /* The size of (*mem)->data  */
   (*mem)->next = NULL;
@@ -305,8 +311,10 @@ read_data(struct memblock_t **mem,
   /* Did we consume all the data from the spill file?  */
   if ((buf->spill_size -= (*mem)->size) == 0)
     {
+      /* Close and reset our spill file information.  */
       SVN_ERR(svn_io_file_close(buf->spill, scratch_pool));
       buf->spill = NULL;
+      buf->spill_start = 0;
     }
 
   /* *mem has been initialized. Done.  */
@@ -551,4 +559,57 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
 
   return svn_error_trace(svn_spillbuf__write(&reader->buf, data, len,
                                              scratch_pool));
+}
+
+
+struct spillbuf_baton
+{
+  svn_spillbuf_reader_t *reader;
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+read_handler_spillbuf(void *baton, char *buffer, apr_size_t *len)
+{
+  struct spillbuf_baton *sb = baton;
+
+  SVN_ERR(svn_spillbuf__reader_read(len, sb->reader, buffer, *len,
+                                    sb->scratch_pool));
+
+  svn_pool_clear(sb->scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_handler_spillbuf(void *baton, const char *data, apr_size_t *len)
+{
+  struct spillbuf_baton *sb = baton;
+
+  SVN_ERR(svn_spillbuf__reader_write(sb->reader, data, *len,
+                                     sb->scratch_pool));
+
+  svn_pool_clear(sb->scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream__from_spillbuf(apr_size_t blocksize,
+                          apr_size_t maxsize,
+                          apr_pool_t *result_pool)
+{
+  svn_stream_t *stream;
+  struct spillbuf_baton *sb = apr_palloc(result_pool, sizeof(*sb));
+
+  sb->reader = svn_spillbuf__reader_create(blocksize, maxsize, result_pool);
+  sb->scratch_pool = svn_pool_create(result_pool);
+
+  stream = svn_stream_create(sb, result_pool);
+
+  svn_stream_set_read(stream, read_handler_spillbuf);
+  svn_stream_set_write(stream, write_handler_spillbuf);
+
+  return stream;
 }

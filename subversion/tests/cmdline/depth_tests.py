@@ -151,10 +151,10 @@ def depth_files_same_as_nonrecursive(sbox, opt):
   # Should create a depth-files top directory, so both iota and A
   # should exist, and A should be empty and depth-empty.
 
-  if not os.path.exists(os.path.join(sbox.wc_dir, "iota")):
+  if not os.path.exists(sbox.ospath('iota')):
     raise svntest.Failure("'checkout %s' failed to create file 'iota'" % opt)
 
-  if os.path.exists(os.path.join(sbox.wc_dir, "A")):
+  if os.path.exists(sbox.ospath('A')):
     raise svntest.Failure("'checkout %s' unexpectedly created subdir 'A'" % opt)
 
   verify_depth("Expected depth files for top of WC, got some other depth",
@@ -826,7 +826,7 @@ def depth_immediates_subdir_propset_2(sbox):
   other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
 
   # Set a property on an immediate subdirectory of the working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -959,8 +959,8 @@ def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  A_path = os.path.join(wc_dir, 'A')
+  iota_path = sbox.ospath('iota')
+  A_path = sbox.ospath('A')
   D_path = os.path.join(A_path, 'D')
   gamma_path = os.path.join(D_path, 'gamma')
   G_path = os.path.join(D_path, 'G')
@@ -1076,7 +1076,8 @@ def diff_in_depthy_wc(sbox):
     "___________________________________________________________________\n",
     "Deleted: foo\n",
     "## -1 +0,0 ##\n",
-    "-foo-val\n"]
+    "-foo-val\n",
+    "\\ No newline at end of property\n"]
 
   os.chdir(wc_empty)
 
@@ -1170,9 +1171,9 @@ def commit_depth_immediates(sbox):
   #    Transmitting file data ..
   #    Committed revision 2.
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path   = os.path.join(wc_dir, 'A', 'mu')
-  G_path    = os.path.join(wc_dir, 'A', 'D', 'G')
+  iota_path = sbox.ospath('iota')
+  mu_path   = sbox.ospath('A/mu')
+  G_path    = sbox.ospath('A/D/G')
   rho_path  = os.path.join(G_path, 'rho')
 
   svntest.main.file_append(iota_path, "new text in iota\n")
@@ -1253,7 +1254,7 @@ def add_tree_with_depth(sbox):
   "add multi-subdir tree with --depth options"  # For issue #2931
   sbox.build()
   wc_dir = sbox.wc_dir
-  new1_path = os.path.join(wc_dir, 'new1')
+  new1_path = sbox.ospath('new1')
   new2_path = os.path.join(new1_path, 'new2')
   new3_path = os.path.join(new2_path, 'new3')
   new4_path = os.path.join(new3_path, 'new4')
@@ -1511,7 +1512,7 @@ def depth_folding_clean_trees_1(sbox):
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   C_path = os.path.join(A_path, 'C')
   B_path = os.path.join(A_path, 'B')
   D_path = os.path.join(A_path, 'D')
@@ -1978,7 +1979,7 @@ def fold_tree_with_unversioned_modified_items(sbox):
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   pi_path = os.path.join(A_path, 'D', 'G', 'pi')
   mu_path = os.path.join(A_path, 'mu')
   unv_path = os.path.join(A_path, 'B', 'unv')
@@ -2034,7 +2035,7 @@ def depth_empty_update_on_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   # Change iota and commit it in r2.
   svntest.main.file_write(iota_path, 'Modified iota\n')
@@ -2072,11 +2073,11 @@ def excluded_path_update_operation(sbox):
 
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   B_path = os.path.join(A_path, 'B')
   L_path = os.path.join(A_path, 'L')
   E_path = os.path.join(B_path, 'E')
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   # Simply exclude a subtree
   expected_output = svntest.wc.State(wc_dir, {
@@ -2189,7 +2190,7 @@ def excluded_path_misc_operation(sbox):
 
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   B_path = os.path.join(A_path, 'B')
   L_path = os.path.join(A_path, 'L')
   M_path = os.path.join(A_path, 'M')
@@ -2335,7 +2336,7 @@ def exclude_keeps_hidden_entries(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   os.chdir(A_path)
 
   # the second 'up' used to cause the entry of 'C' to be lost.
@@ -2369,7 +2370,7 @@ def info_excluded(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
 
   expected_info = {
@@ -2538,7 +2539,7 @@ def update_excluded_path_sticky_depths(sbox):
 
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   B_path = os.path.join(A_path, 'B')
 
   # Exclude the subtree 'A/B'
@@ -2733,9 +2734,9 @@ def sparse_update_with_dash_dash_parents(sbox):
 
   sbox.build(create_wc = False)
   sbox.add_test_path(sbox.wc_dir, True)
-  alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
-  pi_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'pi')
-  omega_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  pi_path = sbox.ospath('A/D/G/pi')
+  omega_path = sbox.ospath('A/D/H/omega')
 
   # Start with a depth=empty root checkout.
   svntest.actions.run_and_verify_svn(
@@ -2811,6 +2812,99 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         None, None, None, None, None, False,
                                         '--parents', omega_path)
 
+def update_below_depth_empty(sbox):
+  "update below depth empty shouldn't be applied"
+  sbox.build()
+
+  repo_url = sbox.repo_url
+  A = sbox.ospath('A')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/C'               : Item(status='D '),
+      'A/B'               : Item(status='D '),
+      'A/mu'              : Item(status='D '),
+      'A/D'               : Item(status='D '),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
+                                        None, None, None, None, None, None,
+                                        False,
+                                        '--set-depth', 'empty', A)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/iota',
+                                           repo_url + '/A/B',
+                                     '-m', 'remote copy')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    })
+
+  # This update should just update the revision of the working copy
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
+                                        None, None)
+
+# Test for issue #4136.
+@Issue(4136)
+def commit_then_immediates_update(sbox):
+  "deep commit followed by update --depth immediates"
+  sbox.build()
+
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+  mu_path = sbox.ospath('A/mu')
+
+  # Modify A/mu and commit the changes.
+  svntest.main.file_write(mu_path, "modified mu\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'        : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Now, update --depth immediates in the root of the working copy.
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents="modified mu\n")
+  expected_status = svntest.wc.State(wc_dir, { '' : svntest.wc.StateItem() })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('',     wc_rev=2, status='  ')
+  expected_status.tweak('A',    wc_rev=2, status='  ')
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=immediates", wc_dir)
+
+def revert_depth_files(sbox):
+  "depth immediate+files should revert deleted files"
+
+  sbox.build(read_only = True)
+  
+  expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
+  
+  # Apply an unrelated delete one level to deep
+  sbox.simple_rm('A/D/gamma')
+
+  sbox.simple_rm('A/mu')
+  # Expect reversion of just 'mu'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=immediates', sbox.ospath('A'))
+
+  # Apply an unrelated directory delete
+  sbox.simple_rm('A/D')
+
+  sbox.simple_rm('A/mu')
+  # Expect reversion of just 'mu'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=files', sbox.ospath('A'))
+
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2858,6 +2952,9 @@ test_list = [ None,
               update_excluded_path_sticky_depths,
               update_depth_empty_root_of_infinite_children,
               sparse_update_with_dash_dash_parents,
+              update_below_depth_empty,
+              commit_then_immediates_update,
+              revert_depth_files,
               ]
 
 if __name__ == "__main__":

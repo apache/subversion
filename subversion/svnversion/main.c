@@ -37,8 +37,8 @@
 static svn_error_t *
 version(svn_boolean_t quiet, apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, quiet, NULL, NULL,
-                             NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnversion", TRUE, quiet, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -57,19 +57,19 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
     (svn_cmdline_fprintf
      (stdout, pool,
       _("usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n"
-        "  Produce a compact 'version number' for the working copy path\n"
+        "  Produce a compact version identifier for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
         "  determine if WC_PATH itself is switched (detection of switches\n"
-        "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+        "  within WC_PATH does not rely on TRAIL_URL).  The version identifier\n"
         "  is written to standard output.  For example:\n"
         "\n"
         "    $ svnversion . /repos/svn/trunk\n"
         "    4168\n"
         "\n"
-        "  The version number will be a single number if the working\n"
+        "  The version identifier will be a single number if the working\n"
         "  copy is single revision, unmodified, not switched and with\n"
         "  a URL that matches the TRAIL_URL argument.  If the working\n"
-        "  copy is unusual the version number will be more complex:\n"
+        "  copy is unusual the version identifier will be more complex:\n"
         "\n"
         "   4123:4168     mixed revision working copy\n"
         "   4168M         modified working copy\n"
@@ -107,8 +107,8 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
@@ -122,7 +122,6 @@ main(int argc, const char *argv[])
 {
   const char *wc_path, *trail_url;
   const char *local_abspath;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_wc_revision_status_t *res;
   svn_boolean_t no_newline = FALSE, committed = FALSE;
@@ -150,13 +149,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();
@@ -186,10 +179,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'n':
@@ -208,8 +199,7 @@ main(int argc, const char *argv[])
           is_version = TRUE;
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -219,13 +209,10 @@ main(int argc, const char *argv[])
       exit(0);
     }
   if (os->ind > argc || os->ind < argc - 2)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   SVN_INT_ERR(svn_utf_cstring_to_utf8(&wc_path,
-                                      (os->ind < argc) ? os->argv[os->ind] 
+                                      (os->ind < argc) ? os->argv[os->ind]
                                                        : ".",
                                       pool));
 

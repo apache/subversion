@@ -93,7 +93,8 @@ svn_cl__switch(apr_getopt_t *os,
                void *baton,
                apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *externals_err = SVN_NO_ERROR;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
@@ -156,6 +157,9 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
+  /* Postpone conflict resolution during the switch operation.
+   * If any conflicts occur we'll run the conflict resolver later. */
+
   /* Do the 'switch' update. */
   err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
                            &(opt_state->start_revision), depth,
@@ -175,13 +179,24 @@ svn_cl__switch(apr_getopt_t *os,
       return err;
     }
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
-
   if (nwb.had_externals_error)
-    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
-                            _("Failure occurred processing one or more "
-                              "externals definitions"));
+    externals_err = svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+                                     NULL,
+                                     _("Failure occurred processing one or "
+                                       "more externals definitions"));
 
-  return SVN_NO_ERROR;
+  if (! opt_state->quiet)
+    {
+      err = svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool);
+      if (err)
+        return svn_error_compose_create(externals_err, err);
+    }
+
+  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                            opt_state->depth,
+                                            opt_state->accept_which,
+                                            opt_state->editor_cmd,
+                                            ctx, scratch_pool);
+
+  return svn_error_compose_create(externals_err, err);
 }

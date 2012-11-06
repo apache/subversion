@@ -12,7 +12,7 @@ command-line client.  It has no access to code internals; it never
 looks inside the .svn/ directory; it only performs actions that a
 human user would do.
 
-These tests require Python 2.4 or later.
+These tests require Python 2.5 or later.
 
   [ For more general information on Subversion's testing system,
     please read the README in subversion/tests/. ]
@@ -333,7 +333,8 @@ svntest/tree.py.  It will explain the general API that most tests use.
 
 Finally, try copying-and-pasting a simple test and then edit from
 there.  Don't forget to add your test to the 'test_list' variable at
-the bottom of the file.
+the bottom of the file. To avoid renumbering of existing tests, you
+should add new tests to the end of the list.
 
 
 Testing Compatability With Previous Release

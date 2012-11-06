@@ -121,10 +121,12 @@ svn_nls_init(void)
 #else /* ! WIN32 */
       bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
     }
+#endif /* WIN32 */
+
 #ifdef HAVE_BIND_TEXTDOMAIN_CODESET
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
 #endif /* HAVE_BIND_TEXTDOMAIN_CODESET */
-#endif /* WIN32 */
+
 #endif /* ENABLE_NLS */
 
   return err;

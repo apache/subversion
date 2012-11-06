@@ -382,7 +382,7 @@ opt_revision_to_string(const char **str,
       *str = apr_pstrmemdup(pool, "HEAD", 4);
       break;
     case svn_opt_revision_number:
-      *str = apr_itoa(pool, rev->value.number);
+      *str = apr_ltoa(pool, rev->value.number);
       break;
     default:
       return svn_error_createf
@@ -1327,7 +1327,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
   /* Load an entries hash, and cache it into DIR_ACCESS. Go ahead and
      fetch all entries here (optimization) since we know how to filter
      out a "hidden" node.  */
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
+  SVN_ERR(svn_wc__entries_read_internal(&entries, dir_access, TRUE, pool));
   *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
 
   if (!show_hidden && *entry != NULL)

@@ -31,10 +31,12 @@
 #include "svn_props.h"
 #include "svn_repos.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_fspath.h"
 
 
 /*** Commit wrappers ***/
@@ -48,6 +50,9 @@ svn_repos_fs_commit_txn(const char **conflict_p,
 {
   svn_error_t *err, *err2;
   const char *txn_name;
+  apr_hash_t *props;
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
 
   *new_rev = SVN_INVALID_REVNUM;
 
@@ -55,13 +60,31 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_repos__hooks_pre_commit(repos, txn_name, pool));
 
+  /* Remove any ephemeral transaction properties. */
+  SVN_ERR(svn_fs_txn_proplist(&props, txn, pool));
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_hash_this(hi, &key, NULL, NULL);
+
+      svn_pool_clear(iterpool);
+
+      if (strncmp(key, SVN_PROP_TXN_PREFIX,
+                  (sizeof(SVN_PROP_TXN_PREFIX) - 1)) == 0)
+        {
+          SVN_ERR(svn_fs_change_txn_prop(txn, key, NULL, iterpool));
+        }
+    }
+  svn_pool_destroy(iterpool);
+  
   /* Commit. */
   err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))
     return err;
 
   /* Run post-commit hooks. */
-  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
+  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, txn_name, pool)))
     {
       err2 = svn_error_create
                (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err2,
@@ -83,23 +106,29 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
                                    apr_hash_t *revprop_table,
                                    apr_pool_t *pool)
 {
-  svn_string_t *author = apr_hash_get(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                                      APR_HASH_KEY_STRING);
   apr_array_header_t *revprops;
+  const char *txn_name;
+  svn_string_t *author = apr_hash_get(revprop_table,
+                                      SVN_PROP_REVISION_AUTHOR,
+                                      APR_HASH_KEY_STRING);
 
-  /* Run start-commit hooks. */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
-                                        repos->client_capabilities, pool));
-
-  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
+  /* Begin the transaction, ask for the fs to do on-the-fly lock checks.
+     We fetch its name, too, so the start-commit hook can use it.  */
   SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
                             SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR(svn_fs_txn_name(&txn_name, *txn_p, pool));
 
   /* We pass the revision properties to the filesystem by adding them
      as properties on the txn.  Later, when we commit the txn, these
      properties will be copied into the newly created revision. */
   revprops = svn_prop_hash_to_array(revprop_table, pool);
-  return svn_repos_fs_change_txn_props(*txn_p, revprops, pool);
+  SVN_ERR(svn_repos_fs_change_txn_props(*txn_p, revprops, pool));
+
+  /* Run start-commit hooks. */
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        repos->client_capabilities, txn_name,
+                                        pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -124,36 +153,6 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
                                             pool);
 }
 
-
-svn_error_t *
-svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
-                                  svn_repos_t *repos,
-                                  svn_revnum_t rev,
-                                  const char *author,
-                                  apr_pool_t *pool)
-{
-  /* ### someday, we might run a read-hook here. */
-
-  /* Begin the transaction. */
-  SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev, 0, pool));
-
-  /* We pass the author to the filesystem by adding it as a property
-     on the txn. */
-
-  /* User (author). */
-  if (author)
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen(author);
-      SVN_ERR(svn_fs_change_txn_prop(*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                     &val, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Property wrappers ***/
 
@@ -162,7 +161,7 @@ svn_repos__validate_prop(const char *name,
                          const svn_string_t *value,
                          apr_pool_t *pool)
 {
-  svn_prop_kind_t kind = svn_property_kind(NULL, name);
+  svn_prop_kind_t kind = svn_property_kind2(name);
 
   /* Disallow setting non-regular properties. */
   if (kind != svn_prop_regular_kind)
@@ -394,9 +393,9 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
     {
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   strlen(SVN_PROP_REVISION_AUTHOR)) != 0)
+                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
           && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      strlen(SVN_PROP_REVISION_DATE)) != 0))
+                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
         *value_p = NULL;
 
       else
@@ -689,8 +688,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
      the change itself. */
   /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendants, pool));
+    SVN_ERR(svn_fs_get_mergeinfo2(mergeinfo, root, readable_paths, inherit,
+                                  include_descendants, TRUE, pool, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 
@@ -740,7 +739,54 @@ svn_repos_fs_pack2(svn_repos_t *repos,
                      cancel_func, cancel_baton, pool);
 }
 
+svn_error_t *
+svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *inherited_props;
+  const char *parent_path = path;
 
+  inherited_props = apr_array_make(result_pool, 1,
+                                   sizeof(svn_prop_inherited_item_t *));
+  while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
+    {
+      svn_boolean_t allowed = TRUE;
+      apr_hash_t *parent_properties;
+
+      svn_pool_clear(iterpool);
+      parent_path = svn_fspath__dirname(parent_path, scratch_pool);
+
+      if (authz_read_func)
+        SVN_ERR(authz_read_func(&allowed, root, parent_path,
+                                authz_read_baton, iterpool));
+      if (allowed)
+        {
+          SVN_ERR(svn_fs_node_proplist(&parent_properties, root,
+                                       parent_path, result_pool));
+          if (parent_properties && apr_hash_count(parent_properties))
+            {
+              svn_prop_inherited_item_t *i_props =
+                apr_pcalloc(result_pool, sizeof(*i_props));
+              i_props->path_or_url =
+                apr_pstrdup(result_pool, parent_path + 1);
+              i_props->prop_hash = parent_properties;
+              /* Build the output array in depth-first order. */
+              svn_sort__array_insert(&i_props, inherited_props, 0);
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  *inherited_props_p = inherited_props;
+  return SVN_NO_ERROR;
+}
 
 /*
  * vim:ts=4:sw=2:expandtab:tw=80:fo=tcroq

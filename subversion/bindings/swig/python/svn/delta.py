@@ -27,11 +27,8 @@ from libsvn.delta import *
 from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_delta_')
 _unprefix_names(locals(), 'svn_txdelta_', 'tx_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
-
-# Force our accessor since it appears that there isn't a more civilized way
-# to make SWIG use it.
-svn_txdelta_window_t.ops = property(svn_txdelta_window_t_ops_get)
 
 class Editor:
 

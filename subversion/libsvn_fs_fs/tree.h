@@ -23,11 +23,18 @@
 #ifndef SVN_LIBSVN_FS_TREE_H
 #define SVN_LIBSVN_FS_TREE_H
 
+#include "fs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+
+/* In POOL, create an instance of a DAG node 1st level cache.
+   The POOL will be cleared at regular intervals. */
+fs_fs_dag_cache_t*
+svn_fs_fs__create_dag_cache(apr_pool_t *pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate the structure in POOL. */
@@ -61,6 +68,13 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
                       const char *path,
                       apr_pool_t *pool);
 
+/* Implement root_vtable_t.node_id(). */
+svn_error_t *
+svn_fs_fs__node_id(const svn_fs_id_t **id_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool);
+
 /* Set *REVISION to the revision in which PATH under ROOT was created.
    Use POOL for any temporary allocations.  If PATH is in an
    uncommitted transaction, *REVISION will be set to
@@ -70,6 +84,12 @@ svn_fs_fs__node_created_rev(svn_revnum_t *revision,
                             svn_fs_root_t *root,
                             const char *path,
                             apr_pool_t *pool);
+
+/* Verify metadata for ROOT.
+   ### Currently only implemented for revision roots. */
+svn_error_t *
+svn_fs_fs__verify_root(svn_fs_root_t *root,
+                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

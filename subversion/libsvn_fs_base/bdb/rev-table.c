@@ -92,7 +92,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
     return svn_fs_base__err_dangling_rev(fs, rev);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, _("reading filesystem revision"), db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("reading filesystem revision"), db_err));
 
   /* Parse REVISION skel.  */
   skel = svn_skel__parse(value.data, value.size, pool);
@@ -138,7 +138,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
         (bfd->revisions, trail->db_txn,
          svn_fs_base__set_dbt(&query, &recno, sizeof(recno)),
          svn_fs_base__skel_to_dbt(&result, skel, pool), 0);
-      return BDB_WRAP(fs, "updating filesystem revision", db_err);
+      return BDB_WRAP(fs, N_("updating filesystem revision"), db_err);
     }
 
   svn_fs_base__trail_debug(trail, "revisions", "put");
@@ -146,7 +146,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
                                svn_fs_base__recno_dbt(&key, &recno),
                                svn_fs_base__skel_to_dbt(&value, skel, pool),
                                DB_APPEND);
-  SVN_ERR(BDB_WRAP(fs, "storing filesystem revision", db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("storing filesystem revision"), db_err));
 
   /* Turn the record number into a Subversion revision number.
      Revisions are numbered starting with zero; Berkeley DB record
@@ -176,7 +176,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
 
   /* Create a database cursor.  */
   svn_fs_base__trail_debug(trail, "revisions", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "getting youngest revision (creating cursor)",
+  SVN_ERR(BDB_WRAP(fs, N_("getting youngest revision (creating cursor)"),
                    bfd->revisions->cursor(bfd->revisions, trail->db_txn,
                                           &cursor, 0)));
 
@@ -200,7 +200,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
            "Corrupt DB: revision 0 missing from 'revisions' table, in "
            "filesystem '%s'", fs->path);
 
-      SVN_ERR(BDB_WRAP(fs, "getting youngest revision (finding last entry)",
+      SVN_ERR(BDB_WRAP(fs, N_("getting youngest revision (finding last entry)"),
                        db_err));
     }
 
@@ -210,7 +210,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
      reasons, and txn_commit shouldn't fail that way, and
      2) using a cursor after committing its transaction can cause
      undetectable database corruption.  */
-  SVN_ERR(BDB_WRAP(fs, "getting youngest revision (closing cursor)",
+  SVN_ERR(BDB_WRAP(fs, N_("getting youngest revision (closing cursor)"),
                    svn_bdb_dbc_close(cursor)));
 
   /* Turn the record number into a Subversion revision number.

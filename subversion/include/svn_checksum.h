@@ -100,7 +100,8 @@ svn_checksum_match(const svn_checksum_t *checksum1,
 
 
 /**
- * Return a deep copy of @a checksum, allocated in @a pool.
+ * Return a deep copy of @a checksum, allocated in @a pool.  If @a
+ * checksum is NULL then NULL is returned.
  *
  * @since New in 1.6.
  */
@@ -239,6 +240,14 @@ svn_checksum_final(svn_checksum_t **checksum,
 apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum);
 
+/**
+ * Return @c TRUE iff CHECKSUM matches the checksum for the empty string.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_checksum_is_empty_checksum(svn_checksum_t *checksum);
+
 
 /**
  * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and
@@ -260,18 +269,6 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
                           const char *fmt,
                           ...)
   __attribute__ ((format(printf, 4, 5)));
-
-
-/**
- * Internal function for creating a checksum from a binary digest.
- *
- * @since New in 1.6
- */
-svn_checksum_t *
-svn_checksum__from_digest(const unsigned char *digest,
-                          svn_checksum_kind_t kind,
-                          apr_pool_t *result_pool);
-
 
 #ifdef __cplusplus
 }

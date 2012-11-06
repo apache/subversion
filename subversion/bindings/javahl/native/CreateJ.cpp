@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file ConflictResolverCallback.cpp
- * @brief Implementation of the class ConflictResolverCallback.
+ * @file CreateJ.cpp
+ * @brief Implementation of the class CreateJ.
  */
 
 #include "svn_error.h"
@@ -206,9 +206,9 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
         POP_AND_RETURN_NULL;
     }
 
-  jbyteArray jdigest = JNIUtil::makeJByteArray(
-                            (const signed char *)checksum->digest,
-                            svn_checksum_size(checksum));
+  jbyteArray jdigest
+    = JNIUtil::makeJByteArray(checksum->digest,
+                              static_cast<int>(svn_checksum_size(checksum)));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -533,11 +533,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
       || text_status == svn_wc_status_conflicted)
     text_status = status->text_status;
 
+  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
+
+  if (repos_text_status == svn_wc_status_modified
+      || repos_text_status == svn_wc_status_conflicted)
+    repos_text_status = status->repos_text_status;
+
   jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
   jobject jTextType = EnumMapper::mapStatusKind(text_status);
   jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
-  jobject jRepositoryTextType = EnumMapper::mapStatusKind(
-                                                  status->repos_text_status);
+  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
   jobject jRepositoryPropType = EnumMapper::mapStatusKind(
                                                   status->repos_prop_status);
   jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
@@ -906,7 +911,7 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 }
 
 jobject
-CreateJ::RevisionRangeList(apr_array_header_t *ranges)
+CreateJ::RevisionRangeList(svn_rangelist_t *ranges)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1014,21 +1019,22 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
     POP_AND_RETURN_NULL;
 
   apr_hash_index_t *hi;
-  int i = 0;
   for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
-       hi; hi = apr_hash_next(hi), ++i)
+       hi; hi = apr_hash_next(hi))
     {
       const char *key;
       svn_string_t *val;
 
-      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+      apr_hash_this(hi,
+                    reinterpret_cast<const void **>(&key),
+                    NULL,
+                    reinterpret_cast<void **>(&val));
 
       jstring jpropName = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jbyteArray jpropVal = JNIUtil::makeJByteArray(
-                                    (const signed char *)val->data, val->len);
+      jbyteArray jpropVal = JNIUtil::makeJByteArray(val);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 

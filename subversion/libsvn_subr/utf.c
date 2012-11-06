@@ -23,6 +23,7 @@
 
 
 
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
@@ -55,6 +56,7 @@ static const char *SVN_UTF_UTON_XLATE_HANDLE = "svn-utf-uton-xlate-handle";
 static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 
 static svn_mutex__t *xlate_handle_mutex = NULL;
+static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
 
 /* The xlate handle cache is a global hash table with linked lists of xlate
  * handles.  In multi-threaded environments, a thread "borrows" an xlate
@@ -118,7 +120,8 @@ xlate_handle_node_cleanup(void *arg)
 }
 
 void
-svn_utf_initialize(apr_pool_t *pool)
+svn_utf_initialize2(apr_pool_t *pool,
+                    svn_boolean_t assume_native_utf8)
 {
   if (!xlate_handle_hash)
     {
@@ -141,6 +144,9 @@ svn_utf_initialize(apr_pool_t *pool)
       apr_pool_cleanup_register(subpool, NULL, xlate_cleanup,
                                 apr_pool_cleanup_null);
     }
+
+    if (!assume_native_charset_is_utf8)
+      assume_native_charset_is_utf8 = assume_native_utf8;
 }
 
 /* Return a unique string key based on TOPAGE and FROMPAGE.  TOPAGE and
@@ -194,8 +200,8 @@ atomic_swap(void * volatile * mem, void *new_value)
 #endif
 }
 
-/* Set *RET to a newly created handle node for converting from FROMPAGE 
-   to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set 
+/* Set *RET to a newly created handle node for converting from FROMPAGE
+   to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set
    (*RET)->handle to NULL.  If fail for any other reason, return the error.
    Allocate *RET and its xlate handle in POOL. */
 static svn_error_t *
@@ -268,11 +274,11 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 
 /* Extend xlate_alloc_handle by using USERDATA_KEY as a key in our
    global hash map, if available.
-   
+
    Allocate *RET and its xlate handle in POOL if svn_utf_initialize()
    hasn't been called or USERDATA_KEY is NULL.  Else, allocate them
    in the pool of xlate_handle_hash.
-   
+
    Note: this function is not thread-safe. Call get_xlate_handle_node
    instead. */
 static svn_error_t *
@@ -286,7 +292,7 @@ get_xlate_handle_node_internal(xlate_handle_node_t **ret,
       xlate_handle_node_t *old_node = NULL;
 
       /* 2nd level: hash lookup */
-      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash, 
+      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash,
                                                       userdata_key,
                                                       APR_HASH_KEY_STRING);
       if (old_node_p)
@@ -375,7 +381,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
 }
 
 /* Put back NODE into the xlate handle cache for use by other calls.
-   
+
    Note: this function is not thread-safe. Call put_xlate_handle_node
    instead. */
 static svn_error_t *
@@ -397,7 +403,7 @@ put_xlate_handle_node_internal(xlate_handle_node_t *node,
     }
   node->next = *node_p;
   *node_p = node;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -425,7 +431,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
         return SVN_NO_ERROR;
 
       SVN_MUTEX__WITH_LOCK(xlate_handle_mutex,
-                           put_xlate_handle_node_internal(node, 
+                           put_xlate_handle_node_internal(node,
                                                           userdata_key));
     }
   else
@@ -433,7 +439,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       /* Store it in the per-pool cache. */
       apr_pool_userdata_set(node, userdata_key, apr_pool_cleanup_null, pool);
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -442,7 +448,9 @@ static svn_error_t *
 get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
   return get_xlate_handle_node(ret, SVN_APR_UTF8_CHARSET,
-                               SVN_APR_LOCALE_CHARSET,
+                               assume_native_charset_is_utf8
+                                 ? SVN_APR_UTF8_CHARSET
+                                 : SVN_APR_LOCALE_CHARSET,
                                SVN_UTF_NTOU_XLATE_HANDLE, pool);
 }
 
@@ -455,7 +463,10 @@ get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 static svn_error_t *
 get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
-  return get_xlate_handle_node(ret, SVN_APR_LOCALE_CHARSET,
+  return get_xlate_handle_node(ret,
+                               assume_native_charset_is_utf8
+                                 ? SVN_APR_UTF8_CHARSET
+                                 : SVN_APR_LOCALE_CHARSET,
                                SVN_APR_UTF8_CHARSET,
                                SVN_UTF_UTON_XLATE_HANDLE, pool);
 }
@@ -737,7 +748,7 @@ svn_utf_stringbuf_to_utf8(svn_stringbuf_t **dest,
 
   return svn_error_compose_create(err,
                                   put_xlate_handle_node
-                                     (node, 
+                                     (node,
                                       SVN_UTF_NTOU_XLATE_HANDLE,
                                       pool));
 }
@@ -771,7 +782,7 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
 
   return svn_error_compose_create(err,
                                   put_xlate_handle_node
-                                     (node, 
+                                     (node,
                                       SVN_UTF_NTOU_XLATE_HANDLE,
                                       pool));
 }
@@ -816,7 +827,7 @@ svn_utf_cstring_to_utf8(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   SVN_ERR(svn_error_compose_create(err,
                                    put_xlate_handle_node
-                                      (node, 
+                                      (node,
                                        SVN_UTF_NTOU_XLATE_HANDLE,
                                        pool)));
   return check_cstring_utf8(*dest, pool);
@@ -839,7 +850,7 @@ svn_utf_cstring_to_utf8_ex2(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   SVN_ERR(svn_error_compose_create(err,
                                    put_xlate_handle_node
-                                      (node, 
+                                      (node,
                                        SVN_UTF_NTOU_XLATE_HANDLE,
                                        pool)));
 
@@ -881,7 +892,9 @@ svn_utf_stringbuf_from_utf8(svn_stringbuf_t **dest,
         *dest = svn_stringbuf_dup(src, pool);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -914,7 +927,9 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
         *dest = svn_string_dup(src, pool);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -928,11 +943,13 @@ svn_utf_cstring_from_utf8(const char **dest,
   xlate_handle_node_t *node;
   svn_error_t *err;
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err, 
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -949,12 +966,14 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   const char *convset_key = get_xlate_key(topage, SVN_APR_UTF8_CHARSET,
                                           pool);
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_xlate_handle_node(&node, topage, SVN_APR_UTF8_CHARSET,
                                 convset_key, pool));
   err = convert_cstring(dest, src, node, pool);
-  put_xlate_handle_node(node, convset_key, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, convset_key, pool));
 
   return err;
 }
@@ -1051,7 +1070,9 @@ svn_utf_cstring_from_utf8_string(const char **dest,
         *dest = apr_pstrmemdup(pool, src->data, src->len);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }

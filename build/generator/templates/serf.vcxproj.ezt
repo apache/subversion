@@ -34,7 +34,7 @@
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>[is configs "Debug"]true[else]false[end]</UseDebugLibraries>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -46,9 +46,9 @@
   <PropertyGroup>
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[configs]</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[configs]</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(OutDir)\[serf_lib]</NMakeOutput>
 [end][end]  </PropertyGroup>
   <ItemDefinitionGroup>

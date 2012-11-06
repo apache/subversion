@@ -36,6 +36,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
@@ -688,9 +689,8 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
   const svn_checksum_t *md5_checksum;
 
   if (digest)
-    md5_checksum = svn_checksum__from_digest(
-                   digest, svn_checksum_md5,
-                   svn_wc__get_committed_queue_pool(*queue));
+    md5_checksum = svn_checksum__from_digest_md5(
+                     digest, svn_wc__get_committed_queue_pool(*queue));
   else
     md5_checksum = NULL;
 
@@ -748,7 +748,7 @@ svn_wc_process_committed4(const char *path,
     new_date = 0;
 
   if (digest)
-    md5_checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    md5_checksum = svn_checksum__from_digest_md5(digest, pool);
   else
     md5_checksum = NULL;
 
@@ -932,7 +932,9 @@ svn_wc_add3(const char *path,
     {
       svn_kind_t kind;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath, FALSE, pool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
+                                   FALSE /* allow_missing */,
+                                   FALSE /* show_hidden */, pool));
       if (kind == svn_kind_dir)
         {
           svn_wc_adm_access_t *adm_access;
@@ -1907,6 +1909,43 @@ static struct svn_wc_diff_callbacks4_t diff_callbacks3_wrapper = {
   wrap_4to3_dir_closed
 };
 
+
+svn_error_t *
+svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_abspath,
+                        const char *target,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
+                        const apr_array_header_t *changelist_filter,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__get_diff_editor(editor, edit_baton,
+                            wc_ctx,
+                            anchor_abspath, target,
+                            depth,
+                            ignore_ancestry, show_copies_as_adds,
+                            use_git_diff_format, use_text_base,
+                            reverse_order, server_performs_filtering,
+                            changelist_filter,
+                            callbacks, callback_baton,
+                            cancel_func, cancel_baton,
+                            result_pool, scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -2585,6 +2624,47 @@ status4_wrapper_func(void *baton,
   return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
 }
 
+
+svn_error_t *
+svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          svn_boolean_t depth_as_sticky,
+                          svn_boolean_t server_performs_filtering,
+                          const apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func4_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__get_status_editor(editor, edit_baton,
+                              set_locks_baton,
+                              edit_revision,
+                              wc_ctx,
+                              anchor_abspath,
+                              target_basename,
+                              depth,
+                              get_all, no_ignore,
+                              depth_as_sticky,
+                              server_performs_filtering,
+                              ignore_patterns,
+                              status_func, status_baton,
+                              cancel_func, cancel_baton,
+                              result_pool,
+                              scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
@@ -3154,6 +3234,59 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
 
+
+svn_error_t *
+svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__get_update_editor(editor, edit_baton,
+                              target_revision,
+                              wc_ctx,
+                              anchor_abspath,
+                              target_basename, NULL,
+                              use_commit_times,
+                              depth, depth_is_sticky,
+                              allow_unver_obstructions,
+                              adds_as_modification,
+                              server_performs_filtering,
+                              clean_checkout,
+                              diff3_cmd,
+                              preserved_exts,
+                              fetch_dirents_func, fetch_dirents_baton,
+                              conflict_func, conflict_baton,
+                              external_func, external_baton,
+                              cancel_func, cancel_baton,
+                              notify_func, notify_baton,
+                              result_pool, scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
@@ -3287,6 +3420,56 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
                                    diff3_cmd, NULL, editor, edit_baton,
                                    traversal_info, pool);
 }
+
+
+svn_error_t *
+svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t server_performs_filtering,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__get_switch_editor(editor, edit_baton,
+                              target_revision,
+                              wc_ctx,
+                              anchor_abspath, target_basename,
+                              switch_url, NULL,
+                              use_commit_times,
+                              depth, depth_is_sticky,
+                              allow_unver_obstructions,
+                              server_performs_filtering,
+                              diff3_cmd,
+                              preserved_exts,
+                              fetch_dirents_func, fetch_dirents_baton,
+                              conflict_func, conflict_baton,
+                              external_func, external_baton,
+                              cancel_func, cancel_baton,
+                              notify_func, notify_baton,
+                              result_pool, scratch_pool));
+}
+
 
 svn_error_t *
 svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
@@ -3425,6 +3608,14 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                                    pool);
 }
 
+
+svn_error_t *
+svn_wc_external_item_create(const svn_wc_external_item2_t **item,
+                            apr_pool_t *pool)
+{
+  *item = apr_pcalloc(pool, sizeof(svn_wc_external_item2_t));
+  return SVN_NO_ERROR;
+}
 
 svn_wc_external_item_t *
 svn_wc_external_item_dup(const svn_wc_external_item_t *item,
@@ -3996,6 +4187,49 @@ svn_wc_copy(const char *src_path,
 /*** From merge.c ***/
 
 svn_error_t *
+svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc_merge5(merge_outcome,
+                          NULL /* merge_props_outcome */,
+                          wc_ctx,
+                          left_abspath,
+                          right_abspath,
+                          target_abspath,
+                          left_label,
+                          right_label,
+                          target_label,
+                          left_version,
+                          right_version,
+                          dry_run,
+                          diff3_cmd,
+                          merge_options,
+                          NULL /* original_props */,
+                          prop_diff,
+                          conflict_func, conflict_baton,
+                          cancel_func, cancel_baton,
+                          scratch_pool));
+}
+
+svn_error_t *
 svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *left,
               const char *right,
@@ -4094,6 +4328,17 @@ svn_wc_merge(const char *left,
 
 
 /*** From util.c ***/
+
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char *path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool)
+{
+  return svn_wc_conflict_version_create2(repos_url, NULL, path_in_repos,
+                                         peg_rev, node_kind, pool);
+}
 
 svn_wc_conflict_description_t *
 svn_wc_conflict_description_create_text(const char *path,
@@ -4217,4 +4462,23 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
     }
 
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
+svn_wc_move(svn_wc_context_t *wc_ctx,
+            const char *src_abspath,
+            const char *dst_abspath,
+            svn_boolean_t metadata_only,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__move2(wc_ctx, src_abspath, dst_abspath,
+                                       metadata_only,
+                                       TRUE, /* allow_mixed_revisions */
+                                       cancel_func, cancel_baton,
+                                       notify_func, notify_baton,
+                                       scratch_pool));
 }

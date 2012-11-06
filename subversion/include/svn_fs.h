@@ -39,6 +39,7 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -85,6 +86,16 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
 
+/** Enable / disable revprop caching for a FSFS repository.
+ *
+ * "2" is allowed, too and means "enable if efficient",
+ * i.e. this will not create warning at runtime if there
+ * if no efficient support for revprop caching.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
@@ -113,6 +124,13 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.6.
  */
 #define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.8.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
 /** @} */
 
 
@@ -250,6 +268,10 @@ svn_fs_upgrade(const char *path,
  * to the Subversion filesystem located in the directory @a path.
  * Use @a pool for necessary allocations.
  *
+ * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
+ * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
+ * verified, global invariants may be verified as well.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
@@ -260,7 +282,9 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool);
+              svn_revnum_t start,
+              svn_revnum_t end,
+              apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -309,8 +333,31 @@ svn_fs_delete_fs(const char *path,
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
  *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_hotcopy2(const char *src_path,
+                const char *dest_path,
+                svn_boolean_t clean,
+                svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy(const char *src_path,
                const char *dest_path,
@@ -357,6 +404,24 @@ svn_fs_recover(const char *path,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool);
+
+
+/**
+ * Take an exclusive lock on @a fs to prevent commits and then invoke
+ * @a freeze_body passing @a baton.
+ *
+ * @note The BDB backend doesn't implement this feature so most
+ * callers should not call this function directly but should use the
+ * higher level #svn_repos_freeze instead.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool);
+              
 
 
 /** Subversion filesystems based on Berkeley DB.
@@ -772,6 +837,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
 /** @} */
 
 /**
@@ -828,7 +894,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn, with the same lifetime as @a txn;
+ * the conflict in @a txn, allocated within @a pool;
  * otherwise, set @a *conflict_p to NULL.
  *
  * If the commit succeeds, @a txn is invalid.
@@ -843,6 +909,25 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
  * something else went wrong in post commit FS processing.
+ *
+ * @note See api-errata/1.8/fs001.txt for information on how this
+ * function was documented in versions prior to 1.8.
+ *
+ * ### need to document this better. there are four combinations of
+ * ### return values:
+ * ### 1) err=NULL. conflict=NULL. new_rev is valid
+ * ### 2) err=SVN_ERR_FS_CONFLICT. conflict is set. new_rev=SVN_INVALID_REVNUM
+ * ### 3) err=!NULL. conflict=NULL. new_rev is valid
+ * ### 4) err=!NULL. conflict=NULL. new_rev=SVN_INVALID_REVNUM
+ * ###
+ * ### some invariants:
+ * ###   *conflict_p will be non-NULL IFF SVN_ERR_FS_CONFLICT
+ * ###   if *conflict_p is set (and SVN_ERR_FS_CONFLICT), then new_rev
+ * ###     will always be SVN_INVALID_REVNUM
+ * ###   *conflict_p will always be initialized to NULL, or to a valid
+ * ###     conflict string
+ * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
+ * ###     to a valid, committed revision number
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -966,6 +1051,118 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn,
                         const apr_array_header_t *props,
                         apr_pool_t *pool);
+
+/** @} */
+
+
+/** Editors
+ *
+ * ### docco
+ *
+ * @defgroup svn_fs_editor Transaction editors
+ * @{
+ */
+
+/**
+ * Create a new filesystem transaction, based on based on the youngest
+ * revision of @a fs, and return its name @a *txn_name and an @a *editor
+ * that can be used to make changes into it.
+ *
+ * @a flags determines transaction enforcement behaviors, and is composed
+ * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
+ * property of the underlying transaction, and will not change if multiple
+ * editors are used to refer to that transaction (see @a autocommit, below).
+ * 
+ * @note If you're building a txn for committing, you probably don't want
+ * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
+ * honors the repository's hook configurations.
+ *
+ * When svn_editor_complete() is called for @a editor, internal resources
+ * will be cleaned and nothing more will happen. If you wish to commit the
+ * transaction, call svn_fs_editor_commit() instead. It is illegal to call
+ * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
+ *
+ * @see svn_fs_commit_txn()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_create(svn_editor_t **editor,
+                     const char **txn_name,
+                     svn_fs_t *fs,
+                     apr_uint32_t flags,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+/**
+ * Like svn_fs_editor_create(), but open an existing transaction
+ * @a txn_name and continue editing it.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_create_for(svn_editor_t **editor,
+                         svn_fs_t *fs,
+                         const char *txn_name,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/**
+ * Commit the transaction represented by @a editor.
+ *
+ * If the commit to the filesystem succeeds, then @a *revision will be set
+ * to the resulting revision number. Note that further errors may occur,
+ * as described below. If the commit process does not succeed, for whatever
+ * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
+ *
+ * If a conflict occurs during the commit, then @a *conflict_path will
+ * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
+ * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
+ * message that incorporates @a *conflict_path.
+ *
+ * If a non-conflict error occurs during the commit, then that error will
+ * be returned.
+ * As is standard with any Subversion API, @a revision, @a post_commit_err,
+ * and @a conflict_path (the OUT parameters) have an indeterminate value if
+ * an error is returned.
+ *
+ * If the commit completes (and a revision is returned in @a *revision), then
+ * it is still possible for an error to occur during the cleanup process.
+ * Any such error will be returned in @a *post_commit_err. The caller must
+ * properly use or clear that error.
+ *
+ * If svn_editor_complete() has already been called on @a editor, then
+ * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
+ *
+ * @note After calling this function, @a editor will be marked as completed
+ * and no further operations may be performed on it. The underlying
+ * transaction will either be committed or aborted once this function is
+ * called. It cannot be recovered for additional work.
+ *
+ * @a result_pool will be used to allocate space for @a conflict_path.
+ * @a scratch_pool will be used for all temporary allocations.
+ *
+ * @note To summarize, there are three possible outcomes of this function:
+ * successful commit (with or without an associated @a *post_commit_err);
+ * failed commit due to a conflict (reported via @a *conflict_path); and
+ * failed commit for some other reason (reported via the returned error.)
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_commit(svn_revnum_t *revision,
+                     svn_error_t **post_commit_err,
+                     const char **conflict_path,
+                     svn_editor_t *editor,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
 
 /** @} */
 
@@ -1471,13 +1668,15 @@ svn_fs_copied_from(svn_revnum_t *rev_p,
 /** Set @a *root_p and @a *path_p to the revision root and path of the
  * destination of the most recent copy event that caused @a path to
  * exist where it does in @a root, or to NULL if no such copy exists.
- * When non-NULL, allocate @a *root_p and @a *path_p in @a pool.
  *
  * @a *path_p might be a parent of @a path, rather than @a path
  * itself.  However, it will always be the deepest relevant path.
  * That is, if a copy occurs underneath another copy in the same txn,
  * this function makes sure to set @a *path_p to the longest copy
  * destination path that is still a parent of or equal to @a path.
+ *
+ * Values returned in @a *root_p and @a *path_p will be allocated
+ * from @a pool.
  *
  * @since New in 1.3.
  */
@@ -1501,6 +1700,15 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
+ * If @a adjust_inherited_mergeinfo is TRUE, then any inherited
+ * mergeinfo returned in @a *catalog is normalized to represent the
+ * inherited mergeinfo on the path doing the inheriting.  If
+ * @a adjust_inherited_mergeinfo is FALSE, then any inherited
+ * mergeinfo is the raw explicit mergeinfo from the nearest parent
+ * of the path with explicit mergeinfo, unadjusted for the path-wise
+ * difference between the path and its parent.  This may include
+ * non-inheritable mergeinfo.
+ *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1508,10 +1716,28 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * paths; descendants of the elements in @a paths which get their
  * mergeinfo via inheritance are not included in @a *catalog.)
  *
- * Do any necessary temporary allocation in @a pool.
+ * Allocate @a *catalog in result_pool.  Do any necessary temporary
+ * allocations in @a scratch_pool.
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_get_mergeinfo2(), but with @a adjust_inherited_mergeinfo
+ * set always set to TRUE and only one pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
@@ -1753,6 +1979,44 @@ svn_fs_file_contents(svn_stream_t **contents,
                      const char *path,
                      apr_pool_t *pool);
 
+/**
+ * Callback function type that gets presented with a immutable non-NULL
+ * @a contents of @a len bytes.  Further parameters may be passed through
+ * in @a baton.
+ *
+ * Allocations must be made in @a pool.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_fs_process_contents_func_t)(const unsigned char *contents,
+                                  apr_size_t len,
+                                  void *baton,
+                                  apr_pool_t *pool);
+
+/** Attempts to efficiently provide the contents of the file @a path in
+ * @a root.  If that succeeds, @a *success will be set to #TRUE and the
+ * contents will be passed to the the @a processor along with the given
+ * @a baton.  Allocations take place in @a pool.
+ *
+ * This function is intended to support zero copy data processing.  It may
+ * not be implemented for all data backends or not applicable for certain
+ * content.  In that case, @a *success will always be #FALSE.  Also, this
+ * is a best-effort function which means there is no guarantee that e.g.
+ * @a processor gets called at for any content.
+ *
+ * @note @a processor is expected to be relatively short function with
+ * at most O(content size) runtime.
+ * 
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool);
 
 /** Create a new file named @a path in @a root.  The file's initial contents
  * are the empty string, and it has no properties.  @a root must be the
@@ -2201,7 +2465,8 @@ svn_fs_get_locks(svn_fs_t *fs,
 
 /**
  * Append a textual list of all available FS modules to the stringbuf
- * @a output.
+ * @a output.  Third-party modules are only included if repository
+ * access has caused them to be loaded.
  *
  * @since New in 1.2.
  */

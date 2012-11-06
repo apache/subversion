@@ -67,8 +67,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnraisetreeconflict", TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help4(NULL, "svnraisetreeconflict", TRUE, FALSE, FALSE,
+                             NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -218,10 +218,10 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 
   /* Allocate and fill in the description data structures */
   SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
-  left = svn_wc_conflict_version_create(repos_url1, path_in_repos1, peg_rev1,
-                                        kind1, pool);
-  right = svn_wc_conflict_version_create(repos_url2, path_in_repos2, peg_rev2,
-                                         kind2, pool);
+  left = svn_wc_conflict_version_create2(repos_url1, NULL, path_in_repos1,
+                                         peg_rev1, kind1, pool);
+  right = svn_wc_conflict_version_create2(repos_url2, NULL, path_in_repos2,
+                                          peg_rev2, kind2, pool);
   c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
@@ -308,15 +308,14 @@ check_lib_versions(void)
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE(my_version);
+
   return svn_ver_check_list(&my_version, checklist);
 }
 
 int
 main(int argc, const char *argv[])
 {
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_error_t *err;
   apr_getopt_t *os;
@@ -336,13 +335,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();
@@ -372,10 +365,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'h':
@@ -386,8 +377,7 @@ main(int argc, const char *argv[])
           exit(0);
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -403,10 +393,7 @@ main(int argc, const char *argv[])
     }
 
   if (remaining_argv->nelts < 1)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   /* Do the main task */
   SVNRAISETC_INT_ERR(raise_tree_conflict(remaining_argv->nelts,

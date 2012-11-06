@@ -31,7 +31,7 @@ INSTALLDIR=E:\svn
 
 EXPATVER=2.0.0
 HTTPDVER=2.2.13
-NEONVER=0.28.2
+SERFVER=1.1.0
 OPENSSLVER=0.9.8k
 SQLITEVER=3.6.3
 ZLIBVER=1.2.3
@@ -40,7 +40,6 @@ ZLIBVER=1.2.3
 PATCHESDIR=$(HOME)\mydiffs\svn
 OPENSSLDIR=$(SOURCESDIR)\openssl-$(OPENSSLVER)
 EXPATDIR=$(SOURCESDIR)\expat-$(EXPATVER)
-NEONDIR=$(SOURCESDIR)\neon-$(NEONVER)
 HTTPDDIR=$(SOURCESDIR)\httpd-$(HTTPDVER)
 #APRDIR=$(SOURCESDIR)\apr
 #APRUTILDIR=$(SOURCESDIR)\apr-util
@@ -50,7 +49,7 @@ APRUTILDIR=$(HTTPDDIR)\srclib\apr-util
 APRICONVDIR=$(HTTPDDIR)\srclib\apr-iconv
 SQLITEDIR=$(SOURCESDIR)\sqlite-amalgamation
 ZLIBDIR=$(SOURCESDIR)\zlib-$(ZLIBVER)
-SERFDIR=$(SOURCESDIR)\serf
+SERFDIR=$(SOURCESDIR)\serf-$(SERFVER)
 
 all:
 	@echo Available targets: newfiles versionstamp
@@ -101,13 +100,13 @@ targetdir: TARGETDIRset
 
 # TODO: pass --with-apr-* if you don't have httpd; make --with-* args optional
 config: targetdir
-	python gen-make.py --$(CONFIG) --with-httpd=$(HTTPDDIR) --with-neon=$(NEONDIR) --with-serf=$(SERFDIR) --with-openssl=$(OPENSSLDIR) --with-sqlite=$(SQLITEDIR) --with-zlib=$(ZLIBDIR) $(ENABLE_ML) --vsnet-version=2008 -t vcproj 2>&1 | tee log.gen-make
+	python gen-make.py --$(CONFIG) --with-httpd=$(HTTPDDIR) --with-serf=$(SERFDIR) --with-openssl=$(OPENSSLDIR) --with-sqlite=$(SQLITEDIR) --with-zlib=$(ZLIBDIR) $(ENABLE_ML) --vsnet-version=2008 -t vcproj 2>&1 | tee log.gen-make
 
 # Visual Studio 2008
-libsvn_auth_gnome_keyring libsvn_auth_kwallet libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_base libsvn_fs_fs libsvn_fs_util libsvn_ra libsvn_ra_local libsvn_ra_neon libsvn_ra_serf libsvn_ra_svn libsvn_repos libsvn_subr libsvn_wc: targetdir
+libsvn_auth_gnome_keyring libsvn_auth_kwallet libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_base libsvn_fs_fs libsvn_fs_util libsvn_ra libsvn_ra_local libsvn_ra_serf libsvn_ra_svn libsvn_repos libsvn_subr libsvn_wc: targetdir
 	$(MSBUILD) /t:Libraries\$@
 	$(MAKE) package
-svn svnadmin svndumpfilter svnlook svnmucc svnserve svnsync svnversion entries-dump: targetdir
+svn svnadmin svndumpfilter svnlook svnmucc svnserve svnsync svnversion svnrdump entries-dump: targetdir
 	$(MSBUILD) /t:Programs\$@
 	$(MAKE) package
 auth-test cache-test changes-test checksum-test client-test compat-test config-test db-test diff-diff3-test dir-delta-editor dirent_uri-test error-test fs-base-test fs-pack-test fs-test hashdump-test key-test locks-test mergeinfo-test opt-test path-test ra-local-test random-test repos-test revision-test skel-test stream-test string-test strings-reps-test svn_test_fs svn_test_main svndiff-test target-test time-test translate-test tree-conflict-data-test utf-test vdelta-test window-test: targetdir
@@ -128,7 +127,7 @@ all2: targetdir
 package:
 	test -d $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline || mkdir $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline
 	test -d $(TARGETDIR)\bin || mkdir $(TARGETDIR)\bin
-	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
+	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion svnrdump svnmucc) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
 	for %%i in (diff diff3 diff4) do @if exist $(CONFIG)\tools\diff\%%i.exe $(CP) $(CONFIG)\tools\diff\%%i.exe $(TARGETDIR)\bin
 	$(CP) $(APRDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin
 	$(CP) $(APRUTILDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin

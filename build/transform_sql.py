@@ -49,7 +49,7 @@ class Processor(object):
 
   # a few SQL comments that act as directives for this transform system
   re_format = re.compile('-- *format: *([0-9]+)')
-  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)')
+  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)( +\(([^\)]*)\))?')
   re_include = re.compile('-- *include: *([-a-z]+)')
   re_define = re.compile('-- *define: *([A-Z_0-9]+)')
 
@@ -66,6 +66,13 @@ class Processor(object):
     self.close_define()
     self.output.write('#define STMT_%s %d\n' % (match.group(1),
                                                 self.stmt_count))
+
+    if match.group(3) == None:
+      info = 'NULL'
+    else:
+      info = '"' + match.group(3) + '"'
+    self.output.write('#define STMT_%d_INFO {"STMT_%s", %s}\n' %
+                      (self.stmt_count, match.group(1), info))
     self.output.write('#define STMT_%d \\\n' % (self.stmt_count,))
     self.var_printed = True
 
@@ -103,10 +110,35 @@ class Processor(object):
     for line in input.split('\n'):
       line = line.replace('"', '\\"')
 
+      # IS_STRICT_DESCENDANT_OF()
+
+      # A common operation in the working copy is determining descendants of
+      # a node. To allow Sqlite to use its indexes to provide the answer we
+      # must provide simple less than and greater than operations.
+      #
+      # For relative paths that consist of one or more components like 'subdir'
+      # we can accomplish this by comparing local_relpath with 'subdir/' and
+      # 'subdir0' ('/'+1 = '0')
+      #
+      # For the working copy root this case is less simple and not strictly
+      # valid utf-8/16 (but luckily Sqlite doesn't validate utf-8 nor utf-16).
+      # The binary blob x'FFFF' is higher than any valid utf-8 and utf-16
+      # sequence.
+      #
+      # So for the root we can compare with > '' and < x'FFFF'. (This skips the
+      # root itself and selects all descendants)
+      #
+      ### RH: I implemented this first with a user defined Sqlite function. But
+      ### when I wrote the documentation for it, I found out I could just
+      ### define it this way, without losing the option of just dropping the
+      ### query in a plain sqlite3.
+
       # '/'+1 == '0'
-      line = re.sub(r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
-                    r"((\1) > (\2) || '/' AND (\1) < (\2) || '0') ",
-                    line)
+      line = re.sub(
+            r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
+            r"(((\1) > (CASE (\2) WHEN '' THEN '' ELSE (\2) || '/' END))" +
+            r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
+            line)
 
       if line.strip():
         handled = False
@@ -129,7 +161,7 @@ class Processor(object):
         # got something besides whitespace. write it out. include some whitespace
         # to separate the SQL commands. and a backslash to continue the string
         # onto the next line.
-        self.output.write('  "%s " \\\n' % line)
+        self.output.write('  "%s " \\\n' % line.rstrip())
 
     # previous line had a continuation. end the madness.
     self.close_define()
@@ -167,6 +199,13 @@ def main(input_filepath, output):
       + ', \\\n'.join('    STMT_%d' % (i,) for i in range(proc.stmt_count))
       + ', \\\n    NULL \\\n  }\n')
 
+    output.write('\n')
+
+    output.write(
+      '#define %s_DECLARE_STATEMENT_INFO(varname) \\\n' % (var_name,)
+      + '  static const char * const varname[][2] = { \\\n'
+      + ', \\\n'.join('    STMT_%d_INFO' % (i) for i in range(proc.stmt_count))
+      + ', \\\n    {NULL, NULL} \\\n  }\n')
 
 if __name__ == '__main__':
   if len(sys.argv) < 2 or len(sys.argv) > 3:

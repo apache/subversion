@@ -32,9 +32,7 @@ IF ERRORLEVEL 1 (
 PATH %PATH%;%TESTDIR%\bin
 SET result=0
 
-
-echo python win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
-python win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
 IF ERRORLEVEL 1 (
   echo [python reported error %ERRORLEVEL%]
   SET result=1
@@ -44,10 +42,10 @@ IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
 mkdir "%TESTDIR%\swig\py-release\libsvn"
 mkdir "%TESTDIR%\swig\py-release\svn"
 
-xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd"
-xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll"
-xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py"
-xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py"
+xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
+xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
+xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
+xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
 
 SET PYTHONPATH=%TESTDIR%\swig\py-release
 
@@ -56,5 +54,32 @@ IF ERRORLEVEL 1 (
   echo [Python reported error %ERRORLEVEL%]
   SET result=1
 )
+
+mkdir "%TESTDIR%\swig\pl-release\SVN"
+mkdir "%TESTDIR%\swig\pl-release\auto\SVN"
+xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-release\SVN" > nul:
+pushd release\subversion\bindings\swig\perl\native
+for %%i in (*.dll) do (
+  set name=%%i
+  mkdir "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
+  xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
+  xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
+)
+popd
+
+svnversion . /1.7.x | find "S" > nul:
+IF ERRORLEVEL 1 (
+  ECHO --- Building 1.7.x: Skipping perl tests ---
+  EXIT /B %result%
+)
+
+SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
+pushd subversion\bindings\swig\perl\native
+perl -MExtUtils::Command::MM -e test_harness() t\*.t
+IF ERRORLEVEL 1 (
+  echo [Perl reported error %ERRORLEVEL%]
+  SET result=1
+)
+popd
 
 exit /b %result%

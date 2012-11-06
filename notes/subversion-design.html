@@ -2340,7 +2340,10 @@ write/Makefile:6
       <p>Once you've done this, read Jim Blandy's own structural overview,
         which explains how nodes and revisions are organized (among other
         things) in the filesystem implementation:
-        <tt class="filename">subversion/libsvn_fs/structure</tt>.</p>
+        <tt class="filename">subversion/libsvn_fs_base/notes/structure</tt>.
+        (Some details in that document are specific to the BDB-based
+        filesystem implementation.  Details specific to FSFS are recorded in
+        <tt class="filename">subversion/libsvn_fs_fs/structure</tt>.)</p>
 
       <p>Finally, read the well-documented API in
         <tt class="filename">subversion/include/svn_fs.h</tt>.</p>

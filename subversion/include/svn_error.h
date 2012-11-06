@@ -317,7 +317,10 @@ svn_handle_warning(FILE *stream,
 #ifdef SVN_ERR__TRACING
 #define SVN_ERR__TRACED "traced call"
 
-#define svn_error_trace(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
+svn_error_t *
+svn_error__trace(const char *file, long line, svn_error_t *err);
+
+#define svn_error_trace(expr)  svn_error__trace(__FILE__, __LINE__, (expr))
 #else
 #define svn_error_trace(expr)  (expr)
 #endif
@@ -460,6 +463,31 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
     abort();                                                 \
   } while (1)
 
+/** Like SVN_ERR_ASSERT(), but append ERR to the returned error chain.
+ *
+ * If EXPR is false, return a malfunction error whose chain includes ERR.
+ * If EXPR is true, do nothing.  (In particular, this does not clear ERR.)
+ *
+ * Types: (svn_boolean_t expr, svn_error_t *err)
+ *
+ * @since New in 1.8.
+ */
+#ifdef __clang_analyzer__
+#include <assert.h>
+/* Just ignore ERR.  If the assert triggers, it'll be our least concern. */
+#define SVN_ERR_ASSERT_E(expr, err)       assert((expr))
+#else
+#define SVN_ERR_ASSERT_E(expr, err)                                      \
+  do {                                                                  \
+    if (!(expr)) {                                                      \
+      return svn_error_compose_create(                                  \
+               svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr), \
+               (err));                                                  \
+    }                                                                   \
+  } while (0)
+#endif
+
+
 /** Check that a condition is true: if not, report an error and possibly
  * terminate the program.
  *
@@ -478,12 +506,19 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  * evaluation of this expression is not compiled out in release-mode builds.
  *
  * @since New in 1.6.
+ *
+ * @see SVN_ERR_ASSERT_E()
  */
+#ifdef __clang_analyzer__
+#include <assert.h>
+#define SVN_ERR_ASSERT(expr)       assert((expr))
+#else
 #define SVN_ERR_ASSERT(expr)                                            \
   do {                                                                  \
     if (!(expr))                                                        \
       SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
   } while (0)
+#endif
 
 /** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.

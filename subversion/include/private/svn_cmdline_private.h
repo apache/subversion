@@ -44,12 +44,14 @@ extern "C" {
  * @a propname is the property name. @a propval is the property value, which
  * will be encoded if it contains unsafe bytes.
  *
- * @since New in 1.6.
+ * If @a inherited_prop is TRUE then @a propname is an inherited property,
+ * otherwise @a propname is an explicit property.
  */
 void
 svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
                             const char *propname,
                             svn_string_t *propval,
+                            svn_boolean_t inherited_prop,
                             apr_pool_t *pool);
 
 
@@ -92,7 +94,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  apr_pool_t *pool);
 
 /** Sets the config options in @a config_options, an apr array containing
- * svn_cmdline__config_argument_t* elements to the configuration in @a cfg,
+ * @c svn_cmdline__config_argument_t* elements, to the configuration in @a cfg,
  * a hash mapping of <tt>const char *</tt> configuration file names to
  * @c svn_config_t *'s. Write warnings to stderr.
  *

@@ -32,6 +32,8 @@
 
 #include "svn_ra.h"
 
+#include "private/svn_ra_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,7 +58,7 @@ typedef struct svn_ra__vtable_t {
      time this is called.  SESSION->priv may be set by this function. */
   svn_error_t *(*open_session)(svn_ra_session_t *session,
                                const char **corrected_url,
-                               const char *repos_URL,
+                               const char *session_URL,
                                const svn_ra_callbacks2_t *callbacks,
                                void *callback_baton,
                                apr_hash_t *config,
@@ -294,11 +296,55 @@ typedef struct svn_ra__vtable_t {
                                   svn_revnum_t *revision_deleted,
                                   apr_pool_t *pool);
 
+  /* See svn_ra__register_editor_shim_callbacks() */
+  svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
+  /* See svn_ra_get_inherited_props(). */
+  svn_error_t *(*get_inherited_props)(svn_ra_session_t *session,
+                                      apr_array_header_t **iprops,
+                                      const char *path,
+                                      svn_revnum_t revision,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+  /* See svn_ra__get_commit_ev2()  */
+  svn_error_t *(*get_commit_ev2)(
+    svn_editor_t **editor,
+    svn_ra_session_t *session,
+    apr_hash_t *revprop_table,
+    svn_commit_callback2_t callback,
+    void *callback_baton,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
+    svn_ra__provide_base_cb_t provide_base_cb,
+    svn_ra__provide_props_cb_t provide_props_cb,
+    svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+    void *cb_baton,
+    svn_cancel_func_t cancel_func,
+    void *cancel_baton,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool);
+
+  /* See svn_ra__replay_range_ev2() */
+  svn_error_t *(*replay_range_ev2)(
+    svn_ra_session_t *session,
+    svn_revnum_t start_revision,
+    svn_revnum_t end_revision,
+    svn_revnum_t low_water_mark,
+    svn_boolean_t send_deltas,
+    svn_ra__replay_revstart_ev2_callback_t revstart_func,
+    svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+    void *replay_baton,
+    apr_pool_t *scratch_pool);
+
 } svn_ra__vtable_t;
 
 /* The RA session object. */
 struct svn_ra_session_t {
   const svn_ra__vtable_t *vtable;
+
+  /* Cancellation handlers consumers may want to use. */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* Pool used to manage this session. */
   apr_pool_t *pool;
@@ -327,9 +373,6 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
                                 apr_pool_t *pool);
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                              const svn_ra__vtable_t **vtable,
-                              apr_pool_t *pool);
-svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
@@ -450,6 +493,62 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  svn_revnum_t end_revision,
                                  svn_revnum_t *revision_deleted,
                                  apr_pool_t *pool);
+
+
+/**
+ * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * need to find PATH's inherited properties on a legacy server that
+ * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
+ *
+ * All arguments are as per the two aforementioned APIs.
+ */
+svn_error_t *
+svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_array_header_t **inherited_props,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Utility function to provide a shim between a returned Ev2 and an RA
+   provider's Ev1-based commit editor.
+
+   See svn_ra__get_commit_ev2() for parameter semantics.  */
+svn_error_t *
+svn_ra__use_commit_shim(svn_editor_t **editor,
+                        svn_ra_session_t *session,
+                        apr_hash_t *revprop_table,
+                        svn_commit_callback2_t callback,
+                        void *callback_baton,
+                        apr_hash_t *lock_tokens,
+                        svn_boolean_t keep_locks,
+                        svn_ra__provide_base_cb_t provide_base_cb,
+                        svn_ra__provide_props_cb_t provide_props_cb,
+                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                        void *cb_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Utility function to provide a shim between a returned Ev2 and an RA
+   provider's Ev1-based commit editor.
+
+   See svn_ra__replay_range_ev2() for parameter semantics.  */
+svn_error_t *
+svn_ra__use_replay_range_shim(svn_ra_session_t *session,
+                              svn_revnum_t start_revision,
+                              svn_revnum_t end_revision,
+                              svn_revnum_t low_water_mark,
+                              svn_boolean_t send_deltas,
+                              svn_ra__replay_revstart_ev2_callback_t revstart_func,
+                              svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+                              void *replay_baton,
+                              svn_ra__provide_base_cb_t provide_base_cb,
+                              svn_ra__provide_props_cb_t provide_props_cb,
+                              void *cb_baton,
+                              apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

@@ -29,6 +29,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_ra.h"
 #include "svn_client.h"
 #include "svn_types.h"
 
@@ -36,6 +37,115 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+/* Return true if KIND is a revision kind that is dependent on the working
+ * copy. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_previous ||                                  \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)                                   \
+
+/* Return true if KIND is a revision kind that the WC can supply without
+ * contacting the repository. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)
+
+/* A location in a repository. */
+typedef struct svn_client__pathrev_t
+{
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t rev;
+  const char *url;
+} svn_client__pathrev_t;
+
+/* Return a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of REPOS_ROOT_URL, REPOS_UUID, REV and URL. */
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool);
+
+/* Return a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of REPOS_ROOT_URL, REPOS_UUID, and REV,
+ * and using the repository-relative RELPATH to construct the URL. */
+svn_client__pathrev_t *
+svn_client__pathrev_create_with_relpath(const char *repos_root_url,
+                                        const char *repos_uuid,
+                                        svn_revnum_t rev,
+                                        const char *relpath,
+                                        apr_pool_t *result_pool);
+
+/* Set *PATHREV_P to a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of the repository root URL and UUID from
+ * RA_SESSION, and of REV and URL. */
+svn_error_t *
+svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
+                                        svn_ra_session_t *ra_session,
+                                        svn_revnum_t rev,
+                                        const char *url,
+                                        apr_pool_t *result_pool);
+
+/* Return a deep copy of PATHREV, allocated in RESULT_POOL. */
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *pathrev,
+                        apr_pool_t *result_pool);
+
+/* Return a deep copy of PATHREV, with a URI-encoded representation of
+ * RELPATH joined on to the URL.  Allocate the result in RESULT_POOL. */
+svn_client__pathrev_t *
+svn_client__pathrev_join_relpath(const svn_client__pathrev_t *pathrev,
+                                 const char *relpath,
+                                 apr_pool_t *result_pool);
+
+/* Return the repository-relative relpath of PATHREV. */
+const char *
+svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
+                            apr_pool_t *result_pool);
+
+/* Return the repository-relative fspath of PATHREV. */
+const char *
+svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
+                           apr_pool_t *result_pool);
+
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
+   REVISION, create an RA connection to that object as it exists in
+   that revision, following copy history if necessary.  If REVISION is
+   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
+   that it is the same node in both PEG_REVISION and REVISION.  If it
+   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
+
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
+
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
@@ -58,6 +168,79 @@ svn_client__create_status(svn_client_status_t **cst,
                           const svn_wc_status3_t *status,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+/* Set *ANCESTOR_URL and *ANCESTOR_REVISION to the URL and revision,
+ * respectively, of the youngest common ancestor of the two locations
+ * PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2.  Set *ANCESTOR_RELPATH to
+ * NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if they have no
+ * common ancestor.  This function assumes that PATH_OR_URL1@REV1 and
+ * PATH_OR_URL2@REV2 both refer to the same repository.
+ *
+ * Use the authentication baton cached in CTX to authenticate against
+ * the repository.
+ *
+ * See also svn_client__get_youngest_common_ancestor().
+ */
+svn_error_t *
+svn_client__youngest_common_ancestor(const char **ancestor_url,
+                                     svn_revnum_t *ancestor_rev,
+                                     const char *path_or_url1,
+                                     const svn_opt_revision_t *revision1,
+                                     const char *path_or_url2,
+                                     const svn_opt_revision_t *revision2,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/* Get the repository location of the base node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_base().
+ *
+ * Set *BASE_P to the location that this node was checked out at or last
+ * updated/switched to, regardless of any uncommitted changes (delete,
+ * replace and/or copy-here/move-here).
+ *
+ * If there is no base node at LOCAL_ABSPATH (such as when there is a
+ * locally added/copied/moved-here node that is not part of a replace),
+ * set *BASE_P to NULL.
+ */
+svn_error_t *
+svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
+                             const char *wc_abspath,
+                             svn_wc_context_t *wc_ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/* Get the original location of the WC node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_origin().
+ *
+ * Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
+ * is a local copy, give the copy-from location.  If the node is locally
+ * added or deleted, set *ORIGIN_P to NULL.
+ */
+svn_error_t *
+svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
+                               const char *wc_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
+ * youngest common ancestor of the branches, the base chosen for 3-way
+ * merge, the right-hand side of the source diff, and the target WC.
+ *
+ * Any of the output pointers may be NULL if not wanted.
+ */
+svn_error_t *
+svn_client__automatic_merge_get_locations(
+                                svn_client__pathrev_t **yca,
+                                svn_client__pathrev_t **base,
+                                svn_client__pathrev_t **right,
+                                svn_client__pathrev_t **target,
+                                const svn_client_automatic_merge_t *merge,
+                                apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }

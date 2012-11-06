@@ -32,7 +32,7 @@
  * the PRESENCE column in these tables has one of the following values
  * (see also the C type #svn_wc__db_status_t):
  *   "normal"
- *   "absent" -- server has declared it "absent" (ie. authz failure)
+ *   "server-excluded" -- server has declared it excluded (ie. authz failure)
  *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
@@ -107,7 +107,8 @@ CREATE TABLE PRISTINE (
   md5_checksum  TEXT NOT NULL
   );
 
-
+CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+  
 /* ------------------------------------------------------------------------- */
 
 /* The ACTUAL_NODE table describes text changes and property changes
@@ -169,7 +170,10 @@ CREATE TABLE ACTUAL_NODE (
   /* stsp: This is meant for text conflicts, right? What about property
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
-           conflict_data as well? */
+           conflict_data as well? 
+     rhuijben: Because that won't allow triggers to handle refcounts.
+               We would have to scan all conflict skels before cleaning up the
+               a single file from the pristine stor */
   older_checksum  TEXT REFERENCES PRISTINE (checksum),
   left_checksum  TEXT REFERENCES PRISTINE (checksum),
   right_checksum  TEXT REFERENCES PRISTINE (checksum),
@@ -363,7 +367,7 @@ CREATE TABLE NODES (
        current 'op_depth'.  This state is badly named, it should be
        something like 'deleted'.
 
-     absent: in the 'BASE' tree this is a node that is excluded by
+     server-excluded: in the 'BASE' tree this is a node that is excluded by
        authz.  The name of the node is known from the parent, but no
        other information is available.  Not valid in the 'WORKING'
        tree as there is no way to commit such a node.
@@ -383,17 +387,19 @@ CREATE TABLE NODES (
      perhaps add a column called "moved_from". */
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is implied by a different node with
-     a moved_to column pointing at this node. */
+     copied). This is set on all the nodes in the moved tree.  The source of
+     the move is implied by a different node with a moved_to column pointing
+     at the root node of the moved tree. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
-     specifies the local_relpath of where the BASE node was moved to.
+     specifies the local_relpath of where the node was moved to.
      This is set only on the root of a move, and is NULL for all children.
 
-     Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node in the BASE tree. A non-NULL moved_to column
-     is only valid in rows where op_depth == 0. */
+     The op-depth of the moved-to node is not recorded. A moved_to path
+     always points at a node within the highest op-depth layer at the
+     destination. This invariant must be maintained by operations which
+     change existing move information. */
   moved_to  TEXT,
 
 
@@ -460,24 +466,26 @@ CREATE TABLE NODES (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* The serialized file external information. */
-  /* ### hack.  hack.  hack.
-     ### This information is already stored in properties, but because the
-     ### current working copy implementation is such a pain, we can't
-     ### readily retrieve it, hence this temporary cache column.
-     ### When it is removed, be sure to remove the extra column from
-     ### the db-tests.
+  /* Is there a file external in this location. NULL if there
+     is no file external, otherwise '1'  */
+  /* ### Originally we had a wc-1.0 like skel in this place, so we
+     ### check for NULL.
+     ### In Subversion 1.7 we defined this column as TEXT, but Sqlite
+     ### only uses this information for deciding how to optimize
+     ### anyway. */
+  file_external  INTEGER,
 
-     ### Note: This is only here as a hack, and should *NOT* be added
-     ### to any wc_db APIs.  */
-  file_external  TEXT,
-
+  /* serialized skel of this node's inherited properties. NULL if this
+     is not the BASE of a WC root node. */
+  inherited_props  BLOB,
 
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+/* I_NODES_MOVED is introduced in format 30 */
+CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the highest (most "current") op_depth.  This view
@@ -495,7 +503,7 @@ CREATE VIEW NODES_CURRENT AS
                         AND n2.local_relpath = n.local_relpath);
 
 /* Many queries have to filter the nodes table to pick only that version
-   of each node with the base (least "current") op_depth.  This view
+   of each node with the BASE ("as checked out") op_depth.  This view
    does the heavy lifting for such queries. */
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
@@ -571,6 +579,8 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
+/* ------------------------------------------------------------------------- */
+
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
 -- STMT_UPGRADE_TO_20
@@ -626,6 +636,15 @@ PRAGMA user_version = 20;
 -- STMT_UPGRADE_TO_21
 PRAGMA user_version = 21;
 
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_SELECT_OLD_TREE_CONFLICT
+SELECT wc_id, local_relpath, tree_conflict_data
+FROM actual_node
+WHERE tree_conflict_data IS NOT NULL
+
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_ERASE_OLD_CONFLICTS
+UPDATE actual_node SET tree_conflict_data = NULL
 
 /* ------------------------------------------------------------------------- */
 
@@ -696,6 +715,15 @@ PRAGMA user_version = 26;
 -- STMT_UPGRADE_TO_27
 PRAGMA user_version = 27;
 
+/* For format 27 bump code */
+-- STMT_UPGRADE_27_HAS_ACTUAL_NODES_CONFLICTS
+SELECT 1 FROM actual_node
+WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
+           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+           AND (tree_conflict_data IS NULL))
+LIMIT 1
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 28 involves no schema changes, it only converts MD5 pristine 
@@ -751,6 +779,73 @@ PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 30 creates a new NODES index for move information, and a new
+   PRISTINE index for the md5_checksum column. It also activates use of
+   skel-based conflict storage -- see notes/wc-ng/conflict-storage-2.0.
+   It also renames the "absent" presence to "server-excluded". */
+-- STMT_UPGRADE_TO_30
+CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
+ON NODES (wc_id, moved_to, op_depth);
+
+CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+
+UPDATE nodes SET presence = "server-excluded" WHERE presence = "absent";
+
+/* Just to be sure clear out file external skels from pre 1.7.0 development
+   working copies that were never updated by 1.7.0+ style clients */
+UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
+
+-- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
+SELECT wc_id, local_relpath,
+  conflict_old, conflict_working, conflict_new, prop_reject, tree_conflict_data
+FROM actual_node
+WHERE conflict_old IS NOT NULL
+   OR conflict_working IS NOT NULL
+   OR conflict_new IS NOT NULL
+   OR prop_reject IS NOT NULL
+   OR tree_conflict_data IS NOT NULL
+ORDER by wc_id, local_relpath
+
+-- STMT_UPGRADE_30_SET_CONFLICT
+UPDATE actual_node SET conflict_data = ?3, conflict_old = NULL,
+  conflict_working = NULL, conflict_new = NULL, prop_reject = NULL,
+  tree_conflict_data = NULL
+WHERE wc_id = ?1 and local_relpath = ?2
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 31 adds the inherited_props column to the NODES table. C code then
+   initializes the update/switch roots to make sure future updates fetch the
+   inherited properties */
+-- STMT_UPGRADE_TO_31
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+PRAGMA user_version = 31;
+
+-- STMT_UPGRADE_31_SELECT_WCROOT_NODES
+/* Select all base nodes which are the root of a WC, including
+   switched subtrees, but excluding those which map to the root
+   of the repos.
+
+   ### IPROPS: Is this query horribly inefficient?  Quite likely,
+   ### but it only runs during an upgrade, so do we care? */
+SELECT l.wc_id, l.local_relpath FROM nodes as l
+LEFT OUTER JOIN nodes as r
+ON l.wc_id = r.wc_id
+   AND l.repos_id = r.repos_id
+   AND r.local_relpath = l.parent_relpath
+WHERE (l.local_relpath = '' AND l.repos_path != '')
+   OR (l.op_depth = 0
+       AND l.local_relpath != ''
+       AND l.repos_path != ltrim(r.repos_path
+                                 || '/'
+                                 || ltrim(substr(l.local_relpath,
+                                                 length(l.parent_relpath) + 1),
+                                          '/'),
+                                 '/'))
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
@@ -763,9 +858,6 @@ PRAGMA user_version = 29;
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* TODO: Rename the "absent" presence value to "server-excluded" before
-   the 1.7 release. wc_db.c and this file have references to "absent" which
-   still need to be changed to "server-excluded". */
 /* TODO: Un-confuse *_revision column names in the EXTERNALS table to
    "-r<operative> foo@<peg>", as suggested by the patch attached to
    http://svn.haxx.se/dev/archive-2011-09/0478.shtml */

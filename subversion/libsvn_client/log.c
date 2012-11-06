@@ -90,37 +90,37 @@ copyfrom_info_receiver(svn_location_segment_t *segment,
 }
 
 svn_error_t *
-svn_client__get_copy_source(const char *path_or_url,
+svn_client__get_copy_source(const char **original_repos_relpath,
+                            svn_revnum_t *original_revision,
+                            const char *path_or_url,
                             const svn_opt_revision_t *revision,
-                            const char **copyfrom_path,
-                            svn_revnum_t *copyfrom_rev,
                             svn_client_ctx_t *ctx,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { 0 };
-  apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
   svn_ra_session_t *ra_session;
-  svn_revnum_t at_rev;
-  const char *at_url;
+  svn_client__pathrev_t *at_loc;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
   copyfrom_info.rev = SVN_INVALID_REVNUM;
-  copyfrom_info.pool = pool;
+  copyfrom_info.pool = result_pool;
 
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                           path_or_url, NULL,
-                                           revision, revision,
-                                           ctx, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
+                                            path_or_url, NULL,
+                                            revision, revision,
+                                            ctx, sesspool));
 
   /* Find the copy source.  Walk the location segments to find the revision
      at which this node was created (copied or added). */
 
-  err = svn_ra_get_location_segments(ra_session, "", at_rev, at_rev,
+  err = svn_ra_get_location_segments(ra_session, "", at_loc->rev, at_loc->rev,
                                      SVN_INVALID_REVNUM,
                                      copyfrom_info_receiver, &copyfrom_info,
-                                     pool);
+                                     scratch_pool);
 
   svn_pool_destroy(sesspool);
 
@@ -134,14 +134,14 @@ svn_client__get_copy_source(const char *path_or_url,
             svn_error_clear(err);
             err = SVN_NO_ERROR;
 
-            *copyfrom_path = NULL;
-            *copyfrom_rev = SVN_INVALID_REVNUM;
+            *original_repos_relpath = NULL;
+            *original_revision = SVN_INVALID_REVNUM;
         }
       return svn_error_trace(err);
     }
 
-  *copyfrom_path = copyfrom_info.path;
-  *copyfrom_rev = copyfrom_info.rev;
+  *original_repos_relpath = copyfrom_info.path;
+  *original_revision = copyfrom_info.rev;
   return SVN_NO_ERROR;
 }
 
@@ -281,9 +281,7 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_ra_session_t *ra_session;
   const char *url_or_path;
   svn_boolean_t has_log_revprops;
-  const char *actual_url;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
   pre_15_receiver_baton_t rb = {0};
@@ -300,8 +298,7 @@ svn_client_log5(const apr_array_header_t *targets,
 
   /* Make a copy of PEG_REVISION, we may need to change it to a
      default value. */
-  peg_rev.kind = peg_revision->kind;
-  peg_rev.value = peg_revision->value;
+  peg_rev = *peg_revision;
 
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
@@ -427,7 +424,7 @@ svn_client_log5(const apr_array_header_t *targets,
                                 _("When specifying working copy paths, only "
                                   "one target may be given"));
 
-      /* An unspecified PEG_REVISION for a working copy path defautls
+      /* An unspecified PEG_REVISION for a working copy path defaults
          to svn_opt_revision_working. */
       if (peg_rev.kind == svn_opt_revision_unspecified)
           peg_rev.kind = svn_opt_revision_working;
@@ -476,6 +473,8 @@ svn_client_log5(const apr_array_header_t *targets,
 
 
   {
+    svn_client__pathrev_t *actual_loc;
+
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
@@ -485,8 +484,8 @@ svn_client_log5(const apr_array_header_t *targets,
     else
       ra_target = url_or_path;
 
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target, NULL,
+    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &actual_loc,
+                                             ra_target, NULL,
                                              &peg_rev, &session_opt_rev,
                                              ctx, pool));
 
@@ -499,7 +498,7 @@ svn_client_log5(const apr_array_header_t *targets,
 
       /* Create ra session on first use */
       rb.ra_session_pool = pool;
-      rb.ra_session_url = actual_url;
+      rb.ra_session_url = actual_loc->url;
     }
   }
 

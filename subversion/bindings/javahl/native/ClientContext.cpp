@@ -71,7 +71,8 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
 
     env->DeleteLocalRef(jctx);
 
-    SVN_JNI_ERR(svn_client_create_context(&m_context, pool.getPool()),
+    SVN_JNI_ERR(svn_client_create_context2(&m_context, NULL,
+                                           pool.getPool()),
                 );
 
     /* Clear the wc_ctx as we don't want to maintain this unconditionally
@@ -111,7 +112,7 @@ ClientContext::~ClientContext()
 /* Helper function to make sure that we don't keep dangling pointers in ctx.
    Note that this function might be called multiple times if getContext()
    is called on the same pool.
-   
+
    The use of this function assumes a proper subpool behavior by its user,
    (read: SVNClient) usually per request.
  */
@@ -125,7 +126,7 @@ struct clearctx_baton_t
 
 static apr_status_t clear_ctx_ptrs(void *ptr)
 {
-    clearctx_baton_t *bt = (clearctx_baton_t*)ptr;
+    clearctx_baton_t *bt = reinterpret_cast<clearctx_baton_t*>(ptr);
 
     /* Reset all values to those before overwriting by getContext. */
     *bt->ctx = *bt->backup;
@@ -148,9 +149,11 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
        Note that this allows creating a stack of context changes if
        the function is invoked multiple times with different pools.
      */
-    clearctx_baton_t *bt = (clearctx_baton_t *)apr_pcalloc(pool, sizeof(*bt));
+    clearctx_baton_t *bt =
+      reinterpret_cast<clearctx_baton_t *>(apr_pcalloc(pool, sizeof(*bt)));
     bt->ctx = ctx;
-    bt->backup = (svn_client_ctx_t*)apr_pmemdup(pool, ctx, sizeof(*ctx));
+    bt->backup =
+      reinterpret_cast<svn_client_ctx_t*>(apr_pmemdup(pool, ctx, sizeof(*ctx)));
     apr_pool_cleanup_register(in_pool.getPool(), bt, clear_ctx_ptrs,
                               clear_ctx_ptrs);
 
@@ -166,9 +169,10 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
 
         bt->backup->config = ctx->config;
       }
-    svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
-                                                         SVN_CONFIG_CATEGORY_CONFIG,
-                                                         APR_HASH_KEY_STRING);
+    svn_config_t *config =
+        reinterpret_cast<svn_config_t *>(apr_hash_get(ctx->config,
+                                                      SVN_CONFIG_CATEGORY_CONFIG,
+                                                      APR_HASH_KEY_STRING));
 
 
     /* The whole list of registered providers */
@@ -323,7 +327,7 @@ ClientContext::cancelOperation()
 svn_error_t *
 ClientContext::checkCancel(void *cancelBaton)
 {
-    ClientContext *that = (ClientContext *)cancelBaton;
+    ClientContext *that = static_cast<ClientContext *>(cancelBaton);
     if (that->m_cancelOperation)
         return svn_error_create(SVN_ERR_CANCELLED, NULL,
                                 _("Operation cancelled"));

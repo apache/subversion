@@ -41,8 +41,20 @@ extern "C" {
 /* Set inheritability of all ranges in RANGELIST to INHERITABLE.
    If RANGELIST is NULL do nothing. */
 void
-svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+svn_rangelist__set_inheritance(svn_rangelist_t *rangelist,
                                svn_boolean_t inheritable);
+
+/* Parse a rangelist from the string STR. Set *RANGELIST to the result,
+ * allocated in RESULT_POOL. Return an error if the rangelist is not
+ * well-formed (for example, if it contains invalid characters or if
+ * R1 >= R2 in a "R1-R2" range element).
+ *
+ * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
+ * or combine adjacent and overlapping ranges. */
+svn_error_t *
+svn_rangelist__parse(svn_rangelist_t **rangelist,
+                     const char *str,
+                     apr_pool_t *result_pool);
 
 /* Set inheritability of all rangelists in MERGEINFO to INHERITABLE.
    If MERGEINFO is NULL do nothing.  If a rangelist in MERGEINFO is
@@ -87,9 +99,10 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
 
 /* Make a shallow (ie, mergeinfos are not duped, or altered at all;
    keys share storage) copy of IN_CATALOG in *OUT_CATALOG, removing
-   PREFIX_PATH (which is an absolute path) from the beginning of each
-   key in the catalog (each of which is also an absolute path).  It is
-   illegal for any key to not start with PREFIX_PATH.  The new hash
+   PREFIX_PATH from the beginning of each key in the catalog.
+   PREFIX_PATH and the keys of IN_CATALOG are absolute 'fspaths',
+   starting with '/'.  It is illegal for any key to not start with
+   PREFIX_PATH.  The keys of *OUT_CATALOG are relpaths.  The new hash
    and temporary values are allocated in POOL.  (This is useful for
    making the return value from svn_ra_get_mergeinfo relative to the
    session root, say.) */
@@ -112,11 +125,11 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *OUT_MERGEINFO to a deep copy of MERGEINFO with the relpath
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
 
-   Allocate *OUT_MERGEINFO in RESULT_POOL.  Use SCRATCH_POOL for any
-   temporary allocations. */
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
 svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
@@ -143,22 +156,9 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            const char *val_prefix,
                                            apr_pool_t *pool);
 
-/* Create a string representation of MERGEINFO in *OUTPUT, allocated in POOL.
-   Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
-   in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
-   causes *OUTPUT to be set to an appropriate newline terminated string.  If
-   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT.
-
-   Any relative merge source paths in MERGEINFO are converted to absolute
-   paths in *OUTPUT.*/
-svn_error_t *
-svn_mergeinfo__to_formatted_string(svn_string_t **output,
-                                   svn_mergeinfo_t mergeinfo,
-                                   const char *prefix,
-                                   apr_pool_t *pool);
-
 /* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
-   found in the rangelists within MERGEINFO.  If MERGEINFO is NULL or empty
+   found in the rangelists within MERGEINFO.  Note that *OLDEST_REV is
+   exclusive and *YOUNGEST_REV is inclusive.  If MERGEINFO is NULL or empty
    set *YOUNGEST_REV and *OLDEST_REV to SVN_INVALID_REVNUM. */
 svn_error_t *
 svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
@@ -167,9 +167,9 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in
-   RESULT_POOL, less any rangelists that fall outside of the range
-   OLDEST_REV:YOUNGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
-   any rangelists within the range OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
+   RESULT_POOL, less any revision ranges that fall outside of the range
+   OLDEST_REV:YOUNGEST_REV (exclusive:inclusive) if INCLUDE_RANGE is true,
+   or less any ranges within OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
    is false.  If all the rangelists mapped to a given path are filtered
    then filter that path as well.  If all paths are filtered or MERGEINFO is
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash.
@@ -208,19 +208,10 @@ svn_boolean_t
 svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
                                  apr_pool_t *scratch_pool);
 
-/* If MERGEINFO_STR is a string representation of non-inheritable mergeinfo
-   set *IS_NONINHERITABLE to TRUE, set it to FALSE otherwise.  MERGEINFO_STR
-   may be NULL or empty.  If MERGEINFO_STR cannot be parsed return
-   SVN_ERR_MERGEINFO_PARSE_ERROR. */
-svn_error_t *
-svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
-                                         const char *mergeinfo_str,
-                                         apr_pool_t *scratch_pool);
-
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in
    RESULT_POOL. */
-apr_array_header_t *
+svn_rangelist_t *
 svn_rangelist__initialize(svn_revnum_t start,
                           svn_revnum_t end,
                           svn_boolean_t inheritable,
@@ -251,6 +242,17 @@ svn_error_t *
 svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                        const apr_array_header_t *segments,
                                        apr_pool_t *pool);
+
+/* Merge every rangelist in MERGEINFO into the given MERGED_RANGELIST,
+ * ignoring the source paths of MERGEINFO. MERGED_RANGELIST may
+ * initially be empty. New elements added to RANGELIST are allocated in
+ * RESULT_POOL. See svn_rangelist_merge2() for details of inheritability
+ * etc. */
+svn_error_t *
+svn_rangelist__merge_many(svn_rangelist_t *merged_rangelist,
+                          svn_mergeinfo_t mergeinfo,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
