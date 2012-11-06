@@ -294,6 +294,150 @@ test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test normalization-independent UTF-8 string comparison */
+static svn_error_t *
+normalized_compare(const char *stra, int expected, const char *strb,
+                   const char *stratag, const char *strbtag,
+                   apr_int32_t *bufa, apr_size_t lena,
+                   apr_int32_t *bufb, apr_size_t lenb)
+{
+  apr_size_t rlena, rlenb;
+  int result;
+
+  SVN_ERR(svn_utf__decompose_normalized(stra, 0, bufa, lena, &rlena));
+  SVN_ERR(svn_utf__decompose_normalized(strb, 0, bufb, lenb, &rlenb));
+  result = svn_utf__ucs4cmp(bufa, rlena, bufb, rlenb);
+
+  /* UCS-4 debugging dump of the decomposed strings
+  apr_size_t i;
+  printf("(%c)%7s %c %s\n", expected,
+         stratag, (!result ? '=' : (result < 0 ? '>' : '<')), strbtag);
+  for (i = 0; i < rlena || i < rlenb; ++i)
+    {
+      if (i < rlena && i < rlenb)
+        printf("    U+%04X   U+%04X\n", bufa[i], bufb[i]);
+      else if (i < rlena)
+        printf("    U+%04X\n", bufa[i]);
+      else
+        printf("             U+%04X\n", bufb[i]);
+    }
+  */
+
+  if (('=' == expected && 0 != result)
+      || ('>' < expected && 0 >= result)
+      || ('<' > expected && 0 <= result))
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "Expected %s %c %s but %s %c %s",
+         stratag, expected, strbtag,
+         stratag, (!result ? '=' : (result < 0 ? '>' : '<')), strbtag);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_utf_decompose_normalized_ucs4cmp(apr_pool_t *pool)
+{
+  /* Normalized: NFC */
+  static const char nfc[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d"              /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Normalized: NFD */
+  static const char nfd[] =
+    "S\xcc\xa3\xcc\x87"         /* S with dot above and below */
+    "u\xcc\x8a"                 /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "v\xcc\x83"                 /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "r\xcc\x8f"                 /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "i\xcc\x88\xcc\x81"         /* i with diaeresis and acute */
+    "o\xcc\x9b\xcc\x80"         /* o with grave and hook */
+    "n\xcc\xad";                /* n with circumflex below */
+
+  /* Mixed, denormalized */
+  static const char mixup[] =
+    "S\xcc\x87\xcc\xa3"         /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  static const char longer[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d"              /* o with grave and hook */
+    "\xe1\xb9\x8b"              /* n with circumflex below */
+    "X";
+
+  static const char shorter[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d";             /* o with grave and hook */
+
+  static const char lowercase[] =
+    "s\xcc\x87\xcc\xa3"         /* s with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  const apr_size_t buflen = 200;
+  apr_int32_t *bufa = apr_palloc(pool, buflen * sizeof(apr_int32_t));
+  apr_int32_t *bufb = apr_palloc(pool, buflen * sizeof(apr_int32_t));
+
+
+  SVN_ERR(normalized_compare(nfc, '=', nfd, "nfc", "nfd",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(nfc, '=', mixup, "nfc", "mixup",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(mixup, '=', nfd, "mixup", "nfd",
+                             bufa, buflen, bufb, buflen));
+
+  SVN_ERR(normalized_compare(nfc, '<', longer, "nfc", "longer",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(nfd, '>', shorter, "nfd", "shorter",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(mixup, '<', lowercase, "mixup", "lowercase",
+                             bufa, buflen, bufb, buflen));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -308,5 +452,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf_cstring_to_utf8_ex2"),
     SVN_TEST_PASS2(test_utf_cstring_from_utf8_ex2,
                    "test svn_utf_cstring_from_utf8_ex2"),
+    SVN_TEST_PASS2(test_utf_decompose_normalized_ucs4cmp,
+                   "test normalized unicode comparison"),
     SVN_TEST_NULL
   };
