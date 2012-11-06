@@ -21,7 +21,7 @@
  * @endcopyright
  *
  * @file svn_utf_private.h
- * @brief UTF validation routines
+ * @brief UTF validation and normalization routines
  */
 
 #ifndef SVN_UTF_PRIVATE_H
@@ -79,6 +79,28 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+
+/* Fill the given BUFFER with an NFD representation of the UTF-8
+ * string STR, with one buffer slot per Unicode codepoint. If LEN is
+ * 0, assume STR is NUL-terminated; otherwise look only at the first
+ * LEN bytes in STR. If the returned RESULT_LENGTH is greater than the
+ * supplied BUFFER_LENGTH, the the contents of the buffer are
+ * indeterminate; otherwise the buffer up to RESULT_LENGTH contains
+ * the normalized string representation.
+ *
+ * A returned error may indicate that STR contains invalid UTF-8 or
+ * invalid Unicode codepoints. Any error message comes from utf8proc.
+ */
+svn_error_t *
+svn_utf__decompose_normalized(const char *str, apr_size_t len,
+                              apr_int32_t *buffer, apr_size_t buffer_length,
+                              apr_size_t *result_length);
+
+
+
+/* Return the version of the wrapped utf8proc library. */
+const char *
+svn_utf__utf8proc_version(void);
 
 #ifdef __cplusplus
 }
