@@ -100,7 +100,7 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   expected_dumpfile_name is produced if provided. Additionally, the
   subdir argument appends itself to the URL"""
 
-  # Create an empty sanbox repository
+  # Create an empty sandbox repository
   build_repos(sbox)
 
   # This directory contains all the dump files
@@ -347,14 +347,12 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
-@XFail()
 @Skip(svntest.main.is_ra_type_dav_serf)
 def only_trunk_dump(sbox):
   "dump: subdirectory"
   run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
-                expected_dumpfile_name="trunk-only.expected.dump")
+                expected_dumpfile_name="trunk-only.expected.dump",)
 
-@XFail()
 @Skip(svntest.main.is_ra_type_dav_serf)
 def only_trunk_A_with_changes_dump(sbox):
   "dump: subdirectory with changes on root"
