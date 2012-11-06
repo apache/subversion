@@ -5735,6 +5735,7 @@ def update_moved_dir_file_move(sbox):
                                         None, None, 1)
 
 @XFail()
+@Issue(3144,3630)
 def update_move_text_mod(sbox):
   "text mod to moved files"
 
@@ -5784,6 +5785,7 @@ def update_move_text_mod(sbox):
                                         None, None, 1)
 
 @XFail()
+@Issue(3144,3630)
 def update_nested_move_text_mod(sbox):
   "text mod to moved file in moved dir"
 
