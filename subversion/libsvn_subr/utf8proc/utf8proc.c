@@ -101,21 +101,30 @@ const char *utf8proc_version(void) {
   return "1.1.5";
 }
 
+/*
+ * This macro tells translators that string X should be translated,
+ * but does not look up the translation at run time.  This is standard
+ * GNU gettext notation for annotating compile-time constant strings.
+ */
+#ifndef N_
+#define N_(x) x
+#endif
+
 UTF8PROC_API
 const char *utf8proc_errmsg(ssize_t errcode) {
   switch (errcode) {
     case UTF8PROC_ERROR_NOMEM:
-    return "Memory for processing UTF-8 data could not be allocated.";
+    return N_("Memory for processing UTF-8 data could not be allocated.");
     case UTF8PROC_ERROR_OVERFLOW:
-    return "UTF-8 string is too long to be processed.";
+    return N_("UTF-8 string is too long to be processed.");
     case UTF8PROC_ERROR_INVALIDUTF8:
-    return "Invalid UTF-8 string";
+    return N_("Invalid UTF-8 string");
     case UTF8PROC_ERROR_NOTASSIGNED:
-    return "Unassigned Unicode code point found in UTF-8 string.";
+    return N_("Unassigned Unicode code point found in UTF-8 string.");
     case UTF8PROC_ERROR_INVALIDOPTS:
-    return "Invalid options for UTF-8 processing chosen.";
+    return N_("Invalid options for UTF-8 processing chosen.");
     default:
-    return "An unknown error occured while processing UTF-8 data.";
+    return N_("An unknown error occured while processing UTF-8 data.");
   }
 }
 
