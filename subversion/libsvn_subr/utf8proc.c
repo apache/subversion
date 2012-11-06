@@ -61,3 +61,19 @@ svn_utf__decompose_normalized(const char *str, apr_size_t len,
   *result_length = (apr_size_t)result;
   return SVN_NO_ERROR;
 }
+
+
+int svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
+                     const apr_int32_t *bufb, apr_size_t lenb)
+{
+  const apr_size_t len = (lena < lenb ? lena : lenb);
+  apr_size_t i;
+
+  for (i = 0; i < len; ++i)
+    {
+      const int diff = bufb[i] - bufa[i];
+      if (diff)
+        return diff;
+    }
+  return (lena == lenb ? 0 : (lena < lenb ? 1 : -1));
+}

@@ -80,13 +80,12 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                apr_pool_t *));
 
 
-/* Fill the given BUFFER with an NFD representation of the UTF-8
- * string STR, with one buffer slot per Unicode codepoint. If LEN is
- * 0, assume STR is NUL-terminated; otherwise look only at the first
- * LEN bytes in STR. If the returned RESULT_LENGTH is greater than the
- * supplied BUFFER_LENGTH, the the contents of the buffer are
- * indeterminate; otherwise the buffer up to RESULT_LENGTH contains
- * the normalized string representation.
+/* Fill the given BUFFER with an NFD UCS-4 representation of the UTF-8
+ * string STR. If LEN is 0, assume STR is NUL-terminated; otherwise
+ * look only at the first LEN bytes in STR. If the returned
+ * RESULT_LENGTH is greater than the supplied BUFFER_LENGTH, the the
+ * contents of the buffer are indeterminate; otherwise the buffer up
+ * to RESULT_LENGTH contains the normalized string representation.
  *
  * A returned error may indicate that STR contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
@@ -96,6 +95,14 @@ svn_utf__decompose_normalized(const char *str, apr_size_t len,
                               apr_int32_t *buffer, apr_size_t buffer_length,
                               apr_size_t *result_length);
 
+
+/* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
+ * length LENB. Return 0 if they're equal, a negative value if BUFA is
+ * greater than BUFB, otherwise a positive value.
+ */
+int
+svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
+                 const apr_int32_t *bufb, apr_size_t lenb);
 
 
 /* Return the version of the wrapped utf8proc library. */
