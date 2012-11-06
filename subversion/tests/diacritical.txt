@@ -25,17 +25,17 @@ Combining diacriticals:
 
 char    name                            UCS-4          UTF-8
 
-̇       dot                             \u0307         \xcc\x87
-̣       dot below                       \u0323         \xcc\xa3
-̊       ring                            \u030A         \xcc\x8a
-̱       macron below                    \u0331         \xcc\xb1
-̃       tilde                           \u0303         \xcc\x83
-̆       breve                           \u0306         \xcc\x86
-̧       cedilla                         \u0327         \xcc\xa7
-̏       double grave                    \u030F         \xcc\x8f
-̌       caron                           \u030C         \xcc\x8c
-̈       diaeresis                       \u0308         \xcc\x88
-́       acute                           \u0301         \xcc\x81
-̀       grave                           \u0300         \xcc\x80
-̛       horn                            \u031B         \xcc\x9b
-̭       circumflex below                \u032D         \xcc\xad
+ ̇       dot                             \u0307         \xcc\x87
+ ̣       dot below                       \u0323         \xcc\xa3
+ ̊       ring                            \u030A         \xcc\x8a
+ ̱       macron below                    \u0331         \xcc\xb1
+ ̃       tilde                           \u0303         \xcc\x83
+ ̆       breve                           \u0306         \xcc\x86
+ ̧       cedilla                         \u0327         \xcc\xa7
+ ̏       double grave                    \u030F         \xcc\x8f
+ ̌       caron                           \u030C         \xcc\x8c
+ ̈       diaeresis                       \u0308         \xcc\x88
+ ́       acute                           \u0301         \xcc\x81
+ ̀       grave                           \u0300         \xcc\x80
+ ̛       horn                            \u031B         \xcc\x9b
+ ̭       circumflex below                \u032D         \xcc\xad
