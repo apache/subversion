@@ -2668,27 +2668,24 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
 }
 
 
-
-/* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
-static svn_error_t *
-depth_get_info(svn_wc__db_status_t *status,
-                svn_kind_t *kind,
-                svn_revnum_t *revision,
-                const char **repos_relpath,
-                apr_int64_t *repos_id,
-                svn_revnum_t *changed_rev,
-                apr_time_t *changed_date,
-                const char **changed_author,
-                svn_depth_t *depth,
-                const svn_checksum_t **checksum,
-                const char **target,
-                svn_boolean_t *had_props,
-                svn_wc__db_wcroot_t *wcroot,
-                const char *local_relpath,
-                int op_depth,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
+                          svn_kind_t *kind,
+                          svn_revnum_t *revision,
+                          const char **repos_relpath,
+                          apr_int64_t *repos_id,
+                          svn_revnum_t *changed_rev,
+                          apr_time_t *changed_date,
+                          const char **changed_author,
+                          svn_depth_t *depth,
+                          const svn_checksum_t **checksum,
+                          const char **target,
+                          svn_boolean_t *had_props,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          int op_depth,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -4176,11 +4173,11 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
 
   {
     svn_error_t *err;
-    err = depth_get_info(&status, &kind, &node_revision, &node_repos_relpath,
-                         &node_repos_id, NULL, NULL, NULL, NULL, NULL,
-                         NULL, NULL,
-                         src_wcroot, src_relpath, src_op_depth,
-                         scratch_pool, scratch_pool);
+    err = svn_wc__db_depth_get_info(&status, &kind, &node_revision,
+                                    &node_repos_relpath, &node_repos_id,
+                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                    src_wcroot, src_relpath, src_op_depth,
+                                    scratch_pool, scratch_pool);
 
     if (err)
       {
@@ -4393,10 +4390,11 @@ op_copy_shadowed_layer_txn(void * baton, svn_sqlite__db_t *sdb,
   del_op_depth = relpath_depth(ocb->dst_relpath);
 
   /* Get some information from the parent */
-  SVN_ERR(depth_get_info(NULL, NULL, &revision, &repos_relpath, &repos_id,
-                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                         ocb->src_wcroot, src_parent_relpath, src_op_depth,
-                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, &revision, &repos_relpath,
+                                    &repos_id, NULL, NULL, NULL, NULL, NULL,
+                                    NULL, NULL, ocb->src_wcroot,
+                                    src_parent_relpath, src_op_depth,
+                                    scratch_pool, scratch_pool));
 
   if (repos_relpath == NULL)
     {
