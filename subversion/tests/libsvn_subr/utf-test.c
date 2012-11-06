@@ -297,6 +297,7 @@ test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
 /* Test normalization-independent UTF-8 string comparison */
 static svn_error_t *
 normalized_compare(const char *stra, int expected, const char *strb,
+                   svn_boolean_t implicit_size,
                    const char *stratag, const char *strbtag,
                    apr_int32_t *bufa, apr_size_t lena,
                    apr_int32_t *bufb, apr_size_t lenb)
@@ -304,8 +305,12 @@ normalized_compare(const char *stra, int expected, const char *strb,
   apr_size_t rlena, rlenb;
   int result;
 
-  SVN_ERR(svn_utf__decompose_normalized(stra, 0, bufa, lena, &rlena));
-  SVN_ERR(svn_utf__decompose_normalized(strb, 0, bufb, lenb, &rlenb));
+  SVN_ERR(svn_utf__decompose_normalized(stra,
+                                        (implicit_size ? 0 : strlen(stra)),
+                                        bufa, lena, &rlena));
+  SVN_ERR(svn_utf__decompose_normalized(strb,
+                                        (implicit_size ? 0 : strlen(strb)),
+                                        bufb, lenb, &rlenb));
   result = svn_utf__ucs4cmp(bufa, rlena, bufb, rlenb);
 
   /* UCS-4 debugging dump of the decomposed strings
@@ -403,7 +408,7 @@ test_utf_decompose_normalized_ucs4cmp(apr_pool_t *pool)
     "\xe1\xb8\xaf"              /* i with diaeresis and acute */
     "\xe1\xbb\x9d";             /* o with grave and hook */
 
-  static const char lowercase[] =
+  static const char lowcase[] =
     "s\xcc\x87\xcc\xa3"         /* s with dot above and below */
     "\xc5\xaf"                  /* u with ring */
     "b\xcc\xb1"                 /* b with macron below */
@@ -420,18 +425,18 @@ test_utf_decompose_normalized_ucs4cmp(apr_pool_t *pool)
   apr_int32_t *bufb = apr_palloc(pool, buflen * sizeof(apr_int32_t));
 
 
-  SVN_ERR(normalized_compare(nfc, '=', nfd, "nfc", "nfd",
+  SVN_ERR(normalized_compare(nfc, '=', nfd, TRUE, "nfc", "nfd",
                              bufa, buflen, bufb, buflen));
-  SVN_ERR(normalized_compare(nfc, '=', mixup, "nfc", "mixup",
+  SVN_ERR(normalized_compare(nfc, '=', mixup, TRUE, "nfc", "mixup",
                              bufa, buflen, bufb, buflen));
-  SVN_ERR(normalized_compare(mixup, '=', nfd, "mixup", "nfd",
+  SVN_ERR(normalized_compare(mixup, '=', nfd, FALSE, "mixup", "nfd",
                              bufa, buflen, bufb, buflen));
 
-  SVN_ERR(normalized_compare(nfc, '<', longer, "nfc", "longer",
+  SVN_ERR(normalized_compare(nfc, '<', longer, FALSE, "nfc", "longer",
                              bufa, buflen, bufb, buflen));
-  SVN_ERR(normalized_compare(nfd, '>', shorter, "nfd", "shorter",
+  SVN_ERR(normalized_compare(nfd, '>', shorter, TRUE, "nfd", "shorter",
                              bufa, buflen, bufb, buflen));
-  SVN_ERR(normalized_compare(mixup, '<', lowercase, "mixup", "lowercase",
+  SVN_ERR(normalized_compare(mixup, '<', lowcase, FALSE, "mixup", "lowcase",
                              bufa, buflen, bufb, buflen));
 
   return SVN_NO_ERROR;
