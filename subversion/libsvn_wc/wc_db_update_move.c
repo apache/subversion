@@ -55,8 +55,8 @@
  */
 
 struct tc_editor_baton {
-  const char *src_relpath;
-  const char *dst_relpath;
+  const char *move_root_src_relpath;
+  const char *move_root_dst_relpath;
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
   svn_skel_t **work_items;
@@ -142,7 +142,7 @@ tc_editor_alter_file(void *baton,
                                     &original_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &moved_here_checksum, NULL,
                                     NULL, b->wcroot, dst_relpath,
-                                    relpath_depth(b->dst_relpath),
+                                    relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(original_revision == expected_moved_here_revision);
   SVN_ERR_ASSERT(kind == svn_kind_file);
@@ -301,7 +301,7 @@ tc_editor_complete(void *baton,
   svn_wc_notify_t *notify;
 
   notify = svn_wc_create_notify(svn_dirent_join(b->wcroot->abspath,
-                                                b->dst_relpath,
+                                                b->move_root_dst_relpath,
                                                 scratch_pool),
                                 svn_wc_notify_update_completed,
                                 scratch_pool);
@@ -634,13 +634,11 @@ update_moved_away_conflict_victim(void *baton,
 
   /* Construct editor baton. */
   tc_editor_baton = apr_pcalloc(scratch_pool, sizeof(*tc_editor_baton));
-  tc_editor_baton->src_relpath = b->victim_relpath;
-  SVN_ERR(svn_wc__db_scan_deletion_internal(NULL,
-                                            &tc_editor_baton->dst_relpath,
-                                            NULL, NULL, wcroot,
-                                            tc_editor_baton->src_relpath,
-                                            scratch_pool, scratch_pool));
-  if (tc_editor_baton->dst_relpath == NULL)
+  tc_editor_baton->move_root_src_relpath = b->victim_relpath;
+  SVN_ERR(svn_wc__db_scan_deletion_internal(
+            NULL, &tc_editor_baton->move_root_dst_relpath, NULL, NULL,
+            wcroot, b->victim_relpath, scratch_pool, scratch_pool));
+  if (tc_editor_baton->move_root_dst_relpath == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("The node '%s' has not been moved away"),
                              svn_dirent_local_style(
@@ -665,8 +663,8 @@ update_moved_away_conflict_victim(void *baton,
 
   /* ... and drive it. */
   SVN_ERR(drive_tree_conflict_editor(tc_editor,
-                                     tc_editor_baton->src_relpath,
-                                     tc_editor_baton->dst_relpath,
+                                     tc_editor_baton->move_root_src_relpath,
+                                     tc_editor_baton->move_root_dst_relpath,
                                      b->operation,
                                      b->local_change, b->incoming_change,
                                      tc_editor_baton->old_version,
