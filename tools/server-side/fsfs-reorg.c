@@ -47,162 +47,371 @@
 
 #define ERROR_TAG "diff: "
 
+/* forward declarations */
 typedef struct noderev_t noderev_t;
 typedef struct revision_info_t revision_info_t;
 
+/* A FSFS rev file is sequence of fragments and unused space (the latter
+ * only being inserted by this tool and not during ordinary SVN operation).
+ * 
+ * This type defines the type of any fragment.
+ *
+ * Please note that the classification as "property", "dir" or "file"
+ * fragments is only to be used while determining the future placement
+ * of a representation.  If the rep is shared, the same rep may be used
+ * as *any* of the 3 kinds.
+ */
 enum fragment_kind_t
 {
+  /* the 2 number line containing changes and root node offsets */
   header_fragment,
+
+  /* list of all changes in a revision */
   changes_fragment,
-  noderep_fragment,
+
+  /* (the textual representation of) a noderev */
+  noderev_fragment,
+
+  /* a property rep (including PLAIN / DELTA header) */
   property_fragment,
+
+  /* a directory rep (including PLAIN / DELTA header) */
   dir_fragment,
+
+  /* a file rep (including PLAIN / DELTA header) */
   file_fragment
 };
 
+/* A fragment.  This is used to represent the final ordering, i.e. there
+ * will be an array containing elements of this type that basically put
+ * a fragment at some location in the target file.
+ */
 typedef struct fragment_t
 {
+  /* position in the target file */
   apr_size_t position;
-  void *data;
+
+  /* kind of fragment */
   enum fragment_kind_t kind;
+
+  /* pointer to the  fragment struct; type depends on KIND */
+  void *data;
 } fragment_t;
 
+/* Location info for a single revision.
+ */
 typedef struct revision_location_t
 {
+  /* pack file offset (manifest value), 0 for non-packed files */
   apr_size_t offset;
+  
+  /* offset of the changes list relative to OFFSET */
   apr_size_t changes;
+
+  /* length of the changes list on bytes */
   apr_size_t changes_len;
+
+  /* first offset behind the revision data in the pack file (file length
+   * for non-packed revs) */
   apr_size_t end;  
 } revision_location_t;
 
+/* Absolute position and size of some item.
+ */
 typedef struct location_t
 {
+  /* absolute offset in the file */
   apr_size_t offset;
+
+  /* item length in bytes */
   apr_size_t size;
 } location_t;
 
+/* A parsed directory entry. Note that instances of this struct may be
+ * shared between different DIRECTORY_T containers.
+ */
 typedef struct direntry_t
 {
+  /* (local) entry / path name */
   const char *name;
+
+  /* strlen (name) */
   apr_size_t name_len;
+
+  /* node rev providing ID and representation(s) */
   noderev_t *node;
 } direntry_t;
 
+/* Representation of a parsed directory content.
+ */
 typedef struct directory_t
 {
+  /* array of pointers to DIRENTRY_T */
   apr_array_header_t *entries;
+
+  /* MD5 of the textual representation. Will be set lazily as a side-effect
+   * of determining the length of this dir's textual representation. */
   unsigned char target_md5[16];
+
+  /* (expanded) length of the textual representation.
+   * Determined lazily during the write process. */
   apr_size_t size;
 } directory_t;
 
+/* A representation fragment.
+ */
 typedef struct representation_t
 {
+  /* location in the source file */
   location_t original;
+
+  /* location in the reordered target file */
   location_t target;
+
+  /* length of the PLAIN / DELTA line in the source file in bytes */
   apr_size_t header_size;
+
+  /* deltification base, or NULL if there is none */
   struct representation_t *delta_base;
+
+  /* revision that contains this representation
+   * (may be referenced by other revisions, though) */
   revision_info_t *revision;
+
+  /* representation content parsed as a directory. This will be NULL, if
+   * *no* directory noderev uses this representation. */
   directory_t *dir;
+
+  /* the source content has a PLAIN header, so we may simply copy the
+   * source content into the target */
   svn_boolean_t is_plain;
+
+  /* coloring flag used in the reordering algorithm to keep track of
+   * representations that still need to be placed. */
   svn_boolean_t covered;
 } representation_t;
 
+/* A node rev.
+ */
 struct noderev_t
 {
+  /* location within the source file */
   location_t original;
+
+  /* location within the reorganized target file. */
   location_t target;
+
+  /* predecessor node, or NULL if there is none */
   noderev_t *predecessor;
+
+  /* content representation; may be NULL if there is none */
   representation_t *text;
+
+  /* properties representation; may be NULL if there is none */
   representation_t *props;
+
+  /* revision that this noderev belongs to */
   revision_info_t *revision;
+
+  /* coloring flag used in the reordering algorithm to keep track of
+   * representations that still need to be placed. */
   svn_boolean_t covered;
 };
 
+/* Represents a single revision.
+ * There will be only one instance per revision. */
 struct revision_info_t
 {
+  /* number of this revision */
   svn_revnum_t revision;
+
+  /* position in the source file */
   revision_location_t original;
+
+  /* position in the reorganized target file */
   revision_location_t target;
+
+  /* noderev of the root directory */
   noderev_t *root_noderev;
+
+  /* all noderevs_t of this revision (in no particular order),
+   * i.e. those that point back to this struct */
   apr_array_header_t *node_revs;
+  
+  /* all representation_t of this revision (in no particular order),
+   * i.e. those that point back to this struct */
   apr_array_header_t *representations;
 };
 
+/* Represents a packed revision file.
+ */
 typedef struct revision_pack_t
 {
+  /* first revision in the pack file */
   svn_revnum_t base;
+
+  /* revision_info_t* of all revisions in the pack file; in revision order. */
   apr_array_header_t *info;
+
+  /* list of fragments to place in the target pack file; in target order. */
   apr_array_header_t *fragments;
+
+  /* source pack file length */
   apr_size_t filesize;
+
+  /* temporary value. Equal to the number of bytes in the target pack file
+   * already allocated to fragments. */
   apr_size_t target_offset;
 } revision_pack_t;
 
+/* Cache for revision source content.  All content is stored in DATA and
+ * the HASH maps revision number to an svn_string_t instance whose data
+ * member points into DATA.
+ * 
+ * Once TOTAL_SIZE exceeds LIMIT, all content will be discarded.  Similarly,
+ * the hash gets cleared every 10000 insertions to keep the HASH_POOL
+ * memory usage in check.
+ */
 typedef struct content_cache_t
 {
-  apr_pool_t *pool;
+  /* pool used for HASH */
   apr_pool_t *hash_pool;
 
+  /* svn_revnum_t -> svn_string_t.
+   * The strings become (potentially) invalid when adding new cache entries. */
   apr_hash_t *hash;
 
+  /* data buffer. the first TOTAL_SIZE bytes are actually being used. */
   char *data;
+
+  /* DATA capacity */
   apr_size_t limit;
 
+  /* number of bytes used in DATA */
   apr_size_t total_size;
+
+  /* number of insertions since the last hash cleanup */
   apr_size_t insert_count;
 } content_cache_t;
 
+/* A cached directory. In contrast to directory_t, this stored the data as
+ * the plain hash that the normal FSFS will use to serialize & diff dirs.
+ */
 typedef struct dir_cache_entry_t
 {
+  /* revision containing the representation */
   svn_revnum_t revision;
+
+  /* offset of the representation within that revision */
   apr_size_t offset;
-  
+
+  /* key-value representation of the directory entries */
   apr_hash_t *hash;
 } dir_cache_entry_t;
 
+/* Directory cache. (revision, offset) will be mapped directly into the
+ * ENTRIES array of ENTRY_COUNT buckets (many entries will be NULL).
+ * Two alternating pools will be used to allocate dir content.
+ * 
+ * If the INSERT_COUNT exceeds a given limit, the pools get exchanged and
+ * the older of the two will be cleared. This is to keep dir objects valid
+ * for at least one insertion.
+ */
 typedef struct dir_cache_t
 {
+  /* fixed-size array of ENTRY_COUNT elements */
   dir_cache_entry_t *entries;
 
+  /* currently used for entry allocations */
   apr_pool_t *pool1;
+  
+  /* previously used for entry allocations */
   apr_pool_t *pool2;
+
+  /* size of ENTRIES in elements */
   apr_size_t entry_count;
+
+  /* number of directory elements added. I.e. usually >> #cached dirs */
   apr_size_t insert_count;
 } dir_cache_t;
 
+/* A cached, undeltified txdelta window.
+ */
 typedef struct window_cache_entry_t
 {
+  /* revision containing the window */
   svn_revnum_t revision;
+
+  /* offset of the deltified window within that revision */
   apr_size_t offset;
 
+  /* window content */
   svn_stringbuf_t *window;
 } window_cache_entry_t;
 
+/* Cache for undeltified txdelta windows. (revision, offset) will be mapped
+ * directly into the ENTRIES array of INSERT_COUNT buckets (most entries
+ * will be NULL).
+ *
+ * The cache will be cleared when USED exceeds CAPACITY.
+ */
 typedef struct window_cache_t
 {
+  /* fixed-size array of ENTRY_COUNT elements */
   window_cache_entry_t *entries;
 
+  /* used to allocate windows */
   apr_pool_t *pool;
+
+  /* size of ENTRIES in elements */
   apr_size_t entry_count;
+
+  /* maximum combined size of all cached windows */
   apr_size_t capacity;
+
+  /* current combined size of all cached windows */
   apr_size_t used;
 } window_cache_t;
 
+/* Root data structure containing all information about a given repository.
+ */
 typedef struct fs_fs_t
 {
+  /* repository to reorg */
   const char *path;
+
+  /* revision to start at (must be 0, ATM) */
   svn_revnum_t start_revision;
+
+  /* FSFS format number */
   int format;
 
+  /* highest revision number in the repo */
   svn_revnum_t max_revision;
+
+  /* first non-packed revision */
   svn_revnum_t min_unpacked_rev;
+
+  /* sharing size*/
   int max_files_per_dir;
 
+  /* all revisions */
   apr_array_header_t *revisions;
+
+  /* all packed files */
   apr_array_header_t *packs;
 
+  /* empty representation.
+   * Used as a dummy base for DELTA reps without base. */
   representation_t *null_base;
+
+  /* revision content cache */
   content_cache_t *cache;
+
+  /* directory hash cache */
   dir_cache_t *dir_cache;
+
+  /* undeltified txdelta window cache */
   window_cache_t *window_cache;
 } fs_fs_t;
 
@@ -256,7 +465,6 @@ create_content_cache(apr_pool_t *pool,
 {
   content_cache_t *result = apr_pcalloc(pool, sizeof(*result));
 
-  result->pool = pool;
   result->hash_pool = svn_pool_create(pool);
   result->hash = svn_hash__make(result->hash_pool);
   result->limit = limit;
@@ -1672,7 +1880,7 @@ add_noderev_recursively(fs_fs_t *fs,
   node->target.offset = *current_pos;
 
   fragment.data = node;
-  fragment.kind = noderep_fragment;
+  fragment.kind = noderev_fragment;
   fragment.position = *current_pos;
   APR_ARRAY_PUSH(fragments, fragment_t) = fragment;
 
@@ -1804,7 +2012,7 @@ get_content_length(apr_size_t *length,
         case dir_fragment:
           *length = content->len + 16;
           break;
-        case noderep_fragment:
+        case noderev_fragment:
           *length = content->len + 3;
           break;
         default:
@@ -1846,7 +2054,7 @@ move_fragment(fragment_t *fragment,
         representation->target.offset = new_position;
         break;
 
-      case noderep_fragment:
+      case noderev_fragment:
         node = fragment->data;
         node->target.offset = new_position;
         break;
@@ -2352,7 +2560,7 @@ get_fragment_content(svn_string_t **content,
 
         return SVN_NO_ERROR;
 
-      case noderep_fragment:
+      case noderev_fragment:
         node = fragment->data;
         SVN_ERR(get_content(&revision_content, fs,
                             node->revision->revision, pool));
