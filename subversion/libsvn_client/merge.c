@@ -11788,21 +11788,37 @@ svn_client_automatic_merge_is_reintegrate_like(
 }
 
 svn_error_t *
-svn_client__automatic_merge_get_locations(
-                                svn_client__pathrev_t **yca,
-                                svn_client__pathrev_t **base,
-                                svn_client__pathrev_t **right,
-                                svn_client__pathrev_t **target,
+svn_client_automatic_merge_get_locations(
+                                const char **yca_url,
+                                svn_revnum_t *yca_rev,
+                                const char **base_url,
+                                svn_revnum_t *base_rev,
+                                const char **right_url,
+                                svn_revnum_t *right_rev,
+                                const char **target_url,
+                                svn_revnum_t *target_rev,
+                                const char **repos_root_url,
                                 const svn_client_automatic_merge_t *merge,
                                 apr_pool_t *result_pool)
 {
-  if (yca)
-    *yca = svn_client__pathrev_dup(merge->yca, result_pool);
-  if (base)
-    *base = svn_client__pathrev_dup(merge->base, result_pool);
-  if (right)
-    *right = svn_client__pathrev_dup(merge->right, result_pool);
-  if (target)
-    *target = svn_client__pathrev_dup(merge->target, result_pool);
+  if (yca_url)
+    *yca_url = apr_pstrdup(result_pool, merge->yca->url);
+  if (yca_rev)
+    *yca_rev = merge->yca->rev;
+  if (base_url)
+    *base_url = apr_pstrdup(result_pool, merge->base->url);
+  if (base_rev)
+    *base_rev = merge->base->rev;
+  if (right_url)
+    *right_url = apr_pstrdup(result_pool, merge->right->url);
+  if (right_rev)
+    *right_rev = merge->right->rev;
+  if (target_url)
+    *target_url = apr_pstrdup(result_pool, merge->target->url);
+  if (target_rev)
+    *target_rev = merge->target->rev;
+  if (repos_root_url)
+    *repos_root_url = apr_pstrdup(result_pool, merge->yca->repos_root_url);
+
   return SVN_NO_ERROR;
 }

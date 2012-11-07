@@ -3459,6 +3459,26 @@ svn_boolean_t
 svn_client_automatic_merge_is_reintegrate_like(
         const svn_client_automatic_merge_t *merge);
 
+/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
+ * youngest common ancestor of the branches, the base chosen for 3-way
+ * merge, the right-hand side of the source diff, and the target WC.
+ *
+ * Any of the output pointers may be NULL if not wanted.
+ */
+svn_error_t *
+svn_client_automatic_merge_get_locations(
+                                const char **yca_url,
+                                svn_revnum_t *yca_rev,
+                                const char **base_url,
+                                svn_revnum_t *base_rev,
+                                const char **right_url,
+                                svn_revnum_t *right_rev,
+                                const char **target_url,
+                                svn_revnum_t *target_rev,
+                                const char **repos_root_url,
+                                const svn_client_automatic_merge_t *merge,
+                                apr_pool_t *result_pool);
+
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
  * the working-copy path @a target_wcpath.
