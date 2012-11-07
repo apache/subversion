@@ -37,6 +37,7 @@
 #include "private/svn_atomic.h"
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
+#include "private/svn_utf_private.h"
 
 #ifdef SQLITE3_DEBUG
 #include "private/svn_debug.h"
@@ -101,6 +102,12 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
+
+  /* Buffers for normalized unicode string comparison. */
+  apr_int32_t *nfd_buf1;
+  apr_size_t nfd_len1;
+  apr_int32_t *nfd_buf2;
+  apr_size_t nfd_len2;
 };
 
 struct svn_sqlite__stmt_t
@@ -854,6 +861,61 @@ close_apr(void *data)
 }
 
 
+/* Unicode normalizing collation for WC paths */
+static int
+compare_normalized_unicode(void *baton,
+                           int len1, const void *key1,
+                           int len2, const void *key2)
+{
+  svn_sqlite__db_t *db = baton;
+  apr_size_t rlen1;
+  apr_size_t rlen2;
+  svn_error_t *err;
+
+  for (;;)
+    {
+      err = svn_utf__decompose_normalized(key1, len1,
+                                          db->nfd_buf1, db->nfd_len1,
+                                          &rlen1);
+      /* There is really nothing we can do here if an error occurs
+         during Unicode normalizetion, and attempting to recover could
+         result in the wc.db index being corrupted. Presumably this
+         can only happen if the index already contains invalid UTF-8
+         strings, which should never happen in any case ... */
+      if (err)
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+
+      if (rlen1 <= db->nfd_len1)
+        break;
+
+      /* Double the decomposition buffer size and retry */
+      db->nfd_len1 *= 2;
+      db->nfd_buf1 = apr_palloc(db->state_pool,
+                                db->nfd_len1 * sizeof(*db->nfd_buf1));
+    }
+
+  /* And repeat with the second string */
+  for (;;)
+    {
+      err = svn_utf__decompose_normalized(key2, len2,
+                                          db->nfd_buf2, db->nfd_len2,
+                                          &rlen2);
+      if (err)
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+
+      if (rlen2 <= db->nfd_len2)
+        break;
+
+      db->nfd_len2 *= 2;
+      db->nfd_buf2 = apr_palloc(db->state_pool,
+                                db->nfd_len2 * sizeof(*db->nfd_buf2));
+    }
+
+  return svn_utf__ucs4cmp(db->nfd_buf1, db->nfd_len1,
+                          db->nfd_buf2, db->nfd_len2);
+}
+
+
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
@@ -866,6 +928,16 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
+
+  (*db)->nfd_len1 = (*db)->nfd_len2 = 2048;
+  (*db)->nfd_buf1 = apr_palloc(result_pool,
+                               (*db)->nfd_len1 * sizeof(*(*db)->nfd_buf1));
+  (*db)->nfd_buf2 = apr_palloc(result_pool,
+                               (*db)->nfd_len2 * sizeof(*(*db)->nfd_buf2));
+  SQLITE_ERR(sqlite3_create_collation((*db)->db3,
+                                      "SVN-UCS-NFD", SQLITE_UTF8,
+                                      *db, compare_normalized_unicode),
+             *db);
 
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
