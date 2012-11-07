@@ -290,7 +290,6 @@ tc_editor_alter_file(void *baton,
   const char *move_dst_repos_relpath;
   svn_revnum_t move_dst_revision;
   svn_kind_t move_dst_kind;
-  svn_boolean_t is_shadowed;
 
   /* Get kind, revision, and checksum of the moved-here node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
@@ -302,25 +301,31 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
   SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
-  /* If the node is shadowed by a higher layer, we need to flag a 
-   * tree conflict and must not touch the working file. */
-  SVN_ERR(check_shadowed_node(&is_shadowed,
-                              relpath_depth(b->move_root_dst_relpath),
-                              dst_relpath, b->wcroot));
+  /* ### TODO update revision etc. in NODES table */
 
-  if (is_shadowed)
+  /* Update file and prop contents if the update has changed them. */
+  if (!svn_checksum_match(move_src_checksum, move_dst_checksum)
+      /* ### || props have changed */)
     {
-      /* ### TODO flag tree conflict */
-    }
-  if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
-    {
-      SVN_ERR(update_working_file(b->work_items, dst_relpath,
-                                  move_dst_repos_relpath,
-                                  move_src_checksum, move_dst_checksum,
-                                  b->old_version, b->new_version,
-                                  b->wcroot, b->db,
-                                  b->notify_func, b->notify_baton,
-                                  b->result_pool, scratch_pool));
+      svn_boolean_t is_shadowed;
+
+      /* If the node is shadowed by a higher layer, we need to flag a 
+       * tree conflict and must not touch the working file. */
+      SVN_ERR(check_shadowed_node(&is_shadowed,
+                                  relpath_depth(b->move_root_dst_relpath),
+                                  dst_relpath, b->wcroot));
+      if (is_shadowed)
+        {
+          /* ### TODO flag tree conflict */
+        }
+      else
+        SVN_ERR(update_working_file(b->work_items, dst_relpath,
+                                    move_dst_repos_relpath,
+                                    move_src_checksum, move_dst_checksum,
+                                    b->old_version, b->new_version,
+                                    b->wcroot, b->db,
+                                    b->notify_func, b->notify_baton,
+                                    b->result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
