@@ -316,7 +316,7 @@ normalized_compare(const char *stra, int expected, const char *strb,
   /* UCS-4 debugging dump of the decomposed strings
   apr_size_t i;
   printf("(%c)%7s %c %s\n", expected,
-         stratag, (!result ? '=' : (result < 0 ? '>' : '<')), strbtag);
+         stratag, (!result ? '=' : (result < 0 ? '<' : '>')), strbtag);
   for (i = 0; i < rlena || i < rlenb; ++i)
     {
       if (i < rlena && i < rlenb)
@@ -336,7 +336,7 @@ normalized_compare(const char *stra, int expected, const char *strb,
         (SVN_ERR_TEST_FAILED, NULL,
          "Expected %s %c %s but %s %c %s",
          stratag, expected, strbtag,
-         stratag, (!result ? '=' : (result < 0 ? '>' : '<')), strbtag);
+         stratag, (!result ? '=' : (result < 0 ? '<' : '>')), strbtag);
     }
 
   return SVN_NO_ERROR;
