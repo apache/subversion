@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import sys, os, re
+import sys, os, re, copy
 
 # Our testing module
 import svntest
@@ -903,7 +903,6 @@ def update_symlink(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-@XFail()
 @Issue(4091)
 @SkipUnless(svntest.main.is_posix_os)
 def replace_symlinks(sbox):
@@ -971,7 +970,7 @@ def replace_symlinks(sbox):
     'A/mu.sh'       : Item(status='  ', wc_rev=2),
     'iota.sh'       : Item(status='  ', wc_rev=2),
     })
-  expected_status_r2 = expected_status
+  expected_status_r2 = copy.deepcopy(expected_status)
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r2)
 
   # Failing git-svn test: 'new symlink is added to a file that was
