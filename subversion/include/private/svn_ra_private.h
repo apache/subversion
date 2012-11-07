@@ -272,6 +272,15 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_editor_t *editor,
                    apr_pool_t *scratch_pool);
 
+/* Set *TREE_P to a new tree object representing the subtree rooted at
+ * the repository path of SESSION in revision REVNUM.
+ */
+svn_error_t *
+svn_ra__open_tree(svn_tree_t **tree_p,
+                  svn_ra_session_t *ra_session,
+                  svn_revnum_t revnum,
+                  apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }

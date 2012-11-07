@@ -1774,6 +1774,38 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               void *notify_baton,
               apr_pool_t *scratch_pool);
 
+/* ---------------------------------------------------------------------- */
+
+/* Set *TREE_P to a new tree object representing the subtree rooted at
+ * absolute path ABSPATH in the 'base' layer of a working copy.
+ */
+svn_error_t *
+svn_wc__open_base_tree(svn_tree_t **tree_p,
+                       const char *abspath,
+                       svn_wc_context_t *wc_ctx,
+                       apr_pool_t *result_pool);
+
+/* Set *TREE_P to a new tree object representing the subtree rooted at
+ * absolute path ABSPATH in the 'pristine'/'working' layer of a working copy.
+*/
+svn_error_t *
+svn_wc__open_pristine_tree(svn_tree_t **tree_p,
+                           const char *abspath,
+                           svn_wc_context_t *wc_ctx,
+                           apr_pool_t *result_pool);
+
+/* Set *TREE_P to a new tree object representing the subtree rooted at
+ * absolute path ABSPATH in the 'actual' layer of a working copy.
+ *
+ * That is, the tree that would get exported by "svn export WC", or shown
+ * as the right-hand side of a diff in "svn diff WCPATH".
+ */
+svn_error_t *
+svn_wc__open_actual_tree(svn_tree_t **tree_p,
+                         const char *abspath,
+                         svn_wc_context_t *wc_ctx,
+                         apr_pool_t *result_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

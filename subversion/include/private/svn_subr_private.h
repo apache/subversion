@@ -325,6 +325,17 @@ svn_version__at_least(svn_version_t *version,
 
 /** @} */
 
+/* Set *TREE_P to a new tree object representing the subtree rooted at
+ * absolute path ABSPATH in the local file system.
+ *
+ * Each node in this tree has an empty set of properties.
+ */
+svn_error_t *
+svn_io__open_tree(svn_tree_t **tree_p,
+                  const char *abspath,
+                  apr_pool_t *result_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

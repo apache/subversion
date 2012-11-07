@@ -1269,6 +1269,37 @@ typedef unsigned long svn_linenum_t;
 
 
 
+/** Abstract representation of a tree of #svn_tree_node_t.
+ *
+ * This object presents an interface for referring to, accessing and
+ * traversing a tree, usually a versioned tree, of the kind of nodes that
+ * Subversion versions.
+ *
+ * A tree always has a root node: a completely empty tree is not allowed.
+ *
+ * An implementation of this interface could represent, among other trees,
+ *   * a tree in some revision of a repository,
+ *   * the base or working version of a Working Copy tree,
+ *   * an unversioned tree on disk (presumably without properties),
+ *   * a temporary tree in memory, constructed on the fly.
+ *
+ * @since New in 1.x.
+ */
+typedef struct svn_tree_t svn_tree_t;
+
+/** Abstract representation of a tree node.
+ *
+ * Each node is a file, a directory or a symbolic link, and has a set of
+ * properties.
+ *
+ * @see #svn_tree_t
+ *
+ * @since New in 1.x.
+ */
+typedef struct svn_tree_node_t svn_tree_node_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
