@@ -133,13 +133,13 @@ tc_editor_alter_file(void *baton,
 {
   struct tc_editor_baton *b = baton;
   const svn_checksum_t *move_dst_checksum;
-  const char *original_repos_relpath;
+  const char *move_dst_repos_relpath;
   svn_revnum_t move_dst_revision;
   svn_kind_t kind;
 
   /* Get kind, revision, and checksum of the moved-here node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &kind, &move_dst_revision,
-                                    &original_repos_relpath, NULL, NULL, NULL,
+                                    &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &move_dst_checksum, NULL,
                                     NULL, b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
@@ -198,7 +198,7 @@ tc_editor_alter_file(void *baton,
             {
               original_version = svn_wc_conflict_version_dup(b->old_version,
                                                              scratch_pool);
-              original_version->path_in_repos = original_repos_relpath;
+              original_version->path_in_repos = move_dst_repos_relpath;
               original_version->node_kind = svn_node_file;
               SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
                                                           original_version,
