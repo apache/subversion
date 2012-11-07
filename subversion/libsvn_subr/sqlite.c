@@ -872,6 +872,9 @@ collate_ucs_nfd(void *baton,
   apr_size_t rlen2;
   svn_error_t *err;
 
+  if (0 == len1 || 0 == len2)
+    return (len1 == len2 ? 0 : (len1 < len2 ? -1 : 1));
+
   for (;;)
     {
       err = svn_utf__decompose_normalized(key1, len1,
