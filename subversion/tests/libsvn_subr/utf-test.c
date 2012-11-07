@@ -334,7 +334,7 @@ normalized_compare(const char *stra, int expected, const char *strb,
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, NULL,
-         "Expected %s %c %s but %s %c %s",
+         "Expected '%s' %c '%s' but '%s' %c '%s'",
          stratag, expected, strbtag,
          stratag, (!result ? '=' : (result < 0 ? '<' : '>')), strbtag);
     }
