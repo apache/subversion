@@ -47,6 +47,7 @@
 
 #include "wc.h"
 #include "wc_db_private.h"
+#include "wc-queries.h"
 #include "conflicts.h"
 #include "workqueue.h"
 
@@ -122,6 +123,44 @@ tc_editor_alter_directory(void *baton,
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 }
 
+
+/* Check whether the node at LOCAL_RELPATH in the working copy at WCROOT
+ * is shadowed by some node at a higher op depth than EXPECTED_OP_DEPTH. */
+static svn_error_t *
+check_shadowed_node(svn_boolean_t *is_shadowed,
+                    int expected_op_depth,
+                    const char *local_relpath,
+                    svn_wc__db_wcroot_t *wcroot)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      int op_depth = svn_sqlite__column_int(stmt, 0);
+
+      if (op_depth > expected_op_depth)
+        {
+          *is_shadowed = TRUE;
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *is_shadowed = FALSE;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
@@ -136,6 +175,7 @@ tc_editor_alter_file(void *baton,
   const char *move_dst_repos_relpath;
   svn_revnum_t move_dst_revision;
   svn_kind_t move_dst_kind;
+  svn_boolean_t is_shadowed;
 
   /* Get kind, revision, and checksum of the moved-here node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
@@ -147,8 +187,16 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
   SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
-  /* ### what if checksum kind differs?*/
-  if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
+  /* If the node is shadowed by a higher layer, we need to flag a 
+   * tree conflict and must not touch the working file. */
+  SVN_ERR(check_shadowed_node(&is_shadowed,
+                              relpath_depth(b->move_root_dst_relpath),
+                              dst_relpath, b->wcroot));
+  if (is_shadowed)
+    {
+      /* ### TODO flag tree conflict */
+    }
+  else if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
     {
       const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
                                                      dst_relpath,
