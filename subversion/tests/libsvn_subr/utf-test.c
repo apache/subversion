@@ -425,18 +425,55 @@ test_utf_decompose_normalized_ucs4cmp(apr_pool_t *pool)
   apr_int32_t *bufb = apr_palloc(pool, buflen * sizeof(apr_int32_t));
 
 
+  /* Empty key */
+  SVN_ERR(normalized_compare("", '=', "", TRUE, "empty", "empty",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("", '<', "a", TRUE, "empty", "nonempty",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("a", '>', "", TRUE, "nonempty", "empty",
+                             bufa, buflen, bufb, buflen));
+
+  /* Deterministic ordering */
+  SVN_ERR(normalized_compare("a", '<', "b", TRUE, "a", "b",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("b", '<', "c", TRUE, "b", "c",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("a", '<', "c", TRUE, "a", "c",
+                             bufa, buflen, bufb, buflen));
+
+  SVN_ERR(normalized_compare("b", '>', "a", FALSE, "b", "a",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("c", '>', "b", FALSE, "c", "b",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare("c", '>', "a", FALSE, "c", "a",
+                             bufa, buflen, bufb, buflen));
+
+  /* Normalized equality */
   SVN_ERR(normalized_compare(nfc, '=', nfd, TRUE, "nfc", "nfd",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(nfd, '=', nfc, TRUE, "nfd", "nfc",
                              bufa, buflen, bufb, buflen));
   SVN_ERR(normalized_compare(nfc, '=', mixup, TRUE, "nfc", "mixup",
                              bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(nfd, '=', mixup, TRUE, "nfd", "mixup",
+                             bufa, buflen, bufb, buflen));
   SVN_ERR(normalized_compare(mixup, '=', nfd, FALSE, "mixup", "nfd",
                              bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(mixup, '=', nfc, FALSE, "mixup", "nfc",
+                             bufa, buflen, bufb, buflen));
 
+  /* Key length */
   SVN_ERR(normalized_compare(nfc, '<', longer, FALSE, "nfc", "longer",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(longer, '>', nfc, FALSE, "longer","nfc",
                              bufa, buflen, bufb, buflen));
   SVN_ERR(normalized_compare(nfd, '>', shorter, TRUE, "nfd", "shorter",
                              bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(shorter, '<', nfd, TRUE, "shorter", "nfd",
+                             bufa, buflen, bufb, buflen));
   SVN_ERR(normalized_compare(mixup, '<', lowcase, FALSE, "mixup", "lowcase",
+                             bufa, buflen, bufb, buflen));
+  SVN_ERR(normalized_compare(lowcase, '>', mixup, FALSE, "lowcase", "mixup",
                              bufa, buflen, bufb, buflen));
 
   return SVN_NO_ERROR;
