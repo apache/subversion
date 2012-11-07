@@ -71,9 +71,9 @@ int svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
 
   for (i = 0; i < len; ++i)
     {
-      const int diff = bufb[i] - bufa[i];
+      const int diff = bufa[i] - bufb[i];
       if (diff)
         return diff;
     }
-  return (lena == lenb ? 0 : (lena < lenb ? 1 : -1));
+  return (lena == lenb ? 0 : (lena < lenb ? -1 : 1));
 }

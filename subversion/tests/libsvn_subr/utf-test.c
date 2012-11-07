@@ -329,8 +329,8 @@ normalized_compare(const char *stra, int expected, const char *strb,
   */
 
   if (('=' == expected && 0 != result)
-      || ('<' == expected && 0 >= result)
-      || ('>' == expected && 0 <= result))
+      || ('<' == expected && 0 <= result)
+      || ('>' == expected && 0 >= result))
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, NULL,

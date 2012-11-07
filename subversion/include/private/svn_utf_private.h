@@ -98,7 +98,7 @@ svn_utf__decompose_normalized(const char *str, apr_size_t len,
 
 /* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
  * length LENB. Return 0 if they're equal, a negative value if BUFA is
- * greater than BUFB, otherwise a positive value.
+ * less than BUFB, otherwise a positive value.
  */
 int
 svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
