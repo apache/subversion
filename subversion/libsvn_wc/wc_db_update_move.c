@@ -135,17 +135,17 @@ tc_editor_alter_file(void *baton,
   const svn_checksum_t *move_dst_checksum;
   const char *move_dst_repos_relpath;
   svn_revnum_t move_dst_revision;
-  svn_kind_t kind;
+  svn_kind_t move_dst_kind;
 
   /* Get kind, revision, and checksum of the moved-here node. */
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, &kind, &move_dst_revision,
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &move_dst_checksum, NULL,
                                     NULL, b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
-  SVN_ERR_ASSERT(kind == svn_kind_file);
+  SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
   /* ### what if checksum kind differs?*/
   if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
