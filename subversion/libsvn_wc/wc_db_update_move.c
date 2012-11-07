@@ -125,7 +125,7 @@ tc_editor_alter_directory(void *baton,
 static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
-                     svn_revnum_t expected_moved_here_revision,
+                     svn_revnum_t expected_move_dst_revision,
                      apr_hash_t *props,
                      const svn_checksum_t *moved_away_checksum,
                      svn_stream_t *post_update_contents,
@@ -144,7 +144,7 @@ tc_editor_alter_file(void *baton,
                                     NULL, b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(original_revision == expected_moved_here_revision);
+  SVN_ERR_ASSERT(original_revision == expected_move_dst_revision);
   SVN_ERR_ASSERT(kind == svn_kind_file);
 
   /* ### what if checksum kind differs?*/
