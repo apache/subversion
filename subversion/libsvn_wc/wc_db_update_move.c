@@ -127,7 +127,7 @@ tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
                      svn_revnum_t expected_move_dst_revision,
                      apr_hash_t *props,
-                     const svn_checksum_t *moved_away_checksum,
+                     const svn_checksum_t *move_src_checksum,
                      svn_stream_t *post_update_contents,
                      apr_pool_t *scratch_pool)
 {
@@ -148,7 +148,7 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(kind == svn_kind_file);
 
   /* ### what if checksum kind differs?*/
-  if (!svn_checksum_match(moved_away_checksum, moved_here_checksum))
+  if (!svn_checksum_match(move_src_checksum, moved_here_checksum))
     {
       const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
                                                      dst_relpath,
@@ -172,7 +172,7 @@ tc_editor_alter_file(void *baton,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
                                            b->db, moved_to_abspath,
-                                           moved_away_checksum,
+                                           move_src_checksum,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__internal_merge(b->work_items, &conflict_skel,
                                      &merge_outcome, b->db,
@@ -433,23 +433,23 @@ update_moved_away_file(svn_editor_t *tc_editor,
 {
   svn_kind_t kind;
   svn_stream_t *post_update_contents;
-  const svn_checksum_t *moved_away_checksum;
+  const svn_checksum_t *move_src_checksum;
                     
   /* Read post-update contents from the updated moved-away file and tell
    * the editor to merge them into the moved-here file. */
   SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &moved_away_checksum, NULL, NULL, db,
+                                        &move_src_checksum, NULL, NULL, db,
                                         svn_dirent_join(wcroot->abspath,
                                                         src_relpath,
                                                         scratch_pool),
                                         scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_pristine_read(&post_update_contents, NULL, db,
-                                   wcroot->abspath, moved_away_checksum,
+                                   wcroot->abspath, move_src_checksum,
                                    scratch_pool, scratch_pool));
   SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
                                 move_root_dst_revision,
                                 NULL, /* ### TODO props */
-                                moved_away_checksum,
+                                move_src_checksum,
                                 post_update_contents));
   SVN_ERR(svn_stream_close(post_update_contents));
 
