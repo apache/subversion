@@ -484,7 +484,7 @@ get_tc_info(svn_wc_operation_t *operation,
           svn_revnum_t revision;
           svn_node_kind_t node_kind;
 
-          /* Construct b->new_version from BASE info. */
+          /* Construct new_version from BASE info. */
           SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision,
                                            &repos_relpath, &repos_root_url,
                                            &repos_uuid, NULL, NULL, NULL,
