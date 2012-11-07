@@ -283,7 +283,7 @@ INSTALL_EXTRA_SWIG_PY=\
 
 # export an env variable so that the tests can run without being installed
 TEST_SHLIB_VAR_SWIG_PY=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
@@ -326,7 +326,7 @@ INSTALL_EXTRA_SWIG_RB=\
 
 # export an env variable so that the tests can run without being installed
 TEST_SHLIB_VAR_SWIG_RB=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(SWIG_PY_DIR)/libsvn_swig_rb $(SWIG_PY_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
