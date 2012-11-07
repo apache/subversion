@@ -1,0 +1,29 @@
+This 'tree-read-api' branch is a feature branch to develop a new API.
+As a 'feature' branch, it is maintained by periodic 'catch-up' (aka
+'sync') merges from trunk, and may one day be reintegrated to trunk.
+
+The new API is an abstraction of a generic tree of (usually) versioned
+nodes -- where each node is a file or directory, with properties.  We
+already have a generic tree-editing API (svn_delta_editor_t,
+svn_editor_t).  It will be beneficial to have a generic tree-access API
+as well.
+
+The idea is that code can use the same interface to examine the WC base,
+the WC working state, revision X in a repository, or any other concrete
+or virtual tree that we may decide to implement.  Use of a common API
+can reduce code duplication, improving consistency of behaviour,
+simplifying maintenance and reducing bugs.
+
+It should be possible to write operations that combine generic trees,
+such as traversing two trees in parallel, diffing and patching trees.
+Then we could, for example, extend 'svn diff' to be able to compare any
+two arbitrary trees, related or not, such as the unversioned tree
+'/tmp/saved-tests' against the WC tree 'wc/subversion/tests'.  Instead
+of ng this by writing several more variants of the current three
+subroutines (WC/WC, WC/repos, repos/repos), in principle we would need
+just one diff subroutine that takes two Tree objects as input.
+
+Another goal here is to facilitate writing a three-way merge that fully
+supports moves and renames.
+
+- Julian Foad, November 2012
