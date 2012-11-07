@@ -233,8 +233,10 @@ mergeinfo_summary(
               ctx, pool, pool));
 
   SVN_ERR(svn_client_automatic_merge_get_locations(
-            &yca_url, &base_url, &right_url, &target_url,
-            &yca_rev, &base_rev, &right_rev, &target_rev,
+            &yca_url, &yca_rev,
+            &base_url, &base_rev,
+            &right_url, &right_rev,
+            &target_url, &target_rev,
             &repos_root_url,
             the_merge, pool));
   reintegrate_like = svn_client_automatic_merge_is_reintegrate_like(the_merge);
