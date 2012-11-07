@@ -132,7 +132,7 @@ tc_editor_alter_file(void *baton,
                      apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  const svn_checksum_t *moved_here_checksum;
+  const svn_checksum_t *move_dst_checksum;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
   svn_kind_t kind;
@@ -140,7 +140,7 @@ tc_editor_alter_file(void *baton,
   /* Get kind, revision, and checksum of the moved-here node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &kind, &original_revision,
                                     &original_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, &moved_here_checksum, NULL,
+                                    NULL, NULL, &move_dst_checksum, NULL,
                                     NULL, b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
@@ -148,7 +148,7 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(kind == svn_kind_file);
 
   /* ### what if checksum kind differs?*/
-  if (!svn_checksum_match(move_src_checksum, moved_here_checksum))
+  if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
     {
       const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
                                                      dst_relpath,
@@ -168,7 +168,7 @@ tc_editor_alter_file(void *baton,
        */
       SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
                                            b->db, moved_to_abspath,
-                                           moved_here_checksum,
+                                           move_dst_checksum,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
                                            b->db, moved_to_abspath,
