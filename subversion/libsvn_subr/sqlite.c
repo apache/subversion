@@ -863,9 +863,9 @@ close_apr(void *data)
 
 /* Unicode normalizing collation for WC paths */
 static int
-compare_normalized_unicode(void *baton,
-                           int len1, const void *key1,
-                           int len2, const void *key2)
+collate_ucs_nfd(void *baton,
+                int len1, const void *key1,
+                int len2, const void *key2)
 {
   svn_sqlite__db_t *db = baton;
   apr_size_t rlen1;
@@ -911,8 +911,7 @@ compare_normalized_unicode(void *baton,
                                 db->nfd_len2 * sizeof(*db->nfd_buf2));
     }
 
-  return svn_utf__ucs4cmp(db->nfd_buf1, db->nfd_len1,
-                          db->nfd_buf2, db->nfd_len2);
+  return svn_utf__ucs4cmp(db->nfd_buf1, rlen1, db->nfd_buf2, rlen2);
 }
 
 
@@ -935,8 +934,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   (*db)->nfd_buf2 = apr_palloc(result_pool,
                                (*db)->nfd_len2 * sizeof(*(*db)->nfd_buf2));
   SQLITE_ERR(sqlite3_create_collation((*db)->db3,
-                                      "SVN-UCS-NFD", SQLITE_UTF8,
-                                      *db, compare_normalized_unicode),
+                                      "svn-ucs-nfd", SQLITE_UTF8,
+                                      *db, collate_ucs_nfd),
              *db);
 
 #ifdef SQLITE3_DEBUG
