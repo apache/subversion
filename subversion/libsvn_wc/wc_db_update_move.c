@@ -167,11 +167,11 @@ tc_editor_alter_file(void *baton,
        * moved-here working file as the merge-right version.
        */
       SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
-                                           b->db, moved_to_abspath,
+                                           b->db, b->wcroot->abspath,
                                            move_dst_checksum,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
-                                           b->db, moved_to_abspath,
+                                           b->db, b->wcroot->abspath,
                                            move_src_checksum,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__internal_merge(b->work_items, &conflict_skel,
