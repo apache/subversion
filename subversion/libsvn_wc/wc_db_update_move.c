@@ -161,6 +161,121 @@ check_shadowed_node(svn_boolean_t *is_shadowed,
   return SVN_NO_ERROR;
 }
 
+/* Update text and prop contents of the working file at DST_RELPATH
+ * in the working copy at WCROOT, from OLD_VERSION to NEW_VERSION,
+ * based on pristine contents identified by MOVE_SRC_CHECKSUM and
+ * MOVE_DST_CHECKSUM. MOVE_DST_REPOS_RELPATH is the repository path 
+ * the node at DST_RELPATH would be committed to.
+ * Use working copy database DB.
+ * Use NOTIFY_FUNC and NOTIFY_BATON for notifications.
+ * Add any required work items to *WORK_ITEMS, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+update_working_file(svn_skel_t **work_items,
+                    const char *dst_relpath,
+                    const char *move_dst_repos_relpath,
+                    const svn_checksum_t *move_src_checksum,
+                    const svn_checksum_t *move_dst_checksum,
+                    svn_wc_conflict_version_t *old_version,
+                    svn_wc_conflict_version_t *new_version,
+                    svn_wc__db_wcroot_t *wcroot,
+                    svn_wc__db_t *db,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  const char *moved_to_abspath = svn_dirent_join(wcroot->abspath,
+                                                 dst_relpath,
+                                                 scratch_pool);
+  const char *pre_update_pristine_abspath;
+  const char *post_update_pristine_abspath;
+  svn_skel_t *conflict_skel;
+  enum svn_wc_merge_outcome_t merge_outcome;
+  svn_wc_notify_state_t content_state;
+  svn_wc_notify_t *notify;
+
+  /*
+   * Run a 3-way merge to update the file, using the pre-update
+   * pristine text as the merge base, the post-update pristine
+   * text as the merge-left version, and the current content of the
+   * moved-here working file as the merge-right version.
+   */
+  SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
+                                       db, wcroot->abspath,
+                                       move_dst_checksum,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
+                                       db, wcroot->abspath,
+                                       move_src_checksum,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_merge(work_items, &conflict_skel,
+                                 &merge_outcome, db,
+                                 pre_update_pristine_abspath,
+                                 post_update_pristine_abspath,
+                                 moved_to_abspath,
+                                 moved_to_abspath,
+                                 NULL, NULL, NULL, /* diff labels */
+                                 NULL, /* actual props */
+                                 FALSE, /* dry-run */
+                                 NULL, /* diff3-cmd */
+                                 NULL, /* merge options */
+                                 NULL, /* prop_diff */
+                                 NULL, NULL, /* cancel_func + baton */
+                                 result_pool, scratch_pool));
+
+  if (merge_outcome == svn_wc_merge_conflict)
+    {
+      svn_skel_t *work_item;
+      svn_wc_conflict_version_t *original_version;
+
+      if (conflict_skel)
+        {
+          original_version = svn_wc_conflict_version_dup(old_version,
+                                                         scratch_pool);
+          original_version->path_in_repos = move_dst_repos_relpath;
+          original_version->node_kind = svn_node_file;
+          SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
+                                                      original_version,
+                                                      scratch_pool,
+                                                      scratch_pool));
+          SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
+                                                  moved_to_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool,
+                                                  scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+        }
+      content_state = svn_wc_notify_state_conflicted;
+    }
+  else
+    {
+      svn_boolean_t is_locally_modified;
+
+      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                               db, moved_to_abspath,
+                                               FALSE /* exact_comparison */,
+                                               scratch_pool));
+      if (is_locally_modified)
+        content_state = svn_wc_notify_state_merged;
+      else
+        content_state = svn_wc_notify_state_changed;
+    }
+
+  notify = svn_wc_create_notify(moved_to_abspath,
+                                svn_wc_notify_update_update,
+                                scratch_pool);
+  notify->kind = svn_node_file;
+  notify->content_state = content_state;
+  notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
+  notify->old_revision = old_version->peg_rev;
+  notify->revision = new_version->peg_rev;
+  notify_func(notify_baton, notify, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
@@ -192,99 +307,20 @@ tc_editor_alter_file(void *baton,
   SVN_ERR(check_shadowed_node(&is_shadowed,
                               relpath_depth(b->move_root_dst_relpath),
                               dst_relpath, b->wcroot));
+
   if (is_shadowed)
     {
       /* ### TODO flag tree conflict */
     }
-  else if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
+  if (!svn_checksum_match(move_src_checksum, move_dst_checksum))
     {
-      const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
-                                                     dst_relpath,
-                                                     scratch_pool);
-      const char *pre_update_pristine_abspath;
-      const char *post_update_pristine_abspath;
-      svn_skel_t *conflict_skel;
-      enum svn_wc_merge_outcome_t merge_outcome;
-      svn_wc_notify_state_t content_state;
-      svn_wc_notify_t *notify;
-
-      /*
-       * Run a 3-way merge to update the file, using the pre-update
-       * pristine text as the merge base, the post-update pristine
-       * text as the merge-left version, and the current content of the
-       * moved-here working file as the merge-right version.
-       */
-      SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
-                                           b->db, b->wcroot->abspath,
-                                           move_dst_checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
-                                           b->db, b->wcroot->abspath,
-                                           move_src_checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__internal_merge(b->work_items, &conflict_skel,
-                                     &merge_outcome, b->db,
-                                     pre_update_pristine_abspath,
-                                     post_update_pristine_abspath,
-                                     moved_to_abspath,
-                                     moved_to_abspath,
-                                     NULL, NULL, NULL, /* diff labels */
-                                     NULL, /* actual props */
-                                     FALSE, /* dry-run */
-                                     NULL, /* diff3-cmd */
-                                     NULL, /* merge options */
-                                     NULL, /* prop_diff */
-                                     NULL, NULL, /* cancel_func + baton */
-                                     b->result_pool, scratch_pool));
-
-      if (merge_outcome == svn_wc_merge_conflict)
-        {
-          svn_skel_t *work_item;
-          svn_wc_conflict_version_t *original_version;
-
-          if (conflict_skel)
-            {
-              original_version = svn_wc_conflict_version_dup(b->old_version,
-                                                             scratch_pool);
-              original_version->path_in_repos = move_dst_repos_relpath;
-              original_version->node_kind = svn_node_file;
-              SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                                          original_version,
-                                                          scratch_pool,
-                                                          scratch_pool));
-              SVN_ERR(svn_wc__conflict_create_markers(&work_item, b->db,
-                                                      moved_to_abspath,
-                                                      conflict_skel,
-                                                      scratch_pool,
-                                                      scratch_pool));
-              *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
-                                                b->result_pool);
-            }
-          content_state = svn_wc_notify_state_conflicted;
-        }
-      else
-        {
-          svn_boolean_t is_locally_modified;
-
-          SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
-                                                   b->db, moved_to_abspath,
-                                                   FALSE /* exact_comparison */,
-                                                   scratch_pool));
-          if (is_locally_modified)
-            content_state = svn_wc_notify_state_merged;
-          else
-            content_state = svn_wc_notify_state_changed;
-        }
-
-      notify = svn_wc_create_notify(moved_to_abspath,
-                                    svn_wc_notify_update_update,
-                                    scratch_pool);
-      notify->kind = svn_node_file;
-      notify->content_state = content_state;
-      notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
-      notify->old_revision = b->old_version->peg_rev;
-      notify->revision = b->new_version->peg_rev;
-      b->notify_func(b->notify_baton, notify, scratch_pool);
+      SVN_ERR(update_working_file(b->work_items, dst_relpath,
+                                  move_dst_repos_relpath,
+                                  move_src_checksum, move_dst_checksum,
+                                  b->old_version, b->new_version,
+                                  b->wcroot, b->db,
+                                  b->notify_func, b->notify_baton,
+                                  b->result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
