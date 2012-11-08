@@ -706,9 +706,8 @@ def unrelated_changed_special_status(sbox):
                                      '--changelist', 'chi cl',
                                      '-m', 'psi changed special status')
 
-
+#----------------------------------------------------------------------
 @Issue(3972)
-@SkipUnless(svntest.main.is_posix_os)
 def symlink_destination_change(sbox):
   "revert a symlink destination change"
 
@@ -717,8 +716,7 @@ def symlink_destination_change(sbox):
 
   # Create a new symlink and commit it.
   newfile_path = os.path.join(wc_dir, 'newfile')
-  os.symlink('linktarget', newfile_path)
-  svntest.main.run_svn(None, 'add', newfile_path)
+  sbox.simple_add_symlink('linktarget', 'newfile')
 
   expected_output = svntest.wc.State(wc_dir, {
     'newfile' : Item(verb='Adding'),
@@ -734,7 +732,10 @@ def symlink_destination_change(sbox):
 
   # Modify the symlink to point somewhere else
   os.remove(newfile_path)
-  os.symlink('linktarget2', newfile_path)
+  if svntest.main.is_posix_os():
+    os.symlink('linktarget2', newfile_path)
+  else:
+    sbox.simple_append('newfile', 'link linktarget2', truncate = True)
 
   expected_status.tweak('newfile', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -754,7 +755,6 @@ def symlink_destination_change(sbox):
 # This used to lose the special status in the target working copy
 # (disk and metadata).
 @Issue(3884)
-@SkipUnless(svntest.main.is_posix_os)
 def merge_foreign_symlink(sbox):
   "merge symlink-add from foreign repos"
 
@@ -773,8 +773,7 @@ def merge_foreign_symlink(sbox):
   zeta2_path = sbox2.ospath('A/zeta')
 
   # sbox2 r2: create zeta2 in sbox2
-  os.symlink('target', zeta2_path)
-  sbox2.simple_add('A/zeta')
+  sbox2.simple_add_symlink('target', 'A/zeta')
   sbox2.simple_commit('A/zeta')
 
 
@@ -1099,17 +1098,16 @@ def externals_as_symlink_targets(sbox):
 
   sbox.simple_commit()
 
+#----------------------------------------------------------------------
 @XFail()
 @Issue(4119)
-@SkipUnless(svntest.main.is_posix_os)
 def cat_added_symlink(sbox):
   "cat added symlink"
 
   sbox.build(read_only = True)
 
   kappa_path = sbox.ospath('kappa')
-  os.symlink('iota', kappa_path)
-  sbox.simple_add('kappa')
+  sbox.simple_add_symlink('iota', 'kappa')
   svntest.actions.run_and_verify_svn(None, "link iota", [],
                                      "cat", kappa_path)
 
