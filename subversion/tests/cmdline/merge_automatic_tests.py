@@ -728,7 +728,7 @@ def cherry3_fwd(sbox):
   #     (          \     /     \
   #     (           \   /       \
   #   B (---o--o-[o]-x-/---------x
-  #               \__/
+  #                \__/
   #     2  34  5  6  7    8  9   0
 
   make_branches(sbox)
