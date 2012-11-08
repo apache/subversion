@@ -310,9 +310,9 @@ class Sandbox:
   def simple_add_symlink(self, dest, target):
     """Create a symlink TARGET pointing to DEST and add it to subversion"""
     if svntest.main.is_posix_os():
-      symlink(dest, self.ospath(target))
+      os.symlink(dest, self.ospath(target))
     else:
-      svntest.main.file_write(self.ospath(target), "LINK %s" % dest)
+      svntest.main.file_write(self.ospath(target), "link %s" % dest)
     self.simple_add(target)
     if not svntest.main.is_posix_os():
       # '*' is evaluated on Windows
