@@ -1628,7 +1628,7 @@ temp_op_make_copy(svn_test__sandbox_t *b,
 
   SVN_ERR(insert_dirs(b, before));
 
-  SVN_ERR(svn_wc__db_temp_op_make_copy(b->wc_ctx->db, dir_abspath, b->pool));
+  SVN_ERR(svn_wc__db_op_make_copy(b->wc_ctx->db, dir_abspath, NULL, NULL, b->pool));
 
   SVN_ERR(check_db_rows(b, "", after));
 
