@@ -750,6 +750,10 @@ struct file_baton
      initialized, this is never NULL, but it may have zero elements.  */
   apr_array_header_t *propchanges;
 
+  /* For existing files, whether there are local modifications. FALSE for added
+     files */
+  svn_boolean_t local_prop_mods;
+
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
 
@@ -3299,7 +3303,7 @@ open_file(const char *path,
                                &fb->changed_author, NULL,
                                &fb->original_checksum, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               &conflicted, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, &fb->local_prop_mods,
                                NULL, NULL, &have_work,
                                eb->db, fb->local_abspath,
                                fb->pool, scratch_pool));
@@ -3521,6 +3525,85 @@ change_file_prop(void *file_baton,
 
   if (!fb->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));
+
+  if (! fb->shadowed
+      && strcmp(name, SVN_PROP_SPECIAL) == 0)
+    {
+      struct edit_baton *eb = fb->edit_baton;
+      svn_boolean_t modified = FALSE;
+      svn_boolean_t becomes_symlink;
+      svn_boolean_t was_symlink;
+
+      /* Let's see if we have a change as in some scenarios servers report
+         non-changes of properties. */
+      becomes_symlink = (value != NULL);
+
+      if (fb->adding_file)
+        was_symlink = becomes_symlink; /* No change */
+      else
+        {
+          apr_hash_t *props;
+
+          /* We read the server-props, not the ACTUAL props here as we just
+             want to see if this is really an incoming prop change. */
+          SVN_ERR(svn_wc__db_base_get_props(&props, eb->db,
+                                            fb->local_abspath,
+                                            scratch_pool, scratch_pool));
+
+          was_symlink = ((props
+                              && apr_hash_get(props, SVN_PROP_SPECIAL,
+                                              APR_HASH_KEY_STRING) != NULL)
+                              ? svn_tristate_true
+                              : svn_tristate_false);
+        }
+
+      if (was_symlink != becomes_symlink)
+        {
+          /* If the local node was not modified, we continue as usual, if
+             modified we want a tree conflict just like how we would handle
+             it when receiving a delete + add (aka "replace") */
+          if (fb->local_prop_mods)
+            modified = TRUE;
+          else
+            SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
+                                                     fb->local_abspath,
+                                                     FALSE, scratch_pool));
+        }
+
+      if (modified)
+        {
+          svn_wc_conflict_description2_t *tree_conflict = NULL;
+
+          /* Create a copy of the existing (pre update) BASE node in WORKING,
+             mark a tree conflict and handle the rest of the update as
+             shadowed */
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, fb->local_abspath,
+                                               scratch_pool));
+          /* ### Performance: We should just create the conflict here, without
+             ### verifying again */
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                                      svn_wc__db_status_added,
+                                      svn_wc__db_kind_file, TRUE,
+                                      svn_wc_conflict_action_add,
+                                      svn_node_file, fb->new_relpath,
+                                      scratch_pool, scratch_pool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  fb->local_abspath,
+                                                  tree_conflict,
+                                                  scratch_pool));
+          fb->edit_conflict = tree_conflict;
+
+          do_notification(eb, fb->local_abspath, svn_node_file,
+                          svn_wc_notify_tree_conflict, scratch_pool);
+
+          /* Ok, we introduced a replacement, so we can now handle the rest
+             as a normal shadowed update */
+          fb->shadowed = TRUE;
+          fb->add_existed = FALSE;
+          fb->already_notified = TRUE;
+      }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4038,67 +4121,6 @@ close_file(void *file_baton,
   /* And new nodes need an empty set of ACTUAL props.  */
   if (current_actual_props == NULL)
     current_actual_props = apr_hash_make(scratch_pool);
-
-  /* Catch symlink-ness change.
-   * add_file() doesn't know whether the incoming added node is a file or
-   * a symlink, because symlink-ness is saved in a prop :(
-   * So add_file() cannot notice when update wants to add a symlink where
-   * locally there already is a file scheduled for addition, or vice versa.
-   * It sees incoming symlinks as simple files and may wrongly try to offer
-   * a text conflict. So flag a tree conflict here. */
-  if (!fb->shadowed
-      && (! fb->adding_file || fb->add_existed))
-    {
-      svn_boolean_t local_is_link;
-      svn_boolean_t incoming_is_link;
-      int i;
-
-      local_is_link = apr_hash_get(local_actual_props,
-                                SVN_PROP_SPECIAL,
-                                APR_HASH_KEY_STRING) != NULL;
-
-      incoming_is_link = local_is_link;
-
-      /* Does an incoming propchange affect symlink-ness? */
-      for (i = 0; i < regular_prop_changes->nelts; ++i)
-        {
-          const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
-                                                  svn_prop_t);
-
-          if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
-            {
-              incoming_is_link = (prop->value != NULL);
-              break;
-            }
-        }
-
-      if (local_is_link != incoming_is_link)
-        {
-          svn_wc_conflict_description2_t *tree_conflict = NULL;
-
-          fb->shadowed = TRUE;
-          fb->obstruction_found = TRUE;
-          fb->add_existed = FALSE;
-
-          /* ### Performance: We should just create the conflict here, without
-             ### verifying again */
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      svn_wc__db_status_added,
-                                      svn_wc__db_kind_file, TRUE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath,
-                                      scratch_pool, scratch_pool));
-          SVN_ERR_ASSERT(tree_conflict != NULL);
-          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                                  fb->local_abspath,
-                                                  tree_conflict,
-                                                  scratch_pool));
-
-          fb->already_notified = TRUE;
-          do_notification(eb, fb->local_abspath, svn_node_unknown,
-                          svn_wc_notify_tree_conflict, scratch_pool);
-        }
-    }
 
   prop_state = svn_wc_notify_state_unknown;
 
