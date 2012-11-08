@@ -307,6 +307,17 @@ class Sandbox:
         raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
     return props
 
+  def simple_add_symlink(self, dest, target):
+    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+    if svntest.main.is_posix_os():
+      symlink(dest, self.ospath(target))
+    else:
+      svntest.main.file_write(self.ospath(target), "LINK %s" % dest)
+    self.simple_add(target)
+    if not svntest.main.is_posix_os():
+      # '*' is evaluated on Windows
+      self.simple_propset('svn:special', 'X', target)
+
   def simple_copy(self, source, dest):
     """Copy SOURCE to DEST in the WC.
        SOURCE and DEST are relpaths relative to the WC."""

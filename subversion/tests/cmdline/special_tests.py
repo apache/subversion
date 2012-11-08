@@ -859,8 +859,8 @@ def symlink_to_wc_svnversion(sbox):
                                             symlink_path, sbox.repo_url,
                                             [ "1\n" ], [])
 
+#----------------------------------------------------------------------
 # Regression in 1.7.0: Update fails to change a symlink
-@SkipUnless(svntest.main.is_posix_os)
 def update_symlink(sbox):
   "update a symlink"
 
@@ -873,13 +873,15 @@ def update_symlink(sbox):
   symlink_path = sbox.ospath('symlink')
 
   # create a symlink to /A/mu
-  os.symlink("A/mu", symlink_path)
-  sbox.simple_add('symlink')
+  sbox.simple_add_symlink("A/mu", 'symlink')
   sbox.simple_commit()
 
   # change the symlink to /iota
   os.remove(symlink_path)
-  os.symlink("iota", symlink_path)
+  if svntest.main.is_posix_os():
+    os.symlink("iota", symlink_path)
+  else:
+    file_write(symlink_path, 'link iota')
   sbox.simple_commit()
 
   # update back to r2
@@ -896,6 +898,10 @@ def update_symlink(sbox):
   expected_status.add({
     'symlink'           : Item(status='  ', wc_rev='3'),
   })
+
+  if not svntest.main.is_posix_os():
+    expected_disk = None
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -903,8 +909,8 @@ def update_symlink(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+#----------------------------------------------------------------------
 @Issue(4091)
-@SkipUnless(svntest.main.is_posix_os)
 def replace_symlinks(sbox):
   "replace symlinks"
   sbox.build()
@@ -921,10 +927,8 @@ def replace_symlinks(sbox):
   sbox.simple_mkdir('A/D/Y')
   sbox.simple_mkdir('Ax')
 
-  os.symlink('../Y', wc('A/D/H/Z'))
-  os.symlink('../Y', wc('A/D/Hx/Z'))
-  sbox.simple_add('A/D/H/Z',
-                  'A/D/Hx/Z')
+  sbox.simple_add_symlink('../Y', 'A/D/H/Z')
+  sbox.simple_add_symlink('../Y', 'A/D/Hx/Z')
 
   for p in ['Ax/mu',
             'A/D/Gx/pi',
@@ -945,6 +949,8 @@ def replace_symlinks(sbox):
       file_write(wc(p), '#!/bin/sh\necho "hello, svn!"\n')
       os.chmod(wc(p), 0775)
       sbox.simple_add(p)
+      if not svntest.main.is_posix_os():
+        sbox.simple_propset('svn:executable', 'X', p)
   sbox.simple_commit() # r2
   sbox.simple_update()
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
@@ -975,14 +981,12 @@ def replace_symlinks(sbox):
 
   # Failing git-svn test: 'new symlink is added to a file that was
   # also just made executable', i.e., in the same revision.
-  sbox.simple_propset("svn:executable", "*", 'A/B/E/alpha')
-  os.symlink('alpha', wc('A/B/E/sym-alpha'))
-  sbox.simple_add('A/B/E/sym-alpha')
+  sbox.simple_propset("svn:executable", "X", 'A/B/E/alpha')
+  sbox.simple_add_symlink('alpha', 'A/B/E/sym-alpha')
 
   # Add a symlink to a file made non-executable in the same revision.
   sbox.simple_propdel("svn:executable", 'A/B/E/beta.sh')
-  os.symlink('beta.sh', wc('A/B/E/sym-beta.sh'))
-  sbox.simple_add('A/B/E/sym-beta.sh')
+  sbox.simple_add_symlink('beta.sh', 'A/B/E/sym-beta.sh')
 
   # Replace a normal {file, exec, dir} with a symlink to the same kind
   # via Subversion replacement.
@@ -990,13 +994,9 @@ def replace_symlinks(sbox):
                  'A/D/G/rho.sh',
                  #'A/D/G/Z', # Ooops, not compatible with --bin=svn1.6.
                  )
-  os.symlink(wc('../gamma'), wc('A/D/G/pi'))
-  os.symlink(wc('../gamma.sh'), wc('A/D/G/rho.sh'))
-  #os.symlink(wc('../Y'), wc('A/D/G/Z'))
-  sbox.simple_add('A/D/G/pi',
-                  'A/D/G/rho.sh',
-                  #'A/D/G/Z',
-                  )
+  sbox.simple_add_symlink('../gamma', 'A/D/G/pi')
+  sbox.simple_add_symlink('../gamma.sh', 'A/D/G/rho.sh')
+  #sbox.simple_add_symlink('../Y', 'A/D/G/Z')
 
   # Replace a symlink to {file, exec, dir} with a normal item of the
   # same kind via Subversion replacement.
@@ -1004,30 +1004,34 @@ def replace_symlinks(sbox):
                  'A/D/H/psi.sh',
                  #'A/D/H/Z',
                  )
-  os.symlink(wc('../gamma'), wc('A/D/H/chi'))
-  os.symlink(wc('../gamma.sh'), wc('A/D/H/psi.sh'))
-  #os.symlink(wc('../Y'), wc('A/D/H/Z'))
-  sbox.simple_add('A/D/H/chi',
-                  'A/D/H/psi.sh',
-                  #'A/D/H/Z',
-                  )
+  sbox.simple_add_symlink('../gamma', 'A/D/H/chi')
+  sbox.simple_add_symlink('../gamma.sh', 'A/D/H/psi.sh')
+  #sbox.simple_add_symlink('../Y', 'A/D/H/Z')
 
   # Replace a normal {file, exec} with a symlink to {exec, file} via
   # Subversion replacement.
   sbox.simple_rm('A/mu',
                  'A/mu.sh')
-  os.symlink('../iota2', wc('A/mu'))
-  os.symlink('../iota', wc('A/mu.sh'))
-  sbox.simple_add('A/mu',
-                  'A/mu.sh')
+  sbox.simple_add_symlink('../iota2', 'A/mu')
+  sbox.simple_add_symlink('../iota', 'A/mu.sh')
 
   # Ditto, without the Subversion replacement.  Failing git-svn test
   # 'executable file becomes a symlink to bar/zzz (file)'.
-  os.remove(wc('Ax/mu'))
-  os.remove(wc('Ax/mu.sh'))
-  os.symlink('../iota2', wc('Ax/mu'))
-  os.symlink('../iota', wc('Ax/mu.sh'))
-  sbox.simple_propset('svn:special', '*',
+  if svntest.main.is_posix_os():
+    os.remove(wc('Ax/mu'))
+    os.remove(wc('Ax/mu.sh'))
+    os.symlink('../iota2', wc('Ax/mu'))
+    os.symlink('../iota', wc('Ax/mu.sh'))
+  else:
+    # At least modify the file a bit
+
+    # ### Somehow this breaks the test when using multiline data?
+    # ### Is that intended behavior?
+
+    file_write(sbox.ospath('Ax/mu'), 'Link to iota2')
+    file_write(sbox.ospath('Ax/mu.sh'), 'Link to iota')
+
+  sbox.simple_propset('svn:special', 'X',
                       'Ax/mu',
                       'Ax/mu.sh')
   sbox.simple_propdel('svn:executable', 'Ax/mu.sh')
