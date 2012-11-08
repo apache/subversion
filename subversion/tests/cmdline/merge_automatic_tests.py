@@ -83,6 +83,8 @@ from merge_tests import set_up_branch
 #     B (--o--x--o-----?--x
 #
 #   Merge with cherry-picks
+#   (This set of six cases represents all of the topologically distinct
+#   scenarios involving one cherry-pick between two automatic merges.)
 #
 #     Cherry1, fwd
 #     A (--o-----o-[o]----o---
@@ -701,6 +703,7 @@ def cherry1_fwd(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @XFail()
+@Issue(4255)
 def cherry2_fwd(sbox):
   """cherry2_fwd"""
 
@@ -721,6 +724,7 @@ def cherry2_fwd(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @XFail()
+@Issue(4255)
 def cherry3_fwd(sbox):
   """cherry3_fwd"""
 
