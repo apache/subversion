@@ -61,16 +61,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1401915
-   Ignore file externals with mergeinfo when merging.
-   Justification:
-     Prevents a segfault,
-     see http://svn.haxx.se/dev/archive-2012-10/0364.shtml
-   Branch:
-     ^/subversion/branches/1.7.x-r1401915
-   Votes:
-     +1: pburba, steveking
-
  * r1403258
    Fix incorrect status returned by the 1.6 API.
    Justification:
@@ -110,3 +100,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1401915
+   Ignore file externals with mergeinfo when merging.
+   Justification:
+     Prevents a segfault,
+     see http://svn.haxx.se/dev/archive-2012-10/0364.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-r1401915
+   Votes:
+     +1: pburba, steveking, philip
