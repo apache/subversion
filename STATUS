@@ -61,13 +61,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1403258
-   Fix incorrect status returned by the 1.6 API.
-   Justification:
-     Regression for users of the 1.6 API.
-   Votes:
-     +1: philip, rhuijben
-
  * r1403588, r1403691
    Expand the scope of mod_dav_svn's validation of client-reported
    and client-requested revisions during update operations.
@@ -110,3 +103,11 @@ Approved changes:
      ^/subversion/branches/1.7.x-r1401915
    Votes:
      +1: pburba, steveking, philip
+
+ * r1403258
+   Fix incorrect status returned by the 1.6 API.
+   Justification:
+     Regression for users of the 1.6 API.
+   Votes:
+     +1: philip, rhuijben, cmpilato
+
