@@ -17,7 +17,7 @@
 #    under the License.
 # ====================================================================
 
-require "test-unit-ext/always-show-result"
+require "test-unit-ext/always-show-result" if RUBY_VERSION < '1.9.3'
 require "test-unit-ext/priority"
-require "test-unit-ext/backtrace-filter"
-require "test-unit-ext/long-display-for-emacs"
+require "test-unit-ext/backtrace-filter" if RUBY_VERSION < '1.9.3'
+require "test-unit-ext/long-display-for-emacs" if RUBY_VERSION < '1.9.3'
