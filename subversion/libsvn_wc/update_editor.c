@@ -4074,29 +4074,39 @@ close_file(void *file_baton,
 
       if (local_is_link != incoming_is_link)
         {
-          svn_wc_conflict_description2_t *tree_conflict = NULL;
+          svn_boolean_t is_locally_modified;
 
-          fb->shadowed = TRUE;
-          fb->obstruction_found = TRUE;
-          fb->add_existed = FALSE;
+          SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                                   eb->db, fb->local_abspath,
+                                                   FALSE /* exact_comparison */,
+                                                   scratch_pool));
 
-          /* ### Performance: We should just create the conflict here, without
-             ### verifying again */
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      svn_wc__db_status_added,
-                                      svn_wc__db_kind_file, TRUE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath,
-                                      scratch_pool, scratch_pool));
-          SVN_ERR_ASSERT(tree_conflict != NULL);
-          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                                  fb->local_abspath,
-                                                  tree_conflict,
-                                                  scratch_pool));
+          if (is_locally_modified)
+            {
+              svn_wc_conflict_description2_t *tree_conflict = NULL;
 
-          fb->already_notified = TRUE;
-          do_notification(eb, fb->local_abspath, svn_node_unknown,
-                          svn_wc_notify_tree_conflict, scratch_pool);
+              fb->shadowed = TRUE;
+              fb->obstruction_found = TRUE;
+              fb->add_existed = FALSE;
+
+              /* ### Performance: We should just create the conflict
+                 ### here, without verifying again */
+              SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                                          svn_wc__db_status_added,
+                                          svn_wc__db_kind_file, TRUE,
+                                          svn_wc_conflict_action_add,
+                                          svn_node_file, fb->new_relpath,
+                                          scratch_pool, scratch_pool));
+              SVN_ERR_ASSERT(tree_conflict != NULL);
+              SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                      fb->local_abspath,
+                                                      tree_conflict,
+                                                      scratch_pool));
+
+              fb->already_notified = TRUE;
+              do_notification(eb, fb->local_abspath, svn_node_unknown,
+                              svn_wc_notify_tree_conflict, scratch_pool);
+            }
         }
     }
 
