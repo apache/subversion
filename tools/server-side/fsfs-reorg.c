@@ -415,6 +415,8 @@ typedef struct fs_fs_t
   window_cache_t *window_cache;
 } fs_fs_t;
 
+/* Return the rev pack folder for revision REV in FS.
+ */
 static const char *
 get_pack_folder(fs_fs_t *fs,
                 svn_revnum_t rev,
@@ -424,6 +426,8 @@ get_pack_folder(fs_fs_t *fs,
                       fs->path, rev / fs->max_files_per_dir);
 }
 
+/* Return the path of the file containing revision REV in FS.
+ */
 static const char *
 rev_or_pack_file_name(fs_fs_t *fs,
                       svn_revnum_t rev,
@@ -435,6 +439,8 @@ rev_or_pack_file_name(fs_fs_t *fs,
                           rev / fs->max_files_per_dir, rev);
 }
 
+/* Open the file containing revision REV in FS and return it in *FILE.
+ */
 static svn_error_t *
 open_rev_or_pack_file(apr_file_t **file,
                       fs_fs_t *fs,
@@ -448,6 +454,9 @@ open_rev_or_pack_file(apr_file_t **file,
                           pool);
 }
 
+/* Read the whole content of the file containing REV in FS and return that
+ * in *CONTENT.
+ */
 static svn_error_t *
 read_rev_or_pack_file(svn_stringbuf_t **content,
                       fs_fs_t *fs,
@@ -459,6 +468,9 @@ read_rev_or_pack_file(svn_stringbuf_t **content,
                                   pool);
 }
 
+/* Return a new content cache with the given size LIMIT.  Use POOL for
+ * all cache-related allocations.
+ */
 static content_cache_t *
 create_content_cache(apr_pool_t *pool,
                      apr_size_t limit)
@@ -475,6 +487,9 @@ create_content_cache(apr_pool_t *pool,
   return result;
 }
 
+/* Return the content of revision REVISION from CACHE. Return NULL upon a
+ * cache miss. This is a cache-internal function.
+ */
 static svn_string_t *
 get_cached_content(content_cache_t *cache,
                    svn_revnum_t revision)
@@ -482,6 +497,9 @@ get_cached_content(content_cache_t *cache,
   return apr_hash_get(cache->hash, &revision, sizeof(revision));
 }
 
+/* Take the content in DATA and store it under REVISION in CACHE.
+ * This is a cache-internal function.
+ */
 static void
 set_cached_content(content_cache_t *cache,
                    svn_revnum_t revision,
@@ -489,11 +507,14 @@ set_cached_content(content_cache_t *cache,
 {
   svn_string_t *content;
   svn_revnum_t *key;
-  
+
+  /* double insertion? -> broken cache logic */
   assert(get_cached_content(cache, revision) == NULL);
 
+  /* purge the cache upon overflow */
   if (cache->total_size + data->len > cache->limit)
     {
+      /* the hash pool grows slowly over time; clear it once in a while */
       if (cache->insert_count > 10000)
         {
           svn_pool_clear(cache->hash_pool);
@@ -504,8 +525,13 @@ set_cached_content(content_cache_t *cache,
         cache->hash = svn_hash__make(cache->hash_pool);
 
       cache->total_size = 0;
+
+      /* buffer overflow / revision too large */
+      if (data->len > cache->limit)
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
+  /* copy data to cache and update he index (hash) */
   content = apr_palloc(cache->hash_pool, sizeof(*content));
   content->data = cache->data + cache->total_size;
   content->len = data->len;
@@ -520,6 +546,9 @@ set_cached_content(content_cache_t *cache,
   ++cache->insert_count;
 }
 
+/* Get the file content of revision REVISION in FS and return it in *DATA.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 static svn_error_t *
 get_content(svn_string_t **data,
             fs_fs_t *fs,
@@ -530,7 +559,8 @@ get_content(svn_string_t **data,
   revision_info_t *revision_info;
   svn_stringbuf_t *temp;
   apr_off_t temp_offset;
-  
+
+  /* try getting the data from our cache */
   svn_string_t *result = get_cached_content(fs->cache, revision);
   if (result)
     {
@@ -538,6 +568,7 @@ get_content(svn_string_t **data,
       return SVN_NO_ERROR;
     }
 
+  /* not in cache. Is the revision valid at all? */
   if (revision - fs->start_revision > fs->revisions->nelts)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                              _("Unknown revision %ld"), revision);
@@ -545,6 +576,8 @@ get_content(svn_string_t **data,
                                 revision - fs->start_revision,
                                 revision_info_t*);
 
+  /* read the revision content. Assume that the file has *not* been
+   * reorg'ed, yet, i.e. all data is in one place. */
   temp = svn_stringbuf_create_ensure(  revision_info->original.end
                                      - revision_info->original.offset,
                                      scratch_pool);
@@ -558,6 +591,7 @@ get_content(svn_string_t **data,
   revision_info->original.offset = (apr_size_t)temp_offset;
   SVN_ERR(svn_io_file_read(file, temp->data, &temp->len, scratch_pool));
 
+  /* cache the result and return it */
   set_cached_content(fs->cache, revision,
                      svn_stringbuf__morph_into_string(temp));
   *data = get_cached_content(fs->cache, revision);
@@ -565,6 +599,9 @@ get_content(svn_string_t **data,
   return SVN_NO_ERROR;
 }
 
+/* Return a new directory cache with ENTRY_COUNT buckets in its index.
+ * Use POOL for all cache-related allocations.
+ */
 static dir_cache_t *
 create_dir_cache(apr_pool_t *pool,
                  apr_size_t entry_count)
@@ -580,6 +617,9 @@ create_dir_cache(apr_pool_t *pool,
   return result;
 }
 
+/* Return the position within FS' dir cache ENTRIES index for the given
+ * (REVISION, OFFSET) pair. This is a cache-internal function.
+ */
 static apr_size_t
 get_dir_cache_index(fs_fs_t *fs,
                     svn_revnum_t revision,
@@ -588,12 +628,18 @@ get_dir_cache_index(fs_fs_t *fs,
   return (revision + offset * 0xd1f3da69) % fs->dir_cache->entry_count;
 }
 
+/* Return the currently active pool of FS' dir cache. Note that it may be
+ * cleared after *2* insertions.
+ */
 static apr_pool_t *
 get_cached_dir_pool(fs_fs_t *fs)
 {
   return fs->dir_cache->pool1;
 }
 
+/* Return the cached directory content stored in REPRESENTAION within FS.
+ * If that has not been found in cache, return NULL.
+ */
 static apr_hash_t *
 get_cached_dir(fs_fs_t *fs,
                representation_t *representation)
@@ -609,17 +655,21 @@ get_cached_dir(fs_fs_t *fs,
     : NULL;
 }
 
+/* Cache the directory HASH for  REPRESENTAION within FS.
+ */
 static void
 set_cached_dir(fs_fs_t *fs,
                representation_t *representation,
                apr_hash_t *hash)
 {
+  /* select the entry to use */
   svn_revnum_t revision = representation->revision->revision;
   apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_dir_cache_index(fs, revision, offset);
   dir_cache_entry_t *entry = &fs->dir_cache->entries[i];
 
+  /* clean the cache and rotate pools at regular intervals */
   fs->dir_cache->insert_count += apr_hash_count(hash);
   if (fs->dir_cache->insert_count >= fs->dir_cache->entry_count * 100)
     {
@@ -636,11 +686,16 @@ set_cached_dir(fs_fs_t *fs,
       fs->dir_cache->pool1 = pool;
     }
 
+  /* write data to cache */
   entry->hash = hash;
   entry->offset = offset;
   entry->revision = revision;
 }
 
+/* Return a new txdelta window cache with ENTRY_COUNT buckets in its index
+ * and a the total CAPACITY given in bytes.
+ * Use POOL for all cache-related allocations.
+ */
 static window_cache_t *
 create_window_cache(apr_pool_t *pool,
                     apr_size_t entry_count,
@@ -657,6 +712,9 @@ create_window_cache(apr_pool_t *pool,
   return result;
 }
 
+/* Return the position within FS' window cache ENTRIES index for the given
+ * (REVISION, OFFSET) pair. This is a cache-internal function.
+ */
 static apr_size_t
 get_window_cache_index(fs_fs_t *fs,
                        svn_revnum_t revision,
@@ -665,6 +723,9 @@ get_window_cache_index(fs_fs_t *fs,
   return (revision + offset * 0xd1f3da69) % fs->window_cache->entry_count;
 }
 
+/* Return the cached txdelta window stored in REPRESENTAION within FS.
+ * If that has not been found in cache, return NULL.
+ */
 static svn_stringbuf_t *
 get_cached_window(fs_fs_t *fs,
                   representation_t *representation,
@@ -681,17 +742,21 @@ get_cached_window(fs_fs_t *fs,
     : NULL;
 }
 
+/* Cache the undeltified txdelta WINDOW for REPRESENTAION within FS.
+ */
 static void
 set_cached_window(fs_fs_t *fs,
                   representation_t *representation,
                   svn_stringbuf_t *window)
 {
+  /* select entry */
   svn_revnum_t revision = representation->revision->revision;
   apr_size_t offset = representation->original.offset;
 
   apr_size_t i = get_window_cache_index(fs, revision, offset);
   window_cache_entry_t *entry = &fs->window_cache->entries[i];
 
+  /* if the capacity is exceeded, clear the cache */
   fs->window_cache->used += window->len;
   if (fs->window_cache->used >= fs->window_cache->capacity)
     {
@@ -702,6 +767,7 @@ set_cached_window(fs_fs_t *fs,
       fs->window_cache->used = window->len;
     }
 
+  /* set the entry to a copy of the window data */
   entry->window = svn_stringbuf_dup(window, fs->window_cache->pool);
   entry->offset = offset;
   entry->revision = revision;
