@@ -105,6 +105,15 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1356167, 1406870
+   Fix issue 4091, symlink-ness change causes client assert.
+   Justification:
+     Client assert, regression from 1.6, several duplicate issues.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4091
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
