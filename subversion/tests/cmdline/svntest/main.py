@@ -829,12 +829,7 @@ def create_repos(path, minor_version = None):
   opts = ("--bdb-txn-nosync",)
   if not minor_version or minor_version > options.server_minor_version:
     minor_version = options.server_minor_version
-  if minor_version < 4:
-    opts += ("--pre-1.4-compatible",)
-  elif minor_version < 5:
-    opts += ("--pre-1.5-compatible",)
-  elif minor_version < 6:
-    opts += ("--pre-1.6-compatible",)
+  opts += ("--compatible-version=1.%d" % (minor_version),)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
