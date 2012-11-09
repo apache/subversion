@@ -45,28 +45,60 @@ const char *svn_utf__utf8proc_version(void)
 }
 
 
-svn_error_t *
-svn_utf__decompose_normalized(const char *str, apr_size_t len,
-                              apr_int32_t *buffer, apr_size_t buffer_length,
-                              apr_size_t *result_length)
-{
-  const int nullterm = (len == SVN_UTF__UNKNOWN_LENGTH ? UTF8PROC_NULLTERM : 0);
-  const ssize_t result = utf8proc_decompose((const void*)str, len,
-                                            buffer, buffer_length,
-                                            UTF8PROC_DECOMPOSE
-                                            | UTF8PROC_STABLE | nullterm);
-  if (result < 0)
-    return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
-                            gettext(utf8proc_errmsg(result)));
 
-  *result_length = (apr_size_t)result;
-  return SVN_NO_ERROR;
+/* Fill the given BUFFER with an NFD UCS-4 representation of the UTF-8
+ * STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING is
+ * NUL-terminated; otherwise look only at the first LENGTH bytes in
+ * STRING. Upon return, BUFFER->data points at an array of UCS-4
+ * characters and BUFFER->len contains the length of the array.
+ *
+ * This function really horribly abuses stringbufs, because the result
+ * does not conform to published stringbuf semantics. However, these
+ * results are never used outside the utf8proc wrappers.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints. Any error message comes from utf8proc.
+ */
+static svn_error_t *
+decompose_normalized(const char *string, apr_size_t length,
+                     svn_stringbuf_t *buffer)
+{
+  const int nullterm = (length == SVN_UTF__UNKNOWN_LENGTH
+                        ? UTF8PROC_NULLTERM : 0);
+
+  for (;;)
+    {
+      apr_int32_t *const ucs4buf = (void *)buffer->data;
+      const ssize_t ucs4len = buffer->blocksize / sizeof(*ucs4buf);
+      const ssize_t result =
+        utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
+                           UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
+
+      if (result < 0)
+        return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
+                                gettext(utf8proc_errmsg(result)));
+
+      if (result <= ucs4len)
+        {
+          buffer->len = result;
+          return SVN_NO_ERROR;
+        }
+
+      /* Increase the decomposition buffer size and retry */
+      svn_stringbuf__reserve(buffer, result * sizeof(*ucs4buf));
+    }
 }
 
 
-int
-svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
-                 const apr_int32_t *bufb, apr_size_t lenb)
+/* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
+ * length LENB. Return 0 if they're equal, a negative value if BUFA is
+ * less than BUFB, otherwise a positive value.
+ *
+ * Yes, this is strcmp for known-length UCS-4 strings.
+ */
+static int
+ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
+        const apr_int32_t *bufb, apr_size_t lenb)
 {
   const apr_size_t len = (lena < lenb ? lena : lenb);
   apr_size_t i;
@@ -82,78 +114,55 @@ svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
 
 
 svn_error_t *
-svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf)
-{
-  char utf8buf[8];     /* The longest UTF-8 sequence has 4 bytes */
-  const apr_size_t utf8len = utf8proc_encode_char(ucs4, (void *)utf8buf);
-
-  if (utf8len)
-    {
-      svn_stringbuf_appendbytes(buf, utf8buf, utf8len);
-      return SVN_NO_ERROR;
-    }
-
-  return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
-                           "Invalid Unicode character U+%04lX",
-                           (long)ucs4);
-}
-
-
-/* Decompose the given UTF-8 KEY of length KEYLEN.  This function
-   really horribly abuses stringbufs, because the result does not
-   conform to published stringbuf semantics. However, these results
-   should never be used outside the very carefully closed world of
-   SQLite extensions.
- */
-static svn_error_t *
-decompose_normcmp_arg(const void *arg, apr_size_t arglen,
-                      svn_stringbuf_t *buf)
-{
-  for (;;)
-    {
-      apr_int32_t *const ucsbuf = (void *)buf->data;
-      const apr_size_t ucslen = buf->blocksize / sizeof(*ucsbuf);
-      SVN_ERR(svn_utf__decompose_normalized(arg, arglen, ucsbuf, ucslen,
-                                            &buf->len));
-      if (buf->len <= ucslen)
-        return SVN_NO_ERROR;
-
-      /* Increase the decomposition buffer size and retry */
-      svn_stringbuf__reserve(buf, buf->len * sizeof(*ucsbuf));
-    }
-}
-
-svn_error_t *
-svn_utf__normcmp(const void *str1, apr_size_t len1,
-                 const void *str2, apr_size_t len2,
+svn_utf__normcmp(const char *str1, apr_size_t len1,
+                 const char *str2, apr_size_t len2,
                  svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
                  int *result)
 {
   /* Shortcut-circuit the decision if at least one of the strings is empty. */
-  const svn_boolean_t empty1 = (0 == len1
-                                || (len1 == SVN_UTF__UNKNOWN_LENGTH
-                                    && !*(const char*)str1));
-  const svn_boolean_t empty2 = (0 == len2
-                                || (len2 == SVN_UTF__UNKNOWN_LENGTH
-                                    && !*(const char*)str2));
+  const svn_boolean_t empty1 =
+    (0 == len1 || (len1 == SVN_UTF__UNKNOWN_LENGTH && !*str1));
+  const svn_boolean_t empty2 =
+    (0 == len2 || (len2 == SVN_UTF__UNKNOWN_LENGTH && !*str2));
   if (empty1 || empty2)
     {
       *result = (empty1 == empty2 ? 0 : (empty1 ? -1 : 1));
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(decompose_normcmp_arg(str1, len1, buf1));
-  SVN_ERR(decompose_normcmp_arg(str2, len2, buf2));
-  *result = svn_utf__ucs4cmp((void *)buf1->data, buf1->len,
-                             (void *)buf2->data, buf2->len);
+  SVN_ERR(decompose_normalized(str1, len1, buf1));
+  SVN_ERR(decompose_normalized(str2, len2, buf2));
+  *result = ucs4cmp((void *)buf1->data, buf1->len,
+                    (void *)buf2->data, buf2->len);
   return SVN_NO_ERROR;
 }
 
 
+/* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
+ * A returned error indicates that the codepoint is invalud.
+ */
+static svn_error_t *
+encode_ucs4(apr_int32_t ucs4chr, svn_stringbuf_t *buffer)
+{
+  char utf8buf[8];     /* The longest UTF-8 sequence has 4 bytes */
+  const apr_size_t utf8len = utf8proc_encode_char(ucs4chr, (void *)utf8buf);
+
+  if (utf8len)
+    {
+      svn_stringbuf_appendbytes(buffer, utf8buf, utf8len);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
+                           "Invalid Unicode character U+%04lX",
+                           (long)ucs4chr);
+}
+
+
 svn_error_t *
-svn_utf__glob(const void *pattern, apr_size_t pattern_len,
-              const void *string, apr_size_t string_len,
-              const void *escape, apr_size_t escape_len,
+svn_utf__glob(const char *pattern, apr_size_t pattern_len,
+              const char *string, apr_size_t string_len,
+              const char *escape, apr_size_t escape_len,
               svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
               svn_boolean_t sql_like, svn_boolean_t *match)
 {
