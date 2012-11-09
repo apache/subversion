@@ -31,6 +31,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,6 +105,40 @@ int
 svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
                  const apr_int32_t *bufb, apr_size_t lenb);
 
+
+/* Decode a single UCS-4 code point to UTF-8, appending the result to BUF. */
+svn_error_t *
+svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf);
+
+
+/* Compare two UTF-8 strings, ignoring normalization, using
+ * buffers BUF1 and BUF2 for temporary storage.
+ * Return compare value in *RESULT.
+ */
+svn_error_t *
+svn_utf__normcmp(const void *str1, apr_size_t len1,
+                 const void *str2, apr_size_t len2,
+                 svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+                 int *result);
+
+
+/* Pattern matching similar to the the SQLite LIKE and GLOB
+ * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
+ * strings. Furthermore, ESCAPE, if provided, must be a character from
+ * the ASCII subset.
+ *
+ * Use buffers BUF1 and BUF2 for temporary storage.
+ *
+ * If SQL_LIKE is true, interpret PATTERN as a pattern used by the SQL
+ * LIKE operator and notice ESCAPE. Otherwise it's a Unix fileglob
+ * pattern, and ESCAPE must be NULL.
+ *
+ * Set *MATCH to the result of the comparison.
+*/
+svn_error_t *
+svn_utf__glob(const void *pattern, const void *string, const void *escape,
+              svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+              svn_boolean_t sql_like, svn_boolean_t *match);
 
 /* Return the version of the wrapped utf8proc library. */
 const char *
