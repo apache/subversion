@@ -84,36 +84,6 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
  * to indicate that the length of a string is unknonw. */
 #define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)
 
-/* Fill the given BUFFER with an NFD UCS-4 representation of the UTF-8
- * string STR. If LEN is SVN_UTF__UNKNOWN_LENGTH, assume STR is
- * NUL-terminated; otherwise look only at the first LEN bytes in
- * STR. If the returned RESULT_LENGTH is greater than the supplied
- * BUFFER_LENGTH, the the contents of the buffer are indeterminate;
- * otherwise the buffer up to RESULT_LENGTH contains the normalized
- * string representation.
- *
- * A returned error may indicate that STR contains invalid UTF-8 or
- * invalid Unicode codepoints. Any error message comes from utf8proc.
- */
-svn_error_t *
-svn_utf__decompose_normalized(const char *str, apr_size_t len,
-                              apr_int32_t *buffer, apr_size_t buffer_length,
-                              apr_size_t *result_length);
-
-
-/* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
- * length LENB. Return 0 if they're equal, a negative value if BUFA is
- * less than BUFB, otherwise a positive value.
- */
-int
-svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
-                 const apr_int32_t *bufb, apr_size_t lenb);
-
-
-/* Decode a single UCS-4 code point to UTF-8, appending the result to BUF. */
-svn_error_t *
-svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf);
-
 
 /* Compare two UTF-8 strings, ignoring normalization, using buffers
  * BUF1 and BUF2 for temporary storage. If either of LEN1 or LEN2 is
@@ -124,8 +94,8 @@ svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf);
  * Return compare value in *RESULT.
  */
 svn_error_t *
-svn_utf__normcmp(const void *str1, apr_size_t len1,
-                 const void *str2, apr_size_t len2,
+svn_utf__normcmp(const char *str1, apr_size_t len1,
+                 const char *str2, apr_size_t len2,
                  svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
                  int *result);
 
@@ -149,9 +119,9 @@ svn_utf__normcmp(const void *str1, apr_size_t len1,
  * Set *MATCH to the result of the comparison.
 */
 svn_error_t *
-svn_utf__glob(const void *pattern, apr_size_t pattern_len,
-              const void *string, apr_size_t string_len,
-              const void *escape, apr_size_t escape_len,
+svn_utf__glob(const char *pattern, apr_size_t pattern_len,
+              const char *string, apr_size_t string_len,
+              const char *escape, apr_size_t escape_len,
               svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
               svn_boolean_t sql_like, svn_boolean_t *match);
 
