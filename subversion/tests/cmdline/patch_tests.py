@@ -3939,7 +3939,7 @@ def patch_target_no_eol_at_eof(sbox):
     "context", # no newline at end of file
   ]
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A/mu'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
