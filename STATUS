@@ -88,6 +88,21 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1407597
+   Fix issue #4079 ("svnmucc cp rev arg" SEGV).
+   Justification:
+     "Segmentation fault (core dumped)" is considered sub-par error reporting.
+   Notes:
+     svnmucc.c has been renamed since 1.7.x, so backporting this change should
+     be done like so:
+       $ svn merge --ignore-ancestry -c1407597 \
+                   ^/subversion/trunk/subversion/svnmucc/svnmucc.c \
+                   tools/client-side/svnmucc/svnmucc.c
+       $ svn merge --record-only -c1407597 ^/subversion/trunk
+       $ svn ci -m ...
+   Votes:
+     +1: cmpilato
+   
 Veto-blocked changes:
 =====================
 
