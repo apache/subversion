@@ -376,7 +376,26 @@ struct report_context_t {
   svn_boolean_t closed_root;
 };
 
-
+
+/* Returns best connection for fetching files/properities. */
+static svn_ra_serf__connection_t *
+get_best_connection(report_context_t *ctx)
+{
+  svn_ra_serf__connection_t * conn;
+
+  /* Currently just cycle connection. In future we could store number of
+   * pending request on each connection for better connection usage. */
+  conn = ctx->sess->conns[ctx->sess->cur_conn];
+
+  /* Switch our connection. */
+  ctx->sess->cur_conn++;
+
+  if (ctx->sess->cur_conn >= ctx->sess->num_conns)
+      ctx->sess->cur_conn = 1;
+
+  return conn;
+}
+
 /** Report state management helper **/
 
 static report_info_t *
@@ -1273,7 +1292,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   svn_ra_serf__handler_t *handler;
 
   /* What connection should we go on? */
-  conn = ctx->sess->conns[ctx->sess->cur_conn];
+  conn = get_best_connection(ctx);
 
   /* go fetch info->name from DAV:checked-in */
   info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
@@ -1989,7 +2008,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
-                                             ctx->sess->conns[ctx->sess->cur_conn],
+                                             get_best_connection(ctx),
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
@@ -2555,11 +2574,6 @@ finish_report(void *report_baton,
       if (sess->num_conns < MAX_NR_OF_CONNS)
         SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
                                           report->active_propfinds));
-
-      /* Switch our connection. */
-      if (!report->done)
-         if (++sess->cur_conn == sess->num_conns)
-             sess->cur_conn = 1;
 
       /* Prune directory propfinds that are finished. */
       done_list = report->done_dir_propfinds;
