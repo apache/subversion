@@ -50,11 +50,11 @@ svn_utf__decompose_normalized(const char *str, apr_size_t len,
                               apr_int32_t *buffer, apr_size_t buffer_length,
                               apr_size_t *result_length)
 {
+  const int nullterm = (len == SVN_UTF__UNKNOWN_LENGTH ? UTF8PROC_NULLTERM : 0);
   const ssize_t result = utf8proc_decompose((const void*)str, len,
                                             buffer, buffer_length,
                                             UTF8PROC_DECOMPOSE
-                                            | UTF8PROC_STABLE
-                                            | (len ? 0 : UTF8PROC_NULLTERM));
+                                            | UTF8PROC_STABLE | nullterm);
   if (result < 0)
     return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
                             gettext(utf8proc_errmsg(result)));
@@ -129,6 +129,19 @@ svn_utf__normcmp(const void *str1, apr_size_t len1,
                  svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
                  int *result)
 {
+  /* Shortcut-circuit the decision if at least one of the strings is empty. */
+  const svn_boolean_t empty1 = (0 == len1
+                                || (len1 == SVN_UTF__UNKNOWN_LENGTH
+                                    && !*(const char*)str1));
+  const svn_boolean_t empty2 = (0 == len2
+                                || (len2 == SVN_UTF__UNKNOWN_LENGTH
+                                    && !*(const char*)str2));
+  if (empty1 || empty2)
+    {
+      *result = (empty1 == empty2 ? 0 : (empty1 ? -1 : 1));
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(decompose_normcmp_arg(str1, len1, buf1));
   SVN_ERR(decompose_normcmp_arg(str2, len2, buf2));
   *result = svn_utf__ucs4cmp((void *)buf1->data, buf1->len,
@@ -138,7 +151,9 @@ svn_utf__normcmp(const void *str1, apr_size_t len1,
 
 
 svn_error_t *
-svn_utf__glob(const void *pattern, const void *string, const void *escape,
+svn_utf__glob(const void *pattern, apr_size_t pattern_len,
+              const void *string, apr_size_t string_len,
+              const void *escape, apr_size_t escape_len,
               svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
               svn_boolean_t sql_like, svn_boolean_t *match)
 {

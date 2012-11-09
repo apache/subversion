@@ -80,13 +80,17 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+/* A constant used for many length parameters in the utf8proc wrappers
+ * to indicate that the length of a string is unknonw. */
+#define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)
 
 /* Fill the given BUFFER with an NFD UCS-4 representation of the UTF-8
- * string STR. If LEN is 0, assume STR is NUL-terminated; otherwise
- * look only at the first LEN bytes in STR. If the returned
- * RESULT_LENGTH is greater than the supplied BUFFER_LENGTH, the the
- * contents of the buffer are indeterminate; otherwise the buffer up
- * to RESULT_LENGTH contains the normalized string representation.
+ * string STR. If LEN is SVN_UTF__UNKNOWN_LENGTH, assume STR is
+ * NUL-terminated; otherwise look only at the first LEN bytes in
+ * STR. If the returned RESULT_LENGTH is greater than the supplied
+ * BUFFER_LENGTH, the the contents of the buffer are indeterminate;
+ * otherwise the buffer up to RESULT_LENGTH contains the normalized
+ * string representation.
  *
  * A returned error may indicate that STR contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
@@ -111,8 +115,12 @@ svn_error_t *
 svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf);
 
 
-/* Compare two UTF-8 strings, ignoring normalization, using
- * buffers BUF1 and BUF2 for temporary storage.
+/* Compare two UTF-8 strings, ignoring normalization, using buffers
+ * BUF1 and BUF2 for temporary storage. If either of LEN1 or LEN2 is
+ * SVN_UTF__UNKNOWN_LENGTH, assume the associated string is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
  * Return compare value in *RESULT.
  */
 svn_error_t *
@@ -127,6 +135,11 @@ svn_utf__normcmp(const void *str1, apr_size_t len1,
  * strings. Furthermore, ESCAPE, if provided, must be a character from
  * the ASCII subset.
  *
+ * If any of PATTERN_LEN, STRING_LEN or ESCAPE_LEN are
+ * SVN_UTF__UNKNOWN_LENGTH, assume the associated string is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
  * Use buffers BUF1 and BUF2 for temporary storage.
  *
  * If SQL_LIKE is true, interpret PATTERN as a pattern used by the SQL
@@ -136,7 +149,9 @@ svn_utf__normcmp(const void *str1, apr_size_t len1,
  * Set *MATCH to the result of the comparison.
 */
 svn_error_t *
-svn_utf__glob(const void *pattern, const void *string, const void *escape,
+svn_utf__glob(const void *pattern, apr_size_t pattern_len,
+              const void *string, apr_size_t string_len,
+              const void *escape, apr_size_t escape_len,
               svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
               svn_boolean_t sql_like, svn_boolean_t *match);
 

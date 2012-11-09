@@ -301,10 +301,13 @@ normalized_compare(const char *stra, int expected, const char *strb,
                    const char *stratag, const char *strbtag,
                    svn_stringbuf_t *bufa, svn_stringbuf_t *bufb)
 {
+  const apr_size_t lena = (implicit_size
+                           ? SVN_UTF__UNKNOWN_LENGTH : strlen(stra));
+  const apr_size_t lenb = (implicit_size
+                           ? SVN_UTF__UNKNOWN_LENGTH : strlen(strb));
   int result;
 
-  SVN_ERR(svn_utf__normcmp(stra, (implicit_size ? 0 : strlen(stra)),
-                           strb, (implicit_size ? 0 : strlen(strb)),
+  SVN_ERR(svn_utf__normcmp(stra, lena, strb, lenb,
                            bufa, bufb, &result));
 
   /* UCS-4 debugging dump of the decomposed strings
