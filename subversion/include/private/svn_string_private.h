@@ -54,6 +54,13 @@ extern "C" {
 svn_string_t *
 svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
 
+/** Like svn_stringbuf_ensure, but does not reserve space for the '\0'
+ * and does not copy the data.
+ */
+void
+svn_stringbuf__reserve(svn_stringbuf_t *str, apr_size_t minimum_size);
+
+
 /** Like apr_strtoff but provided here for backward compatibility
  *  with APR 0.9 */
 apr_status_t
