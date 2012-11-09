@@ -38,6 +38,7 @@
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_string_private.h"
 
 #ifdef SQLITE3_DEBUG
 #include "private/svn_debug.h"
@@ -46,10 +47,23 @@
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
-  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 6 || __APPLE_CC__))
+    #if !__APPLE_CC__ || __GNUC_MINOR__ >= 6
+      #pragma GCC diagnostic push
+    #endif
+    #pragma GCC diagnostic ignored "-Wunreachable-code"
     #pragma GCC diagnostic ignored "-Wunused-function"
+    #pragma GCC diagnostic ignored "-Wcast-qual"
+    #pragma GCC diagnostic ignored "-Wunused"
+    #pragma GCC diagnostic ignored "-Wshadow"
+    #if __APPLE_CC__
+      #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+    #endif
   #endif
   #include <sqlite3.c>
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 6))
+    #pragma GCC diagnostic pop
+  #endif
 #else
   #include <sqlite3.h>
 #endif
@@ -103,11 +117,9 @@ struct svn_sqlite__db_t
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
 
-  /* Buffers for normalized unicode string comparison. */
-  apr_int32_t *nfd_buf1;
-  apr_size_t nfd_len1;
-  apr_int32_t *nfd_buf2;
-  apr_size_t nfd_len2;
+  /* Buffers for SQLite extensoins. */
+  svn_stringbuf_t *sqlext_buf1;
+  svn_stringbuf_t *sqlext_buf2;
 };
 
 struct svn_sqlite__stmt_t
@@ -868,53 +880,20 @@ collate_ucs_nfd(void *baton,
                 int len2, const void *key2)
 {
   svn_sqlite__db_t *db = baton;
-  apr_size_t rlen1;
-  apr_size_t rlen2;
-  svn_error_t *err;
+  int result;
 
-  if (0 == len1 || 0 == len2)
-    return (len1 == len2 ? 0 : (len1 < len2 ? -1 : 1));
-
-  for (;;)
+  if (svn_utf__normcmp(key1, len1, key2, len2,
+                       db->sqlext_buf1, db->sqlext_buf2, &result))
     {
-      err = svn_utf__decompose_normalized(key1, len1,
-                                          db->nfd_buf1, db->nfd_len1,
-                                          &rlen1);
       /* There is really nothing we can do here if an error occurs
          during Unicode normalizetion, and attempting to recover could
          result in the wc.db index being corrupted. Presumably this
          can only happen if the index already contains invalid UTF-8
          strings, which should never happen in any case ... */
-      if (err)
-        SVN_ERR_MALFUNCTION_NO_RETURN();
-
-      if (rlen1 <= db->nfd_len1)
-        break;
-
-      /* Double the decomposition buffer size and retry */
-      db->nfd_len1 *= 2;
-      db->nfd_buf1 = apr_palloc(db->state_pool,
-                                db->nfd_len1 * sizeof(*db->nfd_buf1));
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
-  /* And repeat with the second string */
-  for (;;)
-    {
-      err = svn_utf__decompose_normalized(key2, len2,
-                                          db->nfd_buf2, db->nfd_len2,
-                                          &rlen2);
-      if (err)
-        SVN_ERR_MALFUNCTION_NO_RETURN();
-
-      if (rlen2 <= db->nfd_len2)
-        break;
-
-      db->nfd_len2 *= 2;
-      db->nfd_buf2 = apr_palloc(db->state_pool,
-                                db->nfd_len2 * sizeof(*db->nfd_buf2));
-    }
-
-  return svn_utf__ucs4cmp(db->nfd_buf1, rlen1, db->nfd_buf2, rlen2);
+  return result;
 }
 
 
@@ -931,11 +910,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
 
-  (*db)->nfd_len1 = (*db)->nfd_len2 = 2048;
-  (*db)->nfd_buf1 = apr_palloc(result_pool,
-                               (*db)->nfd_len1 * sizeof(*(*db)->nfd_buf1));
-  (*db)->nfd_buf2 = apr_palloc(result_pool,
-                               (*db)->nfd_len2 * sizeof(*(*db)->nfd_buf2));
+  (*db)->sqlext_buf1 = svn_stringbuf_create_ensure(4096, result_pool);
+  (*db)->sqlext_buf2 = svn_stringbuf_create_ensure(4096, result_pool);
   SQLITE_ERR(sqlite3_create_collation((*db)->db3,
                                       "svn-ucs-nfd", SQLITE_UTF8,
                                       *db, collate_ucs_nfd),

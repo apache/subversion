@@ -26,6 +26,7 @@
 #define UTF8PROC_INLINE
 #include "utf8proc/utf8proc.c"
 
+#include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
 #define UNUSED(x) ((void)(x))
@@ -63,8 +64,9 @@ svn_utf__decompose_normalized(const char *str, apr_size_t len,
 }
 
 
-int svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
-                     const apr_int32_t *bufb, apr_size_t lenb)
+int
+svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
+                 const apr_int32_t *bufb, apr_size_t lenb)
 {
   const apr_size_t len = (lena < lenb ? lena : lenb);
   apr_size_t i;
@@ -76,4 +78,69 @@ int svn_utf__ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
         return diff;
     }
   return (lena == lenb ? 0 : (lena < lenb ? -1 : 1));
+}
+
+
+svn_error_t *
+svn_utf__encode_ucs4_to_stringbuf(apr_int32_t ucs4, svn_stringbuf_t *buf)
+{
+  char utf8buf[8];     /* The longest UTF-8 sequence has 4 bytes */
+  const apr_size_t utf8len = utf8proc_encode_char(ucs4, (void *)utf8buf);
+
+  if (utf8len)
+    {
+      svn_stringbuf_appendbytes(buf, utf8buf, utf8len);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
+                           "Invalid Unicode character U+%04lX",
+                           (long)ucs4);
+}
+
+
+/* Decompose the given UTF-8 KEY of length KEYLEN.  This function
+   really horribly abuses stringbufs, because the result does not
+   conform to published stringbuf semantics. However, these results
+   should never be used outside the very carefully closed world of
+   SQLite extensions.
+ */
+static svn_error_t *
+decompose_normcmp_arg(const void *arg, apr_size_t arglen,
+                      svn_stringbuf_t *buf)
+{
+  for (;;)
+    {
+      apr_int32_t *const ucsbuf = (void *)buf->data;
+      const apr_size_t ucslen = buf->blocksize / sizeof(*ucsbuf);
+      SVN_ERR(svn_utf__decompose_normalized(arg, arglen, ucsbuf, ucslen,
+                                            &buf->len));
+      if (buf->len <= ucslen)
+        return SVN_NO_ERROR;
+
+      /* Increase the decomposition buffer size and retry */
+      svn_stringbuf__reserve(buf, buf->len * sizeof(*ucsbuf));
+    }
+}
+
+svn_error_t *
+svn_utf__normcmp(const void *str1, apr_size_t len1,
+                 const void *str2, apr_size_t len2,
+                 svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+                 int *result)
+{
+  SVN_ERR(decompose_normcmp_arg(str1, len1, buf1));
+  SVN_ERR(decompose_normcmp_arg(str2, len2, buf2));
+  *result = svn_utf__ucs4cmp((void *)buf1->data, buf1->len,
+                             (void *)buf2->data, buf2->len);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf__glob(const void *pattern, const void *string, const void *escape,
+              svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+              svn_boolean_t sql_like, svn_boolean_t *match)
+{
+  return SVN_NO_ERROR;
 }
