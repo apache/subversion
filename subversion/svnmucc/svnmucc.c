@@ -1300,7 +1300,7 @@ main(int argc, const char **argv)
           else
             anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
 
-          if ((++i == action_args->nelts) && (j >= num_url_args))
+          if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             insufficient(pool);
         }
       APR_ARRAY_PUSH(actions, struct action *) = action;
