@@ -636,6 +636,7 @@ setup_serf_req(serf_request_t *request,
                svn_ra_serf__session_t *session,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
+               const char *accept_encoding,
                apr_pool_t *request_pool,
                apr_pool_t *scratch_pool)
 {
@@ -695,6 +696,11 @@ setup_serf_req(serf_request_t *request,
   if (session->http10)
       serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
 #endif
+
+  if (accept_encoding)
+    {
+      serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
+    }
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
@@ -2051,6 +2057,7 @@ setup_request(serf_request_t *request,
 {
   serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
+  const char *accept_encoding;
 
   if (handler->body_delegate)
     {
@@ -2065,9 +2072,23 @@ setup_request(serf_request_t *request,
       body_bkt = NULL;
     }
 
+  if (handler->custom_accept_encoding)
+    {
+      accept_encoding = NULL;
+    }
+  else if (handler->session->using_compression)
+    {
+      /* Accept gzip compression if enabled. */
+      accept_encoding = "gzip";
+    }
+  else
+    {
+      accept_encoding = NULL;
+    }
+
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
                          handler->session, handler->method, handler->path,
-                         body_bkt, handler->body_type,
+                         body_bkt, handler->body_type, accept_encoding,
                          request_pool, scratch_pool));
 
   if (handler->header_delegate)
