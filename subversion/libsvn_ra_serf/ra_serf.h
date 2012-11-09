@@ -393,6 +393,11 @@ typedef struct svn_ra_serf__handler_t {
   /* The content-type of the request body. */
   const char *body_type;
 
+  /* If TRUE then default Accept-Encoding request header is not configured for
+     request. If FALSE then 'gzip' accept encoding will be used if compression
+     enabled. */
+  svn_boolean_t custom_accept_encoding;
+
   /* Has the request/response been completed?  */
   svn_boolean_t done;
 
