@@ -17438,6 +17438,60 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+#----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+def merge_with_externals_with_mergeinfo(sbox):
+  "merge with externals with mergeinfo"
+
+  # Some paths we'll care about.
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  file_external_path = sbox.ospath('A/file-external')
+  mu_COPY_path = sbox.ospath('A_COPY/mu')
+  mu_path = sbox.ospath('A/mu')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a branch of ^/A and then make a few edits under A in r3-6:
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  svntest.main.file_write(mu_COPY_path, "branch edit")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'file edit on the branch', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Create a file external under 'A' and set some bogus mergeinfo
+  # on it (the fact that this mergeinfo is bogus has no bearing on
+  # this test).
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'svn:externals',
+                                     '^/iota file-external', A_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'set file external', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', SVN_PROP_MERGEINFO,
+                                     "/bogus-mergeinfo:5", file_external_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'set mergeinfo on file external',
+                                     file_external_path)
+
+  # Sync merge ^/A to A_COPY and then reintegrate A_COPY back to A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'sync merge', wc_dir)
+  # This was segfaulting, see
+  # http://svn.haxx.se/dev/archive-2012-10/0364.shtml
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output(None,
+                          ['U    ' + mu_path + '\n',
+                           ' U   ' + A_path  + '\n'],
+                          two_url=True),
+    [], 'merge', '--reintegrate', sbox.repo_url + '/A_COPY',
+    A_path)
+
 ########################################################################
 # Run the tests
 
@@ -17569,6 +17623,7 @@ test_list = [ None,
               reverse_merge_with_rename,
               merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
+              merge_with_externals_with_mergeinfo,
              ]
 
 if __name__ == '__main__':
