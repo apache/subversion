@@ -377,7 +377,7 @@ struct report_context_t {
 };
 
 
-/* Returns best connection for fetching files/properities. */
+/* Returns best connection for fetching files/properities. */
 static svn_ra_serf__connection_t *
 get_best_connection(report_context_t *ctx)
 {
