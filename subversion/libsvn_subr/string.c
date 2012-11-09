@@ -37,32 +37,6 @@
 #include "svn_private_config.h"
 
 
-/* Our own realloc, since APR doesn't have one.  Note: this is a
-   generic realloc for memory pools, *not* for strings. */
-static void *
-my__realloc(char *data, apr_size_t oldsize, apr_size_t request,
-            apr_pool_t *pool)
-{
-  void *new_area;
-
-  /* kff todo: it's a pity APR doesn't give us this -- sometimes it
-     could realloc the block merely by extending in place, sparing us
-     a memcpy(), but only the pool would know enough to be able to do
-     this.  We should add a realloc() to APR if someone hasn't
-     already. */
-
-  /* malloc new area */
-  new_area = apr_palloc(pool, request);
-
-  /* copy data to new area */
-  memcpy(new_area, data, oldsize);
-
-  /* I'm NOT freeing old area here -- cuz we're using pools, ugh. */
-
-  /* return new area */
-  return new_area;
-}
-
 static APR_INLINE svn_boolean_t
 string_compare(const char *str1,
                const char *str2,
@@ -442,10 +416,8 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str)
 
 
 void
-svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
+svn_stringbuf__reserve(svn_stringbuf_t *str, apr_size_t minimum_size)
 {
-  ++minimum_size;  /* + space for '\0' */
-
   /* Keep doubling capacity until have enough. */
   if (str->blocksize < minimum_size)
     {
@@ -470,13 +442,23 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
               }
           }
 
-      str->data = (char *) my__realloc(str->data,
-                                       str->len + 1,
-                                       /* We need to maintain (and thus copy)
-                                          the trailing nul */
-                                       str->blocksize,
-                                       str->pool);
+      str->data = apr_palloc(str->pool, str->blocksize);
+      /* Note that we do not touch str->len. It's up to the caller to
+         reset it, or copy the old data, or do whatever magic it
+         wants. */
     }
+}
+
+void
+svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
+{
+  const char *old_data = str->data;
+
+  /* Reserve space for the required size and don't forget the '\0' */
+  svn_stringbuf__reserve(str, minimum_size + 1);
+
+  /* Copy the data. We need to maintain (and thus copy) the trailing nul */
+  memcpy(str->data, old_data, str->len + 1);
 }
 
 
