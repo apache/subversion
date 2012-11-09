@@ -94,10 +94,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1403258
-   Fix incorrect status returned by the 1.6 API.
-   Justification:
-     Regression for users of the 1.6 API.
-   Votes:
-     +1: philip, rhuijben, cmpilato
-

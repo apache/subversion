@@ -463,7 +463,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   /* (Currently a no-op, but just make sure it is ok) */
   if (old_status->repos_node_status == svn_wc_status_modified
       || old_status->repos_node_status == svn_wc_status_conflicted)
-    (*status)->text_status = old_status->repos_text_status;
+    (*status)->repos_text_status = old_status->repos_text_status;
 
   if (old_status->node_status == svn_wc_status_added)
     (*status)->prop_status = svn_wc_status_none; /* No separate info */
