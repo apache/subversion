@@ -110,7 +110,7 @@ svn_utf__normcmp(const char *str1, apr_size_t len1,
  * null-terminated; otherwise, consider the string only up to the
  * given length.
  *
- * Use buffers BUF1 and BUF2 for temporary storage.
+ * Use buffers PATTERN_BUF, STRING_BUF and TEMP_BUF for temporary storage.
  *
  * If SQL_LIKE is true, interpret PATTERN as a pattern used by the SQL
  * LIKE operator and notice ESCAPE. Otherwise it's a Unix fileglob
@@ -122,8 +122,11 @@ svn_error_t *
 svn_utf__glob(const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
-              svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
-              svn_boolean_t sql_like, svn_boolean_t *match);
+              svn_boolean_t sql_like,
+              svn_stringbuf_t *pattern_buf,
+              svn_stringbuf_t *string_buf,
+              svn_stringbuf_t *temp_buf,
+              svn_boolean_t *match);
 
 /* Return the version of the wrapped utf8proc library. */
 const char *
