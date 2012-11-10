@@ -26,10 +26,16 @@
 #define UTF8PROC_INLINE
 #include "utf8proc/utf8proc.c"
 
+#include <apr_fnmatch.h>
+
 #include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
 #define UNUSED(x) ((void)(x))
+
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
 
 
 const char *svn_utf__utf8proc_version(void)
@@ -142,7 +148,7 @@ svn_utf__normcmp(const char *str1, apr_size_t len1,
  * A returned error indicates that the codepoint is invalud.
  */
 static svn_error_t *
-encode_ucs4(apr_int32_t ucs4chr, svn_stringbuf_t *buffer)
+encode_ucs4(svn_stringbuf_t *buffer, apr_int32_t ucs4chr)
 {
   char utf8buf[8];     /* The longest UTF-8 sequence has 4 bytes */
   const apr_size_t utf8len = utf8proc_encode_char(ucs4chr, (void *)utf8buf);
@@ -163,8 +169,110 @@ svn_error_t *
 svn_utf__glob(const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
-              svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
-              svn_boolean_t sql_like, svn_boolean_t *match)
+              svn_boolean_t sql_like,
+              svn_stringbuf_t *pattern_buf,
+              svn_stringbuf_t *string_buf,
+              svn_stringbuf_t *temp_buf,
+              svn_boolean_t *match)
 {
+  SVN_DBG((">ptn  : %s\n", pattern));
+  SVN_DBG((">str  : %s\n", string));
+  SVN_DBG((">esc  : %s\n", (escape ? escape : "(null)")));
+
+  /* If we're in LIKE mode, we don't do custom escape chars. */
+  if (escape && !sql_like)
+    return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
+                            "The GLOB operator does not allow"
+                            " a custom escape character");
+
+  /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
+     because apr_fnmatch can't handle it.*/
+  SVN_ERR(decompose_normalized(pattern, pattern_len, temp_buf));
+  svn_stringbuf_setempty(pattern_buf);
+  if (!sql_like)
+    {
+      const apr_int32_t *const glob = (void *)temp_buf->data;
+      apr_size_t i;
+      for (i = 0; i < temp_buf->len; ++i)
+        SVN_ERR(encode_ucs4(pattern_buf, glob[i]));
+    }
+  else
+    {
+      /* Convert a LIKE pattern to a GLOB pattern that apr_fnmatch can use. */
+      const apr_int32_t *like = (void *)temp_buf->data;
+      apr_int32_t ucs4esc;
+      svn_boolean_t escaped;
+      apr_size_t i;
+
+      if (!escape)
+        ucs4esc = -1;           /* Definitely an invalid UCS-4 character. */
+      else
+        {
+          const int nullterm = (escape_len == SVN_UTF__UNKNOWN_LENGTH
+                                ? UTF8PROC_NULLTERM : 0);
+          ssize_t result =
+            utf8proc_decompose((const void*) escape, escape_len, &ucs4esc, 1,
+                               UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
+          if (result < 0)
+            return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
+                                    gettext(utf8proc_errmsg(result)));
+          if (result > 1)
+            return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
+                                    "The ESCAPE parameter is too long");
+          if ((ucs4esc & 0xFF) != ucs4esc)
+            return svn_error_createf(SVN_ERR_UTF8_GLOB, NULL,
+                                     "Invalid ESCAPE character U+%04lX",
+                                     (long)ucs4esc);
+          SVN_DBG(("<esc  : %c (U+%04lX)\n", (char)(ucs4esc & 0xFF), (long)ucs4esc));
+        }
+
+      for (i = 0, escaped = FALSE; i < temp_buf->len; ++i, ++like)
+        {
+          if (*like == ucs4esc && !escaped)
+            {
+              svn_stringbuf_appendbyte(pattern_buf, '\\');
+              escaped = TRUE;
+            }
+          else if (escaped)
+            {
+              SVN_ERR(encode_ucs4(pattern_buf, *like));
+              escaped = FALSE;
+            }
+          else
+            {
+              if ((*like == '[' || *like == '\\') && !escaped)
+                {
+                  /* Escape brackets and backslashes which are always
+                     literals in LIKE patterns. */
+                  svn_stringbuf_appendbyte(pattern_buf, '\\');
+                  escaped = TRUE;
+                  --i; --like;
+                  continue;
+                }
+
+              /* Replace LIKE wildcards with their GLOB equivalents. */
+              if (*like == '%')
+                  svn_stringbuf_appendbyte(pattern_buf, '*');
+              else if (*like == '_')
+                  svn_stringbuf_appendbyte(pattern_buf, '?');
+              else
+                SVN_ERR(encode_ucs4(pattern_buf, *like));
+            }
+        }
+    }
+  SVN_DBG(("glob  : %s\n", pattern_buf->data));
+
+  /* Now normalize the string */
+  SVN_ERR(decompose_normalized(string, string_len, temp_buf));
+  svn_stringbuf_setempty(string_buf);
+  {
+    const apr_int32_t *const ucs4nfd = (void *)temp_buf->data;
+    apr_size_t i;
+    for (i = 0; i < temp_buf->len; ++i)
+      SVN_ERR(encode_ucs4(string_buf, ucs4nfd[i]));
+  }
+  SVN_DBG(("string: %s\n", string_buf->data));
+
+  *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;
 }

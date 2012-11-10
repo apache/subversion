@@ -27,6 +27,10 @@
 
 #include "private/svn_utf_private.h"
 
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
+
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
 static apr_uint32_t diff_diff3_seed;
 
@@ -481,6 +485,93 @@ test_utf_collated_compare(apr_pool_t *pool)
 }
 
 
+
+static svn_error_t *
+test_utf_pattern_match(apr_pool_t *pool)
+{
+  static const struct glob_test_t {
+    svn_boolean_t sql_like;
+    svn_boolean_t matches;
+    const char *pattern;
+    const char *string;
+    const char *escape;
+  } glob_tests[] = {
+#define LIKE_MATCH TRUE, TRUE
+#define LIKE_FAIL  TRUE, FALSE
+#define GLOB_MATCH FALSE, TRUE
+#define GLOB_FAIL  FALSE, FALSE
+
+    {LIKE_FAIL,  "",     "test", NULL},
+    {GLOB_FAIL,  "",     "test", NULL},
+    {LIKE_FAIL,  "",     "%",    NULL},
+    {GLOB_FAIL,  "",     "*",    NULL},
+    {LIKE_FAIL,  "test", "%",    NULL},
+    {GLOB_FAIL,  "test", "*",    NULL},
+    {LIKE_MATCH, "test", "test", NULL},
+    {GLOB_MATCH, "test", "test", NULL},
+
+    {LIKE_MATCH, "t\xe1\xb8\x9dst", "te\xcc\xa7\xcc\x86st", NULL},
+    {GLOB_MATCH, "te\xcc\xa7\xcc\x86st", "t\xe1\xb8\x9dst", NULL},
+#undef LIKE_MATCH
+#undef LIKE_FAIL
+#undef GLOB_MATCH
+#undef GLOB_FAIL
+
+    {FALSE, FALSE, NULL, NULL, NULL}
+  };
+
+  svn_stringbuf_t *bufa = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *bufb = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *bufc = svn_stringbuf_create_empty(pool);
+  const struct glob_test_t *gt;
+
+  srand(79);
+  for (gt = glob_tests; gt->pattern; ++gt)
+    {
+      const svn_boolean_t implicit_size = (rand() % 13) & 1;
+      const apr_size_t lenptn = (implicit_size
+                                 ? SVN_UTF__UNKNOWN_LENGTH
+                                 : strlen(gt->pattern));
+      const apr_size_t lenstr = (implicit_size
+                                 ? SVN_UTF__UNKNOWN_LENGTH
+                                 : strlen(gt->string));
+      const apr_size_t lenesc = (implicit_size
+                                 ? SVN_UTF__UNKNOWN_LENGTH
+                                 : (gt->escape ? strlen(gt->escape) : 0));
+      svn_boolean_t match;
+      svn_error_t *err;
+
+
+      SVN_DBG(("--- %d ----------\n", (int)(gt - glob_tests)));
+
+      err = svn_utf__glob(gt->pattern, lenptn,
+                          gt->string, lenstr,
+                          gt->escape, lenesc,
+                          gt->sql_like, bufa, bufb, bufc, &match);
+      if (gt->sql_like && gt->escape && !err)
+        return svn_error_create
+          (SVN_ERR_TEST_FAILED, NULL, "Failed to detect GLOB ESCAPE");
+
+      if (!match != !gt->matches)
+        {
+          if (gt->sql_like)
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL,
+               "Wrong result: %s'%s' LIKE '%s'%s%s%s%s",
+               (gt->matches ? "NOT " : ""), gt->string, gt->pattern,
+               (gt->escape ? " ESCAPE " : ""), (gt->escape ? "'" : ""),
+               (gt->escape ? gt->escape : ""), (gt->escape ? "'" : ""));
+          else
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL, "Wrong result: %s%s GLOB %s",
+               (gt->matches ? "NOT " : ""), gt->string, gt->pattern);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -497,5 +588,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf_cstring_from_utf8_ex2"),
     SVN_TEST_PASS2(test_utf_collated_compare,
                    "test svn_utf__normcmp"),
+    SVN_TEST_PASS2(test_utf_pattern_match,
+                   "test svn_utf__match"),
     SVN_TEST_NULL
   };
