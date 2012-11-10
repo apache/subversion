@@ -1123,7 +1123,10 @@ def incoming_symlink_changes(sbox):
   sbox.simple_add_symlink('iota', 's-type')
   sbox.simple_append('s-reverse', 'link iota')
   sbox.simple_add('s-reverse')
+  # Sleep here so that the subsequent s-in-place change is detected.
+  svntest.actions.do_sleep_for_timestamps()
   sbox.simple_commit() # r2
+  svntest.actions.no_sleep_for_timestamps()
 
   # Replace s-replace
   sbox.simple_rm('s-replace')
