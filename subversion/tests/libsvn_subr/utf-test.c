@@ -27,10 +27,6 @@
 
 #include "private/svn_utf_private.h"
 
-#ifdef SVN_DEBUG
-#include "private/svn_debug.h"
-#endif
-
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
 static apr_uint32_t diff_diff3_seed;
 
@@ -582,8 +578,6 @@ test_utf_pattern_match(apr_pool_t *pool)
       svn_boolean_t match;
       svn_error_t *err;
 
-
-      SVN_DBG(("--- %d ----------\n", (int)(gt - glob_tests)));
 
       err = svn_utf__glob(gt->pattern, lenptn,
                           gt->string, lenstr,

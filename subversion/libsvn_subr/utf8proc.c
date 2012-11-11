@@ -33,10 +33,6 @@
 #include "svn_private_config.h"
 #define UNUSED(x) ((void)(x))
 
-#ifdef SVN_DEBUG
-#include "private/svn_debug.h"
-#endif
-
 
 const char *svn_utf__utf8proc_version(void)
 {
@@ -195,10 +191,6 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
               svn_stringbuf_t *temp_buf,
               svn_boolean_t *match)
 {
-  SVN_DBG((">ptn  : %s\n", pattern));
-  SVN_DBG((">str  : %s\n", string));
-  SVN_DBG((">esc  : %s\n", (escape ? escape : "(null)")));
-
   /* If we're in LIKE mode, we don't do custom escape chars. */
   if (escape && !sql_like)
     return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
@@ -239,7 +231,6 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
             return svn_error_createf(SVN_ERR_UTF8_GLOB, NULL,
                                      "Invalid ESCAPE character U+%04lX",
                                      (long)ucs4esc);
-          SVN_DBG(("<esc  : %c (U+%04lX)\n", (char)(ucs4esc & 0xFF), (long)ucs4esc));
         }
 
       svn_stringbuf_setempty(pattern_buf);
@@ -278,14 +269,12 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
         }
       pattern_buf->data[pattern_buf->len] = '\0';
     }
-  SVN_DBG(("glob  : %s\n", pattern_buf->data));
 
   /* Now normalize the string */
   SVN_ERR(decompose_normalized(string, string_len, temp_buf));
     SVN_ERR(encode_ucs4_string(string_buf,
                                (void *)temp_buf->data,
                                temp_buf->len));
-  SVN_DBG(("string: %s\n", string_buf->data));
 
   *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;
