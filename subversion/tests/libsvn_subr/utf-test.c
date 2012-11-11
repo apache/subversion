@@ -509,9 +509,67 @@ test_utf_pattern_match(apr_pool_t *pool)
     {GLOB_FAIL,  "test", "*",    NULL},
     {LIKE_MATCH, "test", "test", NULL},
     {GLOB_MATCH, "test", "test", NULL},
-
     {LIKE_MATCH, "t\xe1\xb8\x9dst", "te\xcc\xa7\xcc\x86st", NULL},
     {GLOB_MATCH, "te\xcc\xa7\xcc\x86st", "t\xe1\xb8\x9dst", NULL},
+
+    {LIKE_FAIL,  "test", "test", "\xe1\xb8\x9d"}, /* escape char not ascii */
+
+    {LIKE_MATCH, "te#st",    "test",   "#"},
+    {LIKE_FAIL,  "te#st",    "test",   NULL},
+    {GLOB_MATCH, "te\\st",   "test",   NULL},
+    {LIKE_MATCH, "te##st",   "te#st",  "#"},
+    {LIKE_FAIL,  "te##st",   "te#st",  NULL},
+    {GLOB_MATCH, "te\\\\st", "te\\st", NULL},
+    {GLOB_FAIL,  "te\\\\st", "te\\st", "\\"}, /* escape char with glob */
+    {LIKE_FAIL,  "te#%t",    "te%t",   NULL},
+    {LIKE_MATCH, "te#%t",    "te%t",   "#"},
+    {GLOB_MATCH, "te\\*t",   "te*t",   NULL},
+    {LIKE_FAIL,  "te#%t",    "test",   NULL},
+    {GLOB_FAIL,  "te\\*t",   "test",   NULL},
+    {LIKE_FAIL,  "te#_t",    "te_t",   NULL},
+    {LIKE_MATCH, "te#_t",    "te_t",   "#"},
+    {GLOB_MATCH, "te\\?t",   "te?t",   NULL},
+    {LIKE_FAIL,  "te#_t",    "test",   NULL},
+    {LIKE_FAIL,  "te#_t",    "test",   "#"},
+    {GLOB_FAIL,  "te\\?t",   "test",   NULL},
+
+    {LIKE_MATCH, "_est",     "test",   NULL},
+    {GLOB_MATCH, "?est",     "test",   NULL},
+    {LIKE_MATCH, "te_t",     "test",   NULL},
+    {GLOB_MATCH, "te?t",     "test",   NULL},
+    {LIKE_MATCH, "tes_",     "test",   NULL},
+    {GLOB_MATCH, "tes?",     "test",   NULL},
+    {LIKE_FAIL,  "test_",    "test",   NULL},
+    {GLOB_FAIL,  "test?",    "test",   NULL},
+
+    {LIKE_MATCH, "[s%n]",   "[subversion]", NULL},
+    {GLOB_FAIL,  "[s*n]",   "[subversion]", NULL},
+    {LIKE_MATCH, "#[s%n]",  "[subversion]", "#"},
+    {GLOB_MATCH, "\\[s*n]", "[subversion]", NULL},
+
+    {GLOB_MATCH, ".[\\-\\t]", ".t",           NULL},
+    {GLOB_MATCH, "test*?*[a-z]*", "testgoop", NULL},
+    {GLOB_MATCH, "te[^x]t", "test",           NULL},
+    {GLOB_MATCH, "te[^abc]t", "test",         NULL},
+    {GLOB_MATCH, "te[^x]t", "test",           NULL},
+    {GLOB_MATCH, "te[!x]t", "test",           NULL},
+    {GLOB_FAIL,  "te[^x]t", "text",           NULL},
+    {GLOB_FAIL,  "te[^\\x]t", "text",         NULL},
+    {GLOB_FAIL,  "te[^x\\", "text",           NULL},
+    {GLOB_FAIL,  "te[/]t", "text",            NULL},
+    {GLOB_MATCH, "te[r-t]t", "test",          NULL},
+    {GLOB_MATCH, "te[r-Tz]t", "tezt",         NULL},
+    {GLOB_FAIL,  "te[R-T]t", "tent",          NULL},
+/*  {GLOB_MATCH, "tes[]t]", "test",           NULL}, */
+    {GLOB_MATCH, "tes[t-]", "test",           NULL},
+    {GLOB_MATCH, "tes[t-]]", "test]",         NULL},
+    {GLOB_FAIL,  "tes[t-]]", "test",          NULL},
+    {GLOB_FAIL,  "tes[u-]", "test",           NULL},
+    {GLOB_FAIL,  "tes[t-]", "tes[t-]",        NULL},
+    {GLOB_MATCH, "test[/-/]", "test/",        NULL},
+    {GLOB_MATCH, "test[\\/-/]", "test/",      NULL},
+    {GLOB_MATCH, "test[/-\\/]", "test/",      NULL},
+
 #undef LIKE_MATCH
 #undef LIKE_FAIL
 #undef GLOB_MATCH
@@ -548,24 +606,29 @@ test_utf_pattern_match(apr_pool_t *pool)
                           gt->string, lenstr,
                           gt->escape, lenesc,
                           gt->sql_like, bufa, bufb, bufc, &match);
-      if (gt->sql_like && gt->escape && !err)
-        return svn_error_create
-          (SVN_ERR_TEST_FAILED, NULL, "Failed to detect GLOB ESCAPE");
 
-      if (!match != !gt->matches)
+      if (!gt->sql_like && gt->escape && !err)
+        return svn_error_create
+          (SVN_ERR_TEST_FAILED, err, "Failed to detect GLOB ESCAPE");
+
+      if ((err && gt->matches)
+          || (!err && !match != !gt->matches))
         {
           if (gt->sql_like)
             return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
+              (SVN_ERR_TEST_FAILED, err,
                "Wrong result: %s'%s' LIKE '%s'%s%s%s%s",
                (gt->matches ? "NOT " : ""), gt->string, gt->pattern,
                (gt->escape ? " ESCAPE " : ""), (gt->escape ? "'" : ""),
                (gt->escape ? gt->escape : ""), (gt->escape ? "'" : ""));
           else
             return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL, "Wrong result: %s%s GLOB %s",
+              (SVN_ERR_TEST_FAILED, err, "Wrong result: %s%s GLOB %s",
                (gt->matches ? "NOT " : ""), gt->string, gt->pattern);
         }
+
+      if (err)
+        svn_error_clear(err);
     }
 
   return SVN_NO_ERROR;
