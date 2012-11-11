@@ -1275,7 +1275,7 @@ write_config(svn_fs_t *fs,
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
 "### some disk space if you merge frequently or frequently change node"      NL
 "### properties.  You should not activate this if rep-sharing has been"      NL
-"### disabled because is may result in a net increase in repository size."   NL
+"### disabled because this may result in a net increase in repository size." NL
 "### property deltification is disabled by default."                         NL
 "# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
 "###"                                                                        NL
