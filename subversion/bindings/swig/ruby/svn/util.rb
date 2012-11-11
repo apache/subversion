@@ -36,7 +36,7 @@ module Svn
   module Util #:nodoc:
     module_function
     def to_ruby_class_name(name)
-      name.split("_").collect do |x|
+      name.to_s.split("_").collect do |x|
         "#{x[0,1].upcase}#{x[1..-1].downcase}"
       end.join("")
     end

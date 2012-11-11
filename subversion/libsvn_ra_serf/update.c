@@ -376,7 +376,26 @@ struct report_context_t {
   svn_boolean_t closed_root;
 };
 
-
+
+/* Returns best connection for fetching files/properities. */
+static svn_ra_serf__connection_t *
+get_best_connection(report_context_t *ctx)
+{
+  svn_ra_serf__connection_t * conn;
+
+  /* Currently just cycle connection. In future we could store number of
+   * pending request on each connection for better connection usage. */
+  conn = ctx->sess->conns[ctx->sess->cur_conn];
+
+  /* Switch our connection. */
+  ctx->sess->cur_conn++;
+
+  if (ctx->sess->cur_conn >= ctx->sess->num_conns)
+      ctx->sess->cur_conn = 1;
+
+  return conn;
+}
+
 /** Report state management helper **/
 
 static report_info_t *
@@ -1273,7 +1292,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   svn_ra_serf__handler_t *handler;
 
   /* What connection should we go on? */
-  conn = ctx->sess->conns[ctx->sess->cur_conn];
+  conn = get_best_connection(ctx);
 
   /* go fetch info->name from DAV:checked-in */
   info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
@@ -1397,6 +1416,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           handler->conn = conn;
           handler->session = ctx->sess;
 
+          handler->custom_accept_encoding = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = fetch_ctx;
 
@@ -1988,7 +2008,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
-                                             ctx->sess->conns[ctx->sess->cur_conn],
+                                             get_best_connection(ctx),
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
@@ -2416,21 +2436,6 @@ create_update_report_body(serf_bucket_t **body_bkt,
 }
 
 static svn_error_t *
-headers_report(serf_bucket_t *headers,
-               void *baton,
-               apr_pool_t *pool)
-{
-  report_context_t *report = baton;
-
-  if (report->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
 {
@@ -2477,8 +2482,6 @@ finish_report(void *report_baton,
   handler->body_type = "text/xml";
   handler->conn = sess->conns[0];
   handler->session = sess;
-  handler->header_delegate = headers_report;
-  handler->header_delegate_baton = report;
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
@@ -2571,11 +2574,6 @@ finish_report(void *report_baton,
       if (sess->num_conns < MAX_NR_OF_CONNS)
         SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
                                           report->active_propfinds));
-
-      /* Switch our connection. */
-      if (!report->done)
-         if (++sess->cur_conn == sess->num_conns)
-             sess->cur_conn = 1;
 
       /* Prune directory propfinds that are finished. */
       done_list = report->done_dir_propfinds;
@@ -2739,16 +2737,18 @@ finish_report(void *report_baton,
         }
     }
 
-  /* Ensure that we opened and closed our root dir and that we closed
-   * all of our children. */
-  if (report->closed_root == FALSE && report->root_dir != NULL)
-    {
-      SVN_ERR(close_all_dirs(report->root_dir));
-    }
-
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
   if (report->report_completed)
-    err = report->update_editor->close_edit(report->update_baton, iterpool);
+    {
+      /* Ensure that we opened and closed our root dir and that we closed
+       * all of our children. */
+      if (report->closed_root == FALSE && report->root_dir != NULL)
+        {
+          SVN_ERR(close_all_dirs(report->root_dir));
+        }
+
+      err = report->update_editor->close_edit(report->update_baton, iterpool);
+    }
   else
     err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                            _("Missing update-report close tag"));
@@ -3162,6 +3162,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           handler->conn = conn;
           handler->session = session;
 
+          handler->custom_accept_encoding = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = stream_ctx;
 

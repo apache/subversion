@@ -226,21 +226,6 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
- * youngest common ancestor of the branches, the base chosen for 3-way
- * merge, the right-hand side of the source diff, and the target WC.
- *
- * Any of the output pointers may be NULL if not wanted.
- */
-svn_error_t *
-svn_client__automatic_merge_get_locations(
-                                svn_client__pathrev_t **yca,
-                                svn_client__pathrev_t **base,
-                                svn_client__pathrev_t **right,
-                                svn_client__pathrev_t **target,
-                                const svn_client_automatic_merge_t *merge,
-                                apr_pool_t *result_pool);
-
 
 #ifdef __cplusplus
 }

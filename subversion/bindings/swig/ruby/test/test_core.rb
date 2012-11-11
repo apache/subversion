@@ -1,3 +1,4 @@
+# encoding = utf-8
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
@@ -52,7 +53,13 @@ class SvnCoreTest < Test::Unit::TestCase
     now = Time.now.gmtime
     str = now.strftime("%Y-%m-%dT%H:%M:%S.") + "#{now.usec}Z"
 
-    assert_equal(now, Time.from_svn_format(str))
+    if RUBY_VERSION > '1.9'
+      # ruby 1.9 Time comparison gets into the nano-seconds, strftime
+      # shaves these off. So we can compare epoch time instead
+      assert_equal(now.to_i, Time.from_svn_format(str).gmtime.to_i)
+    else
+      assert_equal(now, Time.from_svn_format(str).gmtime)
+    end
 
     apr_time = now.to_i * 1000000 + now.usec
     assert_equal(apr_time, now.to_apr_time)
@@ -244,7 +251,11 @@ class SvnCoreTest < Test::Unit::TestCase
       config_infos << [section, name, value]
     end
     assert_equal(infos.sort, config_infos.sort)
-    assert_equal(infos.sort, config.collect {|args| args}.sort)
+    if RUBY_VERSION > '1.9'
+      assert_equal(infos.sort, config.collect {|sect,name,val| [sect,name,val]}.sort)
+    else
+      assert_equal(infos.sort, config.collect {|args| args}.sort)
+    end
   end
 
   def test_config_find_group
@@ -532,7 +543,13 @@ EOD
     date_str = now.strftime("%Y-%m-%dT%H:%M:%S")
     date_str << ".#{now.usec}Z"
     info.date = date_str
-    assert_equal(now, info.date)
+    if RUBY_VERSION > '1.9'
+      # ruby 1.9 Time comparison gets into the nano-seconds, strftime
+      # shaves these off. So we can compare epoch time instead
+      assert_equal(now.to_i, info.date.gmtime.to_i)
+    else
+      assert_equal(now, info.date.gmtime)
+    end
   end
 
   def test_svn_prop

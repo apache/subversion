@@ -618,14 +618,26 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           break;
       }
 
-    SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
-                                 &dst_repos_root_url, &dst_repos_uuid, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, dstdir_abspath,
-                                 scratch_pool, scratch_pool));
+    err = svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
+                               &dst_repos_root_url, &dst_repos_uuid, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, dstdir_abspath,
+                               scratch_pool, scratch_pool);
+
+    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      {
+        /* An unversioned destination directory exists on disk. */
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_dirent_local_style(dstdir_abspath,
+                                                        scratch_pool));
+      }
+    else
+      SVN_ERR(err);
 
     /* Do this now, as we know the right data is cached */
     SVN_ERR(svn_wc__db_get_wcroot(&dst_wcroot_abspath, db, dstdir_abspath,
