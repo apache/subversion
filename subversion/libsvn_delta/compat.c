@@ -911,7 +911,7 @@ ev2_abort_edit(void *edit_baton,
 }
 
 /* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
- * DEDITOR_BATON, which will be driven by EDITOR.  These will both be
+ * DEDITOR_BATON, which will drive EDITOR.  These will both be
  * allocated in RESULT_POOL, which may become large and long-lived;
  * SCRATCH_POOL is used for temporary allocations.
  *
@@ -1832,7 +1832,7 @@ do_unlock(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Return an svn_editor_t * in EDITOR_P which will be driven by
+/* Return an svn_editor_t * in EDITOR_P which will drive
  * DEDITOR/DEDIT_BATON.  EDITOR_P is allocated in RESULT_POOL, which may
  * become large and long-lived; SCRATCH_POOL is used for temporary
  * allocations.
