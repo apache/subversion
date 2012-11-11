@@ -2737,16 +2737,18 @@ finish_report(void *report_baton,
         }
     }
 
-  /* Ensure that we opened and closed our root dir and that we closed
-   * all of our children. */
-  if (report->closed_root == FALSE && report->root_dir != NULL)
-    {
-      SVN_ERR(close_all_dirs(report->root_dir));
-    }
-
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
   if (report->report_completed)
-    err = report->update_editor->close_edit(report->update_baton, iterpool);
+    {
+      /* Ensure that we opened and closed our root dir and that we closed
+       * all of our children. */
+      if (report->closed_root == FALSE && report->root_dir != NULL)
+        {
+          SVN_ERR(close_all_dirs(report->root_dir));
+        }
+
+      err = report->update_editor->close_edit(report->update_baton, iterpool);
+    }
   else
     err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                            _("Missing update-report close tag"));
