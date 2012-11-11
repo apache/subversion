@@ -366,6 +366,9 @@ struct report_context_t {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
+  /* Did we receive all data from the network? */
+  svn_boolean_t report_received;
+
   /* Did we get a complete (non-truncated) report? */
   svn_boolean_t report_completed;
 
@@ -376,22 +379,29 @@ struct report_context_t {
   svn_boolean_t closed_root;
 };
 
-
-/* Returns best connection for fetching files/properities. */
+/* Returns best connection for fetching files/properties. */
 static svn_ra_serf__connection_t *
 get_best_connection(report_context_t *ctx)
 {
   svn_ra_serf__connection_t * conn;
+  int first_conn;
 
-  /* Currently just cycle connection. In future we could store number of
-   * pending request on each connection for better connection usage. */
+  /* Skip the first connection if the REPORT response hasn't been completely
+     received yet. */
+  first_conn = ctx->report_received ? 0: 1;
+
+  if (ctx->sess->num_conns - first_conn == 1)
+    return ctx->sess->conns[first_conn];
+
+  /* Currently just cycle connections. In future we could store number of
+   * pending requests on each connection for better connection usage. */
   conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* Switch our connection. */
   ctx->sess->cur_conn++;
 
   if (ctx->sess->cur_conn >= ctx->sess->num_conns)
-      ctx->sess->cur_conn = 1;
+      ctx->sess->cur_conn = first_conn;
 
   return conn;
 }
@@ -2728,7 +2738,9 @@ finish_report(void *report_baton,
          present (we can't know for sure because of the private structure),
          then go process the pending content.  */
       if (!parser_ctx->paused && parser_ctx->pending != NULL)
-        SVN_ERR(svn_ra_serf__process_pending(parser_ctx, iterpool_inner));
+        SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
+                                             &report->report_received,
+                                             iterpool_inner));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
