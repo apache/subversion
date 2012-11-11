@@ -1395,45 +1395,61 @@ xml_parser_cleanup(void *baton)
   return APR_SUCCESS;
 }
 
+/* Limit the amount of pending content to parse at once to < 100KB per
+   iteration. This number is chosen somewhat arbitrarely. Making it lower
+   will have a drastical negative impact on performance, whereas increasing it
+   increases the risk for connection timeouts.
+ */
+#define PENDING_TO_PARSE PARSE_CHUNK_SIZE * 5
+
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
                              apr_pool_t *scratch_pool)
 {
+  svn_boolean_t pending_empty = FALSE;
+  apr_size_t cur_read = 0;
+
   /* Fast path exit: already paused, nothing to do, or already done.  */
   if (parser->paused || parser->pending == NULL || *parser->done)
     return SVN_NO_ERROR;
 
-  /* ### it is possible that the XML parsing of the pending content is
-     ### so slow, and that we don't return to reading the connection
-     ### fast enough... that the server will disconnect us. right now,
-     ### that is highly improbable, but is noted for future's sake.
-     ### should that ever happen, the loops in this function can simply
-     ### terminate after N seconds.  */
-
-  /* Try to read everything from the spillbuf.  */
-  while (TRUE)
+  /* Parsing the pending conten in the spillbuf will result in many disc i/o
+     operations. This can be so slow that we don't run the network event
+     processing loop often enough, resulting in timed out connections.
+   
+     So we limit the amounts of bytes parsed per iteration.
+   */
+  while (cur_read < PENDING_TO_PARSE)
     {
       const char *data;
       apr_size_t len;
 
       /* Get a block of content, stopping the loop when we run out.  */
       SVN_ERR(svn_spillbuf__read(&data, &len, parser->pending->buf,
-                                 scratch_pool));
-      if (data == NULL)
-        break;
+                             scratch_pool));
+      if (data)
+        {
+          /* Inject the content into the XML parser.  */
+          SVN_ERR(inject_to_parser(parser, data, len, NULL));
 
-      /* Inject the content into the XML parser.  */
-      SVN_ERR(inject_to_parser(parser, data, len, NULL));
+          /* If the XML parsing callbacks paused us, then we're done for now.  */
+          if (parser->paused)
+            return SVN_NO_ERROR;
 
-      /* If the XML parsing callbacks paused us, then we're done for now.  */
-      if (parser->paused)
-        return SVN_NO_ERROR;
+          cur_read += len;
+        }
+      else
+        {
+          /* The buffer is empty. */
+          pending_empty = TRUE;
+          break;
+        }
     }
-  /* All stored content (memory and file) has now been exhausted.  */
 
   /* If the PENDING structures are empty *and* we consumed all content from
      the network, then we're completely done with the parsing.  */
-  if (parser->pending->network_eof)
+  if (pending_empty &&
+      parser->pending->network_eof)
     {
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
@@ -1448,6 +1464,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
   return SVN_NO_ERROR;
 }
+#undef PENDING_TO_PARSE
 
 
 /* ### this is still broken conceptually. just shifting incrementally... */
