@@ -300,56 +300,6 @@ test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
 
 /* Test normalization-independent UTF-8 string comparison */
 static svn_error_t *
-normalized_compare(const char *stra, int expected, const char *strb,
-                   svn_boolean_t implicit_size,
-                   const char *stratag, const char *strbtag,
-                   svn_stringbuf_t *bufa, svn_stringbuf_t *bufb)
-{
-  const apr_size_t lena = (implicit_size
-                           ? SVN_UTF__UNKNOWN_LENGTH : strlen(stra));
-  const apr_size_t lenb = (implicit_size
-                           ? SVN_UTF__UNKNOWN_LENGTH : strlen(strb));
-  int result;
-
-  SVN_ERR(svn_utf__normcmp(stra, lena, strb, lenb,
-                           bufa, bufb, &result));
-
-  /* UCS-4 debugging dump of the decomposed strings
-  {
-    const apr_int32_t *const ucsbufa = (void*)bufa->data;
-    const apr_int32_t *const ucsbufb = (void*)bufb->data;
-    apr_size_t i;
-
-    printf("(%c)%7s %c %s\n", expected,
-           stratag, (!result ? '=' : (result < 0 ? '<' : '>')), strbtag);
-
-    for (i = 0; i < bufa->len || i < bufb->len; ++i)
-    {
-      if (i < bufa->len && i < bufb->len)
-        printf("    U+%04X   U+%04X\n", ucsbufa[i], ucsbufb[i]);
-      else if (i < bufa->len)
-        printf("    U+%04X\n", ucsbufa[i]);
-      else
-        printf("             U+%04X\n", ucsbufb[i]);
-    }
-  }
-  */
-
-  if (('=' == expected && 0 != result)
-      || ('<' == expected && 0 <= result)
-      || ('>' == expected && 0 >= result))
-    {
-      return svn_error_createf
-        (SVN_ERR_TEST_FAILED, NULL,
-         "Expected '%s' %c '%s' but '%s' %c '%s'",
-         stratag, expected, strbtag,
-         stratag, (!result ? '=' : (result < 0 ? '<' : '>')), strbtag);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_utf_collated_compare(apr_pool_t *pool)
 {
   /* Normalized: NFC */
@@ -427,59 +377,92 @@ test_utf_collated_compare(apr_pool_t *pool)
     "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
     "\xe1\xb9\x8b";             /* n with circumflex below */
 
+  static const struct utfcmp_test_t {
+    const char *stra;
+    char op;
+    const char *strb;
+    const char *taga;
+    const char *tagb;
+  } utfcmp_tests[] = {
+    /* Empty key */
+    {"",  '=', "",  "empty",    "empty"},
+    {"",  '<', "a", "empty",    "nonempty"},
+    {"a", '>', "",  "nonempty", "empty"},
+
+    /* Deterministic ordering */
+    {"a", '<', "b", "a", "b"},
+    {"b", '<', "c", "b", "c"},
+    {"a", '<', "c", "a", "c"},
+
+    /* Normalized equality */
+    {nfc,   '=', nfd,    "nfc",   "nfd"},
+    {nfd,   '=', nfc,    "nfd",   "nfc"},
+    {nfc,   '=', mixup,  "nfc",   "mixup"},
+    {nfd,   '=', mixup,  "nfd",   "mixup"},
+    {mixup, '=', nfd,    "mixup", "nfd"},
+    {mixup, '=', nfc,    "mixup", "nfc"},
+
+    /* Key length */
+    {nfc,     '<', longer,    "nfc",     "longer"},
+    {longer,  '>', nfc,       "longer",  "nfc"},
+    {nfd,     '>', shorter,   "nfd",     "shorter"},
+    {shorter, '<', nfd,       "shorter", "nfd"},
+    {mixup,   '<', lowcase,   "mixup",   "lowcase"},
+    {lowcase, '>', mixup,     "lowcase",  "mixup"},
+
+    {NULL, 0, NULL, NULL, NULL}
+  };
+
+
   svn_stringbuf_t *bufa = svn_stringbuf_create_empty(pool);
   svn_stringbuf_t *bufb = svn_stringbuf_create_empty(pool);
+  const struct utfcmp_test_t *ut;
 
-  /* Empty key */
-  SVN_ERR(normalized_compare("", '=', "", TRUE, "empty", "empty",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("", '<', "a", TRUE, "empty", "nonempty",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("a", '>', "", TRUE, "nonempty", "empty",
-                             bufa, bufb));
+  srand(111);
+  for (ut = utfcmp_tests; ut->stra; ++ut)
+    {
+      const svn_boolean_t implicit_size = (rand() % 17) & 1;
+      const apr_size_t lena = (implicit_size
+                               ? SVN_UTF__UNKNOWN_LENGTH : strlen(ut->stra));
+      const apr_size_t lenb = (implicit_size
+                               ? SVN_UTF__UNKNOWN_LENGTH : strlen(ut->strb));
+      int result;
 
-  /* Deterministic ordering */
-  SVN_ERR(normalized_compare("a", '<', "b", TRUE, "a", "b",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("b", '<', "c", TRUE, "b", "c",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("a", '<', "c", TRUE, "a", "c",
-                             bufa, bufb));
+      SVN_ERR(svn_utf__normcmp(ut->stra, lena, ut->strb, lenb,
+                               bufa, bufb, &result));
 
-  SVN_ERR(normalized_compare("b", '>', "a", FALSE, "b", "a",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("c", '>', "b", FALSE, "c", "b",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare("c", '>', "a", FALSE, "c", "a",
-                             bufa, bufb));
+      /* UCS-4 debugging dump of the decomposed strings
+      {
+        const apr_int32_t *const ucsbufa = (void*)bufa->data;
+        const apr_int32_t *const ucsbufb = (void*)bufb->data;
+        apr_size_t i;
 
-  /* Normalized equality */
-  SVN_ERR(normalized_compare(nfc, '=', nfd, TRUE, "nfc", "nfd",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(nfd, '=', nfc, TRUE, "nfd", "nfc",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(nfc, '=', mixup, TRUE, "nfc", "mixup",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(nfd, '=', mixup, TRUE, "nfd", "mixup",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(mixup, '=', nfd, FALSE, "mixup", "nfd",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(mixup, '=', nfc, FALSE, "mixup", "nfc",
-                             bufa, bufb));
+        printf("(%c)%7s %c %s\n", ut->op,
+               ut->taga, (!result ? '=' : (result < 0 ? '<' : '>')), ut->tagb);
 
-  /* Key length */
-  SVN_ERR(normalized_compare(nfc, '<', longer, FALSE, "nfc", "longer",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(longer, '>', nfc, FALSE, "longer","nfc",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(nfd, '>', shorter, TRUE, "nfd", "shorter",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(shorter, '<', nfd, TRUE, "shorter", "nfd",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(mixup, '<', lowcase, FALSE, "mixup", "lowcase",
-                             bufa, bufb));
-  SVN_ERR(normalized_compare(lowcase, '>', mixup, FALSE, "lowcase", "mixup",
-                             bufa, bufb));
+        for (i = 0; i < bufa->len || i < bufb->len; ++i)
+        {
+          if (i < bufa->len && i < bufb->len)
+            printf("    U+%04X   U+%04X\n", ucsbufa[i], ucsbufb[i]);
+          else if (i < bufa->len)
+            printf("    U+%04X\n", ucsbufa[i]);
+          else
+            printf("             U+%04X\n", ucsbufb[i]);
+        }
+      }
+      */
+
+      if (('=' == ut->op && 0 != result)
+          || ('<' == ut->op && 0 <= result)
+          || ('>' == ut->op && 0 >= result))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "Ut->Op '%s' %c '%s' but '%s' %c '%s'",
+             ut->taga, ut->op, ut->tagb,
+             ut->taga, (!result ? '=' : (result < 0 ? '<' : '>')), ut->tagb);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
