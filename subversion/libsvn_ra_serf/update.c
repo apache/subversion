@@ -352,10 +352,6 @@ struct report_context_t {
 
   /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
-  svn_ra_serf__list_t *done_dir_propfinds;
-
-  /* list of outstanding prop changes (contains report_dir_t) */
-  svn_ra_serf__list_t *active_dir_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
   svn_ra_serf__list_t *file_propchanges_only;
@@ -374,9 +370,6 @@ struct report_context_t {
 
   /* The XML parser context for the REPORT response.  */
   svn_ra_serf__xml_parser_t *parser_ctx;
-
-  /* Did we close the root directory? */
-  svn_boolean_t closed_root;
 };
 
 /* Returns best connection for fetching files/properties. */
@@ -1213,44 +1206,6 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
-/* Close the directory represented by DIR -- and any suitable parents
-   thereof -- if we are able to do so.  This is the case whenever:
-
-     - there are no remaining open items within the directory, and
-     - the directory's XML close tag has been processed (so we know
-       there are no more children to worry about in the future), and
-     - either:
-         - we aren't fetching properties for this directory, or
-         - we've already finished fetching those properties.
-*/
-static svn_error_t *
-maybe_close_dir_chain(report_dir_t *dir)
-{
-  report_dir_t *cur_dir = dir;
-
-  while (cur_dir
-         && !cur_dir->ref_count
-         && cur_dir->tag_closed
-         && (!cur_dir->fetch_props || cur_dir->propfind_handler->done))
-    {
-      report_dir_t *parent = cur_dir->parent_dir;
-      report_context_t *report_context = cur_dir->report_context;
-
-      SVN_ERR(close_dir(cur_dir));
-      if (parent)
-        {
-          parent->ref_count--;
-        }
-      else
-        {
-          report_context->closed_root = TRUE;
-        }
-      cur_dir = parent;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Open the file associated with INFO for editing, pass along any
    propchanges we've recorded for it, and then close the file. */
 static svn_error_t *
@@ -2013,7 +1968,8 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if (info->dir->fetch_props)
         {
-          svn_ra_serf__list_t *list_item;
+          /* Unconditionally set fetch_props now. */
+          info->dir->fetch_props = TRUE;
 
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
@@ -2021,7 +1977,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
-                                             &ctx->done_dir_propfinds,
+                                             &ctx->done_propfinds,
                                              info->dir->pool));
           SVN_ERR_ASSERT(info->dir->propfind_handler);
 
@@ -2029,11 +1985,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_ra_serf__request_create(info->dir->propfind_handler);
 
           ctx->active_propfinds++;
-
-          list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
-          list_item->data = info->dir;
-          list_item->next = ctx->active_dir_propfinds;
-          ctx->active_dir_propfinds = list_item;
 
           if (ctx->active_fetches + ctx->active_propfinds
               > REQUEST_COUNT_TO_PAUSE)
@@ -2453,6 +2404,7 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *report_target;
+  svn_boolean_t closed_root;
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
@@ -2513,6 +2465,7 @@ finish_report(void *report_baton,
   SVN_ERR(open_connection_if_needed(sess, 0));
 
   sess->cur_conn = 1;
+  closed_root = FALSE;
 
   /* Note that we may have no active GET or PROPFIND requests, yet the
      processing has not been completed. This could be from a delay on the
@@ -2584,59 +2537,6 @@ finish_report(void *report_baton,
         SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
                                           report->active_propfinds));
 
-      /* Prune directory propfinds that are finished. */
-      done_list = report->done_dir_propfinds;
-      while (done_list)
-        {
-          report->active_propfinds--;
-
-          if (report->active_dir_propfinds)
-            {
-              svn_ra_serf__list_t *cur, *prev;
-
-              prev = NULL;
-              cur = report->active_dir_propfinds;
-
-              while (cur)
-                {
-                  report_dir_t *item = cur->data;
-
-                  if (item->propfind_handler == done_list->data)
-                    {
-                      break;
-                    }
-
-                  prev = cur;
-                  cur = cur->next;
-                }
-
-              /* If we found a match, set the new props and remove this
-               * propchange from our list.
-               */
-              if (cur)
-                {
-                  report_dir_t *cur_dir = cur->data;
-
-                  if (!prev)
-                    {
-                      report->active_dir_propfinds = cur->next;
-                    }
-                  else
-                    {
-                      prev->next = cur->next;
-                    }
-
-                  /* See if this directory (and perhaps even parents of that)
-                     can be closed now. */
-                  SVN_ERR(open_dir(cur_dir));
-                  SVN_ERR(maybe_close_dir_chain(cur_dir));
-                }
-            }
-
-          done_list = done_list->next;
-        }
-      report->done_dir_propfinds = NULL;
-
       /* prune our propfind list if they are done. */
       done_list = report->done_propfinds;
       while (done_list)
@@ -2703,15 +2603,14 @@ finish_report(void *report_baton,
         }
       report->done_propfinds = NULL;
 
-      /* Prune completely fetches from our list. */
+      /* prune our fetches list if they are done. */
       done_list = report->done_fetches;
       while (done_list)
         {
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
 
-          /* Decrease the refcount in the parent directory of the file
-             whose fetch has completed. */
+          /* decrease our parent's directory refcount. */
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
 
@@ -2720,9 +2619,31 @@ finish_report(void *report_baton,
 
           done_list = done_list->next;
 
-          /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. */
-          SVN_ERR(maybe_close_dir_chain(cur_dir));
+          /* If we have a valid directory and
+           * we have no open items in this dir and
+           * we've closed the directory tag (no more children can be added)
+           * and either:
+           *   we know we won't be fetching props or
+           *   we've already completed the propfind
+           * then, we know it's time for us to close this directory.
+           */
+          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed
+                 && (!cur_dir->fetch_props
+                     || cur_dir->propfind_handler->done))
+            {
+              report_dir_t *parent = cur_dir->parent_dir;
+
+              SVN_ERR(close_dir(cur_dir));
+              if (parent)
+                {
+                  parent->ref_count--;
+                }
+              else
+                {
+                  closed_root = TRUE;
+                }
+              cur_dir = parent;
+            }
         }
       report->done_fetches = NULL;
 
@@ -2744,7 +2665,7 @@ finish_report(void *report_baton,
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
         {
-          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
 
@@ -2753,7 +2674,7 @@ finish_report(void *report_baton,
     {
       /* Ensure that we opened and closed our root dir and that we closed
        * all of our children. */
-      if (report->closed_root == FALSE && report->root_dir != NULL)
+      if (closed_root == FALSE && report->root_dir != NULL)
         {
           SVN_ERR(close_all_dirs(report->root_dir));
         }
