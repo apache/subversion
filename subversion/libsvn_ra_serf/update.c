@@ -406,6 +406,7 @@ get_best_connection(report_context_t *ctx)
   return conn;
 }
 
+
 /** Report state management helper **/
 
 static report_info_t *
