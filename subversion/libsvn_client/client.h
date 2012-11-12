@@ -628,17 +628,16 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
-   implement the file comparison function
+   DIFF_CALLBACKS/DIFF_CMD_BATON represent the callback that implements
+   the comparison.
 
    DEPTH is the depth to recurse.
 
    RA_SESSION is an RA session through which this editor may fetch
    properties, file contents and directory listings of the 'old' side of the
    diff. It is a separate RA session from the one through which this editor
-   is being driven.
-
-   REVISION is the start revision in the comparison.
+   is being driven. REVISION is the revision number of the 'old' side of
+   the diff.
 
    For each deleted directory, if WALK_DELETED_DIRS is true then just call
    the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
