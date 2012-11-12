@@ -3469,9 +3469,9 @@ deliver(const dav_resource *resource, ap_filter_t *output)
             }
           else
             {
-              /* ### TODO:  We could test for readability of the root
-                     directory of each repository and hide those that
-                     the user can't see. */
+                if (! dav_svn__allow_list_repos(resource->info->r,
+                                                entry->name, entry_pool))
+                  continue;
             }
 
           /* append a trailing slash onto the name for directories. we NEED
