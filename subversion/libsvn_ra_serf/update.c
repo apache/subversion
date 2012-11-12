@@ -1264,7 +1264,6 @@ handle_propchange_only(report_info_t *info,
   svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
-  SVN_ERR(maybe_close_dir_chain(info->dir));
 
   return SVN_NO_ERROR;
 }
@@ -1289,7 +1288,6 @@ handle_local_content(report_info_t *info,
   svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
-  SVN_ERR(maybe_close_dir_chain(info->dir));
 
   return SVN_NO_ERROR;
 }
