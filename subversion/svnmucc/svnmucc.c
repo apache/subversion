@@ -783,6 +783,9 @@ execute(const apr_array_header_t *actions,
 
   root.children = apr_hash_make(pool);
   root.operation = OP_OPEN;
+  root.prop_mods = apr_hash_make(pool);
+  root.prop_dels = apr_array_make(pool, 1, sizeof(const char *));
+
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
@@ -845,6 +848,7 @@ execute(const apr_array_header_t *actions,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
   SVN_ERR(editor->open_root(editor_baton, head, pool, &root.baton));
+  SVN_ERR(change_props(editor, root.baton, &root, pool));
   err = drive(&root, head, editor, pool);
   if (!err)
     err = editor->close_edit(editor_baton, pool);
@@ -1291,9 +1295,12 @@ main(int argc, const char **argv)
           url = sanitize_url(url, pool);
           action->path[j] = url;
 
-          /* The cp source could be the anchor, but the other URLs should be
-             children of the anchor. */
-          if (! (action->action == ACTION_CP && j == 0))
+          /* The first URL arguments to 'cp', 'pd', 'ps' could be the anchor,
+             but the other URLs should be children of the anchor. */
+          if (! (action->action == ACTION_CP && j == 0)
+              && action->action != ACTION_PROPDEL
+              && action->action != ACTION_PROPSET
+              && action->action != ACTION_PROPSETF)
             url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
