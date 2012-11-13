@@ -203,15 +203,14 @@ change_props(const svn_delta_editor_t *editor,
       for (hi = apr_hash_first(pool, child->prop_mods);
            hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *propname = svn__apr_hash_index_key(hi);
+          const svn_string_t *val = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
           if (child->kind == svn_node_dir)
-            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_dir_prop(baton, propname, val, iterpool));
           else
-            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_file_prop(baton, propname, val, iterpool));
         }
     }
 
@@ -234,14 +233,11 @@ drive(struct operation *operation,
   for (hi = apr_hash_first(pool, operation->children);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      struct operation *child;
+      const char *key = svn__apr_hash_index_key(hi);
+      struct operation *child = svn__apr_hash_index_val(hi);
       void *file_baton = NULL;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      child = val;
 
       /* Deletes and replacements are simple -- delete something. */
       if (child->operation == OP_DELETE || child->operation == OP_REPLACE)
@@ -312,15 +308,12 @@ drive(struct operation *operation,
       /* If we opened, added, or replaced a directory, we need to
          recurse, apply outstanding propmods, and then close it. */
       if ((child->kind == svn_node_dir)
-          && (child->operation == OP_OPEN
-              || child->operation == OP_ADD
-              || child->operation == OP_REPLACE))
+          && child->operation != OP_DELETE)
         {
+          SVN_ERR(change_props(editor, child->baton, child, subpool));
+
           SVN_ERR(drive(child, head, editor, subpool));
-          if (child->kind == svn_node_dir)
-            {
-              SVN_ERR(change_props(editor, child->baton, child, subpool));
-            }
+
           SVN_ERR(editor->close_directory(child->baton, subpool));
         }
     }
@@ -792,8 +785,10 @@ execute(const apr_array_header_t *actions,
       head = base_revision;
     }
 
+  memset(&root, 0, sizeof(root));
   root.children = apr_hash_make(pool);
   root.operation = OP_OPEN;
+  root.kind = svn_node_dir; /* For setting properties */
   root.prop_mods = apr_hash_make(pool);
   root.prop_dels = apr_array_make(pool, 1, sizeof(const char *));
 
@@ -868,7 +863,8 @@ execute(const apr_array_header_t *actions,
     err = editor->close_edit(editor_baton, pool);
 
   if (err)
-    svn_error_clear(editor->abort_edit(editor_baton, pool));
+    err = svn_error_compose_create(err,
+                                   editor->abort_edit(editor_baton, pool));
 
   return err;
 }
