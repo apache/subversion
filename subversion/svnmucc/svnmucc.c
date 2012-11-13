@@ -762,20 +762,21 @@ execute(const apr_array_header_t *actions,
                               pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
+  /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
   SVN_ERR(svn_ra_open4(&aux_session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
   SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
 
-  /* Maybe reparent to ANCHOR's dir, if ANCHOR is a file. */
+  /* Reparent to ANCHOR's dir, if ANCHOR is not a directory. */
   {
     svn_node_kind_t kind;
 
     SVN_ERR(svn_ra_check_path(aux_session,
                               svn_uri_skip_ancestor(repos_root, anchor, pool),
                               head, &kind, pool));
-    if (kind == svn_node_file)
+    if (kind != svn_node_dir)
       {
         anchor = svn_uri_dirname(anchor, pool);
         SVN_ERR(svn_ra_reparent(session, anchor, pool));
