@@ -362,7 +362,7 @@ def compare_and_display_lines(message, label, expected, actual,
 
   if isinstance(actual, str):
     actual = [actual]
-  actual = [line for line in actual if not line.startswith('DBG:')]
+  actual = svntest.main.filter_dbg(actual)
 
   if not expected.matches(actual, except_re):
     expected.display_differences(message, label, actual)
