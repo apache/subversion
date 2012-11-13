@@ -5242,9 +5242,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
-  const char *original_root_url;
+  const char *repos_root_url;
+  const char *repos_uuid;
   const char *original_repos_relpath;
-  const char *original_uuid;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -5281,10 +5281,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                                           scratch_pool));
       }
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, &repos_root_url,
+                               &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, dir_abspath, scratch_pool, scratch_pool));
 
   switch (status)
@@ -5319,26 +5319,30 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     {
       /* Find the repository_root via the parent directory, which
          is always versioned before this function is called */
-      SVN_ERR(svn_wc__internal_get_repos_info(&original_root_url,
-                                              &original_uuid,
-                                              wc_ctx->db,
-                                              dir_abspath,
-                                              pool, pool));
+
+      if (!repos_root_url)
+        {
+          /* The parent is an addition, scan upwards to find the right info */
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                           &repos_root_url, &repos_uuid,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           wc_ctx->db, dir_abspath,
+                                           scratch_pool, scratch_pool));
+        }
+      SVN_ERR_ASSERT(repos_root_url);
 
       original_repos_relpath =
-        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
+          svn_uri_skip_ancestor(repos_root_url, copyfrom_url, scratch_pool);
 
       if (!original_repos_relpath)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),
-                                 copyfrom_url, original_root_url);
+                                 copyfrom_url, repos_root_url);
     }
   else
     {
-      original_root_url = NULL;
       original_repos_relpath = NULL;
-      original_uuid = NULL;
       copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
     }
 
@@ -5475,8 +5479,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   changed_date,
                                   changed_author,
                                   original_repos_relpath,
-                                  original_root_url,
-                                  original_uuid,
+                                  original_repos_relpath ? repos_root_url
+                                                         : NULL,
+                                  original_repos_relpath ? repos_uuid : NULL,
                                   copyfrom_rev,
                                   new_text_base_sha1_checksum,
                                   TRUE,
