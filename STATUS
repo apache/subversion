@@ -102,7 +102,15 @@ Candidate changes:
        $ svn ci -m ...
    Votes:
      +1: cmpilato
-   
+
+ * r1408632
+   Fix 'svnmucc propset ^/'.
+   Justification:
+     Tries to access the parent of the repository root as a repository.
+     ('svn ps foo bar https://svn.apache.org/repos')
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
