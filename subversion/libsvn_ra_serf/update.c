@@ -126,7 +126,7 @@ typedef struct report_dir_t
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
 
-  /* controlling dir baton - this is only created in open_dir() */
+  /* controlling dir baton - this is only created in ensure_dir_opened() */
   void *dir_baton;
   apr_pool_t *dir_baton_pool;
 
@@ -577,7 +577,7 @@ remove_dir_props(void *baton,
 /** Helpers to open and close directories */
 
 static svn_error_t*
-open_dir(report_dir_t *dir)
+ensure_dir_opened(report_dir_t *dir)
 {
   report_context_t *ctx = dir->report_context;
 
@@ -606,7 +606,7 @@ open_dir(report_dir_t *dir)
     }
   else
     {
-      SVN_ERR(open_dir(dir->parent_dir));
+      SVN_ERR(ensure_dir_opened(dir->parent_dir));
 
       dir->dir_baton_pool = svn_pool_create(dir->parent_dir->dir_baton_pool);
 
@@ -702,7 +702,7 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 
   SVN_ERR_ASSERT(! dir->ref_count);
 
-  SVN_ERR(open_dir(dir));
+  SVN_ERR(ensure_dir_opened(dir));
 
   return close_dir(dir);
 }
@@ -847,7 +847,7 @@ open_updated_file(report_info_t *info,
   const svn_delta_editor_t *update_editor = ctx->update_editor;
 
   /* Ensure our parent is open. */
-  SVN_ERR(open_dir(info->dir));
+  SVN_ERR(ensure_dir_opened(info->dir));
   info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
   /* Expand our full name now if we haven't done so yet. */
@@ -1689,7 +1689,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       tmppool = svn_pool_create(info->dir->dir_baton_pool);
 
@@ -1719,7 +1719,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       SVN_ERR(ctx->update_editor->absent_directory(
                                         svn_relpath_join(info->name, file_name,
@@ -1744,7 +1744,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       SVN_ERR(ctx->update_editor->absent_file(
                                         svn_relpath_join(info->name, file_name,
