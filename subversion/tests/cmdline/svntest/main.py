@@ -339,6 +339,7 @@ def get_fsfs_format_file_path(repo_dir):
 def filter_dbg(lines):
   excluded = filter(lambda line: line.startswith('DBG:'), lines)
   included = filter(lambda line: not line.startswith('DBG:'), lines)
+  sys.stdout.write(''.join(excluded))
   return included
 
 # Run any binary, logging the command line and return code
