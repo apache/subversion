@@ -312,28 +312,30 @@ def basic_svnmucc(sbox):
                 'cp', '17', 'a', 'b')
 
 
+def propset_root_internal(sbox, target):
+  ## propset on ^/
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         'propset', 'foo', 'bar',
+                                         target)
+  svntest.actions.run_and_verify_svn(None, 'bar', [],
+                                     'propget', '--strict', 'foo',
+                                     target)
+
+  ## propdel on ^/
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         'propdel', 'foo',
+                                         target)
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'propget', '--strict', 'foo',
+                                     target)
+
 @Issues(3663)
 def propset_root(sbox):
   "propset/propdel on repos root"
 
   sbox.build(create_wc=False)
-
-  ## propset on ^/
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
-                                         'propset', 'foo', 'bar',
-                                         sbox.repo_url)
-  svntest.actions.run_and_verify_svn(None, 'bar', [],
-                                     'propget', '--strict', 'foo',
-                                     sbox.repo_url)
-
-  ## propdel on ^/
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
-                                         'propdel', 'foo',
-                                         sbox.repo_url)
-  svntest.actions.run_and_verify_svn(None, [], [],
-                                     'propget', '--strict', 'foo',
-                                     sbox.repo_url)
-
+  propset_root_internal(sbox, sbox.repo_url)
+  propset_root_internal(sbox, sbox.repo_url + '/iota')
 
 
 ######################################################################
