@@ -403,6 +403,9 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   int format;
+  const char *original_repos_relpath;
+  const char *original_root_url;
+  svn_boolean_t is_op_root;
   const char *repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
                                                     scratch_pool);
   svn_wc__db_status_t status;
@@ -428,9 +431,10 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                &db_revision, &db_repos_relpath,
                                &db_repos_root_url, &db_repos_uuid,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &original_repos_relpath, &original_root_url,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &is_op_root, NULL, NULL,
                                NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
@@ -469,26 +473,17 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 
       /* The caller gives us a URL which should match the entry. However,
          some callers compensate for an old problem in entry->url and pass
-         the copyfrom_url instead. See ^/notes/api-errata/wc002.txt. As
+         the copyfrom_url instead. See ^/notes/api-errata/1.7/wc002.txt. As
          a result, we allow the passed URL to match copyfrom_url if it
          does not match the entry's primary URL.  */
-      /* ### comparing URLs, should they be canonicalized first? */
       if (strcmp(db_repos_uuid, repos_uuid)
           || strcmp(db_repos_root_url, repos_root_url)
           || !svn_relpath_skip_ancestor(db_repos_relpath, repos_relpath))
         {
-          const char *copyfrom_root_url, *copyfrom_repos_relpath;
-
-          SVN_ERR(svn_wc__internal_get_copyfrom_info(&copyfrom_root_url,
-                                                     &copyfrom_repos_relpath,
-                                                     NULL, NULL, NULL,
-                                                     db, local_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
-
-          if (copyfrom_root_url == NULL
-              || strcmp(copyfrom_root_url, repos_root_url)
-              || strcmp(copyfrom_repos_relpath, repos_relpath))
+          if (!is_op_root /* copy_from was set on op-roots only */
+              || original_root_url == NULL
+              || strcmp(original_root_url, repos_root_url)
+              || strcmp(original_repos_relpath, repos_relpath))
             return
               svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                                 _("URL '%s' (uuid: '%s') doesn't match existing "
