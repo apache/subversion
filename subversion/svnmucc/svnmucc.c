@@ -1145,7 +1145,7 @@ main(int argc, const char **argv)
     {
       int j, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
-      struct action *action = apr_palloc(pool, sizeof(*action));
+      struct action *action = apr_pcalloc(pool, sizeof(*action));
 
       /* First, parse the action. */
       if (! strcmp(action_string, "mv"))
