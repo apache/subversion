@@ -8057,6 +8057,7 @@ read_children_info(void *baton,
           child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
           child->recorded_size = get_recorded_size(stmt, 7);
           child->has_checksum = !svn_sqlite__column_is_null(stmt, 6);
+          child->copied = op_depth > 0 && !svn_sqlite__column_is_null(stmt, 2);
           child->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
           if (child->had_props)
