@@ -103,8 +103,11 @@ Candidate changes:
    Votes:
      +1: cmpilato, danielsh
 
- * r1408632, r1408647
+ * r1408632, r1408647, r1408676, r1408684, r1408653
    Fix 'svnmucc propset ^/'.
+   Notes:
+     r1408653 extends the regression test.
+     r1408684 adds a missing editor API call.
    Justification:
      Tries to access the parent of the repository root as a repository.
      ('svnmucc ps foo bar https://svn.apache.org/repos')
