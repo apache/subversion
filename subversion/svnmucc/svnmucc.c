@@ -1215,8 +1215,8 @@ main(int argc, const char **argv)
       if (action->action == ACTION_PUT)
         {
           action->path[1] =
-            svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                  const char *), pool);
+            svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                    const char *), pool);
           if (++i == action_args->nelts)
             insufficient(pool);
         }
@@ -1246,8 +1246,8 @@ main(int argc, const char **argv)
           else
             {
               const char *propval_file =
-                svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                      const char *), pool);
+                svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                        const char *), pool);
 
               if (++i == action_args->nelts)
                 insufficient(pool);
