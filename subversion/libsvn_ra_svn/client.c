@@ -325,7 +325,7 @@ static svn_ra_reporter3_t ra_svn_reporter = {
   ra_svn_abort_report
 };
 
-/* Set *REPORTER/*REPORT_BATON to a new reporter which will drive
+/* Set *REPORTER and *REPORT_BATON to a new reporter which will drive
  * EDITOR/EDIT_BATON when it gets the finish_report() call.
  *
  * Allocate the new reporter in POOL.
