@@ -101,7 +101,7 @@ Candidate changes:
        $ svn merge --record-only -c1407597 ^/subversion/trunk
        $ svn ci -m ...
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
  * r1408632
    Fix 'svnmucc propset ^/'.
