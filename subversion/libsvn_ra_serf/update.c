@@ -85,8 +85,8 @@ typedef enum report_state_e {
    since network and parsing behavior (ie. it doesn't pause immediately)
    can make the measurements quite imprecise.
 
-   We measure outstanding requests as the sum of ACTIVE_FETCHES and
-   ACTIVE_PROPFINDS in the report_context_t structure.  */
+   We measure outstanding requests as the sum of NUM_ACTIVE_FETCHES and
+   NUM_ACTIVE_PROPFINDS in the report_context_t structure.  */
 #define REQUEST_COUNT_TO_PAUSE 1000
 #define REQUEST_COUNT_TO_RESUME 100
 
@@ -342,13 +342,13 @@ struct report_context_t {
   report_dir_t *root_dir;
 
   /* number of pending GET requests */
-  unsigned int active_fetches;
+  unsigned int num_active_fetches;
 
   /* completed fetches (contains report_fetch_t) */
   svn_ra_serf__list_t *done_fetches;
 
   /* number of pending PROPFIND requests */
-  unsigned int active_propfinds;
+  unsigned int num_active_propfinds;
 
   /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
@@ -1283,7 +1283,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       /* Create a serf request for the PROPFIND.  */
       svn_ra_serf__request_create(info->propfind_handler);
 
-      ctx->active_propfinds++;
+      ctx->num_active_propfinds++;
     }
 
   /* If we've been asked to fetch the file or it's an add, do so.
@@ -1394,7 +1394,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           svn_ra_serf__request_create(handler);
 
-          ctx->active_fetches++;
+          ctx->num_active_fetches++;
         }
     }
   else if (info->propfind_handler)
@@ -1417,7 +1417,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
-  if (ctx->active_fetches + ctx->active_propfinds > REQUEST_COUNT_TO_PAUSE)
+  if (ctx->num_active_fetches + ctx->num_active_propfinds
+      > REQUEST_COUNT_TO_PAUSE)
     ctx->parser_ctx->paused = TRUE;
 
   return SVN_NO_ERROR;
@@ -1984,9 +1985,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* Create a serf request for the PROPFIND.  */
           svn_ra_serf__request_create(info->dir->propfind_handler);
 
-          ctx->active_propfinds++;
+          ctx->num_active_propfinds++;
 
-          if (ctx->active_fetches + ctx->active_propfinds
+          if (ctx->num_active_fetches + ctx->num_active_propfinds
               > REQUEST_COUNT_TO_PAUSE)
             ctx->parser_ctx->paused = TRUE;
         }
@@ -2341,16 +2342,16 @@ link_path(void *report_baton,
 #define REQS_PER_CONN 8
 
 /** This function creates a new connection for this serf session, but only
- * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
+ * if the number of NUM_ACTIVE_REQS > REQS_PER_CONN or if there currently is
  * only one main connection open.
  */
 static svn_error_t *
-open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
+open_connection_if_needed(svn_ra_serf__session_t *sess, int num_active_reqs)
 {
   /* For each REQS_PER_CONN outstanding requests open a new connection, with
    * a minimum of 1 extra connection. */
   if (sess->num_conns == 1 ||
-      ((active_reqs / REQS_PER_CONN) > sess->num_conns))
+      ((num_active_reqs / REQS_PER_CONN) > sess->num_conns))
     {
       int cur = sess->num_conns;
       apr_status_t status;
@@ -2472,7 +2473,9 @@ finish_report(void *report_baton,
      network or because we've spooled the entire response into our "pending"
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
-  while (!report->done || report->active_fetches || report->active_propfinds)
+  while (!report->done
+         || report->num_active_fetches
+         || report->num_active_propfinds)
     {
       apr_pool_t *iterpool_inner;
       svn_ra_serf__list_t *done_list;
@@ -2534,8 +2537,8 @@ finish_report(void *report_baton,
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < MAX_NR_OF_CONNS)
-        SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
-                                          report->active_propfinds));
+        SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
+                                          report->num_active_propfinds));
 
       /* prune our propfind list if they are done. */
       done_list = report->done_propfinds;
@@ -2543,7 +2546,7 @@ finish_report(void *report_baton,
         {
           svn_pool_clear(iterpool_inner);
 
-          report->active_propfinds--;
+          report->num_active_propfinds--;
 
           /* If we have some files that we won't be fetching the content
            * for, ensure that we update the file with any altered props.
@@ -2615,7 +2618,7 @@ finish_report(void *report_baton,
           cur_dir->ref_count--;
 
           /* Decrement our active fetch count. */
-          report->active_fetches--;
+          report->num_active_fetches--;
 
           done_list = done_list->next;
 
@@ -2650,7 +2653,7 @@ finish_report(void *report_baton,
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
       if (parser_ctx->paused
-          && (report->active_fetches + report->active_propfinds
+          && (report->num_active_fetches + report->num_active_propfinds
               < REQUEST_COUNT_TO_RESUME))
         parser_ctx->paused = FALSE;
 
