@@ -863,6 +863,8 @@ execute(const apr_array_header_t *actions,
   if (!err)
     err = drive(&root, head, editor, pool);
   if (!err)
+    err = editor->close_directory(root.baton, pool);
+  if (!err)
     err = editor->close_edit(editor_baton, pool);
 
   if (err)
