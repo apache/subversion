@@ -770,8 +770,22 @@ execute(const apr_array_header_t *actions,
                        NULL, config, pool));
   SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
-
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
+
+  /* Maybe reparent to ANCHOR's dir, if ANCHOR is a file. */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_ra_check_path(aux_session,
+                              svn_uri_skip_ancestor(repos_root, anchor, pool),
+                              head, &kind, pool));
+    if (kind == svn_node_file)
+      {
+        anchor = svn_uri_dirname(anchor, pool);
+        SVN_ERR(svn_ra_reparent(session, anchor, pool));
+      }
+  }
+
   if (SVN_IS_VALID_REVNUM(base_revision))
     {
       if (base_revision > head)
@@ -848,10 +862,12 @@ execute(const apr_array_header_t *actions,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
   SVN_ERR(editor->open_root(editor_baton, head, pool, &root.baton));
-  SVN_ERR(change_props(editor, root.baton, &root, pool));
-  err = drive(&root, head, editor, pool);
+  err = change_props(editor, root.baton, &root, pool);
+  if (!err)
+    err = drive(&root, head, editor, pool);
   if (!err)
     err = editor->close_edit(editor_baton, pool);
+
   if (err)
     svn_error_clear(editor->abort_edit(editor_baton, pool));
 
