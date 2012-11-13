@@ -2668,7 +2668,7 @@ finish_report(void *report_baton,
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
         {
-         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
 
