@@ -103,7 +103,7 @@ Candidate changes:
    Votes:
      +1: cmpilato, danielsh
 
- * r1408632
+ * r1408632, r1408647
    Fix 'svnmucc propset ^/'.
    Justification:
      Tries to access the parent of the repository root as a repository.
