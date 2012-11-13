@@ -325,6 +325,11 @@ static svn_ra_reporter3_t ra_svn_reporter = {
   ra_svn_abort_report
 };
 
+/* Set *REPORTER/*REPORT_BATON to a new reporter which will drive
+ * EDITOR/EDIT_BATON when it gets the finish_report() call.
+ *
+ * Allocate the new reporter in POOL.
+ */
 static svn_error_t *
 ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
                     apr_pool_t *pool,
