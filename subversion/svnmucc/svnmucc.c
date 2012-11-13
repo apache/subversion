@@ -284,22 +284,18 @@ drive(struct operation *operation,
           svn_txdelta_window_handler_t handler;
           void *handler_baton;
           svn_stream_t *contents;
-          apr_file_t *f = NULL;
 
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, subpool,
                                           &handler, &handler_baton));
-          if (strcmp(child->src_file, "-"))
+          if (strcmp(child->src_file, "-") != 0)
             {
-              SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ,
-                                       APR_OS_DEFAULT, pool));
+              SVN_ERR(svn_stream_open_readonly(&contents, child->src_file,
+                                               pool, pool));
             }
           else
             {
-              apr_status_t apr_err = apr_file_open_stdin(&f, pool);
-              if (apr_err)
-                return svn_error_wrap_apr(apr_err, "Can't open stdin");
+              SVN_ERR(svn_stream_for_stdin(&contents, pool));
             }
-          contents = svn_stream_from_aprfile2(f, FALSE, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
         }
@@ -881,11 +877,8 @@ read_propvalue_file(const svn_string_t **value_p,
 {
   svn_stringbuf_t *value;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
-  apr_file_t *f;
 
-  SVN_ERR(svn_io_file_open(&f, filename, APR_READ | APR_BINARY | APR_BUFFERED,
-                           APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_stringbuf_from_aprfile(&value, f, scratch_pool));
+  SVN_ERR(svn_stringbuf_from_file2(&value, filename, scratch_pool));
   *value_p = svn_string_create_from_buf(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
