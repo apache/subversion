@@ -2606,14 +2606,15 @@ finish_report(void *report_baton,
         }
       report->done_propfinds = NULL;
 
-      /* prune our fetches list if they are done. */
+      /* Prune completely fetches from our list. */
       done_list = report->done_fetches;
       while (done_list)
         {
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
 
-          /* decrease our parent's directory refcount. */
+          /* Decrease the refcount in the parent directory of the file
+             whose fetch has completed. */
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
 
