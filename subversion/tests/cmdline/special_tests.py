@@ -1123,22 +1123,29 @@ def incoming_symlink_changes(sbox):
   sbox.simple_add_symlink('iota', 's-type')
   sbox.simple_append('s-reverse', 'link iota')
   sbox.simple_add('s-reverse')
-  # Sleep here so that the subsequent s-in-place change is detected.
-  svntest.actions.do_sleep_for_timestamps()
   sbox.simple_commit() # r2
-  svntest.actions.no_sleep_for_timestamps()
 
   # Replace s-replace
   sbox.simple_rm('s-replace')
-  sbox.simple_add_symlink('A/mu', 's-replace')
+  # Note that we don't use 'A/mu' as the length of that matches 'iota', which
+  # would make us depend on timestamp changes for detecting differences.
+  sbox.simple_add_symlink('A/D/G/pi', 's-replace')
 
   # Change target of s-in-place
   if svntest.main.is_posix_os():
     os.remove(sbox.ospath('s-in-place'))
-    os.symlink('A/mu', sbox.ospath('s-in-place'))
+    os.symlink('A/D/G/pi', sbox.ospath('s-in-place'))
   else:
-    sbox.simple_append('s-in-place', 'link A/mu', truncate = True)
-  sbox.simple_commit() # r3
+    sbox.simple_append('s-in-place', 'link A/D/G/pi', truncate = True)
+
+  # r3
+  expected_output = svntest.wc.State(wc_dir, {
+    's-replace'         : Item(verb='Replacing'),
+    's-in-place'        : Item(verb='Sending'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        wc_dir)
 
   # r4
   svntest.main.run_svnmucc('propdel', 'svn:special',
