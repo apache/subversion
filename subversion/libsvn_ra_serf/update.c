@@ -1969,9 +1969,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if (info->dir->fetch_props)
         {
-          /* Unconditionally set fetch_props now. */
-          info->dir->fetch_props = TRUE;
-
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              get_best_connection(ctx),
