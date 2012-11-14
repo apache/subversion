@@ -183,11 +183,11 @@ of paths that have changed in this revision.
 
 =item $rev
 
-The revision this change occured in.
+The revision this change occurred in.
 
 =item $date
 
-The date and time the revision occured.
+The date and time the revision occurred.
 
 =item $msg
 
