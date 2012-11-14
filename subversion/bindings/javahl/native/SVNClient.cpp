@@ -584,7 +584,7 @@ void SVNClient::doImport(const char *path, const char *url,
         return;
 
     SVN_JNI_ERR(svn_client_import5(intPath.c_str(), intUrl.c_str(), depth,
-                                   noIgnore, ignoreUnknownNodeTypes,
+                                   noIgnore, FALSE, ignoreUnknownNodeTypes,
                                    revprops.hash(subPool),
                                    ImportFilterCallback::callback, ifCallback,
                                    CommitCallback::callback, commitCallback,
