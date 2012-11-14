@@ -636,8 +636,8 @@ test_16k_add(const svn_test_opts_t *opts,
                                        svn_io_file_del_none,
                                        iterpool, iterpool));
 
-      SVN_ERR(svn_client_add4(path, svn_depth_unknown, FALSE, FALSE, FALSE,
-                              ctx, iterpool));
+      SVN_ERR(svn_client_add5(path, svn_depth_unknown, FALSE, FALSE, FALSE,
+                              FALSE, ctx, iterpool));
     }
 
   targets = apr_array_make(pool, 1, sizeof(const char *));
