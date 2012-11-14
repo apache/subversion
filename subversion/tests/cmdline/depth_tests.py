@@ -106,7 +106,7 @@ def verify_depth(msg, depth, path="."):
                                                              [], "info", path)
     for line in out:
       if line.startswith("Depth:"):
-        raise svntest.failure(msg)
+        raise svntest.Failure(msg)
   else:
     expected_stdout = svntest.verify.ExpectedOutput("Depth: %s\n" % depth,
                                                     match_all=False)
