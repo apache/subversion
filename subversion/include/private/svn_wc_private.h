@@ -669,35 +669,6 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-
-/**
- * Return the location of the base for this node's next commit,
- * reflecting any local tree modifications affecting this node.
- *
- * Get the base location of @a local_abspath using @a wc_ctx.  If @a
- * local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- *
- * If this node has no uncommitted changes, return the same location as
- * svn_wc__node_get_base().
- *
- * If this node is moved-here or copied-here (possibly as part of a replace),
- * return the location of the copy/move source. Do the same even when the node
- * has been removed from a recursive copy (subpath excluded from the copy).
- *
- * Else, if this node is locally added, return SVN_INVALID_REVNUM/NULL, or
- * if locally deleted or replaced, return the revert-base location.
- */
-svn_error_t *
-svn_wc__node_get_commit_base(svn_revnum_t *revision,
-                             const char **repos_relpath,
-                             const char **repos_root_url,
-                             const char **repos_uuid,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
 /**
  * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:
  *

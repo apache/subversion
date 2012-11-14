@@ -1918,6 +1918,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t op_root;
 
   svn_boolean_t has_checksum;
+  svn_boolean_t copied;
   svn_boolean_t had_props;
   svn_boolean_t props_mod;
 

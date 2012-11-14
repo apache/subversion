@@ -431,6 +431,11 @@ static const svn_editor_cb_many_t editor_ops = {
  * Driver code.
  */
 
+/* Set *OPERATION, *LOCAL_CHANGE, *INCOMING_CHANGE, *OLD_VERSION, *NEW_VERSION
+ * to reflect the tree conflict on the victim SRC_ABSPATH in DB.
+ *
+ * If SRC_ABSPATH is not a tree-conflict victim, return an error.
+ */
 static svn_error_t *
 get_tc_info(svn_wc_operation_t *operation,
             svn_wc_conflict_reason_t *local_change,
@@ -510,6 +515,8 @@ get_tc_info(svn_wc_operation_t *operation,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_file(svn_editor_t *tc_editor,
                        const char *src_relpath,
@@ -545,6 +552,8 @@ update_moved_away_file(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_dir(svn_editor_t *tc_editor,
                       const char *src_relpath,
@@ -564,6 +573,8 @@ update_moved_away_dir(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_subtree(svn_editor_t *tc_editor,
                           const char *src_relpath,
@@ -639,6 +650,8 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 drive_tree_conflict_editor(svn_editor_t *tc_editor,
                            const char *src_relpath,
@@ -708,7 +721,8 @@ struct update_moved_away_conflict_victim_baton {
   apr_pool_t *result_pool;
 };
 
-/* An implementation of svn_wc__db_txn_callback_t. */
+/* The body of svn_wc__db_update_moved_away_conflict_victim(), which see.
+ * An implementation of svn_wc__db_txn_callback_t. */
 static svn_error_t *
 update_moved_away_conflict_victim(void *baton,
                                   svn_wc__db_wcroot_t *wcroot,

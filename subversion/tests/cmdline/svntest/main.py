@@ -337,9 +337,10 @@ def get_fsfs_format_file_path(repo_dir):
   return os.path.join(repo_dir, "db", "format")
 
 def filter_dbg(lines):
-  for line in lines:
-    if not line.startswith('DBG:'):
-      yield line
+  excluded = filter(lambda line: line.startswith('DBG:'), lines)
+  included = filter(lambda line: not line.startswith('DBG:'), lines)
+  sys.stdout.write(''.join(excluded))
+  return included
 
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
@@ -537,7 +538,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
     raise Failure
 
   return exit_code, \
-         [line for line in stdout_lines if not line.startswith("DBG:")], \
+         filter_dbg(stdout_lines), \
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
@@ -713,7 +714,7 @@ def run_entriesdump(path):
   class Entry(object):
     pass
   entries = { }
-  exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
+  exec(''.join(filter_dbg(stdout_lines)))
   return entries
 
 def run_entriesdump_subdirs(path):
@@ -722,7 +723,7 @@ def run_entriesdump_subdirs(path):
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, 0, None, '--subdirs', path)
-  return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
+  return map(lambda line: line.strip(), filter_dbg(stdout_lines))
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,

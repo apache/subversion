@@ -886,14 +886,17 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "svn://SERVER:443/",     "svn://server:443" },
     { "file:///C%7C/temp/REPOS", "file:///C%7C/temp/REPOS" },
     { "file:///C|/temp/REPOS", "file:///C%7C/temp/REPOS" },
+    { "file:///C:/",           "file:///C:" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///c:/",           "file:///C:" },
 #else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///c:/",           "file:///c:" },
 #endif /* SVN_USE_DOS_PATHS */
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
@@ -2369,7 +2372,7 @@ test_file_url_from_dirent(apr_pool_t *pool)
   } tests[] = {
 #ifdef SVN_USE_DOS_PATHS
     { "C:/file",                   "file:///C:/file" },
-    { "C:/",                       "file:///C:/" },
+    { "C:/",                       "file:///C:" },
     { "C:/File#$",                 "file:///C:/File%23$" },
     /* We can't check these as svn_dirent_get_absolute() won't work
        on shares that don't exist */
@@ -2396,6 +2399,8 @@ test_file_url_from_dirent(apr_pool_t *pool)
                                  "svn_uri_get_file_url_from_dirent(\"%s\") "
                                  "returned \"%s\" expected \"%s\"",
                                  tests[i].dirent, result, tests[i].result);
+
+      SVN_TEST_ASSERT(svn_uri_is_canonical(result, pool));
     }
 
   return SVN_NO_ERROR;

@@ -2390,22 +2390,15 @@ svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
 
       if (is_wc_root)
         {
-          const char *child_repos_relpath;
-
-          SVN_ERR(svn_wc__internal_get_repos_relpath(&child_repos_relpath,
-                                                     db, parent_abspath,
-                                                     iterpool, iterpool));
-
           /* If the WC root is also the root of the repository then by
-             definition there are no inheritable properties to be had. */
-          if (child_repos_relpath[0] != '\0')
-            {
-              /* Grab the cached inherited properties for the WC root. */
-              SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops, db,
-                                                    parent_abspath,
-                                                    scratch_pool,
-                                                    iterpool));
-            }
+             definition there are no inheritable properties to be had,
+             but checking for that is just as expensive as fetching them
+             anyway. */
+
+          /* Grab the cached inherited properties for the WC root. */
+          SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops, db,
+                                                parent_abspath,
+                                                scratch_pool, iterpool));
         }
 
       /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then

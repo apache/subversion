@@ -959,6 +959,7 @@ svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             svn_boolean_t *network_eof,
                              apr_pool_t *scratch_pool);
 
 

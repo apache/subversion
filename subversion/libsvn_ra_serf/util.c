@@ -1404,6 +1404,7 @@ xml_parser_cleanup(void *baton)
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             svn_boolean_t *network_eof,
                              apr_pool_t *scratch_pool)
 {
   svn_boolean_t pending_empty = FALSE;
@@ -1411,7 +1412,10 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
   /* Fast path exit: already paused, nothing to do, or already done.  */
   if (parser->paused || parser->pending == NULL || *parser->done)
-    return SVN_NO_ERROR;
+    {
+      *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
+      return SVN_NO_ERROR;
+    }
 
   /* Parsing the pending conten in the spillbuf will result in many disc i/o
      operations. This can be so slow that we don't run the network event
@@ -1434,7 +1438,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
           /* If the XML parsing callbacks paused us, then we're done for now.  */
           if (parser->paused)
-            return SVN_NO_ERROR;
+            break;
 
           cur_read += len;
         }
@@ -1461,6 +1465,8 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       parser->xmlp = NULL;
       add_done_item(parser);
     }
+
+  *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
 
   return SVN_NO_ERROR;
 }

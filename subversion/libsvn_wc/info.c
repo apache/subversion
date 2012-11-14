@@ -94,6 +94,7 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_boolean_t conflicted;
   svn_boolean_t op_root;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
   svn_wc_info_t *wc_info;
 
   tmpinfo = apr_pcalloc(result_pool, sizeof(*tmpinfo));
@@ -118,7 +119,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                &wc_info->recorded_time,
                                &wc_info->changelist,
                                &conflicted, &op_root, NULL, NULL,
-                               &have_base, NULL, NULL,
+                               &have_base, &have_more_work, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -188,9 +189,30 @@ build_info_for_node(svn_wc__info2_t **info,
 
       /* ### We should be able to avoid both these calls with the information
          from read_info() in most cases */
-      SVN_ERR(svn_wc__internal_node_get_schedule(&wc_info->schedule, NULL,
-                                                 db, local_abspath,
-                                                 scratch_pool));
+      if (! op_root)
+        wc_info->schedule = svn_wc_schedule_normal;
+      else if (! have_more_work && ! have_base)
+        wc_info->schedule = svn_wc_schedule_add;
+      else
+        {
+          svn_wc__db_status_t below_working;
+          svn_boolean_t have_work;
+
+          SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
+                                                &below_working,
+                                                db, local_abspath,
+                                                scratch_pool));
+
+          /* If the node is not present or deleted (read: not present
+             in working), then the node is not a replacement */
+          if (below_working != svn_wc__db_status_not_present
+              && below_working != svn_wc__db_status_deleted)
+            {
+              wc_info->schedule = svn_wc_schedule_replace;
+            }
+          else
+            wc_info->schedule = svn_wc_schedule_add;
+        }
       SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, db, local_abspath,
                                 result_pool, scratch_pool));
     }
