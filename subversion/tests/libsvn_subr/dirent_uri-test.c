@@ -886,14 +886,17 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "svn://SERVER:443/",     "svn://server:443" },
     { "file:///C%7C/temp/REPOS", "file:///C%7C/temp/REPOS" },
     { "file:///C|/temp/REPOS", "file:///C%7C/temp/REPOS" },
+    { "file:///C:/",           "file:///C:" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///c:/",           "file:///C:" },
 #else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///c:/",           "file:///c:" },
 #endif /* SVN_USE_DOS_PATHS */
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
