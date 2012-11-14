@@ -1136,7 +1136,7 @@ svn_client_add5(const char *path,
       svn_boolean_t is_special;
 
       SVN_ERR(svn_io_check_special_path(local_abspath, &disk_kind, &is_special,
-                                        pool));
+                                        scratch_pool));
 
       /* A symlink can be an unversioned target and a wcroot. Lets try to add
          the symlink, which can't be a wcroot. */
