@@ -124,7 +124,7 @@ svn_cache__get_global_membuffer_cache(void)
           FALSE,
           pool);
 
-      /* Some error occured. Most likely it's an OOM error but we don't
+      /* Some error occurred. Most likely it's an OOM error but we don't
        * really care. Simply release all cache memory and disable caching
        */
       if (err)
