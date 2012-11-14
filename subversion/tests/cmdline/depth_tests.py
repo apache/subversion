@@ -2905,6 +2905,28 @@ def revert_depth_files(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=files', sbox.ospath('A'))
 
+@Issue(4257)
+def spurious_nodes_row(sbox):
+  "update produces no spurious rows"
+
+  sbox.build(read_only = True)
+  return
+
+  val1 = svntest.wc.sqlite_stmt(sbox.wc_dir, "select count(*) from nodes")
+  expected_output = svntest.wc.State(sbox.wc_dir, { })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=empty", sbox.wc_dir)
+  val2 = svntest.wc.sqlite_stmt(sbox.wc_dir, "select count(*) from nodes")
+  if (val1 != val2):
+    # ra_neon added a spurious not-present row that does not show up in status
+    raise svntest.Failure("count changed from '%s' to '%s'" % (val1, val2))
+
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2955,6 +2977,7 @@ test_list = [ None,
               update_below_depth_empty,
               commit_then_immediates_update,
               revert_depth_files,
+              spurious_nodes_row,
               ]
 
 if __name__ == "__main__":
