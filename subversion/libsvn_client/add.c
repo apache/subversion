@@ -737,7 +737,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
       err = svn_client_propget5(&props, &inherited_config_auto_props,
                                 SVN_PROP_INHERITABLE_AUTO_PROPS, path_or_url,
                                 &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                                scratch_pool, scratch_pool);
+                                scratch_pool, iterpool);
       if (err)
         {
           if (target_is_url || err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
@@ -746,7 +746,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
           svn_error_clear(err);
           err = NULL;
           SVN_ERR(find_existing_parent(&path_or_url, ctx, path_or_url,
-                                       scratch_pool, scratch_pool));
+                                       scratch_pool, iterpool));
         }
       else
         {
