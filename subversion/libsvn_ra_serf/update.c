@@ -63,10 +63,15 @@
  */
 typedef enum report_state_e {
     NONE = 0,
+    INITIAL = 0,
+    UPDATE_REPORT,
+    TARGET_REVISION,
     OPEN_DIR,
     ADD_DIR,
+    ABSENT_DIR,
     OPEN_FILE,
     ADD_FILE,
+    ABSENT_FILE,
     PROP,
     IGNORE_PROP_NAME,
     NEED_PROP_NAME
@@ -371,6 +376,115 @@ struct report_context_t {
   /* The XML parser context for the REPORT response.  */
   svn_ra_serf__xml_parser_t *parser_ctx;
 };
+
+
+#ifdef NOT_USED_YET
+
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t update_ttable[] = {
+  { INITIAL, S_, "update-report", UPDATE_REPORT,
+    FALSE, { NULL }, FALSE },
+
+  { UPDATE_REPORT, S_, "target-revision", TARGET_REVISION,
+    FALSE, { "rev", NULL }, TRUE },
+
+  { UPDATE_REPORT, S_, "open-directory", OPEN_DIR,
+    FALSE, { "rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "open-directory", OPEN_DIR,
+    FALSE, { "rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "add-directory", ADD_DIR,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ADD_DIR, S_, "add-directory", ADD_DIR,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "open-file", OPEN_FILE,
+    FALSE, { "rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "add-file", ADD_FILE,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ADD_DIR, S_, "add-file", ADD_FILE,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "delete-entry", OPEN_FILE,
+    FALSE, { "?rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "absent-directory", ABSENT_DIR,
+    FALSE, { "name", NULL }, TRUE },
+
+  { ADD_DIR, S_, "absent-directory", ABSENT_DIR,
+    FALSE, { "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "absent-file", ABSENT_FILE,
+    FALSE, { "name", NULL }, TRUE },
+
+  { ADD_DIR, S_, "absent-file", ABSENT_FILE,
+    FALSE, { "name", NULL }, TRUE },
+
+  { 0 }
+};
+
+
+
+/* Conforms to svn_ra_serf__xml_opened_t  */
+static svn_error_t *
+update_opened(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int entered_state,
+              const svn_ra_serf__dav_props_t *tag,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
+static svn_error_t *
+update_closed(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int leaving_state,
+              const svn_string_t *cdata,
+              apr_hash_t *attrs,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  if (leaving_state == TARGET_REVISION)
+    {
+      const char *rev = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
+
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      SVN_STR_TO_REV(rev),
+                                                      ctx->sess->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_cdata_t  */
+static svn_error_t *
+update_cdata(svn_ra_serf__xml_estate_t *xes,
+             void *baton,
+             int current_state,
+             const char *data,
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* NOT_USED_YET */
+
 
 /* Returns best connection for fetching files/properties. */
 static svn_ra_serf__connection_t *
