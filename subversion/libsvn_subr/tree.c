@@ -203,7 +203,6 @@ walk_two_trees(svn_tree_node_t *node1,
   if (node1 && node2)
     {
       assert(strcmp(relpath1, relpath2) == 0);  /* ### until move/rename support */
-      assert(kind1 == kind2);  /* In Subversion a node can't change kind */
     }
 
   SVN_ERR(walk_func(node1, node2, walk_baton, scratch_pool));
@@ -211,9 +210,13 @@ walk_two_trees(svn_tree_node_t *node1,
   SVN_DBG(("walk_two_trees: kind %d/%d, '%s'\n",
            kind1, kind2, relpath1 ? relpath1 : relpath2));
 
-  /* Recurse, if it's a directory on BOTH sides */
+  /* Recurse, if it's a directory on BOTH sides.  (If it's a directory on
+   * just one side (it's a replacement), we want to treat that just the same
+   * as a deleted or added directory: it's up to the callback to traverse
+   * the singleton if it wants to.) */
   if (node1 && node2
       && kind1 == svn_node_dir
+      && kind2 == svn_node_dir
       && depth >= svn_depth_files)
     {
       apr_hash_t *children1, *children2;
