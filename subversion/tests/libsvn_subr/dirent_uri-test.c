@@ -2369,7 +2369,7 @@ test_file_url_from_dirent(apr_pool_t *pool)
   } tests[] = {
 #ifdef SVN_USE_DOS_PATHS
     { "C:/file",                   "file:///C:/file" },
-    { "C:/",                       "file:///C:/" },
+    { "C:/",                       "file:///C:" },
     { "C:/File#$",                 "file:///C:/File%23$" },
     /* We can't check these as svn_dirent_get_absolute() won't work
        on shares that don't exist */
@@ -2396,6 +2396,8 @@ test_file_url_from_dirent(apr_pool_t *pool)
                                  "svn_uri_get_file_url_from_dirent(\"%s\") "
                                  "returned \"%s\" expected \"%s\"",
                                  tests[i].dirent, result, tests[i].result);
+
+      SVN_TEST_ASSERT(svn_uri_is_canonical(result, pool));
     }
 
   return SVN_NO_ERROR;
