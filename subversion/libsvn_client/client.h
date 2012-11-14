@@ -326,17 +326,18 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
-   is is a hash as per svn_client__get_all_auto_props.
+/* If AUTOPROPS is not null: Then read automatic properties matching PATH
+   from AUTOPROPS.  AUTOPROPS is is a hash as per
+   svn_client__get_all_auto_props.  Set *PROPERTIES to a hash containing
+   propname/value pairs (const char * keys mapping to svn_string_t * values).
 
-   Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
-   may be an empty hash, but will not be NULL.
+   If AUTOPROPS is null then set *PROPERTIES to an empty hash.
 
-   Set *MIMETYPE to the mimetype, if any, or to NULL.
-
-   If MAGIC_COOKIE is not NULL and no mime-type can be determined
-   via CTX->config try to detect the mime-type with libmagic.
+   If *MIMETYPE is null or "application/octet-stream" then check AUTOPROPS
+   for a matching svn:mime-type.  If AUTOPROPS is null or no match is found
+   and MAGIC_COOKIE is not NULL, then then try to detect the mime-type with
+   libmagic.  If a mimetype is found then add it to *PROPERTIES and set
+   *MIMETYPE to the mimetype value or NULL otherwise.
 
    Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
