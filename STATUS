@@ -135,6 +135,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1409804
+   Add a delimiter between the two chains in svn_error_compose_create().
+   Justification:
+     Allow users to tell where the second error chain starts -- avoids
+     misrepresentation that the first error is caused by the second.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
