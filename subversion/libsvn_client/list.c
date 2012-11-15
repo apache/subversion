@@ -132,28 +132,29 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  const char *repos_root, *url;
   svn_error_t *err;
-  svn_dirent_t *dirent;
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-  SVN_ERR(svn_ra_get_session_url(ra_session, &url, pool));
-
-  err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
+  err = svn_ra_stat(ra_session, "", rev, dirent_p, pool);
 
   /* svnserve before 1.2 doesn't support the above, so fall back on
      a less efficient method. */
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
+      const char *repos_root_url;
+      const char *session_url;
       svn_node_kind_t kind;
+      svn_dirent_t *dirent;
 
       svn_error_clear(err);
+
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
+      SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind, pool));
 
       if (kind != svn_node_none)
         {
-          if (strcmp(url, repos_root) != 0)
+          if (strcmp(session_url, repos_root_url) != 0)
             {
               svn_ra_session_t *parent_session;
               apr_hash_t *parent_ents;
@@ -162,7 +163,7 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_uri_split(&parent_url, &base_name, url, subpool);
+              svn_uri_split(&parent_url, &base_name, session_url, subpool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            NULL, parent_url,
@@ -171,11 +172,13 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
-                                      NULL, "", rev, dirent_fields, pool));
+                                      NULL, "", rev, dirent_fields, subpool));
 
               /* Get the relevant entry. */
               dirent = apr_hash_get(parent_ents, base_name,
                                     APR_HASH_KEY_STRING);
+
+              *dirent_p = svn_dirent_dup(dirent, pool);
 
               svn_pool_destroy(subpool); /* Close RA session */
             }
@@ -216,15 +219,16 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
                                      APR_HASH_KEY_STRING);
                   dirent->last_author = val ? val->data : NULL;
                 }
+
+              *dirent_p = dirent;
             }
         }
       else
-        dirent = NULL;
+        *dirent_p = NULL;
     }
   else
     SVN_ERR(err);
 
-  *dirent_p = dirent;
   return SVN_NO_ERROR;
 }
 
