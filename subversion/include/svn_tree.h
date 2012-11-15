@@ -187,7 +187,7 @@ svn_tree_node_read_file(svn_tree_node_t *node,
 
 /** Fetch the entries and/or properties of the directory @a tree_node.
  *
- * If @a dirents is non-NULL, set @a *dirents to contain all the entries
+ * If @a children is non-NULL, set @a *children to contain all the entries
  * of the directory @a tree_node.  The hash maps (const char *) entry
  * basenames to (svn_tree_node_t *) values.
  *
@@ -201,7 +201,7 @@ svn_tree_node_read_file(svn_tree_node_t *node,
  */
 svn_error_t *
 svn_tree_node_read_dir(svn_tree_node_t *node,
-                       apr_hash_t **dirents,
+                       apr_hash_t **children,
                        apr_hash_t **props,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);

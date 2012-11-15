@@ -110,21 +110,21 @@ walk_tree(svn_tree_node_t *node,
   /* Recurse */
   if (kind == svn_node_dir && depth >= svn_depth_files)
     {
-      apr_hash_t *dirents;
-      apr_array_header_t *dirents_sorted;
+      apr_hash_t *children;
+      apr_array_header_t *children_sorted;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
-      SVN_ERR(svn_tree_node_read_dir(node, &dirents, NULL /* props */,
+      SVN_ERR(svn_tree_node_read_dir(node, &children, NULL /* props */,
                                      scratch_pool, scratch_pool));
-      dirents_sorted = svn_sort__hash(dirents,
-                                      svn_sort_compare_items_lexically,
-                                      scratch_pool);
+      children_sorted = svn_sort__hash(children,
+                                       svn_sort_compare_items_lexically,
+                                       scratch_pool);
 
-      for (i = 0; i < dirents_sorted->nelts; i++)
+      for (i = 0; i < children_sorted->nelts; i++)
         {
           const svn_sort__item_t *item
-            = &APR_ARRAY_IDX(dirents_sorted, i, svn_sort__item_t);
+            = &APR_ARRAY_IDX(children_sorted, i, svn_sort__item_t);
           svn_tree_node_t *child = item->value;
           svn_node_kind_t child_kind;
 
