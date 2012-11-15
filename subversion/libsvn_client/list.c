@@ -123,13 +123,14 @@ get_dir_contents(apr_uint32_t dirent_fields,
 }
 
 /* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
-static svn_error_t *
-ra_stat_compatible(svn_ra_session_t *ra_session,
-                   svn_revnum_t rev,
-                   svn_dirent_t **dirent_p,
-                   apr_uint32_t dirent_fields,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+/* ### Maybe we should move this behavior into the svn_ra_stat wrapper? */
+svn_error_t *
+svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
+                               svn_revnum_t rev,
+                               svn_dirent_t **dirent_p,
+                               apr_uint32_t dirent_fields,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
 {
   const char *repos_root, *url;
   svn_error_t *err;
@@ -157,15 +158,16 @@ ra_stat_compatible(svn_ra_session_t *ra_session,
               svn_ra_session_t *parent_session;
               apr_hash_t *parent_ents;
               const char *parent_url, *base_name;
+              apr_pool_t *subpool = svn_pool_create(pool);
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_uri_split(&parent_url, &base_name, url, pool);
+              svn_uri_split(&parent_url, &base_name, url, subpool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            NULL, parent_url,
                                                            NULL, NULL, FALSE,
-                                                           TRUE, ctx, pool));
+                                                           TRUE, ctx, subpool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
@@ -174,6 +176,8 @@ ra_stat_compatible(svn_ra_session_t *ra_session,
               /* Get the relevant entry. */
               dirent = apr_hash_get(parent_ents, base_name,
                                     APR_HASH_KEY_STRING);
+
+              svn_pool_destroy(subpool); /* Close RA session */
             }
           else
             {
@@ -183,7 +187,7 @@ ra_stat_compatible(svn_ra_session_t *ra_session,
                  be rev. */
               dirent = apr_palloc(pool, sizeof(*dirent));
               dirent->kind = kind;
-              dirent->size = 0;
+              dirent->size = SVN_INVALID_FILESIZE;
               if (dirent_fields & SVN_DIRENT_HAS_PROPS)
                 {
                   apr_hash_t *props;
@@ -217,8 +221,8 @@ ra_stat_compatible(svn_ra_session_t *ra_session,
       else
         dirent = NULL;
     }
-  else if (err)
-    return svn_error_trace(err);
+  else
+    SVN_ERR(err);
 
   *dirent_p = dirent;
   return SVN_NO_ERROR;
@@ -255,8 +259,8 @@ svn_client_list2(const char *path_or_url,
 
   fs_path = svn_client__pathrev_fspath(loc, pool);
 
-  SVN_ERR(ra_stat_compatible(ra_session, loc->rev, &dirent, dirent_fields,
-                             ctx, pool));
+  SVN_ERR(svn_client__ra_stat_compatible(ra_session, loc->rev, &dirent,
+                                         dirent_fields, ctx, pool));
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                              _("URL '%s' non-existent in revision %ld"),

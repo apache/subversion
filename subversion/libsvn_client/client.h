@@ -901,6 +901,16 @@ svn_client__condense_commit_items(const char **base_url,
                                   apr_pool_t *pool);
 
 
+/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
+svn_error_t *
+svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
+                               svn_revnum_t rev,
+                               svn_dirent_t **dirent_p,
+                               apr_uint32_t dirent_fields,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
+
+
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
