@@ -61,7 +61,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1403964, r1403982
+ * r1403964, r1403982, r1410106
    Make fs_fs properly cleanup after a failed transmission of a representation.
    Justification:
      Read errors can create problems for users of the WANdisco replicator
