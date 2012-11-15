@@ -5008,22 +5008,11 @@ rep_write_cleanup(void *data)
   
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
-  if (err)
-    {
-      apr_status_t rc = err->apr_err;
-      svn_error_clear(err);
-      return rc;
-    }
-  err = svn_io_file_close(b->file, b->pool);
-  if (err)
-    {
-      apr_status_t rc = err->apr_err;
-      svn_error_clear(err);
-      return rc;
-    }
+  err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
   /* Remove our lock */
-  err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
+  err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
+                                                       b->lockcookie, b->pool));
   if (err)
     {
       apr_status_t rc = err->apr_err;
