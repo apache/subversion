@@ -163,13 +163,16 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool)
 {
-  apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   int i;
+  apr_array_header_t *externals = NULL;
+  apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   const char *parent_directory_display = svn_path_is_url(parent_directory) ?
     parent_directory : svn_dirent_local_style(parent_directory, pool);
 
+  /* If an error occurs halfway through parsing, *externals_p should stay
+   * untouched. So, store the list in a local var first. */
   if (externals_p)
-    *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
+    externals = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
@@ -327,9 +330,12 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
             item->url = svn_dirent_canonicalize(item->url, pool);
         }
 
-      if (externals_p)
-        APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;
+      if (externals)
+        APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
     }
+
+  if (externals_p)
+    *externals_p = externals;
 
   return SVN_NO_ERROR;
 }
