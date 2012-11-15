@@ -1384,11 +1384,13 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver2(editor, edit_baton, targets, TRUE,
                                path_driver_cb_func, (void *)editor, pool);
+
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                err,
+                editor->abort_edit(edit_baton, pool));
     }
 
   /* Close the edit. */
