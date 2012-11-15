@@ -901,7 +901,8 @@ svn_client__condense_commit_items(const char **base_url,
                                   apr_pool_t *pool);
 
 
-/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
+/* Like svn_ra_stat() on the ra session root, but with a compatibility
+   hack for pre-1.2 svnserve that don't support this api. */
 svn_error_t *
 svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
                                svn_revnum_t rev,
