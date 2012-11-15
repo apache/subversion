@@ -677,7 +677,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
+      err = svn_error_compose_create(
+                    err,
+                    svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
   return svn_error_trace(err);
