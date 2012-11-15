@@ -801,6 +801,29 @@ test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
 
 }
 
+static svn_error_t *
+test_externals_parse_erratic(apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_array_header_t *list = NULL;
+
+  err = svn_wc_parse_externals_description3(
+          &list, "parent_dir",
+          "^/valid/but/should/not/be/on/record wc_target\n"
+           "because_this_is_an_error",
+          FALSE, pool);
+
+  /* DESC above has an error, so expect one. */
+  SVN_TEST_ASSERT(err != NULL);
+  svn_error_clear(err);
+
+  /* svn_wc_parse_externals_description3() should not
+     touch LIST when DESC had an error.*/
+  SVN_TEST_ASSERT(list == NULL);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -821,5 +844,6 @@ struct svn_test_descriptor_t test_funcs[] =
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
     SVN_TEST_OPTS_PASS(test_externals_parse, "test svn_wc_parse_externals_description3"),
+    SVN_TEST_PASS2(test_externals_parse_erratic, "parse erratic externals definition"),
     SVN_TEST_NULL
   };
