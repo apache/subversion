@@ -164,15 +164,16 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     apr_pool_t *pool)
 {
   int i;
+  int j;
   apr_array_header_t *externals = NULL;
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   const char *parent_directory_display = svn_path_is_url(parent_directory) ?
     parent_directory : svn_dirent_local_style(parent_directory, pool);
 
   /* If an error occurs halfway through parsing, *externals_p should stay
-   * untouched. So, store the list in a local var first. */
-  if (externals_p)
-    externals = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
+   * untouched. So, store the list in a local var first. Since we are checking
+   * for duplicate targets, always compose the list regardless. */
+  externals = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
@@ -330,8 +331,23 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
             item->url = svn_dirent_canonicalize(item->url, pool);
         }
 
-      if (externals)
-        APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
+      /* Has the same WC target path already been mentioned in this prop? */
+      for (j = 0; j < externals->nelts; j++)
+        {
+          svn_wc_external_item2_t *other_item =
+              APR_ARRAY_IDX(externals, j, svn_wc_external_item2_t *);
+
+          if (strcmp(item->target_dir, other_item->target_dir) == 0)
+            return svn_error_createf
+              (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+               _("Invalid %s property on '%s': "
+                 "target '%s' appears more than once"),
+               SVN_PROP_EXTERNALS,
+               parent_directory_display,
+               item->target_dir);
+        }
+
+      APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
     }
 
   if (externals_p)
