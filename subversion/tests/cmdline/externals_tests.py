@@ -2898,7 +2898,7 @@ def duplicate_targets(sbox):
   abs_wc_dir = os.path.abspath(sbox.wc_dir)
 
   expected_stderr = verify.RegexOutput(
-    ".*Invalid svn:externals property on '" + abs_wc_dir +
+    ".*Invalid svn:externals property on '" + re.escape(abs_wc_dir) +
     "': target 'barf' appears more than once\n",
     match_all=False)
 
