@@ -178,7 +178,10 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
               dirent = apr_hash_get(parent_ents, base_name,
                                     APR_HASH_KEY_STRING);
 
-              *dirent_p = svn_dirent_dup(dirent, pool);
+              if (dirent)
+                *dirent_p = svn_dirent_dup(dirent, pool);
+              else
+                *dirent_p = NULL;
 
               svn_pool_destroy(subpool); /* Close RA session */
             }
