@@ -2888,9 +2888,9 @@ def duplicate_targets(sbox):
       svn ps svn:externals "^/A/B/E barf\n^/A/D/G barf" .
       svn ps svn:externals "^/A/B/E barf/.\n^/A/D/G ./barf" .
       svn ps svn:externals "^/A/B/E ././barf\n^/A/D/G .//barf" .
-      svn pl -v .
+      svn pg svn:externals .
       svn ps svn:externals "^/A/B/E ok" .
-      svn pl -v .
+      svn pg svn:externals .
       """)
 
   sbox.build()
@@ -2918,9 +2918,11 @@ def duplicate_targets(sbox):
   actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'ps',
     'svn:externals', '^/A/B/E ././barf\n^/A/D/G .//barf', wc_dir)
 
-  # svn pl -v .
-  actions.run_and_verify_svn2('OUTPUT', [], [], 0, 'pl', '-v',
-    wc_dir)
+  # svn pg svn:externals .
+  expected_stdout = []
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+    'svn:externals', wc_dir)
 
   # svn ps svn:externals "^/A/B/E ok" .
   expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
@@ -2928,16 +2930,15 @@ def duplicate_targets(sbox):
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
     'svn:externals', '^/A/B/E ok', wc_dir)
 
-  # svn pl -v .
-  expected_stdout = [
-    "Properties on '" + wc_dir + "':\n",
-    '  svn:externals\n',
-    '    ^/A/B/E ok\n',
-    '    \n',
-  ]
+  # svn pg svn:externals .
+  expected_stdout = verify.UnorderedOutput([
+    '^/A/B/E ok\n',
+    '\n'
+  ])
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pl', '-v',
-    wc_dir)
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+    'svn:externals', wc_dir)
+
 
 
 ########################################################################
