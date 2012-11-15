@@ -154,10 +154,16 @@ disk_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
 static svn_error_t *
 wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
 {
+  const char *parent_abspath;
   from_path = wc_path(b, from_path);
   to_path = wc_path(b, to_path);
-  return svn_wc_copy3(b->wc_ctx, from_path, to_path, FALSE,
-                      NULL, NULL, NULL, NULL, b->pool);
+  parent_abspath = svn_dirent_dirname(to_path, b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_copy3(b->wc_ctx, from_path, to_path, FALSE,
+                       NULL, NULL, NULL, NULL, b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
+  return SVN_NO_ERROR;
 }
 
 /* Revert a WC file or directory tree at PATH */
@@ -673,11 +679,7 @@ wc_wc_copies(svn_test__sandbox_t *b)
     /* Perform each subtest in turn. */
     for (subtest = subtests; subtest->from_path; subtest++)
       {
-        SVN_ERR(svn_wc_copy3(b->wc_ctx,
-                             wc_path(b, subtest->from_path),
-                             wc_path(b, subtest->to_path),
-                             FALSE /* metadata_only */,
-                             NULL, NULL, NULL, NULL, b->pool));
+        SVN_ERR(wc_copy(b, subtest->from_path, subtest->to_path));
         SVN_ERR(check_db_rows(b, subtest->to_path, subtest->expected));
       }
   }
