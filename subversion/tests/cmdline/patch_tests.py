@@ -4201,7 +4201,7 @@ def patch_git_with_index_line(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-@XFail(svntest.main.is_posix_os)
+@XFail()
 def patch_change_symlink_target(sbox):
   "patch changes symlink target"
 
