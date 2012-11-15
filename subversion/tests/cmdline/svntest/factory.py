@@ -454,6 +454,10 @@ class TestFactory:
         return self.cmd_svn(multiline_args, False,
           self.keep_args_of, 3)
 
+      if second in ['propget','pget','pg']:
+        return self.cmd_svn(args[1:], False,
+          self.keep_args_of, 2)
+
       if second in ['delete','del','remove', 'rm']:
         return self.cmd_svn(args[1:], False,
           self.keep_args_of + ['--with-revprop'])
