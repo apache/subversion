@@ -58,12 +58,50 @@ svn_tree_get_node_by_relpath(svn_tree_node_t **node_p,
 
 /** A tree-walker callback.
  *
+ * The callback receives one directory node being visited, @a dir_node, and
+ * the closure @a dir_visit_baton.  It also receives two lists of nodes
+ * which together contain all the children to be visited.  The
+ * subdirectories are in @a subdirs, and the non-directory children in @a
+ * files.
+ *
+ * This is modeled on Python's 'os.walk' function.
+ *
+ * ### TODO? "The callback may modify the list of subdirs (in place) in
+ * order to influence the order and scope of traversal: the walker will
+ * recurse into the subdirs that are in the list when the callback returns."
+ *
+ * @a scratch_pool is available for use within the function until it returns.
+ */
+typedef svn_error_t *
+(*svn_tree_dir_visit_func_t)(svn_tree_node_t *dir_node,
+                             apr_array_header_t *subdirs,
+                             apr_array_header_t *files,
+                             void *dir_visit_baton,
+                             apr_pool_t *scratch_pool);
+
+/** Walk a subdirectory of a generic tree, starting at @a root_dir_node.
+ *
+ * ...
+ *
+ * Call @a dir_visit_func for each visited node, passing @a dir_visit_baton
+ * and the tree node object.
+ *
+ * If @a cancel_func is not null, call it with @a cancel_baton to check for
+ * cancellation.
+ */
+svn_error_t *
+svn_tree_walk_dirs(svn_tree_node_t *root_dir_node,
+                   svn_depth_t depth,
+                   svn_tree_dir_visit_func_t dir_visit_func,
+                   void *dir_visit_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool);
+
+/** A tree-walker callback.
+ *
  * This callback presents one tree node object being visited, @a node,
  * and the closure @a walk_baton.
- *
- * ### TODO: Consider re-modelling, more like Python's OS tree walker
- *     that passes a list of subdirs and a list of non-dir children,
- *     and lets the list of subdirs be modified before it recurses into them.
  *
  * @a scratch_pool is available for use within the function until it returns.
  */

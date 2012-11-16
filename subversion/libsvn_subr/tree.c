@@ -87,40 +87,48 @@ tree_node_get_kind_or_unknown(svn_node_kind_t *kind,
   return svn_error_trace(err);
 }
 
-/* The body of svn_tree_walk(), which see.
+/* The body of svn_tree_walk_dirs(), which see.
  */
 static svn_error_t *
-walk_tree(svn_tree_node_t *node,
+walk_dirs(svn_tree_node_t *dir_node,
           svn_depth_t depth,
-          svn_tree_walk_func_t walk_func,
+          svn_tree_dir_visit_func_t walk_func,
           void *walk_baton,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
+  apr_array_header_t *dirs
+    = apr_array_make(scratch_pool, 1, sizeof(svn_tree_node_t *));
+  apr_array_header_t *files
+    = apr_array_make(scratch_pool, 1, sizeof(svn_tree_node_t *));
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+#ifdef SVN_DEBUG
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(tree_node_get_kind_or_unknown(&kind, dir_node, scratch_pool));
+    assert(kind == svn_node_dir);
+  }
+#endif
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(tree_node_get_kind_or_unknown(&kind, node, scratch_pool));
-
-  SVN_ERR(walk_func(node, walk_baton, scratch_pool));
-
-  /* Recurse */
-  if (kind == svn_node_dir && depth >= svn_depth_files)
+  if (depth >= svn_depth_files)
     {
       apr_hash_t *children;
       apr_array_header_t *children_sorted;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      int i;
 
-      SVN_ERR(svn_tree_node_read_dir(node, &children, NULL /* props */,
+      SVN_ERR(svn_tree_node_read_dir(dir_node, &children, NULL /* props */,
                                      scratch_pool, scratch_pool));
       children_sorted = svn_sort__hash(children,
                                        svn_sort_compare_items_lexically,
                                        scratch_pool);
 
+      /* Categorize the children into dirs and non-dirs */
       for (i = 0; i < children_sorted->nelts; i++)
         {
           const svn_sort__item_t *item
@@ -130,17 +138,87 @@ walk_tree(svn_tree_node_t *node,
 
           svn_pool_clear(iterpool);
           SVN_ERR(tree_node_get_kind_or_unknown(&child_kind, child, iterpool));
-          if (depth >= svn_depth_immediates || child_kind == svn_node_file)
+          if (child_kind == svn_node_dir)
             {
-              SVN_ERR(walk_tree(child,
-                                depth == svn_depth_infinity ? depth
-                                       : svn_depth_empty,
-                                walk_func, walk_baton,
-                                cancel_func, cancel_baton, iterpool));
+              APR_ARRAY_PUSH(dirs, svn_tree_node_t *) = child;
+            }
+          else
+            {
+              if (depth >= svn_depth_immediates)
+                APR_ARRAY_PUSH(files, svn_tree_node_t *) = child;
             }
         }
-      svn_pool_destroy(iterpool);
     }
+
+  /* Call the visitor callback */
+  SVN_ERR(walk_func(dir_node, dirs, files, walk_baton, scratch_pool));
+
+  /* Recurse */
+  for (i = 0; i < dirs->nelts; i++)
+    {
+      const svn_sort__item_t *item
+        = &APR_ARRAY_IDX(dirs, i, svn_sort__item_t);
+      svn_tree_node_t *child = item->value;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(walk_dirs(child,
+                        depth == svn_depth_infinity ? depth
+                               : svn_depth_empty,
+                        walk_func, walk_baton,
+                        cancel_func, cancel_baton, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_tree_walk_dirs(svn_tree_node_t *root_dir_node,
+              svn_depth_t depth,
+              svn_tree_dir_visit_func_t dir_visit_func,
+              void *dir_visit_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  SVN_ERR(walk_dirs(root_dir_node, depth, dir_visit_func, dir_visit_baton,
+                    cancel_func, cancel_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton for per_dir_to_per_node_cb() */
+typedef struct per_dir_to_per_node_baton_t
+{
+  svn_tree_walk_func_t node_walk_func;
+  void *node_walk_baton;
+} per_dir_to_per_node_baton_t;
+
+/* A dir-walk callback that calls a per-node callback. */
+static svn_error_t *
+per_dir_to_per_node_cb(svn_tree_node_t *dir_node,
+                       apr_array_header_t *subdirs,
+                       apr_array_header_t *files,
+                       void *dir_visit_baton,
+                       apr_pool_t *scratch_pool)
+{
+  per_dir_to_per_node_baton_t *b = dir_visit_baton;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  /* Visit this dir */
+  SVN_ERR(b->node_walk_func(dir_node, b->node_walk_baton, scratch_pool));
+
+  /* Visit the non-directory children */
+  for (i = 0; i < files->nelts; i++)
+    {
+      svn_tree_node_t *child_node = APR_ARRAY_IDX(files, i, svn_tree_node_t *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(b->node_walk_func(child_node, b->node_walk_baton, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -154,11 +232,25 @@ svn_tree_walk(svn_tree_t *tree,
               apr_pool_t *scratch_pool)
 {
   svn_tree_node_t *node;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_tree_get_root_node(&node, tree, scratch_pool, scratch_pool));
-  SVN_ERR(walk_tree(node, depth,
-                    walk_func, walk_baton,
-                    cancel_func, cancel_baton, scratch_pool));
+  SVN_ERR(svn_tree_node_get_kind(node, &kind, scratch_pool));
+
+  if (kind == svn_node_dir)
+    {
+      per_dir_to_per_node_baton_t b;
+
+      b.node_walk_func = walk_func;
+      b.node_walk_baton = walk_baton;
+      SVN_ERR(walk_dirs(node, depth, per_dir_to_per_node_cb, &b,
+                        cancel_func, cancel_baton, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(walk_func(node, walk_baton, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
