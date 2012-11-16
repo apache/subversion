@@ -4774,7 +4774,8 @@ svn_wc_add_repos_file(const char *dst_path,
 
 
 /** Remove @a local_abspath from revision control.  @a wc_ctx must
- * hold a write lock.
+ * hold a write lock on the parent of @a local_abspath, or if that is a
+ * WC root then on @a local_abspath itself.
  *
  * If @a local_abspath is a file, all its info will be removed from the
  * administrative area.  If @a local_abspath is a directory, then the
