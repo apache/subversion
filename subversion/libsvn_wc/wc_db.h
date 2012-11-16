@@ -134,7 +134,8 @@ typedef enum svn_wc__db_status_t {
     svn_wc__db_status_normal,
 
     /* The node has been added (potentially obscuring a delete or move of
-       the BASE node; see HAVE_BASE param). The text will be marked as
+       the BASE node; see HAVE_BASE param [### What param? This is an enum
+       not a function.] ). The text will be marked as
        modified, and if properties exist, they will be marked as modified.
 
        In many cases svn_wc__db_status_added means any of added, moved-here
