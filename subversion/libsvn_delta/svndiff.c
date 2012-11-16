@@ -181,6 +181,7 @@ zlib_encode(const char *data,
           return SVN_NO_ERROR;
         }
       out->len = endlen + intlen;
+      out->data[out->len] = 0;
     }
   return SVN_NO_ERROR;
 }
@@ -569,6 +570,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
                                 NULL,
                                 _("Size of uncompressed data "
                                   "does not match stored original length"));
+      out->data[zlen] = 0;
       out->len = zlen;
     }
   return SVN_NO_ERROR;
