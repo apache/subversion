@@ -1644,6 +1644,8 @@ def _create_parser():
                     help='Source directory.')
   parser.add_option('--ssl-cert', action='store',
                     help='Path to SSL server certificate.')
+  parser.add_option('--http-proxy', action='store',
+                    help='Use the HTTP Proxy at hostname:port.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
