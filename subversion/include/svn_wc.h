@@ -899,8 +899,8 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * of those objects.  If the @a url member refers to an absolute URL,
  * it will be canonicalized as URL consistent with the way URLs are
  * canonicalized throughout the Subversion API.  If, however, the
- * @a url member makes use of the recognized (and proprietary)
- * relative URL syntax, "canonicalization" is a less easily-defined
+ * @a url member makes use of the recognized (SVN-specific) relative
+ * URL syntax for svn:externals, "canonicalization" is an ill-defined
  * concept which may even result in munging the relative URL syntax
  * beyond recognition.  You've been warned.
  *
