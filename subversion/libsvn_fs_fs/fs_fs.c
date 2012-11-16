@@ -4822,8 +4822,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
-read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
-            apr_pool_t *pool)
+read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
+                  struct rep_state *rs, apr_pool_t *pool)
 {
   svn_stream_t *stream;
   svn_boolean_t is_cached;
@@ -4870,6 +4870,26 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   return set_cached_window(*nwin, rs, old_offset, pool);
 }
 
+/* Read SIZE bytes from the representation RS and return it in *NWIN. */
+static svn_error_t *
+read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
+                  apr_size_t size, apr_pool_t *pool)
+{
+  /* RS->FILE may be shared between RS instances -> make sure we point
+   * to the right data. */
+  SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
+
+  /* Read the plain data. */
+  *nwin = svn_stringbuf_create_ensure(size, pool);
+  SVN_ERR(svn_io_file_read_full2(rs->file, (*nwin)->data, size, NULL, NULL,
+                                 pool));
+  (*nwin)->data[size] = 0;
+
+  rs->off += (apr_off_t)size;
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the undeltified window that is a result of combining all deltas
    from the current desired representation identified in *RB with its
    base representation.  Store the window in *RESULT. */
@@ -4893,7 +4913,7 @@ get_combined_window(svn_stringbuf_t **result,
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
-      SVN_ERR(read_window(&window, rb->chunk_index, rs, window_pool));
+      SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
       APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
       if (window->src_ops == 0)
@@ -4907,11 +4927,17 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      /* Combine this window with the current one. */
+      /* Maybe, we've got a PLAIN start representation */
       source = buf;
+      if (source == NULL && rb->src_state != NULL)
+        SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
+                                  pool));
+
+      /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
       buf = svn_stringbuf_create_ensure(window->tview_len, new_pool);
       buf->len = window->tview_len;
@@ -5187,7 +5213,7 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
       return SVN_NO_ERROR;
     }
 
-  return read_window(window, drb->rs->chunk_index, drb->rs, pool);
+  return read_delta_window(window, drb->rs->chunk_index, drb->rs, pool);
 }
 
 /* This implements the svn_txdelta_md5_digest_fn_t interface. */
