@@ -78,8 +78,10 @@ Candidate changes:
      Read errors can create problems for users of the WANdisco replicator
      which does retry requests.  Can result in garbage representations in the
      rev file.  
+     Also, can cause false-positive "A previous representation is being written
+     by this process" errors.
    Votes:
-     +1: breser
+     +1: breser, danielsh
 
  * r1345740
    Remove a cast that is both ugly, and apparently illegal in g++ 4.7.
