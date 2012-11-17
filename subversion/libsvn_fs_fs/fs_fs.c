@@ -4885,6 +4885,7 @@ read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
                                  pool));
   (*nwin)->data[size] = 0;
 
+  /* Update RS. */
   rs->off += (apr_off_t)size;
 
   return SVN_NO_ERROR;
@@ -4931,7 +4932,10 @@ get_combined_window(svn_stringbuf_t **result,
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      /* Maybe, we've got a PLAIN start representation */
+      /* Maybe, we've got a PLAIN start representation.  If we do, read
+         as much data from it as the needed for the txdelta window's source
+         view.
+         Note that BUF / SOURCE may only be NULL in the first iteration. */
       source = buf;
       if (source == NULL && rb->src_state != NULL)
         SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
@@ -7126,14 +7130,22 @@ rep_write_cleanup(void *data)
   
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
-  err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+  err = svn_io_file_close(b->file, b->pool);
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
 
-  /* Remove our lock regardless of any preceeding errors so that the 
-     being_written flag is always removed and stays consistent with the
-     file lock which will be removed no matter what since the pool is
-     going away. */
-  err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
-                                                       b->lockcookie, b->pool));
+  /* Remove our lock */
+  err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
   if (err)
     {
       apr_status_t rc = err->apr_err;
