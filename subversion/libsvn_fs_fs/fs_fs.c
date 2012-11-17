@@ -5010,7 +5010,10 @@ rep_write_cleanup(void *data)
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
   err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
-  /* Remove our lock */
+  /* Remove our lock regardless of any preceeding errors so that the 
+     being_written flag is always removed and stays consistent with the
+     file lock which will be removed no matter what since the pool is
+     going away. */
   err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
                                                        b->lockcookie, b->pool));
   if (err)
