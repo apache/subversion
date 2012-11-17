@@ -218,7 +218,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
                     N_("disregard default and svn:ignore and\n"
-                       "svn:global-ignore property ignores")},
+                       "                             "
+                       "svn:global-ignores property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
