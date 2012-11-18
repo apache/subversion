@@ -41,7 +41,6 @@
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
-#include <../test/testutil.h>
 
 #ifndef _
 #define _(x) x
@@ -85,17 +84,14 @@ typedef struct representation_t
   apr_uint32_t revision;
   apr_uint32_t ref_count;
 
-  struct
-    {
-      /* length of the PLAIN / DELTA line in the source file in bytes */
-      apr_size_t header_size : 12;
+  /* length of the PLAIN / DELTA line in the source file in bytes */
+  apr_uint16_t header_size;
 
-      rep_kind_t kind : 3;
-
-      /* the source content has a PLAIN header, so we may simply copy the
-      * source content into the target */
-      svn_boolean_t is_plain : 1;
-    };
+  char kind;
+  
+  /* the source content has a PLAIN header, so we may simply copy the
+   * source content into the target */
+  char is_plain;
   
 } representation_t;
 
