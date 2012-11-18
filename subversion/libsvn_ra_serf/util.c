@@ -1903,10 +1903,12 @@ handle_response(serf_request_t *request,
   handler->conn->last_status_code = handler->sline.code;
 
   if (handler->sline.code == 405
+      || handler->sline.code == 408
       || handler->sline.code == 409
       || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
+         408 Request Timeout
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       serf_bucket_t *hdrs;
