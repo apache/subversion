@@ -164,7 +164,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     apr_pool_t *pool)
 {
   int i;
-  int len;
+  unsigned int len;
   apr_array_header_t *externals = NULL;
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   apr_hash_t *duplicate_check = apr_hash_make(pool);
