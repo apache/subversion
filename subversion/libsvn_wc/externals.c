@@ -334,7 +334,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       /* Has the same WC target path already been mentioned in this prop? */
       len = apr_hash_count(duplicate_check);
-      apr_hash_set(duplicate_check, item->target_dir, APR_HASH_KEY_STRING, 1);
+      apr_hash_set(duplicate_check, item->target_dir, APR_HASH_KEY_STRING, "");
       if (len == apr_hash_count(duplicate_check))
         {
           /* Hashtable length is unchanged. This must be a duplicate. */
