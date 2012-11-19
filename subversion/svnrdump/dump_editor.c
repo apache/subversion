@@ -30,10 +30,10 @@
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 
-#include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
 
 #include "svnrdump.h"
+#include <assert.h>
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -58,8 +58,8 @@ struct dir_baton
   /* has this directory been written to the output stream? */
   svn_boolean_t written_out;
 
-  /* the absolute path to this directory */
-  const char *abspath; /* an fspath */
+  /* the path to this directory */
+  const char *repos_relpath; /* a relpath */
 
   /* Copyfrom info for the node, if any. */
   const char *copyfrom_path; /* a relpath */
@@ -78,6 +78,9 @@ struct file_baton
 {
   struct dump_edit_baton *eb;
   struct dir_baton *parent_dir_baton;
+
+  /* the path to this file */
+  const char *repos_relpath; /* a relpath */
 
   /* The checksum of the file the delta is being applied to */
   const char *base_checksum;
@@ -152,16 +155,13 @@ make_dir_baton(const char *path,
   struct dump_edit_baton *eb = edit_baton;
   struct dir_baton *pb = parent_dir_baton;
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
-  const char *abspath;
+  const char *repos_relpath;
 
   /* Construct the full path of this node. */
-  /* ### FIXME: Not sure why we use an abspath here.  If I understand
-     ### correctly, the only place we used this path is in dump_node(),
-     ### which immediately converts it into a relpath.  -- cmpilato.  */
   if (pb)
-    abspath = svn_fspath__canonicalize(path, pool);
+    repos_relpath = svn_relpath_canonicalize(path, pool);
   else
-    abspath = "/";
+    repos_relpath = "";
 
   /* Strip leading slash from copyfrom_path so that the path is
      canonical and svn_relpath_join can be used */
@@ -171,8 +171,10 @@ make_dir_baton(const char *path,
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
   new_db->pool = pool;
-  new_db->abspath = abspath;
-  new_db->copyfrom_path = copyfrom_path;
+  new_db->repos_relpath = repos_relpath;
+  new_db->copyfrom_path = copyfrom_path 
+                            ? svn_relpath_canonicalize(copyfrom_path, pool)
+                            : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -298,7 +300,7 @@ do_dump_newlines(struct dump_edit_baton *eb,
  */
 static svn_error_t *
 dump_node(struct dump_edit_baton *eb,
-          const char *path,    /* an absolute path. */
+          const char *repos_relpath,
           svn_node_kind_t kind,
           enum svn_node_action action,
           svn_boolean_t is_copy,
@@ -306,16 +308,12 @@ dump_node(struct dump_edit_baton *eb,
           svn_revnum_t copyfrom_rev,
           apr_pool_t *pool)
 {
-  /* Remove leading slashes from path and copyfrom_path */
-  if (path)
-    path = svn_relpath_canonicalize(path, pool);
-
-  if (copyfrom_path)
-    copyfrom_path = svn_relpath_canonicalize(copyfrom_path, pool);
+  assert(svn_relpath_is_canonical(repos_relpath));
+  assert(!copyfrom_path || svn_relpath_is_canonical(copyfrom_path));
 
   /* Node-path: commons/STATUS */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", repos_relpath));
 
   /* Node-kind: file */
   if (kind == svn_node_file)
@@ -358,7 +356,7 @@ dump_node(struct dump_edit_baton *eb,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n\n"));
 
       /* Recurse: Print an additional add-with-history record. */
-      SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
+      SVN_ERR(dump_node(eb, repos_relpath, kind, svn_node_action_add,
                         is_copy, copyfrom_path, copyfrom_rev, pool));
 
       /* We can leave this routine quietly now, don't need to dump any
@@ -504,11 +502,11 @@ add_directory(const char *path,
   is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node */
-  SVN_ERR(dump_node(pb->eb, path,
+  SVN_ERR(dump_node(pb->eb, new_db->repos_relpath,
                     svn_node_dir,
                     val ? svn_node_action_replace : svn_node_action_add,
                     is_copy,
-                    is_copy ? copyfrom_path : NULL,
+                    is_copy ? new_db->copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
@@ -594,6 +592,7 @@ add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->parent_dir_baton = pb;
+  fb->repos_relpath = svn_relpath_canonicalize(path, pool);
 
   LDR_DBG(("add_file %s\n", path));
 
@@ -606,11 +605,12 @@ add_file(const char *path,
   is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node. */
-  SVN_ERR(dump_node(pb->eb, path,
+  SVN_ERR(dump_node(pb->eb, fb->repos_relpath,
                     svn_node_file,
                     val ? svn_node_action_replace : svn_node_action_add,
                     is_copy,
-                    is_copy ? copyfrom_path : NULL,
+                    is_copy ? svn_relpath_canonicalize(copyfrom_path, pool)
+                            : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
@@ -639,6 +639,7 @@ open_file(const char *path,
 
   fb->eb = pb->eb;
   fb->parent_dir_baton = pb;
+  fb->repos_relpath = svn_relpath_canonicalize(path, pool);
 
   LDR_DBG(("open_file %s\n", path));
 
@@ -654,8 +655,9 @@ open_file(const char *path,
       copyfrom_rev = pb->copyfrom_rev;
     }
 
-  SVN_ERR(dump_node(pb->eb, path, svn_node_file, svn_node_action_change,
-                    FALSE, copyfrom_path, copyfrom_rev, pool));
+  SVN_ERR(dump_node(pb->eb, fb->repos_relpath, svn_node_file,
+                    svn_node_action_change, FALSE, copyfrom_path,
+                    copyfrom_rev, pool));
 
   /* Build a nice file baton to pass to change_file_prop and
      apply_textdelta */
@@ -692,7 +694,7 @@ change_dir_prop(void *parent_baton,
          props. If it not, dump the node itself before dumping the
          props. */
 
-      SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
+      SVN_ERR(dump_node(db->eb, db->repos_relpath, svn_node_dir,
                         svn_node_action_change, FALSE, db->copyfrom_path,
                         db->copyfrom_rev, pool));
       db->written_out = TRUE;
