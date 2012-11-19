@@ -121,7 +121,7 @@ ra_treen_read_file(svn_tree_node_t *node,
 
   SVN_ERR(svn_stream_open_unique(&holding_stream, NULL, NULL,
                                  svn_io_file_del_on_close,
-                                 scratch_pool, scratch_pool));
+                                 result_pool, scratch_pool));
   SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
                                          nb->tb->revnum, holding_stream,
                                          NULL, props, result_pool)));
