@@ -61,21 +61,6 @@ Candidate changes:
    Votes:
      +1: stsp, stefan2
 
- * r1403964, r1403982, r1410106, r1410203
-   Make fs_fs properly cleanup after a failed transmission of a representation.
-   Justification:
-     Read errors can create problems for users of the WANdisco replicator
-     which does retry requests.  Can result in garbage representations in the
-     rev file.  
-   Notes:
-     Branch is required since our client code needs a small tweak to deal
-     with pool lifetimes to make the fix work properly with ra_local.  We'd
-     made a similar change with wcng in 1.7 already.
-   Branch:
-     ^/subversion/branches/1.6.x-rep_write_cleanup
-   Votes:
-     +1: breser, danielsh, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -94,3 +79,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1403964, r1403982, r1410106, r1410203
+   Make fs_fs properly cleanup after a failed transmission of a representation.
+   Justification:
+     Read errors can create problems for users of the WANdisco replicator
+     which does retry requests.  Can result in garbage representations in the
+     rev file.  
+   Notes:
+     Branch is required since our client code needs a small tweak to deal
+     with pool lifetimes to make the fix work properly with ra_local.  We'd
+     made a similar change with wcng in 1.7 already.
+   Branch:
+     ^/subversion/branches/1.6.x-rep_write_cleanup
+   Votes:
+     +1: breser, danielsh, stefan2
