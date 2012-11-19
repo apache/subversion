@@ -78,6 +78,9 @@ struct file_baton
 {
   struct dump_edit_baton *eb;
   struct dir_baton *parent_dir_baton;
+
+  /* The checksum of the file the delta is being applied to */
+  const char *base_checksum;
 };
 
 /* A handler baton to be used in window_handler().  */
@@ -115,9 +118,6 @@ struct dump_edit_baton {
      per-edit-session pool */
   const char *delta_abspath;
   apr_file_t *delta_file;
-
-  /* The checksum of the file the delta is being applied to */
-  const char *base_checksum;
 
   /* Flags to trigger dumping props and text */
   svn_boolean_t dump_text;
@@ -777,7 +777,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   eb->dump_text = TRUE;
-  eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
+  fb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
@@ -819,12 +819,12 @@ close_file(void *file_baton,
       if (err)
         SVN_ERR(svn_error_wrap_apr(err, NULL));
 
-      if (eb->base_checksum)
+      if (fb->base_checksum)
         /* Text-delta-base-md5: */
         SVN_ERR(svn_stream_printf(eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
                                   ": %s\n",
-                                  eb->base_checksum));
+                                  fb->base_checksum));
 
       /* Text-content-length: 39 */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
