@@ -146,23 +146,37 @@ typedef svn_error_t *(*svn_tree_walk_two_func_t)(svn_tree_node_t *node1,
                                                  void *walk_baton,
                                                  apr_pool_t *scratch_pool);
 
-/** Walk the two generic trees @a tree1 and @a tree2, simultaneously,
- * recursing to @a depth.
+/** Walk the two generic trees @a tree1 and @a tree2, simultaneously.
+ * Recurse as far as @a depth in each tree.
  *
  * Call @a walk_func for each node, passing @a walk_baton and the tree
  * node object.
  *
- * If @a cancel_func is not null, call it with @a cancel_baton to check for
- * cancellation.
+ * When a directory appears in just one of the trees, visit it, and if @a
+ * walk_singleton_dirs is TRUE, then also walk its contents, passing NULL
+ * as the node on the other side.  The walk recurses only as far as @a
+ * depth, interpreted relative to the root of @a tree1 and @a tree2.
  *
- * TODO: Visit nodes with the same id at the same time, thus tracking moves.
+ * If @a cancel_func is not null, call it with @a cancel_baton to check for
+ * cancellation, approximately once per directory.
+ *
+ * @note This function provides no information on the historical ancestry
+ * or versioning relationship between a pair of nodes.  Nodes at the same
+ * relative path are visited together regardless of whether they are, at one
+ * extreme, different kinds of node within entirely unrelated trees, or, at
+ * the other extreme, references to exactly the same node in two instances
+ * of the same tree.
+ *
+ * TODO: Make another walker that visits nodes with the same id at the same
+ * time, regardless of their relative paths, thus tracking moves?
  * TODO: Let the callback determine the order of walking sub-nodes,
- * especially with respect to far-moves (moves into or out of a directory).
+ * especially with respect to far-moves (moves into or out of a directory)?
  */
 svn_error_t *
 svn_tree_walk_two(svn_tree_t *tree1,
                   svn_tree_t *tree2,
                   svn_depth_t depth,
+                  svn_boolean_t walk_singleton_dirs,
                   const svn_tree_walk_two_func_t walk_func,
                   void *walk_baton,
                   svn_cancel_func_t cancel_func,
