@@ -80,12 +80,12 @@
 /* Particle that will be appended to the namespace name to form the
  * name of the mutex / lock file used for that namespace.
  */
-#define MUTEX_NAME_SUFFIX "Mutex"
+#define MUTEX_NAME_SUFFIX ".mutex"
 
 /* Particle that will be appended to the namespace name to form the
  * name of the shared memory file that backs that namespace.
  */
-#define SHM_NAME_SUFFIX "Shm"
+#define SHM_NAME_SUFFIX ".shm"
 
 /* Platform-dependent implementations of our basic atomic operations.
  * NA_SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
