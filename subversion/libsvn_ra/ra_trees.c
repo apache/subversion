@@ -207,6 +207,9 @@ svn_ra__open_tree(svn_tree_t **tree_p,
 {
   ra_tree_baton_t *tb = apr_palloc(result_pool, sizeof(*tb));
 
+  if (! SVN_IS_VALID_REVNUM(revnum))
+    SVN_ERR(svn_ra_get_latest_revnum(ra_session, &revnum, result_pool));
+
   tb->ra_session = ra_session;
   tb->revnum = revnum;
 

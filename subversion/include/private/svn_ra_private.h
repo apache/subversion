@@ -274,6 +274,12 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
 
 /* Set *TREE_P to a new tree object representing the subtree rooted at
  * the repository path of SESSION in revision REVNUM.
+ *
+ * REVNUM must be either a valid revision number within the repository, or
+ * SVN_INVALID_REVNUM meaning the head revision.  A request to use the head
+ * revision will be resolved to a revision number exactly once for this
+ * tree, some time between calling this function and the first time an
+ * operation on this tree depends on it.
  */
 svn_error_t *
 svn_ra__open_tree(svn_tree_t **tree_p,
