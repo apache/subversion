@@ -795,7 +795,8 @@ typedef struct svn_wc_external_item2_t
       field will often be redundant.) */
   const char *target_dir;
 
-  /** Where to check out from. */
+  /** Where to check out from. This is possibly a relative external URL, as
+   * allowed in externals definitions, but without the peg revision. */
   const char *url;
 
   /** What revision to check out.  The only valid kinds for this are
