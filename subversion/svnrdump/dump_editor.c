@@ -50,6 +50,8 @@ struct dir_baton
   struct dump_edit_baton *eb;
   struct dir_baton *parent_dir_baton;
 
+  apr_pool_t *pool; /* Directory pool */
+
   /* is this directory a new addition to this revision? */
   svn_boolean_t added;
 
@@ -168,6 +170,7 @@ make_dir_baton(const char *path,
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
+  new_db->pool = pool;
   new_db->abspath = abspath;
   new_db->copyfrom_path = copyfrom_path;
   new_db->copyfrom_rev = copyfrom_rev;
@@ -436,6 +439,24 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Dump pending items from the specified node, to allow starting the dump
+   of a child node */
+static svn_error_t *
+dump_pending(struct dir_baton *pb,
+             apr_pool_t *scratch_pool)
+{
+  /* Some pending properties to dump? */
+  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
+                        pb->eb->props, pb->eb->deleted_props,
+                        &(pb->eb->dump_props), TRUE,
+                        pb->pool, scratch_pool));
+
+  /* Some pending newlines to dump? */
+  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -446,13 +467,7 @@ delete_entry(const char *path,
 
   LDR_DBG(("delete_entry %s\n", path));
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
-                        pb->eb->props, pb->eb->deleted_props,
-                        &(pb->eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(pb, pool));
 
   /* Add this path to the deleted_entries of the parent directory
      baton. */
@@ -480,13 +495,7 @@ add_directory(const char *path,
   new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb,
                           pb, TRUE, pb->eb->pool);
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
-                        pb->eb->props, pb->eb->deleted_props,
-                        &(pb->eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(pb, pool));
 
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
@@ -527,13 +536,7 @@ open_directory(const char *path,
 
   LDR_DBG(("open_directory %s\n", path));
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
-                        pb->eb->props, pb->eb->deleted_props,
-                        &(pb->eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(pb, pool));
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
@@ -556,18 +559,11 @@ close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-  struct dump_edit_baton *eb = db->eb;
   apr_hash_index_t *hi;
 
   LDR_DBG(("close_directory %p\n", dir_baton));
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&eb->propstring, eb->stream,
-                        eb->props, eb->deleted_props,
-                        &(eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(eb, &(eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(db, pool));
 
   /* Dump the deleted directory entries */
   for (hi = apr_hash_first(pool, db->deleted_entries); hi;
@@ -601,13 +597,7 @@ add_file(const char *path,
 
   LDR_DBG(("add_file %s\n", path));
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
-                        pb->eb->props, pb->eb->deleted_props,
-                        &(pb->eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(pb, pool));
 
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
@@ -652,13 +642,7 @@ open_file(const char *path,
 
   LDR_DBG(("open_file %s\n", path));
 
-  /* Some pending properties to dump? */
-  SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
-                        pb->eb->props, pb->eb->deleted_props,
-                        &(pb->eb->dump_props), TRUE, pool, pool));
-
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), pool));
+  SVN_ERR(dump_pending(pb, pool));
 
   /* If the parent directory has explicit copyfrom path and rev,
      record the same for this one. */
