@@ -778,7 +778,6 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
-  SVN_ERR(svn_stream_close(delta_filestream));
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
