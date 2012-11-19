@@ -360,6 +360,18 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
                               NULL);
 }
 
+/* Return the name of the sha1->rep mapping file in transaction TXN_ID
+ * within FS for the given SHA1 checksum.  Use POOL for allocations.
+ */
+static APR_INLINE const char *
+path_txn_sha1(svn_fs_t *fs, const char *txn_id, svn_checksum_t *sha1,
+              apr_pool_t *pool)
+{
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                         svn_checksum_to_cstring(sha1, pool),
+                         pool);
+}
+
 static APR_INLINE const char *
 path_txn_changes(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
@@ -2613,10 +2625,6 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
-  const char *sha1 = ffd->rep_sharing_allowed && noderev->data_rep
-                   ? svn_checksum_to_cstring(noderev->data_rep->sha1_checksum,
-                                             pool)
-                   : NULL;
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
@@ -2637,13 +2645,31 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_io_file_close(noderev_file, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* For the in-transaction NODEREV within FS, write the sha1->rep mapping
+ * file in the respective transaction, if rep sharing has been enabled etc.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+store_sha1_rep_mapping(svn_fs_t *fs,
+                       node_revision_t *noderev,
+                       apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   /* if rep sharing has been enabled and the noderev has a data rep and
    * its SHA-1 is known, store the rep struct under its SHA1. */
-  if (sha1)
+  if (   ffd->rep_sharing_allowed
+      && noderev->data_rep
+      && noderev->data_rep->sha1_checksum)
     {
       apr_file_t *rep_file;
-      const char *file_name = svn_dirent_join(path_txn_dir(fs, txn_id, pool),
-                                              sha1, pool);
+      const char *file_name = path_txn_sha1(fs,
+                                            svn_fs_fs__id_txn_id(noderev->id),
+                                            noderev->data_rep->sha1_checksum,
+                                            pool);
       const char *rep_string = representation_string(noderev->data_rep,
                                                      ffd->format,
                                                      (noderev->kind
@@ -4822,8 +4848,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
-read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
-            apr_pool_t *pool)
+read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
+                  struct rep_state *rs, apr_pool_t *pool)
 {
   svn_stream_t *stream;
   svn_boolean_t is_cached;
@@ -4870,6 +4896,27 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   return set_cached_window(*nwin, rs, old_offset, pool);
 }
 
+/* Read SIZE bytes from the representation RS and return it in *NWIN. */
+static svn_error_t *
+read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
+                  apr_size_t size, apr_pool_t *pool)
+{
+  /* RS->FILE may be shared between RS instances -> make sure we point
+   * to the right data. */
+  SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
+
+  /* Read the plain data. */
+  *nwin = svn_stringbuf_create_ensure(size, pool);
+  SVN_ERR(svn_io_file_read_full2(rs->file, (*nwin)->data, size, NULL, NULL,
+                                 pool));
+  (*nwin)->data[size] = 0;
+
+  /* Update RS. */
+  rs->off += (apr_off_t)size;
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the undeltified window that is a result of combining all deltas
    from the current desired representation identified in *RB with its
    base representation.  Store the window in *RESULT. */
@@ -4893,7 +4940,7 @@ get_combined_window(svn_stringbuf_t **result,
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
-      SVN_ERR(read_window(&window, rb->chunk_index, rs, window_pool));
+      SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
       APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
       if (window->src_ops == 0)
@@ -4907,11 +4954,20 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      /* Combine this window with the current one. */
+      /* Maybe, we've got a PLAIN start representation.  If we do, read
+         as much data from it as the needed for the txdelta window's source
+         view.
+         Note that BUF / SOURCE may only be NULL in the first iteration. */
       source = buf;
+      if (source == NULL && rb->src_state != NULL)
+        SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
+                                  pool));
+
+      /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
       buf = svn_stringbuf_create_ensure(window->tview_len, new_pool);
       buf->len = window->tview_len;
@@ -5187,7 +5243,7 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
       return SVN_NO_ERROR;
     }
 
-  return read_window(window, drb->rs->chunk_index, drb->rs, pool);
+  return read_delta_window(window, drb->rs->chunk_index, drb->rs, pool);
 }
 
 /* This implements the svn_txdelta_md5_digest_fn_t interface. */
@@ -7100,22 +7156,14 @@ rep_write_cleanup(void *data)
   
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
-  if (err)
-    {
-      apr_status_t rc = err->apr_err;
-      svn_error_clear(err);
-      return rc;
-    }
-  err = svn_io_file_close(b->file, b->pool);
-  if (err)
-    {
-      apr_status_t rc = err->apr_err;
-      svn_error_clear(err);
-      return rc;
-    }
+  err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
-  /* Remove our lock */
-  err = unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool);
+  /* Remove our lock regardless of any preceeding errors so that the 
+     being_written flag is always removed and stays consistent with the
+     file lock which will be removed no matter what since the pool is
+     going away. */
+  err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
+                                                       b->lockcookie, b->pool));
   if (err)
     {
       apr_status_t rc = err->apr_err;
@@ -7279,9 +7327,7 @@ get_shared_rep(representation_t **old_rep,
     {
       svn_node_kind_t kind;
       const char *file_name
-        = svn_dirent_join(path_txn_dir(fs, rep->txn_id, pool),
-                          svn_checksum_to_cstring(rep->sha1_checksum, pool),
-                          pool);
+        = path_txn_sha1(fs, rep->txn_id, rep->sha1_checksum, pool);
 
       /* in our txn, is there a rep file named with the wanted SHA1?
          If so, read it and use that rep.
@@ -7371,6 +7417,8 @@ rep_write_contents_close(void *baton)
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
+  if (!old_rep)
+    SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
 
   SVN_ERR(svn_io_file_close(b->file, b->pool));
   SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));

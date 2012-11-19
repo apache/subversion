@@ -758,6 +758,7 @@ def cherry3_fwd(sbox):
 # Automatic merges ignore subtree mergeinfo during reintegrate.
 @SkipUnless(server_has_mergeinfo)
 @XFail()
+@Issue(4258)
 def subtree_to_and_fro(sbox):
   "reintegrate considers source subtree mergeinfo"
 

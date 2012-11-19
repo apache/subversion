@@ -899,8 +899,8 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * of those objects.  If the @a url member refers to an absolute URL,
  * it will be canonicalized as URL consistent with the way URLs are
  * canonicalized throughout the Subversion API.  If, however, the
- * @a url member makes use of the recognized (and proprietary)
- * relative URL syntax, "canonicalization" is a less easily-defined
+ * @a url member makes use of the recognized (SVN-specific) relative
+ * URL syntax for svn:externals, "canonicalization" is an ill-defined
  * concept which may even result in munging the relative URL syntax
  * beyond recognition.  You've been warned.
  *
@@ -4774,7 +4774,8 @@ svn_wc_add_repos_file(const char *dst_path,
 
 
 /** Remove @a local_abspath from revision control.  @a wc_ctx must
- * hold a write lock.
+ * hold a write lock on the parent of @a local_abspath, or if that is a
+ * WC root then on @a local_abspath itself.
  *
  * If @a local_abspath is a file, all its info will be removed from the
  * administrative area.  If @a local_abspath is a directory, then the

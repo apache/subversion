@@ -737,7 +737,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
       err = svn_client_propget5(&props, &inherited_config_auto_props,
                                 SVN_PROP_INHERITABLE_AUTO_PROPS, path_or_url,
                                 &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                                scratch_pool, scratch_pool);
+                                scratch_pool, iterpool);
       if (err)
         {
           if (target_is_url || err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
@@ -746,7 +746,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
           svn_error_clear(err);
           err = NULL;
           SVN_ERR(find_existing_parent(&path_or_url, ctx, path_or_url,
-                                       scratch_pool, scratch_pool));
+                                       scratch_pool, iterpool));
         }
       else
         {
@@ -1384,11 +1384,13 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver2(editor, edit_baton, targets, TRUE,
                                path_driver_cb_func, (void *)editor, pool);
+
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                err,
+                editor->abort_edit(edit_baton, pool));
     }
 
   /* Close the edit. */

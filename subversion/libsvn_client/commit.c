@@ -1058,8 +1058,9 @@ svn_client_import5(const char *path,
                     ignore_unknown_node_types, filter_callback,
                     filter_baton, ctx, iterpool)))
     {
-      svn_error_clear(editor->abort_edit(edit_baton, iterpool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                    err,
+                    editor->abort_edit(edit_baton, iterpool));
     }
 
   svn_pool_destroy(iterpool);

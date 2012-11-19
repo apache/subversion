@@ -2219,8 +2219,9 @@ def switch_to_root(sbox):
 
 #----------------------------------------------------------------------
 # Make sure that switch continue after deleting locally modified
-# directories, as it update and merge do.
+# directories, as update and merge do.
 
+@Issue(2505)
 def tolerate_local_mods(sbox):
   "tolerate deletion of a directory with local mods"
 

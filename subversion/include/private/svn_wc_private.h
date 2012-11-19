@@ -546,6 +546,10 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
  * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
  * @a local_abspath. If @a local_abspath was not deleted,
  * set @a *deleted_ancestor_abspath to @c NULL.
+ *
+ * A node is considered 'deleted' if it is deleted or moved-away, and is
+ * not replaced.
+ *
  * @a *deleted_ancestor_abspath is allocated in @a result_pool.
  * Use @a scratch_pool for all temporary allocations.
  */

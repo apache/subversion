@@ -2878,6 +2878,69 @@ def url_to_wc_copy_of_externals(sbox):
     "OUTPUT", expected_stdout, [], 0, 'copy', repo_url + '/A/C',
     sbox.ospath('External-WC-to-URL-Copy'))
 
+@Issue(4227)
+def duplicate_targets(sbox):
+  "local path appears twice in one svn:external prop"
+
+  if False:
+    svntest.factory.make(sbox, r"""
+      svn ps svn:externals "^/A/B/E barf\n^/A/B/E barf" .
+      svn ps svn:externals "^/A/B/E barf\n^/A/D/G barf" .
+      svn ps svn:externals "^/A/B/E barf/.\n^/A/D/G ./barf" .
+      svn ps svn:externals "^/A/B/E ././barf\n^/A/D/G .//barf" .
+      svn pg svn:externals .
+      svn ps svn:externals "^/A/B/E ok" .
+      svn pg svn:externals .
+      """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  abs_wc_dir = os.path.abspath(sbox.wc_dir)
+
+  expected_stderr = verify.RegexOutput(
+    ".*Invalid svn:externals property on '" + re.escape(abs_wc_dir) +
+    "': target 'barf' appears more than once\n",
+    match_all=False)
+
+  # svn ps svn:externals "^/A/B/E barf\n^/A/B/E barf" .
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'ps',
+    'svn:externals', '^/A/B/E barf\n^/A/B/E barf', wc_dir)
+
+  # svn ps svn:externals "^/A/B/E barf\n^/A/D/G barf" .
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'ps',
+    'svn:externals', '^/A/B/E barf\n^/A/D/G barf', wc_dir)
+
+  # svn ps svn:externals "^/A/B/E barf/.\n^/A/D/G ./barf" .
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'ps',
+    'svn:externals', '^/A/B/E barf/.\n^/A/D/G ./barf', wc_dir)
+
+  # svn ps svn:externals "^/A/B/E ././barf\n^/A/D/G .//barf" .
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'ps',
+    'svn:externals', '^/A/B/E ././barf\n^/A/D/G .//barf', wc_dir)
+
+  # svn pg svn:externals .
+  expected_stdout = []
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+    'svn:externals', wc_dir)
+
+  # svn ps svn:externals "^/A/B/E ok" .
+  expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '^/A/B/E ok', wc_dir)
+
+  # svn pg svn:externals .
+  expected_stdout = verify.UnorderedOutput([
+    '^/A/B/E ok\n',
+    '\n'
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+    'svn:externals', wc_dir)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2925,6 +2988,7 @@ test_list = [ None,
               remap_file_external_with_prop_del,
               dir_external_with_dash_r_only,
               url_to_wc_copy_of_externals,
+              duplicate_targets,
              ]
 
 if __name__ == '__main__':

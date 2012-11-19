@@ -542,7 +542,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None):
   "Create config directories and files"
 
   # config file names
@@ -569,13 +569,19 @@ interactive-conflicts = false
     http_library_str = ""
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
+    http_proxy_str = ""
+    if options.http_proxy:
+      http_proxy_parsed = urlparse("//" + options.http_proxy)
+      http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
+                       "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
     server_contents = """
 #
 [global]
 %s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str)
+""" % (http_library_str, http_proxy_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -1283,6 +1289,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--milestone-filter=' + options.milestone_filter)
     if options.ssl_cert:
       args.append('--ssl-cert=' + options.ssl_cert)
+    if options.http_proxy:
+      args.append('--http-proxy=' + options.http_proxy)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1636,6 +1644,8 @@ def _create_parser():
                     help='Source directory.')
   parser.add_option('--ssl-cert', action='store',
                     help='Path to SSL server certificate.')
+  parser.add_option('--http-proxy', action='store',
+                    help='Use the HTTP Proxy at hostname:port.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1949,7 +1959,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     # Build out the default configuration directory
     create_config_dir(default_config_dir,
                       ssl_cert=options.ssl_cert,
-                      ssl_url=options.test_area_url)
+                      ssl_url=options.test_area_url,
+                      http_proxy=options.http_proxy)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

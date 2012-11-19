@@ -915,12 +915,12 @@ svn_client_propget5(apr_hash_t **props,
       if (inherited_props && local_iprops)
         SVN_ERR(svn_wc__get_iprops(inherited_props, ctx->wc_ctx,
                                    target, propname,
-                                   scratch_pool, scratch_pool));
+                                   result_pool, scratch_pool));
 
       SVN_ERR(get_prop_from_wc(props, propname, target,
                                pristine, kind,
-                               depth, changelists, ctx, scratch_pool,
-                               result_pool));
+                               depth, changelists, ctx, result_pool,
+                               scratch_pool));
     }
 
   if ((inherited_props && !local_iprops)
