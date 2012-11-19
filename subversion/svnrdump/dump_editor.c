@@ -70,6 +70,14 @@ struct dir_baton
   apr_hash_t *deleted_entries;
 };
 
+/* A file baton used by all file-related callback functions in the dump
+ * editor */
+struct file_baton
+{
+  struct dump_edit_baton *eb;
+  struct dir_baton *parent_dir_baton;
+};
+
 /* A handler baton to be used in window_handler().  */
 struct handler_baton
 {
@@ -584,8 +592,12 @@ add_file(const char *path,
          void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   void *val;
   svn_boolean_t is_copy;
+
+  fb->eb = pb->eb;
+  fb->parent_dir_baton = pb;
 
   LDR_DBG(("add_file %s\n", path));
 
@@ -618,7 +630,7 @@ add_file(const char *path,
 
   /* Build a nice file baton to pass to change_file_prop and
      apply_textdelta */
-  *file_baton = pb->eb;
+  *file_baton = fb;
 
   return SVN_NO_ERROR;
 }
@@ -631,8 +643,12 @@ open_file(const char *path,
           void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+
+  fb->eb = pb->eb;
+  fb->parent_dir_baton = pb;
 
   LDR_DBG(("open_file %s\n", path));
 
@@ -659,7 +675,7 @@ open_file(const char *path,
 
   /* Build a nice file baton to pass to change_file_prop and
      apply_textdelta */
-  *file_baton = pb->eb;
+  *file_baton = fb;
 
   return SVN_NO_ERROR;
 }
@@ -712,7 +728,8 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  struct dump_edit_baton *eb = file_baton;
+  struct file_baton *fb = file_baton;
+  struct dump_edit_baton *eb = fb->eb;
 
   LDR_DBG(("change_file_prop %p\n", file_baton));
 
@@ -756,7 +773,8 @@ apply_textdelta(void *file_baton, const char *base_checksum,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  struct dump_edit_baton *eb = file_baton;
+  struct file_baton *fb = file_baton;
+  struct dump_edit_baton *eb = fb->eb;
 
   /* Custom handler_baton allocated in a separate pool */
   struct handler_baton *hb;
@@ -792,7 +810,8 @@ close_file(void *file_baton,
            const char *text_checksum,
            apr_pool_t *pool)
 {
-  struct dump_edit_baton *eb = file_baton;
+  struct file_baton *fb = file_baton;
+  struct dump_edit_baton *eb = fb->eb;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
 
   LDR_DBG(("close_file %p\n", file_baton));
