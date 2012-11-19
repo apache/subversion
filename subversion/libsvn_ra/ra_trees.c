@@ -117,16 +117,26 @@ ra_treen_read_file(svn_tree_node_t *node,
                    apr_pool_t *scratch_pool)
 {
   ra_tree_node_baton_t *nb = node->priv;
-  svn_stream_t *holding_stream;
 
-  SVN_ERR(svn_stream_open_unique(&holding_stream, NULL, NULL,
-                                 svn_io_file_del_on_close,
-                                 result_pool, scratch_pool));
-  SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
-                                         nb->tb->revnum, holding_stream,
-                                         NULL, props, result_pool)));
-  SVN_ERR(svn_stream_reset(holding_stream));
-  *stream = holding_stream;
+  if (stream)
+    {
+      /* Spool the content into a temp file, rewind, and return that stream
+       * for the caller to read. */
+      SVN_ERR(svn_stream_open_unique(stream, NULL, NULL,
+                                     svn_io_file_del_on_close,
+                                     result_pool, scratch_pool));
+      SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
+                                             nb->tb->revnum, *stream,
+                                             NULL, props, result_pool)));
+      SVN_ERR(svn_stream_reset(*stream));
+    }
+  else
+    {
+      /* Just get the properties. */
+      SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
+                                             nb->tb->revnum, NULL,
+                                             NULL, props, result_pool)));
+    }
   return SVN_NO_ERROR;
 }
 
