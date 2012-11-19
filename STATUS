@@ -59,7 +59,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r1387226
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
 
  * r1403964, r1403982, r1410106, r1410203
    Make fs_fs properly cleanup after a failed transmission of a representation.
@@ -74,7 +74,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-rep_write_cleanup
    Votes:
-     +1: breser, danielsh
+     +1: breser, danielsh, stefan2
 
 Veto-blocked changes:
 =====================
