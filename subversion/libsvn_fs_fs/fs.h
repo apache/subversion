@@ -180,6 +180,7 @@ typedef struct fs_fs_shared_txn_data_t
    per file.  On Windows apr implements the locking as per file handle
    locks, so we don't have to add our own mutex for just in-process
    synchronization. */
+/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
 #if APR_HAS_THREADS && !defined(WIN32)
 #define SVN_FS_FS__USE_LOCK_MUTEX 1
 #else
