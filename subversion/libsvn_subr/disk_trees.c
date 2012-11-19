@@ -94,11 +94,11 @@ disk_treen_get_kind(svn_tree_node_t *node,
 
 /* */
 static svn_error_t *
-disk_treen_get_file(svn_tree_node_t *node,
-                    svn_stream_t **stream,
-                    apr_hash_t **props,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+disk_treen_read_file(svn_tree_node_t *node,
+                     svn_stream_t **stream,
+                     apr_hash_t **props,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   disk_tree_node_baton_t *nb = node->priv;
   const char *abspath = svn_dirent_join(nb->tb->tree_abspath,
@@ -119,11 +119,11 @@ disk_treen_get_file(svn_tree_node_t *node,
  * auto-props, etc. like "svn add" does.
  */
 static svn_error_t *
-disk_treen_get_dir(svn_tree_node_t *node,
-                   apr_hash_t **children_p,
-                   apr_hash_t **props,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+disk_treen_read_dir(svn_tree_node_t *node,
+                    apr_hash_t **children_p,
+                    apr_hash_t **props,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   disk_tree_node_baton_t *nb = node->priv;
   const char *abspath = svn_dirent_join(nb->tb->tree_abspath,
@@ -170,8 +170,8 @@ static const svn_tree_node__vtable_t disk_tree_node_vtable =
 {
   disk_treen_get_relpath,
   disk_treen_get_kind,
-  disk_treen_get_file,
-  disk_treen_get_dir
+  disk_treen_read_file,
+  disk_treen_read_dir
 };
 
 /* */

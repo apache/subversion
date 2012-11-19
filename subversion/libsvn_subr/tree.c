@@ -457,7 +457,7 @@ svn_tree_node_read_file(svn_tree_node_t *node,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  return node->vtable->get_file(node, stream, props,
+  return node->vtable->read_file(node, stream, props,
                                  result_pool, scratch_pool);
 }
 

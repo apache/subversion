@@ -81,19 +81,19 @@ typedef struct svn_tree_node__vtable_t
                            svn_node_kind_t *kind,
                            apr_pool_t *scratch_pool);
 
-  /* See svn_tree_node_get_file(). */
-  svn_error_t *(*get_file)(svn_tree_node_t *node,
-                           svn_stream_t **stream,
+  /* See svn_tree_node_read_file(). */
+  svn_error_t *(*read_file)(svn_tree_node_t *node,
+                            svn_stream_t **stream,
+                            apr_hash_t **props,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+  /* See svn_tree_node_read_dir(). */
+  svn_error_t *(*read_dir)(svn_tree_node_t *node,
+                           apr_hash_t **children,
                            apr_hash_t **props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
-  /* See svn_tree_node_get_dir(). */
-  svn_error_t *(*read_dir)(svn_tree_node_t *node,
-                          apr_hash_t **children,
-                          apr_hash_t **props,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
 } svn_tree_node__vtable_t;
 
 /** The implementation of the typedef #svn_tree_t. */
