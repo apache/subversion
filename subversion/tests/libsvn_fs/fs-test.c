@@ -4896,6 +4896,26 @@ node_history(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_fs_delete_fs(). */
+static svn_error_t *
+delete_fs(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const char *path;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-delete-fs", opts, pool));
+  path = svn_fs_path(fs, pool);
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind != svn_node_none);
+  SVN_ERR(svn_fs_delete_fs(path, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ------------------------------------------------------------------------ */
@@ -4979,5 +4999,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "create and modify small file"),
     SVN_TEST_OPTS_PASS(node_history,
                        "test svn_fs_node_history"),
+    SVN_TEST_OPTS_PASS(delete_fs,
+                       "test svn_fs_delete_fs"),
     SVN_TEST_NULL
   };
