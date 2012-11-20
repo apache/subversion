@@ -718,7 +718,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
   
   assert(sess->pending_error == SVN_NO_ERROR);
 
@@ -1903,10 +1903,12 @@ handle_response(serf_request_t *request,
   handler->conn->last_status_code = handler->sline.code;
 
   if (handler->sline.code == 405
+      || handler->sline.code == 408
       || handler->sline.code == 409
       || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
+         408 Request Timeout
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       serf_bucket_t *hdrs;

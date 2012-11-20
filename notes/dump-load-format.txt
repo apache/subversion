@@ -297,7 +297,7 @@ $ echo "Replacement text" > dir/file.txt
 $ svn ci -m "Replace dir/file.txt with a copy of otherdir/otherfile.txt and replace its text, too."
 -------------------------------------------------------------------
 
-$Subversion filesystems do not allow the root directory ("/") to be
+Subversion filesystems do not allow the root directory ("/") to be
 deleted or replaced.
 
 === Some details about copyfroms ===

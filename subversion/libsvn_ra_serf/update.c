@@ -2591,7 +2591,7 @@ finish_report(void *report_baton,
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,

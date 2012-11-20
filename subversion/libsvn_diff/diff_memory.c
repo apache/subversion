@@ -420,9 +420,8 @@ output_unified_token_range(output_baton_t *btn,
       const char *out_str;
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&out_str,
-               /* The string below is intentionally not marked for translation:
-                  it's vital to correct operation of the diff(1)/patch(1)
-                  program pair. */
+               /* The string below is intentionally not marked for translation,
+                  for wider interoperability with patch(1) programs. */
                APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
                btn->header_encoding, btn->pool));
       svn_stringbuf_appendcstr(btn->hunk, out_str);

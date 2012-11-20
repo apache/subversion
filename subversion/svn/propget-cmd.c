@@ -443,7 +443,8 @@ svn_cl__propget(apr_getopt_t *os,
           print_filenames = ((opt_state->depth > svn_depth_empty
                               || targets->nelts > 1
                               || apr_hash_count(props) > 1
-                              || opt_state->verbose)
+                              || opt_state->verbose
+                              || opt_state->show_inherited_props)
                              && (! opt_state->strict));
           omit_newline = opt_state->strict;
           like_proplist = opt_state->verbose && !opt_state->strict;

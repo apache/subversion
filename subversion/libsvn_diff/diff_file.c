@@ -1492,12 +1492,12 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
           && ! had_cr)
         {
           const char *out_str;
-          SVN_ERR(svn_utf_cstring_from_utf8_ex2
-                  (&out_str,
-                   apr_psprintf(baton->pool,
-                                APR_EOL_STR "\\ %s" APR_EOL_STR,
-                                _("No newline at end of file")),
-                   baton->header_encoding, baton->pool));
+          SVN_ERR(svn_utf_cstring_from_utf8_ex2(
+               &out_str,
+               /* The string below is intentionally not marked for translation,
+                  for wider interoperability with patch(1) programs. */
+               APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
+               baton->header_encoding, baton->pool));
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }
 

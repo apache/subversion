@@ -721,111 +721,6 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
-{
-  int i;
-  struct external_info
-    {
-      const char *line;
-      const char *url;
-      const char *local_path;
-      svn_revnum_t peg_rev;
-      svn_revnum_t rev;
-      
-    } items[] = {
-        {
-            "dir http://server/svn/a",
-            "http://server/svn/a",
-            "dir"
-        },
-        {
-            "/svn/home dir",
-            "u://svr/svn/home",
-            "dir"
-        },
-        {
-            "//server/home dir",
-            "u://server/home",
-            "dir"
-        },
-        {
-            "../../../../home dir",
-            "u://svr/svn/home",
-            "dir",
-        },
-        {
-            "^/../repB/tools/scripts scripts",
-            "u://svr/svn/cur/repB/tools/scripts",
-            "scripts"
-        },
-        { 
-            "^/../repB/tools/README.txt scripts/README.txt",
-            "u://svr/svn/cur/repB/tools/README.txt",
-            "scripts/README.txt"
-        },
-    };
-  
-
-  for (i = 0; i < sizeof(items) / sizeof(items[0]); i++)
-    {
-      apr_array_header_t *results;
-      svn_wc_external_item2_t *external_item;
-      const char *resolved_url;
-      SVN_ERR(svn_wc_parse_externals_description3(&results, "/my/current/dir",
-                                                  items[i].line, FALSE, pool));
-
-      SVN_TEST_ASSERT(results && results->nelts == 1);
-
-      external_item = APR_ARRAY_IDX(results, 0, svn_wc_external_item2_t *);
-
-      SVN_ERR(svn_wc__resolve_relative_external_url(&resolved_url,
-                                                    external_item,
-                                                    "u://svr/svn/cur/dir",
-                                                    "u://svr/svn/cur/dir/sd/fl",
-                                                    pool, pool));
-
-      SVN_TEST_STRING_ASSERT(resolved_url, items[i].url);
-      SVN_TEST_STRING_ASSERT(external_item->target_dir, items[i].local_path);
-
-      if (items[i].peg_rev != 0)
-        SVN_TEST_ASSERT(external_item->peg_revision.value.number
-                                == items[i].peg_rev);
-      if (items[i].rev != 0)
-        SVN_TEST_ASSERT(external_item->revision.value.number == items[i].rev);
-      SVN_TEST_ASSERT(svn_uri_is_canonical(resolved_url, pool));
-    }
-
-
-  return SVN_NO_ERROR;
-
-}
-
-static svn_error_t *
-test_externals_parse_erratic(apr_pool_t *pool)
-{
-  svn_error_t *err;
-  apr_array_header_t *list = NULL;
-
-  err = svn_wc_parse_externals_description3(
-          &list, "parent_dir",
-          "^/valid/but/should/not/be/on/record wc_target\n"
-           "because_this_is_an_error",
-          FALSE, pool);
-
-  /* DESC above has an error, so expect one. */
-  SVN_TEST_ASSERT(err != NULL);
-  svn_error_clear(err);
-
-  /* svn_wc_parse_externals_description3() should not
-     touch LIST when DESC had an error.*/
-  SVN_TEST_ASSERT(list == NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 
 /* ========================================================================== */
 
@@ -843,7 +738,5 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
-    SVN_TEST_OPTS_PASS(test_externals_parse, "test svn_wc_parse_externals_description3"),
-    SVN_TEST_PASS2(test_externals_parse_erratic, "parse erratic externals definition"),
     SVN_TEST_NULL
   };

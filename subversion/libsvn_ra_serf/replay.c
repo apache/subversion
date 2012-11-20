@@ -732,7 +732,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   svn_revnum_t rev = start_revision;
   const char *report_target;
   int active_reports = 0;
-  apr_short_interval_time_t waittime_left = session->timeout;
+  apr_interval_time_t waittime_left = session->timeout;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
