@@ -184,5 +184,48 @@ svn_diff__normalize_buffer(char **tgt,
                            const char *buf,
                            const svn_diff_file_options_t *opts);
 
+/* Set *OUT_STR to a newline followed by a "\ No newline at end of file" line.
+ *
+ * The text will be encoded into HEADER_ENCODING.
+ */
+svn_error_t *
+svn_diff__unified_append_no_newline_msg(svn_stringbuf_t *stringbuf,
+                                        const char *header_encoding,
+                                        apr_pool_t *scratch_pool);
+
+/* Write a unidiff hunk header to OUTPUT_STREAM.
+ *
+ * The header will use HUNK_DELIMITER (which should usually be "@@") before
+ * and after the line-number ranges which are formed from OLD_START,
+ * OLD_LENGTH, NEW_START and NEW_LENGTH.  If HUNK_EXTRA_CONTEXT is not NULL,
+ * it will be written after the final delimiter, with an intervening space.
+ *
+ * The text will be encoded into HEADER_ENCODING.
+ */
+svn_error_t *
+svn_diff__unified_write_hunk_header(svn_stream_t *output_stream,
+                                    const char *header_encoding,
+                                    const char *hunk_delimiter,
+                                    apr_off_t old_start,
+                                    apr_off_t old_length,
+                                    apr_off_t new_start,
+                                    apr_off_t new_length,
+                                    const char *hunk_extra_context,
+                                    apr_pool_t *scratch_pool);
+
+/* Write a unidiff "---" and "+++" header to OUTPUT_STREAM.
+ *
+ * Write "---" followed by a space and OLD_HEADER and a newline,
+ * then "+++" followed by a space and NEW_HEADER and a newline.
+ *
+ * The text will be encoded into HEADER_ENCODING.
+ */
+svn_error_t *
+svn_diff__unidiff_write_header(svn_stream_t *output_stream,
+                               const char *header_encoding,
+                               const char *old_header,
+                               const char *new_header,
+                               apr_pool_t *scratch_pool);
+
 
 #endif /* DIFF_H */
