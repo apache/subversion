@@ -218,7 +218,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
                     N_("disregard default and svn:ignore and\n"
-                       "svn:global-ignore property ignores")},
+                       "                             "
+                       "svn:global-ignores property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
@@ -1114,7 +1115,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  A unidiff patch suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
-     "  Any non-unidiff content of PATCHFILE is ignored.\n"
+     "  Any non-unidiff content of PATCHFILE is ignored, except for Subversion\n"
+     "  property diffs as produced by 'svn diff'.\n"
      "\n"
      "  Changes listed in the patch will either be applied or rejected.\n"
      "  If a change does not match at its exact line offset, it may be applied\n"
@@ -1229,6 +1231,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Note: svn recognizes the following special versioned properties\n"
      "  but will store any arbitrary properties set:\n"
      "    svn:ignore     - A newline separated list of file glob patterns to ignore.\n"
+     "    svn:global-ignores         - Like svn:ignore, but inheritable.\n"
      "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
      "      URL, HeadURL             - The URL for the head version of the object.\n"
      "      Author, LastChangedBy    - The last person to modify the file.\n"

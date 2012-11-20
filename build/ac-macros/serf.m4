@@ -145,6 +145,7 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
           serf_found=yes
           SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_major --cflags | $SED -e 's/-D[^ ]*//g'`]
           SVN_SERF_LIBS=`$PKG_CONFIG $serf_major --libs` 
+          break
         else
           AC_MSG_RESULT([no])
           AC_MSG_WARN([Serf version too old: need $serf_check_version])

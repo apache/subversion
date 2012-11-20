@@ -795,7 +795,8 @@ typedef struct svn_wc_external_item2_t
       field will often be redundant.) */
   const char *target_dir;
 
-  /** Where to check out from. */
+  /** Where to check out from. This is possibly a relative external URL, as
+   * allowed in externals definitions, but without the peg revision. */
   const char *url;
 
   /** What revision to check out.  The only valid kinds for this are
@@ -4774,7 +4775,8 @@ svn_wc_add_repos_file(const char *dst_path,
 
 
 /** Remove @a local_abspath from revision control.  @a wc_ctx must
- * hold a write lock.
+ * hold a write lock on the parent of @a local_abspath, or if that is a
+ * WC root then on @a local_abspath itself.
  *
  * If @a local_abspath is a file, all its info will be removed from the
  * administrative area.  If @a local_abspath is a directory, then the

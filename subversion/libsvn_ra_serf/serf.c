@@ -131,7 +131,11 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 
   return SVN_NO_ERROR;
 }
-#define DEFAULT_HTTP_TIMEOUT 3600
+
+/* Default HTTP timeout (in seconds); overridden by the 'http-timeout'
+   runtime configuration variable. */
+#define DEFAULT_HTTP_TIMEOUT 600
+
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -253,6 +257,7 @@ load_config(svn_ra_serf__session_t *session,
     }
 
   /* Parse the connection timeout value, if any. */
+  session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
   if (timeout_str)
     {
       char *endstr;
@@ -267,12 +272,6 @@ load_config(svn_ra_serf__session_t *session,
                                 _("Invalid config: negative timeout value"));
       session->timeout = apr_time_from_sec(timeout);
     }
-  else
-    session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
-
-  if (session->timeout < 0) /* Always true for DEFAULT_HTTP_TIMEOUT */
-    session->timeout = apr_time_from_sec(600); /* 10 min */
-
   SVN_ERR_ASSERT(session->timeout > 0);
 
   /* Convert the proxy port value, if any. */

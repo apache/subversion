@@ -197,7 +197,6 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 ######################################################################
 # Tests
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def basic_dump(sbox):
   "dump: standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
@@ -210,7 +209,6 @@ def basic_dump(sbox):
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def revision_0_dump(sbox):
   "dump: revision zero"
   run_dump_test(sbox, "revision-0.dump")
@@ -229,7 +227,6 @@ def revision_0_load(sbox):
 #     docs/         (Added r6)
 #       README      (Added r6)
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def skeleton_dump(sbox):
   "dump: skeleton repository"
   run_dump_test(sbox, "skeleton.dump")
@@ -238,7 +235,6 @@ def skeleton_load(sbox):
   "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def sparse_propchanges_dump(sbox):
   "dump: sparse file/dir propchanges"
   run_dump_test(sbox, "sparse-propchanges.dump")
@@ -248,7 +244,6 @@ def sparse_propchanges_load(sbox):
   "load: sparse file/dir propchanges"
   run_load_test(sbox, "sparse-propchanges.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_and_modify_dump(sbox):
   "dump: copy and modify"
   run_dump_test(sbox, "copy-and-modify.dump")
@@ -257,7 +252,6 @@ def copy_and_modify_load(sbox):
   "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def no_author_dump(sbox):
   "dump: copy revs with no svn:author revprops"
   run_dump_test(sbox, "no-author.dump")
@@ -266,7 +260,6 @@ def no_author_load(sbox):
   "load: copy revs with no svn:author revprops"
   run_load_test(sbox, "no-author.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_from_previous_version_and_modify_dump(sbox):
   "dump: copy from previous version and modify"
   run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
@@ -275,7 +268,6 @@ def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def modified_in_place_dump(sbox):
   "dump: modified in place"
   run_dump_test(sbox, "modified-in-place.dump")
@@ -284,7 +276,6 @@ def modified_in_place_load(sbox):
   "load: modified in place"
   run_load_test(sbox, "modified-in-place.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def move_and_modify_in_the_same_revision_dump(sbox):
   "dump: move parent & modify child file in same rev"
   run_dump_test(sbox, "move-and-modify.dump")
@@ -293,7 +284,6 @@ def move_and_modify_in_the_same_revision_load(sbox):
   "load: move parent & modify child file in same rev"
   run_load_test(sbox, "move-and-modify.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def tag_empty_trunk_dump(sbox):
   "dump: tag empty trunk"
   run_dump_test(sbox, "tag-empty-trunk.dump")
@@ -302,7 +292,6 @@ def tag_empty_trunk_load(sbox):
   "load: tag empty trunk"
   run_load_test(sbox, "tag-empty-trunk.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def tag_trunk_with_file_dump(sbox):
   "dump: tag trunk containing a file"
   run_dump_test(sbox, "tag-trunk-with-file.dump")
@@ -311,7 +300,6 @@ def tag_trunk_with_file_load(sbox):
   "load: tag trunk containing a file"
   run_load_test(sbox, "tag-trunk-with-file.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def tag_trunk_with_file2_dump(sbox):
   "dump: tag trunk containing a file (#2)"
   run_dump_test(sbox, "tag-trunk-with-file2.dump")
@@ -320,7 +308,6 @@ def tag_trunk_with_file2_load(sbox):
   "load: tag trunk containing a file (#2)"
   run_load_test(sbox, "tag-trunk-with-file2.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
@@ -329,7 +316,6 @@ def dir_prop_change_load(sbox):
   "load: directory property changes"
   run_load_test(sbox, "dir-prop-change.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_parent_modify_prop_dump(sbox):
   "dump: copy parent and modify prop"
   run_dump_test(sbox, "copy-parent-modify-prop.dump")
@@ -338,7 +324,6 @@ def copy_parent_modify_prop_load(sbox):
   "load: copy parent and modify prop"
   run_load_test(sbox, "copy-parent-modify-prop.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_revprops_dump(sbox):
   "dump: copy revprops other than svn:*"
   run_dump_test(sbox, "revprops.dump")
@@ -347,19 +332,16 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def only_trunk_dump(sbox):
   "dump: subdirectory"
   run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
                 expected_dumpfile_name="trunk-only.expected.dump",)
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def only_trunk_A_with_changes_dump(sbox):
   "dump: subdirectory with changes on root"
   run_dump_test(sbox, "trunk-A-changes.dump", subdir="/trunk/A",
            expected_dumpfile_name="trunk-A-changes.expected.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def url_encoding_dump(sbox):
   "dump: url encoding issues"
   run_dump_test(sbox, "url-encoding-bug.dump")
@@ -368,21 +350,18 @@ def url_encoding_load(sbox):
   "load: url encoding issues"
   run_load_test(sbox, "url-encoding-bug.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_bad_line_endings_dump(sbox):
   "dump: inconsistent line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings.dump",
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings2.dump",
                 expected_dumpfile_name="copy-bad-line-endings2.expected.dump",
                 bypass_prop_validation=True, ignore_base_checksums=True)
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"
   run_dump_test(sbox, "repo-with-copy-of-root-dir.dump")
@@ -391,7 +370,6 @@ def commit_a_copy_of_root_load(sbox):
   "load: commit a copy of root"
   run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
 
-@Skip(svntest.main.is_ra_type_dav_serf)
 def descend_into_replace_dump(sbox):
   "dump: descending into replaced dir looks in src"
   run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
@@ -402,7 +380,6 @@ def descend_into_replace_load(sbox):
   run_load_test(sbox, "descend-into-replace.dump")
 
 @Issue(3847)
-@Skip(svntest.main.is_ra_type_dav_serf)
 def add_multi_prop_dump(sbox):
   "dump: add with multiple props"
   run_dump_test(sbox, "add-multi-prop.dump")
@@ -417,7 +394,6 @@ def multi_prop_edit_load(sbox):
 # revs in svn:mergeinfo' but uses 'svnrdump load' in place of
 # 'svnadmin load'.
 @Issue(3890)
-@Skip(svntest.main.is_ra_type_dav_serf)
 def reflect_dropped_renumbered_revs(sbox):
   "svnrdump renumbers dropped revs in mergeinfo"
 
@@ -481,7 +457,6 @@ def reflect_dropped_renumbered_revs(sbox):
 # from incremental dump' but uses 'svnrdump [dump|load]' in place of
 # 'svnadmin [dump|load]'.
 @Issue(3890)
-@Skip(svntest.main.is_ra_type_dav_serf)
 def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   "don't drop mergeinfo revs in incremental svnrdump"
 

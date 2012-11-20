@@ -2330,6 +2330,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
 
+  SVN_ERR(svn_wc__write_check(db, is_root ? local_abspath
+                                          : svn_dirent_dirname(local_abspath,
+                                                               scratch_pool),
+                              scratch_pool));
+
   SVN_ERR(svn_wc__db_op_remove_node(&left_something,
                                     db, local_abspath,
                                     destroy_wf /* destroy_wc */,

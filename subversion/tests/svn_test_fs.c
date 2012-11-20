@@ -115,10 +115,14 @@ create_fs(svn_fs_t **fs_p,
   if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
     {
       if (finfo.filetype == APR_DIR)
-        SVN_ERR(svn_fs_delete_fs(name, pool));
+        SVN_ERR_W(svn_fs_delete_fs(name, pool),
+                  apr_psprintf(pool,
+                               "cannot create fs '%s' there is already "
+                               "a directory of that name", name));
       else
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "there is already a file named '%s'", name);
+                                 "cannot create fs '%s' there is already "
+                                 "a file of that name", name);
     }
 
   SVN_ERR(svn_fs_create(fs_p, name, fs_config, pool));
