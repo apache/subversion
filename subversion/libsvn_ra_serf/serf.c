@@ -131,6 +131,8 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 
   return SVN_NO_ERROR;
 }
+
+
 #define DEFAULT_HTTP_TIMEOUT 3600
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
@@ -268,11 +270,9 @@ load_config(svn_ra_serf__session_t *session,
       session->timeout = apr_time_from_sec(timeout);
     }
   else
-    session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
-
-  if (session->timeout < 0) /* Always true for DEFAULT_HTTP_TIMEOUT */
-    session->timeout = apr_time_from_sec(600); /* 10 min */
-
+    {
+      session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
+    }
   SVN_ERR_ASSERT(session->timeout > 0);
 
   /* Convert the proxy port value, if any. */
