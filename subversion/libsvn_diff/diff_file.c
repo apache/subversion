@@ -1733,10 +1733,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               svn_boolean_t show_c_function,
                               apr_pool_t *pool)
 {
-  svn_diff__file_output_baton_t baton;
-
   if (svn_diff_contains_diffs(diff))
     {
+      svn_diff__file_output_baton_t baton;
       const char **c;
       int i;
 
@@ -2238,7 +2237,6 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
 {
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];
-  apr_off_t size;
   int idx;
 #if APR_HAS_MMAP
   apr_mmap_t *mm[3] = { 0 };
@@ -2282,6 +2280,8 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
 
   for (idx = 0; idx < 3; idx++)
     {
+      apr_off_t size;
+
       SVN_ERR(map_or_read_file(&file[idx],
                                MMAP_T_ARG(mm[idx])
                                &baton.buffer[idx], &size,
