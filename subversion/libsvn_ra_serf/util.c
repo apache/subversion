@@ -718,7 +718,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
   
   assert(sess->pending_error == SVN_NO_ERROR);
 
