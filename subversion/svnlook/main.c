@@ -933,8 +933,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_stream_close(outstream));
-  return svn_cmdline_fflush(stdout);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1186,6 +1185,8 @@ print_diff_tree(svn_fs_root_t *root,
               SVN_ERR(svn_cmdline_printf(pool, "%s\n", equal_string));
               SVN_ERR(svn_cmdline_printf(pool, "--- %s\n", orig_label));
               SVN_ERR(svn_cmdline_printf(pool, "+++ %s\n", new_label));
+
+              SVN_ERR(svn_cmdline_fflush(stdout));
             }
           SVN_ERR(display_prop_diffs(props, base_proptable, path, pool));
         }
