@@ -850,8 +850,6 @@ display_prop_diffs(svn_stream_t *outstream,
   apr_pool_t *iterpool;
   int i;
 
-  SVN_ERR(svn_stream_for_stdout(&outstream, pool));
-
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                       _("%sProperty changes on: %s%s"),
                                       APR_EOL_STR,
