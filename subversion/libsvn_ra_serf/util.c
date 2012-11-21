@@ -657,6 +657,10 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
+      /* Destroy original bucket since it content is already copied 
+         to spillbuf. */
+      serf_bucket_destroy(body_bkt);
+
       body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
                                                request_pool,
                                                scratch_pool);
