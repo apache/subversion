@@ -619,8 +619,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     {
       const char *action;
       const svn_string_t *original_value;
-      const svn_prop_t *propchange =
-        &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+      const svn_prop_t *propchange
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       if (original_props)
         original_value = apr_hash_get(original_props,
@@ -698,13 +698,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(outstream, diff, FALSE,
-                                                    "##",
-                                           svn_dirent_local_style(path,
-                                                                  iterpool),
-                                           svn_dirent_local_style(path,
-                                                                  iterpool),
-                                           encoding, orig, val, iterpool));
+        SVN_ERR(svn_diff_mem_string_output_unified2(
+                  outstream, diff, FALSE, "##",
+                  svn_dirent_local_style(path, iterpool),
+                  svn_dirent_local_style(path, iterpool),
+                  encoding, orig, val, iterpool));
         if (!val_has_eol)
           {
             const char *s = "\\ No newline at end of property" APR_EOL_STR;
