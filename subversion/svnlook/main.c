@@ -840,13 +840,13 @@ static const char under_string[] =
 
 /* Helper function to display differences in properties of a file */
 static svn_error_t *
-display_prop_diffs(const apr_array_header_t *propchanges,
+display_prop_diffs(svn_stream_t *outstream,
+                   const char *encoding,
+                   const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
                    const char *path,
                    apr_pool_t *pool)
 {
-  const char *encoding = svn_cmdline_output_encoding(pool);
-  svn_stream_t *outstream;
   apr_pool_t *iterpool;
   int i;
 
@@ -941,7 +941,9 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
-print_diff_tree(svn_fs_root_t *root,
+print_diff_tree(svn_stream_t *out_stream,
+                const char *encoding,
+                svn_fs_root_t *root,
                 svn_fs_root_t *base_root,
                 svn_repos_node_t *node,
                 const char *path /* UTF-8! */,
@@ -1068,7 +1070,8 @@ print_diff_tree(svn_fs_root_t *root,
       if (binary)
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
-          SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+          SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                              "%s", header->data));
         }
       else
         {
@@ -1083,38 +1086,11 @@ print_diff_tree(svn_fs_root_t *root,
 
           if (svn_diff_contains_diffs(diff))
             {
-              svn_stream_t *ostream;
               const char *orig_label, *new_label;
 
               /* Print diff header. */
-              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
-
-              /* This fflush() might seem odd, but it was added to deal
-                 with this bug report:
-
-                   http://subversion.tigris.org/servlets/ReadMsg?\
-                   list=dev&msgNo=140782
-
-                   From: "Steve Hay" <SteveHay{_AT_}planit.com>
-                   To: <dev@subversion.tigris.org>
-                   Subject: svnlook diff output in wrong order when redirected
-                   Date: Fri, 4 Jul 2008 16:34:15 +0100
-                   Message-ID: <1B32FF956ABF414C9BCE5E487A1497E702014F62@\
-                                ukmail02.planit.group>
-
-                 Adding the fflush() fixed the bug (not everyone could
-                 reproduce it, but those who could confirmed the fix).
-                 Later in the thread, Daniel Shahaf speculated as to
-                 why the fix works:
-
-                   "Because svn_cmdline_printf() uses the standard
-                    'FILE *stdout' to write to stdout, while
-                    svn_stream_for_stdout() uses (through
-                    apr_file_open_stdout()) Windows API's to get a
-                    handle for stdout?" */
-              SVN_ERR(svn_cmdline_fflush(stdout));
-
-              SVN_ERR(svn_stream_for_stdout(&ostream, pool));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "%s", header->data));
 
               if (orig_empty)
                 SVN_ERR(generate_label(&orig_label, NULL, path, pool));
@@ -1123,12 +1099,12 @@ print_diff_tree(svn_fs_root_t *root,
                                        base_path, pool));
               SVN_ERR(generate_label(&new_label, root, path, pool));
               SVN_ERR(svn_diff_file_output_unified3
-                      (ostream, diff, orig_path, new_path,
+                      (out_stream, diff, orig_path, new_path,
                        orig_label, new_label,
                        svn_cmdline_output_encoding(pool), NULL,
                        opts->show_c_function, pool));
-              SVN_ERR(svn_stream_close(ostream));
-              SVN_ERR(svn_cmdline_printf(pool, "\n"));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "\n"));
               diff_header_printed = TRUE;
             }
           else if (! node->prop_mod &&
@@ -1138,10 +1114,10 @@ print_diff_tree(svn_fs_root_t *root,
               /* There was an empty file added or deleted in this revision.
                * We can't print a diff, but we can at least print
                * a diff header since we know what happened to this file. */
-              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "%s", header->data));
             }
         }
-      SVN_ERR(svn_cmdline_fflush(stdout));
     }
 
   /* Make sure we delete any temporary files. */
@@ -1181,14 +1157,17 @@ print_diff_tree(svn_fs_root_t *root,
                                      pool));
               SVN_ERR(generate_label(&new_label, root, path, pool));
 
-              SVN_ERR(svn_cmdline_printf(pool, "Index: %s\n", path));
-              SVN_ERR(svn_cmdline_printf(pool, "%s\n", equal_string));
-              SVN_ERR(svn_cmdline_printf(pool, "--- %s\n", orig_label));
-              SVN_ERR(svn_cmdline_printf(pool, "+++ %s\n", new_label));
-
-              SVN_ERR(svn_cmdline_fflush(stdout));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "Index: %s\n", path));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "%s\n", equal_string));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "--- %s\n", orig_label));
+              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                  "+++ %s\n", new_label));
             }
-          SVN_ERR(display_prop_diffs(props, base_proptable, path, pool));
+          SVN_ERR(display_prop_diffs(out_stream, encoding,
+                                     props, base_proptable, path, pool));
         }
     }
 
@@ -1199,7 +1178,7 @@ print_diff_tree(svn_fs_root_t *root,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(print_diff_tree(root, base_root, node,
+  SVN_ERR(print_diff_tree(out_stream, encoding, root, base_root, node,
                           svn_dirent_join(path, node->name, subpool),
                           svn_dirent_join(base_path, node->name, subpool),
                           c, tmpdir, subpool));
@@ -1207,7 +1186,7 @@ print_diff_tree(svn_fs_root_t *root,
     {
       svn_pool_clear(subpool);
       node = node->sibling;
-      SVN_ERR(print_diff_tree(root, base_root, node,
+      SVN_ERR(print_diff_tree(out_stream, encoding, root, base_root, node,
                               svn_dirent_join(path, node->name, subpool),
                               svn_dirent_join(base_path, node->name, subpool),
                               c, tmpdir, subpool));
@@ -1570,12 +1549,40 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       const char *tmpdir;
+      svn_stream_t *out_stream;
+      const char *encoding = svn_cmdline_output_encoding(pool);
 
       SVN_ERR(svn_fs_revision_root(&base_root, c->fs, base_rev_id, pool));
       SVN_ERR(svn_io_temp_dir(&tmpdir, pool));
 
-      SVN_ERR(print_diff_tree(root, base_root, tree, "", "",
-                              c, tmpdir, pool));
+      /* This fflush() might seem odd, but it was added to deal
+         with this bug report:
+
+         http://subversion.tigris.org/servlets/ReadMsg?\
+         list=dev&msgNo=140782
+
+         From: "Steve Hay" <SteveHay{_AT_}planit.com>
+         To: <dev@subversion.tigris.org>
+         Subject: svnlook diff output in wrong order when redirected
+         Date: Fri, 4 Jul 2008 16:34:15 +0100
+         Message-ID: <1B32FF956ABF414C9BCE5E487A1497E702014F62@\
+                     ukmail02.planit.group>
+
+         Adding the fflush() fixed the bug (not everyone could
+         reproduce it, but those who could confirmed the fix).
+         Later in the thread, Daniel Shahaf speculated as to
+         why the fix works:
+
+         "Because svn_cmdline_printf() uses the standard
+         'FILE *stdout' to write to stdout, while
+         svn_stream_for_stdout() uses (through
+         apr_file_open_stdout()) Windows API's to get a
+         handle for stdout?" */
+      SVN_ERR(svn_cmdline_fflush(stdout));
+      SVN_ERR(svn_stream_for_stdout(&out_stream, pool));
+
+      SVN_ERR(print_diff_tree(out_stream, encoding, root, base_root, tree,
+                              "", "", c, tmpdir, pool));
     }
   return SVN_NO_ERROR;
 }
