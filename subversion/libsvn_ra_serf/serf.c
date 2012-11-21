@@ -272,7 +272,7 @@ load_config(svn_ra_serf__session_t *session,
                                 _("Invalid config: negative timeout value"));
       session->timeout = apr_time_from_sec(timeout);
     }
-  SVN_ERR_ASSERT(session->timeout > 0);
+  SVN_ERR_ASSERT(session->timeout >= 0);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
