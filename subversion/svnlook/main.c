@@ -933,6 +933,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
   svn_pool_destroy(iterpool);
 
+  SVN_ERR(svn_stream_close(outstream));
   return svn_cmdline_fflush(stdout);
 }
 
