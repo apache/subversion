@@ -791,44 +791,6 @@ generate_label(const char **label,
   return SVN_NO_ERROR;
 }
 
-/* A helper function used by display_prop_diffs.
-   TOKEN is a string holding a property value.
-   If TOKEN is empty, or is already terminated by an EOL marker,
-   return TOKEN unmodified. Else, return a new string consisting
-   of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL.
-   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
-static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
-                 apr_pool_t *pool)
-{
-  const char *curp;
-
-  if (had_eol)
-    *had_eol = FALSE;
-
-  if (token->len == 0)
-    return token;
-
-  curp = token->data + token->len - 1;
-  if (*curp == '\r')
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
-  else if (*curp != '\n')
-    {
-      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
-    }
-  else
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
-}
-
 /*
  * Constant diff output separator strings
  */
@@ -847,8 +809,6 @@ display_prop_diffs(svn_stream_t *outstream,
                    const char *path,
                    apr_pool_t *pool)
 {
-  apr_pool_t *iterpool;
-  int i;
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                       _("%sProperty changes on: %s%s"),
@@ -859,81 +819,14 @@ display_prop_diffs(svn_stream_t *outstream,
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                       "%s" APR_EOL_STR, under_string));
 
-  iterpool = svn_pool_create(pool);
-  for (i = 0; i < propchanges->nelts; i++)
-    {
-      const char *action;
-      const svn_string_t *original_value;
-      const svn_prop_t *propchange
-        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+  SVN_ERR(check_cancel(NULL));
 
-      SVN_ERR(check_cancel(NULL));
-
-      if (original_props)
-        original_value = apr_hash_get(original_props,
-                                      propchange->name, APR_HASH_KEY_STRING);
-      else
-        original_value = NULL;
-
-      svn_pool_clear(iterpool);
-
-      if (! original_value)
-        action = "Added";
-      else if (! propchange->value)
-        action = "Deleted";
-      else
-        action = "Modified";
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
-                                          "%s: %s%s", action,
-                                          propchange->name, APR_EOL_STR));
-
-      {
-        svn_diff_t *diff;
-        svn_diff_file_options_t options = { 0 };
-        const svn_string_t *tmp;
-        const svn_string_t *orig;
-        const svn_string_t *val;
-        svn_boolean_t val_has_eol;
-
-        /* The last character in a property is often not a newline.
-           An eol character is appended to prevent the diff API to add a
-           '\ No newline at end of file' line. We add
-           '\ No newline at end of property' manually if needed. */
-        tmp = original_value ? original_value
-                             : svn_string_create_empty(iterpool);
-        orig = maybe_append_eol(tmp, NULL, iterpool);
-
-        tmp = propchange->value ? propchange->value :
-                                  svn_string_create_empty(iterpool);
-        val = maybe_append_eol(tmp, &val_has_eol, iterpool);
-
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
-                                         iterpool));
-
-        /* UNIX patch will try to apply a diff even if the diff header
-         * is missing. It tries to be helpful by asking the user for a
-         * target filename when it can't determine the target filename
-         * from the diff header. But there usually are no files which
-         * UNIX patch could apply the property diff to, so we use "##"
-         * instead of "@@" as the default hunk delimiter for property diffs.
-         * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(
-                  outstream, diff, FALSE, "##",
-                  svn_dirent_local_style(path, iterpool),
-                  svn_dirent_local_style(path, iterpool),
-                  encoding, orig, val, iterpool));
-        if (!val_has_eol)
-          {
-            const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            SVN_ERR(svn_stream_puts(outstream, s));
-          }
-      }
-    }
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_diff__display_prop_diffs(
+            outstream, encoding, propchanges, original_props,
+            FALSE /* pretty_print_mergeinfo */, pool));
 
   return SVN_NO_ERROR;
 }
-
 
 
 /* Recursively print all nodes in the tree that have been modified
