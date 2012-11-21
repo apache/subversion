@@ -889,7 +889,7 @@ display_prop_diffs(svn_stream_t *outstream,
 
       {
         svn_diff_t *diff;
-        svn_diff_file_options_t options;
+        svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
