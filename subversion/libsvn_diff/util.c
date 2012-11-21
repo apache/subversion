@@ -36,6 +36,7 @@
 #include "svn_utf.h"
 #include "svn_version.h"
 
+#include "private/svn_diff_private.h"
 #include "diff.h"
 
 #include "svn_private_config.h"
