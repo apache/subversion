@@ -52,6 +52,7 @@
 #include "svn_version.h"
 #include "svn_xml.h"
 
+#include "private/svn_diff_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_fspath.h"
 
