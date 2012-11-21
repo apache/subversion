@@ -279,6 +279,9 @@ svn_diff_contains_diffs(svn_diff_t *diff);
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
  *
+ * Any of the function pointers in this vtable may be NULL to ignore the
+ * corresponding kinds of output.
+ *
  * @note These callbacks describe data ranges in units of "tokens".
  * A "token" is whatever you've defined it to be in your datasource
  * @c svn_diff_fns_t vtable.
