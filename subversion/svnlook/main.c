@@ -840,42 +840,56 @@ static const char under_string[] =
 
 /* Helper function to display differences in properties of a file */
 static svn_error_t *
-display_prop_diffs(const apr_array_header_t *prop_diffs,
-                   apr_hash_t *orig_props,
+display_prop_diffs(const apr_array_header_t *propchanges,
+                   apr_hash_t *original_props,
                    const char *path,
                    apr_pool_t *pool)
 {
+  const char *encoding = svn_cmdline_output_encoding(pool);
+  svn_stream_t *outstream;
+  apr_pool_t *iterpool;
   int i;
 
-  SVN_ERR(svn_cmdline_printf(pool, "\nProperty changes on: %s\n%s\n",
-                             path, under_string));
+  SVN_ERR(svn_stream_for_stdout(&outstream, pool));
 
-  for (i = 0; i < prop_diffs->nelts; i++)
+  SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                      _("%sProperty changes on: %s%s"),
+                                      APR_EOL_STR,
+                                      path,
+                                      APR_EOL_STR));
+
+  SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                      "%s" APR_EOL_STR, under_string));
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < propchanges->nelts; i++)
     {
-      const char *header_label;
-      const svn_string_t *orig_value;
-      const svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+      const char *action;
+      const svn_string_t *original_value;
+      const svn_prop_t *propchange
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       SVN_ERR(check_cancel(NULL));
 
-      if (orig_props)
-        orig_value = apr_hash_get(orig_props, pc->name, APR_HASH_KEY_STRING);
+      if (original_props)
+        original_value = apr_hash_get(original_props,
+                                      propchange->name, APR_HASH_KEY_STRING);
       else
-        orig_value = NULL;
+        original_value = NULL;
 
-      if (! orig_value)
-        header_label = "Added";
-      else if (! pc->value)
-        header_label = "Deleted";
+      svn_pool_clear(iterpool);
+
+      if (! original_value)
+        action = "Added";
+      else if (! propchange->value)
+        action = "Deleted";
       else
-        header_label = "Modified";
-      SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", header_label, pc->name));
-
-      /* Flush stdout before we open a stream to it below. */
-      SVN_ERR(svn_cmdline_fflush(stdout));
+        action = "Modified";
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
+                                          "%s: %s%s", action,
+                                          propchange->name, APR_EOL_STR));
 
       {
-        svn_stream_t *out;
         svn_diff_t *diff;
         svn_diff_file_options_t options;
         const svn_string_t *tmp;
@@ -883,20 +897,20 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         const svn_string_t *val;
         svn_boolean_t val_has_eol;
 
-        SVN_ERR(svn_stream_for_stdout(&out, pool));
-
         /* The last character in a property is often not a newline.
            An eol character is appended to prevent the diff API to add a
            '\ No newline at end of file' line. We add
            '\ No newline at end of property' manually if needed. */
-        tmp = orig_value ? orig_value : svn_string_create_empty(pool);
-        orig = maybe_append_eol(tmp, NULL, pool);
+        tmp = original_value ? original_value
+                             : svn_string_create_empty(iterpool);
+        orig = maybe_append_eol(tmp, NULL, iterpool);
 
-        tmp = pc->value ? pc->value :
-                                  svn_string_create_empty(pool);
-        val = maybe_append_eol(tmp, &val_has_eol, pool);
+        tmp = propchange->value ? propchange->value :
+                                  svn_string_create_empty(iterpool);
+        val = maybe_append_eol(tmp, &val_has_eol, iterpool);
 
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
+                                         iterpool));
 
         /* UNIX patch will try to apply a diff even if the diff header
          * is missing. It tries to be helpful by asking the user for a
@@ -905,18 +919,21 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(out, diff, FALSE, "##",
-                                           svn_dirent_local_style(path, pool),
-                                           svn_dirent_local_style(path, pool),
-                                           svn_cmdline_output_encoding(pool),
-                                           orig, val, pool));
+        SVN_ERR(svn_diff_mem_string_output_unified2(
+                  outstream, diff, FALSE, "##",
+                  svn_dirent_local_style(path, iterpool),
+                  svn_dirent_local_style(path, iterpool),
+                  encoding, orig, val, iterpool));
         if (!val_has_eol)
           {
             const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            SVN_ERR(svn_stream_puts(out, s));
+            SVN_ERR(svn_stream_puts(outstream, s));
           }
       }
     }
+  svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_stream_close(outstream));
   return svn_cmdline_fflush(stdout);
 }
 

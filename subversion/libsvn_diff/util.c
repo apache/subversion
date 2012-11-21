@@ -29,6 +29,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
+#include "svn_utf.h"
 #include "svn_version.h"
 
 #include "diff.h"
@@ -330,6 +331,84 @@ svn_diff__normalize_buffer(char **tgt,
 #undef INCLUDE_AS
 #undef INSERT
 #undef COPY_INCLUDED_SECTION
+}
+
+svn_error_t *
+svn_diff__unified_append_no_newline_msg(svn_stringbuf_t *stringbuf,
+                                        const char *header_encoding,
+                                        apr_pool_t *scratch_pool)
+{
+  const char *out_str;
+
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(
+            &out_str,
+            /* The string below is intentionally not marked for translation,
+               for wider interoperability with patch(1) programs. */
+            APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
+            header_encoding, scratch_pool));
+  svn_stringbuf_appendcstr(stringbuf, out_str);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__unified_write_hunk_header(svn_stream_t *output_stream,
+                                    const char *header_encoding,
+                                    const char *hunk_delimiter,
+                                    apr_off_t old_start,
+                                    apr_off_t old_length,
+                                    apr_off_t new_start,
+                                    apr_off_t new_length,
+                                    const char *hunk_extra_context,
+                                    apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      "%s -%" APR_OFF_T_FMT,
+                                      hunk_delimiter, old_start));
+  /* If the hunk length is 1, suppress the number of lines in the hunk
+   * (it is 1 implicitly) */
+  if (old_length != 1)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                          scratch_pool,
+                                          ",%" APR_OFF_T_FMT, old_length));
+    }
+
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      " +%" APR_OFF_T_FMT, new_start));
+  if (new_length != 1)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                          scratch_pool,
+                                          ",%" APR_OFF_T_FMT, new_length));
+    }
+
+  if (hunk_extra_context == NULL)
+      hunk_extra_context = "";
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      " %s%s%s" APR_EOL_STR,
+                                      hunk_delimiter,
+                                      hunk_extra_context[0] ? " " : "",
+                                      hunk_extra_context));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__unidiff_write_header(svn_stream_t *output_stream,
+                               const char *header_encoding,
+                               const char *old_header,
+                               const char *new_header,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      "--- %s" APR_EOL_STR
+                                      "+++ %s" APR_EOL_STR,
+                                      old_header,
+                                      new_header));
+  return SVN_NO_ERROR;
 }
 
 

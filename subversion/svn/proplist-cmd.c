@@ -151,12 +151,13 @@ proplist_receiver(void *baton,
             {
               if (svn_path_is_url(iprop->path_or_url))
                 SVN_ERR(svn_cmdline_printf(
-                  iterpool, _("Properties inherited from '%s':\n"),
-                  iprop->path_or_url));
+                  iterpool, _("Inherited properties on '%s',\nfrom '%s':\n"),
+                  name_local, iprop->path_or_url));
               else
                 SVN_ERR(svn_cmdline_printf(
-                  iterpool, _("Properties inherited from '%s':\n"),
-                  svn_dirent_local_style(iprop->path_or_url, iterpool)));
+                  iterpool, _("Inherited properties on '%s',\nfrom '%s':\n"),
+                  name_local, svn_dirent_local_style(iprop->path_or_url,
+                                                     iterpool)));
             }
 
           SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,

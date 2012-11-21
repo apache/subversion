@@ -417,14 +417,8 @@ output_unified_token_range(output_baton_t *btn,
     }
   if (past_last == source->tokens->nelts && source->ends_without_eol)
     {
-      const char *out_str;
-      SVN_ERR(svn_utf_cstring_from_utf8_ex2
-              (&out_str,
-               /* The string below is intentionally not marked for translation,
-                  for wider interoperability with patch(1) programs. */
-               APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
-               btn->header_encoding, btn->pool));
-      svn_stringbuf_appendcstr(btn->hunk, out_str);
+      SVN_ERR(svn_diff__unified_append_no_newline_msg(
+                btn->hunk, btn->header_encoding, btn->pool));
     }
 
   if (tokens == 0)
@@ -458,45 +452,19 @@ output_unified_flush_hunk(output_baton_t *baton,
   if (hunk_delimiter == NULL)
     hunk_delimiter = "@@";
 
-  /* Write the hunk header */
+  /* Convert our 0-based line numbers into unidiff 1-based numbers */
   if (baton->hunk_length[0] > 0)
-    /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[0]++;
-  SVN_ERR(svn_stream_printf_from_utf8(
-            baton->output_stream, baton->header_encoding,
-            baton->pool,
-            /* Hunk length 1 is implied, don't show the
-               length field if we have a hunk that long */
-            (baton->hunk_length[0] == 1)
-            ? ("%s -%" APR_OFF_T_FMT)
-            : ("%s -%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT),
-            hunk_delimiter,
-            baton->hunk_start[0], baton->hunk_length[0]));
-
   if (baton->hunk_length[1] > 0)
-    /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[1]++;
 
-
-  /* Hunk length 1 is implied, don't show the
-     length field if we have a hunk that long */
-  if (baton->hunk_length[1] == 1)
-    {
-      SVN_ERR(svn_stream_printf_from_utf8(
-                baton->output_stream, baton->header_encoding,
-                baton->pool,
-                " +%" APR_OFF_T_FMT " %s" APR_EOL_STR,
-                baton->hunk_start[1], hunk_delimiter));
-    }
-  else
-    {
-      SVN_ERR(svn_stream_printf_from_utf8(
-                baton->output_stream, baton->header_encoding,
-                baton->pool,
-                " +%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT " %s" APR_EOL_STR,
-                baton->hunk_start[1], baton->hunk_length[1],
-                hunk_delimiter));
-    }
+  /* Write the hunk header */
+  SVN_ERR(svn_diff__unified_write_hunk_header(
+            baton->output_stream, baton->header_encoding, hunk_delimiter,
+            baton->hunk_start[0], baton->hunk_length[0],
+            baton->hunk_start[1], baton->hunk_length[1],
+            NULL /* hunk_extra_context */,
+            baton->pool));
 
   hunk_len = baton->hunk->len;
   SVN_ERR(svn_stream_write(baton->output_stream,
@@ -601,12 +569,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
 
       if (with_diff_header)
         {
-          SVN_ERR(svn_stream_printf_from_utf8(output_stream,
-                                              header_encoding, pool,
-                                              "--- %s" APR_EOL_STR
-                                              "+++ %s" APR_EOL_STR,
-                                              original_header,
-                                              modified_header));
+          SVN_ERR(svn_diff__unidiff_write_header(
+                    output_stream, header_encoding,
+                    original_header, modified_header, pool));
         }
 
       SVN_ERR(svn_diff_output(diff, &baton,
