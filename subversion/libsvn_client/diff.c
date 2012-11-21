@@ -629,7 +629,9 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         original_value = NULL;
 
       /* If the property doesn't exist on either side, or if it exists
-         with the same value, skip it.  */
+         with the same value, skip it.  This can happen if the client is
+         hitting an old mod_dav_svn server that doesn't understand the
+         "send-all" REPORT style. */
       if ((! (original_value || propchange->value))
           || (original_value && propchange->value
               && svn_string_compare(original_value, propchange->value)))
