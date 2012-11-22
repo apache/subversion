@@ -40,9 +40,8 @@
 
 /*** Code. ***/
 
-/* Determine if ABSPATH needs an inherited property cache (i.e. it is a WC
-   root that is not also the repository root or it is switched).  If it does,
-   then set *NEEDS_CACHE to true, set it to false otherwise. */
+/* Determine if LOCAL_ABSPATH needs an inherited property cache.  If it does,
+   then set *NEEDS_CACHE to TRUE, set it to FALSE otherwise. */
 static svn_error_t *
 need_to_cache_iprops(svn_boolean_t *needs_cache,
                      const char *local_abspath,
@@ -57,10 +56,10 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
                           ctx->wc_ctx, local_abspath,
                            scratch_pool);
 
-  /* ABSPATH can't need a cache if it doesn't exist. */
+  /* LOCAL_ABSPATH doesn't need a cache if it doesn't exist. */
   if (err)
     {
-        if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           svn_error_clear(err);
           is_wc_root = FALSE;
