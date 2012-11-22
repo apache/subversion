@@ -2297,7 +2297,7 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
    interesting to the caller
  */
 svn_error_t *
-svn_wc_db__is_switched(svn_boolean_t *is_wcroot,
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
                        svn_boolean_t *is_switched,
                        svn_kind_t *kind,
                        svn_wc__db_t *db,

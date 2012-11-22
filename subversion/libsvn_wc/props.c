@@ -2386,7 +2386,7 @@ svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc_db__is_switched(&is_wc_root, &is_switched, NULL,
+      SVN_ERR(svn_wc__db_is_switched(&is_wc_root, &is_switched, NULL,
                                      db, parent_abspath, iterpool));
 
       if (is_switched || is_wc_root)

@@ -4999,7 +4999,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-            svn_wc_db__is_switched(wc_root, switched, kind,
+            svn_wc__db_is_switched(wc_root, switched, kind,
                                    db, local_abspath,
                                    scratch_pool));
 }

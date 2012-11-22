@@ -12484,23 +12484,23 @@ db_is_switched(void *baton,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     wcroot, local_relpath, scratch_pool, scratch_pool));
 
-  if (! repos_relpath)
-    {
-      /* Node is shadowed; easy out */
-      if (isb->is_switched)
-        *isb->is_switched = FALSE;
-
-      return SVN_NO_ERROR;
-    }
-  else if (status == svn_wc__db_status_server_excluded
-           || status == svn_wc__db_status_excluded
-           || status == svn_wc__db_status_not_present)
+  if (status == svn_wc__db_status_server_excluded
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present)
     {
       return svn_error_createf(
                     SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                     _("The node '%s' was not found."),
                     path_for_error_message(wcroot, local_relpath,
                                            scratch_pool));
+    }
+  else if (! repos_relpath)
+    {
+      /* Node is shadowed; easy out */
+      if (isb->is_switched)
+        *isb->is_switched = FALSE;
+
+      return SVN_NO_ERROR;
     }
 
   if (! isb->is_switched)
@@ -12531,7 +12531,7 @@ db_is_switched(void *baton,
 }
 
 svn_error_t *
-svn_wc_db__is_switched(svn_boolean_t *is_wcroot,
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
                        svn_boolean_t *is_switched,
                        svn_kind_t *kind,
                        svn_wc__db_t *db,
