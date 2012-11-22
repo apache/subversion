@@ -200,6 +200,16 @@ unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs);
 
+/**
+ * Like svn_cstring__similarity, but accepts svn_string_t's instead
+ * of NUL-terminated character strings.
+ */
+unsigned int
+svn_string__similarity(const svn_string_t *stringa,
+                       const svn_string_t *stringb,
+                       svn_membuf_t *buffer, apr_size_t *rlcs);
+
+
 /** @} */
 
 /** @} */

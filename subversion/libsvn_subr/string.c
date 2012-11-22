@@ -1185,8 +1185,20 @@ unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
 {
-  const apr_size_t lena = strlen(stra);
-  const apr_size_t lenb = strlen(strb);
+  const svn_string_t stringa = {stra, strlen(stra)};
+  const svn_string_t stringb = {strb, strlen(strb)};
+  return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
+}
+
+unsigned int
+svn_string__similarity(const svn_string_t *stringa,
+                       const svn_string_t *stringb,
+                       svn_membuf_t *buffer, apr_size_t *rlcs)
+{
+  const char *stra = stringa->data;
+  const char *strb = stringb->data;
+  const apr_size_t lena = stringa->len;
+  const apr_size_t lenb = stringb->len;
   const apr_size_t total = lena + lenb;
   const char *enda = stra + lena;
   const char *endb = strb + lenb;
@@ -1200,11 +1212,13 @@ svn_cstring__similarity(const char *stra, const char *strb,
     }
 
   /* ... and the common suffix */
-  while (stra < enda && strb < endb && *enda == *endb)
-    {
-      --enda; --endb;
-      ++lcs;
-    }
+  if (stra < enda && strb < endb)
+    do
+      {
+        --enda; --endb;
+        ++lcs;
+      }
+    while (stra < enda && strb < endb && *enda == *endb);
 
   if (stra < enda && strb < endb)
     {
@@ -1254,7 +1268,7 @@ svn_cstring__similarity(const char *stra, const char *strb,
           }
         }
 
-      /* The common suffix matcher always finds the nul terminator,
+      /* The common suffix matcher always incremnts the lcs
          so subtract 1 from the result. */
       lcs += prev[slots] - 1;
     }
