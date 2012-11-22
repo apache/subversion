@@ -699,6 +699,15 @@ test_string_similarity(apr_pool_t *pool)
                     t->stra, t->strb, lcs, t->lcs);
     }
 
+  /* Test partial similarity */
+  {
+    const svn_string_t foo = {"svn:foo", 4};
+    const svn_string_t bar = {"svn:bar", 4};
+    if (1000 != svn_string__similarity(&foo, &bar, &buffer, NULL))
+      return fail(pool, "'%s'[:4] ~ '%s'[:4] found different",
+                  foo.data, bar.data);
+  }
+
   return SVN_NO_ERROR;
 }
 
