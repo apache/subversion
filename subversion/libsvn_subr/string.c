@@ -1181,3 +1181,90 @@ svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
   return apr_pstrdup(pool, buffer);
 }
 
+unsigned int
+svn_cstring__similarity(const char *stra, const char *strb,
+                        svn_membuf_t *buffer, apr_size_t *rlcs)
+{
+  const apr_size_t lena = strlen(stra);
+  const apr_size_t lenb = strlen(strb);
+  const apr_size_t total = lena + lenb;
+  const char *enda = stra + lena;
+  const char *endb = strb + lenb;
+  apr_size_t lcs = 0;
+
+  /* Skip the common prefix ... */
+  while (stra < enda && strb < endb && *stra == *strb)
+    {
+      ++stra; ++strb;
+      ++lcs;
+    }
+
+  /* ... and the common suffix */
+  while (stra < enda && strb < endb && *enda == *endb)
+    {
+      --enda; --endb;
+      ++lcs;
+    }
+
+  if (stra < enda && strb < endb)
+    {
+      /* Move the end pointers past the non-matching part */
+      const apr_size_t resta = ++enda - stra;
+      const apr_size_t restb = ++endb - strb;
+      const apr_size_t slots = (resta > restb ? restb : resta);
+      apr_size_t *curr, *prev;
+      const char *pstr;
+
+      /* The outer loop must iterate on the longer string. */
+      if (resta < restb)
+        {
+          pstr = stra;
+          stra = strb;
+          strb = pstr;
+
+          pstr = enda;
+          enda = endb;
+          endb = pstr;
+        }
+
+      /* Allocate two columns in the LCS matrix
+         ### Optimize this to (slots + 2) instesd of 2 * (slots + 1) */
+      svn_membuf__ensure(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
+      svn_membuf__zero(buffer);
+      curr = buffer->data;
+      prev = curr + slots + 1;
+
+      /* Calculate LCS length of the remainder */
+      for (pstr = stra; pstr < enda; ++pstr)
+        {
+          int i;
+          for (i = 1; i <= slots; ++i)
+            {
+              if (*pstr == strb[i])
+                curr[i] = prev[i-1] + 1;
+              else
+                curr[i] = (curr[i-1] > prev[i] ? curr[i-1] : prev[i]);
+            }
+
+          /* Swap the buffers, making the previous one current */
+          {
+            apr_size_t *const temp = prev;
+            prev = curr;
+            curr = temp;
+          }
+        }
+
+      /* The common suffix matcher always finds the nul terminator,
+         so subtract 1 from the result. */
+      lcs += prev[slots] - 1;
+    }
+
+  if (rlcs)
+    *rlcs = lcs;
+
+  /* Return similarity ratio rounded to 4 significant digits */
+  if (total)
+    return(unsigned int)((2000 * lcs + total/2) / total);
+  else
+    return 1000;
+}

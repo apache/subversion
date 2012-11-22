@@ -167,6 +167,39 @@ svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
 char *
 svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
 
+/**
+ * Computes the similarity score STRA and STRB, given as the ratio
+ * between the length of their longest common subsequence and the
+ * length of the strings, normalized to the range [0..1000].
+ * The result is equivalent to Python's
+ *
+ *   difflib.SequenceMatcher.ratio
+ *
+ * Optionally sets *RLCS to the length of the longest common
+ * subsequence of STRA and STRB. Using BUFFER for temporary storage,
+ * requires memory proportional to the length of the shorter string.
+ *
+ * The LCS algorithm used is described in, e.g.,
+ *
+ *   http://en.wikipedia.org/wiki/Longest_common_subsequence_problem
+ *
+ * Q: Why another LCS when we already have one in libsvn_diff?
+ * A: svn_diff__lcs is too heavyweight and too generic for the
+ *    purposes of similarity testing. Whilst it would be possible
+ *    to use a characte-based tokenizer with it, we really only need
+ *    the *length* of the LCS for the similarity score, not all the
+ *    other information that svn_diff__lcs produces in order to
+ *    make printing diffs possible.
+ *
+ * Q: Is there a limit on the length of the string parameters?
+ * A: Only available memory. But note that the LCS algorithm used
+ *    has O(strlen(STRA) * strlen(STRB)) worst-case performance,
+ *    so do keep a rein on your enthusiasm.
+ */
+unsigned int
+svn_cstring__similarity(const char *stra, const char *strb,
+                        svn_membuf_t *buffer, apr_size_t *rlcs);
+
 /** @} */
 
 /** @} */
