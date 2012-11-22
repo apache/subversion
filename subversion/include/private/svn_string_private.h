@@ -46,6 +46,83 @@ extern "C" {
  * @{
  */
 
+
+/** A self-contained memory buffer of known size.
+ *
+ * Intended to be used where a single variable-sized buffer is needed
+ * within an iteration, a scratch pool is available and we want to
+ * avoid the cost of creating another pool just for the iteration.
+ */
+typedef struct svn_membuf_t
+{
+  /** The a pool from which this buffer was originally allocated, and is not
+   * necessarily specific to this buffer.  This is used only for allocating
+   * more memory from when the buffer needs to grow.
+   */
+  apr_pool_t *pool;
+
+  /** pointer to the memory */
+  void *data;
+
+  /** total size of buffer allocated */
+  apr_size_t size;
+} svn_membuf_t;
+
+
+/* Initialize a memory buffer of the given size */
+void
+svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool);
+
+/* Ensure that the given memory buffer has at least the given size */
+void
+svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size);
+
+/* Resize the given memory buffer, preserving its contents. */
+void
+svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size);
+
+/* Zero-fill the given memory */
+void
+svn_membuf__zero(svn_membuf_t *membuf);
+
+/* Zero-fill the given memory buffer up to the smaller of SIZE and the
+   current buffer size. */
+void
+svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size);
+
+/* Inline implementation of svn_membuf__zero.
+ * Note that PMEMBUF is evaluated only once.
+ */
+#define SVN_MEMBUF__ZERO(pmembuf)                \
+  do                                             \
+    {                                            \
+      svn_membuf_t *const _m_b_f_ = (pmembuf);   \
+      memset(_m_b_f_->data, 0, _m_b_f_->size);   \
+    }                                            \
+  while(0)
+
+/* Inline implementation of svn_membuf__nzero
+ * Note that PMEMBUF and PSIZE are evaluated only once.
+ */
+#define SVN_MEMBUF__NZERO(pmembuf, psize)        \
+  do                                             \
+    {                                            \
+      svn_membuf_t *const _m_b_f_ = (pmembuf);   \
+      const apr_size_t _s_z_ = (psize);          \
+      if (_s_z_ > _m_b_f_->size)                 \
+        memset(_m_b_f_->data, 0, _m_b_f_->size); \
+      else                                       \
+        memset(_m_b_f_->data, 0, _s_z_);         \
+    }                                            \
+  while(0)
+
+#ifndef SVN_DEBUG
+/* In non-debug mode, just use these inlie replacements */
+#define svn_membuf__zero(B) SVN_MEMBUF__ZERO((B))
+#define svn_membuf__nzero(B, S) SVN_MEMBUF__NZERO((B), (S))
+#endif
+
+
 /** Returns the #svn_string_t information contained in the data and
  * len members of @a strbuf. This is effectively a typecast, converting
  * @a strbuf into an #svn_string_t. This first will become invalid and must
