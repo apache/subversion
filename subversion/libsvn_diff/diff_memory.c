@@ -562,7 +562,7 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.hunk_delimiter = hunk_delimiter;
       baton.no_newline_string
-        = (hunk_delimiter != NULL && strcmp(hunk_delimiter, "##") != 0)
+        = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
           ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
           : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
 
