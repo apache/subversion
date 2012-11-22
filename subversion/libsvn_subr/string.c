@@ -1226,7 +1226,6 @@ svn_string__similarity(const svn_string_t *stringa,
 
   if (stra < enda && strb < endb)
     {
-      /* Move the end pointers back past the non-matching part */
       const apr_size_t resta = enda - stra;
       const apr_size_t restb = endb - strb;
       const apr_size_t slots = (resta > restb ? restb : resta);
