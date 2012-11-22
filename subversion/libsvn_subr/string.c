@@ -37,6 +37,53 @@
 #include "svn_private_config.h"
 
 
+
+void
+svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool)
+{
+  membuf->pool = pool;
+  membuf->size = (size ? APR_ALIGN_DEFAULT(size) : 0);
+  membuf->data = (!membuf->size ? NULL : apr_palloc(pool, membuf->size));
+}
+
+void
+svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size)
+{
+  if (size > membuf->size)
+    {
+      membuf->size = APR_ALIGN_DEFAULT(size);
+      membuf->data = (!membuf->size ? NULL
+                      : apr_palloc(membuf->pool, membuf->size));
+    }
+}
+
+void
+svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
+{
+  const void *const old_data = membuf->data;
+  const apr_size_t old_size = membuf->size;
+
+  svn_membuf__ensure(membuf, size);
+  if (old_data && old_data != membuf->data)
+    memcpy(membuf->data, old_data, old_size);
+}
+
+/* Always provide an out-of-line implementation of svn_membuf__zero */
+#undef svn_membuf__zero
+void
+svn_membuf__zero(svn_membuf_t *membuf)
+{
+  SVN_MEMBUF__ZERO(membuf);
+}
+
+/* Always provide an out-of-line implementation of svn_membuf__nzero */
+#undef svn_membuf__nzero
+void
+svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size)
+{
+  SVN_MEMBUF__NZERO(membuf, size);
+}
+
 /* Our own realloc, since APR doesn't have one.  Note: this is a
    generic realloc for memory pools, *not* for strings. */
 static void *
