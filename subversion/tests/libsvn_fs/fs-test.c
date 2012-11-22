@@ -4913,6 +4913,9 @@ delete_fs(const svn_test_opts_t *opts,
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   SVN_TEST_ASSERT(kind == svn_node_none);
 
+  /* Recreate dir so that test cleanup doesn't fail. */
+  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+
   return SVN_NO_ERROR;
 }
 
