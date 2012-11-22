@@ -4099,24 +4099,23 @@ def diff_properties_no_newline(sbox):
     ('p4', 'val1\n', 'val2\n'),
   ]
 
-  expected_output = \
-    make_diff_header("iota", "revision 1", "working copy") + \
-    make_diff_prop_header("iota")
-
-  for pname, old_val, new_val in subtests:
-    expected_output.extend(
-      make_diff_prop_modified(pname, old_val, new_val))
-
   # The "before" state.
   for pname, old_val, new_val in subtests:
     sbox.simple_propset(pname, old_val, 'iota')
   sbox.simple_commit() # r2
 
-  # The "after" state.
+  # Test one change at a time. (Because, with multiple changes, the order
+  # may not be predictable.)
   for pname, old_val, new_val in subtests:
-    sbox.simple_propset(pname, new_val, 'iota')
+    expected_output = \
+      make_diff_header("iota", "revision 1", "working copy") + \
+      make_diff_prop_header("iota") + \
+      make_diff_prop_modified(pname, old_val, new_val)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff')
+    sbox.simple_propset(pname, new_val, 'iota')
+    svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff')
+    svntest.actions.run_and_verify_svn(None, None, [], 'revert', 'iota')
+
   os.chdir(old_cwd)
 
 ########################################################################
