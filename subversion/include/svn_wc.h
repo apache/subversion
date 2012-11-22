@@ -5414,13 +5414,41 @@ svn_wc_crawl_revisions(const char *path,
  *
  * Use @a scratch_pool for any temporary allocations.
  *
+ * For legacy reasons only directories can be a wc-root.
+ * svn_wc_is_root_or_switched() also sets wc_root to @c TRUE for switched
+ * files.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
-svn_error_t *
+SVN_DEPRECATED svn_error_t *
 svn_wc_is_wc_root2(svn_boolean_t *wc_root,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
                    apr_pool_t *scratch_pool);
+
+
+/** If @a is_wcroot is not @c NULL, set @a *is_wcroot to @c TRUE if @a
+ * local_abspath is the root of the working, otherwise to @c FALSE.
+ *
+ * If @a is_switched is not @c NULL, set @a *is_switched to @c TRUE if @a
+ * local_abspath is not the root of the working, and switched against its
+ * parent.
+ *
+ * If @a kind is not @c NULL, set @a *kind to the node kind of @a
+ * local_abspath.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_is_wc_root2(), but with an access baton and relative
