@@ -3975,6 +3975,7 @@ close_file(void *file_baton,
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
   const svn_checksum_t *new_checksum;
+  apr_array_header_t *iprops = NULL;
 
   if (fb->skip_this)
     {
@@ -4299,6 +4300,22 @@ close_file(void *file_baton,
                                         scratch_pool);
     }
 
+  /* Any inherited props to be set set for this base node? */
+  if (eb->wcroot_iprops)
+    {
+      iprops = apr_hash_get(eb->wcroot_iprops, fb->local_abspath,
+                            APR_HASH_KEY_STRING);
+
+      /* close_edit may also update iprops for switched nodes, catching
+         those for which close_directory is never called (e.g. a switch
+         with no changes).  So as a minor optimization we remove any
+         iprops from the hash so as not to set them again in
+         close_edit. */
+      if (iprops)
+        apr_hash_set(eb->wcroot_iprops, fb->local_abspath,
+                     APR_HASH_KEY_STRING, NULL);
+    }
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_relpath,
@@ -4317,6 +4334,7 @@ close_file(void *file_baton,
                                    (fb->add_existed && fb->adding_file),
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
+                                   iprops,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
                                    conflict_skel,
