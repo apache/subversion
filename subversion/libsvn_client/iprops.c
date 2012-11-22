@@ -45,26 +45,26 @@
    then set *NEEDS_CACHE to true, set it to false otherwise. */
 static svn_error_t *
 need_to_cache_iprops(svn_boolean_t *needs_cache,
-                     const char *abspath,
+                     const char *local_abspath,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_wc_root;
+  svn_boolean_t is_switched;
   svn_error_t *err;
 
-  /* Our starting assumption. */
-  *needs_cache = FALSE;
-
-  err = svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx, abspath,
+  err = svn_wc_check_root(&is_wc_root, &is_switched, NULL,
+                          ctx->wc_ctx, local_abspath,
                            scratch_pool);
 
   /* ABSPATH can't need a cache if it doesn't exist. */
   if (err)
     {
-      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           svn_error_clear(err);
           is_wc_root = FALSE;
+          is_switched = FALSE;
         }
       else
         {
@@ -72,19 +72,7 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
         }
     }
 
-  if (is_wc_root)
-    {
-      const char *child_repos_relpath;
-
-      /* We want to cache the inherited properties for WC roots, unless that
-         root points to the root of the repository, then there in nowhere to
-         inherit properties from. */
-      SVN_ERR(svn_wc__node_get_repos_relpath(&child_repos_relpath,
-                                             ctx->wc_ctx, abspath,
-                                             scratch_pool, scratch_pool));
-      if (child_repos_relpath[0] != '\0')
-        *needs_cache = TRUE;
-    }
+  *needs_cache = (is_wc_root || is_switched);
 
   return SVN_NO_ERROR;
 }
