@@ -37,6 +37,17 @@ extern "C" {
 
 
 
+/* The string used to mark a line in a hunk that doesn't end with a newline,
+ * when diffing a file.  Intentionally not marked for translation, for wider
+ * interoperability with patch(1) programs. */
+#define SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE \
+          "\\ No newline at end of file"
+
+/* The string used to mark a line in a hunk that doesn't end with a newline,
+ * when diffing a Subversion property. */
+#define SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY \
+          "\\ No newline at end of property"
+
 /* Display property changes in pseudo-Unidiff format.
  *
  * Write to @a outstream the changes described by @a propchanges based on

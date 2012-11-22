@@ -758,7 +758,11 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * A @a hunk_delimiter can optionally be specified.
  * If @a hunk_delimiter is NULL, use the default hunk delimiter "@@".
  *
- * @since New in 1.7.
+ * As a special case, if the hunk delimiter is "##", then for an incomplete
+ * final line use the text "\ No newline at end of property" instead of
+ * "\ No newline at end of file".
+ *
+ * @since New in 1.7. Hunk delimiter "##" has the special meaning since 1.8.
  */
 svn_error_t *
 svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
