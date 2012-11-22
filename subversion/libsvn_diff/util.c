@@ -350,9 +350,8 @@ svn_diff__unified_append_no_newline_msg(svn_stringbuf_t *stringbuf,
 
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(
             &out_str,
-            /* The string below is intentionally not marked for translation,
-               for wider interoperability with patch(1) programs. */
-            APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
+            APR_EOL_STR
+            SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR,
             header_encoding, scratch_pool));
   svn_stringbuf_appendcstr(stringbuf, out_str);
   return SVN_NO_ERROR;
@@ -417,44 +416,6 @@ svn_diff__unidiff_write_header(svn_stream_t *output_stream,
                                       old_header,
                                       new_header));
   return SVN_NO_ERROR;
-}
-
-/* A helper function used by display_prop_diffs.
-   TOKEN is a string holding a property value.
-   If TOKEN is empty, or is already terminated by an EOL marker,
-   return TOKEN unmodified. Else, return a new string consisting
-   of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL.
-   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
-static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
-                 apr_pool_t *pool)
-{
-  const char *curp;
-
-  if (had_eol)
-    *had_eol = FALSE;
-
-  if (token->len == 0)
-    return token;
-
-  curp = token->data + token->len - 1;
-  if (*curp == '\r')
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
-  else if (*curp != '\n')
-    {
-      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
-    }
-  else
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
 }
 
 /* A helper function for display_prop_diffs.  Output the differences between
@@ -594,22 +555,12 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
       {
         svn_diff_t *diff;
         svn_diff_file_options_t options = { 0 };
-        const svn_string_t *tmp;
-        const svn_string_t *orig;
-        const svn_string_t *val;
-        svn_boolean_t val_has_eol;
-
-        /* The last character in a property is often not a newline.
-           An eol character is appended to prevent the diff API to add a
-           '\ No newline at end of file' line. We add
-           '\ No newline at end of property' manually if needed. */
-        tmp = original_value ? original_value
-                             : svn_string_create_empty(iterpool);
-        orig = maybe_append_eol(tmp, NULL, iterpool);
-
-        tmp = propchange->value ? propchange->value :
-                                  svn_string_create_empty(iterpool);
-        val = maybe_append_eol(tmp, &val_has_eol, iterpool);
+        const svn_string_t *orig
+          = original_value ? original_value
+                           : svn_string_create_empty(iterpool);
+        const svn_string_t *val
+          = propchange->value ? propchange->value
+                              : svn_string_create_empty(iterpool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
                                          iterpool));
@@ -624,11 +575,6 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
         SVN_ERR(svn_diff_mem_string_output_unified2(
                   outstream, diff, FALSE /* no header */, "##", NULL, NULL,
                   encoding, orig, val, iterpool));
-        if (!val_has_eol)
-          {
-            const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            SVN_ERR(svn_stream_puts(outstream, s));
-          }
       }
     }
   svn_pool_destroy(iterpool);
