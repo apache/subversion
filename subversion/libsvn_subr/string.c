@@ -1268,7 +1268,7 @@ svn_string__similarity(const svn_string_t *stringa,
           }
         }
 
-      /* The common suffix matcher always incremnts the lcs
+      /* The common suffix matcher always increments the lcs
          so subtract 1 from the result. */
       lcs += prev[slots] - 1;
     }
