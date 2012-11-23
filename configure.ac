@@ -683,18 +683,6 @@ if test "$enable_nls" = "yes"; then
 fi
 
 AH_BOTTOM([
-/* Wrap qsort_r for cross-platform compatibility */
-#ifndef HAVE_QSORT_R
-#define SVN_QSORT_R(base, length, width, compare, thunk) \
-  (qsort((base), (length), (width), (compare)))
-#elif defined(SVN_QSORT_R_NORMAL_ARG_ORDER)
-#define SVN_QSORT_R qsort_r
-#else
-/* BSD changes the order of the compare and thunk arguments */
-#define SVN_QSORT_R(base, length, width, compare, thunk) \
-  (qsort_r((base), (length), (width), (thunk), (compare)))
-#endif
-
 /* Indicate to translators that string X should be translated.  Do not look
    up the translation at run time; just expand to X.  This macro is suitable
    for use where a constant string is required at compile time. */
@@ -881,9 +869,6 @@ AC_FUNC_VPRINTF
 
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
-
-dnl check for qsor_r presence and argument ordering
-SVN_FUNC_QSORT_R
 
 dnl check for uname
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
