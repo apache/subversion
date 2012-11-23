@@ -3533,8 +3533,8 @@ static int my_rand(apr_uint64_t scalar, apr_uint32_t *seed)
 {
   static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
   /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
-  apr_uint32_t rand = svn_test_rand(seed);
-  return (int)(((double)rand
+  apr_uint32_t r = svn_test_rand(seed);
+  return (int)(((double)r
                 / ((double)TEST_RAND_MAX+1.0))
                * (double)scalar);
 }
