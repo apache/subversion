@@ -695,7 +695,7 @@ test_string_similarity(apr_pool_t *pool)
       if (lcs != t->lcs)
         return fail(pool,
                     "%s ~ %s lcs %"APR_SIZE_T_FMT
-                    " <> expected "APR_SIZE_T_FMT,
+                    " <> expected %"APR_SIZE_T_FMT,
                     t->stra, t->strb, lcs, t->lcs);
     }
 
