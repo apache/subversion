@@ -131,7 +131,7 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_show_inherited_props,
   opt_search,
-  opt_search_and,
+  opt_search_and
 } svn_cl__longopt_t;
 
 
