@@ -543,11 +543,6 @@ import(const char *local_abspath,
       int i;
       apr_hash_t *dirents;
 
-      /* If we are creating a new repository directory path to import to,
-         then we disregard any svn:ignore property. */
-      if (!no_ignore && new_entries->nelts)
-        local_ignores = NULL;
-
       if (dirent->kind == svn_node_dir)
         {
           SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes,
