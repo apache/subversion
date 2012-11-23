@@ -168,7 +168,7 @@ exec_sql2(svn_sqlite__db_t *db, const char *sql, int ignored_err)
   if (sqlite_err != SQLITE_OK && sqlite_err != ignored_err)
     {
       svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
-                                           _("%s, executing statement '%s'"),
+                                           _("sqlite: %s, executing statement '%s'"),
                                            err_msg, sql);
       sqlite3_free(err_msg);
       return err;
@@ -256,8 +256,8 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
     return svn_error_create(SVN_ERR_SQLITE_ERROR,
                             svn_sqlite__reset(stmt),
                             expecting_row
-                              ? _("Expected database row missing")
-                              : _("Extra database row found"));
+                              ? _("sqlite: Expected database row missing")
+                              : _("sqlite: Extra database row found"));
 
   return SVN_NO_ERROR;
 }

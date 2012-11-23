@@ -3196,6 +3196,38 @@ svn_wc_get_actual_target(const char *path,
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
 
+/* This function has no internal variant as its behavior on switched
+   non-directories is not what you would expect. But this happens to
+   be the legacy behavior of this function. */
+svn_error_t *
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_root;
+  svn_boolean_t is_switched;
+  svn_kind_t kind;
+  svn_error_t *err;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
+                              wc_ctx->db, local_abspath, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
+          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_trace(err);
+
+      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
+    }
+
+  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   const char *path,

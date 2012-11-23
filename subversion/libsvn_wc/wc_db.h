@@ -512,6 +512,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         apr_array_header_t *new_iprops,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
@@ -594,6 +595,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            apr_array_header_t *new_iprops,
                             svn_boolean_t keep_recorded_info,
                             svn_boolean_t insert_base_deleted,
                             const svn_skel_t *conflict,
@@ -2288,6 +2290,21 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
+/* Checks if LOCAL_ABSPATH is a working copy root, switched and a directory.
+   With these answers we can answer all 'is anchor' questions that we need for
+   the different ra operations with just a single sqlite transaction and
+   filestat.
+
+   All output arguments can be null to specify that the result is not
+   interesting to the caller
+ */
+svn_error_t *
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
+                       svn_boolean_t *is_switched,
+                       svn_kind_t *kind,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /* @} */

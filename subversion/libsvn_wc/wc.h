@@ -616,14 +616,6 @@ svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_is_wc_root2() */
-svn_error_t *
-svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
-
-
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will

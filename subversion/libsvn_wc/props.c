@@ -2382,14 +2382,17 @@ svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
   while (TRUE)
     {
       apr_hash_t *actual_props;
+      svn_boolean_t is_switched;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__internal_is_wc_root(&is_wc_root, db, parent_abspath,
-                                          iterpool));
+      SVN_ERR(svn_wc__db_is_switched(&is_wc_root, &is_switched, NULL,
+                                     db, parent_abspath, iterpool));
 
-      if (is_wc_root)
+      if (is_switched || is_wc_root)
         {
+          is_wc_root = TRUE;
+
           /* If the WC root is also the root of the repository then by
              definition there are no inheritable properties to be had,
              but checking for that is just as expensive as fetching them

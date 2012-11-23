@@ -1778,6 +1778,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         apr_array_header_t *new_iprops,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
@@ -1821,6 +1822,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
 
   ibb.dav_cache = dav_cache;
+  ibb.iprops = new_iprops;
 
   if (update_actual_props)
     {
@@ -1863,6 +1865,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            apr_array_header_t *new_iprops,
                             svn_boolean_t keep_recorded_info,
                             svn_boolean_t insert_base_deleted,
                             const svn_skel_t *conflict,
@@ -1905,6 +1908,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.target = target;
 
   ibb.dav_cache = dav_cache;
+  ibb.iprops = new_iprops;
 
   if (update_actual_props)
     {
@@ -9025,54 +9029,33 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const char *repos_root_url;
-  svn_revnum_t revision;
-  int op_depth;
-  const char *repos_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL,
-                               &revision, &repos_relpath, &repos_root_url,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, db, local_abspath, result_pool,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_IPROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (repos_relpath && repos_relpath[0] == '\0')
+  if (!have_row)
     {
-      /* LOCAL_ABSPATH reflects the root of the repository, so there is
-         no parents to inherit from. */
-      *iprops = apr_array_make(result_pool, 0,
-                               sizeof(svn_prop_inherited_item_t *));
+      /* No cached iprops. */
+      *iprops = NULL;
     }
   else
     {
-      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                    db, local_abspath,
-                                                    scratch_pool,
-                                                    scratch_pool));
-      VERIFY_USABLE_WCROOT(wcroot);
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_IPROPS));
-      SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0, result_pool,
+                                        scratch_pool));
+      if (!*iprops)
+        *iprops = apr_array_make(result_pool, 0,
+                                 sizeof(svn_prop_inherited_item_t *));
 
-      if (!have_row)
-        {
-          /* No cached iprops. */
-          *iprops = NULL;
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0, result_pool,
-                                            scratch_pool));
-         }
+     }
 
-      SVN_ERR(svn_sqlite__reset(stmt));
-    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -12473,6 +12456,125 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
    *is_root = TRUE;
 
    return SVN_NO_ERROR;
+}
+
+/* Baton for db_is_switched */
+struct db_is_switched_baton_t
+{
+  svn_boolean_t *is_switched;
+  svn_kind_t *kind;
+};
+
+/* This implements svn_wc__db_txn_callback_t for svn_wc_db__is_switched */
+static svn_error_t *
+db_is_switched(void *baton,
+               svn_wc__db_wcroot_t *wcroot,
+               const char *local_relpath,
+               apr_pool_t *scratch_pool)
+{
+  struct db_is_switched_baton_t *isb = baton;
+  svn_wc__db_status_t status;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+  const char *name;
+  const char *parent_local_relpath;
+  apr_int64_t parent_repos_id;
+  const char *parent_repos_relpath;
+
+  SVN_ERR_ASSERT(*local_relpath != '\0'); /* Handled in wrapper */
+
+  SVN_ERR(read_info(&status, isb->kind, NULL, &repos_relpath, &repos_id, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_server_excluded
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present)
+    {
+      return svn_error_createf(
+                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                    _("The node '%s' was not found."),
+                    path_for_error_message(wcroot, local_relpath,
+                                           scratch_pool));
+    }
+  else if (! repos_relpath)
+    {
+      /* Node is shadowed; easy out */
+      if (isb->is_switched)
+        *isb->is_switched = FALSE;
+
+      return SVN_NO_ERROR;
+    }
+
+  if (! isb->is_switched)
+    return SVN_NO_ERROR;
+
+  svn_relpath_split(&parent_local_relpath, &name, local_relpath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
+                                            &parent_repos_relpath,
+                                            &parent_repos_id, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            wcroot, parent_local_relpath,
+                                            scratch_pool, scratch_pool));
+
+  if (repos_id != parent_repos_id)
+    *isb->is_switched = TRUE;
+  else
+    {
+      const char *expected_relpath;
+
+      expected_relpath = svn_relpath_join(parent_repos_relpath, name,
+                                          scratch_pool);
+
+      *isb->is_switched = (strcmp(expected_relpath, repos_relpath) != 0);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
+                       svn_boolean_t *is_switched,
+                       svn_kind_t *kind,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct db_is_switched_baton_t isb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (is_switched)
+    *is_switched = FALSE;
+
+  if (*local_relpath == '\0')
+    {
+      /* Easy out */
+      if (is_wcroot)
+        *is_wcroot = TRUE;
+      
+      if (kind)
+        *kind = svn_kind_dir;
+      return SVN_NO_ERROR;
+    }
+
+  if (is_wcroot)
+    *is_wcroot = FALSE;
+
+  isb.is_switched = is_switched;
+  isb.kind = kind;
+
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
+                                             db_is_switched, &isb,
+                                             scratch_pool));
 }
 
 

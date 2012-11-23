@@ -1185,8 +1185,11 @@ unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
 {
-  const svn_string_t stringa = {stra, strlen(stra)};
-  const svn_string_t stringb = {strb, strlen(strb)};
+  svn_string_t stringa, stringb;
+  stringa.data = stra;
+  stringa.len = strlen(stra);
+  stringb.data = strb;
+  stringb.len = strlen(strb);
   return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
 }
 
@@ -1212,19 +1215,22 @@ svn_string__similarity(const svn_string_t *stringa,
     }
 
   /* ... and the common suffix */
-  if (stra < enda && strb < endb)
-    do
-      {
-        --enda; --endb;
-        ++lcs;
-      }
-    while (stra < enda && strb < endb && *enda == *endb);
+  while (stra < enda && strb < endb)
+    {
+      --enda; --endb;
+      if (*enda != *endb)
+        {
+          ++enda; ++endb;
+          break;
+        }
+
+      ++lcs;
+    }
 
   if (stra < enda && strb < endb)
     {
-      /* Move the end pointers past the non-matching part */
-      const apr_size_t resta = ++enda - stra;
-      const apr_size_t restb = ++endb - strb;
+      const apr_size_t resta = enda - stra;
+      const apr_size_t restb = endb - strb;
       const apr_size_t slots = (resta > restb ? restb : resta);
       apr_size_t *curr, *prev;
       const char *pstr;
@@ -1243,10 +1249,10 @@ svn_string__similarity(const svn_string_t *stringa,
 
       /* Allocate two columns in the LCS matrix
          ### Optimize this to (slots + 2) instesd of 2 * (slots + 1) */
-      svn_membuf__ensure(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
-      svn_membuf__zero(buffer);
-      curr = buffer->data;
-      prev = curr + slots + 1;
+      svn_membuf__resize(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
+      svn_membuf__nzero(buffer, (slots + 2) * sizeof(apr_size_t));
+      prev = buffer->data;
+      curr = prev + slots + 1;
 
       /* Calculate LCS length of the remainder */
       for (pstr = stra; pstr < enda; ++pstr)
@@ -1254,7 +1260,7 @@ svn_string__similarity(const svn_string_t *stringa,
           int i;
           for (i = 1; i <= slots; ++i)
             {
-              if (*pstr == strb[i])
+              if (*pstr == strb[i-1])
                 curr[i] = prev[i-1] + 1;
               else
                 curr[i] = (curr[i-1] > prev[i] ? curr[i-1] : prev[i]);
@@ -1268,9 +1274,7 @@ svn_string__similarity(const svn_string_t *stringa,
           }
         }
 
-      /* The common suffix matcher always increments the lcs
-         so subtract 1 from the result. */
-      lcs += prev[slots] - 1;
+      lcs += prev[slots];
     }
 
   if (rlcs)
