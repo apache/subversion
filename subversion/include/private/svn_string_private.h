@@ -168,9 +168,9 @@ char *
 svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
 
 /**
- * Computes the similarity score of STRA and STRB. Returns the
- * ratio of the length of their longest common subsequence and
- * the length of the strings, normalized to the range [0..1000].
+ * Computes the similarity score of STRA and STRB. Returns the ratio
+ * of the length of their longest common subsequence and the average
+ * length of the strings, normalized to the range [0..1000].
  * The result is equivalent to Python's
  *
  *   difflib.SequenceMatcher.ratio
