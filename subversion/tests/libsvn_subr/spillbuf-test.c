@@ -28,9 +28,9 @@
 #include "../svn_test.h"
 
 
-static const char basic_data[] = ("abcdefghijklmnopqrstuvwxyz"
-                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                  "0123456789");
+static const char basic_data[] = "abcdefghijklmnopqrstuvwxyz"
+                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                 "0123456789";
 
 
 /* Validate that BUF is STARTING_SIZE in length. Then read some data from
