@@ -47,7 +47,6 @@ sinclude(build/ac-macros/swig.m4)
 sinclude(build/ac-macros/zlib.m4)
 sinclude(build/ac-macros/kwallet.m4)
 sinclude(build/ac-macros/macosx.m4)
-sinclude(build/ac-macros/qsort_r.m4)
 
 # Include the libtool macros
 sinclude(build/libtool.m4)
