@@ -576,7 +576,7 @@ test_stream_base64(apr_pool_t *pool)
    The two data writes caused the base 64 code to allocate a buffer
    that was a byte short but exactly matched a stringbuf blocksize.
    That meant the stringbuf didn't overallocate and a write beyond
-   the end of the buffer occured.
+   the end of the buffer occurred.
  */
 static svn_error_t *
 test_stream_base64_2(apr_pool_t *pool)

@@ -37,7 +37,6 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
-#include "private/svn_client_private.h"
 
 
 /*** Code. ***/
@@ -60,10 +59,15 @@ print_log_rev(void *baton,
  * of merging between two branches, given the merge description
  * indicated by YCA, BASE, RIGHT, TARGET, REINTEGRATE_LIKE. */
 static svn_error_t *
-mergeinfo_diagram(svn_client__pathrev_t *yca,
-                  svn_client__pathrev_t *base,
-                  svn_client__pathrev_t *right,
-                  svn_client__pathrev_t *target,
+mergeinfo_diagram(const char *yca_url,
+                  const char *base_url,
+                  const char *right_url,
+                  const char *target_url,
+                  svn_revnum_t yca_rev,
+                  svn_revnum_t base_rev,
+                  svn_revnum_t right_rev,
+                  svn_revnum_t target_rev,
+                  const char *repos_root_url,
                   svn_boolean_t target_is_wc,
                   svn_boolean_t reintegrate_like,
                   apr_pool_t *pool)
@@ -82,16 +86,16 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
 
   /* The YCA (that is, the branching point).  And an ellipsis, because we
    * don't show information about earlier merges */
-  g[0][0] = apr_psprintf(pool, "  %-8ld  ", yca->rev);
+  g[0][0] = apr_psprintf(pool, "  %-8ld  ", yca_rev);
   g[1][0] =     "  |         ";
-  if (strcmp(yca->url, right->url) == 0)
+  if (strcmp(yca_url, right_url) == 0)
     {
       g[2][0] = "-------| |--";
       g[3][0] = "   \\        ";
       g[4][0] = "    \\       ";
       g[5][0] = "     --| |--";
     }
-  else if (strcmp(yca->url, target->url) == 0)
+  else if (strcmp(yca_url, target_url) == 0)
     {
       g[2][0] = "     --| |--";
       g[3][0] = "    /       ";
@@ -107,18 +111,18 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
     }
 
   /* The last full merge */
-  if ((base->rev > yca->rev) && reintegrate_like)
+  if ((base_rev > yca_rev) && reintegrate_like)
     {
       g[2][2] = "---------";
       g[3][2] = "  /      ";
       g[4][2] = " /       ";
       g[5][2] = "---------";
       g[6][2] = "|        ";
-      g[7][2] = apr_psprintf(pool, "%-8ld ", base->rev);
+      g[7][2] = apr_psprintf(pool, "%-8ld ", base_rev);
     }
-  else if (base->rev > yca->rev)
+  else if (base_rev > yca_rev)
     {
-      g[0][2] = apr_psprintf(pool, "%-8ld ", base->rev);
+      g[0][2] = apr_psprintf(pool, "%-8ld ", base_rev);
       g[1][2] = "|        ";
       g[2][2] = "---------";
       g[3][2] = " \\       ";
@@ -135,7 +139,7 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
 
   /* The tips of the branches */
     {
-      g[0][3] = apr_psprintf(pool, "%-8ld", right->rev);
+      g[0][3] = apr_psprintf(pool, "%-8ld", right_rev);
       g[1][3] = "|       ";
       g[2][3] = "-       ";
       g[3][3] = "        ";
@@ -143,7 +147,7 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
       g[5][3] = "-       ";
       g[6][3] = "|       ";
       g[7][3] = target_is_wc ? "WC      "
-                             : apr_psprintf(pool, "%-8ld", target->rev);
+                             : apr_psprintf(pool, "%-8ld", target_rev);
     }
 
   /* Find the width of each column, so we know how to print blank cells */
@@ -152,8 +156,8 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
       col_width[col] = 0;
       for (row = 0; row < ROWS; row++)
         {
-          if (g[row][col] && (strlen(g[row][col]) > col_width[col]))
-            col_width[col] = strlen(g[row][col]);
+          if (g[row][col] && ((int)strlen(g[row][col]) > col_width[col]))
+            col_width[col] = (int)strlen(g[row][col]);
         }
     }
 
@@ -183,10 +187,10 @@ mergeinfo_diagram(svn_client__pathrev_t *yca,
         }
       if (row == 2)
         SVN_ERR(svn_cmdline_printf(pool, "  %s",
-                svn_client__pathrev_relpath(right, pool)));
+                svn_uri_skip_ancestor(repos_root_url, right_url, pool)));
       if (row == 5)
         SVN_ERR(svn_cmdline_printf(pool, "  %s",
-                svn_client__pathrev_relpath(target, pool)));
+                svn_uri_skip_ancestor(repos_root_url, target_url, pool)));
       SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
     }
 
@@ -206,7 +210,9 @@ mergeinfo_summary(
                   apr_pool_t *pool)
 {
   svn_client_automatic_merge_t *the_merge;
-  svn_client__pathrev_t *yca, *base, *right, *target;
+  const char *yca_url, *base_url, *right_url, *target_url;
+  svn_revnum_t yca_rev, base_rev, right_rev, target_rev;
+  const char *repos_root_url;
   svn_boolean_t target_is_wc, reintegrate_like;
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
@@ -226,12 +232,18 @@ mergeinfo_summary(
               target_path_or_url, target_revision,
               ctx, pool, pool));
 
-  SVN_ERR(svn_client__automatic_merge_get_locations(
-            &yca, &base, &right, &target, the_merge, pool));
+  SVN_ERR(svn_client_automatic_merge_get_locations(
+            &yca_url, &yca_rev,
+            &base_url, &base_rev,
+            &right_url, &right_rev,
+            &target_url, &target_rev,
+            &repos_root_url,
+            the_merge, pool));
   reintegrate_like = svn_client_automatic_merge_is_reintegrate_like(the_merge);
 
-  SVN_ERR(mergeinfo_diagram(yca, base, right, target,
-                            target_is_wc, reintegrate_like,
+  SVN_ERR(mergeinfo_diagram(yca_url, base_url, right_url, target_url,
+                            yca_rev, base_rev, right_rev, target_rev,
+                            repos_root_url, target_is_wc, reintegrate_like,
                             pool));
 
   return SVN_NO_ERROR;

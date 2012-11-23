@@ -43,7 +43,7 @@
 #include "svn_xml.h"
 
 #include "private/svn_opt_private.h"
-#include "private/svn_named_atomic.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -116,8 +116,7 @@ open_repos(svn_repos_t **repos,
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, "1");
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING,
-               svn_named_atomic__is_efficient() ? "1" : "0");
+               APR_HASH_KEY_STRING, "2");
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
@@ -195,7 +194,7 @@ enum svnadmin__cmdline_options_t
     svnadmin__pre_1_4_compatible,
     svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible,
-    svnadmin__pre_1_8_compatible
+    svnadmin__compatible_version
   };
 
 /* Option codes and descriptions.
@@ -273,25 +272,22 @@ static const apr_getopt_option_t options_table[] =
         "                             use by another process")},
 
     {"pre-1.4-compatible",     svnadmin__pre_1_4_compatible, 0,
-     N_("use format compatible with Subversion versions\n"
-        "                             earlier than 1.4")},
+     N_("deprecated; see --compatible-version")},
 
     {"pre-1.5-compatible",     svnadmin__pre_1_5_compatible, 0,
-     N_("use format compatible with Subversion versions\n"
-        "                             earlier than 1.5")},
+     N_("deprecated; see --compatible-version")},
 
     {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
-     N_("use format compatible with Subversion versions\n"
-        "                             earlier than 1.6")},
-
-    {"pre-1.8-compatible",     svnadmin__pre_1_8_compatible, 0,
-     N_("use format compatible with Subversion versions\n"
-        "                             earlier than 1.8")},
+     N_("deprecated; see --compatible-version")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
         "                             minimize redundant operations. Default: 16.\n"
         "                             [used for FSFS repositories only]")},
+
+    {"compatible-version",     svnadmin__compatible_version, 1,
+     N_("use repository format compatible with Subversion\n"
+        "                             version ARG (\"1.5.5\", \"1.7\", etc.)")},
 
     {NULL}
   };
@@ -312,9 +308,9 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible,
-    svnadmin__pre_1_8_compatible
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__compatible_version,
+    svnadmin__pre_1_4_compatible, svnadmin__pre_1_5_compatible,
+    svnadmin__pre_1_6_compatible
     } },
 
   {"deltify", subcommand_deltify, {0}, N_
@@ -489,7 +485,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
-  svn_boolean_t pre_1_8_compatible;                 /* --pre-1.8-compatible */
+  svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -640,25 +636,35 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  opt_state->fs_type);
 
+  /* Prior to 1.8, we had explicit options to specify compatibility
+     with a handful of prior Subversion releases. */
   if (opt_state->pre_1_4_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                 APR_HASH_KEY_STRING,
-                 "1");
-
+                 APR_HASH_KEY_STRING, "1");
   if (opt_state->pre_1_5_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                 APR_HASH_KEY_STRING,
-                 "1");
-
+                 APR_HASH_KEY_STRING, "1");
   if (opt_state->pre_1_6_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                 APR_HASH_KEY_STRING,
-                 "1");
+                 APR_HASH_KEY_STRING, "1");
 
-  if (opt_state->pre_1_8_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                 APR_HASH_KEY_STRING,
-                 "1");
+  /* In 1.8, we figured out that we didn't have to keep extending this
+     madness indefinitely. */
+  if (opt_state->compatible_version)
+    {
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 4, 0))
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 5, 0))
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 6, 0))
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+    }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
                            NULL, NULL, NULL, fs_config, pool));
@@ -1989,8 +1995,42 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case svnadmin__pre_1_6_compatible:
         opt_state.pre_1_6_compatible = TRUE;
         break;
-      case svnadmin__pre_1_8_compatible:
-        opt_state.pre_1_8_compatible = TRUE;
+      case svnadmin__compatible_version:
+        {
+          svn_version_t latest = { SVN_VER_MAJOR, SVN_VER_MINOR,
+                                   SVN_VER_PATCH, NULL };
+          svn_version_t *compatible_version;
+
+          /* Parse the version string which carries our target
+             compatibility. */
+          SVN_INT_ERR(svn_version__parse_version_string(&compatible_version,
+                                                        opt_arg, pool));
+
+          /* We can't create repository with a version older than 1.0.0.  */
+          if (! svn_version__at_least(compatible_version, 1, 0, 0))
+            {
+              err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                      _("Cannot create pre-1.0-compatible "
+                                        "repositories"));
+              return EXIT_ERROR(err);
+            }
+
+          /* We can't create repository with a version newer than what
+             the running version of Subversion supports. */
+          if (! svn_version__at_least(&latest,
+                                      compatible_version->major,
+                                      compatible_version->minor,
+                                      compatible_version->patch))
+            {
+              err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                      _("Cannot guaranteed compatibility "
+                                        "beyond the current running version "
+                                        "(" SVN_VER_NUM ")"));
+              return EXIT_ERROR(err);
+            }
+
+          opt_state.compatible_version = compatible_version;
+        }
         break;
       case svnadmin__fs_type:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));

@@ -63,10 +63,15 @@
  */
 typedef enum report_state_e {
     NONE = 0,
+    INITIAL = 0,
+    UPDATE_REPORT,
+    TARGET_REVISION,
     OPEN_DIR,
     ADD_DIR,
+    ABSENT_DIR,
     OPEN_FILE,
     ADD_FILE,
+    ABSENT_FILE,
     PROP,
     IGNORE_PROP_NAME,
     NEED_PROP_NAME
@@ -85,8 +90,8 @@ typedef enum report_state_e {
    since network and parsing behavior (ie. it doesn't pause immediately)
    can make the measurements quite imprecise.
 
-   We measure outstanding requests as the sum of ACTIVE_FETCHES and
-   ACTIVE_PROPFINDS in the report_context_t structure.  */
+   We measure outstanding requests as the sum of NUM_ACTIVE_FETCHES and
+   NUM_ACTIVE_PROPFINDS in the report_context_t structure.  */
 #define REQUEST_COUNT_TO_PAUSE 1000
 #define REQUEST_COUNT_TO_RESUME 100
 
@@ -126,7 +131,7 @@ typedef struct report_dir_t
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
 
-  /* controlling dir baton - this is only created in open_dir() */
+  /* controlling dir baton - this is only created in ensure_dir_opened() */
   void *dir_baton;
   apr_pool_t *dir_baton_pool;
 
@@ -342,13 +347,13 @@ struct report_context_t {
   report_dir_t *root_dir;
 
   /* number of pending GET requests */
-  unsigned int active_fetches;
+  unsigned int num_active_fetches;
 
   /* completed fetches (contains report_fetch_t) */
   svn_ra_serf__list_t *done_fetches;
 
   /* number of pending PROPFIND requests */
-  unsigned int active_propfinds;
+  unsigned int num_active_propfinds;
 
   /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
@@ -362,12 +367,154 @@ struct report_context_t {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
+  /* Did we receive all data from the network? */
+  svn_boolean_t report_received;
+
   /* Did we get a complete (non-truncated) report? */
   svn_boolean_t report_completed;
 
   /* The XML parser context for the REPORT response.  */
   svn_ra_serf__xml_parser_t *parser_ctx;
+
+  /* Did we close the root directory? */
+  svn_boolean_t closed_root;
 };
+
+
+#ifdef NOT_USED_YET
+
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t update_ttable[] = {
+  { INITIAL, S_, "update-report", UPDATE_REPORT,
+    FALSE, { NULL }, FALSE },
+
+  { UPDATE_REPORT, S_, "target-revision", TARGET_REVISION,
+    FALSE, { "rev", NULL }, TRUE },
+
+  { UPDATE_REPORT, S_, "open-directory", OPEN_DIR,
+    FALSE, { "rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "open-directory", OPEN_DIR,
+    FALSE, { "rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "add-directory", ADD_DIR,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ADD_DIR, S_, "add-directory", ADD_DIR,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "open-file", OPEN_FILE,
+    FALSE, { "rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "add-file", ADD_FILE,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ADD_DIR, S_, "add-file", ADD_FILE,
+    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "delete-entry", OPEN_FILE,
+    FALSE, { "?rev", "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "absent-directory", ABSENT_DIR,
+    FALSE, { "name", NULL }, TRUE },
+
+  { ADD_DIR, S_, "absent-directory", ABSENT_DIR,
+    FALSE, { "name", NULL }, TRUE },
+
+  { OPEN_DIR, S_, "absent-file", ABSENT_FILE,
+    FALSE, { "name", NULL }, TRUE },
+
+  { ADD_DIR, S_, "absent-file", ABSENT_FILE,
+    FALSE, { "name", NULL }, TRUE },
+
+  { 0 }
+};
+
+
+
+/* Conforms to svn_ra_serf__xml_opened_t  */
+static svn_error_t *
+update_opened(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int entered_state,
+              const svn_ra_serf__dav_props_t *tag,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
+static svn_error_t *
+update_closed(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int leaving_state,
+              const svn_string_t *cdata,
+              apr_hash_t *attrs,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  if (leaving_state == TARGET_REVISION)
+    {
+      const char *rev = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
+
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      SVN_STR_TO_REV(rev),
+                                                      ctx->sess->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_cdata_t  */
+static svn_error_t *
+update_cdata(svn_ra_serf__xml_estate_t *xes,
+             void *baton,
+             int current_state,
+             const char *data,
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* NOT_USED_YET */
+
+
+/* Returns best connection for fetching files/properties. */
+static svn_ra_serf__connection_t *
+get_best_connection(report_context_t *ctx)
+{
+  svn_ra_serf__connection_t * conn;
+  int first_conn;
+
+  /* Skip the first connection if the REPORT response hasn't been completely
+     received yet. */
+  first_conn = ctx->report_received ? 0: 1;
+
+  if (ctx->sess->num_conns - first_conn == 1)
+    return ctx->sess->conns[first_conn];
+
+  /* Currently just cycle connections. In future we could store number of
+   * pending requests on each connection for better connection usage. */
+  conn = ctx->sess->conns[ctx->sess->cur_conn];
+
+  /* Switch our connection. */
+  ctx->sess->cur_conn++;
+
+  if (ctx->sess->cur_conn >= ctx->sess->num_conns)
+      ctx->sess->cur_conn = first_conn;
+
+  return conn;
+}
 
 
 /** Report state management helper **/
@@ -547,7 +694,7 @@ remove_dir_props(void *baton,
 /** Helpers to open and close directories */
 
 static svn_error_t*
-open_dir(report_dir_t *dir)
+ensure_dir_opened(report_dir_t *dir)
 {
   report_context_t *ctx = dir->report_context;
 
@@ -576,7 +723,7 @@ open_dir(report_dir_t *dir)
     }
   else
     {
-      SVN_ERR(open_dir(dir->parent_dir));
+      SVN_ERR(ensure_dir_opened(dir->parent_dir));
 
       dir->dir_baton_pool = svn_pool_create(dir->parent_dir->dir_baton_pool);
 
@@ -672,7 +819,7 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 
   SVN_ERR_ASSERT(! dir->ref_count);
 
-  SVN_ERR(open_dir(dir));
+  SVN_ERR(ensure_dir_opened(dir));
 
   return close_dir(dir);
 }
@@ -817,7 +964,7 @@ open_updated_file(report_info_t *info,
   const svn_delta_editor_t *update_editor = ctx->update_editor;
 
   /* Ensure our parent is open. */
-  SVN_ERR(open_dir(info->dir));
+  SVN_ERR(ensure_dir_opened(info->dir));
   info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
   /* Expand our full name now if we haven't done so yet. */
@@ -1176,6 +1323,46 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
+/* Close the directory represented by DIR -- and any suitable parents
+   thereof -- if we are able to do so.  This is the case whenever:
+
+     - there are no remaining open items within the directory, and
+     - the directory's XML close tag has been processed (so we know
+       there are no more children to worry about in the future), and
+     - either:
+         - we aren't fetching properties for this directory, or
+         - we've already finished fetching those properties.
+*/
+static svn_error_t *
+maybe_close_dir_chain(report_dir_t *dir)
+{
+  report_dir_t *cur_dir = dir;
+
+  SVN_ERR(ensure_dir_opened(cur_dir));
+                  
+  while (cur_dir
+         && !cur_dir->ref_count
+         && cur_dir->tag_closed
+         && (!cur_dir->fetch_props || cur_dir->propfind_handler->done))
+    {
+      report_dir_t *parent = cur_dir->parent_dir;
+      report_context_t *report_context = cur_dir->report_context;
+
+      SVN_ERR(close_dir(cur_dir));
+      if (parent)
+        {
+          parent->ref_count--;
+        }
+      else
+        {
+          report_context->closed_root = TRUE;
+        }
+      cur_dir = parent;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Open the file associated with INFO for editing, pass along any
    propchanges we've recorded for it, and then close the file. */
 static svn_error_t *
@@ -1226,7 +1413,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   svn_ra_serf__handler_t *handler;
 
   /* What connection should we go on? */
-  conn = ctx->sess->conns[ctx->sess->cur_conn];
+  conn = get_best_connection(ctx);
 
   /* go fetch info->name from DAV:checked-in */
   info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
@@ -1253,7 +1440,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       /* Create a serf request for the PROPFIND.  */
       svn_ra_serf__request_create(info->propfind_handler);
 
-      ctx->active_propfinds++;
+      ctx->num_active_propfinds++;
     }
 
   /* If we've been asked to fetch the file or it's an add, do so.
@@ -1350,6 +1537,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           handler->conn = conn;
           handler->session = ctx->sess;
 
+          handler->custom_accept_encoding = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = fetch_ctx;
 
@@ -1363,7 +1551,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           svn_ra_serf__request_create(handler);
 
-          ctx->active_fetches++;
+          ctx->num_active_fetches++;
         }
     }
   else if (info->propfind_handler)
@@ -1386,7 +1574,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
-  if (ctx->active_fetches + ctx->active_propfinds > REQUEST_COUNT_TO_PAUSE)
+  if (ctx->num_active_fetches + ctx->num_active_propfinds
+      > REQUEST_COUNT_TO_PAUSE)
     ctx->parser_ctx->paused = TRUE;
 
   return SVN_NO_ERROR;
@@ -1657,7 +1846,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       tmppool = svn_pool_create(info->dir->dir_baton_pool);
 
@@ -1687,7 +1876,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       SVN_ERR(ctx->update_editor->absent_directory(
                                         svn_relpath_join(info->name, file_name,
@@ -1712,7 +1901,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      SVN_ERR(open_dir(info->dir));
+      SVN_ERR(ensure_dir_opened(info->dir));
 
       SVN_ERR(ctx->update_editor->absent_file(
                                         svn_relpath_join(info->name, file_name,
@@ -1937,12 +2126,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if (info->dir->fetch_props)
         {
-          /* Unconditionally set fetch_props now. */
-          info->dir->fetch_props = TRUE;
-
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
-                                             ctx->sess->conns[ctx->sess->cur_conn],
+                                             get_best_connection(ctx),
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
@@ -1953,9 +2139,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* Create a serf request for the PROPFIND.  */
           svn_ra_serf__request_create(info->dir->propfind_handler);
 
-          ctx->active_propfinds++;
+          ctx->num_active_propfinds++;
 
-          if (ctx->active_fetches + ctx->active_propfinds
+          if (ctx->num_active_fetches + ctx->num_active_propfinds
               > REQUEST_COUNT_TO_PAUSE)
             ctx->parser_ctx->paused = TRUE;
         }
@@ -2310,16 +2496,16 @@ link_path(void *report_baton,
 #define REQS_PER_CONN 8
 
 /** This function creates a new connection for this serf session, but only
- * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
+ * if the number of NUM_ACTIVE_REQS > REQS_PER_CONN or if there currently is
  * only one main connection open.
  */
 static svn_error_t *
-open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
+open_connection_if_needed(svn_ra_serf__session_t *sess, int num_active_reqs)
 {
   /* For each REQS_PER_CONN outstanding requests open a new connection, with
    * a minimum of 1 extra connection. */
   if (sess->num_conns == 1 ||
-      ((active_reqs / REQS_PER_CONN) > sess->num_conns))
+      ((num_active_reqs / REQS_PER_CONN) > sess->num_conns))
     {
       int cur = sess->num_conns;
       apr_status_t status;
@@ -2365,21 +2551,6 @@ create_update_report_body(serf_bucket_t **body_bkt,
 }
 
 static svn_error_t *
-headers_report(serf_bucket_t *headers,
-               void *baton,
-               apr_pool_t *pool)
-{
-  report_context_t *report = baton;
-
-  if (report->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
 {
@@ -2388,11 +2559,10 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *report_target;
-  svn_boolean_t closed_root;
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
@@ -2427,8 +2597,6 @@ finish_report(void *report_baton,
   handler->body_type = "text/xml";
   handler->conn = sess->conns[0];
   handler->session = sess;
-  handler->header_delegate = headers_report;
-  handler->header_delegate_baton = report;
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
@@ -2451,14 +2619,15 @@ finish_report(void *report_baton,
   SVN_ERR(open_connection_if_needed(sess, 0));
 
   sess->cur_conn = 1;
-  closed_root = FALSE;
 
   /* Note that we may have no active GET or PROPFIND requests, yet the
      processing has not been completed. This could be from a delay on the
      network or because we've spooled the entire response into our "pending"
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
-  while (!report->done || report->active_fetches || report->active_propfinds)
+  while (!report->done
+         || report->num_active_fetches
+         || report->num_active_propfinds)
     {
       apr_pool_t *iterpool_inner;
       svn_ra_serf__list_t *done_list;
@@ -2497,14 +2666,17 @@ finish_report(void *report_baton,
           err = SVN_NO_ERROR;
           status = 0;
 
-          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+          if (sess->timeout)
             {
-              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-            }
-          else
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                      _("Connection timed out"));
+              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+                {
+                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+                }
+              else
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                          _("Connection timed out"));
+                }
             }
         }
       else
@@ -2520,13 +2692,8 @@ finish_report(void *report_baton,
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < MAX_NR_OF_CONNS)
-        SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
-                                          report->active_propfinds));
-
-      /* Switch our connection. */
-      if (!report->done)
-         if (++sess->cur_conn == sess->num_conns)
-             sess->cur_conn = 1;
+        SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
+                                          report->num_active_propfinds));
 
       /* prune our propfind list if they are done. */
       done_list = report->done_propfinds;
@@ -2534,7 +2701,7 @@ finish_report(void *report_baton,
         {
           svn_pool_clear(iterpool_inner);
 
-          report->active_propfinds--;
+          report->num_active_propfinds--;
 
           /* If we have some files that we won't be fetching the content
            * for, ensure that we update the file with any altered props.
@@ -2594,54 +2761,33 @@ finish_report(void *report_baton,
         }
       report->done_propfinds = NULL;
 
-      /* prune our fetches list if they are done. */
+      /* Prune completely fetches from our list. */
       done_list = report->done_fetches;
       while (done_list)
         {
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
 
-          /* decrease our parent's directory refcount. */
+          /* Decrease the refcount in the parent directory of the file
+             whose fetch has completed. */
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
 
           /* Decrement our active fetch count. */
-          report->active_fetches--;
+          report->num_active_fetches--;
 
           done_list = done_list->next;
 
-          /* If we have a valid directory and
-           * we have no open items in this dir and
-           * we've closed the directory tag (no more children can be added)
-           * and either:
-           *   we know we won't be fetching props or
-           *   we've already completed the propfind
-           * then, we know it's time for us to close this directory.
-           */
-          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed
-                 && (!cur_dir->fetch_props
-                     || cur_dir->propfind_handler->done))
-            {
-              report_dir_t *parent = cur_dir->parent_dir;
-
-              SVN_ERR(close_dir(cur_dir));
-              if (parent)
-                {
-                  parent->ref_count--;
-                }
-              else
-                {
-                  closed_root = TRUE;
-                }
-              cur_dir = parent;
-            }
+          /* See if the parent directory of this fetched item (and
+             perhaps even parents of that) can be closed now. */
+          SVN_ERR(maybe_close_dir_chain(cur_dir));
         }
       report->done_fetches = NULL;
 
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
       if (parser_ctx->paused
-          && (report->active_fetches + report->active_propfinds
+          && (report->num_active_fetches + report->num_active_propfinds
               < REQUEST_COUNT_TO_RESUME))
         parser_ctx->paused = FALSE;
 
@@ -2649,25 +2795,29 @@ finish_report(void *report_baton,
          present (we can't know for sure because of the private structure),
          then go process the pending content.  */
       if (!parser_ctx->paused && parser_ctx->pending != NULL)
-        SVN_ERR(svn_ra_serf__process_pending(parser_ctx, iterpool_inner));
+        SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
+                                             &report->report_received,
+                                             iterpool_inner));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
         {
-         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
-    }
-
-  /* Ensure that we opened and closed our root dir and that we closed
-   * all of our children. */
-  if (closed_root == FALSE && report->root_dir != NULL)
-    {
-      SVN_ERR(close_all_dirs(report->root_dir));
     }
 
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
   if (report->report_completed)
-    err = report->update_editor->close_edit(report->update_baton, iterpool);
+    {
+      /* Ensure that we opened and closed our root dir and that we closed
+       * all of our children. */
+      if (report->closed_root == FALSE && report->root_dir != NULL)
+        {
+          SVN_ERR(close_all_dirs(report->root_dir));
+        }
+
+      err = report->update_editor->close_edit(report->update_baton, iterpool);
+    }
   else
     err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                            _("Missing update-report close tag"));
@@ -3081,6 +3231,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           handler->conn = conn;
           handler->session = session;
 
+          handler->custom_accept_encoding = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = stream_ctx;
 

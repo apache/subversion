@@ -46,6 +46,83 @@ extern "C" {
  * @{
  */
 
+
+/** A self-contained memory buffer of known size.
+ *
+ * Intended to be used where a single variable-sized buffer is needed
+ * within an iteration, a scratch pool is available and we want to
+ * avoid the cost of creating another pool just for the iteration.
+ */
+typedef struct svn_membuf_t
+{
+  /** The a pool from which this buffer was originally allocated, and is not
+   * necessarily specific to this buffer.  This is used only for allocating
+   * more memory from when the buffer needs to grow.
+   */
+  apr_pool_t *pool;
+
+  /** pointer to the memory */
+  void *data;
+
+  /** total size of buffer allocated */
+  apr_size_t size;
+} svn_membuf_t;
+
+
+/* Initialize a memory buffer of the given size */
+void
+svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool);
+
+/* Ensure that the given memory buffer has at least the given size */
+void
+svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size);
+
+/* Resize the given memory buffer, preserving its contents. */
+void
+svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size);
+
+/* Zero-fill the given memory */
+void
+svn_membuf__zero(svn_membuf_t *membuf);
+
+/* Zero-fill the given memory buffer up to the smaller of SIZE and the
+   current buffer size. */
+void
+svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size);
+
+/* Inline implementation of svn_membuf__zero.
+ * Note that PMEMBUF is evaluated only once.
+ */
+#define SVN_MEMBUF__ZERO(pmembuf)                \
+  do                                             \
+    {                                            \
+      svn_membuf_t *const _m_b_f_ = (pmembuf);   \
+      memset(_m_b_f_->data, 0, _m_b_f_->size);   \
+    }                                            \
+  while(0)
+
+/* Inline implementation of svn_membuf__nzero
+ * Note that PMEMBUF and PSIZE are evaluated only once.
+ */
+#define SVN_MEMBUF__NZERO(pmembuf, psize)        \
+  do                                             \
+    {                                            \
+      svn_membuf_t *const _m_b_f_ = (pmembuf);   \
+      const apr_size_t _s_z_ = (psize);          \
+      if (_s_z_ > _m_b_f_->size)                 \
+        memset(_m_b_f_->data, 0, _m_b_f_->size); \
+      else                                       \
+        memset(_m_b_f_->data, 0, _s_z_);         \
+    }                                            \
+  while(0)
+
+#ifndef SVN_DEBUG
+/* In non-debug mode, just use these inlie replacements */
+#define svn_membuf__zero(B) SVN_MEMBUF__ZERO((B))
+#define svn_membuf__nzero(B, S) SVN_MEMBUF__NZERO((B), (S))
+#endif
+
+
 /** Returns the #svn_string_t information contained in the data and
  * len members of @a strbuf. This is effectively a typecast, converting
  * @a strbuf into an #svn_string_t. This first will become invalid and must
@@ -89,6 +166,49 @@ svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
  */
 char *
 svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
+
+/**
+ * Computes the similarity score of STRA and STRB. Returns the
+ * ratio of the length of their longest common subsequence and
+ * the length of the strings, normalized to the range [0..1000].
+ * The result is equivalent to Python's
+ *
+ *   difflib.SequenceMatcher.ratio
+ *
+ * Optionally sets *RLCS to the length of the longest common
+ * subsequence of STRA and STRB. Using BUFFER for temporary storage,
+ * requires memory proportional to the length of the shorter string.
+ *
+ * The LCS algorithm used is described in, e.g.,
+ *
+ *   http://en.wikipedia.org/wiki/Longest_common_subsequence_problem
+ *
+ * Q: Why another LCS when we already have one in libsvn_diff?
+ * A: svn_diff__lcs is too heavyweight and too generic for the
+ *    purposes of similarity testing. Whilst it would be possible
+ *    to use a character-based tokenizer with it, we really only need
+ *    the *length* of the LCS for the similarity score, not all the
+ *    other information that svn_diff__lcs produces in order to
+ *    make printing diffs possible.
+ *
+ * Q: Is there a limit on the length of the string parameters?
+ * A: Only available memory. But note that the LCS algorithm used
+ *    has O(strlen(STRA) * strlen(STRB)) worst-case performance,
+ *    so do keep a rein on your enthusiasm.
+ */
+unsigned int
+svn_cstring__similarity(const char *stra, const char *strb,
+                        svn_membuf_t *buffer, apr_size_t *rlcs);
+
+/**
+ * Like svn_cstring__similarity, but accepts svn_string_t's instead
+ * of NUL-terminated character strings.
+ */
+unsigned int
+svn_string__similarity(const svn_string_t *stringa,
+                       const svn_string_t *stringb,
+                       svn_membuf_t *buffer, apr_size_t *rlcs);
+
 
 /** @} */
 

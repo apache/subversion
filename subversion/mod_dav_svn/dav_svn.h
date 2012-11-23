@@ -746,6 +746,20 @@ dav_svn__allow_read_resource(const dav_resource *resource,
                              apr_pool_t *pool);
 
 
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read repository REPOS_NAME.
+   This will invoke any authz modules loaded into Apache unless this
+   Subversion location has been configured to bypass those in favor of a
+   direct lookup in the Subversion authz subsystem. Use POOL for any
+   temporary allocation.
+   IMPORTANT: R must be request for DAV_SVN_RESTYPE_PARENTPATH_COLLECTION
+   resource.
+*/
+svn_boolean_t
+dav_svn__allow_list_repos(request_rec *r,
+                          const char *repos_name,
+                          apr_pool_t *pool);
+
 /* If authz is enabled in the specified BATON, return a read authorization
    function. Otherwise, return NULL. */
 svn_repos_authz_func_t

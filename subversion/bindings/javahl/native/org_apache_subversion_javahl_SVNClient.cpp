@@ -161,7 +161,8 @@ Java_org_apache_subversion_javahl_SVNClient_list
 
   ListCallback callback(jcallback);
   cl->list(url, revision, pegRevision, EnumMapper::toDepth(jdepth),
-           (int)jdirentFields, jfetchLocks ? true : false, &callback);
+           static_cast<int>(jdirentFields), jfetchLocks ? true : false,
+           &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -306,7 +307,7 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, jlimit, &callback);
+                  revProps, static_cast<long>(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL
@@ -958,8 +959,8 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySetRemote(path, jbaseRev, name, &message, value,
-                        jforce ? true:false,
+  cl->propertySetRemote(path, static_cast<svn_revnum_t>(jbaseRev),
+                        name, &message, value, jforce ? true : false,
                         revprops, jcallback ? &callback : NULL);
 }
 
@@ -1770,7 +1771,8 @@ Java_org_apache_subversion_javahl_SVNClient_patch
     return;
 
   PatchCallback callback(jcallback);
-  cl->patch(patchPath, targetPath, jdryRun ? true : false, (int) jstripCount,
+  cl->patch(patchPath, targetPath,
+            jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
 }

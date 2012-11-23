@@ -332,7 +332,7 @@ create_open(svn_wc__db_t **db,
                                   pool));
   SVN_ERR(svn_wc__db_open(db,
                           NULL /* config */,
-                          TRUE /* auto_upgrade */,
+                          FALSE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
 

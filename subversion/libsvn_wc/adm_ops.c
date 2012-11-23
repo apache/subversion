@@ -2211,7 +2211,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__db_open(&db, NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, TRUE, pool, pool));
   /* DB is now open. This is seemingly a "light" function that a caller
      may use repeatedly despite error return values. The rest of this
      function should aggressively close DB, even in the error case.  */
@@ -2329,6 +2329,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   svn_error_t *err = NULL;
 
   SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
+
+  SVN_ERR(svn_wc__write_check(db, is_root ? local_abspath
+                                          : svn_dirent_dirname(local_abspath,
+                                                               scratch_pool),
+                              scratch_pool));
 
   SVN_ERR(svn_wc__db_op_remove_node(&left_something,
                                     db, local_abspath,

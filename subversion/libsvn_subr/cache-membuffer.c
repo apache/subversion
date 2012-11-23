@@ -362,7 +362,7 @@ typedef struct entry_t
 typedef struct entry_group_t
 {
   /* number of entries used [0 .. USED-1] */
-  apr_size_t used;
+  apr_uint32_t used;
 
   /* the actual entries */
   entry_t entries[GROUP_SIZE];
@@ -614,10 +614,10 @@ get_entry(svn_membuffer_t *cache, apr_uint32_t idx)
 static APR_INLINE apr_uint32_t
 get_index(svn_membuffer_t *cache, entry_t *entry)
 {
-  apr_uint32_t group_index
+  apr_size_t group_index
     = ((char *)entry - (char *)cache->directory) / sizeof(entry_group_t);
 
-  return group_index * GROUP_SIZE
+  return (apr_uint32_t)group_index * GROUP_SIZE
        + (apr_uint32_t)(entry - cache->directory[group_index].entries);
 }
 
@@ -1186,7 +1186,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
              < total_size)
         ++segment_count_shift;
 
-      segment_count = 1 << segment_count_shift;
+      segment_count = (apr_size_t)1 << segment_count_shift;
     }
 
   /* If we have an extremely large cache (>512 GB), the default segment
@@ -1249,7 +1249,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     {
       /* allocate buffers and initialize cache members
        */
-      c[seg].segment_count = segment_count;
+      c[seg].segment_count = (apr_uint32_t)segment_count;
 
       c[seg].group_count = group_count;
       c[seg].directory = apr_pcalloc(pool,

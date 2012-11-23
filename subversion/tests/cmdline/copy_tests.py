@@ -4359,13 +4359,14 @@ def nonrecursive_commit_of_copy(sbox):
 # and then renaming the subdir, breaks history of the moved files.
 @Issue(3474)
 def copy_added_dir_with_copy(sbox):
-  """copy of new dir with copied file keeps history"""
+  """copy/mv of new dir with copied file keeps history"""
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   new_dir = sbox.ospath('NewDir');
   new_dir2 = sbox.ospath('NewDir2');
+  new_dir3 = sbox.ospath('NewDir3');
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
@@ -4384,6 +4385,16 @@ def copy_added_dir_with_copy(sbox):
       'NewDir2/mu'        : Item(status='A ', copied='+', wc_rev='-'),
     })
 
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # move of added dir also retains copy history of children
+  rav_svn(None, None, [], 'mv', new_dir, new_dir3)
+  expected_status.remove('NewDir', 'NewDir/mu')
+  expected_status.add(
+    {
+      'NewDir3'           : Item(status='A ', wc_rev='0'),
+      'NewDir3/mu'        : Item(status='A ', copied='+', wc_rev='-'),
+    })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -4670,7 +4681,7 @@ def changed_dir_data_should_match_checkout(sbox):
 def move_added_nodes(sbox):
   """move added nodes"""
 
-  sbox.build()
+  sbox.build(read_only=True)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
                                      sbox.ospath('X'),
@@ -4784,7 +4795,7 @@ def mixed_rev_copy_del(sbox):
 def copy_delete_undo(sbox, use_revert):
   "copy, delete child, undo"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   # Copy directory with children
@@ -4839,7 +4850,7 @@ def copy_delete_revert(sbox):
 def delete_replace_delete(sbox):
   "delete a directory scheduled for replacement"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   # Delete directory with children

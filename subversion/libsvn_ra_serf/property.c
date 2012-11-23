@@ -468,10 +468,6 @@ setup_propfind_headers(serf_bucket_t *headers,
 {
   propfind_context_t *ctx = setup_baton;
 
-  if (ctx->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
-    }
   serf_bucket_headers_setn(headers, "Depth", ctx->depth);
   if (ctx->label)
     {

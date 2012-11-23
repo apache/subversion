@@ -50,7 +50,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-wc_is_too_old_regex = (".*Working copy '.*' is too old \(format \d+.*\).*")
+wc_is_too_old_regex = (".*is too old \(format \d+.*\).*")
 
 
 def get_current_format():
@@ -258,28 +258,29 @@ def basic_upgrade(sbox):
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = wc_is_too_old_regex
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, None, wc_is_too_old_regex,
                                      'info', sbox.wc_dir)
 
-
-  # Upgrade on something not a versioned dir gives a 'not directory' error.
-  not_dir = ".*E155019.*%s'.*directory"
+  # Upgrade on something anywhere within a versioned subdir gives a
+  # 'not a working copy root' error. Upgrade on something without any
+  # versioned parent gives a 'not a working copy' error.
+  # Both cases use the same error code.
+  not_wc = ".*(E155007|E155019).*%s'.*not a working copy.*"
   os.mkdir(sbox.ospath('X'))
-  svntest.actions.run_and_verify_svn(None, None, not_dir % 'X',
+  svntest.actions.run_and_verify_svn(None, None, not_wc % 'X',
                                      'upgrade', sbox.ospath('X'))
 
-  svntest.actions.run_and_verify_svn(None, None, not_dir % 'Y',
+  # Upgrade on a non-existent subdir within an old WC gives a
+  # 'not a working copy' error.
+  svntest.actions.run_and_verify_svn(None, None, not_wc % 'Y',
                                      'upgrade', sbox.ospath('Y'))
-
-  svntest.actions.run_and_verify_svn(None, None, not_dir %
-                                        re.escape(sbox.ospath('A/mu')),
+  # Upgrade on a versioned file within an old WC gives a
+  # 'not a working copy' error.
+  svntest.actions.run_and_verify_svn(None, None, not_wc % 'mu',
                                      'upgrade', sbox.ospath('A/mu'))
-
-  # Upgrade on a versioned subdir gives a 'not root' error.
-  not_root = ".*E155019.*%s'.*root.*%s'"
-  svntest.actions.run_and_verify_svn(None, None, not_root %
-                                        ('A', re.escape(sbox.wc_dir)),
+  # Upgrade on a versioned dir within an old WC gives a
+  # 'not a working copy' error.
+  svntest.actions.run_and_verify_svn(None, None, not_wc % 'A',
                                      'upgrade', sbox.ospath('A'))
 
   # Now upgrade the working copy
@@ -794,10 +795,9 @@ def upgrade_tree_conflict_data(sbox):
   no_actual_node(sbox, 'A/D/G/tau')
 
   # While the upgrade from f20 to f21 will work the upgrade from f22
-  # to f23 will not, since working nodes are present, so the
-  # auto-upgrade will fail.  If this happens we cannot use the
-  # Subversion libraries to query the working copy.
-  exit_code, output, errput = svntest.main.run_svn('format 22', 'st', wc_dir)
+  # to f23 will not, since working nodes are present.
+  exit_code, output, errput = svntest.main.run_svn('format 22', 'upgrade',
+                                                    wc_dir)
 
   if not exit_code:
     run_and_verify_status_no_server(wc_dir, expected_status)
@@ -984,8 +984,8 @@ def upgrade_from_format_28(sbox):
   assert os.path.exists(old_pristine_path)
   assert not os.path.exists(new_pristine_path)
 
-  # Touch the WC to auto-upgrade it
-  svntest.actions.run_and_verify_svn(None, None, [], 'info', sbox.wc_dir)
+  # Upgrade the WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
   assert not os.path.exists(old_pristine_path)
   assert os.path.exists(new_pristine_path)

@@ -5,14 +5,14 @@
 # under the prevailing license of their project.
 
 """
-svncutter - clique-squash, range-selection, and property mutations on SVN dump files 
+svncutter - clique-squash, range-selection, property mutations, and skeletonization on SVN dump files 
 general usage: svncutter [-q] [-r SELECTION] SUBCOMMAND
 
 In all commands, the -r (or --range) option limits the selection of revisions
 over which an operation will be performed. A selection consists of
 one or more comma-separated ranges. A range may consist of an integer
 revision number or the special name HEAD for the head revision. Or it
-may be a colon-separated pair of integers, ir an integer followed by a
+may be a colon-separated pair of integers, or an integer followed by a
 colon followed by HEAD.
 
 Normally, each subcommand produces a progress spinner on standard
@@ -29,6 +29,7 @@ Available subcommands:
    proprename
    log
    setlog
+   skeleton
 """
 
 oneliners = {
@@ -39,6 +40,7 @@ oneliners = {
     "proprename": "Renaming revision properties",
     "log":        "Extracting log entries",
     "setlog":     "Mutating log entries",
+    "skeleton":   "strip content, leave only headers",
     }
 
 helpdict = {
@@ -51,7 +53,7 @@ This can be helpful in cleaning up after migrations from file-oriented
 revision control systems, or if a developer has been using a pre-2006
 version of Emacs VC.
 
-With the -m (or --mapfile) option, squash emits a map to tne named
+With the -m (or --mapfile) option, squash emits a map to the named
 file showing how old revision numbers map into new ones.
 
 With the -e (or --excise) option, the specified set of revisions in
@@ -68,7 +70,7 @@ anything that looks like the regular expression \\br[0-9]+\\b to be
 a comment reference (this is the same format that Subversion uses
 in log headers).
 
-Every revision in the file after the first omiited onf gets the property
+Every revision in the file after the first omitted one gets the property
 'svncutter:original' set to the revision number it had before the
 squash operation.
 
@@ -120,6 +122,12 @@ setlog: usage: svncutter [-r SELECTION] --logentries=LOGFILE setlog
 Replace the log entries in the input dumpfile with the corresponding entries
 in the LOGFILE, which should be in the format of an svn log output.
 Replacements may be restricted to a specified range.
+""",
+    "skeleton": """\
+skeleton: usage: svncutter [-r SELECTION] skeleton
+
+Strip out all content.  Does not produce a valid dumpfile, but may be useful
+when you need to examine a particularly complex node structure.
 """,
     }
 
@@ -177,7 +185,7 @@ class LineBufferedSource:
         "Read a line, require it to have a specified prefix."
         line = self.readline()
         if not line:
-            sys.stderr.write("svncutter: unexpected end of input." + os.linesep)
+            sys.stderr.write("svncutter: unexpected end of input while requiring '%s' input." % prefix + os.linesep)
             sys.exit(1)
         assert line.startswith(prefix)
         return line
@@ -211,7 +219,7 @@ class DumpfileSource(LineBufferedSource):
         LineBufferedSource.__init__(self, infile)
         self.baton = baton
     def read_revision_header(self, property_hook=None):
-        "Read a revision header, parsing its proprties."
+        "Read a revision header, parsing its properties."
         properties = {}
         propkeys = []
         stash = self.require("Revision-number:")
@@ -241,6 +249,43 @@ class DumpfileSource(LineBufferedSource):
         if self.baton:
             self.baton.twirl()
         return (revision, stash, properties)
+    def read_node(self):
+        "Read a node header and body."
+        #print "READ NODE BEGINS"
+        header = self.require("Node-path:")
+        while True:
+            line = self.readline()
+            #print "I see header line", repr(line)
+            if not line:
+                sys.stderr.write('unexpected EOF in node header' + os.linesep)
+                sys.exit(1)
+            header += line
+            if line == '\n':
+                break
+        properties = ""
+        if "Prop-content-length" in header:
+            while True:
+                line = self.readline()
+                #print "I see property line", repr(line)
+                if not line:
+                    sys.stderr.write('unexpected EOF in node properties' + os.linesep)
+                    sys.exit(1)
+                properties += line
+                if line == 'PROPS-END\n':
+                    break
+        content = ""
+        if "Text-content-length" in header:
+            while True:
+                line = self.readline()
+                #print "I see contents line", repr(line)
+                if not line:
+                    break
+                content += line
+                if line.startswith("Node-path:") or line.startswith("Revision-number"):
+                    self.push(line)
+                    break
+        #print "READ NODE ENDS"
+        return (header, properties, content)
     def read_until_next(self, prefix, revmap=None):
         "Accumulate lines until the next matches a specified prefix."
         stash = ""
@@ -312,7 +357,7 @@ class SubversionRange:
         return self.txt
 
 class Logfile:
-    "Represent the state of a lofile"
+    "Represent the state of a logfile"
     def __init__(self, readable, restriction=None):
         self.comments = {}
         self.source = LineBufferedSource(readable)
@@ -610,12 +655,49 @@ def setlog(source, logpatch, selection):
         return (propkeys, propdict)
     source.apply_property_hook(selection, loghook)
 
+def skeletonize(source, selection):
+    "Skeletonize a portion of the dump file defined by a revision selection."
+    emit = 0 in selection
+    stash = source.read_until_next("Revision-number:")
+    if emit:
+        sys.stdout.write(stash)
+    if not source.has_line_buffered():    
+        return
+    while True:
+        (revision,stash,properties) = source.read_revision_header()
+        if revision in selection:
+            sys.stdout.write(stash)
+            emit = True
+        elif revision == selection.upperbound()+1:
+            return
+        else:
+            source.read_until_next("Revision-number:")
+            continue
+        while True:
+            line = source.readline()
+            if not line:
+                return
+            elif line == '\n':
+                sys.stdout.write(line)
+                continue
+            elif line.startswith("Revision-number:"):
+                source.push(line)
+                break
+            elif line.startswith("Node-path:"):
+                source.push(line)
+                (header, properties, content) = source.read_node()
+                sys.stdout.write(header + properties)
+                continue
+            else:
+                sys.stderr.write("svncutter: parse at %s doesn't look right (%s), aborting!\n" % (revision, repr(line)))
+                sys.exit(1)
+
 if __name__ == '__main__':
     try:
-        (options, arguments) = getopt.getopt(sys.argv[1:], "ce:fl:m:p:qr:",
+        (options, arguments) = getopt.getopt(sys.argv[1:], "ce:fl:m:p:qr:s",
                                              ["excise", "flagrefs", "revprop=",
                                               "logpatch=", "map=",
-                                              "quiet", "range="])
+                                              "quiet", "range=", "skeleton"])
         selection = SubversionRange("0:HEAD")
         timefuzz = 300	# 5 minute fuzz
         compressmap = False
@@ -646,11 +728,11 @@ if __name__ == '__main__':
             sys.stderr.write("Type 'svncutter help' for usage." + os.linesep)
             sys.exit(1)
         baton = None
-        #if arguments[0] != 'help':
-        #    if progress:
-        #        baton = Baton(oneliners[arguments[0]], "done")
-        #    else:
-        #        baton = None
+        if arguments[0] != 'help':
+            if progress:
+                baton = Baton(oneliners[arguments[0]], "done")
+            else:
+                baton = None
         if arguments[0] == "squash":
             squash(DumpfileSource(sys.stdin, baton),
                    timefuzz, mapto, selection, excise, flagrefs, compressmap)
@@ -678,6 +760,8 @@ if __name__ == '__main__':
             if not logpatch:
                 sys.stderr.write("svncutter: setlog requires a log entries file.\n")
             setlog(DumpfileSource(sys.stdin, baton), logpatch, selection)
+        elif arguments[0] == "skeleton":
+            skeletonize(DumpfileSource(sys.stdin, baton), selection)            
         elif arguments[0] == "help":
             if len(arguments) == 1:
                 sys.stdout.write(__doc__)

@@ -24,20 +24,33 @@ module Test
   module Unit
     module Assertions
 
+      # make an intermediary assertion block handler
+      def _my_assert_block(&block)
+       if RUBY_VERSION > '1.9'
+         assert_block do
+           yield
+         end
+       else
+         _wrap_assertion do
+           yield
+         end
+       end
+      end
+
       def assert_true(boolean, message=nil)
-        _wrap_assertion do
+        _my_assert_block do
           assert_equal(true, boolean, message)
         end
       end
 
       def assert_false(boolean, message=nil)
-        _wrap_assertion do
+        _my_assert_block do
           assert_equal(false, boolean, message)
         end
       end
 
       def assert_nested_sorted_array(expected, actual, message=nil)
-        _wrap_assertion do
+        _my_assert_block do
           assert_equal(expected.collect {|elem| elem.sort},
                        actual.collect {|elem| elem.sort},
                        message)
@@ -45,7 +58,7 @@ module Test
       end
 
       def assert_equal_log_entries(expected, actual, message=nil)
-        _wrap_assertion do
+        _my_assert_block do
           actual = actual.collect do |entry|
             changed_paths = entry.changed_paths
             changed_paths.each_key do |path|

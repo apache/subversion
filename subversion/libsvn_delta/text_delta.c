@@ -709,6 +709,7 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
         {
         case svn_txdelta_source:
           /* Copy from source area.  */
+          assert(sbuf);
           assert(op->offset + op->length <= window->sview_len);
           fast_memcpy(tbuf + tpos, sbuf + op->offset, buf_len);
           break;
@@ -801,7 +802,8 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */
-      if (ab->sbuf_offset + ab->sbuf_len > window->sview_offset)
+      if (  (apr_size_t)ab->sbuf_offset + ab->sbuf_len
+          > (apr_size_t)window->sview_offset)
         {
           apr_size_t start =
             (apr_size_t)(window->sview_offset - ab->sbuf_offset);

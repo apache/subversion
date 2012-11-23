@@ -546,6 +546,10 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
  * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
  * @a local_abspath. If @a local_abspath was not deleted,
  * set @a *deleted_ancestor_abspath to @c NULL.
+ *
+ * A node is considered 'deleted' if it is deleted or moved-away, and is
+ * not replaced.
+ *
  * @a *deleted_ancestor_abspath is allocated in @a result_pool.
  * Use @a scratch_pool for all temporary allocations.
  */
@@ -668,35 +672,6 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                     const char *local_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
-
-
-/**
- * Return the location of the base for this node's next commit,
- * reflecting any local tree modifications affecting this node.
- *
- * Get the base location of @a local_abspath using @a wc_ctx.  If @a
- * local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- *
- * If this node has no uncommitted changes, return the same location as
- * svn_wc__node_get_base().
- *
- * If this node is moved-here or copied-here (possibly as part of a replace),
- * return the location of the copy/move source. Do the same even when the node
- * has been removed from a recursive copy (subpath excluded from the copy).
- *
- * Else, if this node is locally added, return SVN_INVALID_REVNUM/NULL, or
- * if locally deleted or replaced, return the revert-base location.
- */
-svn_error_t *
-svn_wc__node_get_commit_base(svn_revnum_t *revision,
-                             const char **repos_relpath,
-                             const char **repos_root_url,
-                             const char **repos_uuid,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
 
 /**
  * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:

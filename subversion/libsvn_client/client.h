@@ -326,17 +326,18 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
-   is is a hash as per svn_client__get_all_auto_props.
+/* If AUTOPROPS is not null: Then read automatic properties matching PATH
+   from AUTOPROPS.  AUTOPROPS is is a hash as per
+   svn_client__get_all_auto_props.  Set *PROPERTIES to a hash containing
+   propname/value pairs (const char * keys mapping to svn_string_t * values).
 
-   Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
-   may be an empty hash, but will not be NULL.
+   If AUTOPROPS is null then set *PROPERTIES to an empty hash.
 
-   Set *MIMETYPE to the mimetype, if any, or to NULL.
-
-   If MAGIC_COOKIE is not NULL and no mime-type can be determined
-   via CTX->config try to detect the mime-type with libmagic.
+   If *MIMETYPE is null or "application/octet-stream" then check AUTOPROPS
+   for a matching svn:mime-type.  If AUTOPROPS is null or no match is found
+   and MAGIC_COOKIE is not NULL, then then try to detect the mime-type with
+   libmagic.  If a mimetype is found then add it to *PROPERTIES and set
+   *MIMETYPE to the mimetype value or NULL otherwise.
 
    Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
@@ -351,11 +352,11 @@ svn_error_t *svn_client__get_paths_auto_props(
   apr_pool_t *scratch_pool);
 
 /* Gather all auto-props from CTX->config (or none if auto-props are
-   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
+   disabled) and all svn:auto-props explicitly set on or inherited
    by PATH_OR_URL.
 
    If PATH_OR_URL is an unversioned WC path then gather the
-   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
+   svn:auto-props inherited by PATH_OR_URL's nearest versioned
    parent.
 
    If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
@@ -366,10 +367,10 @@ svn_error_t *svn_client__get_paths_auto_props(
    names to const char *property values.
 
    If a given property name exists for the same pattern in both the config
-   file and in an a svn:inheritable-auto-props property, the latter overrides the
+   file and in an a svn:auto-props property, the latter overrides the
    former.  If a given property name exists for the same pattern in two
-   different inherited svn:inheritable-auto-props, then the closer path-wise
-   property overrides the more distant. svn:inheritable-auto-props explicitly set
+   different inherited svn:auto-props, then the closer path-wise
+   property overrides the more distant. svn:auto-props explicitly set
    on PATH_OR_URL have the highest precedence and override inherited props
    and config file settings.
 
@@ -383,7 +384,7 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
 /* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
    patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
-   svn:inheritable-ignores properties set on, or inherited by, LOCAL_ABSPATH.
+   svn:global-ignores properties set on, or inherited by, LOCAL_ABSPATH.
    If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
    then find its nearest versioned parent path, if any, and return the ignore
    patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
@@ -398,7 +399,7 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* Get a list of ignore patterns defined by the svn:inheritable-ignores
+/* Get a list of ignore patterns defined by the svn:global-ignores
    properties set on, or inherited by, PATH_OR_URL.  Store the collected
    patterns as const char * elements in the array *IGNORES.  Allocate
    *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
@@ -628,17 +629,16 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
-   implement the file comparison function
+   DIFF_CALLBACKS/DIFF_CMD_BATON represent the callback that implements
+   the comparison.
 
    DEPTH is the depth to recurse.
 
    RA_SESSION is an RA session through which this editor may fetch
    properties, file contents and directory listings of the 'old' side of the
    diff. It is a separate RA session from the one through which this editor
-   is being driven.
-
-   REVISION is the start revision in the comparison.
+   is being driven. REVISION is the revision number of the 'old' side of
+   the diff.
 
    For each deleted directory, if WALK_DELETED_DIRS is true then just call
    the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
@@ -899,6 +899,17 @@ svn_error_t *
 svn_client__condense_commit_items(const char **base_url,
                                   apr_array_header_t *commit_items,
                                   apr_pool_t *pool);
+
+
+/* Like svn_ra_stat() on the ra session root, but with a compatibility
+   hack for pre-1.2 svnserve that don't support this api. */
+svn_error_t *
+svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
+                               svn_revnum_t rev,
+                               svn_dirent_t **dirent_p,
+                               apr_uint32_t dirent_fields,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
 
 
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON

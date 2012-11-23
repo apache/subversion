@@ -57,7 +57,8 @@ extern "C" {
 #define UNUSED_CTX(x) ((void)(x))
 
 /** Our User-Agent string. */
-#define USER_AGENT "SVN/" SVN_VER_NUMBER " serf/" \
+#define USER_AGENT "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ")" \
+                   " serf/" \
                    APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
@@ -188,7 +189,7 @@ struct svn_ra_serf__session_t {
   const char *uuid;
 
   /* Connection timeout value */
-  apr_short_interval_time_t timeout;
+  apr_interval_time_t timeout;
 
   /* HTTPv1 flags */
   svn_tristate_t supports_deadprop_count;
@@ -391,6 +392,11 @@ typedef struct svn_ra_serf__handler_t {
 
   /* The content-type of the request body. */
   const char *body_type;
+
+  /* If TRUE then default Accept-Encoding request header is not configured for
+     request. If FALSE then 'gzip' accept encoding will be used if compression
+     enabled. */
+  svn_boolean_t custom_accept_encoding;
 
   /* Has the request/response been completed?  */
   svn_boolean_t done;
@@ -953,6 +959,7 @@ svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             svn_boolean_t *network_eof,
                              apr_pool_t *scratch_pool);
 
 

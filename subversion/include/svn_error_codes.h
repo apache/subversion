@@ -1244,7 +1244,7 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 22,
              "Can't perform this operation without a valid lock token")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN_BY_SERVER,
              SVN_ERR_CLIENT_CATEGORY_START + 23,
              "The operation is forbidden by the server")
@@ -1424,6 +1424,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
              SVN_ERR_MISC_CATEGORY_START + 37,
              "failed to parse version number string")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_CORRUPTED_ATOMIC_STORAGE,
+             SVN_ERR_MISC_CATEGORY_START + 38,
+             "Atomic data storage is corrupt")
 
   /* command-line client errors */
 

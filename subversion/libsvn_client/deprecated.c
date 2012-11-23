@@ -78,6 +78,19 @@ capture_commit_info(const svn_commit_info_t *commit_info,
 
 /*** From add.c ***/
 svn_error_t *
+svn_client_add4(const char *path,
+                svn_depth_t depth,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_add5(path, depth, force, no_ignore, FALSE, add_parents,
+                         ctx, pool);
+}
+
+svn_error_t *
 svn_client_add3(const char *path,
                 svn_boolean_t recursive,
                 svn_boolean_t force,
@@ -398,7 +411,7 @@ svn_client_import4(const char *path,
                    apr_pool_t *pool)
 {
   return svn_error_trace(svn_client_import5(path, url, depth, no_ignore,
-                                            ignore_unknown_node_types,
+                                            FALSE, ignore_unknown_node_types,
                                             revprop_table,
                                             NULL, NULL,
                                             commit_callback, commit_baton,
@@ -2385,7 +2398,7 @@ info_from_info2(svn_info_t **new_info,
   info->size64              = info2->size;
   if (info2->size == SVN_INVALID_FILESIZE)
     info->size               = SVN_INFO_SIZE_UNKNOWN;
-  else if (((apr_size_t)info->size64) == info->size64)
+  else if (((svn_filesize_t)(apr_size_t)info->size64) == info->size64)
     info->size               = (apr_size_t)info->size64;
   else /* >= 4GB */
     info->size               = SVN_INFO_SIZE_UNKNOWN;
@@ -2411,7 +2424,7 @@ info_from_info2(svn_info_t **new_info,
         info->depth = svn_depth_infinity;
 
       info->working_size64      = info2->wc_info->recorded_size;
-      if (((apr_size_t)info->working_size64) == info->working_size64)
+      if (((svn_filesize_t)(apr_size_t)info->working_size64) == info->working_size64)
         info->working_size       = (apr_size_t)info->working_size64;
       else /* >= 4GB */
         info->working_size       = SVN_INFO_SIZE_UNKNOWN;

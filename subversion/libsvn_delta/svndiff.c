@@ -181,6 +181,7 @@ zlib_encode(const char *data,
           return SVN_NO_ERROR;
         }
       out->len = endlen + intlen;
+      out->data[out->len] = 0;
     }
   return SVN_NO_ERROR;
 }
@@ -569,6 +570,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
                                 NULL,
                                 _("Size of uncompressed data "
                                   "does not match stored original length"));
+      out->data[zlen] = 0;
       out->len = zlen;
     }
   return SVN_NO_ERROR;
@@ -852,7 +854,7 @@ write_handler(void *baton,
       /* Check for integer overflow.  */
       if (sview_offset < 0 || inslen + newlen < inslen
           || sview_len + tview_len < sview_len
-          || sview_offset + sview_len < sview_offset)
+          || (apr_size_t)sview_offset + sview_len < (apr_size_t)sview_offset)
         return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
                                 _("Svndiff contains corrupt window header"));
 
@@ -1016,7 +1018,7 @@ read_window_header(svn_stream_t *stream, svn_filesize_t *sview_offset,
   /* Check for integer overflow.  */
   if (*sview_offset < 0 || *inslen + *newlen < *inslen
       || *sview_len + *tview_len < *sview_len
-      || *sview_offset + *sview_len < *sview_offset)
+      || (apr_size_t)*sview_offset + *sview_len < (apr_size_t)*sview_offset)
     return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
                             _("Svndiff contains corrupt window header"));
 

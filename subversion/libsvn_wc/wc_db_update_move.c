@@ -47,6 +47,7 @@
 
 #include "wc.h"
 #include "wc_db_private.h"
+#include "wc-queries.h"
 #include "conflicts.h"
 #include "workqueue.h"
 
@@ -55,8 +56,8 @@
  */
 
 struct tc_editor_baton {
-  const char *src_relpath;
-  const char *dst_relpath;
+  const char *move_root_src_relpath;
+  const char *move_root_dst_relpath;
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
   svn_skel_t **work_items;
@@ -122,130 +123,209 @@ tc_editor_alter_directory(void *baton,
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 }
 
+
+/* Check whether the node at LOCAL_RELPATH in the working copy at WCROOT
+ * is shadowed by some node at a higher op depth than EXPECTED_OP_DEPTH. */
+static svn_error_t *
+check_shadowed_node(svn_boolean_t *is_shadowed,
+                    int expected_op_depth,
+                    const char *local_relpath,
+                    svn_wc__db_wcroot_t *wcroot)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      int op_depth = svn_sqlite__column_int(stmt, 0);
+
+      if (op_depth > expected_op_depth)
+        {
+          *is_shadowed = TRUE;
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *is_shadowed = FALSE;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+/* Update text and prop contents of the working file at DST_RELPATH
+ * in the working copy at WCROOT, from OLD_VERSION to NEW_VERSION,
+ * based on pristine contents identified by MOVE_SRC_CHECKSUM and
+ * MOVE_DST_CHECKSUM. MOVE_DST_REPOS_RELPATH is the repository path 
+ * the node at DST_RELPATH would be committed to.
+ * Use working copy database DB.
+ * Use NOTIFY_FUNC and NOTIFY_BATON for notifications.
+ * Add any required work items to *WORK_ITEMS, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+update_working_file(svn_skel_t **work_items,
+                    const char *dst_relpath,
+                    const char *move_dst_repos_relpath,
+                    const svn_checksum_t *move_src_checksum,
+                    const svn_checksum_t *move_dst_checksum,
+                    svn_wc_conflict_version_t *old_version,
+                    svn_wc_conflict_version_t *new_version,
+                    svn_wc__db_wcroot_t *wcroot,
+                    svn_wc__db_t *db,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  const char *moved_to_abspath = svn_dirent_join(wcroot->abspath,
+                                                 dst_relpath,
+                                                 scratch_pool);
+  const char *pre_update_pristine_abspath;
+  const char *post_update_pristine_abspath;
+  svn_skel_t *conflict_skel;
+  enum svn_wc_merge_outcome_t merge_outcome;
+  svn_wc_notify_state_t content_state;
+  svn_wc_notify_t *notify;
+
+  /*
+   * Run a 3-way merge to update the file, using the pre-update
+   * pristine text as the merge base, the post-update pristine
+   * text as the merge-left version, and the current content of the
+   * moved-here working file as the merge-right version.
+   */
+  SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
+                                       db, wcroot->abspath,
+                                       move_dst_checksum,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
+                                       db, wcroot->abspath,
+                                       move_src_checksum,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_merge(work_items, &conflict_skel,
+                                 &merge_outcome, db,
+                                 pre_update_pristine_abspath,
+                                 post_update_pristine_abspath,
+                                 moved_to_abspath,
+                                 moved_to_abspath,
+                                 NULL, NULL, NULL, /* diff labels */
+                                 NULL, /* actual props */
+                                 FALSE, /* dry-run */
+                                 NULL, /* diff3-cmd */
+                                 NULL, /* merge options */
+                                 NULL, /* prop_diff */
+                                 NULL, NULL, /* cancel_func + baton */
+                                 result_pool, scratch_pool));
+
+  if (merge_outcome == svn_wc_merge_conflict)
+    {
+      svn_skel_t *work_item;
+      svn_wc_conflict_version_t *original_version;
+
+      if (conflict_skel)
+        {
+          original_version = svn_wc_conflict_version_dup(old_version,
+                                                         scratch_pool);
+          original_version->path_in_repos = move_dst_repos_relpath;
+          original_version->node_kind = svn_node_file;
+          SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
+                                                      original_version,
+                                                      scratch_pool,
+                                                      scratch_pool));
+          SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
+                                                  moved_to_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool,
+                                                  scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+        }
+      content_state = svn_wc_notify_state_conflicted;
+    }
+  else
+    {
+      svn_boolean_t is_locally_modified;
+
+      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                               db, moved_to_abspath,
+                                               FALSE /* exact_comparison */,
+                                               scratch_pool));
+      if (is_locally_modified)
+        content_state = svn_wc_notify_state_merged;
+      else
+        content_state = svn_wc_notify_state_changed;
+    }
+
+  notify = svn_wc_create_notify(moved_to_abspath,
+                                svn_wc_notify_update_update,
+                                scratch_pool);
+  notify->kind = svn_node_file;
+  notify->content_state = content_state;
+  notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
+  notify->old_revision = old_version->peg_rev;
+  notify->revision = new_version->peg_rev;
+  notify_func(notify_baton, notify, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
-                     svn_revnum_t expected_moved_here_revision,
+                     svn_revnum_t expected_move_dst_revision,
                      apr_hash_t *props,
-                     const svn_checksum_t *moved_away_checksum,
+                     const svn_checksum_t *move_src_checksum,
                      svn_stream_t *post_update_contents,
                      apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  const svn_checksum_t *moved_here_checksum;
-  const char *original_repos_relpath;
-  svn_revnum_t original_revision;
-  svn_kind_t kind;
+  const svn_checksum_t *move_dst_checksum;
+  const char *move_dst_repos_relpath;
+  svn_revnum_t move_dst_revision;
+  svn_kind_t move_dst_kind;
 
   /* Get kind, revision, and checksum of the moved-here node. */
-  /* 
-   * ### Currently doesn't work right if the moved-away node has been replaced.
-   * ### Need to read info from the move op-root's op-depth, not WORKING, to
-   * ### properly update shadowed nodes within multi-layer move destinations.
-   */
-  SVN_ERR(svn_wc__db_read_info_internal(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, &moved_here_checksum,
-                                        NULL, &original_repos_relpath, NULL,
-                                        &original_revision, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, b->wcroot, dst_relpath,
-                                        scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(original_revision == expected_moved_here_revision);
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
+                                    &move_dst_repos_relpath, NULL, NULL, NULL,
+                                    NULL, NULL, &move_dst_checksum, NULL,
+                                    NULL, b->wcroot, dst_relpath,
+                                    relpath_depth(b->move_root_dst_relpath),
+                                    scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
+  SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
-  /* ### check original revision against moved-here op-root revision? */
-  if (kind != svn_kind_file)
-    return SVN_NO_ERROR;
+  /* ### TODO update revision etc. in NODES table */
 
-  /* ### what if checksum kind differs?*/
-  if (!svn_checksum_match(moved_away_checksum, moved_here_checksum))
+  /* Update file and prop contents if the update has changed them. */
+  if (!svn_checksum_match(move_src_checksum, move_dst_checksum)
+      /* ### || props have changed */)
     {
-      const char *moved_to_abspath = svn_dirent_join(b->wcroot->abspath,
-                                                     dst_relpath,
-                                                     scratch_pool);
-      const char *pre_update_pristine_abspath;
-      const char *post_update_pristine_abspath;
-      svn_skel_t *conflict_skel;
-      enum svn_wc_merge_outcome_t merge_outcome;
-      svn_wc_notify_state_t content_state;
-      svn_wc_notify_t *notify;
+      svn_boolean_t is_shadowed;
 
-      /*
-       * Run a 3-way merge to update the file, using the pre-update
-       * pristine text as the merge base, the post-update pristine
-       * text as the merge-left version, and the current content of the
-       * moved-here working file as the merge-right version.
-       */
-      SVN_ERR(svn_wc__db_pristine_get_path(&pre_update_pristine_abspath,
-                                           b->db, moved_to_abspath,
-                                           moved_here_checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__db_pristine_get_path(&post_update_pristine_abspath,
-                                           b->db, moved_to_abspath,
-                                           moved_away_checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__internal_merge(b->work_items, &conflict_skel,
-                                     &merge_outcome, b->db,
-                                     pre_update_pristine_abspath,
-                                     post_update_pristine_abspath,
-                                     moved_to_abspath,
-                                     moved_to_abspath,
-                                     NULL, NULL, NULL, /* diff labels */
-                                     NULL, /* actual props */
-                                     FALSE, /* dry-run */
-                                     NULL, /* diff3-cmd */
-                                     NULL, /* merge options */
-                                     NULL, /* prop_diff */
-                                     NULL, NULL, /* cancel_func + baton */
-                                     b->result_pool, scratch_pool));
-
-      if (merge_outcome == svn_wc_merge_conflict)
+      /* If the node is shadowed by a higher layer, we need to flag a 
+       * tree conflict and must not touch the working file. */
+      SVN_ERR(check_shadowed_node(&is_shadowed,
+                                  relpath_depth(b->move_root_dst_relpath),
+                                  dst_relpath, b->wcroot));
+      if (is_shadowed)
         {
-          svn_skel_t *work_item;
-          svn_wc_conflict_version_t *original_version;
-
-          if (conflict_skel)
-            {
-              original_version = svn_wc_conflict_version_dup(b->old_version,
-                                                             scratch_pool);
-              original_version->path_in_repos = original_repos_relpath;
-              original_version->node_kind = svn_node_file;
-              SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                                          original_version,
-                                                          scratch_pool,
-                                                          scratch_pool));
-              SVN_ERR(svn_wc__conflict_create_markers(&work_item, b->db,
-                                                      moved_to_abspath,
-                                                      conflict_skel,
-                                                      scratch_pool,
-                                                      scratch_pool));
-              *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
-                                                b->result_pool);
-            }
-          content_state = svn_wc_notify_state_conflicted;
+          /* ### TODO flag tree conflict */
         }
       else
-        {
-          svn_boolean_t is_locally_modified;
-
-          SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
-                                                   b->db, moved_to_abspath,
-                                                   FALSE /* exact_comparison */,
-                                                   scratch_pool));
-          if (is_locally_modified)
-            content_state = svn_wc_notify_state_merged;
-          else
-            content_state = svn_wc_notify_state_changed;
-        }
-
-      notify = svn_wc_create_notify(moved_to_abspath,
-                                    svn_wc_notify_update_update,
-                                    scratch_pool);
-      notify->kind = svn_node_file;
-      notify->content_state = content_state;
-      notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
-      notify->old_revision = b->old_version->peg_rev;
-      notify->revision = b->new_version->peg_rev;
-      b->notify_func(b->notify_baton, notify, scratch_pool);
+        SVN_ERR(update_working_file(b->work_items, dst_relpath,
+                                    move_dst_repos_relpath,
+                                    move_src_checksum, move_dst_checksum,
+                                    b->old_version, b->new_version,
+                                    b->wcroot, b->db,
+                                    b->notify_func, b->notify_baton,
+                                    b->result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -310,7 +390,7 @@ tc_editor_complete(void *baton,
   svn_wc_notify_t *notify;
 
   notify = svn_wc_create_notify(svn_dirent_join(b->wcroot->abspath,
-                                                b->dst_relpath,
+                                                b->move_root_dst_relpath,
                                                 scratch_pool),
                                 svn_wc_notify_update_completed,
                                 scratch_pool);
@@ -351,6 +431,11 @@ static const svn_editor_cb_many_t editor_ops = {
  * Driver code.
  */
 
+/* Set *OPERATION, *LOCAL_CHANGE, *INCOMING_CHANGE, *OLD_VERSION, *NEW_VERSION
+ * to reflect the tree conflict on the victim SRC_ABSPATH in DB.
+ *
+ * If SRC_ABSPATH is not a tree-conflict victim, return an error.
+ */
 static svn_error_t *
 get_tc_info(svn_wc_operation_t *operation,
             svn_wc_conflict_reason_t *local_change,
@@ -404,7 +489,7 @@ get_tc_info(svn_wc_operation_t *operation,
           svn_revnum_t revision;
           svn_node_kind_t node_kind;
 
-          /* Construct b->new_version from BASE info. */
+          /* Construct new_version from BASE info. */
           SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision,
                                            &repos_relpath, &repos_root_url,
                                            &repos_uuid, NULL, NULL, NULL,
@@ -430,47 +515,51 @@ get_tc_info(svn_wc_operation_t *operation,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_file(svn_editor_t *tc_editor,
                        const char *src_relpath,
                        const char *dst_relpath,
-                       const char *move_dst_op_root_relpath,
-                       svn_revnum_t move_dst_op_root_revision,
+                       const char *move_root_dst_relpath,
+                       svn_revnum_t move_root_dst_revision,
                        svn_wc__db_t *db,
                        svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
 {
   svn_kind_t kind;
   svn_stream_t *post_update_contents;
-  const svn_checksum_t *moved_away_checksum;
+  const svn_checksum_t *move_src_checksum;
                     
   /* Read post-update contents from the updated moved-away file and tell
    * the editor to merge them into the moved-here file. */
   SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &moved_away_checksum, NULL, NULL, db,
+                                        &move_src_checksum, NULL, NULL, db,
                                         svn_dirent_join(wcroot->abspath,
                                                         src_relpath,
                                                         scratch_pool),
                                         scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_pristine_read(&post_update_contents, NULL, db,
-                                   wcroot->abspath, moved_away_checksum,
+                                   wcroot->abspath, move_src_checksum,
                                    scratch_pool, scratch_pool));
   SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
-                                move_dst_op_root_revision,
+                                move_root_dst_revision,
                                 NULL, /* ### TODO props */
-                                moved_away_checksum,
+                                move_src_checksum,
                                 post_update_contents));
   SVN_ERR(svn_stream_close(post_update_contents));
 
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_dir(svn_editor_t *tc_editor,
                       const char *src_relpath,
                       const char *dst_relpath,
-                      const char *move_dst_op_root_relpath,
-                      svn_revnum_t move_dst_op_root_revision,
+                      const char *move_root_dst_relpath,
+                      svn_revnum_t move_root_dst_revision,
                       svn_wc__db_t *db,
                       svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
@@ -484,12 +573,14 @@ update_moved_away_dir(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 update_moved_away_subtree(svn_editor_t *tc_editor,
                           const char *src_relpath,
                           const char *dst_relpath,
-                          const char *move_dst_op_root_relpath,
-                          svn_revnum_t move_dst_op_root_revision,
+                          const char *move_root_dst_relpath,
+                          svn_revnum_t move_root_dst_revision,
                           svn_wc__db_t *db,
                           svn_wc__db_wcroot_t *wcroot,
                           apr_pool_t *scratch_pool)
@@ -499,8 +590,8 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   int i;
 
   SVN_ERR(update_moved_away_dir(tc_editor, src_relpath, dst_relpath,
-                                move_dst_op_root_relpath,
-                                move_dst_op_root_revision,
+                                move_root_dst_relpath,
+                                move_root_dst_revision,
                                 db, wcroot, scratch_pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db,
@@ -531,7 +622,7 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
                                                 wcroot, child_src_relpath,
                                                 iterpool, iterpool));
       if (child_dst_op_root_relpath == NULL ||
-          strcmp(child_dst_op_root_relpath, move_dst_op_root_relpath) != 0)
+          strcmp(child_dst_op_root_relpath, move_root_dst_relpath) != 0)
         continue;
 
       SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &child_kind,
@@ -544,14 +635,14 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
       if (child_kind == svn_kind_file || child_kind == svn_kind_symlink)
         SVN_ERR(update_moved_away_file(tc_editor, child_src_relpath,
                                        child_dst_relpath,
-                                       move_dst_op_root_relpath,
-                                       move_dst_op_root_revision,
+                                       move_root_dst_relpath,
+                                       move_root_dst_revision,
                                        db, wcroot, iterpool));
       else if (child_kind == svn_kind_dir)
         SVN_ERR(update_moved_away_subtree(tc_editor, child_src_relpath,
                                           child_dst_relpath,
-                                          move_dst_op_root_relpath,
-                                          move_dst_op_root_revision,
+                                          move_root_dst_relpath,
+                                          move_root_dst_revision,
                                           db, wcroot, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -559,6 +650,8 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* ### Drive TC_EDITOR so as to ...
+ */
 static svn_error_t *
 drive_tree_conflict_editor(svn_editor_t *tc_editor,
                            const char *src_relpath,
@@ -628,7 +721,8 @@ struct update_moved_away_conflict_victim_baton {
   apr_pool_t *result_pool;
 };
 
-/* An implementation of svn_wc__db_txn_callback_t. */
+/* The body of svn_wc__db_update_moved_away_conflict_victim(), which see.
+ * An implementation of svn_wc__db_txn_callback_t. */
 static svn_error_t *
 update_moved_away_conflict_victim(void *baton,
                                   svn_wc__db_wcroot_t *wcroot,
@@ -643,13 +737,11 @@ update_moved_away_conflict_victim(void *baton,
 
   /* Construct editor baton. */
   tc_editor_baton = apr_pcalloc(scratch_pool, sizeof(*tc_editor_baton));
-  tc_editor_baton->src_relpath = b->victim_relpath;
-  SVN_ERR(svn_wc__db_scan_deletion_internal(NULL,
-                                            &tc_editor_baton->dst_relpath,
-                                            NULL, NULL, wcroot,
-                                            tc_editor_baton->src_relpath,
-                                            scratch_pool, scratch_pool));
-  if (tc_editor_baton->dst_relpath == NULL)
+  tc_editor_baton->move_root_src_relpath = b->victim_relpath;
+  SVN_ERR(svn_wc__db_scan_deletion_internal(
+            NULL, &tc_editor_baton->move_root_dst_relpath, NULL, NULL,
+            wcroot, b->victim_relpath, scratch_pool, scratch_pool));
+  if (tc_editor_baton->move_root_dst_relpath == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("The node '%s' has not been moved away"),
                              svn_dirent_local_style(
@@ -674,8 +766,8 @@ update_moved_away_conflict_victim(void *baton,
 
   /* ... and drive it. */
   SVN_ERR(drive_tree_conflict_editor(tc_editor,
-                                     tc_editor_baton->src_relpath,
-                                     tc_editor_baton->dst_relpath,
+                                     tc_editor_baton->move_root_src_relpath,
+                                     tc_editor_baton->move_root_dst_relpath,
                                      b->operation,
                                      b->local_change, b->incoming_change,
                                      tc_editor_baton->old_version,

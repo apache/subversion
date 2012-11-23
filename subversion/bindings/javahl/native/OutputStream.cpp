@@ -95,8 +95,7 @@ svn_error_t *OutputStream::write(void *baton, const char *buffer,
     }
 
   // convert the data to a Java byte array
-  jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
-                                            *len);
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -120,7 +119,7 @@ svn_error_t *OutputStream::close(void *baton)
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton
-  OutputStream *that = (OutputStream*)baton;
+  OutputStream *that = reinterpret_cast<OutputStream*>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.

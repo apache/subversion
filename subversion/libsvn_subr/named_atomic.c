@@ -80,12 +80,12 @@
 /* Particle that will be appended to the namespace name to form the
  * name of the mutex / lock file used for that namespace.
  */
-#define MUTEX_NAME_SUFFIX "Mutex"
+#define MUTEX_NAME_SUFFIX ".mutex"
 
 /* Particle that will be appended to the namespace name to form the
  * name of the shared memory file that backs that namespace.
  */
-#define SHM_NAME_SUFFIX "Shm"
+#define SHM_NAME_SUFFIX ".shm"
 
 /* Platform-dependent implementations of our basic atomic operations.
  * NA_SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
@@ -162,9 +162,11 @@ synched_cmpxchg(volatile apr_int64_t *mem,
 }
 
 #define NA_SYNCHRONIZE(_atomic,op)\
+  do{\
   SVN_ERR(lock(_atomic->mutex));\
   op;\
-  SVN_ERR(unlock(_atomic->mutex,SVN_NO_ERROR));
+  SVN_ERR(unlock(_atomic->mutex,SVN_NO_ERROR));\
+  }while(0)
 
 #define NA_SYNCHRONIZE_IS_FAST FALSE
 
@@ -238,6 +240,7 @@ struct svn_atomic_namespace__t
 /* On most operating systems APR implements file locks per process, not
  * per file. I.e. the lock file will only sync. among processes but within
  * a process, we must use a mutex to sync the threads. */
+/* Compare ../libsvn_fs_fs/fs.h:SVN_FS_FS__USE_LOCK_MUTEX */
 #if APR_HAS_THREADS && !defined(WIN32)
 #define USE_THREAD_MUTEX 1
 #else
@@ -462,10 +465,12 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   if (!err && new_ns->data)
     {
-      /* Sanitize (in case of data corruption)
+      /* Detect severe cases of corruption (i.e. when some outsider messed
+       * with our data file)
        */
       if (new_ns->data->count > MAX_ATOMIC_COUNT)
-        new_ns->data->count = MAX_ATOMIC_COUNT;
+        return svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
+                       _("Number of atomics in namespace is too large."));
 
       /* Cache the number of existing, complete entries.  There can't be
        * incomplete ones from other processes because we hold the mutex.
