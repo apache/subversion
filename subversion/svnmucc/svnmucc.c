@@ -926,7 +926,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
     "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG so override a configuration option\n"
+    "  --config-option ARG   use ARG to override a configuration option\n"
     "  --no-auth-cache       do not cache authentication tokens\n"
     "  --version             print version information\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
