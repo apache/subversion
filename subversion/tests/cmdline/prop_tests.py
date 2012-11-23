@@ -2677,12 +2677,23 @@ def almost_known_prop_names(sbox):
   wc_dir = sbox.wc_dir
   iota_path = sbox.ospath('iota')
 
-  # Node properties
+  # Same prefix, different prop name
   svntest.actions.set_prop('svn:exemutable', 'x', iota_path,
                            "svn: E195011: 'svn:exemutable' "
                            "is not a valid svn: property name")
   svntest.actions.set_prop('svn:exemutable', 'x', iota_path, force=True)
-  svntest.actions.set_prop('tsvn:exemutable', 'x', iota_path)
+
+  # Similar prefix, different prop name
+  svntest.actions.set_prop('svm:exemutable', 'x', iota_path)
+
+  # Similar prefix, same prop name
+  svntest.actions.set_prop('svm:executable', 'x', iota_path,
+                           "svn: E195011: 'svm:executable' "
+                           "is not a valid svn: property name")
+  svntest.actions.set_prop('svm:executable', 'x', iota_path, force=True)
+
+  # Different prefix, same prop name
+  svntest.actions.set_prop('tsvn:executable', 'x', iota_path)
 
 ########################################################################
 # Run the tests
