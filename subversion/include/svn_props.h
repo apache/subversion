@@ -443,6 +443,7 @@ svn_prop_name_is_valid(const char *prop_name);
                                 SVN_PROP_SPECIAL, \
                                 SVN_PROP_EXTERNALS, \
                                 SVN_PROP_MERGEINFO, \
+                                SVN_PROP_INHERITABLE_AUTO_PROPS, \
                                 SVN_PROP_INHERITABLE_IGNORES, \
                                 \
                                 SVN_PROP_TEXT_TIME, \
