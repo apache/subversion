@@ -27,6 +27,8 @@
 
 /*** Includes. ***/
 
+#include <stdlib.h>
+
 #include <apr_hash.h>
 #include "svn_cmdline.h"
 #include "svn_string.h"
@@ -40,6 +42,7 @@
 #include "svn_base64.h"
 #include "cl.h"
 
+#include "private/svn_string_private.h"
 #include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
@@ -223,3 +226,152 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
     }
 }
 
+
+/* Context for sorting property names */
+struct simprop_context_t
+{
+  svn_string_t name;      /* The name of the property we're checking against */
+  svn_membuf_t buffer;    /* Buffer for similariry testing */
+};
+
+struct simprop_t
+{
+  svn_string_t name;      /* svn: property name */
+  unsigned int score;     /* the similarity score */
+  apr_size_t diff;        /* number of chars different from context.name */
+#if !HAVE_QSORT_R
+  struct simprop_context_t *context; /* sorting context for qsort() */
+#endif
+};
+
+/* Similarity test between two property names */
+static APR_INLINE unsigned int
+simprop_key_diff(const svn_string_t *key, const svn_string_t *ctx,
+                 svn_membuf_t *buffer, apr_size_t *diff)
+{
+  apr_size_t lcs;
+  const unsigned int score = svn_string__similarity(key, ctx, buffer, &lcs);
+  if (key->len > ctx->len)
+    *diff = key->len - lcs;
+  else
+    *diff = ctx->len - lcs;
+  return score;
+}
+
+/* Key comparator for qsort or qsort_r for simprop_t */
+#if !HAVE_QSORT_R
+static int
+simprop_compare(const void *pkeya, const void *pkeyb)
+#else
+static int
+simprop_compare(void *pcontext, const void *pkeya, const void *pkeyb)
+#endif
+{
+  struct simprop_t *const keya = *(struct simprop_t *const *)pkeya;
+  struct simprop_t *const keyb = *(struct simprop_t *const *)pkeyb;
+#if !HAVE_QSORT_R
+  struct simprop_context_t *const context = keya->context;
+#else
+  struct simprop_context_t *const context = pcontext;
+#endif
+
+  if (keya->score == -1)
+    keya->score = simprop_key_diff(&keya->name, &context->name,
+                                   &context->buffer, &keya->diff);
+  if (keyb->score == -1)
+    keyb->score = simprop_key_diff(&keyb->name, &context->name,
+                                   &context->buffer, &keyb->diff);
+
+  return (keya->score < keyb->score ? 1
+          : (keya->score > keyb->score ? -1
+             : (keya->diff > keyb->diff ? 1
+                : (keya->diff < keyb->diff ? -1 : 0))));
+}
+
+svn_error_t *
+svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+                            apr_pool_t *scratch_pool)
+{
+  static const char *const nodeprops[] =
+    {
+      SVN_PROP_NODE_ALL_PROPS
+    };
+  static const char *const revprops[] =
+    {
+      SVN_PROP_REVISION_ALL_PROPS
+    };
+
+  struct simprop_t **propkeys;
+  struct simprop_t *propbuf;
+  const char *const *proplist;
+  apr_size_t numprops;
+  apr_size_t i;
+
+  struct simprop_context_t context;
+  svn_string_t prefix;
+
+  context.name.data = propname;
+  context.name.len = strlen(propname);
+  prefix.data = SVN_PROP_PREFIX;
+  prefix.len = strlen(SVN_PROP_PREFIX);
+
+  svn_membuf__create(&context.buffer, 0, scratch_pool);
+
+  /* First, check if the name is even close to being in the svn: namespace.
+     It must contain a colon in the right place, and we only allow
+     one-char typos or a single transposition. */
+  if (context.name.len < prefix.len
+      || context.name.data[prefix.len - 1] != prefix.data[prefix.len - 1])
+    return SVN_NO_ERROR;        /* Wrong prefix, ignore */
+  else
+    {
+      apr_size_t lcs;
+      const apr_size_t name_len = context.name.len;
+      context.name.len = prefix.len; /* Only check up to the prefix length */
+      svn_string__similarity(&context.name, &prefix, &context.buffer, &lcs);
+      context.name.len = name_len; /* Restore the original propname length */
+      if (lcs < prefix.len - 1)
+        return SVN_NO_ERROR;    /* Wrong prefix, ignore */
+    }
+
+  /* Now find the closest match from amongst a the set of reserved
+     node or revision property names. */
+  if (revprop)
+    {
+      proplist = revprops;
+      numprops = sizeof(revprops) / sizeof(*revprops);
+    }
+  else
+    {
+      proplist = nodeprops;
+      numprops = sizeof(nodeprops) / sizeof(*nodeprops);
+    }
+
+  propkeys = apr_palloc(scratch_pool,
+                        numprops * sizeof(struct simprop_t*));
+  propbuf = apr_palloc(scratch_pool,
+                       numprops * sizeof(struct simprop_t));
+  for (i = 0; i < numprops; ++i)
+    {
+      propkeys[i] = &propbuf[i];
+      propbuf[i].name.data = proplist[i];
+      propbuf[i].name.len = strlen(proplist[i]);
+      propbuf[i].score = -1;
+#if !HAVE_QSORT_R
+      propbuf[i].context = &context;
+#endif
+    }
+
+  SVN_QSORT_R(propkeys, numprops, sizeof(*propkeys),
+              simprop_compare, &context);
+
+  if (0 == propkeys[0]->diff)
+    return SVN_NO_ERROR;        /* We found an exact match. */
+
+  /* ### suggest a list of the most likely candidates instead? */
+  return svn_error_createf(
+    SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+    _("'%s' is not a valid %s property name; did you mean '%s'?\n"
+      "(To set the '%s' property, re-run with '--force'.)"),
+      propname, SVN_PROP_PREFIX, propkeys[0]->name.data, propname);
+}
