@@ -5442,7 +5442,8 @@ svn_wc_check_root(svn_boolean_t *is_wcroot,
  * @deprecated Provided for backward compatibility with the 1.7 API. Consider
  * using svn_wc_check_root() instead.
  */
-SVN_DEPRECATED svn_error_t *
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_is_wc_root2(svn_boolean_t *wc_root,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
