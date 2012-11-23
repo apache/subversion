@@ -429,6 +429,26 @@ svn_prop_name_is_valid(const char *prop_name);
 
 /** @} */ /* Meta-data properties */
 
+/**
+ * This is a list of all user-vixible and -settable versioned node properties.
+ *
+ * @since New in 1.8
+ */
+#define SVN_PROP_NODE_ALL_PROPS SVN_PROP_MIME_TYPE, \
+                                SVN_PROP_IGNORE, \
+                                SVN_PROP_EOL_STYLE, \
+                                SVN_PROP_KEYWORDS, \
+                                SVN_PROP_EXECUTABLE, \
+                                SVN_PROP_NEEDS_LOCK, \
+                                SVN_PROP_SPECIAL, \
+                                SVN_PROP_EXTERNALS, \
+                                SVN_PROP_MERGEINFO, \
+                                SVN_PROP_INHERITABLE_IGNORES, \
+                                \
+                                SVN_PROP_TEXT_TIME, \
+                                SVN_PROP_OWNER, \
+                                SVN_PROP_GROUP, \
+                                SVN_PROP_UNIX_MODE
 
 /** @} */
 
