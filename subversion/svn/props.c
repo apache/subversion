@@ -239,7 +239,7 @@ struct simprop_t
   svn_string_t name;      /* svn: property name */
   unsigned int score;     /* the similarity score */
   apr_size_t diff;        /* number of chars different from context.name */
-#if !HAVE_QSORT_R
+#ifndef HAVE_QSORT_R
   struct simprop_context_t *context; /* sorting context for qsort() */
 #endif
 };
@@ -259,20 +259,20 @@ simprop_key_diff(const svn_string_t *key, const svn_string_t *ctx,
 }
 
 /* Key comparator for qsort or qsort_r for simprop_t */
-#if !HAVE_QSORT_R
-static int
-simprop_compare(const void *pkeya, const void *pkeyb)
-#else
+#ifdef HAVE_QSORT_R
 static int
 simprop_compare(void *pcontext, const void *pkeya, const void *pkeyb)
+#else
+static int
+simprop_compare(const void *pkeya, const void *pkeyb)
 #endif
 {
   struct simprop_t *const keya = *(struct simprop_t *const *)pkeya;
   struct simprop_t *const keyb = *(struct simprop_t *const *)pkeyb;
-#if !HAVE_QSORT_R
-  struct simprop_context_t *const context = keya->context;
-#else
+#ifdef HAVE_QSORT_R
   struct simprop_context_t *const context = pcontext;
+#else
+  struct simprop_context_t *const context = keya->context;
 #endif
 
   if (keya->score == -1)
@@ -357,7 +357,7 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
       propbuf[i].name.data = proplist[i];
       propbuf[i].name.len = strlen(proplist[i]);
       propbuf[i].score = (unsigned int)-1;
-#if !HAVE_QSORT_R
+#ifndef HAVE_QSORT_R
       propbuf[i].context = &context;
 #endif
     }

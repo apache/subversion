@@ -684,10 +684,10 @@ fi
 
 AH_BOTTOM([
 /* Wrap qsort_r for cross-platform compatibility */
-#if !HAVE_QSORT_R
+#ifindef HAVE_QSORT_R
 #define SVN_QSORT_R(base, length, width, compare, thunk) \
   (qsort((base), (length), (width), (compare)))
-#elif SVN_QSORT_R_NORMAL_ARG_ORDER
+#elif defined(SVN_QSORT_R_NORMAL_ARG_ORDER)
 #define SVN_QSORT_R qsort_r
 #else
 /* BSD changes the order of the compare and thunk arguments */
