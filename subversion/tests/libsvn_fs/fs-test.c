@@ -4905,7 +4905,7 @@ delete_fs(const svn_test_opts_t *opts,
   const char *path;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-delete-fs", opts, pool));
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delete-fs", opts, pool));
   path = svn_fs_path(fs, pool);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   SVN_TEST_ASSERT(kind != svn_node_none);
