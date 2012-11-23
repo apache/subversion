@@ -1185,8 +1185,11 @@ unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
 {
-  const svn_string_t stringa = {stra, strlen(stra)};
-  const svn_string_t stringb = {strb, strlen(strb)};
+  svn_string_t stringa, stringb;
+  stringa.data = stra;
+  stringa.len = strlen(stra);
+  stringb.data = strb;
+  stringb.len = strlen(strb);
   return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
 }
 
