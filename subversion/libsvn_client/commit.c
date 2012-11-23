@@ -512,6 +512,7 @@ static svn_error_t *
 import(const char *local_abspath,
        const apr_array_header_t *new_entries,
        svn_editor_t *editor,
+       const char *edit_relpath,
        svn_depth_t depth,
        apr_hash_t *excludes,
        apr_hash_t *autoprops,
@@ -525,7 +526,7 @@ import(const char *local_abspath,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
-  const char *relpath = "";
+  const char *relpath = edit_relpath == NULL ? "" : edit_relpath;
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
   const svn_io_dirent2_t *dirent;
   apr_hash_t *props = apr_hash_make(pool);
@@ -766,6 +767,8 @@ svn_client_import5(const char *path,
   apr_array_header_t *global_ignores;
   apr_hash_t *local_ignores_hash;
   apr_array_header_t *local_ignores_arr;
+  const char *edit_relpath;
+  const char *repos_root;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -915,9 +918,13 @@ svn_client_import5(const char *path,
         }
     }
 
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, scratch_pool));
+  edit_relpath = svn_uri_skip_ancestor(repos_root, url, scratch_pool);
+
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(local_abspath, new_entries, editor, depth, excludes,
+  if ((err = import(local_abspath, new_entries, editor, edit_relpath,
+                    depth, excludes,
                     autoprops, local_ignores_arr, global_ignores,
                     no_ignore, no_autoprops, ignore_unknown_node_types,
                     filter_callback, filter_baton, ctx, iterpool)))
