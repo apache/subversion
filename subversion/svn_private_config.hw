@@ -82,6 +82,7 @@
 #define SVN_APR_INT64_T_PYCFMT "L"
 #endif
 
+#define HAVE_QSORT_R
 #define SVN_QSORT_R qsort_s
 
 /* Setup gettext macros */
