@@ -1441,8 +1441,8 @@ def status_depth_local(sbox):
 
   # make some changes to the greek tree
   change_files(wc_dir, ['A/mu', 'A/D/gamma'])
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', D_path)
 
   # for all the possible types of depth, check the status
 
@@ -1501,8 +1501,8 @@ def status_depth_update(sbox):
   # add some files, change directory properties
   change_files_and_commit(wc_dir, ['A/mu', 'A/D/gamma'])
   svntest.main.run_svn(None, 'up', wc_dir)
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', D_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
 
   # update to r1
@@ -1572,8 +1572,8 @@ def status_depth_update_local_modifications(sbox):
   mu_path = os.path.join(A_path, 'mu')
   gamma_path = os.path.join(D_path, 'gamma')
 
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
-  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', D_path)
 
   svntest.main.file_append(mu_path, 'modified')
   svntest.main.file_append(gamma_path, 'modified')

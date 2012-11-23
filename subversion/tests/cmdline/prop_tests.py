@@ -900,9 +900,9 @@ def prop_value_conversions(sbox):
                              "svn: warning: W125005.*use 'svn propdel'")
 
   # Anything else should be untouched
-  svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path)
-  svntest.actions.set_prop('svn:some-prop', ' bar baz', mu_path)
-  svntest.actions.set_prop('svn:some-prop', 'bar\n', iota_path)
+  svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path, force=True)
+  svntest.actions.set_prop('svn:some-prop', ' bar baz', mu_path, force=True)
+  svntest.actions.set_prop('svn:some-prop', 'bar\n', iota_path, force=True)
   svntest.actions.set_prop('some-prop', 'bar', lambda_path)
   svntest.actions.set_prop('some-prop', ' bar baz', mu_path)
   svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
@@ -2670,6 +2670,20 @@ def inheritable_ignores(sbox):
                                      [], 'add', '.', '--force','--no-ignore',
                                      '--config-dir', config_dir)
 
+def almost_known_prop_names(sbox):
+  "propset with svn: prefix but unknown name"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = sbox.ospath('iota')
+
+  # Node properties
+  svntest.actions.set_prop('svn:exemutable', 'x', iota_path,
+                           "svn: E195011: 'svn:exemutable' "
+                           "is not a valid svn: property name")
+  svntest.actions.set_prop('svn:exemutable', 'x', iota_path, force=True)
+  svntest.actions.set_prop('tsvn:exemutable', 'x', iota_path)
+
 ########################################################################
 # Run the tests
 
@@ -2713,6 +2727,7 @@ test_list = [ None,
               file_matching_dir_prop_reject,
               pristine_props_listed,
               inheritable_ignores,
+              almost_known_prop_names,
              ]
 
 if __name__ == '__main__':
