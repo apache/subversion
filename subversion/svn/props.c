@@ -356,7 +356,7 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
       propkeys[i] = &propbuf[i];
       propbuf[i].name.data = proplist[i];
       propbuf[i].name.len = strlen(proplist[i]);
-      propbuf[i].score = -1;
+      propbuf[i].score = (unsigned int)-1;
 #if !HAVE_QSORT_R
       propbuf[i].context = &context;
 #endif
