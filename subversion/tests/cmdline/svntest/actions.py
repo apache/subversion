@@ -1985,8 +1985,12 @@ def create_failing_post_commit_hook(repo_dir):
 # set_prop can be used for properties with NULL characters which are not
 # handled correctly when passed to subprocess.Popen() and values like "*"
 # which are not handled correctly on Windows.
-def set_prop(name, value, path, expected_re_string=None):
+def set_prop(name, value, path, expected_re_string=None, force=None):
   """Set a property with specified value"""
+  if not force:
+    propset = ('propset',)
+  else:
+    propset = ('propset', '--force')
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
     (fd, value_file_path) = mkstemp()
@@ -1995,12 +1999,12 @@ def set_prop(name, value, path, expected_re_string=None):
     value_file.write(value)
     value_file.flush()
     value_file.close()
-    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
-                                       '-F', value_file_path, name, path)
+    propset += ('-F', value_file_path, name, path)
+    exit_code, out, err = main.run_svn(expected_re_string, *propset)
     os.remove(value_file_path)
   else:
-    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
-                                       name, value, path)
+    propset += (name, value, path)
+    exit_code, out, err = main.run_svn(expected_re_string, *propset)
   if expected_re_string:
     if not expected_re_string.startswith(".*"):
       expected_re_string = ".*(" + expected_re_string + ")"
