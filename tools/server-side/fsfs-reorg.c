@@ -2469,8 +2469,7 @@ update_text(svn_stringbuf_t *node_rev,
   if (representation->dir)
     {
       char *newline_pos = strchr(val_pos, '\n');
-      svn_checksum_t checksum = {representation->dir->target_md5,
-                                 svn_checksum_md5};
+      svn_checksum_t checksum;
       const char* temp = apr_psprintf(scratch_pool, "%ld %" APR_SIZE_T_FMT " %" 
                                       APR_SIZE_T_FMT" %" APR_SIZE_T_FMT " %s",
                                       representation->revision->revision,
@@ -2480,6 +2479,8 @@ update_text(svn_stringbuf_t *node_rev,
                                       svn_checksum_to_cstring(&checksum,
                                                               scratch_pool));
 
+      checksum.digest = representation->dir->target_md5;
+      checksum.kind = svn_checksum_md5;
       svn_stringbuf_replace(node_rev,
                             val_pos - node_rev->data, newline_pos - val_pos,
                             temp, strlen(temp));

@@ -134,7 +134,7 @@ svn_cl__null_log(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  struct log_receiver_baton lb = { ctx };
+  struct log_receiver_baton lb;
   const char *target;
   int i;
   apr_array_header_t *revprops;
@@ -194,6 +194,7 @@ svn_cl__null_log(apr_getopt_t *os,
         }
     }
 
+  lb.ctx = ctx;
   lb.quiet = opt_state->quiet;
 
   revprops = apr_array_make(pool, 3, sizeof(char *));
