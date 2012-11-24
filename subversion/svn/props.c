@@ -46,10 +46,6 @@
 #include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
-
-#ifdef SVN_DEBUG                /* ### FIXME: remove this bit */
-#include "private/svn_debug.h"
-#endif
 
 
 svn_error_t *
@@ -372,20 +368,48 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
   if (0 == propkeys[0]->diff)
     return SVN_NO_ERROR;        /* We found an exact match. */
 
-  /* ### FIXME: remove this bit
-#ifdef SVN_DEBUG
+  /* See if we can suggest a sane alternative spelling */
   for (i = 0; i < numprops; ++i)
-    SVN_DBG(("score: %.3f diff: %2"APR_SIZE_T_FMT"   %s\n",
-             propkeys[i]->score/1000.0,
-             propkeys[i]->diff,
-             propkeys[i]->propname));
-#endif
-  */
+    if (propkeys[i]->score < 666) /* 2/3 similarity required */
+      break;
 
-  /* ### suggest a list of the most likely candidates instead? */
-  return svn_error_createf(
-    SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-    _("'%s' is not a valid %s property name; did you mean '%s'?\n"
-      "(To set the '%s' property, re-run with '--force'.)"),
-      propname, SVN_PROP_PREFIX, propkeys[0]->propname, propname);
+  switch (i)
+    {
+    case 0:
+      /* The best alternative isn't good enough */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name;"
+          " re-run with '--force' to set it"),
+        propname, SVN_PROP_PREFIX);
+
+    case 1:
+      /* There is only one good candidate */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name; did you mean '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX, propkeys[0]->propname, propname);
+
+    case 2:
+      /* Suggest a list of the most likely candidates */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name\n"
+          "Did you mean '%s' or '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX,
+        propkeys[0]->propname, propkeys[1]->propname, propname);
+
+    default:
+      /* Never suggest more than three candidates */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name\n"
+          "Did you mean '%s', '%s' or '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX,
+        propkeys[0]->propname, propkeys[1]->propname, propkeys[2]->propname,
+        propname);
+    }
 }
