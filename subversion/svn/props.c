@@ -47,6 +47,9 @@
 
 #include "svn_private_config.h"
 
+#ifdef SVN_DEBUG                /* ### FIXME: remove this bit */
+#include "private/svn_debug.h"
+#endif
 
 
 svn_error_t *
@@ -230,16 +233,17 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
 /* Context for sorting property names */
 struct simprop_context_t
 {
-  svn_string_t name;      /* The name of the property we're checking against */
-  svn_membuf_t buffer;    /* Buffer for similariry testing */
+  svn_string_t name;    /* The name of the property we're comparing with */
+  svn_membuf_t buffer;  /* Buffer for similariry testing */
 };
 
 struct simprop_t
 {
-  svn_string_t name;      /* svn: property name */
-  unsigned int score;     /* the similarity score */
-  apr_size_t diff;        /* number of chars different from context.name */
-  struct simprop_context_t *context; /* sorting context for qsort() */
+  const char *propname; /* The original svn: property name */
+  svn_string_t name;    /* The property name without the svn: prefx */
+  unsigned int score;   /* The similarity score */
+  apr_size_t diff;      /* Number of chars different from context.name */
+  struct simprop_context_t *context; /* Sorting context for qsort() */
 };
 
 /* Similarity test between two property names */
@@ -344,16 +348,21 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
     }
 
   /* Now find the closest match from amongst a the set of reserved
-     node or revision property names. */
+     node or revision property names. Skip the prefix while matching,
+     we already know that it's the same and looking at it would only
+     skew the results. */
   propkeys = apr_palloc(scratch_pool,
                         numprops * sizeof(struct simprop_t*));
   propbuf = apr_palloc(scratch_pool,
                        numprops * sizeof(struct simprop_t));
+  context.name.data += prefix.len;
+  context.name.len -= prefix.len;
   for (i = 0; i < numprops; ++i)
     {
       propkeys[i] = &propbuf[i];
-      propbuf[i].name.data = proplist[i];
-      propbuf[i].name.len = strlen(proplist[i]);
+      propbuf[i].propname = proplist[i];
+      propbuf[i].name.data = proplist[i] + prefix.len;
+      propbuf[i].name.len = strlen(propbuf[i].name.data);
       propbuf[i].score = (unsigned int)-1;
       propbuf[i].context = &context;
     }
@@ -363,10 +372,20 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
   if (0 == propkeys[0]->diff)
     return SVN_NO_ERROR;        /* We found an exact match. */
 
+  /* ### FIXME: remove this bit
+#ifdef SVN_DEBUG
+  for (i = 0; i < numprops; ++i)
+    SVN_DBG(("score: %.3f diff: %2"APR_SIZE_T_FMT"   %s\n",
+             propkeys[i]->score/1000.0,
+             propkeys[i]->diff,
+             propkeys[i]->propname));
+#endif
+  */
+
   /* ### suggest a list of the most likely candidates instead? */
   return svn_error_createf(
     SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
     _("'%s' is not a valid %s property name; did you mean '%s'?\n"
       "(To set the '%s' property, re-run with '--force'.)"),
-      propname, SVN_PROP_PREFIX, propkeys[0]->name.data, propname);
+      propname, SVN_PROP_PREFIX, propkeys[0]->propname, propname);
 }
