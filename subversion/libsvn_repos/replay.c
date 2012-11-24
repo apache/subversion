@@ -103,6 +103,8 @@
    (though not necessarily in the same order in which they
    occurred). */
 
+/* #define USE_EV2_IMPL */
+
 
 /*** Helper functions. ***/
 
@@ -455,7 +457,6 @@ fill_copyfrom(svn_fs_root_t **copyfrom_root,
   return SVN_NO_ERROR;
 }
 
-#ifndef ENABLE_EV2_IMPL
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -779,9 +780,8 @@ path_driver_cb_func(void **dir_baton,
 
   return SVN_NO_ERROR;
 }
-#endif
 
-#ifdef ENABLE_EV2_IMPL
+#ifdef USE_EV2_IMPL
 static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
@@ -840,7 +840,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                   void *authz_read_baton,
                   apr_pool_t *pool)
 {
-#ifndef ENABLE_EV2_IMPL
+#ifndef USE_EV2_IMPL
   apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
