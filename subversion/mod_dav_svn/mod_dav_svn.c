@@ -42,6 +42,7 @@
 #include "mod_dav_svn.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
@@ -59,6 +60,12 @@
 typedef struct server_conf_t {
   const char *special_uri;
   svn_boolean_t use_utf8;
+
+  /* The compression level we will pass to svn_txdelta_to_svndiff3()
+   * for wire-compression. Negative value used to specify default
+     compression level. */
+  int compression_level;
+
 } server_conf_t;
 
 
@@ -92,11 +99,12 @@ typedef struct dir_conf_t {
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
+  svn_version_t *master_version;     /* version of master server */
   const char *activities_db;         /* path to activities database(s) */
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
-  apr_hash_t *hooks_env;             /* environment for hook scripts */
+  const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
 
 
@@ -108,10 +116,6 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 /* The authz_svn provider for bypassing path authz. */
 static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
-
-/* The compression level we will pass to svn_txdelta_to_svndiff3()
- * for wire-compression */
-static int svn__compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
@@ -163,7 +167,11 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
-  return apr_pcalloc(p, sizeof(server_conf_t));
+  server_conf_t *conf = apr_pcalloc(p, sizeof(server_conf_t));
+
+  conf->compression_level = -1;
+
+  return conf;
 }
 
 
@@ -178,6 +186,17 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
   newconf = apr_pcalloc(p, sizeof(*newconf));
 
   newconf->special_uri = INHERIT_VALUE(parent, child, special_uri);
+
+  if (child->compression_level < 0)
+    {
+      /* Inherit compression level from parent if not configured for this
+         VirtualHost. */
+      newconf->compression_level = parent->compression_level;
+    }
+  else
+    {
+      newconf->compression_level = child->compression_level;
+    }
 
   return newconf;
 }
@@ -214,6 +233,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
   newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
+  newconf->master_version = INHERIT_VALUE(parent, child, master_version);
   newconf->activities_db = INHERIT_VALUE(parent, child, activities_db);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
@@ -277,6 +297,25 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
+  return NULL;
+}
+
+
+static const char *
+SVNMasterVersion_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+  svn_error_t *err;
+  svn_version_t *version;
+
+  err = svn_version__parse_version_string(&version, arg1, cmd->pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Malformed master server version string.";
+    }
+  
+  conf->master_version = version;
   return NULL;
 }
 
@@ -513,6 +552,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 static const char *
 SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
+  server_conf_t *conf;
   int value = 0;
   svn_error_t *err = svn_cstring_atoi(&value, arg1);
   if (err)
@@ -530,7 +570,9 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
                         (int)SVN_DELTA_COMPRESSION_LEVEL_NONE,
                         (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
 
-  svn__compression_level = value;
+  conf = ap_get_module_config(cmd->server->module_config,
+                              &dav_svn_module);
+  conf->compression_level = value;
 
   return NULL;
 }
@@ -550,43 +592,9 @@ SVNUseUTF8_cmd(cmd_parms *cmd, void *config, int arg)
 static const char *
 SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  apr_array_header_t *var;
+  dir_conf_t *conf = config;
 
-  var = svn_cstring_split(arg1, "=", TRUE, cmd->pool);
-  if (var && var->nelts >= 2)
-    {
-      dir_conf_t *conf = config;
-      const char *name;
-      const char *val;
-
-      if (! conf->hooks_env)
-        conf->hooks_env = apr_hash_make(cmd->pool);
-
-      name = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                         APR_ARRAY_IDX(var, 0, const char *));
-
-      /* Special case for values which contain '='. */
-      if (var->nelts > 2)
-        {
-          svn_stringbuf_t *buf;
-          int i;
-
-          buf = svn_stringbuf_create(APR_ARRAY_IDX(var, 1, const char *),
-                                     cmd->pool);
-          for (i = 2; i < var->nelts; i++)
-            {
-              svn_stringbuf_appendbyte(buf, '=');
-              svn_stringbuf_appendcstr(buf, APR_ARRAY_IDX(var, i, const char *));
-            }
-
-          val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env), buf->data);
-        }
-      else
-        val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                          APR_ARRAY_IDX(var, 1, const char *));
-
-      apr_hash_set(conf->hooks_env, name, APR_HASH_KEY_STRING, val);
-    }
+  conf->hooks_env = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -689,6 +697,16 @@ dav_svn__get_master_uri(request_rec *r)
 }
 
 
+svn_version_t *
+dav_svn__get_master_version(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->master_uri ? conf->master_version : NULL;
+}
+
+
 const char *
 dav_svn__get_xslt_uri(request_rec *r)
 {
@@ -786,12 +804,39 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
 
 
 svn_boolean_t
-dav_svn__get_v2_protocol_flag(request_rec *r)
+dav_svn__check_httpv2_support(request_rec *r)
 {
   dir_conf_t *conf;
+  svn_boolean_t available;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->v2_protocol == CONF_FLAG_ON;
+  available = conf->v2_protocol == CONF_FLAG_ON;
+
+  /* If our configuration says that HTTPv2 is available, but we are
+     proxying requests to a master Subversion server which lacks
+     support for HTTPv2, we dumb ourselves down. */
+  if (available)
+    {
+      svn_version_t *version = dav_svn__get_master_version(r);
+      if (version && (! svn_version__at_least(version, 1, 7, 0)))
+        available = FALSE;
+    }
+  return available;
+}
+
+
+svn_boolean_t
+dav_svn__check_ephemeral_txnprops_support(request_rec *r)
+{
+  svn_version_t *version = dav_svn__get_master_version(r);
+
+  /* We know this server supports ephemeral txnprops.  But if we're
+     proxying requests to a master server, we need to see if it
+     supports them, too.  */
+  if (version && (! svn_version__at_least(version, 1, 8, 0)))
+    return FALSE;
+
+  return TRUE;
 }
 
 
@@ -873,12 +918,24 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
 
 
 int
-dav_svn__get_compression_level(void)
+dav_svn__get_compression_level(request_rec *r)
 {
-  return svn__compression_level;
+  server_conf_t *conf;
+
+  conf = ap_get_module_config(r->server->module_config,
+                              &dav_svn_module);
+
+  if (conf->compression_level < 0)
+    {
+      return SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+    }
+  else
+    {
+      return conf->compression_level;
+    }
 }
 
-apr_hash_t *
+const char *
 dav_svn__get_hooks_env(request_rec *r)
 {
   dir_conf_t *conf;
@@ -1077,6 +1134,11 @@ static const command_rec cmds[] =
                 "specifies a URI to access a master Subversion repository"),
 
   /* per directory/location */
+  AP_INIT_TAKE1("SVNMasterVersion", SVNMasterVersion_cmd, NULL, ACCESS_CONF,
+                "specifies the Subversion release version of a master "
+                "Subversion server "),
+  
+  /* per directory/location */
   AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem in which the "
                 "activities database(s) should be stored"),
@@ -1136,10 +1198,12 @@ static const command_rec cmds[] =
                "use UTF-8 as native character encoding (default is ASCII)."),
 
   /* per directory/location */
-  AP_INIT_ITERATE("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
-                  ACCESS_CONF|RSRC_CONF,
-                  "Set the environment of hook scripts via any number of "
-                  "VAR=VAL arguments (the default hook environment is empty)."),
+  AP_INIT_TAKE1("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
+                ACCESS_CONF|RSRC_CONF,
+                "Sets the path to the configuration file for the environment "
+                "of hook scripts. If not absolute, the path is relative to "
+                "the repository's conf directory (by default the hooks-env "
+                "file in the repository is used)."),
   { NULL }
 };
 

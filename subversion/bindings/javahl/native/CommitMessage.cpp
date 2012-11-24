@@ -50,9 +50,9 @@ CommitMessage::callback(const char **log_msg,
                         void *baton,
                         apr_pool_t *pool)
 {
-  if (baton && ((CommitMessage *)baton)->m_jcommitMessage)
-    return ((CommitMessage *)baton)->getCommitMessage(log_msg, tmp_file,
-                                                      commit_items, pool);
+  if (baton && static_cast<CommitMessage *>(baton)->m_jcommitMessage)
+    return static_cast<CommitMessage *>(baton)->getCommitMessage(
+            log_msg, tmp_file, commit_items, pool);
 
   *log_msg = NULL;
   *tmp_file = NULL;

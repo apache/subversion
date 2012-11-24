@@ -170,7 +170,7 @@ Java_org_apache_subversion_javahl_SVNRepos_dump
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_hotcopy
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jtargetPath,
- jboolean jcleanLogs)
+ jboolean jcleanLogs, jboolean jincremental)
 {
   JNIEntry(SVNRepos, hotcopy);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -188,7 +188,8 @@ Java_org_apache_subversion_javahl_SVNRepos_hotcopy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->hotcopy(path, targetPath, jcleanLogs ? true : false);
+  cl->hotcopy(path, targetPath, jcleanLogs ? true : false,
+              jincremental ? true : false);
 }
 
 JNIEXPORT void JNICALL

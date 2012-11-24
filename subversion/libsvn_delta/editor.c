@@ -77,23 +77,23 @@ struct svn_editor_t
 #define END_CALLBACK(editor) ((editor)->within_callback = FALSE)
 
 /* Marker to indicate no further changes are allowed on this node.  */
-static const int marker_done;
+static const int marker_done = 0;
 #define MARKER_DONE (&marker_done)
 
 /* Marker indicating that add_* may be called for this path, or that it
    can be the destination of a copy or move. For copy/move, the path
    will switch to MARKER_ALLOW_ALTER, to enable further tweaks.  */
-static const int marker_allow_add;
+static const int marker_allow_add = 0;
 #define MARKER_ALLOW_ADD (&marker_allow_add)
 
 /* Marker indicating that alter_* may be called for this path.  */
-static const int marker_allow_alter;
+static const int marker_allow_alter = 0;
 #define MARKER_ALLOW_ALTER (&marker_allow_alter)
 
 /* Just like MARKER_DONE, but also indicates that the node was created
    via add_directory(). This allows us to verify that the CHILDREN param
    was comprehensive.  */
-static const int marker_added_dir;
+static const int marker_added_dir = 0;
 #define MARKER_ADDED_DIR (&marker_added_dir)
 
 #define MARK_FINISHED(editor) ((editor)->finished = TRUE)

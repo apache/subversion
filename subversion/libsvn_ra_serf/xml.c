@@ -205,9 +205,23 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
             }
         }
     }
+  else
+    {
+      const svn_ra_serf__ns_t *ns;
 
-  /* If there is no prefix, or if the prefix is not found, then the
-     name is NOT within a namespace.  */
+      for (ns = ns_list; ns; ns = ns->next)
+        {
+          if (! ns->namespace[0])
+            {
+              returned_prop_name->namespace = ns->url;
+              returned_prop_name->name = name;
+              return;
+            }
+        }
+    }    
+
+  /* If the prefix is not found, then the name is NOT within a
+     namespace.  */
   returned_prop_name->namespace = "";
   returned_prop_name->name = name;
 }

@@ -592,7 +592,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
   SVN_ERR(svn_wc__db_open(&db,
                           NULL /* config */,
-                          TRUE /* auto_upgrade */,
+                          FALSE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
 

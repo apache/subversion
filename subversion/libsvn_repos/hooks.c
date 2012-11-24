@@ -215,6 +215,7 @@ run_hook_cmd(svn_string_t **result,
   svn_error_t *err;
   apr_proc_t cmd_proc = {0};
   apr_pool_t *cmd_pool;
+  apr_hash_t *hook_env = NULL;
 
   if (result)
     {
@@ -234,8 +235,19 @@ run_hook_cmd(svn_string_t **result,
    * destroy in order to clean up the stderr pipe opened for the process. */
   cmd_pool = svn_pool_create(pool);
 
+  /* Check if a custom environment is defined for this hook, or else
+   * whether a default environment is defined. */
+  if (hooks_env)
+    {
+      hook_env = apr_hash_get(hooks_env, name, APR_HASH_KEY_STRING);
+      if (hook_env == NULL)
+        hook_env = apr_hash_get(hooks_env,
+                                SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION,
+                                APR_HASH_KEY_STRING);
+    }
+    
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
-                          env_from_env_hash(hooks_env, pool, pool),
+                          env_from_env_hash(hook_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
                           null_handle, TRUE, NULL, cmd_pool);
   if (!err)
@@ -357,6 +369,7 @@ svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
                               const apr_array_header_t *capabilities,
+                              const char *txn_name,
                               apr_pool_t *pool)
 {
   const char *hook = svn_repos_start_commit_hook(repos, pool);
@@ -368,7 +381,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[5];
+      const char *args[6];
       char *capabilities_string;
 
       if (capabilities)
@@ -388,7 +401,8 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
       args[2] = user ? user : "";
       args[3] = capabilities_string;
-      args[4] = NULL;
+      args[4] = txn_name;
+      args[5] = NULL;
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_START_COMMIT, hook, args,
                            repos->hooks_env, NULL, pool));

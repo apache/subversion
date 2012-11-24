@@ -133,6 +133,7 @@ svn_error_t *
 svn_delta_path_driver2(const svn_delta_editor_t *editor,
                        void *edit_baton,
                        const apr_array_header_t *paths,
+                       svn_boolean_t sort_paths,
                        svn_delta_path_driver_cb_func_t callback_func,
                        void *callback_baton,
                        apr_pool_t *pool)
@@ -151,6 +152,16 @@ svn_delta_path_driver2(const svn_delta_editor_t *editor,
 
   subpool = svn_pool_create(pool);
   iterpool = svn_pool_create(pool);
+
+  /* sort paths if necessary */
+  if (sort_paths && paths->nelts > 1)
+    {
+      apr_array_header_t *sorted = apr_array_copy(subpool, paths);
+      qsort(sorted->elts, sorted->nelts, sorted->elt_size,
+            svn_sort_compare_paths);
+      paths = sorted;
+    }
+
   item = apr_pcalloc(subpool, sizeof(*item));
 
   /* If the root of the edit is also a target path, we want to call

@@ -601,7 +601,8 @@ svn_fs_pack(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool));
+                                       cancel_func, cancel_baton, pool,
+                                       common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -621,6 +622,17 @@ svn_fs_recover(const char *path,
                                                     common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
+}
+
+svn_error_t *
+svn_fs_freeze(svn_fs_t *fs,
+              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+              void *baton,
+              apr_pool_t *pool)
+{
+  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1189,6 +1201,27 @@ svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root,
 {
   return svn_error_trace(root->vtable->file_contents(contents, root, path,
                                                      pool));
+}
+
+svn_error_t *
+svn_fs_try_process_file_contents(svn_boolean_t *success,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_fs_process_contents_func_t processor,
+                                 void* baton,
+                                 apr_pool_t *pool)
+{
+  /* if the FS doesn't implement this function, report a "failed" attempt */
+  if (root->vtable->try_process_file_contents == NULL)
+    {
+      *success = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(root->vtable->try_process_file_contents(
+                         success,
+                         root, path,
+                         processor, baton, pool));
 }
 
 svn_error_t *

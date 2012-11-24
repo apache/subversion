@@ -691,6 +691,11 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (session->http10)
+      serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
+#endif
+
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
@@ -707,7 +712,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-
+  apr_short_interval_time_t waittime_left = sess->timeout;
+  
   assert(sess->pending_error == SVN_NO_ERROR);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -722,17 +728,36 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
       if (sess->cancel_func)
         SVN_ERR((*sess->cancel_func)(sess->cancel_baton));
 
-      status = serf_context_run(sess->context, sess->timeout, iterpool);
+      status = serf_context_run(sess->context,
+                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
+                                iterpool);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
 
+      /* If the context duration timeout is up, we'll subtract that
+         duration from the total time alloted for such things.  If
+         there's no time left, we fail with a message indicating that
+         the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          err = SVN_NO_ERROR;
+          status = 0;
+
+          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                      _("Connection timed out"));
+            }
+        }
+      else
+        {
+          waittime_left = sess->timeout;
         }
 
       SVN_ERR(err);
@@ -745,7 +770,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                         _("Error running context"));
             }
 
-          return svn_error_wrap_apr(status, _("Error running context"));
+          return svn_ra_serf__wrap_err(status, _("Error running context"));
         }
 
       /* Debugging purposes only! */
@@ -811,7 +836,12 @@ start_error(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
-      else
+
+      /* If there's no error code provided, or if the provided code is
+         0 (which can happen sometimes depending on how the error is
+         constructed on the server-side), just pick a generic error
+         code to run with. */
+      if (! ctx->error->apr_err)
         {
           ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }
@@ -928,7 +958,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 
   status = drain_bucket(response);
   if (status)
-    return svn_error_wrap_apr(status, NULL);
+    return svn_ra_serf__wrap_err(status, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1467,7 +1497,7 @@ handle_server_error(serf_request_t *request,
      surface. */
   err = drain_bucket(response);
   if (err && !SERF_BUCKET_READ_ERROR(err))
-    return svn_error_wrap_apr(err, NULL);
+    return svn_ra_serf__wrap_err(err, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1489,7 +1519,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return svn_error_wrap_apr(status, NULL);
+      return svn_ra_serf__wrap_err(status, NULL);
     }
 
   /* Woo-hoo.  Nothing here to see.  */
@@ -1541,7 +1571,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       ctx->read_size += len;
@@ -1562,7 +1592,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1606,7 +1636,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -1627,7 +1657,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               add_done_item(ctx);
             }
 
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       /* feed me! */
@@ -1817,7 +1847,7 @@ handle_response(serf_request_t *request,
           && handler->sline.code != 304)
         {
           err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                  svn_error_wrap_apr(status, NULL),
+                                  svn_ra_serf__wrap_err(status, NULL),
                                   _("Premature EOF seen from server"
                                     " (http status=%d)"),
                                   handler->sline.code);
@@ -1966,7 +1996,8 @@ handle_response(serf_request_t *request,
 
   if (err
       && (!SERF_BUCKET_READ_ERROR(err->apr_err)
-          || APR_STATUS_IS_ECONNRESET(err->apr_err)))
+          || APR_STATUS_IS_ECONNRESET(err->apr_err)
+          || APR_STATUS_IS_ECONNABORTED(err->apr_err)))
     {
       /* These errors are special cased in serf
          ### We hope no handler returns these by accident. */
@@ -2212,7 +2243,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
 
       /* Now recreate the root_url. */
       session->repos_root = session->session_url;
-      session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
+      session->repos_root.path =
+        (char *)svn_fspath__canonicalize(url_buf->data, session->pool);
       session->repos_root_str =
         svn_urlpath__canonicalize(apr_uri_unparse(session->pool,
                                                   &session->repos_root, 0),
@@ -2397,9 +2429,8 @@ expat_response_handler(serf_request_t *request,
       XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
     }
 
-  /* ### should we bail on anything < 200 or >= 300 ??
-     ### actually: < 200 should really be handled by the core.  */
-  if (ectx->handler->sline.code == 404)
+  /* ### TODO: sline.code < 200 should really be handled by the core */
+  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
     {
       /* By deferring to expect_empty_body(), it will make a choice on
          how to handle the body. Whatever the decision, the core handler
@@ -2418,7 +2449,7 @@ expat_response_handler(serf_request_t *request,
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
-        return svn_error_wrap_apr(status, NULL);
+        return svn_ra_serf__wrap_err(status, NULL);
 
 #if 0
       /* ### move restart/skip into the core handler  */
@@ -2472,7 +2503,7 @@ expat_response_handler(serf_request_t *request,
 
       if (status && !SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
 

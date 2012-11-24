@@ -52,6 +52,9 @@ struct file_rev_baton {
   /* SVNDIFF version to use when sending to client.  */
   int svndiff_version;
 
+  /* Compression level to use for SVNDIFF. */
+  int compression_level;
+
   /* Used by the delta iwndow handler. */
   svn_txdelta_window_handler_t window_handler;
   void *window_baton;
@@ -208,7 +211,7 @@ file_rev_handler(void *baton,
                                                          pool);
       svn_txdelta_to_svndiff3(&frb->window_handler, &frb->window_baton,
                               base64_stream, frb->svndiff_version,
-                              dav_svn__get_compression_level(), pool);
+                              frb->compression_level, pool);
       *window_handler = delta_window_handler;
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
@@ -306,6 +309,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   frb.output = output;
   frb.needs_header = TRUE;
   frb.svndiff_version = resource->info->svndiff_version;
+  frb.compression_level = dav_svn__get_compression_level(resource->info->r);
 
   /* file_rev_handler will send header first time it is called. */
 

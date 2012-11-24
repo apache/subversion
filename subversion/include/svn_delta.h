@@ -452,6 +452,20 @@ svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
                           apr_pool_t *pool);
 
 
+/** Send the @a contents of length @a len as a txdelta against an empty
+ * source directly to window-handler @a handler/@a handler_baton.
+ *
+ * All temporary allocation is performed in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_txdelta_send_contents(const unsigned char *contents,
+                          apr_size_t len,
+                          svn_txdelta_window_handler_t handler,
+                          void *handler_baton,
+                          apr_pool_t *pool);
+
 /** Prepare to apply a text delta.  @a source is a readable generic stream
  * yielding the source data, @a target is a writable generic stream to
  * write target data to, and allocation takes place in a sub-pool of
@@ -483,6 +497,7 @@ svn_txdelta_apply(svn_stream_t *source,
 
 
 
+
 /*** Producing and consuming svndiff-format text deltas.  ***/
 
 /** Prepare to produce an svndiff-format diff from text delta windows.
@@ -1309,8 +1324,9 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  * Each path in @a paths is a const char *. The editor drive will be
  * performed in the same order as @a paths. The paths should be sorted
  * using something like svn_sort_compare_paths to ensure that a depth-first
- * pattern is observed for directory/file baton creation. Some callers may
- * need further customization of the order (ie. libsvn_delta/compat.c).
+ * pattern is observed for directory/file baton creation. If @a sort_paths
+ * is set, the function will sort the paths for you. Some callers may need
+ * further customization of the order (ie. libsvn_delta/compat.c).
  *
  * Use @a scratch_pool for all necessary allocations.
  *
@@ -1320,6 +1336,7 @@ svn_error_t *
 svn_delta_path_driver2(const svn_delta_editor_t *editor,
                        void *edit_baton,
                        const apr_array_header_t *paths,
+                       svn_boolean_t sort_paths,
                        svn_delta_path_driver_cb_func_t callback_func,
                        void *callback_baton,
                        apr_pool_t *scratch_pool);

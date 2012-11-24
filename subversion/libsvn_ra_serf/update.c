@@ -313,6 +313,10 @@ struct report_context_t {
   /* Do we want the server to send copyfrom args or not? */
   svn_boolean_t send_copyfrom_args;
 
+  /* Is the server including properties inline for newly added
+     files/dirs? */
+  svn_boolean_t add_props_included;
+
   /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
 
@@ -357,6 +361,9 @@ struct report_context_t {
 
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
+
+  /* Did we get a complete (non-truncated) report? */
+  svn_boolean_t report_completed;
 
   /* The XML parser context for the REPORT response.  */
   svn_ra_serf__xml_parser_t *parser_ctx;
@@ -926,12 +933,23 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      if (val && svn_cstring_casecmp(val, "application/vnd.svn-svndiff") == 0)
+      if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
           fetch_ctx->delta_stream =
               svn_txdelta_parse_svndiff(info->textdelta,
                                         info->textdelta_baton,
                                         TRUE, info->editor_pool);
+
+          /* Validate the delta base claimed by the server matches
+             what we asked for! */
+          val = serf_bucket_headers_get(hdrs, SVN_DAV_DELTA_BASE_HEADER);
+          if (val && (strcmp(val, info->delta_base) != 0))
+            {
+              err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                      _("GET request returned unexpected "
+                                        "delta base: %s"), val);
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
       else
         {
@@ -961,7 +979,7 @@ handle_fetch(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -981,7 +999,7 @@ handle_fetch(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1057,11 +1075,11 @@ handle_fetch(serf_request_t *request,
           svn_pool_destroy(info->pool);
 
           if (status)
-            return svn_error_wrap_apr(status, NULL);
+            return svn_ra_serf__wrap_err(status, NULL);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
   /* not reached */
@@ -1103,7 +1121,7 @@ handle_stream(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -1122,7 +1140,7 @@ handle_stream(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1152,7 +1170,7 @@ handle_stream(serf_request_t *request,
 
       if (status)
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
   /* not reached */
@@ -1216,9 +1234,9 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
   if (!info->url)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                        _("The OPTIONS response did not include the "
-                          "requested checked-in value"));
+      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                              _("The REPORT or PROPFIND response did not "
+                                "include the requested checked-in value"));
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
@@ -1388,7 +1406,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (state == NONE && strcmp(name.name, "target-revision") == 0)
+  if (state == NONE && strcmp(name.name, "update-report") == 0)
+    {
+      const char *val = svn_xml_get_attr_value("inline-props", attrs);
+      if (val && (strcmp(val, "true") == 0))
+        ctx->add_props_included = TRUE;
+    }
+  else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
@@ -1528,7 +1552,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
       dir->base_rev = info->base_rev;
-      dir->fetch_props = TRUE;
+
+      /* If the server isn't included properties for added items,
+         we'll need to fetch them ourselves. */
+      if (! ctx->add_props_included)
+        dir->fetch_props = TRUE;
 
       dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
                                             dir->base_name, dir->pool);
@@ -1585,8 +1613,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, ADD_FILE);
 
       info->base_rev = SVN_INVALID_REVNUM;
-      info->fetch_props = TRUE;
       info->fetch_file = TRUE;
+
+      /* If the server isn't included properties for added items,
+         we'll need to fetch them ourselves. */
+      if (! ctx->add_props_included)
+        info->fetch_props = TRUE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
@@ -1862,8 +1894,15 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
   if (state == NONE)
     {
-      /* nothing to close yet. */
-      return SVN_NO_ERROR;
+      if (strcmp(name.name, "update-report") == 0)
+        {
+          ctx->report_completed = TRUE;
+        }
+      else
+        {
+          /* nothing to close yet. */
+          return SVN_NO_ERROR;
+        }
     }
 
   if (((state == OPEN_DIR && (strcmp(name.name, "open-directory") == 0)) ||
@@ -1886,9 +1925,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (!checked_in_url &&
           (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props))
         {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested checked-in value"));
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
         }
 
       info->dir->url = checked_in_url;
@@ -1896,7 +1935,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       /* At this point, we should have the checked-in href.
        * If needed, create the PROPFIND to retrieve the dir's properties.
        */
-      if (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props)
+      if (info->dir->fetch_props)
         {
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
@@ -2299,7 +2338,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
                                        sess->conns[cur],
                                        sess->pool);
       if (status)
-        return svn_error_wrap_apr(status, NULL);
+        return svn_ra_serf__wrap_err(status, NULL);
 
       sess->num_conns++;
     }
@@ -2353,6 +2392,7 @@ finish_report(void *report_baton,
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
+  apr_short_interval_time_t waittime_left = sess->timeout;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
@@ -2435,7 +2475,9 @@ finish_report(void *report_baton,
          and what items are allocated within.  */
       iterpool_inner = svn_pool_create(iterpool);
 
-      status = serf_context_run(sess->context, sess->timeout, iterpool_inner);
+      status = serf_context_run(sess->context,
+                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
+                                iterpool_inner);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
@@ -2445,19 +2487,35 @@ finish_report(void *report_baton,
           err = handler->server_error->error;
         }
 
+      /* If the context duration timeout is up, we'll subtract that
+         duration from the total time alloted for such things.  If
+         there's no time left, we fail with a message indicating that
+         the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          err = SVN_NO_ERROR;
+          status = 0;
+
+          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                      _("Connection timed out"));
+            }
+        }
+      else
+        {
+          waittime_left = sess->timeout;
         }
 
       SVN_ERR(err);
       if (status)
         {
-          return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
-                                    status);
+          return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
         }
 
       /* Open extra connections if we have enough requests to send. */
@@ -2607,7 +2665,12 @@ finish_report(void *report_baton,
       SVN_ERR(close_all_dirs(report->root_dir));
     }
 
-  err = report->update_editor->close_edit(report->update_baton, iterpool);
+  /* If we got a complete report, close the edit.  Otherwise, abort it. */
+  if (report->report_completed)
+    err = report->update_editor->close_edit(report->update_baton, iterpool);
+  else
+    err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                           _("Missing update-report close tag"));
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
@@ -2749,6 +2812,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
     {
       make_simple_xml_tag(&buf, "S:recursive", "no", scratch_pool);
     }
+
+  /* Subversion 1.8+ servers can be told to send properties for newly
+     added items inline even when doing a skelta response. */
+  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 

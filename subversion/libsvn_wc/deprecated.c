@@ -3269,7 +3269,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                               target_revision,
                               wc_ctx,
                               anchor_abspath,
-                              target_basename,
+                              target_basename, NULL,
                               use_commit_times,
                               depth, depth_is_sticky,
                               allow_unver_obstructions,
@@ -3455,7 +3455,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                               target_revision,
                               wc_ctx,
                               anchor_abspath, target_basename,
-                              switch_url,
+                              switch_url, NULL,
                               use_commit_times,
                               depth, depth_is_sticky,
                               allow_unver_obstructions,
@@ -4462,4 +4462,23 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
     }
 
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
+svn_wc_move(svn_wc_context_t *wc_ctx,
+            const char *src_abspath,
+            const char *dst_abspath,
+            svn_boolean_t metadata_only,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__move2(wc_ctx, src_abspath, dst_abspath,
+                                       metadata_only,
+                                       TRUE, /* allow_mixed_revisions */
+                                       cancel_func, cancel_baton,
+                                       notify_func, notify_baton,
+                                       scratch_pool));
 }

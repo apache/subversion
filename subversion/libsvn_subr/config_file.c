@@ -1034,6 +1034,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# kwallet-svn-application-name-with-pid = yes"                      NL
 #endif
         "###"                                                                NL
+        "### Set ssl-client-cert-file-prompt to 'yes' to cause the client"   NL
+        "### to prompt for a path to a client cert file when the server"     NL
+        "### requests a client cert but no client cert file is found in the" NL
+        "### expected place (see the 'ssl-client-cert-file' option in the"   NL
+        "### 'servers' configuration file). Defaults to 'no'."               NL
+        "# ssl-client-cert-file-prompt = no"                                 NL
+        "###"                                                                NL
         "### The rest of the [auth] section in this file has been deprecated."
                                                                              NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
@@ -1153,7 +1160,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL
-        ""                                                                   NL;
+        ""                                                                   NL
+        "### Section for configuring working copies."                        NL
+        "[working-copy]"                                                     NL
+        "### Set to true to enable exclusive SQLite locking.  Some clients"  NL
+        "### may not support exclusive locking."                             NL
+        "# exclusive-locking = false"                                        NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),

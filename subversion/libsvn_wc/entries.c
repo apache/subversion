@@ -455,6 +455,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
                                          db, child_abspath,
+                                         FALSE /* create tempfiles */,
                                          scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)
@@ -874,37 +875,53 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   if (conflicted)
     {
-      const apr_array_header_t *conflicts;
-      int j;
-      SVN_ERR(svn_wc__read_conflicts(&conflicts, db, entry_abspath,
-                                     scratch_pool, scratch_pool));
+      svn_skel_t *conflict;
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, db, entry_abspath,
+                                       scratch_pool, scratch_pool));
 
-      for (j = 0; j < conflicts->nelts; j++)
+      SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,
+                                         &prop_conflicted, NULL,
+                                         db, dir_abspath, conflict,
+                                         scratch_pool, scratch_pool));
+
+      if (text_conflicted)
         {
-          const svn_wc_conflict_description2_t *cd;
-          cd = APR_ARRAY_IDX(conflicts, j,
-                             const svn_wc_conflict_description2_t *);
+          const char *my_abspath;
+          const char *their_old_abspath;
+          const char *their_abspath;
+          SVN_ERR(svn_wc__conflict_read_text_conflict(&my_abspath,
+                                                      &their_old_abspath,
+                                                      &their_abspath,
+                                                      db, dir_abspath,
+                                                      conflict, scratch_pool,
+                                                      scratch_pool));
 
-          switch (cd->kind)
-            {
-            case svn_wc_conflict_kind_text:
-              if (cd->base_abspath)
-                entry->conflict_old = svn_dirent_basename(cd->base_abspath,
-                                                          result_pool);
-              if (cd->their_abspath)
-                entry->conflict_new = svn_dirent_basename(cd->their_abspath,
-                                                          result_pool);
-              if (cd->my_abspath)
-                entry->conflict_wrk = svn_dirent_basename(cd->my_abspath,
-                                                          result_pool);
-              break;
-            case svn_wc_conflict_kind_property:
-              entry->prejfile = svn_dirent_basename(cd->their_abspath,
-                                                    result_pool);
-              break;
-            case svn_wc_conflict_kind_tree:
-              break;
-            }
+          if (my_abspath)
+            entry->conflict_wrk = svn_dirent_basename(my_abspath, result_pool);
+
+          if (their_old_abspath)
+            entry->conflict_old = svn_dirent_basename(their_old_abspath,
+                                                      result_pool);
+
+          if (their_abspath)
+            entry->conflict_new = svn_dirent_basename(their_abspath,
+                                                      result_pool);
+        }
+
+      if (prop_conflicted)
+        {
+          const char *prej_abspath;
+
+          SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_abspath, NULL,
+                                                      NULL, NULL, NULL,
+                                                      db, dir_abspath,
+                                                      conflict, scratch_pool,
+                                                      scratch_pool));
+
+          if (prej_abspath)
+            entry->prejfile = svn_dirent_basename(prej_abspath, result_pool);
         }
     }
 
@@ -1372,10 +1389,10 @@ entries_read_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 }
 
 svn_error_t *
-svn_wc_entries_read(apr_hash_t **entries,
-                    svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t show_hidden,
-                    apr_pool_t *pool)
+svn_wc__entries_read_internal(apr_hash_t **entries,
+                              svn_wc_adm_access_t *adm_access,
+                              svn_boolean_t show_hidden,
+                              apr_pool_t *pool)
 {
   apr_hash_t *new_entries;
 
@@ -1384,7 +1401,7 @@ svn_wc_entries_read(apr_hash_t **entries,
     {
       svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
       const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
-      apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
+      apr_pool_t *result_pool = svn_wc__adm_access_pool_internal(adm_access);
       svn_sqlite__db_t *sdb;
       struct entries_read_baton_t erb;
 
@@ -1408,12 +1425,21 @@ svn_wc_entries_read(apr_hash_t **entries,
     *entries = new_entries;
   else
     SVN_ERR(prune_deleted(entries, new_entries,
-                          svn_wc_adm_access_pool(adm_access),
+                          svn_wc__adm_access_pool_internal(adm_access),
                           pool));
 
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_entries_read(apr_hash_t **entries,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t show_hidden,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_wc__entries_read_internal(entries, adm_access,
+                                                       show_hidden, pool));
+}
 
 /* No transaction required: called from write_entry which is itself
    transaction-wrapped. */
@@ -1459,7 +1485,7 @@ insert_node(svn_sqlite__db_t *sdb,
   else if (node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
   else if (node->presence == svn_wc__db_status_server_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "absent"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "server-excluded"));
 
   if (node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));
@@ -1508,9 +1534,7 @@ insert_actual_node(svn_sqlite__db_t *sdb,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
   svn_skel_t *conflict_data = NULL;
-#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_NODE));
 
@@ -1525,22 +1549,6 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   if (actual_node->changelist)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->changelist));
 
-#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
-  if (actual_node->conflict_old
-      || actual_node->conflict_new
-      || actual_node->conflict_working)
-    {
-      SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->conflict_old));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 8, actual_node->conflict_new));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 9, actual_node->conflict_working));
-    }
-
-  if (actual_node->prop_reject)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->prop_reject));
-
-  if (actual_node->tree_conflict_data)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
-#else
   SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(
                                 &conflict_data,
                                 db, wri_abspath,
@@ -1559,7 +1567,6 @@ insert_actual_node(svn_sqlite__db_t *sdb,
 
       SVN_ERR(svn_sqlite__bind_blob(stmt, 6, data->data, data->len));
     }
-#endif
 
   /* Execute and reset the insert clause. */
   return svn_error_trace(svn_sqlite__insert(NULL, stmt));
@@ -2447,7 +2454,8 @@ walker_helper(const char *dirpath,
   svn_error_t *err;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  err = svn_wc_entries_read(&entries, adm_access, show_hidden, pool);
+  err = svn_wc__entries_read_internal(&entries, adm_access, show_hidden,
+                                      pool);
 
   if (err)
     SVN_ERR(walk_callbacks->handle_error(dirpath, err, walk_baton, pool));

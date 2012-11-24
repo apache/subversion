@@ -260,6 +260,8 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
  *
  * Output arguments can be NULL if the value is not necessary.
  *
+ * ### stsp asks: what is LOCATIONS?
+ *
  * TEXT_, PROP_ and TREE_CONFLICTED (when not NULL) will be set to TRUE
  * when the conflict contains the specified kind of conflict, otherwise
  * to false.
@@ -391,7 +393,6 @@ svn_error_t *
 svn_wc__resolve_text_conflict(svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
-
 
 #ifdef __cplusplus
 }

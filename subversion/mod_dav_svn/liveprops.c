@@ -1,5 +1,7 @@
 /*
- * liveprops.c: mod_dav_svn live property provider functions for Subversion
+ * liveprops.c: mod_dav_svn provider functions for "live properties"
+ *              (properties implemented by the WebDAV specification
+ *              itself, not unique to Subversion or its users).
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -275,8 +277,8 @@ insert_prop_internal(const dav_resource *resource,
                      int propid,
                      dav_prop_insert what,
                      apr_text_header *phdr,
-                     apr_pool_t *scratch_pool,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   const char *value = NULL;
   const char *s;
@@ -820,7 +822,7 @@ insert_prop(const dav_resource *resource,
   scratch_pool = svn_pool_create(result_pool);
 
   rv = insert_prop_internal(resource, propid, what, phdr,
-                              scratch_pool, result_pool);
+                            result_pool, scratch_pool);
 
   svn_pool_destroy(scratch_pool);
   return rv;
@@ -958,7 +960,7 @@ dav_svn__insert_all_liveprops(request_rec *r,
     {
       svn_pool_clear(iterpool);
       (void) insert_prop_internal(resource, spec->propid, what, phdr,
-                                  iterpool, resource->pool);
+                                  resource->pool, iterpool);
     }
   svn_pool_destroy(iterpool);
 

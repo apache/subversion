@@ -653,6 +653,20 @@ svn_error_t *
 svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
+/**
+ * Take an exclusive lock on @a path to prevent commits and then
+ * invoke @a freeze_body passing @a baton.  The repository may be
+ * readable by Subversion while frozen, or it may be unreadable,
+ * depending on which FS backend the repository uses.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_freeze(const char *path,
+                 svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+                 void *baton,
+                 apr_pool_t *pool);
+
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
  * returning log file paths relative to the root of the repository.
  *
@@ -764,16 +778,25 @@ const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
 
-/** Set the environment that @a repos's hooks will inherit to @a hooks_env,
- * a hash table where keys and values represent names and values of environment
- * variables. @a hooks_env must live at least as long as @a repos.
+/** Set the environment that @a repos's hooks will inherit.
+ * The environment is specified in a file at @a hooks_env_path.
+ * If @a hooks_env_path is @c NULL, the file is searched at its
+ * default location in the repository. If @a hooks_env_path is
+ * not absolute, it specifies a path relative to the parent of
+ * the file's default location in the repository.
  *
- * If this function is not called, hooks will run in an empty environment.
+ * The @a result_pool should be the same pool that @a repos was allocated in.
+ * The @a scratch_pool is used for temporary allocations.
+ *
+ * If this function is not called, or if the file does not list any
+ * environment variables, hooks will run in an empty environment.
  *
  * @since New in 1.8. */
-void
+svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
-                       apr_hash_t *hooks_env);
+                       const char *hooks_env_path,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -819,6 +842,13 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * avoid sending data through @a editor/@a edit_baton which is not
  * authorized for transmission.
  *
+ * @a zero_copy_limit controls up to which size in bytes data blocks may
+ * be sent using the zero-copy code path.  On that path, a number of
+ * in-memory copy operations have been eliminated to maximize throughput.
+ * However, until the whole block has been pushed to the network stack,
+ * other clients may get blocked.  Thus, be careful when using larger
+ * values here.  0 disables the optimization.
+ *
  * All allocation for the context and collected state will occur in
  * @a pool.
  *
@@ -851,7 +881,33 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * than or equal to the depth of the working copy, then the editor
  * operations will affect only paths at or above @a depth.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_begin_report3(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *target,
+                        const char *tgt_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_size_t zero_copy_limit,
+                        apr_pool_t *pool);
+
+/**
+ * The same as svn_repos_begin_report3(), but setting the @a zero_copy_limit
+ * to 0.
+ *
  * @since New in 1.5.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,
@@ -903,7 +959,7 @@ svn_repos_begin_report(void **report_baton,
 
 
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report2(),
+ * Given a @a report_baton constructed by svn_repos_begin_report3(),
  * record the presence of @a path, at @a revision with depth @a depth,
  * in the current tree.
  *
@@ -974,7 +1030,7 @@ svn_repos_set_path(void *report_baton,
                    apr_pool_t *pool);
 
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report2(),
+ * Given a @a report_baton constructed by svn_repos_begin_report3(),
  * record the presence of @a path in the current tree, containing the contents
  * of @a link_path at @a revision with depth @a depth.
  *
@@ -1040,7 +1096,7 @@ svn_repos_link_path(void *report_baton,
                     svn_boolean_t start_empty,
                     apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report2(),
+/** Given a @a report_baton constructed by svn_repos_begin_report3(),
  * record the non-existence of @a path in the current tree.
  *
  * @a path may not be underneath a path on which svn_repos_set_path3()
@@ -1056,7 +1112,7 @@ svn_repos_delete_path(void *report_baton,
                       const char *path,
                       apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report2(),
+/** Given a @a report_baton constructed by svn_repos_begin_report3(),
  * finish the report and drive the editor as specified when the report
  * baton was constructed.
  *
@@ -1073,7 +1129,7 @@ svn_repos_finish_report(void *report_baton,
                         apr_pool_t *pool);
 
 
-/** Given a @a report_baton constructed by svn_repos_begin_report2(),
+/** Given a @a report_baton constructed by svn_repos_begin_report3(),
  * abort the report.  This function can be called anytime before
  * svn_repos_finish_report() is called.
  *
@@ -1147,7 +1203,7 @@ svn_repos_abort_report(void *report_baton,
  * the total size of the delta.
  *
  * ### svn_repos_dir_delta2 is mostly superseded by the reporter
- * ### functionality (svn_repos_begin_report2 and friends).
+ * ### functionality (svn_repos_begin_report3 and friends).
  * ### svn_repos_dir_delta2 does allow the roots to be transaction
  * ### roots rather than just revision roots, and it has the
  * ### entry_props flag.  Almost all of Subversion's own code uses the
@@ -1284,14 +1340,14 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * Calling @a (*editor)->close_edit completes the commit.
  *
- * If @a callback is non-NULL, then before @c close_edit returns (but
+ * If @a commit_callback is non-NULL, then before @c close_edit returns (but
  * after the commit has succeeded) @c close_edit will invoke
- * @a callback with a filled-in #svn_commit_info_t *, @a callback_baton,
- * and @a pool or some subpool thereof as arguments.  If @a callback
+ * @a commit_callback with a filled-in #svn_commit_info_t *, @a commit_baton,
+ * and @a pool or some subpool thereof as arguments.  If @a commit_callback
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
- * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * (Note that prior to Subversion 1.6, @a commit_callback cannot be NULL; if
  * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
@@ -1312,8 +1368,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              const char *repos_url,
                              const char *base_path,
                              apr_hash_t *revprop_table,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool);
@@ -1338,8 +1394,8 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool);
@@ -2293,7 +2349,7 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
  * @{
  *
  * As it turns out, the svn_repos_replay2(), svn_repos_dir_delta2() and
- * svn_repos_begin_report2() interfaces can be extremely useful for
+ * svn_repos_begin_report3() interfaces can be extremely useful for
  * examining the repository, or more exactly, changes to the repository.
  * These drivers allows for differences between two trees to be
  * described using an editor.
@@ -2346,7 +2402,7 @@ typedef struct svn_repos_node_t
  * repos's filesystem.
  *
  * The editor can also be driven by svn_repos_dir_delta2() or
- * svn_repos_begin_report2(), but unless you have special needs,
+ * svn_repos_begin_report3(), but unless you have special needs,
  * svn_repos_replay2() is preferred.
  *
  * Invoke svn_repos_node_from_baton() on @a edit_baton to obtain the root
@@ -3219,6 +3275,31 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 void *authz_read_baton,
                                 apr_pool_t *pool);
 
+/**
+ * Set @a *inherited_values to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures (the path_or_url members of
+ * which are relative filesystem paths) representing the properties
+ * inherited by @a path in @a root.  If no properties are inherited,
+ * then set @a *inherited_values to an empty array.
+ *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of each parent path from which properties are inherited. Silently omit
+ * properties for unreadable parent paths.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /** Capabilities **/

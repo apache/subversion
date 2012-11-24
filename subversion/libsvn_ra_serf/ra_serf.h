@@ -62,6 +62,10 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+/** Wait duration (in microseconds) used in calls to serf_context_run() */
+#define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
+
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
@@ -89,7 +93,9 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
-/** Max. number of connctions we'll open to the server. */
+/** Max. number of connctions we'll open to the server. 
+ *  Note: minimum 2 connections are required for ra_serf to function correctly!
+ */
 #define MAX_NR_OF_CONNS 4
 
 /*
@@ -208,6 +214,10 @@ struct svn_ra_serf__session_t {
   const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
   const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
   const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
+
+  /* Hash mapping const char * server-supported POST types to
+     disinteresting-but-non-null values. */
+  apr_hash_t *supported_posts;
 
   /*** End HTTP v2 stuff ***/
 
@@ -969,12 +979,15 @@ svn_ra_serf__add_xml_header_buckets(serf_bucket_t *agg_bucket,
                                     serf_bucket_alloc_t *bkt_alloc);
 
 /*
- * Add the appropriate serf buckets to AGG_BUCKET representing xml tag open
- * with name TAG.
+ * Add the appropriate serf buckets to AGG_BUCKET representing the XML
+ * open tag with name TAG.
  *
  * Take the tag's attributes from varargs, a NULL-terminated list of
- * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
- * on each val. Attribute will be ignored if it's value is NULL.
+ * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Attribute
+ * will be ignored if it's value is NULL.
+ *
+ * NOTE: Callers are responsible for XML-escaping attribute values as
+ * necessary.
  *
  * The bucket will be allocated from BKT_ALLOC.
  */
@@ -1647,6 +1660,14 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              svn_revnum_t *revision_deleted,
                              apr_pool_t *pool);
 
+/* Implements the get_inherited_props RA layer function. */
+svn_error_t * svn_ra_serf__get_inherited_props(svn_ra_session_t *session,
+                                               apr_array_header_t **iprops,
+                                               const char *path,
+                                               svn_revnum_t revision,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
+
 /* Implements svn_ra__vtable_t.get_repos_root(). */
 svn_error_t *
 svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
@@ -1657,7 +1678,6 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
-
 
 /*** Authentication handler declarations ***/
 
@@ -1699,6 +1719,21 @@ svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+/** Wrap STATUS from an serf function. If STATUS is not serf error code,
+  * this is equivalent to svn_error_wrap_apr().
+ */
+svn_error_t *
+svn_ra_serf__wrap_err(apr_status_t status,
+                      const char *fmt,
+                      ...);
+
+
+#if defined(SVN_DEBUG)
+/* Wrapper macros to collect file and line information */
+#define svn_ra_serf__wrap_err \
+  (svn_error__locate(__FILE__,__LINE__), (svn_ra_serf__wrap_err))
+
+#endif
 
 #ifdef __cplusplus
 }

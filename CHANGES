@@ -4,7 +4,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
   - General:
-    * remove extraneous externals output from 'svn status -q' (issue #1935)
+    *
 
   - Major new features:
     *
@@ -12,6 +12,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'commit --include-externals' option (related to issues #1167, #3563)
+    * remove extraneous externals output from 'svn status -q' (issue #1935)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
@@ -25,9 +26,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
-    * new --search and --isearch options for 'svn log' (r1354666, -830)
+    * 'svn mergeinfo' now shows a summary graph by default (issue #4239)
+    * new --search and --search-and options for 'svn log' (r1354666, -83518)
     * new built-in interactive text conflict merge tool (r1357864, et al)
     * new 'svn --version --verbose' option shows runtime environment info
+    * new 'svnadmin freeze' subcommand (r1376228)
+    * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
+    * client version info now reported to commit hooks (issue #4124)
+    * 'svn merge' now uses reintegrate mode automatically when needed
 
   - Client-side bugfixes:
     *
@@ -46,7 +52,46 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix inconsistent handling of log revs without changed paths (issue #3694)
 
   - Bindings:
-    *
+    * star-imports in swig-py only import 'svn_*' symbols (r1303375)
+
+
+Version 1.7.7
+(09 Oct 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.7
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * fix memory read bug (r137614)
+    * update Chinese translation
+
+  - Client-side bugfixes:
+    * fix issues with applying Git patch files (r1374800, et al)
+    * fix status does not descend into dir externals after upgrade (issue #4016)
+    * fix file externals don't update with old mod_dav_svn (issue #4224)
+    * fix external diff tool duplicates Index: lines with 'svn diff' (r1380697)
+    * fix GNOME keyring library fails with very old glib (r1378847)
+    * fix unknown password stores in config file cause error (r1375052)
+    * fix assertions in ra_serf running against server root (r1365519, et al)
+    * fix ra_serf checkout/export aborts early on Windows (issue #4174)
+ 
+  - Server-side bugfixes:
+    * fix an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+    * fix unbounded memory use with SVNPathAuthz short_circuit (r1387943)
+    * fix svndumpfilter exclude --targets requires leading slash (issue #4234)
+    * fix connection ttl for memcache should be 50 seconds (r1391641)
+    * stabilize order of paths in dumpfiles with APR 1.4.6 (r1344864, et al)
+
+ Developer-visible changes:
+  - General:
+    * print "All tests successful" at the end of 'make check' (r1375089)
+    * fix sandbox violation in a test (r1371282)
+    * fix tests fail when running within a format 30 WC (r1391188, et al)
+    * fix return value of svn_client_update4() incorrect (r1380295)
+    * fix make check summary missing test failures (r1390965)
+    * fix build does not fail when apache httpd is not available (r1374198)
+
+  - Bindings:
+    * fix swig-pl build fails with swig 2.0.7 and newer. (r1389658)
+    * fix swig-py runtime problems with swig 2.0.5 and newer (r1351117)
 
 
 Version 1.7.6
@@ -487,6 +532,20 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
+Version 1.6.19
+(10 Sep 2012, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.19
+
+  - Client-side bugfixes:
+    * handle missing svn:date reported by svnserve gracefully (r1306111)
+
+  - Server-side bugfixes:
+    * fix possible server hang if a hook script fails to start (r1330410)
+    * fix write-through proxy commit regression introduced in 1.6.17 (r1088602)
+    * partial sync drops properties when converting to adds (issue #4184)
+
+  - Developer-visible changes:
+    * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
 
 Version 1.6.18
 (29 Mar 2012, from /branches/1.6.x)

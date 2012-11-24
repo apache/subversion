@@ -97,7 +97,9 @@ svn_wc__internal_check_wc(int *wc_format,
     {
       svn_node_kind_t kind;
 
-      if (err->apr_err != SVN_ERR_WC_MISSING)
+      if (err->apr_err != SVN_ERR_WC_MISSING &&
+          err->apr_err != SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+          err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
         return svn_error_trace(err);
       svn_error_clear(err);
 
@@ -330,7 +332,7 @@ pool_cleanup_locked(void *p)
          run, but the subpools will NOT be destroyed)  */
       scratch_pool = svn_pool_create(lock->pool);
 
-      err = svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+      err = svn_wc__db_open(&db, NULL /* ### config. need! */, FALSE, TRUE,
                             scratch_pool, scratch_pool);
       if (!err)
         {
@@ -780,7 +782,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
          do it here.  */
       /* ### we could optimize around levels_to_lock==0, but much of this
          ### is going to be simplified soon anyways.  */
-      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, FALSE, TRUE,
                               pool, pool));
       db_provided = FALSE;
     }
@@ -810,7 +812,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       /* Ugh. Too bad about having to open a DB.  */
       SVN_ERR(svn_wc__db_open(&db,
-                              NULL /* ### config */, TRUE, TRUE, pool, pool));
+                              NULL /* ### config */, FALSE, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
@@ -1156,7 +1158,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
      ### given that we need DB for format detection, may as well keep this.
      ### in any case, much of this is going to be simplified soon anyways.  */
   if (!db_provided)
-    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ TRUE, TRUE,
+    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ FALSE, TRUE,
                             pool, pool));
 
   if (svn_path_is_empty(path)
@@ -1477,6 +1479,11 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
   return adm_access->pool;
 }
 
+apr_pool_t *
+svn_wc__adm_access_pool_internal(const svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->pool;
+}
 
 void
 svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,

@@ -80,10 +80,10 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
 /* An SQLite application defined function that allows SQL queries to
    use "relpath_depth(local_relpath)".  */
 static svn_error_t *
-relpath_depth(svn_sqlite__context_t *sctx,
-              int argc,
-              svn_sqlite__value_t *values[],
-              apr_pool_t *scratch_pool)
+relpath_depth_sqlite(svn_sqlite__context_t *sctx,
+                     int argc,
+                     svn_sqlite__value_t *values[],
+                     apr_pool_t *scratch_pool)
 {
   const char *path = NULL;
   apr_int64_t depth;
@@ -114,6 +114,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
+                        svn_boolean_t exclusive,
                         const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -140,8 +141,11 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                            my_statements ? my_statements : statements,
                            0, NULL, result_pool, scratch_pool));
 
+  if (exclusive)
+    SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_PRAGMA_LOCKING_MODE));
+
   SVN_ERR(svn_sqlite__create_scalar_function(*sdb, "relpath_depth", 1,
-                                             relpath_depth, NULL));
+                                             relpath_depth_sqlite, NULL));
 
   return SVN_NO_ERROR;
 }

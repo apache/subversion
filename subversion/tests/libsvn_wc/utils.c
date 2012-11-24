@@ -85,7 +85,7 @@ create_repos_and_wc(const char **repos_url,
     svn_client_ctx_t *ctx;
     svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
-    SVN_ERR(svn_client_create_context(&ctx, subpool));
+    SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
     SVN_ERR(svn_dirent_get_absolute(wc_abspath, wc_path, pool));
     SVN_ERR(svn_client_checkout3(NULL, *repos_url, *wc_abspath,
                                  &head_rev, &head_rev, svn_depth_infinity,
@@ -133,7 +133,8 @@ svn_test__create_fake_wc(const char *wc_abspath,
 
   svn_error_clear(svn_io_remove_file2(db_abspath, FALSE, scratch_pool));
   SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
-                                  svn_sqlite__mode_rwcreate, my_statements,
+                                  svn_sqlite__mode_rwcreate,
+                                  FALSE /* exclusive */, my_statements,
                                   result_pool, scratch_pool));
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));

@@ -59,6 +59,7 @@ typedef struct server_baton_t {
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
   apr_file_t *log_file;    /* Log filehandle. */
+  svn_boolean_t vhost;     /* Use virtual-host-based path to repo. */
   apr_pool_t *pool;
 } server_baton_t;
 
@@ -128,6 +129,16 @@ typedef struct serve_params_t {
      Defaults to SVN_DELTA_COMPRESSION_LEVEL_DEFAULT. */
   int compression_level;
 
+  /* Item size up to which we use the zero-copy code path to transmit
+     them over the network.  0 disables that code path. */
+  apr_size_t zero_copy_limit;
+
+  /* Amount of data to send between checks for cancellation requests
+     coming in from the client. */
+  apr_size_t error_check_interval;
+
+  /* Use virtual-host-based path to repo. */
+  svn_boolean_t vhost;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

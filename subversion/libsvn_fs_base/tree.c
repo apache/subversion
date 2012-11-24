@@ -3676,7 +3676,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(tb->target_stream,
                                tb->target_string->data,
                                &len));
-      svn_stringbuf_set(tb->target_string, "");
+      svn_stringbuf_setempty(tb->target_string);
     }
 
   /* Is the window NULL?  If so, we're done. */
@@ -5387,6 +5387,7 @@ static root_vtable_t root_vtable = {
   base_file_length,
   base_file_checksum,
   base_file_contents,
+  NULL,
   base_make_file,
   base_apply_textdelta,
   base_apply_text,

@@ -45,6 +45,9 @@
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+    #pragma GCC diagnostic ignored "-Wunused-function"
+  #endif
   #include <sqlite3.c>
 #else
   #include <sqlite3.h>
@@ -53,6 +56,20 @@
 #if !SQLITE_VERSION_AT_LEAST(3,7,12)
 #error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
+
+const char *
+svn_sqlite__compiled_version(void)
+{
+  static const char sqlite_version[] = SQLITE_VERSION;
+  return sqlite_version;
+}
+
+const char *
+svn_sqlite__runtime_version(void)
+{
+  return sqlite3_libversion();
+}
+
 
 INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
 
@@ -462,6 +479,27 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
 }
 
 svn_error_t *
+svn_sqlite__bind_iprops(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        const apr_array_header_t *inherited_props,
+                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *skel;
+  svn_stringbuf_t *properties;
+
+  if (inherited_props == NULL)
+    return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
+
+  SVN_ERR(svn_skel__unparse_iproplist(&skel, inherited_props,
+                                      scratch_pool));
+  properties = svn_skel__unparse(skel, scratch_pool);
+  return svn_error_trace(svn_sqlite__bind_blob(stmt,
+                                               slot,
+                                               properties->data,
+                                               properties->len));
+}
+
+svn_error_t *
 svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
                           int slot,
                           const svn_checksum_t *checksum,
@@ -562,6 +600,31 @@ svn_sqlite__column_properties(apr_hash_t **props,
   SVN_ERR(svn_skel__parse_proplist(props,
                                    svn_skel__parse(val, len, scratch_pool),
                                    result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__column_iprops(apr_array_header_t **iprops,
+                          svn_sqlite__stmt_t *stmt,
+                          int column,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  apr_size_t len;
+  const void *val;
+
+  /* svn_skel__parse_iprops copies everything needed to result_pool */
+  val = svn_sqlite__column_blob(stmt, column, &len, NULL);
+  if (val == NULL)
+    {
+      *iprops = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_skel__parse_iprops(iprops,
+                                 svn_skel__parse(val, len, scratch_pool),
+                                 result_pool));
 
   return SVN_NO_ERROR;
 }

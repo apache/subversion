@@ -228,7 +228,7 @@ svn_cl__propedit(apr_getopt_t *os,
           peg_revision.kind = svn_opt_revision_unspecified;
 
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget4(&props, pname_utf8, abspath_or_url,
+          SVN_ERR(svn_client_propget5(&props, NULL, pname_utf8, abspath_or_url,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       &base_rev, svn_depth_empty,

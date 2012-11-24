@@ -356,6 +356,7 @@ def export_working_copy_with_property_mods(sbox):
                                         expected_disk)
 
 @XFail()
+@Issue(3798)
 def export_working_copy_at_base_revision(sbox):
   "export working copy at base revision"
   sbox.build(read_only = True)

@@ -1082,7 +1082,7 @@ svn_path_url_add_component2(const char *url,
   /* = svn_path_uri_encode() but without always copying */
   component = uri_escape(component, svn_uri__char_validity, pool);
 
-  return svn_path_join(url, component, pool);
+  return svn_path_join_internal(url, component, pool);
 }
 
 svn_error_t *
@@ -1100,7 +1100,7 @@ svn_path_get_absolute(const char **pabsolute,
 }
 
 
-
+#if !defined(WIN32) && !defined(DARWIN)
 /** Get APR's internal path encoding. */
 static svn_error_t *
 get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
@@ -1119,6 +1119,7 @@ get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *

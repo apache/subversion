@@ -78,6 +78,12 @@ def check_hotcopy_fsfs(src, dst):
                                 "source" % src_dirent)
       # Compare all files in this directory
       for src_file in src_files:
+        # Exclude temporary files
+        if src_file == 'rev-prop-atomicsShm':
+          continue
+        if src_file == 'rev-prop-atomicsMutex':
+          continue
+
         src_path = os.path.join(src_dirpath, src_file)
         dst_path = os.path.join(dst_dirpath, src_file)
         if not os.path.isfile(dst_path):
@@ -1824,7 +1830,8 @@ def mergeinfo_race(sbox):
 @Issue(4213)
 def recover_old(sbox):
   "recover --pre-1.4-compatible"
-  sbox.build(create_wc=False)
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir, minor_version=0)
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 

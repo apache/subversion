@@ -206,9 +206,8 @@ single_repos_delete(svn_ra_session_t *ra_session,
                                     pool));
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                              relpaths, path_driver_cb_func,
-                              (void *)editor, pool);
+  err = svn_delta_path_driver2(editor, edit_baton, relpaths, TRUE,
+                               path_driver_cb_func, (void *)editor, pool);
 
   if (err)
     {

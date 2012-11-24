@@ -38,6 +38,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Return true if KIND is a revision kind that is dependent on the working
+ * copy. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_previous ||                                  \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)                                   \
+
+/* Return true if KIND is a revision kind that the WC can supply without
+ * contacting the repository. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)
+
 /* A location in a repository. */
 typedef struct svn_client__pathrev_t
 {
@@ -98,6 +113,39 @@ const char *
 svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
                            apr_pool_t *result_pool);
 
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
+   REVISION, create an RA connection to that object as it exists in
+   that revision, following copy history if necessary.  If REVISION is
+   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
+   that it is the same node in both PEG_REVISION and REVISION.  If it
+   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
+
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
+
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
@@ -178,58 +226,20 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-
-/* Details of a symmetric merge. */
-typedef struct svn_client__symmetric_merge_t
-{
-  svn_client__pathrev_t *yca, *base, *mid, *right;
-  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
-} svn_client__symmetric_merge_t;
-
-/* Find the information needed to merge all unmerged changes from a source
- * branch into a target branch.  The information is the locations of the
- * youngest common ancestor, merge base, and such like.
+/* Set *YCA, *BASE, *RIGHT, *TARGET to the repository locations of the
+ * youngest common ancestor of the branches, the base chosen for 3-way
+ * merge, the right-hand side of the source diff, and the target WC.
  *
- * Set *MERGE to the information needed to merge all unmerged changes
- * (up to SOURCE_REVISION) from the source branch SOURCE_PATH_OR_URL @
- * SOURCE_REVISION into the target WC at TARGET_WCPATH.
+ * Any of the output pointers may be NULL if not wanted.
  */
 svn_error_t *
-svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_wcpath,
-                                 svn_boolean_t allow_mixed_rev,
-                                 svn_boolean_t allow_local_mods,
-                                 svn_boolean_t allow_switched_subtrees,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/* Perform a symmetric merge.
- *
- * Merge according to MERGE into the WC at TARGET_WCPATH.
- *
- * The other parameters are as in svn_client_merge4().
- *
- * ### TODO: There's little point in this function being the only way the
- * caller can use the result of svn_client__find_symmetric_merge().  The
- * contents of MERGE should be more public, or there should be other ways
- * the caller can use it, or these two functions should be combined into
- * one.  I want to make it more public, and also possibly have more ways
- * to use it in future (for example, do_symmetric_merge_with_step_by_-
- * step_confirmation).
- */
-svn_error_t *
-svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
-                               const char *target_wcpath,
-                               svn_depth_t depth,
-                               svn_boolean_t force,
-                               svn_boolean_t record_only,
-                               svn_boolean_t dry_run,
-                               const apr_array_header_t *merge_options,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *scratch_pool);
+svn_client__automatic_merge_get_locations(
+                                svn_client__pathrev_t **yca,
+                                svn_client__pathrev_t **base,
+                                svn_client__pathrev_t **right,
+                                svn_client__pathrev_t **target,
+                                const svn_client_automatic_merge_t *merge,
+                                apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

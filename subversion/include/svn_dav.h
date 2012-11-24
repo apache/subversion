@@ -53,6 +53,15 @@ extern "C" {
 
 /** This header is *TEMPORARILY* used to transmit the delta base to the
  * server. It contains a version resource URL for what is on the client.
+ *
+ * @note The HTTP delta draft recommends an If-None-Match header
+ * holding an entity tag corresponding to the base copy that the
+ * client has.  In Subversion, it is much more natural to use a version
+ * URL to specify that base.  We'd like, then, to use the If: header
+ * to specify the URL.  Unfortunately, mod_dav sees all "State-token"
+ * items as lock tokens.  So we'll use this custom header until mod_dav
+ * and other backend APIs are taught to be less rigid, at which time
+ * we can switch to using an If: header to report our base version.
  */
 #define SVN_DAV_DELTA_BASE_HEADER "X-SVN-VR-Base"
 
@@ -177,6 +186,13 @@ extern "C" {
  * @since New in 1.7.  */
 #define SVN_DAV_VTXN_NAME_HEADER "SVN-VTxn-Name"
 
+/** This header is used in the OPTIONS response to identify named
+ * skel-based POST request types which the server is prepared to
+ * handle.  (HTTP protocol v2 only)
+ * @since New in 1.8.   */
+#define SVN_DAV_SUPPORTED_POSTS_HEADER "SVN-Supported-Posts"
+
+
 /**
  * @name Fulltext MD5 headers
  *
@@ -282,6 +298,19 @@ extern "C" {
  * a replay of a directory in the repository (not root). */
 #define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\
             SVN_DAV_PROP_NS_DAV "svn/partial-replay"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to get
+ * inherited properties. */
+#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS \
+  SVN_DAV_PROP_NS_DAV "svn/inherited-props"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to
+ * properly handle ephemeral (that is, deleted-just-before-commit) FS
+ * transaction properties. */
+#define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
 
 /** @} */
 

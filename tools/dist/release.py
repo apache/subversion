@@ -679,7 +679,7 @@ def write_downloads(args):
 #----------------------------------------------------------------------
 # Validate the signatures for a release
 
-key_start = '-----BEGIN PGP SIGNATURE-----\n'
+key_start = '-----BEGIN PGP SIGNATURE-----'
 fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
 
 def check_sigs(args):

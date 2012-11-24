@@ -48,8 +48,8 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool)
@@ -65,7 +65,7 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                  svn_string_create(log_msg, pool));
   return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
                                       repos_url, base_path, revprop_table,
-                                      callback, callback_baton,
+                                      commit_callback, commit_baton,
                                       authz_callback, authz_baton, pool);
 }
 
@@ -250,6 +250,41 @@ svn_repos_begin_report(void **report_baton,
                                  edit_baton,
                                  authz_read_func,
                                  authz_read_baton,
+                                 pool);
+}
+
+svn_error_t *
+svn_repos_begin_report2(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *target,
+                        const char *tgt_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
+{
+  return svn_repos_begin_report3(report_baton,
+                                 revnum,
+                                 repos,
+                                 fs_base,
+                                 target,
+                                 tgt_path,
+                                 text_deltas,
+                                 depth,
+                                 ignore_ancestry,
+                                 send_copyfrom_args,
+                                 editor,
+                                 edit_baton,
+                                 authz_read_func,
+                                 authz_read_baton,
+                                 0,     /* disable zero-copy code path */
                                  pool);
 }
 
