@@ -39,6 +39,7 @@
 #include "svnrdump.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_ra_private.h"
 
 
 
@@ -248,6 +249,81 @@ replay_revend(svn_revnum_t revision,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_EV2_IMPL
+/* Print dumpstream-formatted information about REVISION.
+ * Implements the `svn_ra_replay_revstart_callback_t' interface.
+ */
+static svn_error_t *
+replay_revstart_v2(svn_revnum_t revision,
+                   void *replay_baton,
+                   svn_editor_t **editor,
+                   apr_hash_t *rev_props,
+                   apr_pool_t *pool)
+{
+  struct replay_baton *rb = replay_baton;
+  apr_hash_t *normal_props;
+  svn_stringbuf_t *propstring;
+  svn_stream_t *stdout_stream;
+  svn_stream_t *revprop_stream;
+
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+
+  /* Revision-number: 19 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
+                            ": %ld\n", revision));
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
+  propstring = svn_stringbuf_create_ensure(0, pool);
+  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
+  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(revprop_stream));
+
+  /* Prop-content-length: 13 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
+
+  /* Content-length: 29 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
+
+  /* Property data. */
+  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
+                           &(propstring->len)));
+
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
+  SVN_ERR(svn_stream_close(stdout_stream));
+
+  SVN_ERR(svn_rdump__get_dump_editor_v2(editor, revision,
+                                        rb->stdout_stream,
+                                        rb->extra_ra_session,
+                                        check_cancel, NULL, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Print progress information about the dump of REVISION.
+   Implements the `svn_ra_replay_revfinish_callback_t' interface. */
+static svn_error_t *
+replay_revend_v2(svn_revnum_t revision,
+                 void *replay_baton,
+                 svn_editor_t *editor,
+                 apr_hash_t *rev_props,
+                 apr_pool_t *pool)
+{
+  /* No resources left to free. */
+  struct replay_baton *rb = replay_baton;
+
+  SVN_ERR(svn_editor_complete(editor));
+
+  if (! rb->quiet)
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Initialize the RA layer, and set *CTX to a new client context baton
  * allocated from POOL.  Use CONFIG_DIR and pass USERNAME, PASSWORD,
  * CONFIG_DIR and NO_AUTH_CACHE to initialize the authorization baton.
@@ -391,9 +467,16 @@ replay_revisions(svn_ra_session_t *session,
 
   if (incremental)
     {
+#ifndef USE_EV2_IMPL
       SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                                   0, TRUE, replay_revstart, replay_revend,
                                   replay_baton, pool));
+#else
+      SVN_ERR(svn_ra__replay_range_ev2(session, start_revision, end_revision,
+                                       0, TRUE, replay_revstart_v2,
+                                       replay_revend_v2, replay_baton,
+                                       NULL, NULL, NULL, NULL, pool));
+#endif
     }
   else
     {
@@ -432,9 +515,16 @@ replay_revisions(svn_ra_session_t *session,
 
       /* Now go pick up additional revisions in the range, if any. */
       if (start_revision <= end_revision)
+#ifndef USE_EV2_IMPL
         SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                                     0, TRUE, replay_revstart, replay_revend,
                                     replay_baton, pool));
+#else
+      SVN_ERR(svn_ra__replay_range_ev2(session, start_revision, end_revision,
+                                       0, TRUE, replay_revstart_v2,
+                                       replay_revend_v2, replay_baton,
+                                       NULL, NULL, NULL, NULL, pool));
+#endif
     }
 
   SVN_ERR(svn_stream_close(stdout_stream));
