@@ -1011,7 +1011,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
 
-/** Similar to svn_client_create_context but passes a NULL @a cfg_hash.
+/** Similar to svn_client_create_context2 but passes a NULL @a cfg_hash.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
