@@ -66,7 +66,7 @@ typedef enum svn_cl__longopt_t {
   opt_with_revprop,
   opt_with_all_revprops,
   opt_with_no_revprops,
-  opt_trust_server_cert,
+  opt_trust_server_cert
 } svn_cl__longopt_t;
 
 
