@@ -38,45 +38,52 @@
 
 
 
-/* Allocate the space for a memory buffer. The data pointer will be NULL
- * if the size is 0.
+/* Allocate the space for a memory buffer from POOL.
+ * Return a pointer to the new buffer in *DATA and its size in *SIZE.
+ * The buffer size will be at least MINIMUM_SIZE.
+ *
  * N.B.: The stringbuf creation functions use this, but since stringbufs
  *       always consume at least 1 byte for the NUL terminator, the
  *       resulting data pointers will never be NULL.
  */
 static APR_INLINE void
-membuf_create(apr_size_t size, apr_pool_t *pool,
-              void **rdata, apr_size_t *rsize, apr_pool_t **rpool)
+membuf_create(void **data, apr_size_t *size,
+              apr_size_t minimum_size, apr_pool_t *pool)
 {
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
    * smaller size. Note that this is safe even if apr_palloc would
    * use some other aligment or none at all. */
-  *rsize = (size ? APR_ALIGN_DEFAULT(size) : 0);
-  *rdata = (!*rsize ? NULL : apr_palloc(pool, *rsize));
-  if (rpool)
-    *rpool = pool;
+  minimum_size = APR_ALIGN_DEFAULT(minimum_size);
+  *data = (!minimum_size ? NULL : apr_palloc(pool, minimum_size));
+  *size = minimum_size;
 }
 
-/* Ensure that the size of a given memory buffer is at least SIZE
- * bytes. An existing buffer will be resized by multiplying its size
- * by a power of two.
+/* Ensure that the size of a given memory buffer is at least MINIMUM_SIZE
+ * bytes. If *SIZE is already greater than or equal to MINIMUM_SIZE,
+ * this function does nothing.
+ *
+ * If *SIZE is 0, the allocated buffer size will be MINIMUM_SIZE
+ * rounded up to the nearest APR alignment boundary. Otherwse, *SIZE
+ * will be multiplied by a power of two such that the result is
+ * greater or equal to MINIMUM_SIZE. The pointer to the new buffer
+ * will be returned in *DATA, and its size in *SIZE.
  */
 static APR_INLINE void
-membuf_ensure(apr_size_t size, apr_pool_t *pool,
-              void **data, apr_size_t *rsize)
+membuf_ensure(void **data, apr_size_t *size,
+              apr_size_t minimum_size, apr_pool_t *pool)
 {
-  if (size > *rsize)
+  if (minimum_size > *size)
     {
-      apr_size_t new_size = *rsize;
+      apr_size_t new_size = *size;
 
       if (new_size == 0)
         /* APR will increase odd allocation sizes to the next
          * multiple for 8, for instance. Take advantage of that
          * knowledge and allow for the extra size to be used. */
-        new_size = APR_ALIGN_DEFAULT(size);
+        new_size = minimum_size;
       else
-        while (new_size < size)
+        while (new_size < minimum_size)
           {
             /* new_size is aligned; doubling it should keep it aligned */
             const apr_size_t prev_size = new_size;
@@ -85,26 +92,26 @@ membuf_ensure(apr_size_t size, apr_pool_t *pool,
             /* check for apr_size_t overflow */
             if (prev_size > new_size)
               {
-                new_size = APR_ALIGN_DEFAULT(size);
+                new_size = minimum_size;
                 break;
               }
           }
 
-      *data = (!new_size ? NULL : apr_palloc(pool, new_size));
-      *rsize = new_size;
+      membuf_create(data, size, new_size, pool);
     }
 }
 
 void
 svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool)
 {
-  membuf_create(size, pool, &membuf->data, &membuf->size, &membuf->pool);
+  membuf_create(&membuf->data, &membuf->size, size, pool);
+  membuf->pool = pool;
 }
 
 void
 svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size)
 {
-  membuf_ensure(size, membuf->pool, &membuf->data, &membuf->size);
+  membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
 }
 
 void
@@ -113,7 +120,7 @@ svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
   const void *const old_data = membuf->data;
   const apr_size_t old_size = membuf->size;
 
-  membuf_ensure(size, membuf->pool, &membuf->data, &membuf->size);
+  membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
   if (membuf->data && old_data && old_data != membuf->data)
     memcpy(membuf->data, old_data, old_size);
 }
@@ -369,7 +376,7 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
   ++blocksize; /* + space for '\0' */
 
   /* Allocate memory for svn_string_t and data in one chunk. */
-  membuf_create(blocksize + sizeof(*new_string), pool, &mem, &blocksize, NULL);
+  membuf_create(&mem, &blocksize, blocksize + sizeof(*new_string), pool);
 
   /* Initialize header and string */
   new_string = mem;
@@ -495,7 +502,7 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
   void *mem = NULL;
   ++minimum_size;  /* + space for '\0' */
 
-  membuf_ensure(minimum_size, str->pool, &mem, &str->blocksize);
+  membuf_ensure(&mem, &str->blocksize, minimum_size, str->pool);
   if (mem && mem != str->data)
     {
       if (str->data)
