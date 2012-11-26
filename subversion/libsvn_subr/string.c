@@ -38,23 +38,73 @@
 
 
 
+/* Allocate the space for a memory buffer. The data pointer will be NULL
+ * if the size is NULL.
+ * N.B.: The stringbuf creation functions use this, but since stringbufs
+ *       stringbufs alwase consume at least 1 byte for the NUL terminator,
+ *       the resulting data pointers will never be NULL.
+ */
+static APR_INLINE void
+membuf_create(apr_size_t size, apr_pool_t *pool,
+              void **rdata, apr_size_t *rsize, apr_pool_t **rpool)
+{
+  /* apr_palloc will allocate multiples of 8.
+   * Thus, we would waste some of that memory if we stuck to the
+   * smaller size. Note that this is safe even if apr_palloc would
+   * use some other aligment or none at all. */
+  *rsize = (size ? APR_ALIGN_DEFAULT(size) : 0);
+  *rdata = (!*rsize ? NULL : apr_palloc(pool, *rsize));
+  if (rpool)
+    *rpool = pool;
+}
+
+/* Ensure that the size of a given memory buffer is at least SIZE
+ * bytes. An existing buffer will be resized by multiplying its size
+ * by a power of two.
+ */
+static APR_INLINE void
+membuf_ensure(apr_size_t size, apr_pool_t *pool,
+              void **data, apr_size_t *rsize)
+{
+  if (size > *rsize)
+    {
+      apr_size_t new_size = *rsize;
+
+      if (new_size == 0)
+        /* APR will increase odd allocation sizes to the next
+         * multiple for 8, for instance. Take advantage of that
+         * knowledge and allow for the extra size to be used. */
+        new_size = APR_ALIGN_DEFAULT(size);
+      else
+        while (new_size < size)
+          {
+            /* new_size is aligned; doubling it should keep it aligned */
+            const apr_size_t prev_size = new_size;
+            new_size *= 2;
+
+            /* check for apr_size_t overflow */
+            if (prev_size > new_size)
+              {
+                new_size = APR_ALIGN_DEFAULT(size);
+                break;
+              }
+          }
+
+      *data = (!new_size ? NULL : apr_palloc(pool, new_size));
+      *rsize = new_size;
+    }
+}
+
 void
 svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool)
 {
-  membuf->pool = pool;
-  membuf->size = (size ? APR_ALIGN_DEFAULT(size) : 0);
-  membuf->data = (!membuf->size ? NULL : apr_palloc(pool, membuf->size));
+  membuf_create(size, pool, &membuf->data, &membuf->size, &membuf->pool);
 }
 
 void
 svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size)
 {
-  if (size > membuf->size)
-    {
-      membuf->size = APR_ALIGN_DEFAULT(size);
-      membuf->data = (!membuf->size ? NULL
-                      : apr_palloc(membuf->pool, membuf->size));
-    }
+  membuf_ensure(size, membuf->pool, &membuf->data, &membuf->size);
 }
 
 void
@@ -63,8 +113,8 @@ svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
   const void *const old_data = membuf->data;
   const apr_size_t old_size = membuf->size;
 
-  svn_membuf__ensure(membuf, size);
-  if (old_data && old_data != membuf->data)
+  membuf_ensure(size, membuf->pool, &membuf->data, &membuf->size);
+  if (membuf->data && old_data && old_data != membuf->data)
     memcpy(membuf->data, old_data, old_size);
 }
 
@@ -82,32 +132,6 @@ void
 svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size)
 {
   SVN_MEMBUF__NZERO(membuf, size);
-}
-
-/* Our own realloc, since APR doesn't have one.  Note: this is a
-   generic realloc for memory pools, *not* for strings. */
-static void *
-my__realloc(char *data, apr_size_t oldsize, apr_size_t request,
-            apr_pool_t *pool)
-{
-  void *new_area;
-
-  /* kff todo: it's a pity APR doesn't give us this -- sometimes it
-     could realloc the block merely by extending in place, sparing us
-     a memcpy(), but only the pool would know enough to be able to do
-     this.  We should add a realloc() to APR if someone hasn't
-     already. */
-
-  /* malloc new area */
-  new_area = apr_palloc(pool, request);
-
-  /* copy data to new area */
-  memcpy(new_area, data, oldsize);
-
-  /* I'm NOT freeing old area here -- cuz we're using pools, ugh. */
-
-  /* return new area */
-  return new_area;
 }
 
 static APR_INLINE svn_boolean_t
@@ -330,28 +354,6 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 
 /* svn_stringbuf functions */
 
-/* Create a stringbuf referring to (not copying) an existing block of memory
- * at DATA, of which SIZE bytes are the user data and BLOCKSIZE bytes are
- * allocated in total.  DATA[SIZE] must be a zero byte. */
-static svn_stringbuf_t *
-create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
-                 apr_pool_t *pool)
-{
-  svn_stringbuf_t *new_string;
-
-  new_string = apr_palloc(pool, sizeof(*new_string));
-
-  SVN_ERR_ASSERT_NO_RETURN(size < blocksize);
-  SVN_ERR_ASSERT_NO_RETURN(data[size] == '\0');
-
-  new_string->data = data;
-  new_string->len = size;
-  new_string->blocksize = blocksize;
-  new_string->pool = pool;
-
-  return new_string;
-}
-
 svn_stringbuf_t *
 svn_stringbuf_create_empty(apr_pool_t *pool)
 {
@@ -364,24 +366,17 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
   void *mem;
   svn_stringbuf_t *new_string;
 
-  /* apr_palloc will allocate multiples of 8.
-   * Thus, we would waste some of that memory if we stuck to the
-   * smaller size. Note that this is safe even if apr_palloc would
-   * use some other aligment or none at all. */
-
   ++blocksize; /* + space for '\0' */
-  blocksize = APR_ALIGN_DEFAULT(blocksize);
 
   /* Allocate memory for svn_string_t and data in one chunk. */
-  mem = apr_palloc(pool, sizeof(*new_string) + blocksize);
+  membuf_create(blocksize + sizeof(*new_string), pool, &mem, &blocksize, NULL);
 
   /* Initialize header and string */
   new_string = mem;
-
   new_string->data = (char*)mem + sizeof(*new_string);
   new_string->data[0] = '\0';
   new_string->len = 0;
-  new_string->blocksize = blocksize;
+  new_string->blocksize = blocksize - sizeof(*new_string);
   new_string->pool = pool;
 
   return new_string;
@@ -422,9 +417,15 @@ svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
 {
   char *data = apr_pvsprintf(pool, fmt, ap);
   apr_size_t size = strlen(data);
+  svn_stringbuf_t *new_string;
 
-  /* wrap an svn_stringbuf_t around the new data */
-  return create_stringbuf(data, size, size + 1, pool);
+  new_string = apr_palloc(pool, sizeof(*new_string));
+  new_string->data = data;
+  new_string->len = size;
+  new_string->blocksize = size + 1;
+  new_string->pool = pool;
+
+  return new_string;
 }
 
 
@@ -491,38 +492,15 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str)
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 {
+  void *mem = NULL;
   ++minimum_size;  /* + space for '\0' */
 
-  /* Keep doubling capacity until have enough. */
-  if (str->blocksize < minimum_size)
+  membuf_ensure(minimum_size, str->pool, &mem, &str->blocksize);
+  if (mem && mem != str->data)
     {
-      if (str->blocksize == 0)
-        /* APR will increase odd allocation sizes to the next
-         * multiple for 8, for instance. Take advantage of that
-         * knowledge and allow for the extra size to be used. */
-        str->blocksize = APR_ALIGN_DEFAULT(minimum_size);
-      else
-        while (str->blocksize < minimum_size)
-          {
-            /* str->blocksize is aligned;
-             * doubling it should keep it aligned */
-            apr_size_t prev_size = str->blocksize;
-            str->blocksize *= 2;
-
-            /* check for apr_size_t overflow */
-            if (prev_size > str->blocksize)
-              {
-                str->blocksize = minimum_size;
-                break;
-              }
-          }
-
-      str->data = (char *) my__realloc(str->data,
-                                       str->len + 1,
-                                       /* We need to maintain (and thus copy)
-                                          the trailing nul */
-                                       str->blocksize,
-                                       str->pool);
+      if (str->data)
+        memcpy(mem, str->data, str->len + 1);
+      str->data = mem;
     }
 }
 
