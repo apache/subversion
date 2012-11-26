@@ -39,10 +39,10 @@
 
 
 /* Allocate the space for a memory buffer. The data pointer will be NULL
- * if the size is NULL.
+ * if the size is 0.
  * N.B.: The stringbuf creation functions use this, but since stringbufs
- *       stringbufs alwase consume at least 1 byte for the NUL terminator,
- *       the resulting data pointers will never be NULL.
+ *       always consume at least 1 byte for the NUL terminator, the
+ *       resulting data pointers will never be NULL.
  */
 static APR_INLINE void
 membuf_create(apr_size_t size, apr_pool_t *pool,
