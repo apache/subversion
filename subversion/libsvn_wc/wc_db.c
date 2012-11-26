@@ -1412,7 +1412,7 @@ create_pristine_db(svn_sqlite__db_t **pdb,
   my_statements[i] = NULL;
 
   SVN_ERR(svn_wc__db_util_open_db(pdb, dir_abspath, pdb_fname,
-                                  svn_sqlite__mode_rwcreate,
+                                  svn_sqlite__mode_rwcreate, FALSE,
                                   my_statements,
                                   result_pool, scratch_pool));
 

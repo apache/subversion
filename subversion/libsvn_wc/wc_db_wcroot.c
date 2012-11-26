@@ -708,7 +708,7 @@ try_symlink_as_dir:
       /* We found a wc-1 working copy directory.  */
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            NULL, UNKNOWN_WC_ID, wc_format,
+                            NULL, NULL, UNKNOWN_WC_ID, wc_format,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
     }
