@@ -277,8 +277,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_error_t *err, *err2;
-
+  svn_error_t *err;
   iprops_context_t *iprops_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
@@ -331,20 +330,12 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session,
-                                      scratch_pool);
-
-  err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
-                                      handler->location);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
-
-  SVN_ERR(err);
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+  SVN_ERR(svn_error_compose_create(
+                    svn_ra_serf__error_on_status(handler->sline.code,
+                                                 handler->path,
+                                                 handler->location),
+                    err));
 
   if (iprops_ctx->done)
     *iprops = iprops_ctx->iprops;
