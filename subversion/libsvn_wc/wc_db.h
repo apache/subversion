@@ -2116,9 +2116,11 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 /* Find BASE nodes with cached inherited properties.
 
    Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
-   paths to the same for each path in the working copy at or below
-   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
-   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   paths to the repos_relpath of the path for each path in the working copy
+   at or below LOCAL_ABSPATH, limited by DEPTH, that has cached inherited
+   properties for the BASE node of the path.
+
+   Allocate *IPROP_PATHS in RESULT_POOL.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
