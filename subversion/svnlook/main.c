@@ -96,7 +96,8 @@ enum
     svnlook__copy_info,
     svnlook__xml_opt,
     svnlook__ignore_properties,
-    svnlook__properties_only
+    svnlook__properties_only,
+    svnlook__diff_cmd
   };
 
 /*
@@ -127,6 +128,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
    N_("do not print differences for deleted files")},
+
+  {"diff-cmd",          svnlook__diff_cmd, 1,
+   N_("use ARG as diff command")},
 
   {"ignore-properties",   svnlook__ignore_properties, 0,
    N_("ignore properties during the operation")},
@@ -227,8 +231,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook diff REPOS_PATH\n\n"
       "Print GNU-style diffs of changed files and properties.\n"),
    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
-    svnlook__diff_copy_from, 'x', svnlook__ignore_properties,
-    svnlook__properties_only} },
+    svnlook__diff_copy_from, svnlook__diff_cmd, 'x',
+    svnlook__ignore_properties, svnlook__properties_only} },
 
   {"dirs-changed", subcommand_dirschanged, {0},
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -332,6 +336,7 @@ struct svnlook_opt_state
   svn_boolean_t quiet;            /* --quiet */
   svn_boolean_t ignore_properties;  /* --ignore_properties */
   svn_boolean_t properties_only;    /* --properties-only */
+  const char *diff_cmd;           /* --diff-cmd */
 };
 
 
@@ -353,6 +358,7 @@ typedef struct svnlook_ctxt_t
   const apr_array_header_t *diff_options;
   svn_boolean_t ignore_properties;
   svn_boolean_t properties_only;
+  const char *diff_cmd;
 
 } svnlook_ctxt_t;
 
@@ -967,18 +973,32 @@ print_diff_tree(svn_stream_t *out_stream,
         }
       else
         {
-          svn_diff_t *diff;
-          svn_diff_file_options_t *opts = svn_diff_file_options_create(pool);
-
-          if (c->diff_options)
-            SVN_ERR(svn_diff_file_options_parse(opts, c->diff_options, pool));
-
-          SVN_ERR(svn_diff_file_diff_2(&diff, orig_path,
-                                       new_path, opts, pool));
-
-          if (svn_diff_contains_diffs(diff))
+          if (c->diff_cmd)
             {
-              const char *orig_label, *new_label;
+              apr_file_t *outfile;
+              apr_file_t *errfile;
+              const char *outfilename;
+              const char *errfilename;
+              svn_stream_t *stream;
+              svn_stream_t *err_stream;
+              const char **diff_cmd_argv;
+              int diff_cmd_argc;
+              int exitcode;
+              const char *orig_label;
+              const char *new_label;
+
+              diff_cmd_argv = NULL;
+              diff_cmd_argc = c->diff_options->nelts;
+              if (diff_cmd_argc)
+                {
+                  int i;
+                  diff_cmd_argv = apr_palloc(pool, 
+                                             diff_cmd_argc * sizeof(char *));
+                  for (i = 0; i < diff_cmd_argc; i++)
+                    SVN_ERR(svn_utf_cstring_to_utf8(&diff_cmd_argv[i],
+                              APR_ARRAY_IDX(c->diff_options, i, const char *),
+                              pool));
+                }
 
               /* Print diff header. */
               SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
@@ -990,24 +1010,87 @@ print_diff_tree(svn_stream_t *out_stream,
                 SVN_ERR(generate_label(&orig_label, base_root,
                                        base_path, pool));
               SVN_ERR(generate_label(&new_label, root, path, pool));
-              SVN_ERR(svn_diff_file_output_unified3
-                      (out_stream, diff, orig_path, new_path,
-                       orig_label, new_label,
-                       svn_cmdline_output_encoding(pool), NULL,
-                       opts->show_c_function, pool));
+
+              /* We deal in streams, but svn_io_run_diff2() deals in file
+                 handles, unfortunately, so we need to make these temporary
+                 files, and then copy the contents to our stream. */
+              SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
+                        svn_io_file_del_on_pool_cleanup, pool, pool));
+              SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
+                        svn_io_file_del_on_pool_cleanup, pool, pool));
+
+              SVN_ERR(svn_io_run_diff2(".",
+                                       diff_cmd_argv,
+                                       diff_cmd_argc,
+                                       orig_label, new_label,
+                                       orig_path, new_path,
+                                       &exitcode, outfile, errfile,
+                                       c->diff_cmd, pool));
+
+              SVN_ERR(svn_io_file_close(outfile, pool));
+              SVN_ERR(svn_io_file_close(errfile, pool));
+
+              /* Now, open and copy our files to our output streams. */
+              SVN_ERR(svn_stream_for_stderr(&err_stream, pool));
+              SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
+                                               pool, pool));
+              SVN_ERR(svn_stream_copy3(stream,
+                                       svn_stream_disown(out_stream, pool),
+                                       NULL, NULL, pool));
+              SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
+                                               pool, pool));
+              SVN_ERR(svn_stream_copy3(stream,
+                                       svn_stream_disown(err_stream, pool),
+                                       NULL, NULL, pool));
+
               SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                   "\n"));
               diff_header_printed = TRUE;
             }
-          else if (! node->prop_mod &&
-                  ((! c->no_diff_added && node->action == 'A') ||
-                   (! c->no_diff_deleted && node->action == 'D')))
+          else
             {
-              /* There was an empty file added or deleted in this revision.
-               * We can't print a diff, but we can at least print
-               * a diff header since we know what happened to this file. */
-              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
-                                                  "%s", header->data));
+              svn_diff_t *diff;
+              svn_diff_file_options_t *opts = svn_diff_file_options_create(pool);
+
+              if (c->diff_options)
+                SVN_ERR(svn_diff_file_options_parse(opts, c->diff_options, pool));
+
+              SVN_ERR(svn_diff_file_diff_2(&diff, orig_path,
+                                           new_path, opts, pool));
+
+              if (svn_diff_contains_diffs(diff))
+                {
+                  const char *orig_label, *new_label;
+
+                  /* Print diff header. */
+                  SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                      "%s", header->data));
+
+                  if (orig_empty)
+                    SVN_ERR(generate_label(&orig_label, NULL, path, pool));
+                  else
+                    SVN_ERR(generate_label(&orig_label, base_root,
+                                           base_path, pool));
+                  SVN_ERR(generate_label(&new_label, root, path, pool));
+                  SVN_ERR(svn_diff_file_output_unified3
+                          (out_stream, diff, orig_path, new_path,
+                           orig_label, new_label,
+                           svn_cmdline_output_encoding(pool), NULL,
+                           opts->show_c_function, pool));
+                  SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                      "\n"));
+                  diff_header_printed = TRUE;
+                }
+              else if (! node->prop_mod &&
+                      ((! c->no_diff_added && node->action == 'A') ||
+                       (! c->no_diff_deleted && node->action == 'D')))
+                {
+                  /* There was an empty file added or deleted in this revision.
+                   * We can't print a diff, but we can at least print
+                   * a diff header since we know what happened to this file. */
+                  SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
+                                                      "%s", header->data));
+                }
             }
         }
     }
@@ -1845,6 +1928,7 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
                                           " \t\n\r", TRUE, pool);
   baton->ignore_properties = opt_state->ignore_properties;
   baton->properties_only = opt_state->properties_only;
+  baton->diff_cmd = opt_state->diff_cmd;
 
   if (baton->txn_name)
     SVN_ERR(svn_fs_open_txn(&(baton->txn), baton->fs,
@@ -2352,6 +2436,10 @@ main(int argc, const char *argv[])
 
         case svnlook__properties_only:
           opt_state.properties_only = TRUE;
+          break;
+
+        case svnlook__diff_cmd:
+          opt_state.diff_cmd = opt_arg;
           break;
 
         default:
