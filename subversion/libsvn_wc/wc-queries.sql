@@ -29,7 +29,7 @@
 -- STMT_SELECT_NODE_INFO
 SELECT op_depth, repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, moved_here
+  symlink_target, last_mod_time, properties, moved_here, inherited_props
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
@@ -38,6 +38,7 @@ ORDER BY op_depth DESC
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, moved_here,
+  inherited_props,
   /* All the columns until now must match those returned by
      STMT_SELECT_NODE_INFO. The implementation of svn_wc__db_read_info()
      assumes that these columns are followed by the lock information) */
@@ -798,9 +799,9 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, dav_cache, symlink_target,
-  file_external )
+  inherited_props, file_external )
 VALUES (?1, ?2, 0,
-        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
         (SELECT file_external FROM nodes
           WHERE wc_id = ?1
             AND local_relpath = ?2

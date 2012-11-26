@@ -7667,7 +7667,7 @@ read_info(svn_wc__db_status_t *status,
           if (op_depth != 0)
             *lock = NULL;
           else
-            *lock = lock_from_columns(stmt_info, 16, 17, 18, 19, result_pool);
+            *lock = lock_from_columns(stmt_info, 17, 18, 19, 20, result_pool);
         }
 
       if (have_work)
@@ -9712,6 +9712,7 @@ commit_node(void *baton,
   svn_sqlite__stmt_t *stmt_act;
   svn_boolean_t have_act;
   svn_string_t prop_blob = { 0 };
+  svn_string_t inherited_prop_blob = { 0 };
   const char *changelist = NULL;
   const char *parent_relpath;
   svn_wc__db_status_t new_presence;
@@ -9780,6 +9781,10 @@ commit_node(void *baton,
   if (prop_blob.data == NULL)
     prop_blob.data = svn_sqlite__column_blob(stmt_info, 14, &prop_blob.len,
                                              scratch_pool);
+
+  inherited_prop_blob.data = svn_sqlite__column_blob(stmt_info, 16,
+                                                     &inherited_prop_blob.len,
+                                                     scratch_pool);
 
   if (cb->keep_changelist && have_act)
     changelist = svn_sqlite__column_text(stmt_act, 0, scratch_pool);
@@ -9867,6 +9872,11 @@ commit_node(void *baton,
                                     scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
                                       scratch_pool));
+  if (inherited_prop_blob.data != NULL)
+    {
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 17, inherited_prop_blob.data,
+                                    inherited_prop_blob.len));
+    }
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
