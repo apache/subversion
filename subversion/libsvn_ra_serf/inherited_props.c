@@ -293,6 +293,8 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                       revision,
                                       result_pool, scratch_pool));
 
+  SVN_ERR_ASSERT(session->repos_root_str);
+
   iprops_ctx = apr_pcalloc(scratch_pool, sizeof(*iprops_ctx));
   iprops_ctx->done = FALSE;
   iprops_ctx->repos_root_url = session->repos_root_str;
