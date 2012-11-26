@@ -86,7 +86,11 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  const char *repos_root_url = NULL;
   *wcroot_iprops = apr_hash_make(result_pool);
+
+  if (ra_session)
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
 
   /* If we don't have a base revision for LOCAL_ABSPATH then it can't
      possibly be a working copy root, nor can it contain any WC roots
@@ -149,7 +153,12 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                                            FALSE, TRUE,
                                                            ctx,
                                                            scratch_pool));
+              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                             scratch_pool));
             }
+
+          if (strcmp(repos_root_url, url) == 0)
+            continue;
 
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", revision, result_pool,
