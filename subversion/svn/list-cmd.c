@@ -151,8 +151,6 @@ print_dirent_xml(void *baton,
     {
       if (dirent->kind == svn_node_file)
         entryname = svn_dirent_basename(abs_path, pool);
-      else if (pb->verbose)
-        entryname = ".";
       else
         /* Don't bother to list if no useful information will be shown. */
         return SVN_NO_ERROR;
