@@ -1,0 +1,109 @@
+Goal
+====
+
+Provide a stand-alone executable that will provide a svn_cache__t 
+implementation based on a single shared memory.  The core data
+structure and access logic can be taken from / shared with today's
+membuffer cache.  The latter shall remain available as it is now.
+
+Of curse, we must ensure that crashed / deadlocked cache clients
+get detect and safely cleaned up behind.
+
+The cache process itself shall have a control interface that also
+allows for operations like resetting the content or printing access
+stats.
+
+As a bonus, replace the current revprop cache infrastructure based
+on named atomics with some central storage. 
+
+This development is targeted at the 1.9 release.
+
+
+TODO
+====
+
+* design a shared-mem lock mechanism with the following props:
+
+  - support shared (read) and exclusive (write) locks
+  - identify locking client (for cleanup in that client dies)
+  - very low overhead (~1 musec or better)
+  - support inter-process and inter-thread locking at the same time
+  - simple enough to review and test
+  - portable
+  - breakable (temporarily hung processes shall be able to detect
+    that their lock has been forcefully removed by the cache server)
+
+* implement shared-memory data buffer
+
+* provide a client / server interface and protocol
+
+  - let clients register
+  - make server detect whether the / all clients are alive
+  - de-register a client
+
+* user control interface
+
+
+Technical Issues
+================
+
+Multiple actors
+---------------
+
+The lock infrastructure involves multiple parties / agents:
+
+* One provides the underlying data structure and initializes it.
+  This is part of the server.
+* Many lock users.  Act on the existing data structures but will
+  have local state as well.  Also, may need to contact the 3rd
+  actor.  The users are run in the clients.
+* Token registry and lock breaking / cleanup. 
+  This is part of the server.
+
+
+Core lock data structure: multi-slot locks
+------------------------------------------
+
+The data structure is basically a small array (~16 entries) of "slots" 
+(a simple 4 byte word) and should be cache-aligned to minimize the
+CPU cache coherency overhead.
+
+Each slot may either be unused (content is 0) or used (contains the
+token value of the locking client).  To hold a lock is equivalent to
+having at least one of the slots containing one's token.  Thus,  the
+number of slots in the lock limits the number of shared locks that can
+be acquired.
+
+A shared lock can be acquired by atomically checking a slot for being
+empty (0) and writing the token when it was 0.  Releasing the lock
+is doing the reverse. atomic_compare_and_exchange is the only operation
+we need to acquire a lock and store the holder token at the same time.
+
+Exclusive locks would simply acquire all slots.  If some slots are
+not available, spin.  If they remain unavailable, sleep.  After some
+timeout, contact the server and let it check the other lock holders.
+
+
+Token registry and declaration of death
+---------------------------------------
+
+When the cache server detects that a cache client has died, it will
+simply examine all locks and release all slots holding the respective
+token.
+
+If the server decides that an existing client is not likely to ever
+return the lock, it may declare it "dead".  In addition to doing the
+same cleanup as before, we need another data structure: the token
+registry.  Its actual structure is TBD.
+
+Part of the shared memory contains that token registry, i.e. it is
+visible to the clients.  They can use this to verify their token
+after they release a lock.  If the lock token got invalidated,
+return an error.  Do the same test before acquiring a lock.
+
+Finally, there must be hook interface to be invoked whenever a client
+was declared dead.  The reason is that a client might have continued
+to work with non-sync'ed data from the cache potentially creating
+bogus text deltas during a commit.
+
+
