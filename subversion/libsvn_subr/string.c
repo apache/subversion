@@ -1249,7 +1249,7 @@ svn_string__similarity(const svn_string_t *stringa,
 
       /* Allocate two columns in the LCS matrix
          ### Optimize this to (slots + 2) instesd of 2 * (slots + 1) */
-      svn_membuf__resize(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
+      svn_membuf__ensure(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
       svn_membuf__nzero(buffer, (slots + 2) * sizeof(apr_size_t));
       prev = buffer->data;
       curr = prev + slots + 1;
