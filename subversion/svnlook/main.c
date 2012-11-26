@@ -784,14 +784,6 @@ generate_label(const char **label,
   return SVN_NO_ERROR;
 }
 
-/*
- * Constant diff output separator strings
- */
-static const char equal_string[] =
-  "===================================================================";
-static const char under_string[] =
-  "___________________________________________________________________";
-
 
 /* Helper function to display differences in properties of a file */
 static svn_error_t *
@@ -810,7 +802,7 @@ display_prop_diffs(svn_stream_t *outstream,
                                       APR_EOL_STR));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
-                                      "%s" APR_EOL_STR, under_string));
+                                      SVN_DIFF__UNDER_STRING APR_EOL_STR));
 
   SVN_ERR(check_cancel(NULL));
 
@@ -948,8 +940,7 @@ print_diff_tree(svn_stream_t *out_stream,
 
   if (do_diff && (! c->properties_only))
     {
-      svn_stringbuf_appendcstr(header, equal_string);
-      svn_stringbuf_appendcstr(header, "\n");
+      svn_stringbuf_appendcstr(header, SVN_DIFF__EQUAL_STRING "\n");
 
       if (binary)
         {
@@ -1121,11 +1112,11 @@ print_diff_tree(svn_stream_t *out_stream,
               SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                   "Index: %s\n", path));
               SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
-                                                  "%s\n", equal_string));
-              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
-                                                  "--- %s\n", orig_label));
-              SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
-                                                  "+++ %s\n", new_label));
+                                                  SVN_DIFF__EQUAL_STRING "\n"));
+              /* --- <label1>
+               * +++ <label2> */
+              SVN_ERR(svn_diff__unidiff_write_header(
+                        out_stream, encoding, orig_label, new_label, pool));
             }
           SVN_ERR(display_prop_diffs(out_stream, encoding,
                                      props, base_proptable, path, pool));
