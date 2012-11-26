@@ -887,9 +887,11 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 
 /**
  * Set @a *iprops_paths to a hash mapping const char * absolute working
- * copy paths to the same for each path in the working copy at or below
- * @a local_abspath, limited by @a depth, that has cached inherited
- * properties for the base node of the path.  Allocate @a *iprop_paths
+ * copy paths to the nodes repository root relative path for each path
+ * in the working copy at or below @a local_abspath, limited by @a depth,
+ * that has cached inherited properties for the base node of the path.
+ *
+ * Allocate @a *iprop_paths
  * in @a result_pool.  Use @a scratch_pool for temporary allocations.
  */
 svn_error_t *

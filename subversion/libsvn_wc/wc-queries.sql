@@ -1444,19 +1444,26 @@ SET inherited_props = ?3
 WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
 
 /* Select a single path if its base node has cached inherited properties. */
--- STMT_SELECT_INODES
-SELECT local_relpath FROM nodes
+-- STMT_SELECT_IPROPS_NODE
+SELECT local_relpath, repos_path FROM nodes
 WHERE wc_id = ?1
   AND local_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
 
-/* Select all paths whose base nodes at or below a given path, which
+/* Select all paths whose base nodes are below a given path, which
    have cached inherited properties. */
--- STMT_SELECT_INODES_RECURSIVE
-SELECT local_relpath FROM nodes
+-- STMT_SELECT_IPROPS_RECURSIVE
+SELECT local_relpath, repos_path FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND (inherited_props not null)
+
+-- STMT_SELECT_IPROPS_CHILDREN
+SELECT local_relpath, repos_path FROM nodes
+WHERE wc_id = ?1
+  AND parent_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
 
