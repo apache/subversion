@@ -1399,6 +1399,10 @@ handle_propchange_only(report_info_t *info,
 
   info->dir->ref_count--;
 
+  /* See if the parent directory of this file (and perhaps even
+     parents of that) can be closed now.  */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
+
   return SVN_NO_ERROR;
 }
 
@@ -1422,6 +1426,10 @@ handle_local_content(report_info_t *info,
   svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
+
+  /* See if the parent directory of this fetched item (and
+     perhaps even parents of that) can be closed now. */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
 
   return SVN_NO_ERROR;
 }
@@ -2179,6 +2187,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->dir->propfind_handler = NULL;
         }
 
+      /* See if this directory (and perhaps even parents of that) can
+         be closed now.  This is likely to be the case only if we
+         didn't need to contact the server for supplemental
+         information required to handle any of this directory's
+         children.  */
+      SVN_ERR(maybe_close_dir_chain(info->dir));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OPEN_FILE && strcmp(name.name, "open-file") == 0)
@@ -2785,10 +2799,6 @@ finish_report(void *report_baton,
                     {
                       prev->next = cur->next;
                     }
-
-                  /* See if the parent directory of this fetched item (and
-                     perhaps even parents of that) can be closed now. */
-                  SVN_ERR(maybe_close_dir_chain(info->dir));
                 }
             }
 
