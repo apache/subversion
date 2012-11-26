@@ -24,25 +24,21 @@ dnl Check for _dyld_image_name and _dyld_image_header availability
 AC_DEFUN(SVN_LIB_MACHO_ITERATE,
 [
   AC_MSG_CHECKING([for Mach-O dynamic module iteration functions])
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_RUN_IFELSE([AC_LANG_PROGRAM([[
     #include <mach-o/dyld.h>
     #include <mach-o/loader.h>
-    int check(void) {
-      const struct mach_header *header = _dyld_get_image_header(0);
-      const char *name = _dyld_get_image_name(0);
-      if (name && header) return 1;
-      return 0;
-    }
-  ]],[[]])],[have_macho_iterate=yes],[have_macho_iterate=no])
-
-  if test "$have_macho_iterate" = "yes"; then
+  ]],[[
+    const struct mach_header *header = _dyld_get_image_header(0);
+    const char *name = _dyld_get_image_name(0);
+    if (name && header) return 0;
+    return 1;
+  ]])],[
     AC_DEFINE([SVN_HAVE_MACHO_ITERATE], [1],
               [Is Mach-O low-level _dyld API available?])
     AC_MSG_RESULT([yes])
-  else
+  ],[
     AC_MSG_RESULT([no])
-  fi
+  ])
 ])
 
 dnl SVN_LIB_MACOS_PLIST
@@ -53,12 +49,12 @@ AC_DEFUN(SVN_LIB_MACOS_PLIST,
 
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     #include <AvailabilityMacros.h>
-    #if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_0)
+    #if !defined(MAC_OS_X_VERSION_MAX_ALLOWED) \
+     || !defined(MAC_OS_X_VERSION_10_0) \
+     || (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_0)
     #error ProperyList API unavailable.
     #endif
-  ]],[[]])],[have_macos_plist=yes],[have_macos_plist=no])
-
-  if test "$have_macos_plist" = "yes"; then
+  ]],[[]])],[
     dnl ### Hack.  We should only need to pass the -framework options when
     dnl linking libsvn_subr, since it is the only library that uses Keychain.
     dnl
@@ -75,9 +71,9 @@ AC_DEFUN(SVN_LIB_MACOS_PLIST,
     AC_DEFINE([SVN_HAVE_MACOS_PLIST], [1],
               [Is Mac OS property list API available?])
     AC_MSG_RESULT([yes])
-  else
+  ],[
     AC_MSG_RESULT([no])
-  fi
+  ])
 ])
 
 dnl SVN_LIB_MACOS_KEYCHAIN
@@ -92,28 +88,23 @@ AC_DEFUN(SVN_LIB_MACOS_KEYCHAIN,
 
   AC_MSG_CHECKING([for Mac OS KeyChain Services])
 
-  if test "$have_macos_plist" != "yes"; then
-    dnl There's no sense in checking for KeyChain if plists are not available
-    enable_keychain=no
-    AC_MSG_RESULT([no])
-  else
-    if test "$enable_keychain" = "yes"; then
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-        #include <AvailabilityMacros.h>
-        #if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_2)
-        #error KeyChain API unavailable.
-        #endif
-      ]],[[]])],[],[enable_keychain=no])
-    fi
-
-    if test "$enable_keychain" = "yes"; then
+  if test "$enable_keychain" = "yes"; then
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+      #include <AvailabilityMacros.h>
+      #if !defined(MAC_OS_X_VERSION_MAX_ALLOWED) \
+       || !defined(MAC_OS_X_VERSION_10_2) \
+       || (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_2)
+      #error KeyChain API unavailable.
+      #endif
+    ]],[[]])],[
       dnl ### Hack, see SVN_LIB_MACOS_PLIST
       LIBS="$LIBS -framework Security"
       LIBS="$LIBS -framework CoreServices"
       AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
       AC_MSG_RESULT([yes])
-    else
+    ],[
+      enable_keychain=no
       AC_MSG_RESULT([no])
-    fi
+    ])
   fi
 ])
