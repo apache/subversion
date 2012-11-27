@@ -2168,9 +2168,34 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              an svn:externals line.  As it happens, our parse code
              checks for this, so all we have to is invoke it --
              we're not interested in the parsed result, only in
-             whether or the parsing errored. */
-          SVN_ERR(svn_wc_parse_externals_description3
-                  (NULL, path, propval->data, FALSE, pool));
+             whether or not the parsing errored. */
+          apr_array_header_t *externals = NULL;
+          apr_array_header_t *duplicate_targets = NULL;
+          SVN_ERR(svn_wc_parse_externals_description3(&externals, path,
+                                                      propval->data, FALSE,
+                                                      /*scratch_*/pool));
+          SVN_ERR(svn_wc__externals_find_target_dups(&duplicate_targets,
+                                                     externals,
+                                                     /*scratch_*/pool,
+                                                     /*scratch_*/pool));
+          if (duplicate_targets && duplicate_targets->nelts > 0)
+            {
+              const char *more_str = "";
+              if (duplicate_targets->nelts > 1)
+                {
+                  more_str = apr_psprintf(/*scratch_*/pool,
+                               _(" (%d more duplicate targets found)"),
+                               duplicate_targets->nelts - 1);
+                }
+              return svn_error_createf(
+                SVN_ERR_WC_DUPLICATE_EXTERNALS_TARGET, NULL,
+                _("Invalid %s property on '%s': "
+                  "target '%s' appears more than once%s"),
+                SVN_PROP_EXTERNALS,
+                svn_dirent_local_style(path, pool),
+                APR_ARRAY_IDX(duplicate_targets, 0, const char*),
+                more_str);
+            }
         }
     }
   else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
