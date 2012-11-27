@@ -172,12 +172,12 @@ def run_one_test(sbox, basename, *varargs):
     logger.warn("Expected standard output:")
     logger.warn("=====")
     for x in exp_stdout:
-      logger.warn(x)
+      logger.warn(x.rstrip())
     logger.warn("=====")
     logger.warn("Actual standard output:")
     logger.warn("=====")
     for x in actual_stdout:
-      logger.warn(x)
+      logger.warn(x.rstrip())
     logger.warn("=====")
     raise svntest.Failure
 
@@ -186,12 +186,12 @@ def run_one_test(sbox, basename, *varargs):
     logger.warn("Expected standard error:")
     logger.warn("=====")
     for x in exp_stderr:
-      logger.warn(x)
+      logger.warn(x.rstrip())
     logger.warn("=====")
     logger.warn("Actual standard error:")
     logger.warn("=====")
     for x in actual_stderr:
-      logger.warn(x)
+      logger.warn(x.rstrip())
     logger.warn("=====")
     raise svntest.Failure
 
