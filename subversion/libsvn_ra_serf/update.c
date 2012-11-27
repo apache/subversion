@@ -1356,7 +1356,10 @@ maybe_close_dir_chain(report_dir_t *dir)
 
       /* Make sure there are no references to this dir in the
          active_dir_propfinds list.  If there are, don't close the
-         directory, and don't  -- we should be able to */
+         directory -- which would delete the pool from which the
+         relevant active_dir_propfinds list item is allocated -- and
+         of course don't crawl upward to check the parents for
+         a closure opportunity, either.  */
       done_list = report_context->active_dir_propfinds;
       while (done_list)
         {
@@ -1595,12 +1598,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
   else
     {
-      /* No propfind or GET request.  Just handle the prop changes now.
-
-         Note: we'll use INFO->POOL for the scratch_pool here since it will
-         be destroyed at the end of handle_propchange_only(). That pool
-         would be quite fine, but it is unclear how long INFO->POOL will
-         stick around since its lifetime and usage are unclear.  */
+      /* No propfind or GET request.  Just handle the prop changes now. */
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
@@ -2778,19 +2776,6 @@ finish_report(void *report_baton,
                 {
                   report_info_t *info = cur->data;
 
-                  /* If we've got cached file content for this file,
-                     take care of the locally collected properties and
-                     file content at once.  Otherwise, just deal with
-                     the collected properties. */
-                  if (info->cached_contents)
-                    {
-                      SVN_ERR(handle_local_content(info, iterpool_inner));
-                    }
-                  else
-                    {
-                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
-                    }
-
                   if (!prev)
                     {
                       report->file_propchanges_only = cur->next;
@@ -2798,6 +2783,25 @@ finish_report(void *report_baton,
                   else
                     {
                       prev->next = cur->next;
+                    }
+
+                  /* If we've got cached file content for this file,
+                     take care of the locally collected properties and
+                     file content at once.  Otherwise, just deal with
+                     the collected properties.
+
+                     NOTE:  These functions below could delete
+                     info->dir->pool (via maybe_close_dir_chain()),
+                     from which is allocated the list item in
+                     report->file_propchanges_only.
+                  */
+                  if (info->cached_contents)
+                    {
+                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                    }
+                  else
+                    {
+                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
                     }
                 }
             }
@@ -2823,7 +2827,11 @@ finish_report(void *report_baton,
           report->num_active_fetches--;
 
           /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. */
+             perhaps even parents of that) can be closed now. 
+
+             NOTE:  This could delete cur_dir->pool, from which is
+             allocated the list item in report->done_fetches.
+          */
           SVN_ERR(maybe_close_dir_chain(cur_dir));
 
           done_list = next_done;
@@ -2876,7 +2884,11 @@ finish_report(void *report_baton,
                     }
 
                   /* See if this directory (and perhaps even parents of that)
-                     can be closed now. */
+                     can be closed now.
+
+                     NOTE:  This could delete cur_dir->pool, from which is
+                     allocated the list item in report->active_dir_propfinds.
+                  */
                   SVN_ERR(maybe_close_dir_chain(cur_dir));
                 }
             }
