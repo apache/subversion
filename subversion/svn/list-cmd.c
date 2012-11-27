@@ -42,9 +42,14 @@
 struct print_baton {
   svn_boolean_t verbose;
   svn_client_ctx_t *ctx;
+  
+  /* To keep track of last seen external information. */
+  const char *last_external_parent_url;
+  const char *last_external_target;
+  svn_boolean_t in_external;
 };
 
-/* This implements the svn_client_list_func_t API, printing a single
+/* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
 static svn_error_t *
 print_dirent(void *baton,
@@ -52,12 +57,17 @@ print_dirent(void *baton,
              const svn_dirent_t *dirent,
              const svn_lock_t *lock,
              const char *abs_path,
+             const char *external_parent_url,
+             const char *external_target,
              apr_pool_t *pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
   static const char *time_format_long = NULL;
   static const char *time_format_short = NULL;
+
+  SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
+                 (external_parent_url && external_target));
 
   if (time_format_long == NULL)
     time_format_long = _("%b %d %H:%M");
@@ -79,6 +89,24 @@ print_dirent(void *baton,
     }
   else
     entryname = path;
+  
+  if (external_parent_url && external_target)
+    {
+      if ((pb->last_external_parent_url == NULL 
+           && pb->last_external_target == NULL) 
+          || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
+              || strcmp(pb->last_external_target, external_target) != 0))
+        {
+          SVN_ERR(svn_cmdline_printf(pool,
+                                     _("Listing external '%s'"
+                                       " defined on '%s':\n"), 
+                                     external_target,
+                                     external_parent_url));
+
+          pb->last_external_parent_url = external_parent_url;
+          pb->last_external_target = external_target;
+        }
+    }
 
   if (pb->verbose)
     {
@@ -133,7 +161,7 @@ print_dirent(void *baton,
 }
 
 
-/* This implements the svn_client_list_func_t API, printing a single dirent
+/* This implements the svn_client_list_func2_t API, printing a single dirent
    in XML format. */
 static svn_error_t *
 print_dirent_xml(void *baton,
@@ -141,11 +169,16 @@ print_dirent_xml(void *baton,
                  const svn_dirent_t *dirent,
                  const svn_lock_t *lock,
                  const char *abs_path,
+                 const char *external_parent_url,
+                 const char *external_target,
                  apr_pool_t *pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
-  svn_stringbuf_t *sb;
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
+  
+  SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
+                 (external_parent_url && external_target));
 
   if (strcmp(path, "") == 0)
     {
@@ -160,8 +193,32 @@ print_dirent_xml(void *baton,
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
+  
+  if (external_parent_url && external_target)
+    {
+      if ((pb->last_external_parent_url == NULL 
+           && pb->last_external_target == NULL)
+          || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
+              || strcmp(pb->last_external_target, external_target) != 0))
+        {
+          if (pb->in_external)
+            {
+              /* The external item being listed is different from the previous
+                 one, so close the tag. */
+              svn_xml_make_close_tag(&sb, pool, "external");
+              pb->in_external = FALSE;
+            }
 
-  sb = svn_stringbuf_create_empty(pool);
+          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "external",
+                                "parent_url", external_parent_url,
+                                "target", external_target,
+                                NULL);
+
+          pb->last_external_parent_url = external_parent_url;
+          pb->last_external_target = external_target;
+          pb->in_external = TRUE;
+        }
+    }
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
@@ -223,6 +280,8 @@ svn_cl__list(apr_getopt_t *os,
   struct print_baton pb;
   svn_boolean_t seen_nonexistent_target = FALSE;
   svn_error_t *err;
+  svn_error_t *externals_err = SVN_NO_ERROR;
+  struct svn_cl__check_externals_failed_notify_baton nwb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -264,12 +323,27 @@ svn_cl__list(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_immediates;
 
+  if (opt_state->include_externals)
+    {
+      nwb.wrapped_func = ctx->notify_func2;
+      nwb.wrapped_baton = ctx->notify_baton2;
+      nwb.had_externals_error = FALSE;
+      ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
+      ctx->notify_baton2 = &nwb;
+    }
+
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
+      
+      /* Initialize the following variables for 
+         every list target. */
+      pb.last_external_parent_url = NULL;
+      pb.last_external_target = NULL;
+      pb.in_external = FALSE;
 
       svn_pool_clear(subpool);
 
@@ -288,11 +362,12 @@ svn_cl__list(apr_getopt_t *os,
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
 
-      err = svn_client_list2(truepath, &peg_revision,
+      err = svn_client_list3(truepath, &peg_revision,
                              &(opt_state->start_revision),
                              opt_state->depth,
                              dirent_fields,
                              (opt_state->xml || opt_state->verbose),
+                             opt_state->include_externals,
                              opt_state->xml ? print_dirent_xml : print_dirent,
                              &pb, ctx, subpool);
 
@@ -314,20 +389,38 @@ svn_cl__list(apr_getopt_t *os,
       if (opt_state->xml)
         {
           svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
+          
+          if (pb.in_external)
+            {
+              /* close the final external item's tag */ 
+              svn_xml_make_close_tag(&sb, pool, "external");
+              pb.in_external = FALSE;
+            }
+
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
     }
 
   svn_pool_destroy(subpool);
+  
+  if (opt_state->include_externals && nwb.had_externals_error)
+    {
+      externals_err = svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+                                       NULL,
+                                       _("Failure occurred processing one or "
+                                         "more externals definitions"));
+    }
 
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
   if (seen_nonexistent_target)
-    return svn_error_create(
-      SVN_ERR_ILLEGAL_TARGET, NULL,
-      _("Could not list all targets because some targets don't exist"));
+    {
+      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+            _("Could not list all targets because some targets don't exist"));
+      return svn_error_compose_create(externals_err, err);
+    }
   else
-    return SVN_NO_ERROR;
+    return svn_error_compose_create(externals_err, err);
 }

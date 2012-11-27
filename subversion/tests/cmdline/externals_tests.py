@@ -2131,7 +2131,7 @@ def copy_file_externals(sbox):
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, True, wc_dir)
 
-def include_externals(sbox):
+def commit_include_externals(sbox):
   "commit --include-externals"
   # svntest.factory.make(sbox, """
   #   mkdir Z
@@ -2939,6 +2939,59 @@ def duplicate_targets(sbox):
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
     'svn:externals', wc_dir)
 
+@Issue(4225)  
+def list_include_externals(sbox):
+  "list with --include-externals"
+  
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  B_path = sbox.ospath("A/B")
+  C_path = sbox.ospath("A/C")
+
+  B_url = repo_url + "/A/B"
+  C_url = repo_url + "/A/C"
+
+  def list_external_string(path, url):
+    string = "Listing external" + " '" + path + "' " + "defined on" + " '" + \
+      url + "'" + ":"
+    return string
+
+  expected_stdout = verify.UnorderedOutput([
+    "E/" + "\n", 
+    "F/" + "\n",
+    "lambda" + "\n",
+    list_external_string("gamma", B_url ) + "\n",
+    "gamma" + "\n"])
+
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_path)
+  
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_url)
+
+  expected_stdout = verify.UnorderedOutput([
+    list_external_string("exdir_G", C_url)+ "\n",
+    "pi" + "\n",
+    "rho" + "\n",
+    "tau" + "\n",
+    list_external_string("exdir_H", C_url) + "\n",
+    "chi" + "\n",
+    "omega" + "\n",
+    "psi" + "\n"])
+  
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_path)
+  
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
+
 
 
 ########################################################################
@@ -2982,13 +3035,14 @@ test_list = [ None,
               file_externals_different_url,
               file_external_in_unversioned,
               copy_file_externals,
-              include_externals,
+              commit_include_externals,
               include_immediate_dir_externals,
               shadowing,
               remap_file_external_with_prop_del,
               dir_external_with_dash_r_only,
               url_to_wc_copy_of_externals,
               duplicate_targets,
+              list_include_externals,
              ]
 
 if __name__ == '__main__':
