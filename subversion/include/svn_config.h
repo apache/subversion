@@ -34,6 +34,7 @@
 #include <apr_hash.h>   /* for apr_hash_t */
 
 #include "svn_types.h"
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -241,6 +242,21 @@ svn_config_read(svn_config_t **cfgp,
                 const char *file,
                 svn_boolean_t must_exist,
                 apr_pool_t *pool);
+
+/** Read configuration data from @a stream into @a *cfgp, allocated in
+ * @a result_pool.
+ *
+ * If @a section_names_case_sensitive is TRUE, populate section name hashes
+ * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ *
+ * @since New in 1.8.
+ */
+
+svn_error_t *
+svn_config_parse(svn_config_t **cfgp,
+                 svn_stream_t *stream,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *result_pool);
 
 /** Like svn_config_read(), but merges the configuration data from @a file
  * (a file or registry path) into @a *cfg, which was previously returned
