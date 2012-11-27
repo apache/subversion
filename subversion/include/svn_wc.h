@@ -5403,24 +5403,52 @@ svn_wc_crawl_revisions(const char *path,
  * @{
  */
 
+/** If @a is_wcroot is not @c NULL, set @a *is_wcroot to @c TRUE if @a
+ * local_abspath is the root of the working, otherwise to @c FALSE.
+ *
+ * If @a is_switched is not @c NULL, set @a *is_switched to @c TRUE if @a
+ * local_abspath is not the root of the working, and switched against its
+ * parent.
+ *
+ * If @a kind is not @c NULL, set @a *kind to the node kind of @a
+ * local_abspath.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
+
 /** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
  * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
- * if its parent directory is not a WC or if its parent directory's repository
- * URL is not the parent of its own repository URL. Thus, a switched subtree is
- * considered to be a working copy root. Also, a deleted tree-conflict
- * victim is considered a "working copy root" because it has no URL.
+ * if its parent directory is not a WC or if it is switched. Also, a deleted
+ * tree-conflict victim is considered a "working copy root" because it has no
+ * URL.
  *
  * If @a local_abspath is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
  *
  * Use @a scratch_pool for any temporary allocations.
  *
+ * @note For legacy reasons only a directory can be a wc-root. However, this
+ * function will also set wc_root to @c TRUE for a switched file.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API. Consider
+ * using svn_wc_check_root() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_is_wc_root2(svn_boolean_t *wc_root,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
                    apr_pool_t *scratch_pool);
+
 
 /**
  * Similar to svn_wc_is_wc_root2(), but with an access baton and relative

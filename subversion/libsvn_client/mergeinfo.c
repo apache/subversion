@@ -264,6 +264,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           !svn_dirent_is_root(local_abspath, strlen(local_abspath)))
         {
           svn_boolean_t is_wc_root;
+          svn_boolean_t is_switched;
           svn_revnum_t parent_base_rev;
           svn_revnum_t parent_changed_rev;
 
@@ -273,9 +274,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
           /* If we've reached the root of the working copy don't look any
              higher. */
-          SVN_ERR(svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx,
-                                     local_abspath, iterpool));
-          if (is_wc_root)
+          SVN_ERR(svn_wc_check_root(&is_wc_root, &is_switched, NULL,
+                                    ctx->wc_ctx, local_abspath, iterpool));
+          if (is_wc_root || is_switched)
             break;
 
           /* No explicit mergeinfo on this path.  Look higher up the

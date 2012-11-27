@@ -81,7 +81,7 @@ typedef struct representation_t
   /* revision that contains this representation
    * (may be referenced by other revisions, though) */
   
-  apr_uint32_t revision;
+  svn_revnum_t revision;
   apr_uint32_t ref_count;
 
   /* length of the PLAIN / DELTA line in the source file in bytes */
@@ -418,7 +418,7 @@ read_revision_header(apr_size_t *changes,
 {
   char buf[64];
   const char *line;
-  const char *space;
+  char *space;
   apr_uint64_t val;
   apr_size_t len;
   
@@ -447,7 +447,7 @@ read_revision_header(apr_size_t *changes,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Final line in revision file missing space"));
 
-  *(char *)space = 0;
+  *space = 0;
   
   SVN_ERR(svn_cstring_strtoui64(&val, line+1, 0, APR_SIZE_MAX, 10));
   *root_noderev = (apr_size_t)val;
@@ -588,8 +588,8 @@ key_matches(svn_string_t *string, const char *key)
 static int
 compare_representation_offsets(const void *data, const void *key)
 {
-  apr_ssize_t diff = (*(const representation_t **)data)->offset
-                   - *(const apr_size_t *)key;
+  apr_ssize_t diff = (*(const representation_t *const *)data)->offset
+                     - *(const apr_size_t *)key;
 
   /* sizeof(int) may be < sizeof(ssize_t) */
   if (diff < 0)
@@ -601,7 +601,7 @@ static representation_t *
 find_representation(int *idx,
                     fs_fs_t *fs,
                     revision_info_t **revision_info,
-                    int revision,
+                    svn_revnum_t revision,
                     apr_size_t offset)
 {
   revision_info_t *info;
@@ -645,7 +645,8 @@ read_rep_base(representation_t **representation,
               apr_pool_t *scratch_pool)
 {
   char *str, *last_str;
-  int idx, revision;
+  int idx;
+  svn_revnum_t revision;
   apr_uint64_t temp;
 
   const char *buffer = file_content->data + offset;
@@ -673,7 +674,7 @@ read_rep_base(representation_t **representation,
   /* We hopefully have a DELTA vs. a non-empty base revision. */
   str = svn_cstring_tokenize(" ", &last_str);
   str = svn_cstring_tokenize(" ", &last_str);
-  SVN_ERR(svn_cstring_atoi(&revision, str));
+  SVN_ERR(svn_revnum_parse(&revision, str, NULL));
 
   str = svn_cstring_tokenize(" ", &last_str);
   SVN_ERR(svn_cstring_strtoui64(&temp, str, 0, APR_SIZE_MAX, 10));
@@ -692,7 +693,7 @@ parse_representation(representation_t **representation,
                      apr_pool_t *scratch_pool)
 {
   representation_t *result;
-  int revision;
+  svn_revnum_t revision;
 
   apr_uint64_t offset;
   apr_uint64_t size;
@@ -700,7 +701,7 @@ parse_representation(representation_t **representation,
   int idx;
 
   char *c = (char *)value->data;
-  SVN_ERR(svn_cstring_atoi(&revision, svn_cstring_tokenize(" ", &c)));
+  SVN_ERR(svn_revnum_parse(&revision, svn_cstring_tokenize(" ", &c), NULL));
   SVN_ERR(svn_cstring_strtoui64(&offset, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
   SVN_ERR(svn_cstring_strtoui64(&size, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
   SVN_ERR(svn_cstring_strtoui64(&expanded_size, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
@@ -907,7 +908,7 @@ parse_dir(fs_fs_t *fs,
                               text_pool));
   current = text->data;
 
-  revision_key = apr_psprintf(text_pool, "r%d/", representation->revision);
+  revision_key = apr_psprintf(text_pool, "r%ld/", representation->revision);
   key_len = strlen(revision_key);
   
   /* Translate the string dir entries into real entries. */
@@ -923,9 +924,9 @@ parse_dir(fs_fs_t *fs,
       next = current ? strchr(++current, '\n') : NULL;
       if (next == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-           _("Corrupt directory representation in rev %d at offset %ld"),
+           _("Corrupt directory representation in rev %ld at offset %ld"),
                                  representation->revision,
-                                 representation->offset);
+                                 (long)representation->offset);
       
       *next = 0;
       current = strstr(current, revision_key);

@@ -1066,74 +1066,20 @@ child_is_disjoint(svn_boolean_t *disjoint,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool)
 {
-  const char *node_repos_root, *node_repos_relpath, *node_repos_uuid;
-  const char *parent_repos_root, *parent_repos_relpath, *parent_repos_uuid;
-  svn_wc__db_status_t parent_status;
-  const char *parent_abspath, *base;
+  svn_boolean_t is_switched;
 
   /* Check if the parent directory knows about this node */
-  SVN_ERR(svn_wc__db_is_wcroot(disjoint, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_is_switched(disjoint, &is_switched, NULL,
+                                 db, local_abspath, scratch_pool));
 
   if (*disjoint)
     return SVN_NO_ERROR;
 
-  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
-
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &node_repos_relpath,
-                               &node_repos_root, &node_repos_uuid, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  /* If the node does not have its own repos_relpath, its value is inherited
-     from a parent node, which implies that the node is not disjoint. */
-  if (node_repos_relpath == NULL)
-    {
-      *disjoint = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__db_read_info(&parent_status, NULL, NULL,
-                               &parent_repos_relpath, &parent_repos_root,
-                               &parent_repos_uuid, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, parent_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (parent_repos_relpath == NULL)
-    {
-      if (parent_status == svn_wc__db_status_added)
-        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &parent_repos_relpath,
-                                         &parent_repos_root,
-                                         &parent_repos_uuid,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
-                                         db, parent_abspath,
-                                         scratch_pool, scratch_pool));
-      else
-        SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
-                                           &parent_repos_root,
-                                           &parent_repos_uuid,
-                                           db, parent_abspath,
-                                           scratch_pool, scratch_pool));
-    }
-
-  if (strcmp(parent_repos_root, node_repos_root) != 0 ||
-      strcmp(parent_repos_uuid, node_repos_uuid) != 0 ||
-      strcmp(svn_relpath_join(parent_repos_relpath, base, scratch_pool),
-             node_repos_relpath) != 0)
-    {
-      *disjoint = TRUE;
-    }
-  else
-    *disjoint = FALSE;
+  if (is_switched)
+    *disjoint = TRUE;
 
   return SVN_NO_ERROR;
 }
-
 
 /* */
 static svn_error_t *
@@ -1522,13 +1468,25 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
+  svn_boolean_t is_wcroot;
+  svn_boolean_t is_switched;
   svn_kind_t kind;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
-                               (lock_root_abspath != NULL) /* allow_missing*/,
-                               FALSE /* show_hidden */,
-                               scratch_pool));
+  err = svn_wc__db_is_switched(&is_wcroot, &is_switched, &kind,
+                               db, local_abspath, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+
+      kind = svn_kind_none;
+      is_wcroot = FALSE;
+      is_switched = FALSE;
+    }
 
   if (!lock_root_abspath && kind != svn_kind_dir)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
@@ -1538,15 +1496,6 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
 
   if (lock_anchor && kind == svn_kind_dir)
     {
-      svn_boolean_t is_wcroot;
-
-      SVN_ERR_ASSERT(lock_root_abspath != NULL);
-
-      /* Perform a cheap check to avoid looking for a parent working copy,
-         which might be very expensive in some specific scenarios */
-      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
-                                   scratch_pool));
-
       if (is_wcroot)
         lock_anchor = FALSE;
     }
@@ -1554,58 +1503,48 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   if (lock_anchor)
     {
       const char *parent_abspath;
-      svn_kind_t parent_kind;
-
       SVN_ERR_ASSERT(lock_root_abspath != NULL);
 
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath,
-                                 TRUE /* allow_missing */,
-                                 FALSE /* show_missing */,
-                                 scratch_pool);
-      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
-        {
-          svn_error_clear(err);
-          parent_kind = svn_kind_unknown;
-        }
-      else
-        SVN_ERR(err);
 
-      if (kind == svn_kind_dir && parent_kind == svn_kind_dir)
+      if (kind == svn_kind_dir)
         {
-          svn_boolean_t disjoint;
-          SVN_ERR(child_is_disjoint(&disjoint, wc_ctx->db, local_abspath,
-                                    scratch_pool));
-          if (!disjoint)
+          if (! is_switched)
             local_abspath = parent_abspath;
         }
-      else if (parent_kind == svn_kind_dir)
-        local_abspath = parent_abspath;
-      else if (kind != svn_kind_dir)
-        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                 _("'%s' is not a working copy"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
+      else if (kind != svn_kind_none && kind != svn_kind_unknown)
+        {
+          /* In the single-DB world we know parent exists */
+          local_abspath = parent_abspath;
+        }
+      else
+        {
+          /* Can't lock parents that don't exist */
+          svn_kind_t parent_kind;
+          err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath,
+                                     TRUE /* allow_missing */,
+                                     FALSE /* show_hidden */,
+                                     scratch_pool);
+          if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+            {
+              svn_error_clear(err);
+              parent_kind = svn_kind_unknown;
+            }
+          else
+            SVN_ERR(err);
+
+          if (parent_kind != svn_kind_dir)
+            return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                     _("'%s' is not a working copy"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
+
+          local_abspath = parent_abspath;
+        }
     }
   else if (kind != svn_kind_dir)
     {
       local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-      /* Can't lock parents that don't exist */
-      if (kind == svn_kind_unknown)
-        {
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
-                                       FALSE /* allow_missing */,
-                                       FALSE /* show_hidden */,
-                                       scratch_pool));
-
-          if (kind != svn_kind_dir)
-            return svn_error_createf(
-                             SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                             _("Can't obtain lock on non-directory '%s'."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-        }
     }
 
   if (lock_root_abspath)

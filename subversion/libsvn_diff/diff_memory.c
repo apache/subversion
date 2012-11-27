@@ -35,6 +35,7 @@
 #include "diff.h"
 #include "svn_private_config.h"
 #include "private/svn_adler32.h"
+#include "private/svn_diff_private.h"
 
 typedef struct source_tokens_t
 {
@@ -363,6 +364,9 @@ typedef struct unified_output_baton_t
   /* The delimiters of the hunk header, '@@' for text hunks and '##' for
    * property hunks. */
   const char *hunk_delimiter;
+  /* The string to print after a line that does not end with a newline.
+   * It must start with a '\'.  Typically "\ No newline at end of file". */
+  const char *no_newline_string;
 
   /* Pool for allocation of temporary memory in the callbacks
      Should be cleared on entry of each iteration of a callback */
@@ -417,8 +421,12 @@ output_unified_token_range(output_baton_t *btn,
     }
   if (past_last == source->tokens->nelts && source->ends_without_eol)
     {
-      SVN_ERR(svn_diff__unified_append_no_newline_msg(
-                btn->hunk, btn->header_encoding, btn->pool));
+      const char *out_str;
+
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(
+                &out_str, btn->no_newline_string,
+                btn->header_encoding, btn->pool));
+      svn_stringbuf_appendcstr(btn->hunk, out_str);
     }
 
   if (tokens == 0)
@@ -553,6 +561,10 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
       baton.header_encoding = header_encoding;
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.hunk_delimiter = hunk_delimiter;
+      baton.no_newline_string
+        = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
+          ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
+          : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",

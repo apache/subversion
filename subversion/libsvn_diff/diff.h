@@ -213,19 +213,5 @@ svn_diff__unified_write_hunk_header(svn_stream_t *output_stream,
                                     const char *hunk_extra_context,
                                     apr_pool_t *scratch_pool);
 
-/* Write a unidiff "---" and "+++" header to OUTPUT_STREAM.
- *
- * Write "---" followed by a space and OLD_HEADER and a newline,
- * then "+++" followed by a space and NEW_HEADER and a newline.
- *
- * The text will be encoded into HEADER_ENCODING.
- */
-svn_error_t *
-svn_diff__unidiff_write_header(svn_stream_t *output_stream,
-                               const char *header_encoding,
-                               const char *old_header,
-                               const char *new_header,
-                               apr_pool_t *scratch_pool);
-
 
 #endif /* DIFF_H */
