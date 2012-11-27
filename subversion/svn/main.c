@@ -624,7 +624,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml} },
+    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml, 
+     opt_include_externals },
+    {{opt_include_externals, N_("include externals definitions")}} },
 
   { "lock", svn_cl__lock, {0}, N_
     ("Lock working copy paths or URLs in the repository, so that\n"
