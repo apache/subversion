@@ -269,6 +269,31 @@ test_has_section_case_sensitive(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_stream_interface(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfg_file;
+  svn_stream_t *stream;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_stream_open_readonly(&stream, cfg_file, pool, pool));
+
+  SVN_ERR(svn_config_parse(&cfg, stream, TRUE, pool));
+
+  /* nominal test to make sure cfg is populated with something since
+   * svn_config_parse will happily return an empty cfg if the stream is
+   * empty. */
+  if (! svn_config_has_section(cfg, "section1"))
+    return fail(pool, "Failed to find section1");
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -288,5 +313,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_config_has_section (case insensitive)"),
     SVN_TEST_PASS2(test_has_section_case_sensitive,
                    "test svn_config_has_section (case sensitive)"),
+    SVN_TEST_PASS2(test_stream_interface,
+                   "test svn_config_parse"),
     SVN_TEST_NULL
   };
