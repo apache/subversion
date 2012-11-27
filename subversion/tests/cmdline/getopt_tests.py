@@ -167,33 +167,11 @@ def run_one_test(sbox, basename, *varargs):
   actual_stdout = process_lines(actual_stdout)
   actual_stderr = process_lines(actual_stderr)
 
-  if exp_stdout != actual_stdout:
-    logger.warn("Standard output does not match.")
-    logger.warn("Expected standard output:")
-    logger.warn("=====")
-    for x in exp_stdout:
-      logger.warn(x.rstrip())
-    logger.warn("=====")
-    logger.warn("Actual standard output:")
-    logger.warn("=====")
-    for x in actual_stdout:
-      logger.warn(x.rstrip())
-    logger.warn("=====")
-    raise svntest.Failure
+  svntest.verify.compare_and_display_lines("Standard output does not match.",
+                                           "STDOUT", exp_stdout, actual_stdout)
 
-  if exp_stderr != actual_stderr:
-    logger.warn("Standard error does not match.")
-    logger.warn("Expected standard error:")
-    logger.warn("=====")
-    for x in exp_stderr:
-      logger.warn(x.rstrip())
-    logger.warn("=====")
-    logger.warn("Actual standard error:")
-    logger.warn("=====")
-    for x in actual_stderr:
-      logger.warn(x.rstrip())
-    logger.warn("=====")
-    raise svntest.Failure
+  svntest.verify.compare_and_display_lines("Standard error does not match.",
+                                           "STDERR", exp_stderr, actual_stderr)
 
 def getopt_no_args(sbox):
   "run svn with no arguments"
