@@ -32,6 +32,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
 #include "svn_pools.h"
@@ -9057,6 +9058,175 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  return SVN_NO_ERROR;
+}
+
+/* Remove all prop name value pairs from PROP_HASH where the property
+   name is not PROPNAME. */
+static void
+filter_unwanted_props(apr_hash_t *prop_hash,
+                      const char * propname,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, prop_hash);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *ipropname = svn__apr_hash_index_key(hi);
+
+      if (strcmp(ipropname, propname) != 0)
+        apr_hash_set(prop_hash, ipropname, APR_HASH_KEY_STRING, NULL);
+    }
+  return;
+}
+
+/* Baton for db_read_inherited_props */
+struct read_inherited_props_baton_t
+{
+  apr_array_header_t *iprops;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  const char *propname;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc__db_txn_callback_t for svn_wc__db_read_inherited_props */
+static svn_error_t *
+db_read_inherited_props(void *baton,
+                        svn_wc__db_wcroot_t *wcroot,
+                        const char *local_relpath,
+                        apr_pool_t *scratch_pool)
+{
+  struct read_inherited_props_baton_t *ripb = baton;
+  int i;
+  apr_array_header_t *cached_iprops = NULL;
+  const char *parent_abspath = ripb->local_abspath;
+  svn_boolean_t is_wc_root = FALSE;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *result_pool = ripb->result_pool;
+  svn_wc__db_t *db = ripb->db;
+
+  ripb->iprops = apr_array_make(ripb->result_pool, 1,
+                                sizeof(svn_prop_inherited_item_t *));
+
+  /* Walk up to the root of the WC looking for inherited properties.  When we
+     reach the WC root also check for cached inherited properties. */
+  while (TRUE)
+    {
+      apr_hash_t *actual_props;
+      svn_boolean_t is_switched;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__db_is_switched(&is_wc_root, &is_switched, NULL,
+                                     db, parent_abspath, iterpool));
+
+      if (is_switched || is_wc_root)
+        {
+          is_wc_root = TRUE;
+
+          /* If the WC root is also the root of the repository then by
+             definition there are no inheritable properties to be had,
+             but checking for that is just as expensive as fetching them
+             anyway. */
+
+          /* Grab the cached inherited properties for the WC root. */
+          SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops, db,
+                                                parent_abspath,
+                                                scratch_pool, iterpool));
+        }
+
+      /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
+         LOCAL_ABSPATH can inherit properties from it. */
+      if (strcmp(ripb->local_abspath, parent_abspath) != 0)
+        {
+          SVN_ERR(svn_wc__db_read_props(&actual_props, db, parent_abspath,
+                                        result_pool, iterpool));
+          if (actual_props)
+            {
+              /* If we only want PROPNAME filter out any other properties. */
+              if (ripb->propname)
+                filter_unwanted_props(actual_props, ripb->propname, iterpool);
+
+              if (apr_hash_count(actual_props))
+                {
+                  svn_prop_inherited_item_t *iprop_elt =
+                    apr_pcalloc(ripb->result_pool,
+                                sizeof(svn_prop_inherited_item_t));
+                  iprop_elt->path_or_url = apr_pstrdup(result_pool,
+                                                       parent_abspath);
+                  iprop_elt->prop_hash = actual_props;
+                  /* Build the output array in depth-first order. */
+                  svn_sort__array_insert(&iprop_elt, ripb->iprops, 0);
+                }
+            }
+        }
+
+      /* Inheritance only goes as far as the nearest WC root. */
+      if (is_wc_root)
+        break;
+
+      /* Keep looking for the WC root. */
+      parent_abspath = svn_dirent_dirname(parent_abspath, scratch_pool);
+    }
+
+  if (cached_iprops)
+    {
+      for (i = cached_iprops->nelts - 1; i >= 0; i--)
+        {
+          svn_prop_inherited_item_t *cached_iprop =
+            APR_ARRAY_IDX(cached_iprops, i, svn_prop_inherited_item_t *);
+
+          /* An empty property hash in the iprops cache means there are no
+             inherited properties. */
+          if (apr_hash_count(cached_iprop->prop_hash) == 0)
+            continue;
+
+          if (ripb->propname)
+            filter_unwanted_props(cached_iprop->prop_hash, ripb->propname,
+                                  scratch_pool);
+
+          /* If we didn't filter everything then keep this iprop. */
+          if (apr_hash_count(cached_iprop->prop_hash))
+            svn_sort__array_insert(&cached_iprop, ripb->iprops, 0);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct read_inherited_props_baton_t ripb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  ripb.iprops = NULL;
+  ripb.db = db;
+  ripb.local_abspath = local_abspath;
+  ripb.propname = propname;
+  ripb.result_pool = result_pool;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_read_inherited_props,
+                              &ripb, scratch_pool));
+
+  *iprops = ripb.iprops;
   return SVN_NO_ERROR;
 }
 

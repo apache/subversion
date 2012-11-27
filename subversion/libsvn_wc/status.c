@@ -1028,9 +1028,10 @@ collect_ignore_patterns(apr_array_header_t **patterns,
                                      FALSE, result_pool);      
         }
 
-      SVN_ERR(svn_wc__internal_get_iprops(&inherited_props, db, local_abspath,
-                                          SVN_PROP_INHERITABLE_IGNORES,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_inherited_props(&inherited_props,
+                                              db, local_abspath,
+                                              SVN_PROP_INHERITABLE_IGNORES,
+                                              scratch_pool, scratch_pool));
       for (i = 0; i < inherited_props->nelts; i++)
         {
           apr_hash_index_t *hi;
