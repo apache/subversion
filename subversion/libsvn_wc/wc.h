@@ -755,6 +755,16 @@ svn_wc__fetch_base_func(const char **filename,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Find duplicate targets in *EXTERNALS, a list of svn_wc_external_item2_t*
+ * elements, and store each target string in *DUPLICATE_TARGETS as const
+ * char * elements. *DUPLICATE_TARGETS will be NULL if no duplicates were
+ * found. */
+svn_error_t *
+svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
+                                   apr_array_header_t *externals,
+                                   apr_pool_t *pool,
+                                   apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
