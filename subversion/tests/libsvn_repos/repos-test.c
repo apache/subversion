@@ -49,6 +49,20 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #endif
 
+/* Compare strings, like strcmp but either or both may be NULL which
+ * compares equal to NULL and not equal to any non-NULL string. */
+static int
+strcmp_null(const char *s1, const char *s2)
+{
+  if (s1 && s2)
+    return strcmp(s1, s2);
+  else if (s1 || s2)
+    return 1;
+  else
+    return 0;
+}
+
+
 
 static svn_error_t *
 dir_deltas(const svn_test_opts_t *opts,
@@ -1739,7 +1753,9 @@ nls_receiver(svn_location_segment_t *segment,
                              "Got unexpected location segment: %s",
                              format_segment(segment, pool));
 
-  if (expected_segment->range_start != segment->range_start)
+  if (expected_segment->range_start != segment->range_start
+      || expected_segment->range_end != segment->range_end
+      || strcmp_null(expected_segment->path, segment->path) != 0)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Location segments differ\n"
                              "   Expected location segment: %s\n"
@@ -1950,7 +1966,7 @@ node_location_segments(const svn_test_opts_t *opts,
         { 6, 6, "A/D2/G" },
         { 5, 5, NULL },
         { 3, 4, "A/D2/G" },
-        { 1, 2, "A/D2/G" },
+        { 1, 2, "A/D/G" },
         { 0 }
       };
     SVN_ERR(check_location_segments(repos, "A/D/G",
@@ -1965,7 +1981,7 @@ node_location_segments(const svn_test_opts_t *opts,
     svn_location_segment_t expected_segments[] =
       {
         { 3, 3, "A/D2/G" },
-        { 2, 2, "A/D2/G" },
+        { 2, 2, "A/D/G" },
         { 0 }
       };
     SVN_ERR(check_location_segments(repos, "A/D/G",
