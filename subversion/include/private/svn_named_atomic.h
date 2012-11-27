@@ -104,8 +104,10 @@ svn_atomic_namespace__cleanup(const char *name,
  * characters and an error will be returned if the specified name is longer
  * than supported.
  *
- * @note The lifetime of the atomic is bound to the lifetime
+ * @note The lifetime of the atomic object is bound to the lifetime
  * of the @a ns object, i.e. the pool the latter was created in.
+ * The data in the namespace persists as long as at least one process
+ * holds an #svn_atomic_namespace__t object corresponding to it.
  */
 svn_error_t *
 svn_named_atomic__get(svn_named_atomic__t **atomic,

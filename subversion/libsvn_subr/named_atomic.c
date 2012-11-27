@@ -308,7 +308,7 @@ delete_lock_file(void *arg)
   const char *lock_name = NULL;
 
   /* locks have already been cleaned up. Simply close the file */
-  apr_file_close(mutex->lock_file);
+  apr_status_t status = apr_file_close(mutex->lock_file);
 
   /* Remove the file from disk. This will fail if there ares still other
    * users of this lock file, i.e. namespace. */
@@ -316,10 +316,12 @@ delete_lock_file(void *arg)
   if (lock_name)
     apr_file_remove(lock_name, mutex->pool);
 
-  return 0;
+  return status;
 }
 
-/* Validate the ATOMIC parameter, i.e it's address.
+/* Validate the ATOMIC parameter, i.e it's address.  Correct code will
+ * never need this but if someone should accidentally to use a NULL or
+ * incomplete structure, let's catch that here instead of segfaulting.
  */
 static svn_error_t *
 validate(svn_named_atomic__t *atomic)
@@ -416,7 +418,9 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                            APR_OS_DEFAULT,
                            result_pool));
 
-  /* Make sure the last user of our lock file will actually remove it
+  /* Make sure the last user of our lock file will actually remove it.
+   * Please note that only the last file handle begin closed will actually
+   * remove the underlying file (see docstring for apr_file_remove).
    */
   apr_pool_cleanup_register(result_pool, &new_ns->mutex,
                             delete_lock_file,

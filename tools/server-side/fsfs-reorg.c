@@ -828,7 +828,7 @@ read_revision_header(apr_size_t *changes,
 {
   char buf[64];
   const char *line;
-  const char *space;
+  char *space;
   apr_uint64_t val;
   apr_size_t len;
   
@@ -857,7 +857,7 @@ read_revision_header(apr_size_t *changes,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Final line in revision file missing space"));
 
-  *(char *)space = 0;
+  *space = 0;
   
   SVN_ERR(svn_cstring_strtoui64(&val, line+1, 0, APR_SIZE_MAX, 10));
   *root_noderev = (apr_size_t)val;
@@ -998,8 +998,8 @@ key_matches(svn_string_t *string, const char *key)
 static int
 compare_noderev_offsets(const void *data, const void *key)
 {
-  apr_ssize_t diff = (*(const noderev_t **)data)->original.offset
-                   - *(const apr_size_t *)key;
+  apr_ssize_t diff = (*(const noderev_t *const *)data)->original.offset
+                     - *(const apr_size_t *)key;
 
   /* sizeof(int) may be < sizeof(ssize_t) */
   if (diff < 0)
@@ -1050,14 +1050,14 @@ find_noderev(noderev_t **result,
                                           compare_noderev_offsets);
   if ((idx < 0) || (idx >= revision_info->node_revs->nelts))
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-                             _("No noderev found at offset %" APR_OFF_T_FMT),
-                             offset);
+                             _("No noderev found at offset %ld"),
+                             (long)offset);
 
   *result = APR_ARRAY_IDX(revision_info->node_revs, idx, noderev_t *);
   if ((*result)->original.offset != offset)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-                             _("No noderev found at offset %" APR_OFF_T_FMT),
-                             offset);
+                             _("No noderev found at offset %ld"),
+                             (long)offset);
 
   return SVN_NO_ERROR;
 }
@@ -1079,8 +1079,8 @@ parse_pred(noderev_t **result,
 static int
 compare_representation_offsets(const void *data, const void *key)
 {
-  apr_ssize_t diff = (*(const representation_t **)data)->original.offset
-                   - *(const apr_size_t *)key;
+  apr_ssize_t diff = (*(const representation_t *const *)data)->original.offset
+                     - *(const apr_size_t *)key;
 
   /* sizeof(int) may be < sizeof(ssize_t) */
   if (diff < 0)
@@ -2290,7 +2290,7 @@ write_revisions(fs_fs_t *fs,
           revision_info_t *info = APR_ARRAY_IDX(pack->info, i,
                                                 revision_info_t *);
           SVN_ERR(svn_stream_printf(stream, itempool,
-                                    "%" APR_UINT64_T_FMT "\n",
+                                    "%" APR_SIZE_T_FMT "\n",
                                     info->target.offset));
           svn_pool_clear(itempool);
         }
@@ -2469,10 +2469,9 @@ update_text(svn_stringbuf_t *node_rev,
   if (representation->dir)
     {
       char *newline_pos = strchr(val_pos, '\n');
-      svn_checksum_t checksum = {representation->dir->target_md5,
-                                 svn_checksum_md5};
-      const char* temp = apr_psprintf(scratch_pool, "%ld %" APR_UINT64_T_FMT " %" 
-                                      APR_UINT64_T_FMT" %" APR_SIZE_T_FMT " %s",
+      svn_checksum_t checksum;
+      const char* temp = apr_psprintf(scratch_pool, "%ld %" APR_SIZE_T_FMT " %" 
+                                      APR_SIZE_T_FMT" %" APR_SIZE_T_FMT " %s",
                                       representation->revision->revision,
                                       representation->target.offset - representation->revision->target.offset,
                                       representation->target.size,
@@ -2480,6 +2479,8 @@ update_text(svn_stringbuf_t *node_rev,
                                       svn_checksum_to_cstring(&checksum,
                                                               scratch_pool));
 
+      checksum.digest = representation->dir->target_md5;
+      checksum.kind = svn_checksum_md5;
       svn_stringbuf_replace(node_rev,
                             val_pos - node_rev->data, newline_pos - val_pos,
                             temp, strlen(temp));
@@ -2491,7 +2492,7 @@ update_text(svn_stringbuf_t *node_rev,
       
       val_pos = end_pos + 1;
       end_pos = strchr(strchr(val_pos, ' ') + 1, ' ');
-      temp = apr_psprintf(scratch_pool, "%" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT,
+      temp = apr_psprintf(scratch_pool, "%" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT,
                           representation->target.offset - representation->revision->target.offset,
                           representation->target.size);
 
@@ -2520,7 +2521,7 @@ get_fragment_content(svn_string_t **content,
       case header_fragment:
         info = fragment->data;
         *content = svn_string_createf(pool,
-                                      "\n%" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
+                                      "\n%" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT "\n",
                                       info->root_noderev->target.offset - info->target.offset,
                                       info->target.changes);
         return SVN_NO_ERROR;
@@ -2557,7 +2558,7 @@ get_fragment_content(svn_string_t **content,
               header = svn_stringbuf_create("DELTA\n", pool);
             else
               header = svn_stringbuf_createf(pool,
-                                             "DELTA %ld %" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
+                                             "DELTA %ld %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT "\n",
                                              representation->delta_base->revision->revision,
                                              representation->delta_base->target.offset
                                              - representation->delta_base->revision->target.offset,
@@ -2600,7 +2601,7 @@ get_fragment_content(svn_string_t **content,
               {
                 representation_t *base_rep = representation->delta_base;
                 header = svn_stringbuf_createf(pool,
-                                               "DELTA %ld %" APR_UINT64_T_FMT " %" APR_UINT64_T_FMT "\n",
+                                               "DELTA %ld %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT "\n",
                                                base_rep->revision->revision,
                                                base_rep->target.offset - base_rep->revision->target.offset,
                                                base_rep->target.size);

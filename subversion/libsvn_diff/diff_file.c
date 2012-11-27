@@ -48,6 +48,7 @@
 #include "private/svn_eol_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_adler32.h"
+#include "private/svn_diff_private.h"
 
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t

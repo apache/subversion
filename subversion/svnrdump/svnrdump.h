@@ -53,6 +53,17 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void *cancel_baton,
                            apr_pool_t *pool);
 
+/* Same as above, only returns an Ev2 editor. */
+svn_error_t *
+svn_rdump__get_dump_editor_v2(svn_editor_t **editor,
+                              svn_revnum_t revision,
+                              svn_stream_t *stream,
+                              svn_ra_session_t *ra_session,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool,
+                              apr_pool_t *result_pool);
+
 
 /**
  * Load the dumpstream carried in @a stream to the location described

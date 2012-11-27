@@ -163,7 +163,7 @@ enum restructure_action_t
   RESTRUCTURE_NONE = 0,
   RESTRUCTURE_ADD,         /* add the node, maybe replacing. maybe copy  */
   RESTRUCTURE_ADD_ABSENT,  /* add an absent node, possibly replacing  */
-  RESTRUCTURE_DELETE,      /* delete this node  */
+  RESTRUCTURE_DELETE       /* delete this node  */
 };
 
 /* Records everything about how this node is to be changed.  */
