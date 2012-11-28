@@ -96,7 +96,10 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
     return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
            "directives are mutually exclusive.";
 
-  conf->access_file = ap_server_root_relative(cmd->pool, arg1);
+  if (svn_path_is_repos_relative_url(arg1) || svn_path_is_url(arg1))
+    conf->access_file = arg1;
+  else
+    conf->access_file = ap_server_root_relative(cmd->pool, arg1);
 
   return NULL;
 }
@@ -177,16 +180,23 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   dav_error *dav_err;
   char errbuf[256];
 
+  dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
+  if (dav_err)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
+      return NULL;
+    }
+
   if (conf->repo_relative_access_file)
     {
-      dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
-      if (dav_err) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
-        return NULL;
-      }
-      access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
-                                         conf->repo_relative_access_file,
-                                         NULL);
+      access_file = conf->repo_relative_access_file;
+      if (!svn_path_is_repos_relative_url(access_file) &&
+          !svn_path_is_url(access_file))
+        {
+          access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
+                                             conf->repo_relative_access_file,
+                                             NULL);
+        }
     }
   else
     {
@@ -202,8 +212,8 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   access_conf = user_data;
   if (access_conf == NULL)
     {
-      svn_err = svn_repos_authz_read(&access_conf, access_file,
-                                     TRUE, r->connection->pool);
+      svn_err = svn_repos_authz_read2(&access_conf, access_file,
+                                      TRUE, repos_path, r->connection->pool);
       if (svn_err)
         {
           ap_log_rerror(APLOG_MARK, APLOG_ERR,
