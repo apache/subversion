@@ -545,6 +545,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 40,
              "Mixed-revision working copy was found but not expected")
 
+  /** @since New in 1.8 */
+  SVN_ERRDEF(SVN_ERR_WC_DUPLICATE_EXTERNALS_TARGET,
+             SVN_ERR_WC_CATEGORY_START + 41,
+             "Duplicate targets in svn:externals property")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
