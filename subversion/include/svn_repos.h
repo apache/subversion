@@ -3147,21 +3147,43 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
  */
 typedef struct svn_authz_t svn_authz_t;
 
-/** Read authz configuration data from @a file (a file or registry
- * path) into @a *authz_p, allocated in @a pool.
- *
- * If @a file is not a valid authz rule file, then return
- * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
- * undefined.  If @a must_exist is TRUE, a missing authz file is also
- * an error.
+/** 
+ * Similar to svn_repos_authz_read2(), but without support for
+ * authz files stored in a Subversion repository (absolute or
+ * relative URLs) and without the @a repos_root argument.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p,
                      const char *file,
                      svn_boolean_t must_exist,
                      apr_pool_t *pool);
+
+/**
+ * Read authz configuration data from @a path (a file, repos relative
+ * url, an absolute file url, or a registry path) into @a *authz_p,
+ * allocated in @a pool.
+ *
+ * If @a path is not a valid authz rule file, then return 
+ * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz file is also
+ * an error.
+ *
+ * If @path is a repos relative URL then @a repos_root must be set to
+ * the root of the repository the authz configuration will be used with.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      svn_boolean_t must_exist,
+                      const char *repos_root,
+                      apr_pool_t *pool);
+
 
 /**
  * Check whether @a user can access @a path in the repository @a
