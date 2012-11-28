@@ -988,7 +988,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl Enable some extra warnings. Put these before the user's flags
         dnl so the user can specify flags that override these.
         CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
-        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
@@ -996,7 +996,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl switches enabled.
         dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
 
-        dnl Add each of the following flags only if the compiler accepts it.
+        dnl Add each of the following flags only if the C compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
@@ -1026,6 +1026,23 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
+
+        dnl Add each of the following flags only if the C++ compiler accepts it.
+
+        CXXFLAGS_KEEP="$CXXFLAGS"
+        AC_LANG_PUSH([C++])
+
+        CXXFLAGS="-Wextra-tokens $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wshorten-64-to-32 $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wno-system-headers $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        AC_LANG_POP([C++])
+        CXXFLAGS="$CXXFLAGS_KEEP"
       fi
     fi
 ])
