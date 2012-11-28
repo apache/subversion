@@ -260,9 +260,6 @@ typedef struct merge_cmd_baton_t {
                                          SOURCES_ANCESTRAL is FALSE. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
-  const char *added_path;             /* Set to the dir path whenever the
-                                         dir is added as a child of a
-                                         versioned dir (dry-run only) */
   const merge_target_t *target;       /* Description of merge target node */
 
   /* The left and right URLs and revs.  The value of this field changes to
@@ -488,6 +485,35 @@ dry_run_added_p(const merge_cmd_baton_t *merge_b, const char *wcpath)
   return (merge_b->dry_run &&
           apr_hash_get(merge_b->dry_run_added, wcpath,
                        APR_HASH_KEY_STRING) != NULL);
+}
+
+/* Return true iff we're in dry-run mode and a parent of EDIT_RELPATH
+   would have been added by now if we weren't in dry-run mode.
+   Used to avoid spurious notifications (e.g. conflicts) from a merge
+   attempt into an existing target which would have been deleted if we
+   weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
+   still versioned (e.g. has an associated entry). */
+static svn_boolean_t
+dry_run_added_parent_p(const merge_cmd_baton_t *merge_b,
+                       const char *edit_relpath,
+                       apr_pool_t *scratch_pool)
+{
+  int i;
+  const char *abspath;
+
+  if (!merge_b->dry_run)
+    return FALSE;
+
+  abspath = svn_dirent_join(merge_b->target->abspath, edit_relpath,
+                            scratch_pool);
+  for (i = 0; i < (svn_path_component_count(edit_relpath) - 1); i++)
+    {
+      abspath = svn_dirent_dirname(abspath, scratch_pool);
+      if (apr_hash_get(merge_b->dry_run_added, abspath,
+                       APR_HASH_KEY_STRING))
+        return TRUE;
+    }
+  return FALSE;
 }
 
 /* Return whether any WC path was put in conflict by the merge
@@ -1857,8 +1883,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (merge_b->dry_run && merge_b->added_path
-            && svn_dirent_is_child(merge_b->added_path, mine_abspath, NULL))
+        if (merge_b->dry_run 
+            && dry_run_added_parent_p(merge_b, mine_relpath, scratch_pool))
           {
             if (content_state)
               *content_state = svn_wc_notify_state_changed;
@@ -2337,13 +2363,15 @@ merge_dir_added(svn_wc_notify_state_t *state,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (state && merge_b->dry_run && merge_b->added_path
-            && svn_dirent_is_child(merge_b->added_path, local_abspath, NULL))
+        if (state && merge_b->dry_run
+            && dry_run_added_parent_p(merge_b, local_relpath, scratch_pool))
           {
             *state = svn_wc_notify_state_changed;
           }
         else if (state)
-          *state = obstr_state;
+          {
+            *state = obstr_state;
+          }
         return SVN_NO_ERROR;
       }
 
@@ -2358,9 +2386,10 @@ merge_dir_added(svn_wc_notify_state_t *state,
       /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
         {
-          merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
-          apr_hash_set(merge_b->dry_run_added, merge_b->added_path,
-                       APR_HASH_KEY_STRING, merge_b->added_path);
+          const char *added_path = apr_pstrdup(merge_b->pool,
+                                               local_abspath);
+          apr_hash_set(merge_b->dry_run_added, added_path,
+                       APR_HASH_KEY_STRING, added_path);
         }
       else
         {
@@ -2385,15 +2414,22 @@ merge_dir_added(svn_wc_notify_state_t *state,
           /* The dir is not known to Subversion, or is schedule-delete.
            * We will make it schedule-add. */
           if (!merge_b->dry_run)
-            SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
-                                svn_depth_infinity,
-                                copyfrom_url, copyfrom_rev,
-                                merge_b->ctx->cancel_func,
-                                merge_b->ctx->cancel_baton,
-                                NULL, NULL, /* no notification func! */
-                                scratch_pool));
+            {
+              SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                                  svn_depth_infinity,
+                                  copyfrom_url, copyfrom_rev,
+                                  merge_b->ctx->cancel_func,
+                                  merge_b->ctx->cancel_baton,
+                                  NULL, NULL, /* no notification func! */
+                                  scratch_pool));
+            }
           else
-            merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
+            {
+              const char *added_path = apr_pstrdup(merge_b->pool,
+                                                   local_abspath);
+              apr_hash_set(merge_b->dry_run_added, added_path,
+                           APR_HASH_KEY_STRING, added_path);
+            }
           if (state)
             *state = svn_wc_notify_state_changed;
         }
@@ -2431,9 +2467,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
         }
       break;
     case svn_node_file:
-      if (merge_b->dry_run)
-        merge_b->added_path = NULL;
-
       if (is_versioned && dry_run_deleted_p(merge_b, local_abspath))
         {
           /* ### TODO: Retain record of this dir being added to
@@ -2455,8 +2488,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
         }
       break;
     default:
-      if (merge_b->dry_run)
-        merge_b->added_path = NULL;
       if (state)
         *state = svn_wc_notify_state_unknown;
       break;
@@ -9163,7 +9194,6 @@ do_merge(apr_hash_t **modified_subtrees,
          be reset for each merge source iteration. */
       merge_cmd_baton.merge_source = *source;
       merge_cmd_baton.implicit_src_gap = NULL;
-      merge_cmd_baton.added_path = NULL;
       merge_cmd_baton.add_necessitated_merge = FALSE;
       merge_cmd_baton.dry_run_deletions =
         dry_run ? apr_hash_make(iterpool) : NULL;
