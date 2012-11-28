@@ -1625,6 +1625,71 @@ test_path_condense_targets(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_path_is_repos_relative_url(apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char* path;
+    svn_boolean_t result;
+  } tests[] = {
+    { "^/A",           TRUE },
+    { "http://host/A", FALSE },
+    { "/A/B",          FALSE },
+  };
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      svn_boolean_t result = svn_path_is_repos_relative_url(tests[i].path);
+
+      if (tests[i].result != result)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_is_repos_relative_url(\"%s\")"
+                                 " returned \"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 result ? "TRUE" : "FALSE",
+                                 tests[i].result ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_path_resolve_repos_relative_url(apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char *relative_url;
+    const char *repos_root_url;
+    const char *absolute_url;
+  } tests[] = {
+    { "^/A", "file:///Z/X", "file:///Z/X/A" },
+    { "^/A", "file:///Z/X/", "file:///Z/X//A" }, /* doesn't canonicalize */
+    { "^/A@2", "file:///Z/X", "file:///Z/X/A@2" }, /* peg rev */
+    { "^/A", "/Z/X", "/Z/X/A" }, /* doesn't verify repos_root is URL */
+  };
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *result;
+
+      SVN_ERR(svn_path_resolve_repos_relative_url(&result,
+                                                  tests[i].relative_url,
+                                                  tests[i].repos_root_url,
+                                                  pool));
+
+      if (strcmp(tests[i].absolute_url,result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_resolve_repos_relative_url(\"%s\","
+                                 "\"%s\") returned \"%s\" expected \"%s\"",
+                                 tests[i].relative_url,
+                                 tests[i].repos_root_url,
+                                 result, tests[i].absolute_url);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 
 /* local define to support XFail-ing tests on Windows/Cygwin only */
 #ifdef SVN_USE_DOS_PATHS
@@ -1689,5 +1754,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_path_internal_style"),
     SVN_TEST_PASS2(test_path_condense_targets,
                    "test svn_path_condense_targets"),
+    SVN_TEST_PASS2(test_path_is_repos_relative_url,
+                   "test svn_path_is_repos_relative_url"),
+    SVN_TEST_PASS2(test_path_resolve_repos_relative_url,
+                   "test svn_path_resolve_repos_relative_url"),
     SVN_TEST_NULL
   };
