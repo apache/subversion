@@ -864,12 +864,7 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
       svn_error_t *err;
       apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-      /* Convert the repos_root to a file schema URL first, so we can
-       * work out 
-       * ### Is path or repos_root guaranteed to be in internal format
-       * ### already on Windows?  I don't think so, need to test on Windows.
-       * ### If not this isn't going to work right since it'll construct a
-       * ### URL with blackslahes instead of forward slashes.  */
+      /* Convert the repos_root to a file schema URL first. */
       err = svn_uri_get_file_url_from_dirent(&repos_root_url, repos_root,
                                              scratch_pool);
 
