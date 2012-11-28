@@ -1202,7 +1202,6 @@ test_path_splitext(apr_pool_t *pool)
     const char *path;
     const char *path_root;
     const char *path_ext;
-    svn_boolean_t result;
   } tests[] = {
     { "no-ext",                    "no-ext",                 "" },
     { "test-file.py",              "test-file.",             "py" },
