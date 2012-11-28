@@ -286,9 +286,10 @@ typedef struct merge_cmd_baton_t {
      dry_run mode. */
   apr_hash_t *dry_run_deletions;
 
-  /* The list of paths for entries we've added, used only when in
-     dry_run mode. */
+  /* The list of paths for entries we've added and the most
+     recently added directory.  (Used only when in dry_run mode.) */
   apr_hash_t *dry_run_added;
+  const char *dry_run_last_added_dir;
 
   /* The list of any paths which remained in conflict after a
      resolution attempt was made.  We track this in-memory, rather
@@ -487,32 +488,45 @@ dry_run_added_p(const merge_cmd_baton_t *merge_b, const char *wcpath)
                        APR_HASH_KEY_STRING) != NULL);
 }
 
-/* Return true iff we're in dry-run mode and a parent of EDIT_RELPATH
-   would have been added by now if we weren't in dry-run mode.
-   Used to avoid spurious notifications (e.g. conflicts) from a merge
-   attempt into an existing target which would have been deleted if we
-   weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
-   still versioned (e.g. has an associated entry). */
+/* Return true iff we're in dry-run mode and a parent of
+   LOCAL_RELPATH/LOCAL_ABSPATH would have been added by now if we
+   weren't in dry-run mode.  Used to avoid spurious notifications
+   (e.g. conflicts) from a merge attempt into an existing target which
+   would have been deleted if we weren't in dry_run mode (issue
+   #2584).  Assumes that WCPATH is still versioned (e.g. has an
+   associated entry). */
 static svn_boolean_t
 dry_run_added_parent_p(const merge_cmd_baton_t *merge_b,
-                       const char *edit_relpath,
+                       const char *local_relpath,
+                       const char *local_abspath,
                        apr_pool_t *scratch_pool)
 {
+  const char *abspath = local_abspath;
   int i;
-  const char *abspath;
 
   if (!merge_b->dry_run)
     return FALSE;
 
-  abspath = svn_dirent_join(merge_b->target->abspath, edit_relpath,
-                            scratch_pool);
-  for (i = 0; i < (svn_path_component_count(edit_relpath) - 1); i++)
+  /* See if LOCAL_ABSPATH is a child of the most recently added
+     directory.  This is an optimization over searching through
+     dry_run_added that plays to the strengths of the editor's drive
+     ordering constraints.  In fact, we need the fallback approach
+     below only because of ra_serf's insufficiencies in this area.  */
+  if (merge_b->dry_run_last_added_dir
+      && svn_dirent_is_child(merge_b->dry_run_last_added_dir,
+                             local_abspath, NULL))
+    return TRUE;
+
+  /* The fallback:  see if any of LOCAL_ABSPATH's parents have been
+     added in this merge so far. */
+  for (i = 0; i < (svn_path_component_count(local_relpath) - 1); i++)
     {
       abspath = svn_dirent_dirname(abspath, scratch_pool);
       if (apr_hash_get(merge_b->dry_run_added, abspath,
                        APR_HASH_KEY_STRING))
         return TRUE;
     }
+
   return FALSE;
 }
 
@@ -1884,7 +1898,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (merge_b->dry_run 
-            && dry_run_added_parent_p(merge_b, mine_relpath, scratch_pool))
+            && dry_run_added_parent_p(merge_b, mine_relpath,
+                                      mine_abspath, scratch_pool))
           {
             if (content_state)
               *content_state = svn_wc_notify_state_changed;
@@ -2364,7 +2379,8 @@ merge_dir_added(svn_wc_notify_state_t *state,
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state && merge_b->dry_run
-            && dry_run_added_parent_p(merge_b, local_relpath, scratch_pool))
+            && dry_run_added_parent_p(merge_b, local_relpath,
+                                      local_abspath, scratch_pool))
           {
             *state = svn_wc_notify_state_changed;
           }
@@ -2386,10 +2402,10 @@ merge_dir_added(svn_wc_notify_state_t *state,
       /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
         {
-          const char *added_path = apr_pstrdup(merge_b->pool,
-                                               local_abspath);
-          apr_hash_set(merge_b->dry_run_added, added_path,
-                       APR_HASH_KEY_STRING, added_path);
+          merge_b->dry_run_last_added_dir =
+            apr_pstrdup(merge_b->pool, local_abspath);
+          apr_hash_set(merge_b->dry_run_added, merge_b->dry_run_last_added_dir,
+                       APR_HASH_KEY_STRING, merge_b->dry_run_last_added_dir);
         }
       else
         {
@@ -2425,10 +2441,8 @@ merge_dir_added(svn_wc_notify_state_t *state,
             }
           else
             {
-              const char *added_path = apr_pstrdup(merge_b->pool,
-                                                   local_abspath);
-              apr_hash_set(merge_b->dry_run_added, added_path,
-                           APR_HASH_KEY_STRING, added_path);
+              merge_b->dry_run_last_added_dir =
+                apr_pstrdup(merge_b->pool, local_abspath);
             }
           if (state)
             *state = svn_wc_notify_state_changed;
@@ -2467,6 +2481,9 @@ merge_dir_added(svn_wc_notify_state_t *state,
         }
       break;
     case svn_node_file:
+      if (merge_b->dry_run)
+        merge_b->dry_run_last_added_dir = NULL;
+
       if (is_versioned && dry_run_deleted_p(merge_b, local_abspath))
         {
           /* ### TODO: Retain record of this dir being added to
@@ -2488,6 +2505,8 @@ merge_dir_added(svn_wc_notify_state_t *state,
         }
       break;
     default:
+      if (merge_b->dry_run)
+        merge_b->dry_run_last_added_dir = NULL;
       if (state)
         *state = svn_wc_notify_state_unknown;
       break;
@@ -9199,6 +9218,7 @@ do_merge(apr_hash_t **modified_subtrees,
         dry_run ? apr_hash_make(iterpool) : NULL;
       merge_cmd_baton.dry_run_added =
         dry_run ? apr_hash_make(iterpool) : NULL;
+      merge_cmd_baton.dry_run_last_added_dir = NULL;
       merge_cmd_baton.conflicted_paths = NULL;
       merge_cmd_baton.paths_with_new_mergeinfo = NULL;
       merge_cmd_baton.paths_with_deleted_mergeinfo = NULL;
