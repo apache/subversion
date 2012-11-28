@@ -1,0 +1,170 @@
+Goal
+====
+
+Before FS2 and FSFS2 will be implemented, there are a number of
+improvements that can be applied to FSFS without completely changing
+its overall data structure and algorithms.
+
+There is a whole bunch of changes scheduled for SVN 1.9 - often building
+upon each other - that will improve the repository format in the following
+aspects:
+
+- repository size (typically 10 .. 50% saved)
+- reduce disk I/O by 3x or more in typical scenarios
+- faster data processing and reduced interaction with the OS
+
+The key point will be to attempt all of this while keeping much code
+shared between old and format support.
+
+In contrast to the recent format changes, there will be no way to
+upgrade a repository in-situ.  Even if we provide an upgrade command,
+it will effectively do a dump / load cycle.
+
+
+TODO
+====
+
+Logical addressing
+------------------
+
+To allow for moving data structures around within the repository, we must
+replace the current absolute addressing using file offsets with a logical
+one.  All references will no take the form of (revision, index) pairs and
+a replacement to the format 6 manifest files will map that to actual file
+offsets.
+
+Having the need to map revision-local offsets to pack-file global offsets
+today already gives us some localized address mapping code that simply
+needs to be replaced.
+
+
+Optimize data ordering during pack
+----------------------------------
+
+Replace today's simple concatenating shard packing process with a one
+placing fragments (representations and noderevs) from various revisions
+close to each other if they are likely needed to serve in the same request.
+
+We will optimize on a per-shard basis.  The general strategy is
+
+* place all file properties reps at the beginning of the pack file
+  - if deltified, place them in deltification order
+  - place newer reps first
+* place all directory properties next (same internal ordering as above)
+* place all change lists and root nodes next
+  - strict revision order
+  - place newest ones first
+  - place root node rev in front of change list (i.e. 1 pair / rev)
+* place remaining content as follows:
+  - place node rev directly in front of their reps (where they have one)
+  - start with the latest root directory not placed, yet
+  - recurse to sub-folders first with the newest ones first
+  - per folder, place newest files ones first
+  - place rep deltification chains in deltification order (new->old)
+* no fragments should be left but if they are put them at the end
+
+The fsfs-reorg prototype implements a similar scheme and has shown that
+managing memory consumption during the pack process will be hard.  However,
+logical addressing will make it much simpler as no content (directories)
+needs to be modified.
+
+
+Index pack files
+----------------
+
+In addition to the manifest we need for the (revision, index) -> offset
+mapping, we also introduce an offset -> (revision, index, type) index
+file.  This will allow us to parse any data in a pack file without walking
+the DAG top down.
+
+
+Data prefetch
+-------------
+
+This builds on the previous.  The idea is that whenever a cache lookup
+fails,  we will not just read the single missing fragment but parse all
+data within the APR file buffer and put that into the cache.
+
+For maximum efficiency,  we will align the data blocks being read to
+multiples of the block size and allow that buffer size to be configured
+(where supported by APR).  The default block size will be raised to 64kB.
+
+
+TxDelta v2
+----------
+
+Version 1 of txdelta turns out to be limited in its effectiveness for
+larger files when data gets inserted or removed.  For typical office
+documents (zip files), deltification often becomes ineffective.
+
+Version 2 shall introduce the following changes:
+
+- increase the delta window from 100kB to 1MB
+- use a sliding window instead of a fixed-sized one
+- use a slightly more efficient instruction encoding
+
+When introducing it,  we will make it an option at the txdelta interfaces
+(e.g. a format number).  The version will be indicated in the 'SVN\x1' /
+'SVN\x2' stream header.  While at it, (try to) fix the layering violations
+where those prefixes are being read or written.
+
+
+Large file storage
+------------------
+
+Even most source code repositories contain large, hard to compress,
+hard to deltify binaries.  Reconstructing their content becomes very I/O
+intense and it "dilutes" the data in our pack files.  The latter makes
+e.g. caching, prefetching and packing less efficient.
+
+Once a representation exceeds a certain configured threshold (16M default),
+the fulltext of that item will be stored in a separate file.  This will
+be marked in the representation_t by an extra flag and future reps will
+not be deltified against it.  From that location, the data can be forwarded
+directly via SendFile and the fulltext caches will not be used for it.
+
+Note that by making the decision contingent upon the size of the deltified
+and packed representation,  all large data that benefits from these will
+still be stored within the rev and pack files.
+
+
+Binary representations
+----------------------
+
+Since deltification already does a good job at eliminating redundancy,
+the textual representation of noderev and representation headers can
+make up 50% of the repository data.
+
+Format 7 will optionally support binary representations for
+
+- noderevs
+- representations
+- directories
+- change lists
+
+They can be controlled by a config file setting and that setting will
+apply to new commits only.  A new svnadmin sub-command will allow for
+changing between binary and textual representation, e.g. for debugging
+purposes.
+
+
+Packed change lists
+-------------------
+
+Change lists tend to be large, in some cases >20% of the repo.  Due to the
+new ordering of pack data,  the change lists can be the largest part of
+data to read for svn log.  Use our standard compression method to save
+70 .. 80% of the disk space.
+
+Packing will only be applied to binary representations of change lists
+to keep the number of possible combinations low.
+
+
+Sorted directories
+------------------
+
+Binary lookup in directory data structures is not a frequent operation in
+comparison to reading / writing them from / to disk or cache.  That not
+only reduces CPU load during e.g. transaction building but also gives us
+a deterministic repo representation without relying on stable hash order.
+
