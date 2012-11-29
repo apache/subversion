@@ -1535,6 +1535,8 @@ svn_wc_get_pristine_props(apr_hash_t **props,
       if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
         return svn_error_trace(err);
 
+      svn_error_clear(err);
+
       /* Documented behavior is to set *PROPS to NULL */
       *props = NULL;
     }
@@ -1551,6 +1553,7 @@ svn_wc_prop_get2(const svn_string_t **value,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind kind = svn_property_kind2(name);
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1561,8 +1564,18 @@ svn_wc_prop_get2(const svn_string_t **value,
                                _("Property '%s' is an entry property"), name);
     }
 
-  SVN_ERR(svn_wc__internal_propget(value, wc_ctx->db, local_abspath, name,
-                                   result_pool, scratch_pool));
+  err = svn_wc__internal_propget(value, wc_ctx->db, local_abspath, name,
+                                 result_pool, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      /* Documented behavior is to set *VALUE to NULL */
+      *value = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1582,30 +1595,11 @@ svn_wc__internal_propget(const svn_string_t **value,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
 
-  /* This returns SVN_ERR_WC_PATH_NOT_FOUND for unversioned paths for us */
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
-  if (hidden)
-    {
-      /* The node is not present, or not really "here". Therefore, the
-         property is not present.  */
-      *value = NULL;
-      return SVN_NO_ERROR;
-    }
-
   if (kind == svn_prop_wc_kind)
     {
-      svn_error_t *err;
-      /* If no dav cache can be found, just set VALUE to NULL (for
-         compatibility with pre-WC-NG code). */
-      err = svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
-                                          result_pool, scratch_pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
-        {
-          *value = NULL;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      SVN_ERR_W(err, _("Failed to load properties"));
+      SVN_ERR_W(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
+                                              result_pool, scratch_pool),
+                _("Failed to load properties"));
     }
   else
     {
