@@ -127,15 +127,6 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_get_pristine_props().  */
-svn_error_t *
-svn_wc__get_pristine_props(apr_hash_t **props,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-
 /* Internal version of svn_wc_prop_list2().  */
 svn_error_t *
 svn_wc__get_actual_props(apr_hash_t **props,

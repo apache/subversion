@@ -8944,18 +8944,14 @@ db_read_pristine_props(apr_hash_t **props,
 
       return SVN_NO_ERROR;
     }
-  else if (!deleted_ok)
-    {
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
-                               svn_sqlite__reset(stmt),
-                               _("The node '%s' has a status that"
-                                 " has no properties."),
-                               path_for_error_message(wcroot,
-                                                      local_relpath,
-                                                      scratch_pool));
-    }
-  *props = NULL;
-  return svn_error_trace(svn_sqlite__reset(stmt));
+
+  return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                           svn_sqlite__reset(stmt),
+                           _("The node '%s' has a status that"
+                             " has no properties."),
+                           path_for_error_message(wcroot,
+                                                  local_relpath,
+                                                  scratch_pool));
 }
 
 

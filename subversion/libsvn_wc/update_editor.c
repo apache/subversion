@@ -2394,9 +2394,9 @@ close_directory(void *dir_baton,
   if (db->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                         eb->db, db->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&base_props,
+                                             eb->db, db->local_abspath,
+                                             scratch_pool, scratch_pool));
     }
   else if (!db->adding_dir)
     {
@@ -4077,9 +4077,9 @@ close_file(void *file_baton,
   if (fb->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
-                                         eb->db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&current_base_props,
+                                             eb->db, fb->local_abspath,
+                                             scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
   else if (!fb->adding_file)
