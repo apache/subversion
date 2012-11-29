@@ -211,9 +211,10 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
   svn_stringbuf_strip_whitespace(propbuf);
 
   if (propbuf->data[0] == '\0'
-      || strcmp(propbuf->data, "no") == 0
-      || strcmp(propbuf->data, "off") == 0
-      || strcmp(propbuf->data, "false") == 0)
+      || svn_cstring_casecmp(propbuf->data, "0") == 0
+      || svn_cstring_casecmp(propbuf->data, "no") == 0
+      || svn_cstring_casecmp(propbuf->data, "off") == 0
+      || svn_cstring_casecmp(propbuf->data, "false") == 0)
     {
       svn_error_t *err = svn_error_createf
         (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
