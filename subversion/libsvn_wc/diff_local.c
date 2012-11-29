@@ -513,9 +513,7 @@ diff_status_callback(void *baton,
       /* Report the prop change. */
       /* ### This case should probably be extended for git-diff, but this
              is what the old diff code provided */
-      if (status->node_status == svn_wc_status_deleted
-          || status->node_status == svn_wc_status_replaced
-          || status->prop_status == svn_wc_status_modified)
+      if (status->prop_status == svn_wc_status_modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
