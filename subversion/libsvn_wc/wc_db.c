@@ -321,6 +321,7 @@ static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
                        svn_wc__db_wcroot_t *wcroot,
                        const char *local_relpath,
+                       svn_boolean_t deleted_ok,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -3652,7 +3653,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath,
+  SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
                                  scratch_pool, scratch_pool));
 
   blank_iwb(&iwb);
@@ -5101,7 +5102,7 @@ set_props_txn(void *baton,
   /* Check if the props are modified. If no changes, then wipe out the
      ACTUAL props.  PRISTINE_PROPS==NULL means that any
      ACTUAL props are okay as provided, so go ahead and set them.  */
-  SVN_ERR(db_read_pristine_props(&pristine_props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(&pristine_props, wcroot, local_relpath, FALSE,
                                  scratch_pool, scratch_pool));
   if (spb->props && pristine_props)
     {
@@ -8841,7 +8842,7 @@ db_read_props(void *baton,
     return SVN_NO_ERROR;
 
   /* No local changes. Return the pristine props for this node.  */
-  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath, FALSE,
                                  rpb->result_pool, scratch_pool));
   if (rpb->props == NULL)
     {
@@ -8889,6 +8890,7 @@ static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
                        svn_wc__db_wcroot_t *wcroot,
                        const char *local_relpath,
+                       svn_boolean_t deleted_ok,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -8916,9 +8918,8 @@ db_read_pristine_props(apr_hash_t **props,
   presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
   /* For "base-deleted", it is obvious the pristine props are located
-     in the BASE table. Fall through to fetch them.
-     ### BH: Is this really the behavior we want here? */
-  if (presence == svn_wc__db_status_base_deleted)
+     below the current node. Fetch the NODE from the next record. */
+  if (presence == svn_wc__db_status_base_deleted && deleted_ok)
     {
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -8943,7 +8944,16 @@ db_read_pristine_props(apr_hash_t **props,
 
       return SVN_NO_ERROR;
     }
-
+  else if (!deleted_ok)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                               svn_sqlite__reset(stmt),
+                               _("The node '%s' has a status that"
+                                 " has no properties."),
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
+                                                      scratch_pool));
+    }
   *props = NULL;
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
@@ -8965,7 +8975,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(db_read_pristine_props(props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(props, wcroot, local_relpath, TRUE,
                                  result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }

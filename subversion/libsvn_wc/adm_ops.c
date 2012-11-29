@@ -2446,9 +2446,19 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
-                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
-                                   scratch_pool));
+  err = svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
+                                 SVN_PROP_NEEDS_LOCK, scratch_pool,
+                                 scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      /* The node has non wc representation (e.g. deleted), so
+         we don't want to touch the in-wc file */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
   if (needs_lock)
     SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
 
