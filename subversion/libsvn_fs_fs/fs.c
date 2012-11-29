@@ -38,6 +38,7 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
+#include "revprops.h"
 #include "rep-cache.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
