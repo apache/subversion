@@ -416,11 +416,8 @@ svn_cl__list(apr_getopt_t *os,
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
   if (seen_nonexistent_target)
-    {
-      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-            _("Could not list all targets because some targets don't exist"));
-      return svn_error_compose_create(externals_err, err);
-    }
-  else
-    return svn_error_compose_create(externals_err, err);
+    err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+          _("Could not list all targets because some targets don't exist"));
+
+  return svn_error_compose_create(externals_err, err);
 }
