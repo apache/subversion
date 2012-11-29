@@ -187,14 +187,17 @@ svn_property_kind(int *prefix_len,
 
 
 /** Return @c TRUE iff @a prop_name represents the name of a Subversion
- * property.
+ * property.  That is, any property name in Subversion's name space for
+ * versioned or unversioned properties, regardless whether the particular
+ * property name is recognized.
  */
 svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name);
 
 
 /** Return @c TRUE iff @a props has at least one property whose name
- * represents the name of a Subversion property.
+ * represents the name of a Subversion property, in the sense of
+ * svn_prop_is_svn_prop().
  *
  * @since New in 1.5.
  */
