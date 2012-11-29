@@ -287,7 +287,8 @@ typedef struct merge_cmd_baton_t {
   apr_hash_t *dry_run_deletions;
 
   /* The list of paths for entries we've added and the most
-     recently added directory.  (Used only when in dry_run mode.) */
+     recently added directory.  The latter may be NULL.
+     Both are used only when in dry_run mode. */
   apr_hash_t *dry_run_added;
   const char *dry_run_last_added_dir;
 
