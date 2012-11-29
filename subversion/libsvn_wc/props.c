@@ -1590,7 +1590,6 @@ svn_wc__internal_propget(const svn_string_t **value,
 {
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind2(name);
-  svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
