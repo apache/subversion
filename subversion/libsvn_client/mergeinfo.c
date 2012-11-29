@@ -911,18 +911,15 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
 
 
 svn_error_t *
-svn_client__elide_mergeinfo(const char *target_wcpath,
-                            const char *wc_elision_limit_path,
+svn_client__elide_mergeinfo(const char *target_abspath,
+                            const char *wc_elision_limit_abspath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  const char *target_abspath;
-  const char *limit_abspath = NULL;
+  const char *limit_abspath = wc_elision_limit_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
-  if (wc_elision_limit_path)
-    SVN_ERR(svn_dirent_get_absolute(&limit_abspath, wc_elision_limit_path,
-                                    pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+  SVN_ERR_ASSERT(!wc_elision_limit_abspath || svn_dirent_is_absolute(wc_elision_limit_abspath));
 
   /* Check for first easy out: We are already at the limit path. */
   if (!limit_abspath
@@ -985,12 +982,12 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       /* If TARGET_WCPATH inherited no mergeinfo from the WC and we are
          not limiting our search to the working copy then check if it
          inherits any from the repos. */
-      if (!mergeinfo && !wc_elision_limit_path)
+      if (!mergeinfo && !wc_elision_limit_abspath)
         {
           err = svn_client__get_wc_or_repos_mergeinfo(
             &mergeinfo, NULL, NULL, TRUE,
             svn_mergeinfo_nearest_ancestor,
-            NULL, target_wcpath, ctx, pool);
+            NULL, target_abspath, ctx, pool);
           if (err)
             {
               if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -1009,7 +1006,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
       /* If there is nowhere to elide TARGET_WCPATH's mergeinfo to and
          the elision is limited, then we are done.*/
-      if (!mergeinfo && wc_elision_limit_path)
+      if (!mergeinfo && wc_elision_limit_abspath)
         return SVN_NO_ERROR;
 
       SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_abspath,
