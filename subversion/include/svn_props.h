@@ -451,7 +451,7 @@ svn_prop_name_is_valid(const char *prop_name);
                                 SVN_PROP_TEXT_TIME, \
                                 SVN_PROP_OWNER, \
                                 SVN_PROP_GROUP, \
-                                SVN_PROP_UNIX_MODE
+                                SVN_PROP_UNIX_MODE,
 
 /** @} */
 
