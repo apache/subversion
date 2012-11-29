@@ -2306,6 +2306,24 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
+/* Upate dry run list of added directories.
+
+   If the merge is a dry run, then set MERGE_B->DRY_RUN_LAST_ADDED_DIR to a
+   copy of ADDED_DIR_ABSPATH, allocated in MERGE_B->POOL. Add the same copy
+   to MERGE_B->DRY_RUN_ADDED. Do nothing if the merge is not a dry run. */
+static void
+cache_last_added_dir(merge_cmd_baton_t *merge_b,
+                     const char *added_dir_abspath)
+{
+  if (merge_b->dry_run)
+    {
+      merge_b->dry_run_last_added_dir = apr_pstrdup(merge_b->pool,
+                                                   added_dir_abspath);
+      apr_hash_set(merge_b->dry_run_added, merge_b->dry_run_last_added_dir,
+                  APR_HASH_KEY_STRING, merge_b->dry_run_last_added_dir);
+    }
+}
+
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_added(svn_wc_notify_state_t *state,
@@ -2412,10 +2430,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
       /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
         {
-          merge_b->dry_run_last_added_dir =
-            apr_pstrdup(merge_b->pool, local_abspath);
-          apr_hash_set(merge_b->dry_run_added, merge_b->dry_run_last_added_dir,
-                       APR_HASH_KEY_STRING, merge_b->dry_run_last_added_dir);
+          cache_last_added_dir(merge_b, local_abspath);
         }
       else
         {
@@ -2451,8 +2466,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
             }
           else
             {
-              merge_b->dry_run_last_added_dir =
-                apr_pstrdup(merge_b->pool, local_abspath);
+              cache_last_added_dir(merge_b, local_abspath);
             }
           if (state)
             *state = svn_wc_notify_state_changed;
