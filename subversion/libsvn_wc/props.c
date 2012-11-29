@@ -280,8 +280,8 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
     }
 
   if (had_props)
-    SVN_ERR(svn_wc__get_pristine_props(&pristine_props, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
+                                           scratch_pool, scratch_pool));
   if (pristine_props == NULL)
     pristine_props = apr_hash_make(scratch_pool);
 
@@ -1513,13 +1513,13 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 }
 
 svn_error_t *
-svn_wc__get_pristine_props(apr_hash_t **props,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_wc_get_pristine_props(apr_hash_t **props,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1527,59 +1527,20 @@ svn_wc__get_pristine_props(apr_hash_t **props,
   /* Certain node stats do not have properties defined on them. Check the
      state, and return NULL for these situations.  */
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-  if (status == svn_wc__db_status_added)
+  err = svn_wc__db_read_pristine_props(props, wc_ctx->db, local_abspath,
+                                       result_pool, scratch_pool);
+
+  if (err)
     {
-      /* Resolve the status. copied and moved_here arrive with properties,
-         while a simple add does not.  */
-      SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-    }
-  if (status == svn_wc__db_status_added
-#if 0
-      /* ### the update editor needs to fetch properties while the directory
-         ### is still marked incomplete  */
-      || status == svn_wc__db_status_incomplete
-#endif
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_server_excluded
-      || status == svn_wc__db_status_not_present)
-    {
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      /* Documented behavior is to set *PROPS to NULL */
       *props = NULL;
-      return SVN_NO_ERROR;
     }
 
-  /* status: normal, moved_here, copied, deleted  */
-
-  /* After the above checks, these pristines should always be present.  */
-  return svn_error_trace(
-               svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                              result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc_get_pristine_props(apr_hash_t **props,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__get_pristine_props(props,
-                                                    wc_ctx->db,
-                                                    local_abspath,
-                                                    result_pool,
-                                                    scratch_pool));
-}
-
 
 svn_error_t *
 svn_wc_prop_get2(const svn_string_t **value,

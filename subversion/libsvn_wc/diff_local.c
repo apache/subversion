@@ -239,8 +239,8 @@ file_diff(struct diff_baton *eb,
           /* We show a deletion of what was actually deleted */
           SVN_ERR_ASSERT(status == svn_wc__db_status_deleted);
 
-          SVN_ERR(svn_wc__get_pristine_props(&del_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&del_props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
           SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, &del_checksum, NULL,
