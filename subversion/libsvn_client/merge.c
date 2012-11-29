@@ -304,9 +304,10 @@ typedef struct merge_cmd_baton_t {
      meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_new_mergeinfo;
 
-  /* A list of absolute paths which had explicit mergeinfo prior to the merge
-     but had this mergeinfo deleted by the merge.  This is populated by
-     merge_change_props() and is allocated in POOL so it is subject to the
+  /* A list of absolute paths whose mergeinfo doesn't need updating after
+     the merge. This can be caused by the removal of mergeinfo by the merge
+     or by deleting the node itself.  This is populated by merge_change_props()
+     and the delete callbacks and is allocated in POOL so it is subject to the
      lifetime limitations of POOL.  Is NULL if no paths are found which
      meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_deleted_mergeinfo;
@@ -2232,6 +2233,15 @@ merge_file_deleted(svn_wc_notify_state_t *state,
                                           merge_b->ctx, scratch_pool));
             if (state)
               *state = svn_wc_notify_state_changed;
+
+            /* Record that we might have deleted mergeinfo */
+            if (!merge_b->paths_with_deleted_mergeinfo)
+              merge_b->paths_with_deleted_mergeinfo =
+                                                apr_hash_make(merge_b->pool);
+
+            apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+                         apr_pstrdup(merge_b->pool, mine_abspath),
+                         APR_HASH_KEY_STRING, mine_abspath);
           }
         else
           {
@@ -2610,6 +2620,15 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
                 if (state)
                   *state = svn_wc_notify_state_changed;
               }
+
+            /* Record that we might have deleted mergeinfo */
+            if (!merge_b->paths_with_deleted_mergeinfo)
+              merge_b->paths_with_deleted_mergeinfo =
+                                                apr_hash_make(merge_b->pool);
+
+            apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+                         apr_pstrdup(merge_b->pool, local_abspath),
+                         APR_HASH_KEY_STRING, local_abspath);
           }
         else
           {
