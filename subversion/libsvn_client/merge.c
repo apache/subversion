@@ -6710,7 +6710,6 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                   new_segment->path = original_repos_relpath;
                   new_segment->range_start = original_revision;
                   new_segment->range_end = original_revision;
-                  segment->range_start = original_revision + 1;
                   svn_sort__array_insert(&new_segment, segments, 0);
                 }
             }
