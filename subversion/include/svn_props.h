@@ -213,6 +213,57 @@ svn_prop_has_svn_prop(const apr_hash_t *props,
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name);
 
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
+ * known revision property.  For example, svn:log or svn:date.
+ *
+ * This will return FALSE for any property name that is not known by this
+ * version of the library, even though the name may be known to other (for
+ * example, later) Subversion software.
+ *
+ * @since New in 1.8
+ */
+svn_boolean_t
+svn_prop_is_known_svn_rev_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
+ * known versioned property that is allowed on a file and/or on a directory.
+ * For example, svn:eol-style or svn:ignore or svn:mergeinfo.
+ *
+ * This will return FALSE for any property name that is not known by this
+ * version of the library, even though the name may be known to other (for
+ * example, later) Subversion software.
+ *
+ * @since New in 1.8
+ */
+svn_boolean_t
+svn_prop_is_known_svn_node_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
+ * known versioned property that is allowed on a file.  For example,
+ * svn:eol-style or svn:mergeinfo.
+ *
+ * This will return FALSE for any property name that is not known by this
+ * version of the library, even though the name may be known to other (for
+ * example, later) Subversion software.
+ *
+ * @since New in 1.8
+ */
+svn_boolean_t
+svn_prop_is_known_svn_file_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name represents the name of a Subversion
+ * known versioned property that is allowed on a directory.  For example,
+ * svn:ignore or svn:mergeinfo.
+ *
+ * This will return FALSE for any property name that is not known by this
+ * version of the library, even though the name may be known to other (for
+ * example, later) Subversion software.
+ *
+ * @since New in 1.8
+ */
+svn_boolean_t
+svn_prop_is_known_svn_dir_prop(const char *prop_name);
+
 /** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility

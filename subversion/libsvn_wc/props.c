@@ -1619,47 +1619,38 @@ svn_wc__internal_propget(const svn_string_t **value,
 
 /* The special Subversion properties are not valid for all node kinds.
    Return an error if NAME is an invalid Subversion property for PATH which
-   is of kind NODE_KIND. */
+   is of kind NODE_KIND.  NAME must be in the "svn:" name space.
+
+   Note that we only disallow the property if we're sure it's one that
+   already has a meaning for a different node kind.  We don't disallow
+   setting an *unknown* svn: prop here, at this level; a higher level
+   should disallow that if desired.
+  */
 static svn_error_t *
 validate_prop_against_node_kind(const char *name,
                                 const char *path,
                                 svn_node_kind_t node_kind,
                                 apr_pool_t *pool)
 {
-
-  const char *file_prohibit[] = { SVN_PROP_IGNORE,
-                                  SVN_PROP_EXTERNALS,
-                                  SVN_PROP_INHERITABLE_AUTO_PROPS,
-                                  SVN_PROP_INHERITABLE_IGNORES,
-                                  NULL };
-  const char *dir_prohibit[] = { SVN_PROP_EXECUTABLE,
-                                 SVN_PROP_KEYWORDS,
-                                 SVN_PROP_EOL_STYLE,
-                                 SVN_PROP_MIME_TYPE,
-                                 SVN_PROP_NEEDS_LOCK,
-                                 NULL };
-  const char **node_kind_prohibit;
   const char *path_display
     = svn_path_is_url(path) ? path : svn_dirent_local_style(path, pool);
 
   switch (node_kind)
     {
     case svn_node_dir:
-      node_kind_prohibit = dir_prohibit;
-      while (*node_kind_prohibit)
-        if (strcmp(name, *node_kind_prohibit++) == 0)
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Cannot set '%s' on a directory ('%s')"),
-                                   name, path_display);
+      if (! svn_prop_is_known_svn_dir_prop(name)
+          && svn_prop_is_known_svn_file_prop(name))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot set '%s' on a directory ('%s')"),
+                                 name, path_display);
       break;
     case svn_node_file:
-      node_kind_prohibit = file_prohibit;
-      while (*node_kind_prohibit)
-        if (strcmp(name, *node_kind_prohibit++) == 0)
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Cannot set '%s' on a file ('%s')"),
-                                   name,
-                                   path_display);
+      if (! svn_prop_is_known_svn_file_prop(name)
+          && svn_prop_is_known_svn_dir_prop(name))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot set '%s' on a file ('%s')"),
+                                 name,
+                                 path_display);
       break;
     default:
       return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -1906,6 +1897,7 @@ do_propset(svn_wc__db_t *db,
                                                      notify_action,
                                                      scratch_pool);
       notify->prop_name = name;
+      notify->kind = kind;
 
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
