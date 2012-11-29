@@ -545,25 +545,37 @@ svn_prop_name_is_valid(const char *prop_name);
 /* More reserved revision props in the 'svn:' namespace, used by the
    svnsync tool:   */
 
-/** Prefix for all svnsync custom properties. */
+/** Prefix for all svnsync custom properties.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_PREFIX             SVN_PROP_PREFIX "sync-"
 
 /* The following revision properties are set on revision 0 of
  * destination repositories by svnsync:
  */
 
-/** Used to enforce mutually exclusive destination repository access. */
+/** Used to enforce mutually exclusive destination repository access.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_LOCK               SVNSYNC_PROP_PREFIX "lock"
 
-/** Identifies the repository's source URL. */
+/** Identifies the repository's source URL.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_FROM_URL           SVNSYNC_PROP_PREFIX "from-url"
-/** Identifies the repository's source UUID. */
+/** Identifies the repository's source UUID.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_FROM_UUID          SVNSYNC_PROP_PREFIX "from-uuid"
 
-/** Identifies the last completely mirrored revision. */
+/** Identifies the last completely mirrored revision.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_LAST_MERGED_REV    SVNSYNC_PROP_PREFIX "last-merged-rev"
 
-/** Identifies the revision currently being copied. */
+/** Identifies the revision currently being copied.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_CURRENTLY_COPYING  SVNSYNC_PROP_PREFIX "currently-copying"
 
 
