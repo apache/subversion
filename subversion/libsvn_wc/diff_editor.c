@@ -996,16 +996,21 @@ report_wc_file_as_added(struct edit_baton *eb,
 
 
   if (eb->use_text_base)
-    SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
-                              FALSE, scratch_pool, scratch_pool));
+    {
+      SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
+                                FALSE, scratch_pool, scratch_pool));
+      translated_file = source_file; /* No translation needed */
+    }
   else
-    source_file = local_abspath;
+    {
+      source_file = local_abspath;
 
-  SVN_ERR(svn_wc__internal_translated_file(
+      SVN_ERR(svn_wc__internal_translated_file(
            &translated_file, source_file, db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            eb->cancel_func, eb->cancel_baton,
            scratch_pool, scratch_pool));
+    }
 
   SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL,
                                     path,
