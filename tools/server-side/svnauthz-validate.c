@@ -88,10 +88,12 @@ main(int argc, const char **argv)
   /* Repeat svn_cmdline__getopt_init() inline. */
   apr_err = apr_getopt_init(&os, pool, argc, argv);
   if (apr_err)
-    return svn_cmdline_handle_exit_error(
-             svn_error_wrap_apr(apr_err,
-                                ("Error initializing command line arguments")),
-             pool, "svn-rep-sharing-stats: ");
+    {
+       err = svn_error_wrap_apr(apr_err,
+                                ("Error initializing command line arguments"));
+       svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+       return 2;
+    }
 
   os->interleave = 1;
   while (1)
@@ -131,8 +133,14 @@ main(int argc, const char **argv)
     }
 
   /* Grab AUTHZ_FILE from argv. */
-  SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.authz_file, os->argv[os->ind],
-                                      pool));
+  err = svn_utf_cstring_to_utf8(&opts.authz_file, os->argv[os->ind], pool);
+  if (err)
+    {
+      svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+      svn_error_clear(err);
+      return 2;
+    }
+
   opts.authz_file = svn_dirent_internal_style(opts.authz_file, pool);
 
   /* Read the access file and validate it. */

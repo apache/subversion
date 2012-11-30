@@ -32,6 +32,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
 #include "svn_pools.h"
@@ -320,6 +321,7 @@ static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
                        svn_wc__db_wcroot_t *wcroot,
                        const char *local_relpath,
+                       svn_boolean_t deleted_ok,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -381,7 +383,18 @@ wclock_owns_lock(svn_boolean_t *own_lock,
                  svn_boolean_t exact,
                  apr_pool_t *scratch_pool);
 
+/* Baton for db_is_switched */
+struct db_is_switched_baton_t
+{
+  svn_boolean_t *is_switched;
+  svn_kind_t *kind;
+};
 
+static svn_error_t *
+db_is_switched(void *baton,
+               svn_wc__db_wcroot_t *wcroot,
+               const char *local_relpath,
+               apr_pool_t *scratch_pool);
  
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
    in WCROOT.  */
@@ -1778,6 +1791,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         apr_array_header_t *new_iprops,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
@@ -1821,6 +1835,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
 
   ibb.dav_cache = dav_cache;
+  ibb.iprops = new_iprops;
 
   if (update_actual_props)
     {
@@ -1863,6 +1878,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            apr_array_header_t *new_iprops,
                             svn_boolean_t keep_recorded_info,
                             svn_boolean_t insert_base_deleted,
                             const svn_skel_t *conflict,
@@ -1905,6 +1921,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.target = target;
 
   ibb.dav_cache = dav_cache;
+  ibb.iprops = new_iprops;
 
   if (update_actual_props)
     {
@@ -3636,7 +3653,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath,
+  SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
                                  scratch_pool, scratch_pool));
 
   blank_iwb(&iwb);
@@ -5085,7 +5102,7 @@ set_props_txn(void *baton,
   /* Check if the props are modified. If no changes, then wipe out the
      ACTUAL props.  PRISTINE_PROPS==NULL means that any
      ACTUAL props are okay as provided, so go ahead and set them.  */
-  SVN_ERR(db_read_pristine_props(&pristine_props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(&pristine_props, wcroot, local_relpath, FALSE,
                                  scratch_pool, scratch_pool));
   if (spb->props && pristine_props)
     {
@@ -7663,7 +7680,7 @@ read_info(svn_wc__db_status_t *status,
           if (op_depth != 0)
             *lock = NULL;
           else
-            *lock = lock_from_columns(stmt_info, 16, 17, 18, 19, result_pool);
+            *lock = lock_from_columns(stmt_info, 17, 18, 19, 20, result_pool);
         }
 
       if (have_work)
@@ -8825,7 +8842,7 @@ db_read_props(void *baton,
     return SVN_NO_ERROR;
 
   /* No local changes. Return the pristine props for this node.  */
-  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath, FALSE,
                                  rpb->result_pool, scratch_pool));
   if (rpb->props == NULL)
     {
@@ -8873,6 +8890,7 @@ static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
                        svn_wc__db_wcroot_t *wcroot,
                        const char *local_relpath,
+                       svn_boolean_t deleted_ok,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -8900,9 +8918,8 @@ db_read_pristine_props(apr_hash_t **props,
   presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
   /* For "base-deleted", it is obvious the pristine props are located
-     in the BASE table. Fall through to fetch them.
-     ### BH: Is this really the behavior we want here? */
-  if (presence == svn_wc__db_status_base_deleted)
+     below the current node. Fetch the NODE from the next record. */
+  if (presence == svn_wc__db_status_base_deleted && deleted_ok)
     {
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -8928,8 +8945,13 @@ db_read_pristine_props(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  *props = NULL;
-  return svn_error_trace(svn_sqlite__reset(stmt));
+  return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                           svn_sqlite__reset(stmt),
+                           _("The node '%s' has a status that"
+                             " has no properties."),
+                           path_for_error_message(wcroot,
+                                                  local_relpath,
+                                                  scratch_pool));
 }
 
 
@@ -8949,7 +8971,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(db_read_pristine_props(props, wcroot, local_relpath,
+  SVN_ERR(db_read_pristine_props(props, wcroot, local_relpath, TRUE,
                                  result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -9014,6 +9036,45 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+/* Baton for db_read_cached_iprops */
+struct read_cached_iprops_baton_t
+{
+  apr_array_header_t *iprops;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc__db_txn_callback_t for svn_wc__db_read_cached_iprops */
+static svn_error_t *
+db_read_cached_iprops(void *baton,
+                      svn_wc__db_wcroot_t *wcroot,
+                      const char *local_relpath,
+                      apr_pool_t *scratch_pool)
+{
+  struct read_cached_iprops_baton_t *rib = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_IPROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                               svn_sqlite__reset(stmt),
+                               _("The node '%s' was not found."),
+                               path_for_error_message(wcroot, local_relpath,
+                                                      scratch_pool));
+    }
+
+  SVN_ERR(svn_sqlite__column_iprops(&rib->iprops, stmt, 0,
+                                    rib->result_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
                               svn_wc__db_t *db,
@@ -9023,91 +9084,269 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  const char *repos_root_url;
-  svn_revnum_t revision;
-  int op_depth;
-  const char *repos_relpath;
+  struct read_cached_iprops_baton_t rcib;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL,
-                               &revision, &repos_relpath, &repos_root_url,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, db, local_abspath, result_pool,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
 
-  if (repos_relpath && repos_relpath[0] == '\0')
-    {
-      /* LOCAL_ABSPATH reflects the root of the repository, so there is
-         no parents to inherit from. */
-      *iprops = apr_array_make(result_pool, 0,
-                               sizeof(svn_prop_inherited_item_t *));
-    }
+  rcib.result_pool = result_pool;
+
+  /* Don't use with_txn yet, as we perform just a single transaction */
+  SVN_ERR(db_read_cached_iprops(&rcib, wcroot, local_relpath, scratch_pool));
+
+  if (rcib.iprops)
+    *iprops = rcib.iprops;
   else
     {
-      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                    db, local_abspath,
-                                                    scratch_pool,
-                                                    scratch_pool));
-      VERIFY_USABLE_WCROOT(wcroot);
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_IPROPS));
-      SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (!have_row)
-        {
-          /* No cached iprops. */
-          *iprops = NULL;
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0, result_pool,
-                                            scratch_pool));
-         }
-
-      SVN_ERR(svn_sqlite__reset(stmt));
+      *iprops = apr_array_make(result_pool, 0,
+                               sizeof(svn_prop_inherited_item_t *));
     }
 
   return SVN_NO_ERROR;
 }
 
-/* Recursive body of svn_wc__db_get_children_with_cached_iprops. */
+/* Remove all prop name value pairs from PROP_HASH where the property
+   name is not PROPNAME. */
+static void
+filter_unwanted_props(apr_hash_t *prop_hash,
+                      const char * propname,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, prop_hash);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *ipropname = svn__apr_hash_index_key(hi);
+
+      if (strcmp(ipropname, propname) != 0)
+        apr_hash_set(prop_hash, ipropname, APR_HASH_KEY_STRING, NULL);
+    }
+  return;
+}
+
+/* Baton for db_read_inherited_props */
+struct read_inherited_props_baton_t
+{
+  apr_array_header_t *iprops;
+  const char *propname;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc__db_txn_callback_t for svn_wc__db_read_inherited_props */
 static svn_error_t *
-get_children_with_cached_iprops(apr_hash_t *iprop_paths,
-                                svn_depth_t depth,
-                                const char *local_abspath,
+db_read_inherited_props(void *baton,
+                        svn_wc__db_wcroot_t *wcroot,
+                        const char *local_relpath,
+                        apr_pool_t *scratch_pool)
+{
+  struct read_inherited_props_baton_t *ripb = baton;
+  int i;
+  apr_array_header_t *cached_iprops = NULL;
+  const char *parent_relpath = local_relpath;
+  svn_boolean_t is_wc_root = FALSE;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *result_pool = ripb->result_pool;
+
+  ripb->iprops = apr_array_make(ripb->result_pool, 1,
+                                sizeof(svn_prop_inherited_item_t *));
+
+  /* Walk up to the root of the WC looking for inherited properties.  When we
+     reach the WC root also check for cached inherited properties. */
+  while (TRUE)
+    {
+      apr_hash_t *actual_props;
+      svn_boolean_t is_switched;
+      struct db_is_switched_baton_t swb;
+
+      svn_pool_clear(iterpool);
+
+      swb.is_switched = &is_switched;
+      swb.kind = NULL;
+
+      if (*parent_relpath == '\0')
+        {
+          is_switched = FALSE;
+          is_wc_root = TRUE;
+        }
+      else
+        SVN_ERR(db_is_switched(&swb, wcroot, parent_relpath, scratch_pool));
+
+      if (is_switched || is_wc_root)
+        {
+          struct read_cached_iprops_baton_t rib;
+          is_wc_root = TRUE;
+
+          rib.result_pool = scratch_pool;
+
+          /* If the WC root is also the root of the repository then by
+             definition there are no inheritable properties to be had,
+             but checking for that is just as expensive as fetching them
+             anyway. */
+
+          /* Grab the cached inherited properties for the WC root. */
+          SVN_ERR(db_read_cached_iprops(&rib, wcroot, parent_relpath,
+                                       iterpool));
+
+          cached_iprops = rib.iprops;
+        }
+
+      /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
+         LOCAL_ABSPATH can inherit properties from it. */
+      if (strcmp(local_relpath, parent_relpath) != 0)
+        {
+          struct db_read_props_baton_t rpb;
+          rpb.result_pool = result_pool;
+
+          SVN_ERR(db_read_props(&rpb, wcroot, parent_relpath, iterpool));
+
+          actual_props = rpb.props;
+
+          if (actual_props)
+            {
+              /* If we only want PROPNAME filter out any other properties. */
+              if (ripb->propname)
+                filter_unwanted_props(actual_props, ripb->propname, iterpool);
+
+              if (apr_hash_count(actual_props))
+                {
+                  svn_prop_inherited_item_t *iprop_elt =
+                    apr_pcalloc(ripb->result_pool,
+                                sizeof(svn_prop_inherited_item_t));
+                  iprop_elt->path_or_url = svn_dirent_join(wcroot->abspath,
+                                                           parent_relpath,
+                                                           result_pool);
+
+                  iprop_elt->prop_hash = actual_props;
+                  /* Build the output array in depth-first order. */
+                  svn_sort__array_insert(&iprop_elt, ripb->iprops, 0);
+                }
+            }
+        }
+
+      /* Inheritance only goes as far as the nearest WC root. */
+      if (is_wc_root)
+        break;
+
+      /* Keep looking for the WC root. */
+      parent_relpath = svn_relpath_dirname(parent_relpath, scratch_pool);
+    }
+
+  if (cached_iprops)
+    {
+      for (i = cached_iprops->nelts - 1; i >= 0; i--)
+        {
+          svn_prop_inherited_item_t *cached_iprop =
+            APR_ARRAY_IDX(cached_iprops, i, svn_prop_inherited_item_t *);
+
+          /* An empty property hash in the iprops cache means there are no
+             inherited properties. */
+          if (apr_hash_count(cached_iprop->prop_hash) == 0)
+            continue;
+
+          if (ripb->propname)
+            filter_unwanted_props(cached_iprop->prop_hash, ripb->propname,
+                                  scratch_pool);
+
+          /* If we didn't filter everything then keep this iprop. */
+          if (apr_hash_count(cached_iprop->prop_hash))
+            svn_sort__array_insert(&cached_iprop, ripb->iprops, 0);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                 svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *propname,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  struct read_inherited_props_baton_t ripb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                                                local_abspath, scratch_pool,
-                                                scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-  if (depth == svn_depth_empty
-      || depth == svn_depth_files
-      || depth == svn_depth_immediates)
+
+  ripb.iprops = NULL;
+  ripb.propname = propname;
+  ripb.result_pool = result_pool;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_read_inherited_props,
+                              &ripb, scratch_pool));
+
+  *iprops = ripb.iprops;
+  return SVN_NO_ERROR;
+}
+
+/* Baton for get_children_with_cached_iprops */
+struct get_children_with_cached_baton_t
+{
+  svn_depth_t depth;
+  apr_hash_t *iprop_paths;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc__db_txn_callback_t for
+   svn_wc__db_get_children_with_cached_iprops. */
+static svn_error_t *
+get_children_with_cached_iprops(void *baton,
+                                svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                apr_pool_t *scratch_pool)
+{
+  struct get_children_with_cached_baton_t *cwcb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_t *iprop_paths = cwcb->iprop_paths;
+  apr_pool_t *result_pool = cwcb->result_pool;
+
+  /* First check if LOCAL_RELPATH itself has iprops */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_IPROPS_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+   {
+      const char *relpath_with_cache = svn_sqlite__column_text(stmt, 0,
+                                                               NULL);
+      const char *abspath_with_cache = svn_dirent_join(wcroot->abspath,
+                                                       relpath_with_cache,
+                                                       result_pool);
+      apr_hash_set(iprop_paths, abspath_with_cache, APR_HASH_KEY_STRING,
+                   svn_sqlite__column_text(stmt, 1, result_pool));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (cwcb->depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
+  /* Now fetch information for children or all descendants */
+  if (cwcb->depth == svn_depth_files
+      || cwcb->depth == svn_depth_immediates)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_INODES));  
+                                        STMT_SELECT_IPROPS_CHILDREN));
     }
   else /* Default to svn_depth_infinity. */
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_INODES_RECURSIVE));
+                                        STMT_SELECT_IPROPS_RECURSIVE));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -9121,46 +9360,50 @@ get_children_with_cached_iprops(apr_hash_t *iprop_paths,
                                                        relpath_with_cache,
                                                        result_pool);
       apr_hash_set(iprop_paths, abspath_with_cache, APR_HASH_KEY_STRING,
-                   abspath_with_cache);
+                   svn_sqlite__column_text(stmt, 1, result_pool));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (depth == svn_depth_files || depth == svn_depth_immediates)
+  /* For depth files we should filter non files */
+  if (cwcb->depth == svn_depth_files)
     {
-      const apr_array_header_t *rel_children;
-      int i;
+      apr_hash_index_t *hi;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
-                                                       db, local_abspath,
-                                                       scratch_pool,
-                                                       scratch_pool));
-      for (i = 0; i < rel_children->nelts; i++)
+      for (hi = apr_hash_first(scratch_pool, iprop_paths);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          const char *child_abspath;
+          const char *child_abspath = svn__apr_hash_index_key(hi);
+          const char *child_relpath;
+          svn_kind_t child_kind;
 
           svn_pool_clear(iterpool);
-          child_abspath = svn_dirent_join(
-            local_abspath, APR_ARRAY_IDX(rel_children, i, const char *),
-            iterpool);
 
-          if (depth == svn_depth_files)
+          child_relpath = svn_dirent_is_child(local_relpath, child_abspath,
+                                              NULL);
+
+          if (! child_relpath)
             {
-              svn_kind_t child_kind;
-
-              SVN_ERR(svn_wc__db_read_kind(&child_kind, db, child_abspath,
-                                           FALSE, FALSE, iterpool));
-              if (child_kind != svn_kind_file)
-                continue;
+              continue; /* local_relpath itself */
             }
 
-          SVN_ERR(get_children_with_cached_iprops(iprop_paths,
-                                                  svn_depth_empty,
-                                                  child_abspath, db,
-                                                  result_pool,
-                                                  iterpool));
+          SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &child_kind, NULL,
+                                                    NULL, NULL, NULL, NULL,
+                                                    NULL, NULL, NULL, NULL,
+                                                    NULL, NULL, NULL,
+                                                    wcroot, child_relpath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+          /* Filter if not a file */
+          if (child_kind != svn_kind_file)
+            {
+              apr_hash_set(iprop_paths, child_abspath, APR_HASH_KEY_STRING,
+                           NULL);
+            }
         }
 
       svn_pool_destroy(iterpool);
@@ -9177,10 +9420,26 @@ svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
                                            apr_pool_t *result_pool,
                                            apr_pool_t *scratch_pool)
 {
-  *iprop_paths = apr_hash_make(result_pool);
-  SVN_ERR(get_children_with_cached_iprops(*iprop_paths, depth,
-                                          local_abspath, db, result_pool,
-                                          scratch_pool));
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct get_children_with_cached_baton_t cwcb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                                local_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  cwcb.iprop_paths = apr_hash_make(result_pool);
+  cwcb.depth = depth;
+  cwcb.result_pool = result_pool;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              get_children_with_cached_iprops, &cwcb,
+                              scratch_pool));
+
+  *iprop_paths = cwcb.iprop_paths;
   return SVN_NO_ERROR;
 }
 
@@ -9686,6 +9945,7 @@ commit_node(void *baton,
   svn_sqlite__stmt_t *stmt_act;
   svn_boolean_t have_act;
   svn_string_t prop_blob = { 0 };
+  svn_string_t inherited_prop_blob = { 0 };
   const char *changelist = NULL;
   const char *parent_relpath;
   svn_wc__db_status_t new_presence;
@@ -9754,6 +10014,10 @@ commit_node(void *baton,
   if (prop_blob.data == NULL)
     prop_blob.data = svn_sqlite__column_blob(stmt_info, 14, &prop_blob.len,
                                              scratch_pool);
+
+  inherited_prop_blob.data = svn_sqlite__column_blob(stmt_info, 16,
+                                                     &inherited_prop_blob.len,
+                                                     scratch_pool);
 
   if (cb->keep_changelist && have_act)
     changelist = svn_sqlite__column_text(stmt_act, 0, scratch_pool);
@@ -9841,6 +10105,11 @@ commit_node(void *baton,
                                     scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
                                       scratch_pool));
+  if (inherited_prop_blob.data != NULL)
+    {
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 17, inherited_prop_blob.data,
+                                    inherited_prop_blob.len));
+    }
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -12473,6 +12742,118 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
    *is_root = TRUE;
 
    return SVN_NO_ERROR;
+}
+
+/* This implements svn_wc__db_txn_callback_t for svn_wc_db__is_switched */
+static svn_error_t *
+db_is_switched(void *baton,
+               svn_wc__db_wcroot_t *wcroot,
+               const char *local_relpath,
+               apr_pool_t *scratch_pool)
+{
+  struct db_is_switched_baton_t *isb = baton;
+  svn_wc__db_status_t status;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+  const char *name;
+  const char *parent_local_relpath;
+  apr_int64_t parent_repos_id;
+  const char *parent_repos_relpath;
+
+  SVN_ERR_ASSERT(*local_relpath != '\0'); /* Handled in wrapper */
+
+  SVN_ERR(read_info(&status, isb->kind, NULL, &repos_relpath, &repos_id, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_server_excluded
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present)
+    {
+      return svn_error_createf(
+                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                    _("The node '%s' was not found."),
+                    path_for_error_message(wcroot, local_relpath,
+                                           scratch_pool));
+    }
+  else if (! repos_relpath)
+    {
+      /* Node is shadowed; easy out */
+      if (isb->is_switched)
+        *isb->is_switched = FALSE;
+
+      return SVN_NO_ERROR;
+    }
+
+  if (! isb->is_switched)
+    return SVN_NO_ERROR;
+
+  svn_relpath_split(&parent_local_relpath, &name, local_relpath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
+                                            &parent_repos_relpath,
+                                            &parent_repos_id, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            wcroot, parent_local_relpath,
+                                            scratch_pool, scratch_pool));
+
+  if (repos_id != parent_repos_id)
+    *isb->is_switched = TRUE;
+  else
+    {
+      const char *expected_relpath;
+
+      expected_relpath = svn_relpath_join(parent_repos_relpath, name,
+                                          scratch_pool);
+
+      *isb->is_switched = (strcmp(expected_relpath, repos_relpath) != 0);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
+                       svn_boolean_t *is_switched,
+                       svn_kind_t *kind,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct db_is_switched_baton_t isb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (is_switched)
+    *is_switched = FALSE;
+
+  if (*local_relpath == '\0')
+    {
+      /* Easy out */
+      if (is_wcroot)
+        *is_wcroot = TRUE;
+      
+      if (kind)
+        *kind = svn_kind_dir;
+      return SVN_NO_ERROR;
+    }
+
+  if (is_wcroot)
+    *is_wcroot = FALSE;
+
+  isb.is_switched = is_switched;
+  isb.kind = kind;
+
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
+                                             db_is_switched, &isb,
+                                             scratch_pool));
 }
 
 

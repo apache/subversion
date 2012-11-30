@@ -2394,9 +2394,9 @@ close_directory(void *dir_baton,
   if (db->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                         eb->db, db->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&base_props,
+                                             eb->db, db->local_abspath,
+                                             scratch_pool, scratch_pool));
     }
   else if (!db->adding_dir)
     {
@@ -3975,6 +3975,7 @@ close_file(void *file_baton,
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
   const svn_checksum_t *new_checksum;
+  apr_array_header_t *iprops = NULL;
 
   if (fb->skip_this)
     {
@@ -4076,9 +4077,9 @@ close_file(void *file_baton,
   if (fb->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
-                                         eb->db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&current_base_props,
+                                             eb->db, fb->local_abspath,
+                                             scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
   else if (!fb->adding_file)
@@ -4299,6 +4300,22 @@ close_file(void *file_baton,
                                         scratch_pool);
     }
 
+  /* Any inherited props to be set set for this base node? */
+  if (eb->wcroot_iprops)
+    {
+      iprops = apr_hash_get(eb->wcroot_iprops, fb->local_abspath,
+                            APR_HASH_KEY_STRING);
+
+      /* close_edit may also update iprops for switched nodes, catching
+         those for which close_directory is never called (e.g. a switch
+         with no changes).  So as a minor optimization we remove any
+         iprops from the hash so as not to set them again in
+         close_edit. */
+      if (iprops)
+        apr_hash_set(eb->wcroot_iprops, fb->local_abspath,
+                     APR_HASH_KEY_STRING, NULL);
+    }
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_relpath,
@@ -4317,6 +4334,7 @@ close_file(void *file_baton,
                                    (fb->add_existed && fb->adding_file),
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
+                                   iprops,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
                                    conflict_skel,
@@ -4998,147 +5016,25 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath, *name;
-  const char *repos_relpath, *repos_root, *repos_uuid;
-  svn_wc__db_status_t status;
-  svn_kind_t my_kind;
-
-  if (!kind)
-    kind = &my_kind;
-
-  /* Initialize our return values to the most common (code-wise) values. */
-  *wc_root = TRUE;
-  if (switched)
-    *switched = FALSE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, &repos_relpath,
-                               &repos_root, &repos_uuid, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (repos_relpath == NULL)
-    {
-      /* If we inherit our URL, then we can't be a root, nor switched.  */
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
-    }
-  if (*kind != svn_kind_dir)
-    {
-      /* File/symlinks cannot be a root.  */
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_deleted)
-    {
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_server_excluded
-           || status == svn_wc__db_status_excluded
-           || status == svn_wc__db_status_not_present)
-    {
-      return svn_error_createf(
-                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                    _("The node '%s' was not found."),
-                    svn_dirent_local_style(local_abspath, scratch_pool));
-    }
-  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-    return SVN_NO_ERROR;
-
-  if (!*wc_root && switched == NULL )
-    return SVN_NO_ERROR; /* No more info needed */
-
-  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
-
-  /* Check if the node is recorded in the parent */
-  if (*wc_root)
-    {
-      svn_boolean_t is_root;
-      SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
-
-      if (is_root)
-        {
-          /* We're not in the (versioned) parent directory's list of
-             children, so we must be the root of a distinct working copy.  */
-          return SVN_NO_ERROR;
-        }
-    }
-
-  {
-    const char *parent_repos_root;
-    const char *parent_repos_relpath;
-    const char *parent_repos_uuid;
-
-    SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
-                                       &parent_repos_root,
-                                       &parent_repos_uuid,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-
-    if (strcmp(repos_root, parent_repos_root) != 0
-        || strcmp(repos_uuid, parent_repos_uuid) != 0)
-      {
-        /* This should never happen (### until we get mixed-repos working
-           copies). If we're in the parent, then we should be from the
-           same repository. For this situation, just declare us the root
-           of a separate, unswitched working copy.  */
-        return SVN_NO_ERROR;
-      }
-
-    *wc_root = FALSE;
-
-    if (switched)
-      {
-        const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
-                                                        name, scratch_pool);
-
-        *switched = (strcmp(expected_relpath, repos_relpath) != 0);
-      }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(
+            svn_wc__db_is_switched(wc_root, switched, kind,
+                                   db, local_abspath,
+                                   scratch_pool));
 }
 
 svn_error_t *
-svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_root;
-  svn_boolean_t is_switched;
-  svn_kind_t kind;
-  svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
-                              db, local_abspath, scratch_pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
-          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_trace(err);
-
-      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
-    }
-
-  *wc_root = is_root || is_switched;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_is_wc_root2(svn_boolean_t *wc_root,
-                   svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__internal_is_wc_root(wc_root, wc_ctx->db,
-                                                     local_abspath,
-                                                     scratch_pool));
+  return svn_error_trace(svn_wc__db_is_switched(is_wcroot,is_switched, kind,
+                                                wc_ctx->db, local_abspath,
+                                                scratch_pool));
 }
 
 svn_error_t*

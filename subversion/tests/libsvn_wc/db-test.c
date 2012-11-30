@@ -664,7 +664,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum,
-            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, FALSE, FALSE, NULL, NULL, FALSE, FALSE,
             NULL, NULL,
             pool));
 
@@ -677,7 +677,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             "O-target",
-            NULL, FALSE, FALSE, NULL, FALSE, FALSE,
+            NULL, FALSE, FALSE, NULL, NULL, FALSE, FALSE,
             NULL, NULL,
             pool));
 

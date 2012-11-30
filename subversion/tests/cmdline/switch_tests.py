@@ -586,6 +586,11 @@ def file_dir_file(sbox):
   if not os.path.isdir(file_path):
     raise svntest.Failure
 
+  # The reason the following switch currently fails is that the node
+  # is determined to be a 'root', because it is switched against its parent.
+  # In this specific case the switch editor is designed to be rooted on the node
+  # itself instead of its ancestor. If you would use sbox.ospath('A') for
+  # file_path the switch works both ways.
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      '--ignore-ancestry', file_url, file_path)
   if not os.path.isfile(file_path):

@@ -357,6 +357,10 @@ struct report_context_t {
 
   /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
+  svn_ra_serf__list_t *done_dir_propfinds;
+
+  /* list of outstanding prop changes (contains report_dir_t) */
+  svn_ra_serf__list_t *active_dir_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
   svn_ra_serf__list_t *file_propchanges_only;
@@ -1347,6 +1351,27 @@ maybe_close_dir_chain(report_dir_t *dir)
     {
       report_dir_t *parent = cur_dir->parent_dir;
       report_context_t *report_context = cur_dir->report_context;
+      svn_boolean_t propfind_in_done_list = FALSE;
+      svn_ra_serf__list_t *done_list;
+
+      /* Make sure there are no references to this dir in the
+         active_dir_propfinds list.  If there are, don't close the
+         directory -- which would delete the pool from which the
+         relevant active_dir_propfinds list item is allocated -- and
+         of course don't crawl upward to check the parents for
+         a closure opportunity, either.  */
+      done_list = report_context->active_dir_propfinds;
+      while (done_list)
+        {
+          if (done_list->data == cur_dir)
+            {
+              propfind_in_done_list = TRUE;
+              break;
+            }
+          done_list = done_list->next;
+        }
+      if (propfind_in_done_list)
+        break;
 
       SVN_ERR(close_dir(cur_dir));
       if (parent)
@@ -1377,6 +1402,10 @@ handle_propchange_only(report_info_t *info,
 
   info->dir->ref_count--;
 
+  /* See if the parent directory of this file (and perhaps even
+     parents of that) can be closed now.  */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
+
   return SVN_NO_ERROR;
 }
 
@@ -1400,6 +1429,10 @@ handle_local_content(report_info_t *info,
   svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
+
+  /* See if the parent directory of this fetched item (and
+     perhaps even parents of that) can be closed now. */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
 
   return SVN_NO_ERROR;
 }
@@ -1565,12 +1598,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
   else
     {
-      /* No propfind or GET request.  Just handle the prop changes now.
-
-         Note: we'll use INFO->POOL for the scratch_pool here since it will
-         be destroyed at the end of handle_propchange_only(). That pool
-         would be quite fine, but it is unclear how long INFO->POOL will
-         stick around since its lifetime and usage are unclear.  */
+      /* No propfind or GET request.  Just handle the prop changes now. */
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
@@ -2126,13 +2154,15 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if (info->dir->fetch_props)
         {
+          svn_ra_serf__list_t *list_item;
+ 
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              get_best_connection(ctx),
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
-                                             &ctx->done_propfinds,
+                                             &ctx->done_dir_propfinds,
                                              info->dir->pool));
           SVN_ERR_ASSERT(info->dir->propfind_handler);
 
@@ -2140,6 +2170,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_ra_serf__request_create(info->dir->propfind_handler);
 
           ctx->num_active_propfinds++;
+
+          list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
+          list_item->data = info->dir;
+          list_item->next = ctx->active_dir_propfinds;
+          ctx->active_dir_propfinds = list_item;
 
           if (ctx->num_active_fetches + ctx->num_active_propfinds
               > REQUEST_COUNT_TO_PAUSE)
@@ -2150,6 +2185,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->dir->propfind_handler = NULL;
         }
 
+      /* See if this directory (and perhaps even parents of that) can
+         be closed now.  This is likely to be the case only if we
+         didn't need to contact the server for supplemental
+         information required to handle any of this directory's
+         children.  */
+      SVN_ERR(maybe_close_dir_chain(info->dir));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OPEN_FILE && strcmp(name.name, "open-file") == 0)
@@ -2562,7 +2603,7 @@ finish_report(void *report_baton,
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
@@ -2666,14 +2707,17 @@ finish_report(void *report_baton,
           err = SVN_NO_ERROR;
           status = 0;
 
-          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+          if (sess->timeout)
             {
-              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-            }
-          else
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                      _("Connection timed out"));
+              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+                {
+                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+                }
+              else
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                          _("Connection timed out"));
+                }
             }
         }
       else
@@ -2692,10 +2736,12 @@ finish_report(void *report_baton,
         SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
                                           report->num_active_propfinds));
 
-      /* prune our propfind list if they are done. */
+      /* Prune completed file PROPFINDs. */
       done_list = report->done_propfinds;
       while (done_list)
         {
+          svn_ra_serf__list_t *next_done = done_list->next;
+
           svn_pool_clear(iterpool_inner);
 
           report->num_active_propfinds--;
@@ -2730,19 +2776,6 @@ finish_report(void *report_baton,
                 {
                   report_info_t *info = cur->data;
 
-                  /* If we've got cached file content for this file,
-                     take care of the locally collected properties and
-                     file content at once.  Otherwise, just deal with
-                     the collected properties. */
-                  if (info->cached_contents)
-                    {
-                      SVN_ERR(handle_local_content(info, iterpool_inner));
-                    }
-                  else
-                    {
-                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
-                    }
-
                   if (!prev)
                     {
                       report->file_propchanges_only = cur->next;
@@ -2751,18 +2784,38 @@ finish_report(void *report_baton,
                     {
                       prev->next = cur->next;
                     }
+
+                  /* If we've got cached file content for this file,
+                     take care of the locally collected properties and
+                     file content at once.  Otherwise, just deal with
+                     the collected properties.
+
+                     NOTE:  These functions below could delete
+                     info->dir->pool (via maybe_close_dir_chain()),
+                     from which is allocated the list item in
+                     report->file_propchanges_only.
+                  */
+                  if (info->cached_contents)
+                    {
+                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                    }
+                  else
+                    {
+                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                    }
                 }
             }
 
-          done_list = done_list->next;
+          done_list = next_done;
         }
       report->done_propfinds = NULL;
 
-      /* Prune completely fetches from our list. */
+      /* Prune completed fetches from our list. */
       done_list = report->done_fetches;
       while (done_list)
         {
           report_fetch_t *done_fetch = done_list->data;
+          svn_ra_serf__list_t *next_done = done_list->next;
           report_dir_t *cur_dir;
 
           /* Decrease the refcount in the parent directory of the file
@@ -2773,13 +2826,76 @@ finish_report(void *report_baton,
           /* Decrement our active fetch count. */
           report->num_active_fetches--;
 
-          done_list = done_list->next;
-
           /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. */
+             perhaps even parents of that) can be closed now. 
+
+             NOTE:  This could delete cur_dir->pool, from which is
+             allocated the list item in report->done_fetches.
+          */
           SVN_ERR(maybe_close_dir_chain(cur_dir));
+
+          done_list = next_done;
         }
       report->done_fetches = NULL;
+
+      /* Prune completed directory PROPFINDs. */
+      done_list = report->done_dir_propfinds;
+      while (done_list)
+        {
+          svn_ra_serf__list_t *next_done = done_list->next;
+
+          report->num_active_propfinds--;
+
+          if (report->active_dir_propfinds)
+            {
+              svn_ra_serf__list_t *cur, *prev;
+
+              prev = NULL;
+              cur = report->active_dir_propfinds;
+
+              while (cur)
+                {
+                  report_dir_t *item = cur->data;
+
+                  if (item->propfind_handler == done_list->data)
+                    {
+                      break;
+                    }
+
+                  prev = cur;
+                  cur = cur->next;
+                }
+              SVN_ERR_ASSERT(cur); /* we expect to find a matching propfind! */
+
+              /* If we found a match, set the new props and remove this
+               * propchange from our list.
+               */
+              if (cur)
+                {
+                  report_dir_t *cur_dir = cur->data;
+
+                  if (!prev)
+                    {
+                      report->active_dir_propfinds = cur->next;
+                    }
+                  else
+                    {
+                      prev->next = cur->next;
+                    }
+
+                  /* See if this directory (and perhaps even parents of that)
+                     can be closed now.
+
+                     NOTE:  This could delete cur_dir->pool, from which is
+                     allocated the list item in report->active_dir_propfinds.
+                  */
+                  SVN_ERR(maybe_close_dir_chain(cur_dir));
+                }
+            }
+
+          done_list = next_done;
+        }
+      report->done_dir_propfinds = NULL;
 
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */

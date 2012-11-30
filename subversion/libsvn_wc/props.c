@@ -280,8 +280,8 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
     }
 
   if (had_props)
-    SVN_ERR(svn_wc__get_pristine_props(&pristine_props, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
+                                           scratch_pool, scratch_pool));
   if (pristine_props == NULL)
     pristine_props = apr_hash_make(scratch_pool);
 
@@ -1513,13 +1513,13 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 }
 
 svn_error_t *
-svn_wc__get_pristine_props(apr_hash_t **props,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_wc_get_pristine_props(apr_hash_t **props,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1527,59 +1527,22 @@ svn_wc__get_pristine_props(apr_hash_t **props,
   /* Certain node stats do not have properties defined on them. Check the
      state, and return NULL for these situations.  */
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-  if (status == svn_wc__db_status_added)
+  err = svn_wc__db_read_pristine_props(props, wc_ctx->db, local_abspath,
+                                       result_pool, scratch_pool);
+
+  if (err)
     {
-      /* Resolve the status. copied and moved_here arrive with properties,
-         while a simple add does not.  */
-      SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-    }
-  if (status == svn_wc__db_status_added
-#if 0
-      /* ### the update editor needs to fetch properties while the directory
-         ### is still marked incomplete  */
-      || status == svn_wc__db_status_incomplete
-#endif
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_server_excluded
-      || status == svn_wc__db_status_not_present)
-    {
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+
+      /* Documented behavior is to set *PROPS to NULL */
       *props = NULL;
-      return SVN_NO_ERROR;
     }
 
-  /* status: normal, moved_here, copied, deleted  */
-
-  /* After the above checks, these pristines should always be present.  */
-  return svn_error_trace(
-               svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                              result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc_get_pristine_props(apr_hash_t **props,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__get_pristine_props(props,
-                                                    wc_ctx->db,
-                                                    local_abspath,
-                                                    result_pool,
-                                                    scratch_pool));
-}
-
 
 svn_error_t *
 svn_wc_prop_get2(const svn_string_t **value,
@@ -1590,6 +1553,7 @@ svn_wc_prop_get2(const svn_string_t **value,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind kind = svn_property_kind2(name);
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1600,8 +1564,18 @@ svn_wc_prop_get2(const svn_string_t **value,
                                _("Property '%s' is an entry property"), name);
     }
 
-  SVN_ERR(svn_wc__internal_propget(value, wc_ctx->db, local_abspath, name,
-                                   result_pool, scratch_pool));
+  err = svn_wc__internal_propget(value, wc_ctx->db, local_abspath, name,
+                                 result_pool, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      /* Documented behavior is to set *VALUE to NULL */
+      *value = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1616,35 +1590,15 @@ svn_wc__internal_propget(const svn_string_t **value,
 {
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind2(name);
-  svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
 
-  /* This returns SVN_ERR_WC_PATH_NOT_FOUND for unversioned paths for us */
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
-  if (hidden)
-    {
-      /* The node is not present, or not really "here". Therefore, the
-         property is not present.  */
-      *value = NULL;
-      return SVN_NO_ERROR;
-    }
-
   if (kind == svn_prop_wc_kind)
     {
-      svn_error_t *err;
-      /* If no dav cache can be found, just set VALUE to NULL (for
-         compatibility with pre-WC-NG code). */
-      err = svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
-                                          result_pool, scratch_pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
-        {
-          *value = NULL;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      SVN_ERR_W(err, _("Failed to load properties"));
+      SVN_ERR_W(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
+                                              result_pool, scratch_pool),
+                _("Failed to load properties"));
     }
   else
     {
@@ -1665,47 +1619,38 @@ svn_wc__internal_propget(const svn_string_t **value,
 
 /* The special Subversion properties are not valid for all node kinds.
    Return an error if NAME is an invalid Subversion property for PATH which
-   is of kind NODE_KIND. */
+   is of kind NODE_KIND.  NAME must be in the "svn:" name space.
+
+   Note that we only disallow the property if we're sure it's one that
+   already has a meaning for a different node kind.  We don't disallow
+   setting an *unknown* svn: prop here, at this level; a higher level
+   should disallow that if desired.
+  */
 static svn_error_t *
 validate_prop_against_node_kind(const char *name,
                                 const char *path,
                                 svn_node_kind_t node_kind,
                                 apr_pool_t *pool)
 {
-
-  const char *file_prohibit[] = { SVN_PROP_IGNORE,
-                                  SVN_PROP_EXTERNALS,
-                                  SVN_PROP_INHERITABLE_AUTO_PROPS,
-                                  SVN_PROP_INHERITABLE_IGNORES,
-                                  NULL };
-  const char *dir_prohibit[] = { SVN_PROP_EXECUTABLE,
-                                 SVN_PROP_KEYWORDS,
-                                 SVN_PROP_EOL_STYLE,
-                                 SVN_PROP_MIME_TYPE,
-                                 SVN_PROP_NEEDS_LOCK,
-                                 NULL };
-  const char **node_kind_prohibit;
   const char *path_display
     = svn_path_is_url(path) ? path : svn_dirent_local_style(path, pool);
 
   switch (node_kind)
     {
     case svn_node_dir:
-      node_kind_prohibit = dir_prohibit;
-      while (*node_kind_prohibit)
-        if (strcmp(name, *node_kind_prohibit++) == 0)
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Cannot set '%s' on a directory ('%s')"),
-                                   name, path_display);
+      if (! svn_prop_is_known_svn_dir_prop(name)
+          && svn_prop_is_known_svn_file_prop(name))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot set '%s' on a directory ('%s')"),
+                                 name, path_display);
       break;
     case svn_node_file:
-      node_kind_prohibit = file_prohibit;
-      while (*node_kind_prohibit)
-        if (strcmp(name, *node_kind_prohibit++) == 0)
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Cannot set '%s' on a file ('%s')"),
-                                   name,
-                                   path_display);
+      if (! svn_prop_is_known_svn_file_prop(name)
+          && svn_prop_is_known_svn_dir_prop(name))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot set '%s' on a file ('%s')"),
+                                 name,
+                                 path_display);
       break;
     default:
       return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -1952,6 +1897,7 @@ do_propset(svn_wc__db_t *db,
                                                      notify_action,
                                                      scratch_pool);
       notify->prop_name = name;
+      notify->kind = kind;
 
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
@@ -2168,9 +2114,34 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              an svn:externals line.  As it happens, our parse code
              checks for this, so all we have to is invoke it --
              we're not interested in the parsed result, only in
-             whether or the parsing errored. */
-          SVN_ERR(svn_wc_parse_externals_description3
-                  (NULL, path, propval->data, FALSE, pool));
+             whether or not the parsing errored. */
+          apr_array_header_t *externals = NULL;
+          apr_array_header_t *duplicate_targets = NULL;
+          SVN_ERR(svn_wc_parse_externals_description3(&externals, path,
+                                                      propval->data, FALSE,
+                                                      /*scratch_*/pool));
+          SVN_ERR(svn_wc__externals_find_target_dups(&duplicate_targets,
+                                                     externals,
+                                                     /*scratch_*/pool,
+                                                     /*scratch_*/pool));
+          if (duplicate_targets && duplicate_targets->nelts > 0)
+            {
+              const char *more_str = "";
+              if (duplicate_targets->nelts > 1)
+                {
+                  more_str = apr_psprintf(/*scratch_*/pool,
+                               _(" (%d more duplicate targets found)"),
+                               duplicate_targets->nelts - 1);
+                }
+              return svn_error_createf(
+                SVN_ERR_WC_DUPLICATE_EXTERNALS_TARGET, NULL,
+                _("Invalid %s property on '%s': "
+                  "target '%s' appears more than once%s"),
+                SVN_PROP_EXTERNALS,
+                svn_dirent_local_style(path, pool),
+                APR_ARRAY_IDX(duplicate_targets, 0, const char*),
+                more_str);
+            }
         }
     }
   else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
@@ -2338,129 +2309,6 @@ svn_wc__has_magic_property(const apr_array_header_t *properties)
   return FALSE;
 }
 
-/* Remove all prop name value pairs from PROP_HASH where the property
-   name is not PROPNAME. */
-static void
-filter_unwanted_props(apr_hash_t *prop_hash,
-                      const char * propname,
-                      apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(scratch_pool, prop_hash);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *ipropname = svn__apr_hash_index_key(hi);
-
-      if (strcmp(ipropname, propname) != 0)
-        apr_hash_set(prop_hash, ipropname, APR_HASH_KEY_STRING, NULL);
-    }
-  return;
-}
-
-svn_error_t *
-svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const char *propname,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  int i;
-  apr_array_header_t *cached_iprops = NULL;
-  const char *parent_abspath = local_abspath;
-  svn_boolean_t is_wc_root = FALSE;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  SVN_ERR_ASSERT(inherited_props);
-  *inherited_props = apr_array_make(result_pool, 1,
-                                    sizeof(svn_prop_inherited_item_t *));
-
-  /* Walk up to the root of the WC looking for inherited properties.  When we
-     reach the WC root also check for cached inherited properties. */
-  while (TRUE)
-    {
-      apr_hash_t *actual_props;
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__internal_is_wc_root(&is_wc_root, db, parent_abspath,
-                                          iterpool));
-
-      if (is_wc_root)
-        {
-          /* If the WC root is also the root of the repository then by
-             definition there are no inheritable properties to be had,
-             but checking for that is just as expensive as fetching them
-             anyway. */
-
-          /* Grab the cached inherited properties for the WC root. */
-          SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops, db,
-                                                parent_abspath,
-                                                scratch_pool, iterpool));
-        }
-
-      /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
-         LOCAL_ABSPATH can inherit properties from it. */
-      if (strcmp(local_abspath, parent_abspath) != 0)
-        {
-          SVN_ERR(svn_wc__db_read_props(&actual_props, db, parent_abspath,
-                                        result_pool, iterpool));
-          if (actual_props)
-            {
-              /* If we only want PROPNAME filter out any other properties. */
-              if (propname)
-                filter_unwanted_props(actual_props, propname, iterpool);
-
-              if (apr_hash_count(actual_props))
-                {
-                  svn_prop_inherited_item_t *iprop_elt =
-                    apr_pcalloc(result_pool,
-                                sizeof(svn_prop_inherited_item_t));
-                  iprop_elt->path_or_url = apr_pstrdup(result_pool,
-                                                       parent_abspath);
-                  iprop_elt->prop_hash = actual_props;
-                  /* Build the output array in depth-first order. */
-                  svn_sort__array_insert(&iprop_elt, *inherited_props, 0);
-                }
-            }
-        }
-
-      /* Inheritance only goes as far as the nearest WC root. */
-      if (is_wc_root)
-        break;
-
-      /* Keep looking for the WC root. */
-      parent_abspath = svn_dirent_dirname(parent_abspath, scratch_pool);
-    }
-
-  if (cached_iprops)
-    {
-      for (i = cached_iprops->nelts - 1; i >= 0; i--)
-        {
-          svn_prop_inherited_item_t *cached_iprop =
-            APR_ARRAY_IDX(cached_iprops, i, svn_prop_inherited_item_t *);
-
-          /* An empty property hash in the iprops cache means there are no
-             inherited properties. */
-          if (apr_hash_count(cached_iprop->prop_hash) == 0)
-            continue;
-
-          if (propname)
-            filter_unwanted_props(cached_iprop->prop_hash, propname,
-                                  scratch_pool);
-
-          /* If we didn't filter everything then keep this iprop. */
-          if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(&cached_iprop, *inherited_props, 0);
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc__get_iprops(apr_array_header_t **inherited_props,
                    svn_wc_context_t *wc_ctx,
@@ -2469,9 +2317,11 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__internal_get_iprops(inherited_props, wc_ctx->db,
-                                               local_abspath, propname,
-                                               result_pool, scratch_pool));
+  return svn_error_trace(
+            svn_wc__db_read_inherited_props(inherited_props,
+                                            wc_ctx->db, local_abspath,
+                                            propname,
+                                            result_pool, scratch_pool));
 }
 
 svn_error_t *

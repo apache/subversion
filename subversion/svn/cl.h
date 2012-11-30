@@ -767,6 +767,22 @@ const char *
 svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool);
 
+/* If PROPNAME looks like but is not identical to one of the svn:
+ * poperties, raise an error and suggest a better spelling. Names that
+ * raise errors look like this:
+ *
+ *   - start with svn: but do not exactly match a known property; or,
+ *   - start with a 3-letter prefix that differs in only one letter
+ *     from "svn:", and the rest exactly matches a known propery.
+ *
+ * If REVPROP is TRUE, only check revision property names; otherwise
+ * only check node property names.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+                            apr_pool_t *scratch_pool);
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
  * PROPVAL looks like an attempt to turn the property off (i.e., it's

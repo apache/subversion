@@ -626,16 +626,18 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 
-dnl Ev2 experimental feature ----------------------
-dnl Note: The Ev2 compat code will be built unconditionally, but by providing
-dnl this flag, users can enforce Ev2 compliance for testing purposes
-AC_ARG_ENABLE(ev2-shims,
-  AS_HELP_STRING([--enable-ev2-shims],
-                 [Compile with Ev2 translation [EXPERIMENTAL]]),
-  [enable_ev2_shims=$enableval],[enable_ev2_shims=no])
-if test "$enable_ev2_shims" = "yes"; then
-  AC_DEFINE(ENABLE_EV2_SHIMS, 1,
-            [Define to 1 if Ev2 should be interjected into editor stacks.])
+dnl Ev2 experimental features ----------------------
+dnl Note: The Ev2 implementations will be built unconditionally, but by
+dnl providing this flag, users can choose to use the currently-shimmed Ev2
+dnl editor implementations for various operations.  This will probably
+dnl negatively impact performance, but is useful for testing.
+AC_ARG_ENABLE(ev2-impl,
+  AS_HELP_STRING([--enable-ev2-impl],
+                 [Use Ev2 implementations, where available [EXPERIMENTAL]]),
+  [enable_ev2_impl=$enableval],[enable_ev2_impl=no])
+if test "$enable_ev2_impl" = "yes"; then
+  AC_DEFINE(ENABLE_EV2_IMPL, 1,
+            [Define to 1 if Ev2 implementations should be used.])
 fi
 
 
@@ -986,7 +988,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl Enable some extra warnings. Put these before the user's flags
         dnl so the user can specify flags that override these.
         CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
-        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
@@ -994,7 +996,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl switches enabled.
         dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
 
-        dnl Add each of the following flags only if the compiler accepts it.
+        dnl Add each of the following flags only if the C compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
@@ -1024,6 +1026,23 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
+
+        dnl Add each of the following flags only if the C++ compiler accepts it.
+
+        CXXFLAGS_KEEP="$CXXFLAGS"
+        AC_LANG_PUSH([C++])
+
+        CXXFLAGS="-Wextra-tokens $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wshorten-64-to-32 $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wno-system-headers $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        AC_LANG_POP([C++])
+        CXXFLAGS="$CXXFLAGS_KEEP"
       fi
     fi
 ])
