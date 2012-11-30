@@ -234,11 +234,11 @@ struct revision_info_t
   /* noderev of the root directory */
   noderev_t *root_noderev;
 
-  /* all noderevs_t of this revision (in no particular order),
+  /* all noderevs_t of this revision (ordered by source file offset),
    * i.e. those that point back to this struct */
   apr_array_header_t *node_revs;
   
-  /* all representation_t of this revision (in no particular order),
+  /* all representation_t of this revision (ordered by source file offset),
    * i.e. those that point back to this struct */
   apr_array_header_t *representations;
 };
@@ -637,7 +637,7 @@ get_cached_dir_pool(fs_fs_t *fs)
   return fs->dir_cache->pool1;
 }
 
-/* Return the cached directory content stored in REPRESENTAION within FS.
+/* Return the cached directory content stored in REPRESENTATION within FS.
  * If that has not been found in cache, return NULL.
  */
 static apr_hash_t *
@@ -655,7 +655,7 @@ get_cached_dir(fs_fs_t *fs,
     : NULL;
 }
 
-/* Cache the directory HASH for  REPRESENTAION within FS.
+/* Cache the directory HASH for  REPRESENTATION within FS.
  */
 static void
 set_cached_dir(fs_fs_t *fs,
@@ -723,7 +723,7 @@ get_window_cache_index(fs_fs_t *fs,
   return (revision + offset * 0xd1f3da69) % fs->window_cache->entry_count;
 }
 
-/* Return the cached txdelta window stored in REPRESENTAION within FS.
+/* Return the cached txdelta window stored in REPRESENTATION within FS.
  * If that has not been found in cache, return NULL.
  */
 static svn_stringbuf_t *
@@ -742,7 +742,7 @@ get_cached_window(fs_fs_t *fs,
     : NULL;
 }
 
-/* Cache the undeltified txdelta WINDOW for REPRESENTAION within FS.
+/* Cache the undeltified txdelta WINDOW for REPRESENTATION within FS.
  */
 static void
 set_cached_window(fs_fs_t *fs,
@@ -773,8 +773,9 @@ set_cached_window(fs_fs_t *fs,
   entry->revision = revision;
 }
 
-/* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
-   Use POOL for temporary allocations. */
+/* Given rev pack PATH in FS, read the manifest file and return the offsets
+ * in *MANIFEST. Use POOL for allocations.
+ */
 static svn_error_t *
 read_manifest(apr_array_header_t **manifest,
               fs_fs_t *fs,
@@ -817,6 +818,10 @@ read_manifest(apr_array_header_t **manifest,
   return svn_stream_close(manifest_stream);
 }
 
+/* Read header information for the revision stored in FILE_CONTENT at
+ * offsets START or END.  Return the offsets within FILE_CONTENT for the
+ * *ROOT_NODEREV, the list of *CHANGES and its len in *CHANGES_LEN.
+ * Use POOL for temporary allocations. */
 static svn_error_t *
 read_revision_header(apr_size_t *changes,
                      apr_size_t *changes_len,
@@ -857,8 +862,10 @@ read_revision_header(apr_size_t *changes,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Final line in revision file missing space"));
 
+  /* terminate the header line */
   *space = 0;
-  
+
+  /* extract information */
   SVN_ERR(svn_cstring_strtoui64(&val, line+1, 0, APR_SIZE_MAX, 10));
   *root_noderev = (apr_size_t)val;
   SVN_ERR(svn_cstring_strtoui64(&val, space+1, 0, APR_SIZE_MAX, 10));
@@ -868,6 +875,10 @@ read_revision_header(apr_size_t *changes,
   return SVN_NO_ERROR;
 }
 
+/* Read the FSFS format number and sharding size from the format file at
+ * PATH and return it in *PFORMAT and *MAX_FILES_PER_DIR respectively.
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
@@ -877,6 +888,7 @@ read_format(int *pformat, int *max_files_per_dir,
   char buf[80];
   apr_size_t len;
 
+  /* open format file and read the first line */
   err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
                          APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -951,21 +963,27 @@ read_format(int *pformat, int *max_files_per_dir,
   return svn_io_file_close(file, pool);
 }
 
+/* Read the content of the file at PATH and return it in *RESULT.
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 read_number(svn_revnum_t *result, const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *content;
-  apr_int64_t number;
+  apr_uint64_t number;
   
   SVN_ERR(svn_stringbuf_from_file2(&content, path, pool));
 
   content->data[content->len-1] = 0;
-  SVN_ERR(svn_cstring_atoi64(&number, content->data));
+  SVN_ERR(svn_cstring_strtoui64(&number, content->data, 0, LONG_MAX, 10));
   *result = (svn_revnum_t)number;
 
   return SVN_NO_ERROR;
 }
 
+/* Create *FS for the repository at PATH and read the format and size info.
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 fs_open(fs_fs_t **fs, const char *path, apr_pool_t *pool)
 {
@@ -980,7 +998,8 @@ fs_open(fs_fs_t **fs, const char *path, apr_pool_t *pool)
                       pool));
   if (((*fs)->format != 4) && ((*fs)->format != 6))
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
-    
+
+  /* read size (HEAD) info */
   SVN_ERR(read_number(&(*fs)->min_unpacked_rev,
                       svn_dirent_join(path, "db/min-unpacked-rev", pool),
                       pool));
@@ -989,12 +1008,18 @@ fs_open(fs_fs_t **fs, const char *path, apr_pool_t *pool)
                      pool);
 }
 
+/* Utility function that returns true if STRING->DATA matches KEY.
+ */
 static svn_boolean_t
 key_matches(svn_string_t *string, const char *key)
 {
   return strcmp(string->data, key) == 0;
 }
 
+/* Comparator used for binary search comparing the absolute file offset
+ * of a noderev to some other offset. DATA is a *noderev_t, KEY is pointer
+ * to an apr_size_t.
+ */
 static int
 compare_noderev_offsets(const void *data, const void *key)
 {
@@ -1007,6 +1032,13 @@ compare_noderev_offsets(const void *data, const void *key)
   return diff > 0 ? 1 : 0;
 }
 
+/* Get the revision and offset info from the node ID with FS. Return the
+ * data as *REVISION_INFO and *OFFSET, respectively.
+ *
+ * Note that we assume that the revision_info_t object ID's revision has
+ * already been created. That can be guaranteed for standard FSFS pack
+ * files as IDs never point to future revisions.
+ */
 static svn_error_t *
 parse_revnode_pos(revision_info_t **revision_info,
                   apr_size_t *offset,
@@ -1016,6 +1048,7 @@ parse_revnode_pos(revision_info_t **revision_info,
   int revision;
   apr_uint64_t temp;
 
+  /* split the ID and verify the format */
   const char *revision_pos = strrchr(id->data, 'r');
   char *offset_pos = (char *)strchr(id->data, '/');
 
@@ -1023,12 +1056,14 @@ parse_revnode_pos(revision_info_t **revision_info,
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                              _("Invalid node id '%s'"), id->data);
 
+  /* extract the numbers (temp. modifying the ID)*/
   *offset_pos = 0;
   SVN_ERR(svn_cstring_atoi(&revision, revision_pos + 1));
   SVN_ERR(svn_cstring_strtoui64(&temp, offset_pos + 1, 0, APR_SIZE_MAX, 10));
   *offset = (apr_size_t)temp;
   *offset_pos = '/';
 
+  /* validate the revision number and return the revision info */
   if (revision - fs->start_revision > fs->revisions->nelts)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                              _("Unknown revision %d"), revision);
@@ -1040,6 +1075,12 @@ parse_revnode_pos(revision_info_t **revision_info,
   return SVN_NO_ERROR;
 }
 
+/* Returns in *RESULT the noderev at OFFSET relative the revision given in
+ * REVISION_INFO.  If no such noderev has been parsed, yet, error out.
+ *
+ * Since we require the noderev to already have been parsed, we can use
+ * this functions only to access "older", i.e. predecessor noderevs.
+ */
 static svn_error_t *
 find_noderev(noderev_t **result,
             revision_info_t *revision_info,
@@ -1062,6 +1103,9 @@ find_noderev(noderev_t **result,
   return SVN_NO_ERROR;
 }
 
+/* In *RESULT, return the noderev given by ID in FS.  The noderev must
+ * already have been parsed and put into the FS data structures.
+ */
 static svn_error_t *
 parse_pred(noderev_t **result,
            fs_fs_t *fs,
@@ -1076,6 +1120,10 @@ parse_pred(noderev_t **result,
   return SVN_NO_ERROR;
 }
 
+/* Comparator used for binary search comparing the absolute file offset
+ * of a representation to some other offset. DATA is a *representation_t,
+ * KEY is a pointer to an apr_size_t.
+ */
 static int
 compare_representation_offsets(const void *data, const void *key)
 {
@@ -1088,6 +1136,15 @@ compare_representation_offsets(const void *data, const void *key)
   return diff > 0 ? 1 : 0;
 }
 
+/* Find the revision_info_t object to the given REVISION in FS and return
+ * it in *REVISION_INFO. For performance reasons, we skip the lookup if
+ * the info is already provided.
+ *
+ * In that revision, look for the representation_t object for offset OFFSET.
+ * If it already exists, set *idx to its index in *REVISION_INFO's
+ * representations list and return the representation object. Otherwise,
+ * set the index to where it must be inserted and return NULL.
+ */
 static representation_t *
 find_representation(int *idx,
                     fs_fs_t *fs,
@@ -1097,7 +1154,8 @@ find_representation(int *idx,
 {
   revision_info_t *info;
   *idx = -1;
-  
+
+  /* first let's find the revision '*/
   info = revision_info ? *revision_info : NULL;
   if (info == NULL || info->revision != revision)
     {
@@ -1108,23 +1166,36 @@ find_representation(int *idx,
         *revision_info = info;
     }
 
+  /* not found -> no result */
   if (info == NULL)
     return NULL;
+  
+  assert(revision == info->revision);
 
+  /* look for the representation */
   *idx = svn_sort__bsearch_lower_bound(&offset,
                                        info->representations,
                                        compare_representation_offsets);
   if (*idx < info->representations->nelts)
     {
+      /* return the representation, if this is the one we were looking for */
       representation_t *result
         = APR_ARRAY_IDX(info->representations, *idx, representation_t *);
       if (result->original.offset == offset)
         return result;
     }
 
+  /* not parsed, yet */
   return NULL;
 }
 
+/* Read the representation header in FILE_CONTENT at OFFSET.  Return its
+ * size in *HEADER_SIZE, set *IS_PLAIN if no deltification was used and
+ * return the deltification base representation in *REPRESENTATION.  If
+ * there is none, set it to NULL.  Use FS to it look up.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 static svn_error_t *
 read_rep_base(representation_t **representation,
               apr_size_t *header_size,
@@ -1132,17 +1203,18 @@ read_rep_base(representation_t **representation,
               fs_fs_t *fs,
               svn_stringbuf_t *file_content,
               apr_size_t offset,
-              apr_pool_t *pool,
               apr_pool_t *scratch_pool)
 {
   char *str, *last_str;
   int idx, revision;
   apr_uint64_t temp;
 
+  /* identify representation header (1 line) */
   const char *buffer = file_content->data + offset;
   const char *line_end = strchr(buffer, '\n');
   *header_size = line_end - buffer + 1;
 
+  /* check for PLAIN rep */
   if (strncmp(buffer, "PLAIN\n", *header_size) == 0)
     {
       *is_plain = TRUE;
@@ -1150,6 +1222,7 @@ read_rep_base(representation_t **representation,
       return SVN_NO_ERROR;
     }
 
+  /* check for DELTA against empty rep */
   *is_plain = FALSE;
   if (strncmp(buffer, "DELTA\n", *header_size) == 0)
     {
@@ -1158,10 +1231,12 @@ read_rep_base(representation_t **representation,
       return SVN_NO_ERROR;
     }
 
+  /* it's delta against some other rep. Duplicate the header info such
+   * that we may modify it during parsing. */
   str = apr_pstrndup(scratch_pool, buffer, line_end - buffer);
   last_str = str;
 
-  /* We hopefully have a DELTA vs. a non-empty base revision. */
+  /* parse it. */
   str = svn_cstring_tokenize(" ", &last_str);
   str = svn_cstring_tokenize(" ", &last_str);
   SVN_ERR(svn_cstring_atoi(&revision, str));
@@ -1169,10 +1244,18 @@ read_rep_base(representation_t **representation,
   str = svn_cstring_tokenize(" ", &last_str);
   SVN_ERR(svn_cstring_strtoui64(&temp, str, 0, APR_SIZE_MAX, 10));
 
+  /* it should refer to a rep in an earlier revision.  Look it up */
   *representation = find_representation(&idx, fs, NULL, revision, (apr_size_t)temp);
   return SVN_NO_ERROR;
 }
 
+/* Parse the representation reference (text: or props:) in VALUE, look
+ * it up in FS and return it in *REPRESENTATION.  To be able to parse the
+ * base rep, we pass the FILE_CONTENT as well.
+ * 
+ * If necessary, allocate the result in POOL; use SCRATCH_POOL for temp.
+ * allocations.
+ */
 static svn_error_t *
 parse_representation(representation_t **representation,
                      fs_fs_t *fs,
@@ -1189,14 +1272,19 @@ parse_representation(representation_t **representation,
   apr_uint64_t size;
   int idx;
 
+  /* read location (revision, offset) and size */
   char *c = (char *)value->data;
   SVN_ERR(svn_cstring_atoi(&revision, svn_cstring_tokenize(" ", &c)));
   SVN_ERR(svn_cstring_strtoui64(&offset, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
   SVN_ERR(svn_cstring_strtoui64(&size, svn_cstring_tokenize(" ", &c), 0, APR_SIZE_MAX, 10));
 
+  /* look it up */
   result = find_representation(&idx, fs, &revision_info, revision, (apr_size_t)offset);
   if (!result)
     {
+      /* not parsed, yet (probably a rep in the same revision).
+       * Create a new rep object and determine its base rep as well.
+       */
       result = apr_pcalloc(pool, sizeof(*result));
       result->revision = revision_info;
       result->original.offset = (apr_size_t)offset;
@@ -1204,7 +1292,7 @@ parse_representation(representation_t **representation,
       SVN_ERR(read_rep_base(&result->delta_base, &result->header_size,
                             &result->is_plain, fs, file_content,
                             (apr_size_t)offset + revision_info->original.offset,
-                            pool, scratch_pool));
+                            scratch_pool));
 
       svn_sort__array_insert(&result, revision_info->representations, idx);
     }
@@ -1214,8 +1302,10 @@ parse_representation(representation_t **representation,
   return SVN_NO_ERROR;
 }
 
-/* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
-   window into *NWIN. */
+/* Read the delta window contents of all windows in REPRESENTATION in FS.
+ * Return the data as svn_txdelta_window_t* instances in *WINDOWS.
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 read_windows(apr_array_header_t **windows,
              fs_fs_t *fs,
@@ -1232,13 +1322,16 @@ read_windows(apr_array_header_t **windows,
 
   *windows = apr_array_make(pool, 0, sizeof(svn_txdelta_window_t *));
 
+  /* get the whole revision content */
   SVN_ERR(get_content(&content, fs, representation->revision->revision, pool));
 
+  /* create a read stream and position it directly after the rep header */
   data.data = content->data + offset + 3;
   data.len = representation->original.size - 3;
   stream = svn_stream_from_string(&data, pool);
   SVN_ERR(svn_stream_read(stream, &version, &len));
 
+  /* read the windows from that stream */
   while (TRUE)
     {
       svn_txdelta_window_t *window;
@@ -1259,6 +1352,9 @@ read_windows(apr_array_header_t **windows,
   return SVN_NO_ERROR;
 }
 
+/* Read the content of the PLAIN REPRESENTATION in FS and return it in
+ * *CONTENT.  Use POOL for allocations.
+ */
 static svn_error_t *
 read_plain(svn_stringbuf_t **content,
            fs_fs_t *fs,
@@ -1271,6 +1367,7 @@ read_plain(svn_stringbuf_t **content,
 
   SVN_ERR(get_content(&data, fs, representation->revision->revision, pool));
 
+  /* content is stored as fulltext already */
   *content = svn_stringbuf_ncreate(data->data + offset,
                                    representation->original.size,
                                    pool);
@@ -1278,9 +1375,10 @@ read_plain(svn_stringbuf_t **content,
   return SVN_NO_ERROR;
 }
 
-/* Get the undeltified window that is a result of combining all deltas
-   from the current desired representation identified in *RB with its
-   base representation.  Store the window in *RESULT. */
+/* Get the undeltified representation that is a result of combining all
+ * deltas from the current desired REPRESENTATION in FS with its base
+ * representation.  Store the result in *CONTENT.
+ * Use POOL for allocations. */
 static svn_error_t *
 get_combined_window(svn_stringbuf_t **content,
                     fs_fs_t *fs,
@@ -1291,23 +1389,31 @@ get_combined_window(svn_stringbuf_t **content,
   apr_array_header_t *windows;
   svn_stringbuf_t *base_content, *result;
   const char *source;
-  apr_pool_t *sub_pool = svn_pool_create(pool);
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *sub_pool;
+  apr_pool_t *iter_pool;
 
+  /* special case: no un-deltification necessary */
   if (representation->is_plain)
     return read_plain(content, fs, representation, pool);
 
+  /* special case: data already in cache */
   *content = get_cached_window(fs, representation, pool);
   if (*content)
     return SVN_NO_ERROR;
-  
+
+  /* read the delta windows for this representation */
+  sub_pool = svn_pool_create(pool);
+  iter_pool = svn_pool_create(pool);
   SVN_ERR(read_windows(&windows, fs, representation, sub_pool));
+
+  /* fetch the / create a base content */
   if (representation->delta_base && representation->delta_base->revision)
     SVN_ERR(get_combined_window(&base_content, fs,
                                 representation->delta_base, sub_pool));
   else
     base_content = svn_stringbuf_create_empty(sub_pool);
 
+  /* apply deltas */
   result = svn_stringbuf_create_empty(pool);
   source = base_content->data;
   
@@ -1330,12 +1436,15 @@ get_combined_window(svn_stringbuf_t **content,
 
   svn_pool_destroy(iter_pool);
   svn_pool_destroy(sub_pool);
-  
+
+  /* cache result and return it */
   set_cached_window(fs, representation, result);
   *content = result;
+  
   return SVN_NO_ERROR;
 }
 
+/* forward declaration */
 static svn_error_t *
 read_noderev(noderev_t **noderev,
              fs_fs_t *fs,
@@ -1345,6 +1454,13 @@ read_noderev(noderev_t **noderev,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool);
 
+/* Get the noderev at OFFSET in FILE_CONTENT in FS.  The file content must
+ * pertain to the revision given in REVISION_INFO.  If the data has not
+ * been read yet, parse it and store it in REVISION_INFO.  Return the result
+ * in *NODEREV.
+ * 
+ * Use POOL for allocations and SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 get_noderev(noderev_t **noderev,
             fs_fs_t *fs,
@@ -1371,6 +1487,10 @@ get_noderev(noderev_t **noderev,
   return SVN_NO_ERROR;
 }
 
+/* Read the directory stored in REPRESENTATION in FS into *HASH.  The result
+ * will be allocated in FS' directory cache and it will be plain key-value
+ * hash.  Use SCRATCH_POOL for temporary allocations.
+ */
 static svn_error_t *
 read_dir(apr_hash_t **hash,
          fs_fs_t *fs,
@@ -1382,12 +1502,16 @@ read_dir(apr_hash_t **hash,
   svn_stream_t *stream;
   apr_pool_t *pool;
 
+  /* chances are, we find the info in cache already */
   *hash = get_cached_dir(fs, representation);
   if (*hash)
     return SVN_NO_ERROR;
 
+  /* create the result container */
   pool = get_cached_dir_pool(fs);
   *hash = svn_hash__make(pool);
+
+  /* if this is a non-empty rep, read it and de-serialize the hash */
   if (representation != NULL)
     {
       text_pool = svn_pool_create(scratch_pool);
@@ -1397,11 +1521,18 @@ read_dir(apr_hash_t **hash,
       svn_pool_destroy(text_pool);
     }
 
+  /* cache the result */
   set_cached_dir(fs, representation, *hash);
   
   return SVN_NO_ERROR;
 }
 
+/* Starting at the directory in REPRESENTATION in FILE_CONTENT, read all
+ * DAG nodes, directories and representations linked in that tree structure.
+ * Store them in FS and read them only once.
+ *
+ * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 parse_dir(fs_fs_t *fs,
           svn_stringbuf_t *file_content,
@@ -1414,9 +1545,11 @@ parse_dir(fs_fs_t *fs,
   apr_pool_t *iter_pool = svn_pool_create(scratch_pool);
   apr_hash_t *base_dir = svn_hash__make(scratch_pool);
 
+  /* special case: empty dir rep */
   if (representation == NULL)
     return SVN_NO_ERROR;
 
+  /* if we have a previous representation of that dir, hash it by name */
   if (representation->delta_base && representation->delta_base->dir)
     {
       apr_array_header_t *dir = representation->delta_base->dir->entries;
@@ -1429,31 +1562,41 @@ parse_dir(fs_fs_t *fs,
         }
     }
 
+  /* read this directory */
   SVN_ERR(read_dir(&hash, fs, representation, scratch_pool));
 
+  /* add it as an array to the representation (entries yet to be filled) */
   representation->dir = apr_pcalloc(pool, sizeof(*representation->dir));
   representation->dir->entries
     = apr_array_make(pool, apr_hash_count(hash), sizeof(direntry_t *));
 
-  /* Translate the string dir entries into real entries. */
+  /* Translate the string dir entries into real entries.  Reuse existing
+   * objects as much as possible to keep memory consumption low.
+   */
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
       svn_string_t *str_val = svn__apr_hash_index_val(hi);
       apr_size_t offset;
       revision_info_t *revision_info;
+
+      /* look for corresponding entry in previous version */
       apr_size_t name_len = strlen(name);
       direntry_t *entry = base_dir
                         ? apr_hash_get(base_dir, name, name_len)
                         : NULL;
 
+      /* parse the new target revnode ID (revision, offset) */
       SVN_ERR(parse_revnode_pos(&revision_info, &offset, fs, str_val));
 
+      /* if this is a new entry or if the content changed, create a new
+       * instance for it. */
       if (   !entry
           || !entry->node->text
           || entry->node->text->revision != revision_info
           || entry->node->original.offset != offset)
         {
+          /* create & init the new entry. Reuse the name string if possible */
           direntry_t *new_entry = apr_pcalloc(pool, sizeof(*entry));
           new_entry->name_len = name_len;
           if (entry)
@@ -1461,11 +1604,13 @@ parse_dir(fs_fs_t *fs,
           else
             new_entry->name = apr_pstrdup(pool, name);
 
+          /* Link it to the content noderev. Recurse. */
           entry = new_entry;
           SVN_ERR(get_noderev(&entry->node, fs, file_content, offset,
                               revision_info, pool, iter_pool));
         }
 
+      /* set the directory entry */
       APR_ARRAY_PUSH(representation->dir->entries, direntry_t *) = entry;
       svn_pool_clear(iter_pool);
     }
@@ -1474,6 +1619,12 @@ parse_dir(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Starting at the noderev at OFFSET in FILE_CONTENT, read all DAG nodes,
+ * directories and representations linked in that tree structure.  Store
+ * them in FS and read them only once.  Return the result in *NODEREV.
+ *
+ * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 read_noderev(noderev_t **noderev,
              fs_fs_t *fs,
@@ -1488,10 +1639,12 @@ read_noderev(noderev_t **noderev,
   svn_boolean_t is_dir = FALSE;
 
   scratch_pool = svn_pool_create(scratch_pool);
-  
+
+  /* parse the noderev line-by-line until we find an empty line */
   result->original.offset = offset;
   while (1)
     {
+      /* for this line, extract key and value. Ignore invalid values */
       svn_string_t key;
       svn_string_t value;
       char *sep;
@@ -1501,6 +1654,8 @@ read_noderev(noderev_t **noderev,
 
       line = svn_string_ncreate(start, end - start, scratch_pool);
       offset += end - start + 1;
+
+      /* empty line -> end of noderev data */
       if (line->len == 0)
         break;
       
@@ -1518,6 +1673,7 @@ read_noderev(noderev_t **noderev,
       value.data = sep + 2;
       value.len = line->len - (key.len + 2);
 
+      /* translate (key, value) into noderev elements */
       if (key_matches(&key, "type"))
         is_dir = strcmp(value.data, "dir") == 0;
       else if (key_matches(&key, "pred"))
@@ -1532,6 +1688,7 @@ read_noderev(noderev_t **noderev,
                                      pool, scratch_pool));
     }
 
+  /* link noderev to revision info */
   result->revision = revision_info;
   result->original.size = offset - result->original.offset;
 
@@ -1541,22 +1698,30 @@ read_noderev(noderev_t **noderev,
                                                        revision_info->node_revs,
                                                        compare_noderev_offsets));
 
+  /* if this is a directory, read and process that recursively */
   if (is_dir)
     SVN_ERR(parse_dir(fs, file_content, result->text,
                       pool, scratch_pool));
 
+  /* done */
   svn_pool_destroy(scratch_pool);
   *noderev = result;
 
   return SVN_NO_ERROR;
 }
 
-static void print_progress(svn_revnum_t revision)
+/* Simple utility to print a REVISION number and make it appear immediately.
+ */
+static void
+print_progress(svn_revnum_t revision)
 {
   printf("%8ld", revision);
   fflush(stdout);
 }
 
+/* Read the content of the pack file staring at revision BASE and store it
+ * in FS.  Use POOL for allocations.
+ */
 static svn_error_t *
 read_pack_file(fs_fs_t *fs,
                svn_revnum_t base,
@@ -1569,8 +1734,11 @@ read_pack_file(fs_fs_t *fs,
   svn_stringbuf_t *file_content;
   revision_pack_t *revisions;
   const char *pack_folder = get_pack_folder(fs, base, local_pool);
+
+  /* read the whole pack file into memory */
   SVN_ERR(read_rev_or_pack_file(&file_content, fs, base, local_pool));
 
+  /* create the revision container */
   revisions = apr_pcalloc(pool, sizeof(*revisions));
   revisions->base = base;
   revisions->fragments = NULL;
@@ -1580,15 +1748,18 @@ read_pack_file(fs_fs_t *fs,
   revisions->filesize = file_content->len;
   APR_ARRAY_PUSH(fs->packs, revision_pack_t*) = revisions;
 
+  /* parse the manifest file */
   SVN_ERR(read_manifest(&manifest, fs, pack_folder, local_pool));
   if (manifest->nelts != fs->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
 
+  /* process each revision in the pack file */
   for (i = 0; i < manifest->nelts; ++i)
     {
       apr_size_t root_node_offset;
       svn_string_t rev_content;
-  
+
+      /* create the revision info for the current rev */
       revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
       info->node_revs = apr_array_make(iter_pool, 4, sizeof(noderev_t*));
       info->representations = apr_array_make(iter_pool, 4, sizeof(representation_t*));
@@ -1606,28 +1777,37 @@ read_pack_file(fs_fs_t *fs,
                                    info->original.end,
                                    iter_pool));
 
+      /* put it into our containers */
       APR_ARRAY_PUSH(revisions->info, revision_info_t*) = info;
       APR_ARRAY_PUSH(fs->revisions, revision_info_t*) = info;
-      
+
+      /* cache the revision content */
       rev_content.data = file_content->data + info->original.offset;
       rev_content.len = info->original.end - info->original.offset;
       set_cached_content(fs->cache, info->revision, &rev_content);
 
+      /* parse the revision content recursively. */
       SVN_ERR(read_noderev(&info->root_noderev, fs, file_content,
                            root_node_offset, info, pool, iter_pool));
 
+      /* copy dynamically grown containers from temp into result pool */
       info->node_revs = apr_array_copy(pool, info->node_revs);
       info->representations = apr_array_copy(pool, info->representations);
-      
+
+      /* destroy temps */
       svn_pool_clear(iter_pool);
     }
 
+  /* one more pack file processed */
   print_progress(base);
   apr_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }
 
+/* Read the content of REVSION file and store it in FS.
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 read_revision_file(fs_fs_t *fs,
                    svn_revnum_t revision,
@@ -1640,8 +1820,10 @@ read_revision_file(fs_fs_t *fs,
   revision_pack_t *revisions = apr_pcalloc(pool, sizeof(*revisions));
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
 
+  /* read the whole pack file into memory */
   SVN_ERR(read_rev_or_pack_file(&file_content, fs, revision, local_pool));
 
+  /* create the revision info for the current rev */
   info->node_revs = apr_array_make(pool, 4, sizeof(noderev_t*));
   info->representations = apr_array_make(pool, 4, sizeof(representation_t*));
 
@@ -1656,8 +1838,12 @@ read_revision_file(fs_fs_t *fs,
                                info->original.end,
                                local_pool));
 
+  /* put it into our containers */
   APR_ARRAY_PUSH(fs->revisions, revision_info_t*) = info;
 
+  /* create a pseudo-pack file container for just this rev to keep our
+   * data structures as uniform as possible.
+   */
   revisions->base = revision;
   revisions->fragments = NULL;
   revisions->info = apr_array_make(pool, 1, sizeof(revision_info_t*));
@@ -1665,15 +1851,18 @@ read_revision_file(fs_fs_t *fs,
   APR_ARRAY_PUSH(revisions->info, revision_info_t*) = info;
   APR_ARRAY_PUSH(fs->packs, revision_pack_t*) = revisions;
 
+  /* cache the revision content */
   rev_content.data = file_content->data + info->original.offset;
   rev_content.len = info->original.end - info->original.offset;
   set_cached_content(fs->cache, info->revision, &rev_content);
 
+  /* parse the revision content recursively. */
   SVN_ERR(read_noderev(&info->root_noderev, fs, file_content,
                        root_node_offset, info,
                        pool, local_pool));
   APR_ARRAY_PUSH(info->node_revs, noderev_t*) = info->root_noderev;
 
+  /* show progress every 1000 revs or so */
   if (revision % fs->max_files_per_dir == 0)
     print_progress(revision);
 
@@ -1682,6 +1871,10 @@ read_revision_file(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Read the repository at PATH beginning with revision START_REVISION and
+ * return the result in *FS.  Allocate caches with MEMSIZE bytes total
+ * capacity.  Use POOL for non-cache allocations.
+ */
 static svn_error_t *
 read_revisions(fs_fs_t **fs,
                const char *path,
@@ -1695,16 +1888,17 @@ read_revisions(fs_fs_t **fs,
   apr_size_t dir_cache_size;
 
   /* determine cache sizes */
-
   if (memsize < 100)
     memsize = 100;
   
   content_cache_size = memsize * 7 / 10 > 4000 ? 4000 : memsize * 7 / 10;
   window_cache_size = memsize * 2 / 10 * 1024 * 1024;
   dir_cache_size = (memsize / 10) * 16000;
-  
+
+  /* read repo format and such */
   SVN_ERR(fs_open(fs, path, pool));
 
+  /* create data containers and caches */
   (*fs)->start_revision = start_revision
                         - (start_revision % (*fs)->max_files_per_dir);
   (*fs)->revisions = apr_array_make(pool,
@@ -1728,20 +1922,28 @@ read_revisions(fs_fs_t **fs,
                          (svn_pool_create_allocator(FALSE)),
                           10000, window_cache_size);
 
+  /* read all packed revs */
   for ( revision = start_revision
       ; revision < (*fs)->min_unpacked_rev
       ; revision += (*fs)->max_files_per_dir)
     SVN_ERR(read_pack_file(*fs, revision, pool));
-    
+
+  /* read non-packed revs */
   for ( ; revision <= (*fs)->max_revision; ++revision)
     SVN_ERR(read_revision_file(*fs, revision, pool));
 
   return SVN_NO_ERROR;
 }
 
+/* Return the maximum number of decimal digits required to represent offsets
+ * in the given PACK file.
+ */
 static apr_size_t
 get_max_offset_len(const revision_pack_t *pack)
 {
+  /* the pack files may grow a few percent.
+   * Fudge it up to be on safe side.
+   */
   apr_size_t max_future_size = pack->filesize * 2 + 10000;
   apr_size_t result = 0;
 
