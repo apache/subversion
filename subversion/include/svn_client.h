@@ -5394,7 +5394,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * externals, and will always finish listing an external before listing
  * the next one.
 
- * @a pool may be used for temporary allocations.
+ * @a scratch_pool may be used for temporary allocations.
  *
  * @since New in 1.8.
  */
@@ -5406,7 +5406,7 @@ typedef svn_error_t *(*svn_client_list_func2_t)(
   const char *abs_path,
   const char *external_parent_url,
   const char *external_target,
-  apr_pool_t *pool);
+  apr_pool_t *scratch_pool);
 
 /**
  * Similar to #svn_client_list_func2_t, but without any information about
