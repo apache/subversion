@@ -59,7 +59,7 @@ print_dirent(void *baton,
              const char *abs_path,
              const char *external_parent_url,
              const char *external_target,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
@@ -80,7 +80,7 @@ print_dirent(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_dirent_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, scratch_pool);
       else if (pb->verbose)
         entryname = ".";
       else
@@ -97,7 +97,7 @@ print_dirent(void *baton,
           || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
               || strcmp(pb->last_external_target, external_target) != 0))
         {
-          SVN_ERR(svn_cmdline_printf(pool,
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
                                      _("Listing external '%s'"
                                        " defined on '%s':\n"), 
                                      external_target,
@@ -138,12 +138,13 @@ print_dirent(void *baton,
         timestr[0] = '\0';
 
       /* we need it in UTF-8. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, scratch_pool));
 
-      sizestr = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, dirent->size);
+      sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT, 
+                             dirent->size);
 
       return svn_cmdline_printf
-              (pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
+              (scratch_pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
                dirent->created_rev,
                dirent->last_author ? dirent->last_author : " ? ",
                lock ? 'O' : ' ',
@@ -154,7 +155,7 @@ print_dirent(void *baton,
     }
   else
     {
-      return svn_cmdline_printf(pool, "%s%s\n", entryname,
+      return svn_cmdline_printf(scratch_pool, "%s%s\n", entryname,
                                 (dirent->kind == svn_node_dir)
                                 ? "/" : "");
     }
@@ -171,11 +172,11 @@ print_dirent_xml(void *baton,
                  const char *abs_path,
                  const char *external_parent_url,
                  const char *external_target,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
-  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(scratch_pool);
   
   SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
                  (external_parent_url && external_target));
@@ -183,7 +184,7 @@ print_dirent_xml(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_dirent_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, scratch_pool);
       else
         /* Don't bother to list if no useful information will be shown. */
         return SVN_NO_ERROR;
@@ -205,11 +206,11 @@ print_dirent_xml(void *baton,
             {
               /* The external item being listed is different from the previous
                  one, so close the tag. */
-              svn_xml_make_close_tag(&sb, pool, "external");
+              svn_xml_make_close_tag(&sb, scratch_pool, "external");
               pb->in_external = FALSE;
             }
 
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "external",
+          svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "external",
                                 "parent_url", external_parent_url,
                                 "target", external_target,
                                 NULL);
@@ -220,46 +221,46 @@ print_dirent_xml(void *baton,
         }
     }
 
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
+  svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
                         NULL);
 
-  svn_cl__xml_tagged_cdata(&sb, pool, "name", entryname);
+  svn_cl__xml_tagged_cdata(&sb, scratch_pool, "name", entryname);
 
   if (dirent->kind == svn_node_file)
     {
       svn_cl__xml_tagged_cdata
-        (&sb, pool, "size",
-         apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, dirent->size));
+        (&sb, scratch_pool, "size",
+         apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT, dirent->size));
     }
 
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "commit",
+  svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "commit",
                         "revision",
-                        apr_psprintf(pool, "%ld", dirent->created_rev),
+                        apr_psprintf(scratch_pool, "%ld", dirent->created_rev),
                         NULL);
-  svn_cl__xml_tagged_cdata(&sb, pool, "author", dirent->last_author);
+  svn_cl__xml_tagged_cdata(&sb, scratch_pool, "author", dirent->last_author);
   if (dirent->time)
-    svn_cl__xml_tagged_cdata(&sb, pool, "date",
-                             svn_time_to_cstring(dirent->time, pool));
-  svn_xml_make_close_tag(&sb, pool, "commit");
+    svn_cl__xml_tagged_cdata(&sb, scratch_pool, "date",
+                             svn_time_to_cstring(dirent->time, scratch_pool));
+  svn_xml_make_close_tag(&sb, scratch_pool, "commit");
 
   if (lock)
     {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", lock->token);
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", lock->owner);
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment", lock->comment);
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
+      svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "lock", NULL);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "token", lock->token);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "owner", lock->owner);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "comment", lock->comment);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "created",
                                svn_time_to_cstring(lock->creation_date,
-                                                   pool));
+                                                   scratch_pool));
       if (lock->expiration_date != 0)
-        svn_cl__xml_tagged_cdata(&sb, pool, "expires",
+        svn_cl__xml_tagged_cdata(&sb, scratch_pool, "expires",
                                  svn_time_to_cstring
-                                 (lock->expiration_date, pool));
-      svn_xml_make_close_tag(&sb, pool, "lock");
+                                 (lock->expiration_date, scratch_pool));
+      svn_xml_make_close_tag(&sb, scratch_pool, "lock");
     }
 
-  svn_xml_make_close_tag(&sb, pool, "entry");
+  svn_xml_make_close_tag(&sb, scratch_pool, "entry");
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
@@ -416,11 +417,8 @@ svn_cl__list(apr_getopt_t *os,
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
   if (seen_nonexistent_target)
-    {
-      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-            _("Could not list all targets because some targets don't exist"));
-      return svn_error_compose_create(externals_err, err);
-    }
-  else
-    return svn_error_compose_create(externals_err, err);
+    err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+          _("Could not list all targets because some targets don't exist"));
+
+  return svn_error_compose_create(externals_err, err);
 }

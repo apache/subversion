@@ -239,8 +239,8 @@ file_diff(struct diff_baton *eb,
           /* We show a deletion of what was actually deleted */
           SVN_ERR_ASSERT(status == svn_wc__db_status_deleted);
 
-          SVN_ERR(svn_wc__get_pristine_props(&del_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&del_props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
           SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, &del_checksum, NULL,
@@ -513,9 +513,7 @@ diff_status_callback(void *baton,
       /* Report the prop change. */
       /* ### This case should probably be extended for git-diff, but this
              is what the old diff code provided */
-      if (status->node_status == svn_wc_status_deleted
-          || status->node_status == svn_wc_status_replaced
-          || status->prop_status == svn_wc_status_modified)
+      if (status->prop_status == svn_wc_status_modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;

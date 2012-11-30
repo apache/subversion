@@ -211,9 +211,10 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
   svn_stringbuf_strip_whitespace(propbuf);
 
   if (propbuf->data[0] == '\0'
-      || strcmp(propbuf->data, "no") == 0
-      || strcmp(propbuf->data, "off") == 0
-      || strcmp(propbuf->data, "false") == 0)
+      || svn_cstring_casecmp(propbuf->data, "0") == 0
+      || svn_cstring_casecmp(propbuf->data, "no") == 0
+      || svn_cstring_casecmp(propbuf->data, "off") == 0
+      || svn_cstring_casecmp(propbuf->data, "false") == 0)
     {
       svn_error_t *err = svn_error_createf
         (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
@@ -230,13 +231,13 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
 struct simprop_context_t
 {
   svn_string_t name;    /* The name of the property we're comparing with */
-  svn_membuf_t buffer;  /* Buffer for similariry testing */
+  svn_membuf_t buffer;  /* Buffer for similarity testing */
 };
 
 struct simprop_t
 {
   const char *propname; /* The original svn: property name */
-  svn_string_t name;    /* The property name without the svn: prefx */
+  svn_string_t name;    /* The property name without the svn: prefix */
   unsigned int score;   /* The similarity score */
   apr_size_t diff;      /* Number of chars different from context.name */
   struct simprop_context_t *context; /* Sorting context for qsort() */
@@ -343,7 +344,7 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
         }
     }
 
-  /* Now find the closest match from amongst a the set of reserved
+  /* Now find the closest match from amongst the set of reserved
      node or revision property names. Skip the prefix while matching,
      we already know that it's the same and looking at it would only
      skew the results. */

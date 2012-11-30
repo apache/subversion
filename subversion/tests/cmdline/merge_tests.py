@@ -526,6 +526,13 @@ def add_with_history(sbox):
 
   expected_skip = wc.State(C_path, { })
 
+  # Add some unversioned directory obstructions to the incoming
+  # additions.  This should be tolerated and *not* result in any
+  # difference between the --dry-run and actual merge.
+  # See http://svn.haxx.se/dev/archive-2012-11/0696.shtml
+  os.mkdir(sbox.ospath('A/C/Q'))
+  os.mkdir(sbox.ospath('A/C/Q2'))
+
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,

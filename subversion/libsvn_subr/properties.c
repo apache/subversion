@@ -33,6 +33,90 @@
 #include "svn_ctype.h"
 
 
+/* All Subversion-specific versioned node properties
+ * known to this client, that are applicable to both a file and a dir.
+ */
+#define SVN_PROP__NODE_COMMON_PROPS SVN_PROP_MERGEINFO, \
+                                    SVN_PROP_TEXT_TIME, \
+                                    SVN_PROP_OWNER, \
+                                    SVN_PROP_GROUP, \
+                                    SVN_PROP_UNIX_MODE,
+
+/* All Subversion-specific versioned node properties
+ * known to this client, that are applicable to a dir only.
+ */
+#define SVN_PROP__NODE_DIR_ONLY_PROPS SVN_PROP_IGNORE, \
+                                      SVN_PROP_INHERITABLE_IGNORES, \
+                                      SVN_PROP_INHERITABLE_AUTO_PROPS, \
+                                      SVN_PROP_EXTERNALS,
+
+/* All Subversion-specific versioned node properties
+ * known to this client, that are applicable to a file only.
+ */
+#define SVN_PROP__NODE_FILE_ONLY_PROPS SVN_PROP_MIME_TYPE, \
+                                       SVN_PROP_EOL_STYLE, \
+                                       SVN_PROP_KEYWORDS, \
+                                       SVN_PROP_EXECUTABLE, \
+                                       SVN_PROP_NEEDS_LOCK, \
+                                       SVN_PROP_SPECIAL,
+
+static const char *const known_rev_props[]
+ = { SVN_PROP_REVISION_ALL_PROPS
+     NULL };
+
+static const char *const known_node_props[]
+ = { SVN_PROP__NODE_COMMON_PROPS
+     SVN_PROP__NODE_DIR_ONLY_PROPS
+     SVN_PROP__NODE_FILE_ONLY_PROPS
+     NULL };
+
+static const char *const known_dir_props[]
+ = { SVN_PROP__NODE_COMMON_PROPS
+     SVN_PROP__NODE_DIR_ONLY_PROPS
+     NULL };
+
+static const char *const known_file_props[]
+ = { SVN_PROP__NODE_COMMON_PROPS
+     SVN_PROP__NODE_FILE_ONLY_PROPS
+     NULL };
+
+static svn_boolean_t
+is_known_prop(const char *prop_name,
+              const char *const *known_props)
+{
+  while (*known_props)
+    {
+      if (strcmp(prop_name, *known_props++) == 0)
+        return TRUE;
+    }
+  return FALSE;
+}
+
+svn_boolean_t
+svn_prop_is_known_svn_rev_prop(const char *prop_name)
+{
+  return is_known_prop(prop_name, known_rev_props);
+}
+
+svn_boolean_t
+svn_prop_is_known_svn_node_prop(const char *prop_name)
+{
+  return is_known_prop(prop_name, known_node_props);
+}
+
+svn_boolean_t
+svn_prop_is_known_svn_file_prop(const char *prop_name)
+{
+  return is_known_prop(prop_name, known_file_props);
+}
+
+svn_boolean_t
+svn_prop_is_known_svn_dir_prop(const char *prop_name)
+{
+  return is_known_prop(prop_name, known_dir_props);
+}
+
+
 svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name)
 {

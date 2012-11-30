@@ -922,7 +922,9 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                 scratch_pool, scratch_pool);
       if (err)
         {
-          if (err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+          /* Unversioned and deleted nodes don't have properties */
+          if (err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE
+              && err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
             return svn_error_trace(err);
 
           svn_error_clear(err);
