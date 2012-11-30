@@ -1956,6 +1956,9 @@ get_max_offset_len(const revision_pack_t *pack)
   return result;
 }
 
+/* Create the fragments container in PACK and add revision header fragments
+ * to it.  Use POOL for allocations.
+ */
 static svn_error_t *
 add_revisions_pack_heads(revision_pack_t *pack,
                          apr_pool_t *pool)
@@ -2019,6 +2022,9 @@ add_revisions_pack_heads(revision_pack_t *pack,
   return SVN_NO_ERROR;
 }
 
+/* For the revision given by INFO in FS, return the fragment container in
+ * *FRAGMENTS and the current placement offset in *CURRENT_POS.
+ */
 static svn_error_t *
 get_target_offset(apr_size_t **current_pos,
                   apr_array_header_t **fragments,
@@ -2029,6 +2035,7 @@ get_target_offset(apr_size_t **current_pos,
   revision_pack_t *pack;
   svn_revnum_t revision = info->revision;
 
+  /* identify the pack object */
   if (fs->min_unpacked_rev > revision)
     {
       i = (revision - fs->start_revision) / fs->max_files_per_dir;
@@ -2039,6 +2046,7 @@ get_target_offset(apr_size_t **current_pos,
       i += revision - fs->min_unpacked_rev;
     }
 
+  /* extract the desired info from it */
   pack = APR_ARRAY_IDX(fs->packs, i, revision_pack_t*);
   *current_pos = &pack->target_offset;
   *fragments = pack->fragments;
@@ -2046,11 +2054,19 @@ get_target_offset(apr_size_t **current_pos,
   return SVN_NO_ERROR;
 }
 
+/* forward declaration */
 static svn_error_t *
 add_noderev_recursively(fs_fs_t *fs,
                         noderev_t *node,
                         apr_pool_t *pool);
 
+/* Place fragments for the given REPRESENTATION of the given KIND, iff it
+ * has not been covered, yet.  Place the base reps along the deltification
+ * chain as far as those reps have not been covered, yet.  If REPRESENTATION
+ * is a directory, recursively place its elements.
+ * 
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 add_representation_recursively(fs_fs_t *fs,
                                representation_t *representation,
@@ -2060,13 +2076,16 @@ add_representation_recursively(fs_fs_t *fs,
   apr_size_t *current_pos;
   apr_array_header_t *fragments;
   fragment_t fragment;
-  
+
+  /* place REPRESENTATION only once and only if it exists and will not
+   * be covered later as a directory. */
   if (   representation == NULL
       || representation->covered
       || (representation->dir && kind != dir_fragment)
       || representation == fs->null_base)
     return SVN_NO_ERROR;
 
+  /* add and place a fragment for REPRESENTATION */
   SVN_ERR(get_target_offset(&current_pos, &fragments,
                             fs, representation->revision));
   representation->target.offset = *current_pos;
@@ -2077,9 +2096,12 @@ add_representation_recursively(fs_fs_t *fs,
   fragment.position = *current_pos;
   APR_ARRAY_PUSH(fragments, fragment_t) = fragment;
 
+  /* determine the size of data to be added to the target file */
   if (   kind != dir_fragment
       && representation->delta_base && representation->delta_base->dir)
     {
+      /* base rep is a dir -> would change -> need to store it as fulltext
+       * in our target file */
       apr_pool_t *text_pool = svn_pool_create(pool);
       svn_stringbuf_t *content;
 
@@ -2093,6 +2115,7 @@ add_representation_recursively(fs_fs_t *fs,
     if (   kind == dir_fragment
         || (representation->delta_base && representation->delta_base->dir))
       {
+        /* deltified directories may grow considerably */
         if (representation->original.size < 50)
           *current_pos += 300;
         else
@@ -2100,6 +2123,8 @@ add_representation_recursively(fs_fs_t *fs,
       }
     else
       {
+        /* plain / deltified content will not change but the header may
+         * grow slightly due to larger offsets. */
         representation->target.size = representation->original.size;
 
         if (representation->delta_base &&
@@ -2109,12 +2134,14 @@ add_representation_recursively(fs_fs_t *fs,
           *current_pos += representation->original.size + 13;
       }
 
+  /* follow the delta chain and place base revs immediately after this */
   if (representation->delta_base)
     SVN_ERR(add_representation_recursively(fs,
                                            representation->delta_base,
                                            kind,
                                            pool));
 
+  /* finally, recurse into directories */
   if (representation->dir)
     {
       int i;
@@ -2131,6 +2158,11 @@ add_representation_recursively(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Place fragments for the given NODE in FS, iff it has not been covered,
+ * yet.  Place the reps (text, props) immediately after the node.
+ *
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 add_noderev_recursively(fs_fs_t *fs,
                         noderev_t *node,
@@ -2140,9 +2172,11 @@ add_noderev_recursively(fs_fs_t *fs,
   apr_array_header_t *fragments;
   fragment_t fragment;
 
+  /* don't add it twice */
   if (node->covered)
     return SVN_NO_ERROR;
 
+  /* add and place a fragment for NODE */
   SVN_ERR(get_target_offset(&current_pos, &fragments, fs, node->revision));
   node->covered = TRUE;
   node->target.offset = *current_pos;
@@ -2152,8 +2186,10 @@ add_noderev_recursively(fs_fs_t *fs,
   fragment.position = *current_pos;
   APR_ARRAY_PUSH(fragments, fragment_t) = fragment;
 
+  /* size may slightly increase */
   *current_pos += node->original.size + 40;
-  
+
+  /* recurse into representations */
   if (node->text && node->text->dir)
     SVN_ERR(add_representation_recursively(fs, node->text, dir_fragment, pool));
   else
@@ -2164,6 +2200,8 @@ add_noderev_recursively(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Place a fragment for the last revision in PACK. Use POOL for allocations.
+ */
 static svn_error_t *
 add_revisions_pack_tail(revision_pack_t *pack,
                         apr_pool_t *pool)
@@ -2184,6 +2222,7 @@ add_revisions_pack_tail(revision_pack_t *pack,
 
   pack->target_offset += 2 * offset_len + 3;
 
+  /* end of target file reached.  Store that info in all revs. */
   for (i = 0; i < pack->info->nelts; ++i)
     {
       info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
@@ -2193,6 +2232,9 @@ add_revisions_pack_tail(revision_pack_t *pack,
   return SVN_NO_ERROR;
 }
 
+/* Place all fragments for all revisions / packs in FS.
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 reorder_revisions(fs_fs_t *fs,
                   apr_pool_t *pool)
@@ -2233,6 +2275,7 @@ reorder_revisions(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* forward declaration */
 static svn_error_t *
 get_fragment_content(svn_string_t **content,
                      fs_fs_t *fs,
@@ -2852,6 +2895,9 @@ get_fragment_content(svn_string_t **content,
   return SVN_NO_ERROR;
 }
 
+/* In the repository at PATH, restore the original content in case we ran
+ * this reorg tool before.  Use POOL for allocations.
+ */
 static svn_error_t *
 prepare_repo(const char *path, apr_pool_t *pool)
 {
@@ -2862,16 +2908,19 @@ prepare_repo(const char *path, apr_pool_t *pool)
   const char *revs_path = svn_dirent_join(path, "db/revs", pool);
   const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
   const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
-  
+
+  /* is there a backup? */
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_dir)
     {
+      /* yes, restore the org content from it */
       SVN_ERR(svn_io_remove_dir2(new_path, TRUE, NULL, NULL, pool));
       SVN_ERR(svn_io_file_move(revs_path, new_path, pool));
       SVN_ERR(svn_io_file_move(old_path, revs_path, pool));
       SVN_ERR(svn_io_remove_dir2(new_path, TRUE, NULL, NULL, pool));
     }
 
+  /* same for the rep cache db */
   SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(svn_io_file_move(old_rep_cache_path, rep_cache_path, pool));
@@ -2879,6 +2928,9 @@ prepare_repo(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* In the repository at PATH, create a backup of the orig content and
+ * replace it with the reorg'ed. Use POOL for allocations.
+ */
 static svn_error_t *
 activate_new_revs(const char *path, apr_pool_t *pool)
 {
@@ -2890,6 +2942,8 @@ activate_new_revs(const char *path, apr_pool_t *pool)
   const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
   const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
 
+  /* if there is no backup, yet, move the current repo content to the backup
+   * and place it with the new (reorg'ed) data. */
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_none)
     {
@@ -2897,6 +2951,7 @@ activate_new_revs(const char *path, apr_pool_t *pool)
       SVN_ERR(svn_io_file_move(new_path, revs_path, pool));
     }
 
+  /* same for the rep cache db */
   SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
   if (kind == svn_node_none)
     SVN_ERR(svn_io_file_move(rep_cache_path, old_rep_cache_path, pool));
@@ -2904,6 +2959,9 @@ activate_new_revs(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Write tool usage info text to OSTREAM using PROGNAME as a prefix and
+ * POOL for allocations.
+ */
 static void
 print_usage(svn_stream_t *ostream, const char *progname,
             apr_pool_t *pool)
@@ -2923,6 +2981,7 @@ print_usage(svn_stream_t *ostream, const char *progname,
      progname));
 }
 
+/* linear control flow */
 int main(int argc, const char *argv[])
 {
   apr_pool_t *pool;
