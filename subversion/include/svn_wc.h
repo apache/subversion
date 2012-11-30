@@ -6174,8 +6174,14 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  *
  * If the property is not appropriate for a node of kind @a kind, or
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
- * to a canonicalized version of the property value.  If @a
- * skip_some_checks is TRUE, only some validity checks are taken.
+ * to a canonicalized version of the property value.
+ *
+ * If @a skip_some_checks is TRUE, some validity checks and
+ * canonicalizations are skipped. Presently, these are:
+ *   - For svn:eol-style: strip white space; check value is recognized;
+ *       check file content matches value.
+ *   - For svn:mime-type: strip white space; check value has reasonable
+ *       syntax.
  *
  * Some validity checks require access to the contents and MIME type
  * of the target if it is a file; they will call @a prop_getter with @a
