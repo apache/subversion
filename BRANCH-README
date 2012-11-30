@@ -19,7 +19,7 @@ such as traversing two trees in parallel, diffing and patching trees.
 Then we could, for example, extend 'svn diff' to be able to compare any
 two arbitrary trees, related or not, such as the unversioned tree
 '/tmp/saved-tests' against the WC tree 'wc/subversion/tests'.  Instead
-of ng this by writing several more variants of the current three
+of doing this by writing several more variants of the current three
 subroutines (WC/WC, WC/repos, repos/repos), in principle we would need
 just one diff subroutine that takes two Tree objects as input.
 
