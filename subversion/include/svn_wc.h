@@ -6161,6 +6161,8 @@ svn_wc_is_entry_prop(const char *name);
  * (Currently, this is used if you are attempting to set the
  * #SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
   const svn_string_t **mime_type,
@@ -6192,7 +6194,9 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  * for error messages.
  *
  * ### This is not actually related to the WC, but it does need to call
- * ### svn_wc_parse_externals_description2.
+ * ### svn_wc_parse_externals_description3.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
