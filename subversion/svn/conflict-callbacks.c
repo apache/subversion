@@ -291,6 +291,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                      svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *scratch_pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *answer;
   char *prompt;
   svn_boolean_t diff_allowed = FALSE;
@@ -319,22 +320,22 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 
   while (TRUE)
     {
-      svn_pool_clear(scratch_pool);
+      svn_pool_clear(iterpool);
 
-      prompt = apr_pstrdup(scratch_pool, _("Select: (p) postpone"));
+      prompt = apr_pstrdup(iterpool, _("Select: (p) postpone"));
 
       if (diff_allowed)
         {
-          prompt = apr_pstrcat(scratch_pool, prompt,
+          prompt = apr_pstrcat(iterpool, prompt,
                                _(", (df) diff-full, (e) edit, (m) merge"),
                                (char *)NULL);
 
           if (knows_something)
-            prompt = apr_pstrcat(scratch_pool, prompt, _(", (r) resolved"),
+            prompt = apr_pstrcat(iterpool, prompt, _(", (r) resolved"),
                                  (char *)NULL);
 
           if (! desc->is_binary)
-            prompt = apr_pstrcat(scratch_pool, prompt,
+            prompt = apr_pstrcat(iterpool, prompt,
                                  _(",\n        (mc) mine-conflict, "
                                    "(tc) theirs-conflict"),
                                  (char *)NULL);
@@ -342,25 +343,25 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else
         {
           if (knows_something)
-            prompt = apr_pstrcat(scratch_pool, prompt, _(", (r) resolved"),
+            prompt = apr_pstrcat(iterpool, prompt, _(", (r) resolved"),
                                  (char *)NULL);
-          prompt = apr_pstrcat(scratch_pool, prompt,
+          prompt = apr_pstrcat(iterpool, prompt,
                                _(",\n        "
                                  "(mf) mine-full, (tf) theirs-full"),
                                (char *)NULL);
         }
 
-      prompt = apr_pstrcat(scratch_pool, prompt, ",\n        ", (char *)NULL);
-      prompt = apr_pstrcat(scratch_pool, prompt,
+      prompt = apr_pstrcat(iterpool, prompt, ",\n        ", (char *)NULL);
+      prompt = apr_pstrcat(iterpool, prompt,
                            _("(s) show all options: "),
                            (char *)NULL);
 
-      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, scratch_pool));
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, iterpool));
 
       if (strcmp(answer, "s") == 0)
         {
           /* These are used in svn_cl__accept_from_word(). */
-          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
           _("\n"
             "  (e)  edit             - change merged file in an editor\n"
             "  (df) diff-full        - show all changes made to merged "
@@ -397,7 +398,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           if (desc->is_binary)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                           _("Invalid option; cannot choose "
                                             "based on conflicts in a "
                                             "binary file.\n\n")));
@@ -412,7 +413,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           if (desc->is_binary)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                           _("Invalid option; cannot choose "
                                             "based on conflicts in a "
                                             "binary file.\n\n")));
@@ -441,7 +442,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           if (desc->is_binary)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                           _("Invalid option; cannot "
                                             "display conflicts for a "
                                             "binary file.\n\n")));
@@ -450,30 +451,30 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           else if (! (desc->my_abspath && desc->base_abspath &&
                       desc->their_abspath))
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                           _("Invalid option; original "
                                             "files not available.\n\n")));
               continue;
             }
-          SVN_ERR(show_conflicts(desc, scratch_pool));
+          SVN_ERR(show_conflicts(desc, iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(answer, "df") == 0)
         {
           if (! diff_allowed)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                              _("Invalid option; there's no "
                                 "merged version to diff.\n\n")));
               continue;
             }
 
-          SVN_ERR(show_diff(desc, scratch_pool));
+          SVN_ERR(show_diff(desc, iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(answer, "e") == 0 || strcmp(answer, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, desc, b, scratch_pool));
+          SVN_ERR(open_editor(&performed_edit, desc, b, iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -482,7 +483,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           if (desc->kind != svn_wc_conflict_kind_text)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                           _("Invalid option; can only "
                                             "resolve text conflicts with "
                                             "the internal merge tool."
@@ -504,11 +505,11 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                          b->editor_cmd,
                                          b->config,
                                          &remains_in_conflict,
-                                         scratch_pool));
+                                         iterpool));
               knows_something = !remains_in_conflict;
             }
           else
-            SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
         }
       else if (strcmp(answer, "l") == 0 || strcmp(answer, ":-l") == 0)
@@ -516,12 +517,12 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
             {
-              SVN_ERR(launch_resolver(&performed_edit, desc, b, scratch_pool));
+              SVN_ERR(launch_resolver(&performed_edit, desc, b, iterpool));
               if (performed_edit)
                 knows_something = TRUE;
             }
           else
-            SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
         }
       else if (strcmp(answer, "r") == 0)
@@ -535,10 +536,11 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               break;
             }
           else
-            SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
         }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
