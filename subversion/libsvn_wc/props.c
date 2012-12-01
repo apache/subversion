@@ -1732,17 +1732,14 @@ validate_eol_prop_against_file(const char *path,
 
   err = getter(NULL, translating_stream, getter_baton, pool);
 
-  if (!err)
-    err = svn_stream_close(translating_stream);
+  err = svn_error_compose_create(err, svn_stream_close(translating_stream));
 
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, err,
                              _("File '%s' has inconsistent newlines"),
                              path_display);
-  else if (err)
-    return err;
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *
@@ -1934,7 +1931,7 @@ propset_walk_cb(const char *local_abspath,
   err = do_propset(wb->db, local_abspath, kind, wb->propname, wb->propval,
                    wb->force, wb->notify_func, wb->notify_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
-              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
+              || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -1958,9 +1955,8 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
-  svn_wc__db_status_t status;
   svn_kind_t kind;
-  const char *dir_abspath;
+  svn_wc__db_t *db = wc_ctx->db;
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
@@ -1975,38 +1971,34 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                         name, value, scratch_pool));
     }
 
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, FALSE,
+                               scratch_pool));
+
   /* We have to do this little DIR_ABSPATH dance for backwards compat.
      But from 1.7 onwards, all locks are of infinite depth, and from 1.6
      backward we never call this API with depth > empty, so we only need
      to do the write check once per call, here (and not for every node in
-     the node walker). */
-    /* Get the node status for this path. */
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
+     the node walker).
 
-  if (status != svn_wc__db_status_normal
-      && status != svn_wc__db_status_added
-      && status != svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-                             _("Can't set properties on '%s':"
-                               " invalid status for updating properties."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+     ### Note that we could check for a write lock on local_abspath first
+     ### if we would want to. And then justy check for kind if that fails.
+     ### ... but we need kind for the "svn:" property checks anyway */
+  {
+    const char *dir_abspath;
 
-  if (kind == svn_kind_dir)
-    dir_abspath = local_abspath;
-  else
-    dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    if (kind == svn_kind_dir)
+      dir_abspath = local_abspath;
+    else
+      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
+    /* Verify that we're holding this directory's write lock.  */
+    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
+  }
 
   if (depth == svn_depth_empty || kind != svn_kind_dir)
     {
       apr_hash_t *changelist_hash = NULL;
+      svn_error_t *err;
 
       if (changelist_filter && changelist_filter->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
@@ -2016,12 +2008,23 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
 
-      SVN_ERR(do_propset(wc_ctx->db, local_abspath,
+      err = do_propset(wc_ctx->db, local_abspath,
                          kind == svn_kind_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,
-                         notify_func, notify_baton, scratch_pool));
+                         notify_func, notify_baton, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        {
+          err = svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, err,
+                                  _("Can't set properties on '%s':"
+                                  " invalid status for updating properties."),
+                                  svn_dirent_local_style(local_abspath,
+                                                         scratch_pool));
+        }
+
+      SVN_ERR(err);
     }
   else
     {
