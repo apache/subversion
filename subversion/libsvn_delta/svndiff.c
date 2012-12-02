@@ -229,10 +229,11 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
       ip_len = encode_int(ibuf + 1, window->tview_len) - ibuf;
     }
 
-  /* encode the window header.  */
-  header_current[0] = 0;  /* source offset == 0 */
-  header_current[1] = 0;  /* source length == 0 */
-  header_current = encode_int(header_current + 2, window->tview_len);
+  /* encode the window header.  Please note that the source window may
+   * have content despite not being used for deltification. */
+  header_current = encode_int(header_current, window->sview_offset);
+  header_current = encode_int(header_current, window->sview_len);
+  header_current = encode_int(header_current, window->tview_len);
   header_current[0] = (unsigned char)ip_len;  /* 1 instruction */
   header_current = encode_int(&header_current[1], len);
 
