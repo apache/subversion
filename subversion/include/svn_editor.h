@@ -79,8 +79,8 @@ extern "C" {
  * coupling between those subsystems.
  *
  * The set of changes, and the data necessary to describe it entirely, is
- * completely unbounded. An addition of one simple 20Gb file would be well
- * past the available memory of any machine processing these operations.
+ * completely unbounded. An addition of one simple 20 GB file might be well
+ * past the available memory of a machine processing these operations.
  * As a result, the API to describe the changes is designed to be applied
  * in a sequential (and relatively random-access) model. The operations
  * can be streamed from the driver to the receiver, resulting in the
@@ -927,8 +927,8 @@ svn_editor_alter_directory(svn_editor_t *editor,
  * The properties and/or the contents must be changed. It is an error to
  * pass NULL for @a props, @a checksum, and @a contents.
  *
- * For a description of @a checksum, and @a contents see
- * svn_editor_add_file(). This functions allows @a props to be NULL, but
+ * For a description of @a checksum and @a contents see
+ * svn_editor_add_file(). This function allows @a props to be NULL, but
  * the parameter is otherwise described by svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
@@ -955,7 +955,7 @@ svn_editor_alter_file(svn_editor_t *editor,
  * The properties and/or the target must be changed. It is an error to
  * pass NULL for @a props and @a target.
  *
- * This functions allows @a props to be NULL, but the parameter is
+ * This function allows @a props to be NULL, but the parameter is
  * otherwise described by svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
@@ -1032,7 +1032,7 @@ svn_editor_move(svn_editor_t *editor,
  * For example, the node at index 0 of @a relpaths and @a revisions will
  * be moved to the relpath specified at index 1 of @a relpaths. The node
  * at index 1 will be moved to the location at index 2. The node at index
- * N-1 will be moved to the relpath specifed at index 0.
+ * N-1 will be moved to the relpath specified at index 0.
  *
  * The simplest form of this operation is to swap nodes A and B. One may
  * think to move A to a temporary location T, then move B to A, then move
