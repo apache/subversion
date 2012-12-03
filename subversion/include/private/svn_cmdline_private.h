@@ -31,6 +31,7 @@
 
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +108,40 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
                                   const apr_array_header_t *config_options,
                                   const char *prefix,
                                   const char *argument_name);
+
+/* Return a string allocated in POOL that is a copy of STR but with each
+ * line prefixed with INDENT. A line is all characters up to the first
+ * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
+const char *
+svn_cmdline__indent_string(const char *str,
+                           const char *indent,
+                           apr_pool_t *pool);
+
+/* Print to stdout a hash PROP_HASH that maps property names (char *) to
+   property values (svn_string_t *).  The names are assumed to be in UTF-8
+   format; the values are either in UTF-8 (the special Subversion props) or
+   plain binary values.
+
+   If OUT is not NULL, then write to it rather than stdout.
+
+   If NAMES_ONLY is true, print just names, else print names and
+   values. */
+svn_error_t *
+svn_cmdline__print_prop_hash(svn_stream_t *out,
+                             apr_hash_t *prop_hash,
+                             svn_boolean_t names_only,
+                             apr_pool_t *pool);
+
+/* Similar to svn_cmdline__print_prop_hash(), only output xml to *OUTSTR.
+   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
+   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
+   allocate it first from POOL, otherwise append to it. */
+svn_error_t *
+svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                                 apr_hash_t *prop_hash,
+                                 svn_boolean_t names_only,
+                                 svn_boolean_t inherited_props,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

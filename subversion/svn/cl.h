@@ -462,33 +462,6 @@ svn_cl__print_status_xml(const char *cwd_abspath,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 
-
-/* Print to stdout a hash that maps property names (char *) to property
-   values (svn_string_t *).  The names are assumed to be in UTF-8 format;
-   the values are either in UTF-8 (the special Subversion props) or
-   plain binary values.
-
-   If OUT is not NULL, then write to it rather than stdout.
-
-   If NAMES_ONLY is true, print just names, else print names and
-   values. */
-svn_error_t *
-svn_cl__print_prop_hash(svn_stream_t *out,
-                        apr_hash_t *prop_hash,
-                        svn_boolean_t names_only,
-                        apr_pool_t *pool);
-
-/* Similar to svn_cl__print_prop_hash(), only output xml to *OUTSTR.
-   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
-   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
-   allocate it first from POOL, otherwise append to it. */
-svn_error_t *
-svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
-                            apr_hash_t *prop_hash,
-                            svn_boolean_t names_only,
-                            svn_boolean_t inherited_props,
-                            apr_pool_t *pool);
-
 /* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it
    first from POOL, otherwise append to it.  If AUTHOR or DATE is
    NULL, it will be omitted. */
@@ -819,15 +792,6 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             svn_client_ctx_t *ctx,
                                             svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
-
-/* Return a string allocated in POOL that is a copy of STR but with each
- * line prefixed with INDENT. A line is all characters up to the first
- * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
-const char *
-svn_cl__indent_string(const char *str,
-                      const char *indent,
-                      apr_pool_t *pool);
-
 
 /* Return a string showing NODE's kind, URL and revision, to the extent that
  * that information is available in NODE. If NODE itself is NULL, this prints

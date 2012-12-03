@@ -3282,6 +3282,9 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  * inherited by @a path in @a root.  If no properties are inherited,
  * then set @a *inherited_values to an empty array.
  *
+ * if @a propname is NULL then retrieve all explicit and/or inherited
+ * properties.  Otherwise retrieve only the properties named @a propname.
+ *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each parent path from which properties are inherited. Silently omit
@@ -3296,6 +3299,7 @@ svn_error_t *
 svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
                                  svn_fs_root_t *root,
                                  const char *path,
+                                 const char *propname,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,

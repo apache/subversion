@@ -1005,7 +1005,7 @@ get_props(apr_hash_t **props,
   /* Get any inherited properties the user is authorized to. */
   if (iprops)
     {
-      SVN_ERR(svn_repos_fs_get_inherited_props(iprops, root, path,
+      SVN_ERR(svn_repos_fs_get_inherited_props(iprops, root, path, NULL,
                                                authz_check_access_cb_func(b),
                                                b, pool, pool));
     }
