@@ -220,6 +220,34 @@ DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
 
+-- STMT_DELETE_WORKING_OP_DEPTH
+DELETE FROM nodes
+WHERE wc_id = ?1 
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
+-- STMT_SELECT_LOCAL_RELPATH_OP_DEPTH
+SELECT local_relpath
+FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
+-- STMT_COPY_NODE_MOVE
+INSERT INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target, moved_here )
+SELECT
+    wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
+    repos_id,
+    repos_path, revision, presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target, 1
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3

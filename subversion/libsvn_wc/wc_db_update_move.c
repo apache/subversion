@@ -650,6 +650,83 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
+/* Update the single op-depth layer in the move destination subtree
+   rooted at DST_RELPATH to make it match the move source subtree
+   rooted at SRC_RELPATH. */
+static svn_error_t *
+replace_moved_layer(const char *src_relpath,
+                    const char *dst_relpath,
+                    svn_wc__db_t *db,
+                    svn_wc__db_wcroot_t *wcroot,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int src_op_depth;
+  int dst_op_depth = relpath_depth(dst_relpath);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, src_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    src_op_depth = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("'%s' is not deleted"),
+                             svn_dirent_local_style(src_relpath,
+                                                    scratch_pool));
+
+  /* Delete entire subtree at one op-depth. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_WORKING_OP_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            dst_relpath, dst_op_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Copy entire subtree at one op-depth. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_LOCAL_RELPATH_OP_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            src_relpath, src_op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      svn_error_t *err;
+      svn_sqlite__stmt_t *stmt2;
+      const char *src_cp_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *dst_cp_relpath
+        = svn_relpath_join(dst_relpath,
+                           svn_relpath_skip_ancestor(src_relpath,
+                                                     src_cp_relpath),
+                           scratch_pool);
+
+      err = svn_sqlite__get_statement(&stmt2, wcroot->sdb,
+                                      STMT_COPY_NODE_MOVE);
+      if (!err)
+        err = svn_sqlite__bindf(stmt2, "isdsds", wcroot->wc_id,
+                                src_cp_relpath, src_op_depth,
+                                dst_cp_relpath, dst_op_depth,
+                                svn_relpath_dirname(dst_cp_relpath,
+                                                    scratch_pool));
+      if (!err)
+        err = svn_sqlite__step_done(stmt2);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+ 
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* TODO: extend/retract any base-deleted layers to account for
+     added/removed nodes in the replaced layer. */
+
+  return SVN_NO_ERROR;
+}
+
 /* ### Drive TC_EDITOR so as to ...
  */
 static svn_error_t *
@@ -701,6 +778,9 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                                       db, wcroot, scratch_pool));
 
   SVN_ERR(svn_editor_complete(tc_editor));
+
+  SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, db, wcroot,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
