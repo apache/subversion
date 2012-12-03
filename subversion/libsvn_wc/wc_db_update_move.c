@@ -429,6 +429,18 @@ static const svn_editor_cb_many_t editor_ops = {
 
 /*
  * Driver code.
+ *
+ * The scenario is that a subtree has been locally moved, and then the base
+ * layer on the source side of the move has received an update to a new
+ * state.  The destination subtree has not yet been updated, and still
+ * matches the pre-update state of the source subtree.
+ *
+ * The edit driver drives the receiver with the difference between the
+ * pre-update state (as found now at the move-destination) and the
+ * post-update state (found now at the move-source).
+ *
+ * We currently assume that both the pre-update and post-update states are
+ * single-revision.
  */
 
 /* Set *OPERATION, *LOCAL_CHANGE, *INCOMING_CHANGE, *OLD_VERSION, *NEW_VERSION
@@ -727,7 +739,12 @@ replace_moved_layer(const char *src_relpath,
   return SVN_NO_ERROR;
 }
 
-/* ### Drive TC_EDITOR so as to ...
+/* Transfer changes from the move source to the move destination.
+ *
+ * Drive the editor TC_EDITOR with the difference between DST_RELPATH
+ * (at its own op-depth) and SRC_RELPATH (at op-depth zero).
+ *
+ * ### And the other params?
  */
 static svn_error_t *
 drive_tree_conflict_editor(svn_editor_t *tc_editor,
@@ -757,17 +774,9 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                                               src_relpath, scratch_pool),
                               scratch_pool));
 
-  /*
-   * Drive the TC editor to transfer incoming changes from the move source
-   * to the move destination.
-   *
-   * The pre-update tree is within dst at the op-depth of the move's op-root.
-   * The post-update base tree is within src at op-depth zero.
-   *
-   * We walk the move source (i.e. the post-update tree), comparing each node
+  /* We walk the move source (i.e. the post-update tree), comparing each node
    * with the equivalent node at the move destination and applying the update
-   * to nodes at the move destination.
-   */
+   * to nodes at the move destination. */
   if (old_version->node_kind == svn_node_file)
     SVN_ERR(update_moved_away_file(tc_editor, src_relpath, dst_relpath,
                                    dst_relpath, old_version->peg_rev,
