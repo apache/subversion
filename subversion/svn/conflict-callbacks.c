@@ -332,6 +332,7 @@ static const resolver_option_t obstructed_add_options[] =
   { "mf", "mine-full",        N_("accept pre-existing item (ignore upstream addition)") },
   { "tf", "theirs-full",      N_("accept incoming item (overwrite pre-existing item)") },
   { "h",  "help",             N_("show this help") },
+  { NULL }
 };
 
 /* Resolver options for a tree conflict */
