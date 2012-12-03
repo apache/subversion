@@ -72,13 +72,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1345740
-   Remove a cast that is both ugly, and apparently illegal in g++ 4.7.
-   Justification:
-     Fails to build.
-   Votes:
-     +1: philip, rhuijben
-
  * r1408632, r1408647, r1408676, r1408684, r1408653
    Fix 'svnmucc propset ^/'.
    Notes:
@@ -109,7 +102,7 @@ Candidate changes:
    Justification:
      Handles a Windows specific corner case in a generic conversion function.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
@@ -141,3 +134,12 @@ Approved changes:
        $ svn ci -m ...
    Votes:
      +1: cmpilato, danielsh, rhuijben
+
+ * r1345740
+   Remove a cast that is both ugly, and apparently illegal in g++ 4.7.
+   Justification:
+     Fails to build.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+
