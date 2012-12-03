@@ -54,9 +54,8 @@
 /*
  * Receiver code.
  *
- * The receiver is an editor that, when driven with a certain change, edits
- * the 'base' layer of a moved subtree subtree, and also merges those same
- * edits into its 'actual' layer.
+ * The receiver is an editor that, when driven with a certain change, will
+ * merge the edits into the 'actual' layer of a moved subtree.
  */
 
 struct tc_editor_baton {
@@ -416,10 +415,8 @@ tc_editor_abort(void *baton,
 
 /* An editor.
  *
- * This editor will (referring to fields in struct tc_editor_baton):
- *
- * Edit the MOVE_ROOT_DST_RELPATH subtree (at the op-depth of its op-root).
- * Merge those same edits into the MOVE_ROOT_DST_RELPATH 'actual' tree,
+ * This editor will merge the edits into the 'actual' tree at
+ * MOVE_ROOT_DST_RELPATH (in struct tc_editor_baton),
  * perhaps raising conflicts if necessary.
  *
  */
@@ -756,6 +753,10 @@ replace_moved_layer(const char *src_relpath,
  *
  * Drive the editor TC_EDITOR with the difference between DST_RELPATH
  * (at its own op-depth) and SRC_RELPATH (at op-depth zero).
+ *
+ * Then update the single op-depth layer in the move destination subtree
+ * rooted at DST_RELPATH to make it match the move source subtree
+ * rooted at SRC_RELPATH.
  *
  * ### And the other params?
  */
