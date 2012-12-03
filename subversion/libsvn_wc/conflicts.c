@@ -2648,7 +2648,8 @@ conflict_status_walker(void *baton,
               {
                 if (my_choice == svn_wc_conflict_choose_mine_conflict)
                   SVN_ERR(svn_wc__db_update_moved_away_conflict_victim(
-                            &work_items, local_abspath, cswb->db,
+                            &work_items,
+                            cswb->db, local_abspath,
                             cswb->notify_func, cswb->notify_baton,
                             cswb->cancel_func, cswb->cancel_baton,
                             scratch_pool, scratch_pool));
