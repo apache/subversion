@@ -408,10 +408,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2)
 
--- STMT_UPDATE_NODE_FILEINFO_OPDEPTH
-UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
-
 -- STMT_INSERT_ACTUAL_CONFLICT
 INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
@@ -478,10 +474,6 @@ BEGIN
   SELECT new.wc_id, new.local_relpath, 26, new.changelist
    WHERE new.changelist IS NOT NULL;
 END
-
--- STMT_INSERT_CHANGELIST_LIST
-INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_FINALIZE_CHANGELIST
 DROP TRIGGER trigger_changelist_list_change;
