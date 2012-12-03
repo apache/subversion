@@ -60,11 +60,11 @@
  */
 
 struct tc_editor_baton {
-  const char *move_root_src_relpath;
-  const char *move_root_dst_relpath;
+  svn_skel_t **work_items;
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
-  svn_skel_t **work_items;
+  const char *move_root_src_relpath;
+  const char *move_root_dst_relpath;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
   svn_wc_notify_func2_t notify_func;
@@ -467,8 +467,8 @@ get_tc_info(svn_wc_operation_t *operation,
             svn_wc_conflict_action_t *incoming_change,
             svn_wc_conflict_version_t **old_version,
             svn_wc_conflict_version_t **new_version,
-            const char *src_abspath,
             svn_wc__db_t *db,
+            const char *src_abspath,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
@@ -809,13 +809,13 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
 
 struct update_moved_away_conflict_victim_baton {
   svn_skel_t **work_items;
+  svn_wc__db_t *db;
   const char *victim_relpath;
   svn_wc_operation_t operation;
   svn_wc_conflict_reason_t local_change;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
-  svn_wc__db_t *db;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
   svn_cancel_func_t cancel_func;
@@ -884,8 +884,8 @@ update_moved_away_conflict_victim(void *baton,
 
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             const char *victim_abspath,
                                              svn_wc__db_t *db,
+                                             const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
@@ -903,8 +903,8 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
   svn_wc_conflict_version_t *new_version;
 
   SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
-                      &old_version, &new_version,
-                      victim_abspath, db, scratch_pool, scratch_pool));
+                      &old_version, &new_version, db, victim_abspath,
+                      scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, victim_abspath,

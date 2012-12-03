@@ -3247,8 +3247,8 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
  * need to run as part of marking the conflict resolved. */
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             const char *victim_abspath,
                                              svn_wc__db_t *db,
+                                             const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
