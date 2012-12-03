@@ -53,6 +53,10 @@
 
 /*
  * Receiver code.
+ *
+ * The receiver is an editor that, when driven with a certain change, edits
+ * the 'base' layer of a moved subtree subtree, and also merges those same
+ * edits into its 'actual' layer.
  */
 
 struct tc_editor_baton {
@@ -410,6 +414,15 @@ tc_editor_abort(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* An editor.
+ *
+ * This editor will (referring to fields in struct tc_editor_baton):
+ *
+ * Edit the MOVE_ROOT_DST_RELPATH subtree (at the op-depth of its op-root).
+ * Merge those same edits into the MOVE_ROOT_DST_RELPATH 'actual' tree,
+ * perhaps raising conflicts if necessary.
+ *
+ */
 static const svn_editor_cb_many_t editor_ops = {
   tc_editor_add_directory,
   tc_editor_add_file,
