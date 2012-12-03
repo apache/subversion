@@ -1112,6 +1112,30 @@ AC_SUBST(MOD_ACTIVATION)
 
 
 
+AC_ARG_ENABLE(gcov,
+AC_HELP_STRING([--enable-gcov],
+               [Turn on gcov coverage testing (GCC only).]),
+[
+    if test "$enableval" = "yes" ; then
+      dnl Probably other compilers support something similar;
+      dnl feel free to extend this to include them.
+      if test "$GCC" = "yes"; then
+        if test "$svn_enable_shared" = "yes" ; then
+          AC_MSG_ERROR([Can't have --enable-gcov without --disable-shared (we
+                        recommend also using --enable-all-static).])
+        fi
+        if test ! "$enable_all_static" = "yes" ; then
+          AC_MSG_WARN(We recommend --enable-all-static with --enable-gcov.)
+        fi
+        AC_MSG_NOTICE([Enabling gcov coverage testing.])
+        CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+        CXXFLAGS="$CXXFLAGS -fprofile-arcs -ftest-coverage"
+      else
+        AC_MSG_ERROR([We only support --enable-gcov with GCC right now.])
+      fi
+    fi
+])
+
 AC_ARG_ENABLE(gprof,
 AS_HELP_STRING([--enable-gprof],
                [Produce gprof profiling data in 'gmon.out' (GCC only).]),
