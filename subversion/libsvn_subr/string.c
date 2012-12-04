@@ -37,6 +37,110 @@
 #include "svn_private_config.h"
 
 
+
+/* Allocate the space for a memory buffer from POOL.
+ * Return a pointer to the new buffer in *DATA and its size in *SIZE.
+ * The buffer size will be at least MINIMUM_SIZE.
+ *
+ * N.B.: The stringbuf creation functions use this, but since stringbufs
+ *       always consume at least 1 byte for the NUL terminator, the
+ *       resulting data pointers will never be NULL.
+ */
+static APR_INLINE void
+membuf_create(void **data, apr_size_t *size,
+              apr_size_t minimum_size, apr_pool_t *pool)
+{
+  /* apr_palloc will allocate multiples of 8.
+   * Thus, we would waste some of that memory if we stuck to the
+   * smaller size. Note that this is safe even if apr_palloc would
+   * use some other aligment or none at all. */
+  minimum_size = APR_ALIGN_DEFAULT(minimum_size);
+  *data = (!minimum_size ? NULL : apr_palloc(pool, minimum_size));
+  *size = minimum_size;
+}
+
+/* Ensure that the size of a given memory buffer is at least MINIMUM_SIZE
+ * bytes. If *SIZE is already greater than or equal to MINIMUM_SIZE,
+ * this function does nothing.
+ *
+ * If *SIZE is 0, the allocated buffer size will be MINIMUM_SIZE
+ * rounded up to the nearest APR alignment boundary. Otherwse, *SIZE
+ * will be multiplied by a power of two such that the result is
+ * greater or equal to MINIMUM_SIZE. The pointer to the new buffer
+ * will be returned in *DATA, and its size in *SIZE.
+ */
+static APR_INLINE void
+membuf_ensure(void **data, apr_size_t *size,
+              apr_size_t minimum_size, apr_pool_t *pool)
+{
+  if (minimum_size > *size)
+    {
+      apr_size_t new_size = *size;
+
+      if (new_size == 0)
+        /* APR will increase odd allocation sizes to the next
+         * multiple for 8, for instance. Take advantage of that
+         * knowledge and allow for the extra size to be used. */
+        new_size = minimum_size;
+      else
+        while (new_size < minimum_size)
+          {
+            /* new_size is aligned; doubling it should keep it aligned */
+            const apr_size_t prev_size = new_size;
+            new_size *= 2;
+
+            /* check for apr_size_t overflow */
+            if (prev_size > new_size)
+              {
+                new_size = minimum_size;
+                break;
+              }
+          }
+
+      membuf_create(data, size, new_size, pool);
+    }
+}
+
+void
+svn_membuf__create(svn_membuf_t *membuf, apr_size_t size, apr_pool_t *pool)
+{
+  membuf_create(&membuf->data, &membuf->size, size, pool);
+  membuf->pool = pool;
+}
+
+void
+svn_membuf__ensure(svn_membuf_t *membuf, apr_size_t size)
+{
+  membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
+}
+
+void
+svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
+{
+  const void *const old_data = membuf->data;
+  const apr_size_t old_size = membuf->size;
+
+  membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
+  if (membuf->data && old_data && old_data != membuf->data)
+    memcpy(membuf->data, old_data, old_size);
+}
+
+/* Always provide an out-of-line implementation of svn_membuf__zero */
+#undef svn_membuf__zero
+void
+svn_membuf__zero(svn_membuf_t *membuf)
+{
+  SVN_MEMBUF__ZERO(membuf);
+}
+
+/* Always provide an out-of-line implementation of svn_membuf__nzero */
+#undef svn_membuf__nzero
+void
+svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size)
+{
+  SVN_MEMBUF__NZERO(membuf, size);
+}
+
 static APR_INLINE svn_boolean_t
 string_compare(const char *str1,
                const char *str2,
@@ -257,28 +361,6 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 
 /* svn_stringbuf functions */
 
-/* Create a stringbuf referring to (not copying) an existing block of memory
- * at DATA, of which SIZE bytes are the user data and BLOCKSIZE bytes are
- * allocated in total.  DATA[SIZE] must be a zero byte. */
-static svn_stringbuf_t *
-create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
-                 apr_pool_t *pool)
-{
-  svn_stringbuf_t *new_string;
-
-  new_string = apr_palloc(pool, sizeof(*new_string));
-
-  SVN_ERR_ASSERT_NO_RETURN(size < blocksize);
-  SVN_ERR_ASSERT_NO_RETURN(data[size] == '\0');
-
-  new_string->data = data;
-  new_string->len = size;
-  new_string->blocksize = blocksize;
-  new_string->pool = pool;
-
-  return new_string;
-}
-
 svn_stringbuf_t *
 svn_stringbuf_create_empty(apr_pool_t *pool)
 {
@@ -291,24 +373,17 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
   void *mem;
   svn_stringbuf_t *new_string;
 
-  /* apr_palloc will allocate multiples of 8.
-   * Thus, we would waste some of that memory if we stuck to the
-   * smaller size. Note that this is safe even if apr_palloc would
-   * use some other aligment or none at all. */
-
   ++blocksize; /* + space for '\0' */
-  blocksize = APR_ALIGN_DEFAULT(blocksize);
 
   /* Allocate memory for svn_string_t and data in one chunk. */
-  mem = apr_palloc(pool, sizeof(*new_string) + blocksize);
+  membuf_create(&mem, &blocksize, blocksize + sizeof(*new_string), pool);
 
   /* Initialize header and string */
   new_string = mem;
-
   new_string->data = (char*)mem + sizeof(*new_string);
   new_string->data[0] = '\0';
   new_string->len = 0;
-  new_string->blocksize = blocksize;
+  new_string->blocksize = blocksize - sizeof(*new_string);
   new_string->pool = pool;
 
   return new_string;
@@ -349,9 +424,15 @@ svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
 {
   char *data = apr_pvsprintf(pool, fmt, ap);
   apr_size_t size = strlen(data);
+  svn_stringbuf_t *new_string;
 
-  /* wrap an svn_stringbuf_t around the new data */
-  return create_stringbuf(data, size, size + 1, pool);
+  new_string = apr_palloc(pool, sizeof(*new_string));
+  new_string->data = data;
+  new_string->len = size;
+  new_string->blocksize = size + 1;
+  new_string->pool = pool;
+
+  return new_string;
 }
 
 
@@ -416,49 +497,18 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str)
 
 
 void
-svn_stringbuf__reserve(svn_stringbuf_t *str, apr_size_t minimum_size)
-{
-  /* Keep doubling capacity until have enough. */
-  if (str->blocksize < minimum_size)
-    {
-      if (str->blocksize == 0)
-        /* APR will increase odd allocation sizes to the next
-         * multiple for 8, for instance. Take advantage of that
-         * knowledge and allow for the extra size to be used. */
-        str->blocksize = APR_ALIGN_DEFAULT(minimum_size);
-      else
-        while (str->blocksize < minimum_size)
-          {
-            /* str->blocksize is aligned;
-             * doubling it should keep it aligned */
-            apr_size_t prev_size = str->blocksize;
-            str->blocksize *= 2;
-
-            /* check for apr_size_t overflow */
-            if (prev_size > str->blocksize)
-              {
-                str->blocksize = minimum_size;
-                break;
-              }
-          }
-
-      str->data = apr_palloc(str->pool, str->blocksize);
-      /* Note that we do not touch str->len. It's up to the caller to
-         reset it, or copy the old data, or do whatever magic it
-         wants. */
-    }
-}
-
-void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 {
-  const char *old_data = str->data;
+  void *mem = NULL;
+  ++minimum_size;  /* + space for '\0' */
 
-  /* Reserve space for the required size and don't forget the '\0' */
-  svn_stringbuf__reserve(str, minimum_size + 1);
-
-  /* Copy the data. We need to maintain (and thus copy) the trailing nul */
-  memcpy(str->data, old_data, str->len + 1);
+  membuf_ensure(&mem, &str->blocksize, minimum_size, str->pool);
+  if (mem && mem != str->data)
+    {
+      if (str->data)
+        memcpy(mem, str->data, str->len + 1);
+      str->data = mem;
+    }
 }
 
 
@@ -1116,3 +1166,108 @@ svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
   return apr_pstrdup(pool, buffer);
 }
 
+unsigned int
+svn_cstring__similarity(const char *stra, const char *strb,
+                        svn_membuf_t *buffer, apr_size_t *rlcs)
+{
+  svn_string_t stringa, stringb;
+  stringa.data = stra;
+  stringa.len = strlen(stra);
+  stringb.data = strb;
+  stringb.len = strlen(strb);
+  return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
+}
+
+unsigned int
+svn_string__similarity(const svn_string_t *stringa,
+                       const svn_string_t *stringb,
+                       svn_membuf_t *buffer, apr_size_t *rlcs)
+{
+  const char *stra = stringa->data;
+  const char *strb = stringb->data;
+  const apr_size_t lena = stringa->len;
+  const apr_size_t lenb = stringb->len;
+  const apr_size_t total = lena + lenb;
+  const char *enda = stra + lena;
+  const char *endb = strb + lenb;
+  apr_size_t lcs = 0;
+
+  /* Skip the common prefix ... */
+  while (stra < enda && strb < endb && *stra == *strb)
+    {
+      ++stra; ++strb;
+      ++lcs;
+    }
+
+  /* ... and the common suffix */
+  while (stra < enda && strb < endb)
+    {
+      --enda; --endb;
+      if (*enda != *endb)
+        {
+          ++enda; ++endb;
+          break;
+        }
+
+      ++lcs;
+    }
+
+  if (stra < enda && strb < endb)
+    {
+      const apr_size_t resta = enda - stra;
+      const apr_size_t restb = endb - strb;
+      const apr_size_t slots = (resta > restb ? restb : resta);
+      apr_size_t *curr, *prev;
+      const char *pstr;
+
+      /* The outer loop must iterate on the longer string. */
+      if (resta < restb)
+        {
+          pstr = stra;
+          stra = strb;
+          strb = pstr;
+
+          pstr = enda;
+          enda = endb;
+          endb = pstr;
+        }
+
+      /* Allocate two columns in the LCS matrix
+         ### Optimize this to (slots + 2) instesd of 2 * (slots + 1) */
+      svn_membuf__ensure(buffer, 2 * (slots + 1) * sizeof(apr_size_t));
+      svn_membuf__nzero(buffer, (slots + 2) * sizeof(apr_size_t));
+      prev = buffer->data;
+      curr = prev + slots + 1;
+
+      /* Calculate LCS length of the remainder */
+      for (pstr = stra; pstr < enda; ++pstr)
+        {
+          int i;
+          for (i = 1; i <= slots; ++i)
+            {
+              if (*pstr == strb[i-1])
+                curr[i] = prev[i-1] + 1;
+              else
+                curr[i] = (curr[i-1] > prev[i] ? curr[i-1] : prev[i]);
+            }
+
+          /* Swap the buffers, making the previous one current */
+          {
+            apr_size_t *const temp = prev;
+            prev = curr;
+            curr = temp;
+          }
+        }
+
+      lcs += prev[slots];
+    }
+
+  if (rlcs)
+    *rlcs = lcs;
+
+  /* Return similarity ratio rounded to 4 significant digits */
+  if (total)
+    return(unsigned int)((2000 * lcs + total/2) / total);
+  else
+    return 1000;
+}

@@ -886,6 +886,14 @@ def text_base_path(file_path):
 
   raise svntest.Failure("No pristine text for " + relpath)
 
+def sqlite_stmt(wc_root_path, stmt):
+  """Execute STMT on the SQLite wc.db in WC_ROOT_PATH and return the
+     results."""
+
+  db = open_wc_db(wc_root_path)[0]
+  c = db.cursor()
+  c.execute(stmt)
+  return c.fetchall()
 
 # ------------
 ### probably toss these at some point. or major rework. or something.

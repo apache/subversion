@@ -2402,7 +2402,17 @@ svn_uri_get_file_url_from_dirent(const char **url,
       *url = apr_pstrcat(pool, "file:", dirent, NULL);
     }
   else
-    *url = apr_pstrcat(pool, "file:///", dirent, NULL);
+    {
+      char *uri = apr_pstrcat(pool, "file:///", dirent, NULL);
+      apr_size_t len = 8 /* strlen("file:///") */ + strlen(dirent);
+
+      /* "C:/" is a canonical dirent on Windows,
+         but "file:///C:/" is not a canonical uri */
+      if (uri[len-1] == '/')
+        uri[len-1] = '\0';
+
+      *url = uri;
+    }
 #endif
 
   return SVN_NO_ERROR;

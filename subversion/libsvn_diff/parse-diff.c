@@ -555,15 +555,11 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       pos = 0;
       SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
 
-      /* Lines starting with a backslash are comments, such as
-       * "\ No newline at end of file". */
+      /* Lines starting with a backslash indicate a missing EOL:
+       * "\ No newline at end of file" or "end of property". */
       if (line->data[0] == '\\')
         {
-          if (in_hunk &&
-              ((!*is_property &&
-                strcmp(line->data, "\\ No newline at end of file") == 0) ||
-               (*is_property &&
-                strcmp(line->data, "\\ No newline at end of property") == 0)))
+          if (in_hunk)
             {
               char eolbuf[2];
               apr_size_t len;

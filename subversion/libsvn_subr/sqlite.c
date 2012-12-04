@@ -108,9 +108,9 @@ struct svn_sqlite__db_t
   apr_pool_t *state_pool;
 
   /* Buffers for SQLite extensoins. */
-  svn_stringbuf_t *sqlext_buf1;
-  svn_stringbuf_t *sqlext_buf2;
-  svn_stringbuf_t *sqlext_buf3;
+  svn_membuf_t sqlext_buf1;
+  svn_membuf_t sqlext_buf2;
+  svn_membuf_t sqlext_buf3;
 };
 
 struct svn_sqlite__stmt_t
@@ -178,7 +178,7 @@ exec_sql2(svn_sqlite__db_t *db, const char *sql, int ignored_err)
   if (sqlite_err != SQLITE_OK && sqlite_err != ignored_err)
     {
       svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
-                                           _("%s, executing statement '%s'"),
+                                           _("sqlite: %s, executing statement '%s'"),
                                            err_msg, sql);
       sqlite3_free(err_msg);
       return err;
@@ -266,8 +266,8 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
     return svn_error_create(SVN_ERR_SQLITE_ERROR,
                             svn_sqlite__reset(stmt),
                             expecting_row
-                              ? _("Expected database row missing")
-                              : _("Extra database row found"));
+                              ? _("sqlite: Expected database row missing")
+                              : _("sqlite: Extra database row found"));
 
   return SVN_NO_ERROR;
 }
@@ -874,7 +874,7 @@ collate_ucs_nfd(void *baton,
   int result;
 
   if (svn_utf__normcmp(key1, len1, key2, len2,
-                       db->sqlext_buf1, db->sqlext_buf2, &result))
+                       &db->sqlext_buf1, &db->sqlext_buf2, &result))
     {
       /* There is really nothing we can do here if an error occurs
          during Unicode normalizetion, and attempting to recover could
@@ -921,16 +921,16 @@ glob_like_ucs_nfd_common(sqlite3_context *context,
     {
       err = svn_utf__glob(pattern, pattern_len, string, string_len,
                           escape, escape_len, sql_like,
-                          db->sqlext_buf1, db->sqlext_buf2, db->sqlext_buf3,
+                          &db->sqlext_buf1, &db->sqlext_buf2, &db->sqlext_buf3,
                           &match);
 
       if (err)
         {
           const char *errmsg;
-          svn_stringbuf_ensure(db->sqlext_buf1, 511);
+          svn_membuf__ensure(&db->sqlext_buf1, 512);
           errmsg = svn_err_best_message(err,
-                                        db->sqlext_buf1->data,
-                                        db->sqlext_buf1->blocksize);
+                                        db->sqlext_buf1.data,
+                                        db->sqlext_buf1.size - 1);
           svn_error_clear(err);
           sqlite3_result_error(context, errmsg, -1);
           return;
@@ -970,9 +970,9 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
 
   /* Create extension buffers with space for 200 UCS-4 characters. */
-  (*db)->sqlext_buf1 = svn_stringbuf_create_ensure(799, result_pool);
-  (*db)->sqlext_buf2 = svn_stringbuf_create_ensure(799, result_pool);
-  (*db)->sqlext_buf3 = svn_stringbuf_create_ensure(799, result_pool);
+  svn_membuf__create(&(*db)->sqlext_buf1, 800, result_pool);
+  svn_membuf__create(&(*db)->sqlext_buf2, 800, result_pool);
+  svn_membuf__create(&(*db)->sqlext_buf3, 800, result_pool);
 
   /* Register collation and LIKE and GLOB operator replacements. */
   SQLITE_ERR(sqlite3_create_collation((*db)->db3,

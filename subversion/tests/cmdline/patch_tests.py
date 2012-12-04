@@ -4201,6 +4201,40 @@ def patch_git_with_index_line(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+@XFail()
+def patch_change_symlink_target(sbox):
+  "patch changes symlink target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, '\n'.join([
+    "Index: link",
+    "===================================================================",
+    "--- iota        (revision 1)",
+    "+++ iota        (working copy)",
+    "@@ -1 +1 @@",
+    "-link foo",
+    "\\ No newline at end of file",
+    "+link bar",
+    "\\ No newline at end of file",
+    "",
+    ]))
+  
+  # r2
+  sbox.simple_add_symlink('target', 'link')
+  sbox.simple_commit()
+
+  expected_output = [
+    'M         %s\n' % sbox.ospath('link'),
+  ]
+
+  # This currently fails.
+  # TODO: when it passes, verify that the on-disk 'link' is correct ---
+  #       symlink to 'bar' (or "link bar" on non-HAVE_SYMLINK platforms)
+  svntest.actions.run_and_verify_svn(None, "U *link", [],
+                                     'patch', patch_file_path, wc_dir)
+
 ########################################################################
 #Run the tests
 
@@ -4246,6 +4280,7 @@ test_list = [ None,
               patch_target_no_eol_at_eof,
               patch_add_and_delete,
               patch_git_with_index_line,
+              patch_change_symlink_target,
             ]
 
 if __name__ == '__main__':

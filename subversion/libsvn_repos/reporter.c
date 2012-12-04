@@ -717,11 +717,13 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
              zero-copy code. */
           if (b->zero_copy_limit > 0 && s_path == NULL)
             {
-              zero_copy_baton_t baton = { b->zero_copy_limit
-                                        , dhandler
-                                        , dbaton
-                                        , FALSE};
+              zero_copy_baton_t baton;
               svn_boolean_t called = FALSE;
+
+              baton.zero_copy_limit = b->zero_copy_limit;
+              baton.dhandler = dhandler;
+              baton.dbaton = dbaton;
+              baton.zero_copy_succeeded = FALSE;
               SVN_ERR(svn_fs_try_process_file_contents(&called,
                                                        b->t_root, t_path,
                                                        send_zero_copy_delta,

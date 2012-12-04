@@ -79,8 +79,9 @@ typedef struct import_ctx_t
   /* Collection of all possible configuration file dictated auto-props and
      svn:auto-props.  A hash mapping const char * file patterns to a
      second hash which maps const char * property names to const char *
-     property values.  Properties which don't have a value, e.g. svn:executable,
-     simply map the property name to an empty string. */
+     property values.  Properties which don't have a value, e.g.
+     svn:executable, simply map the property name to an empty string.
+     May be NULL if autoprops are disabled. */
   apr_hash_t *autoprops;
 } import_ctx_t;
 
@@ -287,7 +288,7 @@ import_file(const svn_delta_editor_t *editor,
 
 /* Return in CHILDREN a mapping of basenames to dirents for the importable
  * children of DIR_ABSPATH.  EXCLUDES is a hash of absolute paths to filter
- * out.  IGNORES and MANDATORY_IGNORES, if non-NULL, are lists of basename
+ * out.  IGNORES and GLOBAL_IGNORES, if non-NULL, are lists of basename
  * patterns to filter out.
  * FILTER_CALLBACK and FILTER_BATON will be called for each absolute path,
  * allowing users to further filter the list of returned entries.
@@ -298,7 +299,7 @@ get_filtered_children(apr_hash_t **children,
                       const char *dir_abspath,
                       apr_hash_t *excludes,
                       apr_array_header_t *ignores,
-                      apr_array_header_t *mandatory_ignores,
+                      apr_array_header_t *global_ignores,
                       svn_client_import_filter_func_t filter_callback,
                       void *filter_baton,
                       svn_client_ctx_t *ctx,
@@ -359,7 +360,8 @@ get_filtered_children(apr_hash_t **children,
           continue;
         }
 
-      if (svn_wc_match_ignore_list(base_name, mandatory_ignores, iterpool))
+      if (global_ignores &&
+          svn_wc_match_ignore_list(base_name, global_ignores, iterpool))
         {
           apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
           continue;
@@ -392,8 +394,9 @@ import_dir(const svn_delta_editor_t *editor,
            const char *edit_path,
            svn_depth_t depth,
            apr_hash_t *excludes,
-           apr_array_header_t *mandatory_ignores,
+           apr_array_header_t *global_ignores,
            svn_boolean_t no_ignore,
+           svn_boolean_t no_autoprops,
            svn_boolean_t ignore_unknown_node_types,
            svn_client_import_filter_func_t filter_callback,
            void *filter_baton,
@@ -412,8 +415,9 @@ import_children(const char *dir_abspath,
                 void *dir_baton,
                 svn_depth_t depth,
                 apr_hash_t *excludes,
-                apr_array_header_t *mandatory_ignores,
+                apr_array_header_t *global_ignores,
                 svn_boolean_t no_ignore,
+                svn_boolean_t no_autoprops,
                 svn_boolean_t ignore_unknown_node_types,
                 svn_client_import_filter_func_t filter_callback,
                 void *filter_baton,
@@ -455,7 +459,7 @@ import_children(const char *dir_abspath,
 
           SVN_ERR(import_dir(editor, dir_baton, this_abspath,
                              this_edit_path, depth_below_here, excludes,
-                             mandatory_ignores, no_ignore,
+                             global_ignores, no_ignore, no_autoprops,
                              ignore_unknown_node_types, filter_callback,
                              filter_baton, import_ctx, ctx, iterpool));
         }
@@ -508,7 +512,7 @@ import_children(const char *dir_abspath,
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
  * the import (values are unused).
  *
- * MANDATORY_IGNORES is an array of const char * ignore patterns.  Any child
+ * GLOBAL_IGNORES is an array of const char * ignore patterns.  Any child
  * of LOCAL_ABSPATH which matches one or more of the patterns is not imported.
  *
  * If NO_IGNORE is FALSE, don't import files or directories that match
@@ -528,8 +532,9 @@ import_dir(const svn_delta_editor_t *editor,
            const char *edit_path,
            svn_depth_t depth,
            apr_hash_t *excludes,
-           apr_array_header_t *mandatory_ignores,
+           apr_array_header_t *global_ignores,
            svn_boolean_t no_ignore,
+           svn_boolean_t no_autoprops,
            svn_boolean_t ignore_unknown_node_types,
            svn_client_import_filter_func_t filter_callback,
            void *filter_baton,
@@ -538,16 +543,11 @@ import_dir(const svn_delta_editor_t *editor,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
-  apr_array_header_t *ignores = NULL;
   void *this_dir_baton;
 
   SVN_ERR(svn_path_check_valid(local_abspath, pool));
-
-  if (!no_ignore)
-    SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-
-  SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes, ignores,
-                                mandatory_ignores, filter_callback,
+  SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes, NULL,
+                                global_ignores, filter_callback,
                                 filter_baton, ctx, pool, pool));
 
   /* Import this directory, but not yet its children. */
@@ -578,8 +578,8 @@ import_dir(const svn_delta_editor_t *editor,
 
   /* Now import the children recursively. */
   SVN_ERR(import_children(local_abspath, edit_path, dirents, editor,
-                          this_dir_baton, depth, excludes, mandatory_ignores,
-                          no_ignore, ignore_unknown_node_types,
+                          this_dir_baton, depth, excludes, global_ignores,
+                          no_ignore, no_autoprops, ignore_unknown_node_types,
                           filter_callback, filter_baton,
                           import_ctx, ctx, pool));
 
@@ -621,7 +621,7 @@ import_dir(const svn_delta_editor_t *editor,
  * repository target and thus dictates which immediate children of that
  * target should be ignored and not imported.
  *
- * MANDATORY_IGNORES is an array of const char * ignore patterns which
+ * GLOBAL_IGNORES is an array of const char * ignore patterns which
  * correspond to the svn:global-ignores properties (if any) set on
  * the root of the repository target or inherited by it.
  *
@@ -647,8 +647,9 @@ import(const char *local_abspath,
        apr_hash_t *excludes,
        apr_hash_t *autoprops,
        apr_array_header_t *local_ignores,
-       apr_array_header_t *mandatory_ignores,
+       apr_array_header_t *global_ignores,
        svn_boolean_t no_ignore,
+       svn_boolean_t no_autoprops,
        svn_boolean_t ignore_unknown_node_types,
        svn_client_import_filter_func_t filter_callback,
        void *filter_baton,
@@ -656,7 +657,6 @@ import(const char *local_abspath,
        apr_pool_t *pool)
 {
   void *root_baton;
-  apr_array_header_t *ignores = NULL;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
@@ -724,12 +724,10 @@ import(const char *local_abspath,
       svn_boolean_t ignores_match = FALSE;
 
       if (!no_ignore)
-        {
-          SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match =
-            (svn_wc_match_ignore_list(local_abspath, ignores, pool)
-             || svn_wc_match_ignore_list(local_abspath, local_ignores, pool));
-        }
+        ignores_match =
+          (svn_wc_match_ignore_list(local_abspath, global_ignores, pool)
+           || svn_wc_match_ignore_list(local_abspath, local_ignores, pool));
+
       if (!ignores_match)
         SVN_ERR(import_file(editor, root_baton, local_abspath, edit_path,
                             dirent, import_ctx, ctx, pool));
@@ -738,38 +736,21 @@ import(const char *local_abspath,
     {
       apr_hash_t *dirents;
 
-      if (!no_ignore)
-        {
-          int i;
-
-          SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-
-          /* If we are not creating new repository paths, then we are creating
-             importing new paths to an existing directory.  If that directory
-             has the svn:ignore property set on it, then we want to ignore
-             immediate children that match the pattern(s) defined by that
-             property. */
-          if (!new_entries->nelts)
-            {
-              for (i = 0; i < local_ignores->nelts; i++)
-                {
-                  const char *ignore = APR_ARRAY_IDX(local_ignores, i,
-                                                     const char *);
-                  APR_ARRAY_PUSH(ignores, const char *) = ignore;
-                }          
-            }
-        }
+      /* If we are creating a new repository directory path to import to,
+         then we disregard any svn:ignore property. */
+      if (!no_ignore && new_entries->nelts)
+        local_ignores = NULL;
 
       SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes,
-                                    ignores, mandatory_ignores,
+                                    local_ignores, global_ignores,
                                     filter_callback, filter_baton, ctx,
                                     pool, pool));
 
       SVN_ERR(import_children(local_abspath, edit_path, dirents, editor,
-                              root_baton, depth, excludes, mandatory_ignores,
-                              no_ignore, ignore_unknown_node_types,
-                              filter_callback, filter_baton,
-                              import_ctx, ctx, pool));
+                              root_baton, depth, excludes, global_ignores,
+                              no_ignore, no_autoprops,
+                              ignore_unknown_node_types, filter_callback,
+                              filter_baton, import_ctx, ctx, pool));
 
     }
   else if (dirent->kind == svn_node_none
@@ -890,6 +871,7 @@ svn_client_import5(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t no_autoprops,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
                    svn_client_import_filter_func_t filter_callback,
@@ -913,9 +895,8 @@ svn_client_import5(const char *path,
   const char *dir;
   apr_hash_t *commit_revprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *autoprops;
-  apr_array_header_t *mandatory_ignores;
-  svn_opt_revision_t rev;
+  apr_hash_t *autoprops = NULL;
+  apr_array_header_t *global_ignores;
   apr_hash_t *local_ignores_hash;
   apr_array_header_t *local_ignores_arr;
 
@@ -1031,24 +1012,41 @@ svn_client_import5(const char *path,
 
   /* Get inherited svn:auto-props, svn:global-ignores, and
      svn:ignores for the location we are importing to. */
-  SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
-                                         scratch_pool, iterpool));
-  SVN_ERR(svn_client__get_inherited_ignores(&mandatory_ignores, url,
-                                            ctx, scratch_pool, iterpool));
-  rev.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client_propget5(&local_ignores_hash, NULL, SVN_PROP_IGNORE, url,
-                              &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                              scratch_pool, scratch_pool));
-  local_ignores_arr = apr_array_make(scratch_pool, 1, sizeof(const char *));
-
-  if (apr_hash_count(local_ignores_hash))
+  if (!no_autoprops)
+    SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
+                                           scratch_pool, iterpool));
+  if (no_ignore)
     {
-      svn_string_t *propval = apr_hash_get(local_ignores_hash, url,
-                                           APR_HASH_KEY_STRING);
-      if (propval)
+      global_ignores = NULL;
+      local_ignores_arr = NULL;
+    }
+  else
+    {
+      svn_opt_revision_t rev;
+      apr_array_header_t *config_ignores;
+
+      SVN_ERR(svn_client__get_inherited_ignores(&global_ignores, url, ctx,
+                                                scratch_pool, iterpool));
+      SVN_ERR(svn_wc_get_default_ignores(&config_ignores, ctx->config,
+                                         scratch_pool));
+      global_ignores = apr_array_append(scratch_pool, global_ignores,
+                                        config_ignores);
+
+      rev.kind = svn_opt_revision_head;
+      SVN_ERR(svn_client_propget5(&local_ignores_hash, NULL, SVN_PROP_IGNORE, url,
+                                  &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
+                                  scratch_pool, scratch_pool));
+      local_ignores_arr = apr_array_make(scratch_pool, 1, sizeof(const char *));
+
+      if (apr_hash_count(local_ignores_hash))
         {
-          svn_cstring_split_append(local_ignores_arr, propval->data,
-                                   "\n\r\t\v ", FALSE, scratch_pool);
+          svn_string_t *propval = apr_hash_get(local_ignores_hash, url,
+                                               APR_HASH_KEY_STRING);
+          if (propval)
+            {
+              svn_cstring_split_append(local_ignores_arr, propval->data,
+                                       "\n\r\t\v ", FALSE, scratch_pool);
+            }
         }
     }
 
@@ -1056,11 +1054,13 @@ svn_client_import5(const char *path,
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import(local_abspath, new_entries, editor, edit_baton,
                     depth, excludes, autoprops, local_ignores_arr,
-                    mandatory_ignores, no_ignore, ignore_unknown_node_types,
-                    filter_callback, filter_baton, ctx, iterpool)))
+                    global_ignores, no_ignore, no_autoprops,
+                    ignore_unknown_node_types, filter_callback,
+                    filter_baton, ctx, iterpool)))
     {
-      svn_error_clear(editor->abort_edit(edit_baton, iterpool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                    err,
+                    editor->abort_edit(edit_baton, iterpool));
     }
 
   svn_pool_destroy(iterpool);

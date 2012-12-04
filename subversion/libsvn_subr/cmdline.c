@@ -52,6 +52,9 @@
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
+#include "svn_sorts.h"
+#include "svn_props.h"
+#include "svn_subst.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
@@ -757,4 +760,166 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
     }
 
   return SVN_NO_ERROR;
+}
+
+/* Return a copy, allocated in POOL, of the next line of text from *STR
+ * up to and including a CR and/or an LF. Change *STR to point to the
+ * remainder of the string after the returned part. If there are no
+ * characters to be returned, return NULL; never return an empty string.
+ */
+static const char *
+next_line(const char **str, apr_pool_t *pool)
+{
+  const char *start = *str;
+  const char *p = *str;
+
+  /* n.b. Throughout this fn, we never read any character after a '\0'. */
+  /* Skip over all non-EOL characters, if any. */
+  while (*p != '\r' && *p != '\n' && *p != '\0')
+    p++;
+  /* Skip over \r\n or \n\r or \r or \n, if any. */
+  if (*p == '\r' || *p == '\n')
+    {
+      char c = *p++;
+
+      if ((c == '\r' && *p == '\n') || (c == '\n' && *p == '\r'))
+        p++;
+    }
+
+  /* Now p points after at most one '\n' and/or '\r'. */
+  *str = p;
+
+  if (p == start)
+    return NULL;
+
+  return svn_string_ncreate(start, p - start, pool)->data;
+}
+
+const char *
+svn_cmdline__indent_string(const char *str,
+                           const char *indent,
+                           apr_pool_t *pool)
+{
+  svn_stringbuf_t *out = svn_stringbuf_create_empty(pool);
+  const char *line;
+
+  while ((line = next_line(&str, pool)))
+    {
+      svn_stringbuf_appendcstr(out, indent);
+      svn_stringbuf_appendcstr(out, line);
+    }
+  return out->data;
+}
+
+svn_error_t *
+svn_cmdline__print_prop_hash(svn_stream_t *out,
+                             apr_hash_t *prop_hash,
+                             svn_boolean_t names_only,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *sorted_props;
+  int i;
+
+  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
+                                pool);
+  for (i = 0; i < sorted_props->nelts; i++)
+    {
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *pname = item.key;
+      svn_string_t *propval = item.value;
+      const char *pname_stdout;
+
+      if (svn_prop_needs_translation(pname))
+        SVN_ERR(svn_subst_detranslate_string(&propval, propval,
+                                             TRUE, pool));
+
+      SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
+
+      if (out)
+        {
+          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout);
+          SVN_ERR(svn_subst_translate_cstring2(pname_stdout, &pname_stdout,
+                                              APR_EOL_STR,  /* 'native' eol */
+                                              FALSE, /* no repair */
+                                              NULL,  /* no keywords */
+                                              FALSE, /* no expansion */
+                                              pool));
+
+          SVN_ERR(svn_stream_puts(out, pname_stdout));
+        }
+      else
+        {
+          /* ### We leave these printfs for now, since if propval wasn't
+             translated above, we don't know anything about its encoding.
+             In fact, it might be binary data... */
+          printf("  %s\n", pname_stdout);
+        }
+
+      if (!names_only)
+        {
+          /* Add an extra newline to the value before indenting, so that
+           * every line of output has the indentation whether the value
+           * already ended in a newline or not. */
+          const char *newval = apr_psprintf(pool, "%s\n", propval->data);
+          const char *indented_newval = svn_cmdline__indent_string(newval,
+                                                                   "    ",
+                                                                   pool);
+          if (out)
+            {
+              SVN_ERR(svn_stream_puts(out, indented_newval));
+            }
+          else
+            {
+              printf("%s", indented_newval);
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                                 apr_hash_t *prop_hash,
+                                 svn_boolean_t names_only,
+                                 svn_boolean_t inherited_props,
+                                 apr_pool_t *pool)
+{
+  apr_array_header_t *sorted_props;
+  int i;
+
+  if (*outstr == NULL)
+    *outstr = svn_stringbuf_create_empty(pool);
+
+  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
+                                pool);
+  for (i = 0; i < sorted_props->nelts; i++)
+    {
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *pname = item.key;
+      svn_string_t *propval = item.value;
+
+      if (names_only)
+        {
+          svn_xml_make_open_tag(
+            outstr, pool, svn_xml_self_closing,
+            inherited_props ? "inherited_property" : "property",
+            "name", pname, NULL);
+        }
+      else
+        {
+          const char *pname_out;
+
+          if (svn_prop_needs_translation(pname))
+            SVN_ERR(svn_subst_detranslate_string(&propval, propval,
+                                                 TRUE, pool));
+
+          SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_out, pname, pool));
+
+          svn_cmdline__print_xml_prop(outstr, pname_out, propval,
+                                      inherited_props, pool);
+        }
+    }
+
+    return SVN_NO_ERROR;
 }

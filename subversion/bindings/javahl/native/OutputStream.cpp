@@ -95,9 +95,7 @@ svn_error_t *OutputStream::write(void *baton, const char *buffer,
     }
 
   // convert the data to a Java byte array
-  jbyteArray data = JNIUtil::makeJByteArray
-                       (reinterpret_cast<const signed char*>(buffer),
-                        static_cast<int>(*len));
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 

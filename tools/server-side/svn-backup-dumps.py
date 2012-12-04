@@ -686,7 +686,7 @@ if __name__ == "__main__":
         print("Everything OK.")
         sys.exit(0)
     else:
-        print("An error occured!")
+        print("An error occurred!")
         sys.exit(1)
 
 # vim:et:ts=4:sw=4

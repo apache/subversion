@@ -147,6 +147,7 @@ print_properties_xml(const char *pname,
    All other arguments are as per print_properties. */
 static svn_error_t *
 print_single_prop(svn_string_t *propval,
+                  const char *target_abspath_or_url,
                   const char *abspath_or_URL,
                   const char *wc_path_prefix,
                   svn_stream_t *out,
@@ -171,9 +172,24 @@ print_single_prop(svn_string_t *propval,
       /* In verbose mode, print exactly same as "proplist" does;
        * otherwise, print a brief header. */
       if (inherited_property)
-        header = apr_psprintf(scratch_pool, like_proplist
-                              ? _("Properties inherited from '%s':\n")
-                              : "%s - ", abspath_or_URL);
+        {
+          if (like_proplist)
+            {
+              if (! svn_path_is_url(target_abspath_or_url))
+                target_abspath_or_url =
+                  svn_cl__local_style_skip_ancestor(wc_path_prefix,
+                                                    target_abspath_or_url,
+                                                    scratch_pool);
+              header = apr_psprintf(
+                scratch_pool,
+                _("Inherited properties on '%s',\nfrom '%s':\n"),
+                target_abspath_or_url, abspath_or_URL);
+            }
+          else
+            {
+              header = apr_psprintf(scratch_pool, "%s - ", abspath_or_URL);
+            }
+        }
       else
         header = apr_psprintf(scratch_pool, like_proplist
                               ? _("Properties on '%s':\n")
@@ -194,7 +210,7 @@ print_single_prop(svn_string_t *propval,
       apr_hash_t *hash = apr_hash_make(scratch_pool);
 
       apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-      SVN_ERR(svn_cl__print_prop_hash(out, hash, FALSE, scratch_pool));
+      SVN_ERR(svn_cmdline__print_prop_hash(out, hash, FALSE, scratch_pool));
     }
   else
     {
@@ -218,6 +234,8 @@ print_single_prop(svn_string_t *propval,
    value.  INHERITED_PROPS is a depth-first ordered array of
    svn_prop_inherited_item_t * structures.
 
+   TARGET_ABSPATH_OR_URL is the path which inherits INHERITED_PROPS.
+
    PROPS may be an empty hash, but is never null.  INHERITED_PROPS may be
    null.
 
@@ -234,6 +252,7 @@ print_single_prop(svn_string_t *propval,
    like "svn proplist -v" does. */
 static svn_error_t *
 print_properties(svn_stream_t *out,
+                 const char *target_abspath_or_url,
                  const char *pname_utf8,
                  apr_hash_t *props,
                  apr_array_header_t *inherited_props,
@@ -259,7 +278,7 @@ print_properties(svn_stream_t *out,
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
           svn_string_t *propval = svn__apr_hash_index_val(apr_hash_first(pool,
                                                           iprop->prop_hash));
-          SVN_ERR(print_single_prop(propval,
+          SVN_ERR(print_single_prop(propval, target_abspath_or_url,
                                     iprop->path_or_url,
                                     path_prefix, out, pname_utf8,
                                     print_filenames, omit_newline,
@@ -276,8 +295,8 @@ print_properties(svn_stream_t *out,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(print_single_prop(propval, filename, path_prefix,
-                                out, pname_utf8, print_filenames,
+      SVN_ERR(print_single_prop(propval, target_abspath_or_url, filename,
+                                path_prefix, out, pname_utf8, print_filenames,
                                 omit_newline, like_proplist, FALSE,
                                 iterpool));
     }
@@ -443,7 +462,8 @@ svn_cl__propget(apr_getopt_t *os,
           print_filenames = ((opt_state->depth > svn_depth_empty
                               || targets->nelts > 1
                               || apr_hash_count(props) > 1
-                              || opt_state->verbose)
+                              || opt_state->verbose
+                              || opt_state->show_inherited_props)
                              && (! opt_state->strict));
           omit_newline = opt_state->strict;
           like_proplist = opt_state->verbose && !opt_state->strict;
@@ -455,7 +475,7 @@ svn_cl__propget(apr_getopt_t *os,
               subpool));
           else
             SVN_ERR(print_properties(
-              out, pname_utf8,
+              out, truepath, pname_utf8,
               props,
               opt_state->show_inherited_props ? inherited_props : NULL,
               print_filenames,

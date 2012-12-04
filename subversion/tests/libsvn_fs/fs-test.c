@@ -3533,7 +3533,8 @@ static int my_rand(apr_uint64_t scalar, apr_uint32_t *seed)
 {
   static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
   /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
-  return (int)(((double)svn_test_rand(seed)
+  apr_uint32_t r = svn_test_rand(seed);
+  return (int)(((double)r
                 / ((double)TEST_RAND_MAX+1.0))
                * (double)scalar);
 }
@@ -4895,6 +4896,36 @@ node_history(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_fs_delete_fs(). */
+static svn_error_t *
+delete_fs(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  const char *path;
+  svn_node_kind_t kind;
+
+  /* We have to use a subpool to close the svn_fs_t before calling
+     svn_fs_delete_fs.  See issue 4264. */
+  {
+    svn_fs_t *fs;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(svn_test__create_fs(&fs, "test-repo-delete-fs", opts, subpool));
+    path = svn_fs_path(fs, pool);
+    svn_pool_destroy(subpool);
+  }
+
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind != svn_node_none);
+  SVN_ERR(svn_fs_delete_fs(path, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
+  /* Recreate dir so that test cleanup doesn't fail. */
+  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ------------------------------------------------------------------------ */
@@ -4978,5 +5009,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "create and modify small file"),
     SVN_TEST_OPTS_PASS(node_history,
                        "test svn_fs_node_history"),
+    SVN_TEST_OPTS_PASS(delete_fs,
+                       "test svn_fs_delete_fs"),
     SVN_TEST_NULL
   };

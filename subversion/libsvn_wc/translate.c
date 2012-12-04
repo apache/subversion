@@ -409,8 +409,8 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
          set the file read_only just yet.  That happens upon commit. */
       apr_hash_t *pristine_props;
 
-      SVN_ERR(svn_wc__get_pristine_props(&pristine_props, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
+                                             scratch_pool, scratch_pool));
 
       if (pristine_props
             && apr_hash_get(pristine_props,

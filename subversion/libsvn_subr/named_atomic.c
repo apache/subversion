@@ -80,12 +80,12 @@
 /* Particle that will be appended to the namespace name to form the
  * name of the mutex / lock file used for that namespace.
  */
-#define MUTEX_NAME_SUFFIX "Mutex"
+#define MUTEX_NAME_SUFFIX ".mutex"
 
 /* Particle that will be appended to the namespace name to form the
  * name of the shared memory file that backs that namespace.
  */
-#define SHM_NAME_SUFFIX "Shm"
+#define SHM_NAME_SUFFIX ".shm"
 
 /* Platform-dependent implementations of our basic atomic operations.
  * NA_SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
@@ -162,9 +162,11 @@ synched_cmpxchg(volatile apr_int64_t *mem,
 }
 
 #define NA_SYNCHRONIZE(_atomic,op)\
+  do{\
   SVN_ERR(lock(_atomic->mutex));\
   op;\
-  SVN_ERR(unlock(_atomic->mutex,SVN_NO_ERROR));
+  SVN_ERR(unlock(_atomic->mutex,SVN_NO_ERROR));\
+  }while(0)
 
 #define NA_SYNCHRONIZE_IS_FAST FALSE
 
@@ -238,6 +240,7 @@ struct svn_atomic_namespace__t
 /* On most operating systems APR implements file locks per process, not
  * per file. I.e. the lock file will only sync. among processes but within
  * a process, we must use a mutex to sync the threads. */
+/* Compare ../libsvn_fs_fs/fs.h:SVN_FS_FS__USE_LOCK_MUTEX */
 #if APR_HAS_THREADS && !defined(WIN32)
 #define USE_THREAD_MUTEX 1
 #else
@@ -305,7 +308,7 @@ delete_lock_file(void *arg)
   const char *lock_name = NULL;
 
   /* locks have already been cleaned up. Simply close the file */
-  apr_file_close(mutex->lock_file);
+  apr_status_t status = apr_file_close(mutex->lock_file);
 
   /* Remove the file from disk. This will fail if there ares still other
    * users of this lock file, i.e. namespace. */
@@ -313,10 +316,12 @@ delete_lock_file(void *arg)
   if (lock_name)
     apr_file_remove(lock_name, mutex->pool);
 
-  return 0;
+  return status;
 }
 
-/* Validate the ATOMIC parameter, i.e it's address.
+/* Validate the ATOMIC parameter, i.e it's address.  Correct code will
+ * never need this but if someone should accidentally to use a NULL or
+ * incomplete structure, let's catch that here instead of segfaulting.
  */
 static svn_error_t *
 validate(svn_named_atomic__t *atomic)
@@ -413,7 +418,9 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                            APR_OS_DEFAULT,
                            result_pool));
 
-  /* Make sure the last user of our lock file will actually remove it
+  /* Make sure the last user of our lock file will actually remove it.
+   * Please note that only the last file handle begin closed will actually
+   * remove the underlying file (see docstring for apr_file_remove).
    */
   apr_pool_cleanup_register(result_pool, &new_ns->mutex,
                             delete_lock_file,

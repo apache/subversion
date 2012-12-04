@@ -5523,6 +5523,16 @@ def update_to_HEAD_plus_1(sbox):
                                         None, None,
                                         None, None, None, wc_dir, '-r', '2')
 
+  other_wc = sbox.add_wc_path('other')
+  other_url = sbox.repo_url + '/A'
+  svntest.actions.run_and_verify_svn("subtree checkout", None, [],
+                                     'co', other_url, other_wc)
+  svntest.actions.run_and_verify_update(other_wc,
+                                        None, None, None,
+                                        "E160006.*No such.*revision",
+                                        None, None,
+                                        None, None, None, other_wc, '-r', '2')
+
 @XFail()
 def update_moved_dir_leaf_del(sbox):
   "update locally moved dir with leaf del"
@@ -5735,6 +5745,7 @@ def update_moved_dir_file_move(sbox):
                                         None, None, 1)
 
 @XFail()
+@Issue(3144,3630)
 def update_move_text_mod(sbox):
   "text mod to moved files"
 
@@ -5784,6 +5795,7 @@ def update_move_text_mod(sbox):
                                         None, None, 1)
 
 @XFail()
+@Issue(3144,3630)
 def update_nested_move_text_mod(sbox):
   "text mod to moved file in moved dir"
 

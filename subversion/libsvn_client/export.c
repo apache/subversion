@@ -677,7 +677,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
+      err = svn_error_compose_create(
+                    err,
+                    svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
   return svn_error_trace(err);
@@ -905,6 +907,47 @@ fetch_base_func(const char **filename,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_editor(const svn_delta_editor_t **export_editor,
+           void **edit_baton,
+           struct edit_baton *eb,
+           svn_client_ctx_t *ctx,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
+{
+  svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+  
+  editor->set_target_revision = set_target_revision;
+  editor->open_root = open_root;
+  editor->add_directory = add_directory;
+  editor->add_file = add_file;
+  editor->apply_textdelta = apply_textdelta;
+  editor->close_file = close_file;
+  editor->change_file_prop = change_file_prop;
+  editor->change_dir_prop = change_dir_prop;
+
+  SVN_ERR(svn_delta_get_cancellation_editor(ctx->cancel_func,
+                                            ctx->cancel_baton,
+                                            editor,
+                                            eb,
+                                            export_editor,
+                                            edit_baton,
+                                            result_pool));
+
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_baton = eb;
+
+  SVN_ERR(svn_editor__insert_shims(export_editor, edit_baton,
+                                   *export_editor, *edit_baton,
+                                   NULL, NULL, shim_callbacks,
+                                   result_pool, scratch_pool));
+
+   return SVN_NO_ERROR;
+}
 
 
 /*** Public Interfaces ***/
@@ -1042,37 +1085,10 @@ svn_client_export5(svn_revnum_t *result_rev,
           const svn_delta_editor_t *export_editor;
           const svn_ra_reporter3_t *reporter;
           void *report_baton;
-          svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
-          svn_delta_shim_callbacks_t *shim_callbacks =
-                                    svn_delta_shim_callbacks_default(pool);
 
-          editor->set_target_revision = set_target_revision;
-          editor->open_root = open_root;
-          editor->add_directory = add_directory;
-          editor->add_file = add_file;
-          editor->apply_textdelta = apply_textdelta;
-          editor->close_file = close_file;
-          editor->change_file_prop = change_file_prop;
-          editor->change_dir_prop = change_dir_prop;
-
-          SVN_ERR(svn_delta_get_cancellation_editor(ctx->cancel_func,
-                                                    ctx->cancel_baton,
-                                                    editor,
-                                                    eb,
-                                                    &export_editor,
-                                                    &edit_baton,
-                                                    pool));
-
-          shim_callbacks->fetch_kind_func = fetch_kind_func;
-          shim_callbacks->fetch_props_func = fetch_props_func;
-          shim_callbacks->fetch_base_func = fetch_base_func;
-          shim_callbacks->fetch_baton = eb;
-
-          SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
-                                           export_editor, edit_baton,
-                                           NULL, NULL, shim_callbacks,
-                                           pool, pool));
+          SVN_ERR(get_editor(&export_editor, &edit_baton, eb, ctx,
+                             pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,

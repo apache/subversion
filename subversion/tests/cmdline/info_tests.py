@@ -221,6 +221,7 @@ def info_on_added_file(sbox):
   expected = {'Path' : re.escape(new_file),
               'Name' : 'new_file',
               'URL' : '.*/new_file',
+              'Relative URL' : '.*/new_file',
               'Repository Root' : '.*',
               'Node Kind' : 'file',
               'Schedule' : 'add',
@@ -240,6 +241,7 @@ def info_on_added_file(sbox):
                                      'path'     : new_file,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_file'),
+                       ('relative-url', {}, '.*/new_file'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -259,6 +261,7 @@ def info_on_mkdir(sbox):
   # check that we have a Repository Root and Repository UUID
   expected = {'Path' : re.escape(new_dir),
               'URL' : '.*/new_dir',
+              'Relative URL' : '.*/new_dir',
               'Repository Root' : '.*',
               'Node Kind' : 'directory',
               'Schedule' : 'add',
@@ -277,6 +280,7 @@ def info_on_mkdir(sbox):
                                      'path'     : new_dir,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_dir'),
+                       ('relative-url', {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -396,6 +400,7 @@ def info_repos_root_url(sbox):
         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url),
+        'Relative URL'      : '\^/', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'directory',
         'Last Changed Rev'  : '1',
@@ -405,6 +410,7 @@ def info_repos_root_url(sbox):
         'Name'              : 'iota',
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url + '/iota'),
+        'Relative URL'      : '\^/iota', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'file',
         'Last Changed Rev'  : '1',

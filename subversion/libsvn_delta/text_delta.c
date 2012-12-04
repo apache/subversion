@@ -709,6 +709,7 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
         {
         case svn_txdelta_source:
           /* Copy from source area.  */
+          assert(sbuf);
           assert(op->offset + op->length <= window->sview_len);
           fast_memcpy(tbuf + tpos, sbuf + op->offset, buf_len);
           break;

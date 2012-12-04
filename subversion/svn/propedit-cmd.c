@@ -84,6 +84,9 @@ svn_cl__propedit(apr_getopt_t *os,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("'%s' is not a valid Subversion property name"),
                              pname_utf8);
+  if (!opt_state->force)
+    SVN_ERR(svn_cl__check_svn_prop_name(pname_utf8, opt_state->revprop, pool));
+
   if (opt_state->encoding && !svn_prop_needs_translation(pname_utf8))
       return svn_error_create
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,

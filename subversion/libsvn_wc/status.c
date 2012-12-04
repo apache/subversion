@@ -252,14 +252,15 @@ read_info(const struct svn_wc__db_info_t **info,
 {
   struct svn_wc__db_info_t *mtb = apr_pcalloc(result_pool, sizeof(*mtb));
   const svn_checksum_t *checksum;
+  const char *original_repos_relpath;
 
   SVN_ERR(svn_wc__db_read_info(&mtb->status, &mtb->kind,
                                &mtb->revnum, &mtb->repos_relpath,
                                &mtb->repos_root_url, &mtb->repos_uuid,
                                &mtb->changed_rev, &mtb->changed_date,
                                &mtb->changed_author, &mtb->depth,
-                               &checksum, NULL, NULL, NULL, NULL,
-                               NULL, &mtb->lock, &mtb->recorded_size,
+                               &checksum, NULL, &original_repos_relpath, NULL,
+                               NULL, NULL, &mtb->lock, &mtb->recorded_size,
                                &mtb->recorded_mod_time, &mtb->changelist,
                                &mtb->conflicted, &mtb->op_root,
                                &mtb->had_props, &mtb->props_mod,
@@ -358,6 +359,7 @@ read_info(const struct svn_wc__db_info_t **info,
     }
 
   mtb->has_checksum = (checksum != NULL);
+  mtb->copied = (original_repos_relpath != NULL);
 
 #ifdef HAVE_SYMLINK
   if (mtb->kind == svn_kind_file
@@ -676,27 +678,33 @@ assemble_status(svn_wc_status3_t **status,
             override a C text status.*/
       if (info->status == svn_wc__db_status_added)
         {
+          copied = info->copied;
           if (!info->op_root)
-            copied = TRUE; /* And keep status normal */
-          else if (info->kind == svn_kind_file
-                   && !info->have_base && !info->have_more_work)
+            { /* Keep status normal */ }
+          else if (!info->have_base && !info->have_more_work)
             {
               /* Simple addition or copy, no replacement */
               node_status = svn_wc_status_added;
-              /* If an added node has a pristine file, it was copied */
-              copied = info->has_checksum;
             }
           else
             {
-              svn_wc_schedule_t schedule;
-              SVN_ERR(svn_wc__internal_node_get_schedule(&schedule, &copied,
-                                                         db, local_abspath,
-                                                         scratch_pool));
+              svn_wc__db_status_t below_working;
+              svn_boolean_t have_base, have_work;
 
-              if (schedule == svn_wc_schedule_add)
+              SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
+                                                    &below_working,
+                                                    db, local_abspath,
+                                                    scratch_pool));
+
+              /* If the node is not present or deleted (read: not present
+                 in working), then the node is not a replacement */
+              if (below_working != svn_wc__db_status_not_present
+                  && below_working != svn_wc__db_status_deleted)
+                {
+                  node_status = svn_wc_status_replaced;
+                }
+              else
                 node_status = svn_wc_status_added;
-              else if (schedule == svn_wc_schedule_replace)
-                node_status = svn_wc_status_replaced;
             }
 
           /* Get moved-from info (only for potential op-roots of a move). */
@@ -1020,9 +1028,10 @@ collect_ignore_patterns(apr_array_header_t **patterns,
                                      FALSE, result_pool);      
         }
 
-      SVN_ERR(svn_wc__internal_get_iprops(&inherited_props, db, local_abspath,
-                                          SVN_PROP_INHERITABLE_IGNORES,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_inherited_props(&inherited_props,
+                                              db, local_abspath,
+                                              SVN_PROP_INHERITABLE_IGNORES,
+                                              scratch_pool, scratch_pool));
       for (i = 0; i < inherited_props->nelts; i++)
         {
           apr_hash_index_t *hi;

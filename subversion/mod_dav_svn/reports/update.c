@@ -618,12 +618,8 @@ send_propchange(item_baton_t *b,
 {
   const char *qname;
 
-  /* Ensure that the property name is XML-safe.
-     apr_xml_quote_string() doesn't realloc if there is nothing to
-     quote, so dup the name, but only if necessary. */
-  qname = apr_xml_quote_string(b->pool, name, 1);
-  if (qname == name)
-    qname = apr_pstrdup(b->pool, name);
+  /* Ensure that the property name is XML-safe. */
+  qname = apr_xml_quote_string(pool, name, 1);
 
   if (value)
     {

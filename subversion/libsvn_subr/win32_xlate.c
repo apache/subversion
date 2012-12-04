@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+/* prevent "empty compilation unit" warning on e.g. UNIX */
+typedef int win32_xlate__dummy;
+
 #ifdef WIN32
 
 /* Define _WIN32_DCOM for CoInitializeEx(). */

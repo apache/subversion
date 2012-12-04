@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevisionRanges.cpp
+ * @file RevisionRange.cpp
  * @brief Implementation of the class RevisionRange.
  */
 

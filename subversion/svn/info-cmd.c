@@ -102,7 +102,21 @@ print_info_xml(void *baton,
                         "revision", rev_str,
                         NULL);
 
+  /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
+
+  if (info->repos_root_URL)
+    {
+      /* "<relative-url> xx </relative-url>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "relative-url",
+                               apr_pstrcat(pool, "^/",
+                                           svn_path_uri_encode(
+                                               svn_uri_skip_ancestor(
+                                                   info->repos_root_URL,
+                                                   info->URL, pool),
+                                               pool),
+                                           NULL));
+    }
 
   if (info->repos_root_URL || info->repos_UUID)
     {
@@ -307,6 +321,13 @@ print_info(void *baton,
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
+
+  if (info->URL && info->repos_root_URL)
+    SVN_ERR(svn_cmdline_printf(pool, _("Relative URL: ^/%s\n"),
+                               svn_path_uri_encode(
+                                   svn_uri_skip_ancestor(info->repos_root_URL,
+                                                         info->URL, pool),
+                                   pool)));
 
   if (info->repos_root_URL)
     SVN_ERR(svn_cmdline_printf(pool, _("Repository Root: %s\n"),
