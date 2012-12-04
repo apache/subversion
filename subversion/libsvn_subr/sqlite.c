@@ -43,14 +43,12 @@
 #endif
 
 #ifdef SVN_SQLITE_INLINE
-/* Include sqlite3 inline, making all symbols private. */
-  #define SQLITE_API static
-  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-    #pragma GCC diagnostic ignored "-Wunused-function"
-  #endif
-  #include <sqlite3.c>
+/* Import the sqlite3 API vtable from sqlite3wrapper.c */
+#define SQLITE_OMIT_DEPRECATED
+#include <sqlite3ext.h>
+extern const sqlite3_api_routines *const sqlite3_api;
 #else
-  #include <sqlite3.h>
+#include <sqlite3.h>
 #endif
 
 #if !SQLITE_VERSION_AT_LEAST(3,7,12)
