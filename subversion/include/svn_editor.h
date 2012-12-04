@@ -884,8 +884,11 @@ svn_editor_add_absent(svn_editor_t *editor,
  *
  * Alter the properties of the directory at @a relpath.
  *
- * @a revision specifies the expected revision of the directory and is
- * used to catch attempts at altering out-of-date directories. If the
+ * @a revision specifies the revision at which the receiver should
+ * expect to find this node. That is, @a relpath at the start of the
+ * whole edit and @a relpath at @a revision must lie within the same
+ * node-rev (aka location history segment). This information may be used
+ * to catch an attempt to alter and out-of-date directory. If the
  * directory does not have a corresponding revision in the repository
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
@@ -1004,8 +1007,14 @@ svn_editor_copy(svn_editor_t *editor,
                 svn_revnum_t replaces_rev);
 
 /** Drive @a editor's #svn_editor_cb_move_t callback.
- * Move the node at @a src_relpath, expected to be identical to revision @a
- * src_revision of that path, to @a dst_relpath.
+ *
+ * Move the node at @a src_relpath to @a dst_relpath.
+ *
+ * @a src_revision specifies the revision at which the receiver should
+ * expect to find this node.  That is, @a src_relpath at the start of
+ * the whole edit and @a src_relpath at @a src_revision must lie within
+ * the same node-rev (aka history-segment).  This is just like the
+ * revisions specified to svn_editor_delete() and svn_editor_rotate().
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
