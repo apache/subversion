@@ -2695,6 +2695,12 @@ def almost_known_prop_names(sbox):
   # Different prefix, same prop name
   svntest.actions.set_prop('tsvn:executable', 'x', iota_path)
 
+  # Property name is too different to matter
+  svntest.actions.set_prop('svn:foobar', 'x', iota_path,
+                           "svn: E195011: 'svn:foobar'"
+                           " is not a valid svn: property name;"
+                           " re-run with '--force' to set it")
+
 ########################################################################
 # Run the tests
 

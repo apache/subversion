@@ -74,7 +74,8 @@ typedef enum report_state_e {
     ABSENT_FILE,
     PROP,
     IGNORE_PROP_NAME,
-    NEED_PROP_NAME
+    NEED_PROP_NAME,
+    TXDELTA
 } report_state_e;
 
 
@@ -228,6 +229,8 @@ typedef struct report_info_t
   const char *final_sha1_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
+  svn_stream_t *svndiff_decoder;
+  svn_stream_t *base64_decoder;
 
   /* Checksum for close_file */
   const char *final_checksum;
@@ -318,6 +321,9 @@ struct report_context_t {
   /* Do we want the server to send copyfrom args or not? */
   svn_boolean_t send_copyfrom_args;
 
+  /* Is the server sending everything in one response? */
+  svn_boolean_t send_all_mode;
+
   /* Is the server including properties inline for newly added
      files/dirs? */
   svn_boolean_t add_props_included;
@@ -357,6 +363,10 @@ struct report_context_t {
 
   /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
+  svn_ra_serf__list_t *done_dir_propfinds;
+
+  /* list of outstanding prop changes (contains report_dir_t) */
+  svn_ra_serf__list_t *active_dir_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
   svn_ra_serf__list_t *file_propchanges_only;
@@ -1347,6 +1357,27 @@ maybe_close_dir_chain(report_dir_t *dir)
     {
       report_dir_t *parent = cur_dir->parent_dir;
       report_context_t *report_context = cur_dir->report_context;
+      svn_boolean_t propfind_in_done_list = FALSE;
+      svn_ra_serf__list_t *done_list;
+
+      /* Make sure there are no references to this dir in the
+         active_dir_propfinds list.  If there are, don't close the
+         directory -- which would delete the pool from which the
+         relevant active_dir_propfinds list item is allocated -- and
+         of course don't crawl upward to check the parents for
+         a closure opportunity, either.  */
+      done_list = report_context->active_dir_propfinds;
+      while (done_list)
+        {
+          if (done_list->data == cur_dir)
+            {
+              propfind_in_done_list = TRUE;
+              break;
+            }
+          done_list = done_list->next;
+        }
+      if (propfind_in_done_list)
+        break;
 
       SVN_ERR(close_dir(cur_dir));
       if (parent)
@@ -1377,6 +1408,10 @@ handle_propchange_only(report_info_t *info,
 
   info->dir->ref_count--;
 
+  /* See if the parent directory of this file (and perhaps even
+     parents of that) can be closed now.  */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
+
   return SVN_NO_ERROR;
 }
 
@@ -1401,6 +1436,10 @@ handle_local_content(report_info_t *info,
 
   info->dir->ref_count--;
 
+  /* See if the parent directory of this fetched item (and
+     perhaps even parents of that) can be closed now. */
+  SVN_ERR(maybe_close_dir_chain(info->dir));
+
   return SVN_NO_ERROR;
 }
 
@@ -1414,17 +1453,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
   /* What connection should we go on? */
   conn = get_best_connection(ctx);
-
-  /* go fetch info->name from DAV:checked-in */
-  info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
-                                        info->base_rev, "DAV:", "checked-in");
-
-  if (!info->url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                              _("The REPORT or PROPFIND response did not "
-                                "include the requested checked-in value"));
-    }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   info->propfind_handler = NULL;
@@ -1565,12 +1593,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
   else
     {
-      /* No propfind or GET request.  Just handle the prop changes now.
-
-         Note: we'll use INFO->POOL for the scratch_pool here since it will
-         be destroyed at the end of handle_propchange_only(). That pool
-         would be quite fine, but it is unclear how long INFO->POOL will
-         stick around since its lifetime and usage are unclear.  */
+      /* No propfind or GET request.  Just handle the prop changes now. */
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
@@ -1597,9 +1620,15 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   if (state == NONE && strcmp(name.name, "update-report") == 0)
     {
-      const char *val = svn_xml_get_attr_value("inline-props", attrs);
+      const char *val;
+
+      val = svn_xml_get_attr_value("inline-props", attrs);
       if (val && (strcmp(val, "true") == 0))
         ctx->add_props_included = TRUE;
+
+      val = svn_xml_get_attr_value("send-all", attrs);
+      if (val && (strcmp(val, "true") == 0))
+        ctx->send_all_mode = TRUE;
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
@@ -1802,7 +1831,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, ADD_FILE);
 
       info->base_rev = SVN_INVALID_REVNUM;
-      info->fetch_file = TRUE;
+
+      /* If the server isn't in "send-all" mode, we should expect to
+         fetch contents for added files. */
+      if (! ctx->send_all_mode)
+        info->fetch_file = TRUE;
 
       /* If the server isn't included properties for added items,
          we'll need to fetch them ourselves. */
@@ -2042,7 +2075,31 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              addition to <fetch-file>s and such) when *not* in
              "send-all" mode.  As a client, we're smart enough to know
              that's wrong, so we'll just ignore these tags. */
-          ;
+          if (ctx->send_all_mode)
+            {
+              const svn_delta_editor_t *update_editor = ctx->update_editor;
+
+              info = push_state(parser, ctx, TXDELTA);
+
+              if (! info->file_baton)
+                {
+                  SVN_ERR(open_updated_file(info, FALSE, info->pool));
+                }
+
+              info->base_checksum = svn_xml_get_attr_value("base-checksum",
+                                                           attrs);
+              SVN_ERR(update_editor->apply_textdelta(info->file_baton,
+                                                     info->base_checksum,
+                                                     info->editor_pool,
+                                                     &info->textdelta,
+                                                     &info->textdelta_baton));
+              info->svndiff_decoder = svn_txdelta_parse_svndiff(
+                                          info->textdelta,
+                                          info->textdelta_baton,
+                                          TRUE, info->pool);
+              info->base64_decoder = svn_base64_decode(info->svndiff_decoder,
+                                                       info->pool);
+            }
         }
       else
         {
@@ -2126,13 +2183,15 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if (info->dir->fetch_props)
         {
+          svn_ra_serf__list_t *list_item;
+ 
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              get_best_connection(ctx),
                                              info->dir->url,
                                              ctx->target_rev, "0",
                                              all_props,
-                                             &ctx->done_propfinds,
+                                             &ctx->done_dir_propfinds,
                                              info->dir->pool));
           SVN_ERR_ASSERT(info->dir->propfind_handler);
 
@@ -2140,6 +2199,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_ra_serf__request_create(info->dir->propfind_handler);
 
           ctx->num_active_propfinds++;
+
+          list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
+          list_item->data = info->dir;
+          list_item->next = ctx->active_dir_propfinds;
+          ctx->active_dir_propfinds = list_item;
 
           if (ctx->num_active_fetches + ctx->num_active_propfinds
               > REQUEST_COUNT_TO_PAUSE)
@@ -2150,6 +2214,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->dir->propfind_handler = NULL;
         }
 
+      /* See if this directory (and perhaps even parents of that) can
+         be closed now.  This is likely to be the case only if we
+         didn't need to contact the server for supplemental
+         information required to handle any of this directory's
+         children.  */
+      SVN_ERR(maybe_close_dir_chain(info->dir));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OPEN_FILE && strcmp(name.name, "open-file") == 0)
@@ -2223,13 +2293,89 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->delta_base = value ? value->data : NULL;
         }
 
-      SVN_ERR(fetch_file(ctx, info));
+      /* go fetch info->name from DAV:checked-in */
+      info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
+                                            info->base_rev, "DAV:", "checked-in");
+      if (!info->url)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
+        }
+
+      /* If the server is in "send-all" mode, we might have opened the
+         file when we started seeing content for it.  If we didn't get
+         any content for it, we still need to open the file.  But in
+         any case, we can then immediately close it.  */
+      if (ctx->send_all_mode)
+        {
+          if (! info->file_baton)
+            {
+              SVN_ERR(open_updated_file(info, FALSE, info->pool));
+            }
+          SVN_ERR(close_updated_file(info, info->pool));
+          info->dir->ref_count--;
+        }
+      /* Otherwise, if the server is *not* in "send-all" mode, we
+         should be at a point where we can queue up any auxiliary
+         content-fetching requests.  */
+      else
+        {
+          SVN_ERR(fetch_file(ctx, info));
+        }
+
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == ADD_FILE && strcmp(name.name, "add-file") == 0)
     {
-      /* We should have everything we need to fetch the file. */
-      SVN_ERR(fetch_file(ctx, parser->state->private));
+      report_info_t *info = parser->state->private;
+
+      /* go fetch info->name from DAV:checked-in */
+      info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
+                                            info->base_rev, "DAV:", "checked-in");
+      if (!info->url)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
+        }
+
+      /* If the server is in "send-all" mode, we might have opened the
+         file when we started seeing content for it.  If we didn't get
+         any content for it, we still need to open the file.  But in
+         any case, we can then immediately close it.  */
+      if (ctx->send_all_mode)
+        {
+          if (! info->file_baton)
+            {
+              SVN_ERR(open_updated_file(info, FALSE, info->pool));
+            }
+          SVN_ERR(close_updated_file(info, info->pool));
+          info->dir->ref_count--;
+        }
+      /* Otherwise, if the server is *not* in "send-all" mode, we
+         should be at a point where we can queue up any auxiliary
+         content-fetching requests.  */
+      else
+        {
+          SVN_ERR(fetch_file(ctx, info));
+        }
+
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == TXDELTA && strcmp(name.name, "txdelta") == 0)
+    {
+      report_info_t *info = parser->state->private;
+
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore these tags. */
+      if (ctx->send_all_mode)
+        {
+          SVN_ERR(svn_stream_close(info->base64_decoder));
+        }
+
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == PROP)
@@ -2355,6 +2501,27 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info = parser->state->private;
 
       svn_stringbuf_appendbytes(info->prop_value, data, len);
+    }
+  else if (parser->state->current_state == TXDELTA)
+    {
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore these tags. */
+      if (ctx->send_all_mode)
+        {
+          apr_size_t nlen = len;
+          report_info_t *info = parser->state->private;
+
+          SVN_ERR(svn_stream_write(info->base64_decoder, data, &nlen));
+          if (nlen != len)
+            {
+              /* Short write without associated error?  "Can't happen." */
+              return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                       _("Error writing to '%s': unexpected EOF"),
+                                       info->name);
+            }
+        }
     }
 
   return SVN_NO_ERROR;
@@ -2695,10 +2862,12 @@ finish_report(void *report_baton,
         SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
                                           report->num_active_propfinds));
 
-      /* prune our propfind list if they are done. */
+      /* Prune completed file PROPFINDs. */
       done_list = report->done_propfinds;
       while (done_list)
         {
+          svn_ra_serf__list_t *next_done = done_list->next;
+
           svn_pool_clear(iterpool_inner);
 
           report->num_active_propfinds--;
@@ -2733,19 +2902,6 @@ finish_report(void *report_baton,
                 {
                   report_info_t *info = cur->data;
 
-                  /* If we've got cached file content for this file,
-                     take care of the locally collected properties and
-                     file content at once.  Otherwise, just deal with
-                     the collected properties. */
-                  if (info->cached_contents)
-                    {
-                      SVN_ERR(handle_local_content(info, iterpool_inner));
-                    }
-                  else
-                    {
-                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
-                    }
-
                   if (!prev)
                     {
                       report->file_propchanges_only = cur->next;
@@ -2754,18 +2910,38 @@ finish_report(void *report_baton,
                     {
                       prev->next = cur->next;
                     }
+
+                  /* If we've got cached file content for this file,
+                     take care of the locally collected properties and
+                     file content at once.  Otherwise, just deal with
+                     the collected properties.
+
+                     NOTE:  These functions below could delete
+                     info->dir->pool (via maybe_close_dir_chain()),
+                     from which is allocated the list item in
+                     report->file_propchanges_only.
+                  */
+                  if (info->cached_contents)
+                    {
+                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                    }
+                  else
+                    {
+                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                    }
                 }
             }
 
-          done_list = done_list->next;
+          done_list = next_done;
         }
       report->done_propfinds = NULL;
 
-      /* Prune completely fetches from our list. */
+      /* Prune completed fetches from our list. */
       done_list = report->done_fetches;
       while (done_list)
         {
           report_fetch_t *done_fetch = done_list->data;
+          svn_ra_serf__list_t *next_done = done_list->next;
           report_dir_t *cur_dir;
 
           /* Decrease the refcount in the parent directory of the file
@@ -2776,13 +2952,76 @@ finish_report(void *report_baton,
           /* Decrement our active fetch count. */
           report->num_active_fetches--;
 
-          done_list = done_list->next;
-
           /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. */
+             perhaps even parents of that) can be closed now. 
+
+             NOTE:  This could delete cur_dir->pool, from which is
+             allocated the list item in report->done_fetches.
+          */
           SVN_ERR(maybe_close_dir_chain(cur_dir));
+
+          done_list = next_done;
         }
       report->done_fetches = NULL;
+
+      /* Prune completed directory PROPFINDs. */
+      done_list = report->done_dir_propfinds;
+      while (done_list)
+        {
+          svn_ra_serf__list_t *next_done = done_list->next;
+
+          report->num_active_propfinds--;
+
+          if (report->active_dir_propfinds)
+            {
+              svn_ra_serf__list_t *cur, *prev;
+
+              prev = NULL;
+              cur = report->active_dir_propfinds;
+
+              while (cur)
+                {
+                  report_dir_t *item = cur->data;
+
+                  if (item->propfind_handler == done_list->data)
+                    {
+                      break;
+                    }
+
+                  prev = cur;
+                  cur = cur->next;
+                }
+              SVN_ERR_ASSERT(cur); /* we expect to find a matching propfind! */
+
+              /* If we found a match, set the new props and remove this
+               * propchange from our list.
+               */
+              if (cur)
+                {
+                  report_dir_t *cur_dir = cur->data;
+
+                  if (!prev)
+                    {
+                      report->active_dir_propfinds = cur->next;
+                    }
+                  else
+                    {
+                      prev->next = cur->next;
+                    }
+
+                  /* See if this directory (and perhaps even parents of that)
+                     can be closed now.
+
+                     NOTE:  This could delete cur_dir->pool, from which is
+                     allocated the list item in report->active_dir_propfinds.
+                  */
+                  SVN_ERR(maybe_close_dir_chain(cur_dir));
+                }
+            }
+
+          done_list = next_done;
+        }
+      report->done_dir_propfinds = NULL;
 
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
@@ -2922,9 +3161,19 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    svn_io_file_del_on_pool_cleanup,
                                    report->pool, scratch_pool));
 
+#ifdef SVN_RA_SERF__UPDATES_SEND_ALL
+  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
+                        "xmlns:S", SVN_XML_NAMESPACE, "send-all", "true",
+                        NULL);
+#else
   svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
                         "xmlns:S", SVN_XML_NAMESPACE,
                         NULL);
+  /* Subversion 1.8+ servers can be told to send properties for newly
+     added items inline even when doing a skelta response. */
+  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
+#endif
+
 
   make_simple_xml_tag(&buf, "S:src-path", report->source, scratch_pool);
 
@@ -2963,9 +3212,18 @@ make_update_reporter(svn_ra_session_t *ra_session,
       make_simple_xml_tag(&buf, "S:recursive", "no", scratch_pool);
     }
 
-  /* Subversion 1.8+ servers can be told to send properties for newly
-     added items inline even when doing a skelta response. */
-  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
+  /* When in 'send-all' mode, mod_dav_svn will assume that it should
+     calculate and transmit real text-deltas (instead of empty windows
+     that merely indicate "text is changed") unless it finds this
+     element.  When not in 'send-all' mode, mod_dav_svn will never
+     send text-deltas at all.
+
+     NOTE: Do NOT count on servers actually obeying this, as some exist
+     which obey send-all, but do not check for this directive at all! */
+  if (! text_deltas)
+    {
+      make_simple_xml_tag(&buf, "S:text-deltas", "no", scratch_pool);
+    }
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 

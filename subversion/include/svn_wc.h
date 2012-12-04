@@ -6161,6 +6161,8 @@ svn_wc_is_entry_prop(const char *name);
  * (Currently, this is used if you are attempting to set the
  * #SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
   const svn_string_t **mime_type,
@@ -6174,8 +6176,14 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  *
  * If the property is not appropriate for a node of kind @a kind, or
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
- * to a canonicalized version of the property value.  If @a
- * skip_some_checks is TRUE, only some validity checks are taken.
+ * to a canonicalized version of the property value.
+ *
+ * If @a skip_some_checks is TRUE, some validity checks and
+ * canonicalizations are skipped. Presently, these are:
+ *   - For svn:eol-style: strip white space; check value is recognized;
+ *       check file content matches value.
+ *   - For svn:mime-type: strip white space; check value has reasonable
+ *       syntax.
  *
  * Some validity checks require access to the contents and MIME type
  * of the target if it is a file; they will call @a prop_getter with @a
@@ -6186,7 +6194,9 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  * for error messages.
  *
  * ### This is not actually related to the WC, but it does need to call
- * ### svn_wc_parse_externals_description2.
+ * ### svn_wc_parse_externals_description3.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,

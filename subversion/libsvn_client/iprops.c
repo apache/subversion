@@ -116,7 +116,10 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
             {
               const char *target_abspath = apr_pstrdup(scratch_pool,
                                                        local_abspath);
-              apr_hash_set(iprop_paths, target_abspath, 
+
+              /* As value we set TARGET_ABSPATH, but any string besides ""
+                 would do */
+              apr_hash_set(iprop_paths, target_abspath,
                            APR_HASH_KEY_STRING, target_abspath);
             }
         }
@@ -126,10 +129,18 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
            hi = apr_hash_next(hi))
         {
           const char *child_abspath = svn__apr_hash_index_key(hi);
+          const char *child_repos_relpath = svn__apr_hash_index_val(hi);
           const char *url;
           apr_array_header_t *inherited_props;
 
           svn_pool_clear(iterpool);
+
+          if (*child_repos_relpath == '\0')
+            {
+              /* A repository root doesn't have inherited properties */
+              continue;
+            }
+
           SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child_abspath,
                                        iterpool, iterpool));
           if (ra_session)
@@ -153,7 +164,7 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", revision, result_pool,
-                                             scratch_pool));
+                                             iterpool));
           apr_hash_set(*wcroot_iprops,
                        apr_pstrdup(result_pool, child_abspath),
                        APR_HASH_KEY_STRING,

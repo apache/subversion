@@ -37,6 +37,16 @@ extern "C" {
 
 
 
+/* The separator string used below the "Index:" or similar line of
+ * Subversion's Unidiff-like diff format.  */
+#define SVN_DIFF__EQUAL_STRING \
+  "==================================================================="
+
+/* The separator string used below the "Properties on ..." line of
+ * Subversion's Unidiff-like diff format.  */
+#define SVN_DIFF__UNDER_STRING \
+  "___________________________________________________________________"
+
 /* The string used to mark a line in a hunk that doesn't end with a newline,
  * when diffing a file.  Intentionally not marked for translation, for wider
  * interoperability with patch(1) programs. */
@@ -47,6 +57,20 @@ extern "C" {
  * when diffing a Subversion property. */
 #define SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY \
           "\\ No newline at end of property"
+
+/* Write a unidiff "---" and "+++" header to OUTPUT_STREAM.
+ *
+ * Write "---" followed by a space and OLD_HEADER and a newline,
+ * then "+++" followed by a space and NEW_HEADER and a newline.
+ *
+ * The text will be encoded into HEADER_ENCODING.
+ */
+svn_error_t *
+svn_diff__unidiff_write_header(svn_stream_t *output_stream,
+                               const char *header_encoding,
+                               const char *old_header,
+                               const char *new_header,
+                               apr_pool_t *scratch_pool);
 
 /* Display property changes in pseudo-Unidiff format.
  *

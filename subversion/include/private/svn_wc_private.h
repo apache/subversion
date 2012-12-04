@@ -887,9 +887,11 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 
 /**
  * Set @a *iprops_paths to a hash mapping const char * absolute working
- * copy paths to the same for each path in the working copy at or below
- * @a local_abspath, limited by @a depth, that has cached inherited
- * properties for the base node of the path.  Allocate @a *iprop_paths
+ * copy paths to the nodes repository root relative path for each path
+ * in the working copy at or below @a local_abspath, limited by @a depth,
+ * that has cached inherited properties for the base node of the path.
+ *
+ * Allocate @a *iprop_paths
  * in @a result_pool.  Use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
@@ -1227,7 +1229,12 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
 /* Internal version of svn_wc_delete4(). It has one additional parameter,
  * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
- * delete operation is the delete-half of a move. */
+ * delete operation is the delete-half of a move.
+ *
+ * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
+ *     unversioned, svn_wc__delete_many() will continue whereas
+ *     svn_wc__delete_internal() will throw an error.
+ */
 svn_error_t *
 svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
@@ -1243,7 +1250,12 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
 
 /* Alternative version of svn_wc_delete4().
  * It can delete multiple TARGETS more efficiently (within a single sqlite
- * transaction per working copy), but lacks support for moves. */
+ * transaction per working copy), but lacks support for moves.
+ *
+ * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
+ *     unversioned, svn_wc__delete_many() will continue whereas
+ *     svn_wc__delete_internal() will throw an error.
+ */
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                     const apr_array_header_t *targets,

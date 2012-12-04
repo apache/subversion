@@ -4901,12 +4901,19 @@ static svn_error_t *
 delete_fs(const svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
-  svn_fs_t *fs;
   const char *path;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delete-fs", opts, pool));
-  path = svn_fs_path(fs, pool);
+  /* We have to use a subpool to close the svn_fs_t before calling
+     svn_fs_delete_fs.  See issue 4264. */
+  {
+    svn_fs_t *fs;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(svn_test__create_fs(&fs, "test-repo-delete-fs", opts, subpool));
+    path = svn_fs_path(fs, pool);
+    svn_pool_destroy(subpool);
+  }
+
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   SVN_TEST_ASSERT(kind != svn_node_none);
   SVN_ERR(svn_fs_delete_fs(path, pool));

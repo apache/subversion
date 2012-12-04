@@ -57,17 +57,6 @@
 #include "svn_private_config.h"
 
 
-/*
- * Constant separator strings
- */
-static const char equal_string[] =
-  "===================================================================";
-static const char under_string[] =
-  "___________________________________________________________________";
-
-
-/*-----------------------------------------------------------------*/
-
 /* Utilities */
 
 
@@ -482,8 +471,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
       SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                           "Index: %s" APR_EOL_STR
-                                          "%s" APR_EOL_STR,
-                                          path, equal_string));
+                                          SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                                          path));
 
       if (use_git_diff_format)
         SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
@@ -492,11 +481,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       SVN_INVALID_REVNUM,
                                       encoding, pool));
 
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
-                                          "--- %s" APR_EOL_STR
-                                          "+++ %s" APR_EOL_STR,
-                                          label1,
-                                          label2));
+      /* --- label1
+       * +++ label2 */
+      SVN_ERR(svn_diff__unidiff_write_header(
+        outstream, encoding, label1, label2, pool));
     }
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
@@ -506,7 +494,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       APR_EOL_STR));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
-                                      "%s" APR_EOL_STR, under_string));
+                                      SVN_DIFF__UNDER_STRING APR_EOL_STR));
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
@@ -757,7 +745,9 @@ diff_content_changed(const char *path,
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
                diff_cmd_baton->header_encoding, subpool,
-               "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               "Index: %s" APR_EOL_STR
+               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+               path));
 
       /* ### Print git diff headers. */
 
@@ -805,7 +795,9 @@ diff_content_changed(const char *path,
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
                diff_cmd_baton->header_encoding, subpool,
-               "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               "Index: %s" APR_EOL_STR
+               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+               path));
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
        * ### 'Index' and '===' line is something subversion has added. The rest
@@ -860,8 +852,9 @@ diff_content_changed(const char *path,
           /* Print out the diff header. */
           SVN_ERR(svn_stream_printf_from_utf8(outstream,
                    diff_cmd_baton->header_encoding, subpool,
-                   "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
-                   path, equal_string));
+                   "Index: %s" APR_EOL_STR
+                   SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                   path));
 
           if (diff_cmd_baton->use_git_diff_format)
             {
@@ -1068,8 +1061,9 @@ diff_file_deleted(svn_wc_notify_state_t *state,
     {
       SVN_ERR(svn_stream_printf_from_utf8(diff_cmd_baton->outstream,
                 diff_cmd_baton->header_encoding, scratch_pool,
-                "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
-                path, equal_string));
+                "Index: %s (deleted)" APR_EOL_STR
+                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                path));
     }
   else
     {

@@ -29,7 +29,7 @@
 -- STMT_SELECT_NODE_INFO
 SELECT op_depth, repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, moved_here
+  symlink_target, last_mod_time, properties, moved_here, inherited_props
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
@@ -38,6 +38,7 @@ ORDER BY op_depth DESC
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, moved_here,
+  inherited_props,
   /* All the columns until now must match those returned by
      STMT_SELECT_NODE_INFO. The implementation of svn_wc__db_read_info()
      assumes that these columns are followed by the lock information) */
@@ -218,6 +219,34 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
+
+-- STMT_DELETE_WORKING_OP_DEPTH
+DELETE FROM nodes
+WHERE wc_id = ?1 
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
+-- STMT_SELECT_LOCAL_RELPATH_OP_DEPTH
+SELECT local_relpath
+FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
+-- STMT_COPY_NODE_MOVE
+INSERT INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target, moved_here )
+SELECT
+    wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
+    repos_id,
+    repos_path, revision, presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target, 1
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
@@ -407,10 +436,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2)
 
--- STMT_UPDATE_NODE_FILEINFO_OPDEPTH
-UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
-
 -- STMT_INSERT_ACTUAL_CONFLICT
 INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
@@ -477,10 +502,6 @@ BEGIN
   SELECT new.wc_id, new.local_relpath, 26, new.changelist
    WHERE new.changelist IS NOT NULL;
 END
-
--- STMT_INSERT_CHANGELIST_LIST
-INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_FINALIZE_CHANGELIST
 DROP TRIGGER trigger_changelist_list_change;
@@ -798,9 +819,9 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, dav_cache, symlink_target,
-  file_external )
+  inherited_props, file_external )
 VALUES (?1, ?2, 0,
-        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
         (SELECT file_external FROM nodes
           WHERE wc_id = ?1
             AND local_relpath = ?2
@@ -1444,19 +1465,26 @@ SET inherited_props = ?3
 WHERE (wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
 
 /* Select a single path if its base node has cached inherited properties. */
--- STMT_SELECT_INODES
-SELECT local_relpath FROM nodes
+-- STMT_SELECT_IPROPS_NODE
+SELECT local_relpath, repos_path FROM nodes
 WHERE wc_id = ?1
   AND local_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
 
-/* Select all paths whose base nodes at or below a given path, which
+/* Select all paths whose base nodes are below a given path, which
    have cached inherited properties. */
--- STMT_SELECT_INODES_RECURSIVE
-SELECT local_relpath FROM nodes
+-- STMT_SELECT_IPROPS_RECURSIVE
+SELECT local_relpath, repos_path FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND (inherited_props not null)
+
+-- STMT_SELECT_IPROPS_CHILDREN
+SELECT local_relpath, repos_path FROM nodes
+WHERE wc_id = ?1
+  AND parent_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
 

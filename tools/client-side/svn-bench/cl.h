@@ -149,21 +149,6 @@ svn_error_t *
 svn_cl__check_cancel(void *baton);
 
 
-/* Print to stdout a hash that maps property names (char *) to property
-   values (svn_string_t *).  The names are assumed to be in UTF-8 format;
-   the values are either in UTF-8 (the special Subversion props) or
-   plain binary values.
-
-   If OUT is not NULL, then write to it rather than stdout.
-
-   If NAMES_ONLY is true, print just names, else print names and
-   values. */
-svn_error_t *
-svn_cl__print_prop_hash(svn_stream_t *out,
-                        apr_hash_t *prop_hash,
-                        svn_boolean_t names_only,
-                        apr_pool_t *pool);
-
 
 /*** Notification functions to display results on the terminal. */
 

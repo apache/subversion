@@ -88,27 +88,6 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
   return key;
 }
 
-const char*
-svn_fs_fs__combine_two_numbers(apr_int64_t a,
-                               apr_int64_t b,
-                               apr_pool_t *pool)
-{
-  /* encode numbers as 2x 10x7 bits + 1 space + 1 terminating \0*/
-  char *key_buffer = apr_palloc(pool, 22);
-  const char *key = key_buffer;
-
-  /* combine the numbers. Since the separator is disjoint from any part
-   * of the encoded numbers, there is no other combination that can yield
-   * the same result */
-  key_buffer = encode_number(a, key_buffer);
-  *++key_buffer = ' ';
-  key_buffer = encode_number(b, ++key_buffer);
-  *++key_buffer = '\0';
-
-  /* return the start of the key */
-  return key;
-}
-
 /* Utility function to serialize string S in the given serialization CONTEXT.
  */
 static void

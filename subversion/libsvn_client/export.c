@@ -759,7 +759,6 @@ get_editor(const svn_delta_editor_t **export_editor,
   return SVN_NO_ERROR;
 }
 
-
 
 /*** Public Interfaces ***/
 
@@ -871,8 +870,8 @@ svn_client_export5(svn_revnum_t *result_rev,
           void *report_baton;
           svn_boolean_t use_sleep = FALSE;
 
-          SVN_ERR(get_editor(&export_editor, &edit_baton, eb,
-                             ctx, pool, pool));
+          SVN_ERR(get_editor(&export_editor, &edit_baton, eb, ctx,
+          pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,

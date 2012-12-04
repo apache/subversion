@@ -40,7 +40,7 @@ with prefix trimmed in the namespace of the caller for this import.
 
 The 3rd through the last parameter is a list of symbol endings that
 you wish for SVN::Base not to import into your namespace.  This is useful
-for cases where you may want to import certaion symbols differently than
+for cases where you may want to import certain symbols differently than
 normally.
 
 =head1 CAVEATS

@@ -48,29 +48,6 @@
 
 /*** Code. ***/
 
-/* Check whether NAME is a revision property name.
- *
- * Return TRUE if it is.
- * Return FALSE if it is not.
- */
-static svn_boolean_t
-is_revision_prop_name(const char *name)
-{
-  apr_size_t i;
-  static const char *revision_props[] =
-    {
-      SVN_PROP_REVISION_ALL_PROPS
-    };
-
-  for (i = 0; i < sizeof(revision_props) / sizeof(revision_props[0]); i++)
-    {
-      if (strcmp(name, revision_props[i]) == 0)
-        return TRUE;
-    }
-  return FALSE;
-}
-
-
 /* Return an SVN_ERR_CLIENT_PROPERTY_NAME error if NAME is a wcprop,
    else return SVN_NO_ERROR. */
 static svn_error_t *
@@ -266,7 +243,7 @@ static svn_error_t *
 check_prop_name(const char *propname,
                 const svn_string_t *propval)
 {
-  if (is_revision_prop_name(propname))
+  if (svn_prop_is_known_svn_rev_prop(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Revision property '%s' not allowed "
                                "in this context"), propname);

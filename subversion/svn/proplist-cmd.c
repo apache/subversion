@@ -38,6 +38,8 @@
 #include "svn_props.h"
 #include "cl.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 typedef struct proplist_baton_t
@@ -82,9 +84,9 @@ proplist_receiver_xml(void *baton,
 
           svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
                             "path", name_local, NULL);
-          SVN_ERR(svn_cl__print_xml_prop_hash(&sb, iprop->prop_hash,
-                                              (! opt_state->verbose),
-                                              TRUE, iterpool));
+          SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, iprop->prop_hash,
+                                                   (! opt_state->verbose),
+                                                   TRUE, iterpool));
           svn_xml_make_close_tag(&sb, iterpool, "target");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
@@ -105,9 +107,9 @@ proplist_receiver_xml(void *baton,
         svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                               "path", name_local, NULL);
 
-        SVN_ERR(svn_cl__print_xml_prop_hash(&sb, prop_hash,
-                                            (! opt_state->verbose),
-                                            FALSE, pool));
+        SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, prop_hash,
+                                                 (! opt_state->verbose),
+                                                 FALSE, pool));
 
         /* "</target>" */
         svn_xml_make_close_tag(&sb, pool, "target");
@@ -160,8 +162,9 @@ proplist_receiver(void *baton,
                                                      iterpool)));
             }
 
-          SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,
-                                          (! opt_state->verbose), iterpool));
+          SVN_ERR(svn_cmdline__print_prop_hash(NULL, iprop->prop_hash,
+                                               (! opt_state->verbose),
+                                               iterpool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -171,8 +174,8 @@ proplist_receiver(void *baton,
       if (!opt_state->quiet)
         SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"),
                                    name_local));
-      SVN_ERR(svn_cl__print_prop_hash(NULL, prop_hash, (! opt_state->verbose),
-                                      pool));
+      SVN_ERR(svn_cmdline__print_prop_hash(NULL, prop_hash,
+                                           (! opt_state->verbose), pool));
     }
 
   return SVN_NO_ERROR;
@@ -228,9 +231,9 @@ svn_cl__proplist(apr_getopt_t *os,
           svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal,
                                 "revprops",
                                 "rev", revstr, NULL);
-          SVN_ERR(svn_cl__print_xml_prop_hash(&sb, proplist,
-                                              (! opt_state->verbose), FALSE,
-                                              scratch_pool));
+          SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, proplist,
+                                                   (! opt_state->verbose),
+                                                   FALSE, scratch_pool));
           svn_xml_make_close_tag(&sb, scratch_pool, "revprops");
 
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
@@ -243,8 +246,9 @@ svn_cl__proplist(apr_getopt_t *os,
                                 _("Unversioned properties on revision %ld:\n"),
                                 rev));
 
-          SVN_ERR(svn_cl__print_prop_hash
-                  (NULL, proplist, (! opt_state->verbose), scratch_pool));
+          SVN_ERR(svn_cmdline__print_prop_hash(NULL, proplist,
+                                               (! opt_state->verbose),
+                                               scratch_pool));
         }
     }
   else  /* operate on normal, versioned properties (not revprops) */

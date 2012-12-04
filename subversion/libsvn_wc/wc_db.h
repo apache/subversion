@@ -2094,6 +2094,26 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+
+/**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a local_abspath from the ACTUAL tree above
+ * @a local_abspath (looking through to the WORKING or BASE tree as
+ * required), up to and including the root of the working copy and
+ * any cached inherited properties inherited by the root.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
 /* Read a BASE node's inherited property information.
 
    Set *IPROPS to to a depth-first ordered array of
@@ -2116,9 +2136,11 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 /* Find BASE nodes with cached inherited properties.
 
    Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
-   paths to the same for each path in the working copy at or below
-   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
-   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   paths to the repos_relpath of the path for each path in the working copy
+   at or below LOCAL_ABSPATH, limited by DEPTH, that has cached inherited
+   properties for the BASE node of the path.
+
+   Allocate *IPROP_PATHS in RESULT_POOL.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
@@ -3225,8 +3247,8 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
  * need to run as part of marking the conflict resolved. */
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             const char *victim_abspath,
                                              svn_wc__db_t *db,
+                                             const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
