@@ -1,0 +1,8 @@
+This branch (wc-collate-path) will contain experiments on the topic of
+normalization-agnostic working copies (a.k.a. the Mac HFS Nonsense Problem).
+
+It is not, as such, meant to be ever completely merged to trunk.
+
+Eventually some changes may be merged, others rejected, and still others
+migrated to the real feature branch that will have to account for server
+behaviour as well as client.
