@@ -2312,13 +2312,20 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
-/* Checks if LOCAL_ABSPATH is a working copy root, switched and a directory.
-   With these answers we can answer all 'is anchor' questions that we need for
-   the different ra operations with just a single sqlite transaction and
-   filestat.
+/* Check whether a node is a working copy root and/or switched.
 
-   All output arguments can be null to specify that the result is not
-   interesting to the caller
+   If LOCAL_ABSPATH is the root of a working copy, set *IS_WC_ROOT to TRUE,
+   otherwise to FALSE.
+
+   If LOCAL_ABSPATH is switched against its parent in the same working copy
+   set *IS_SWITCHED to TRUE, otherwise to FALSE.
+
+   If KIND is not null, set *KIND to the node type of LOCAL_ABSPATH.
+
+   Any of the output arguments can be null to specify that the result is not
+   interesting to the caller.
+
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__db_is_switched(svn_boolean_t *is_wcroot,

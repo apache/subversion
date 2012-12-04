@@ -3211,8 +3211,8 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
   svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
-                              wc_ctx->db, local_abspath, scratch_pool);
+  err = svn_wc__db_is_switched(&is_root, &is_switched, &kind,
+                               wc_ctx->db, local_abspath, scratch_pool);
 
   if (err)
     {
