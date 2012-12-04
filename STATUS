@@ -135,11 +135,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
 
- * r1345740
-   Remove a cast that is both ugly, and apparently illegal in g++ 4.7.
-   Justification:
-     Fails to build.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
-
