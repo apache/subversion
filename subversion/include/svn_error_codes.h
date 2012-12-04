@@ -545,6 +545,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 40,
              "Mixed-revision working copy was found but not expected")
 
+  /** @since New in 1.8 */
+  SVN_ERRDEF(SVN_ERR_WC_DUPLICATE_EXTERNALS_TARGET,
+             SVN_ERR_WC_CATEGORY_START + 41,
+             "Duplicate targets in svn:externals property")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -1244,7 +1249,7 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 22,
              "Can't perform this operation without a valid lock token")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN_BY_SERVER,
              SVN_ERR_CLIENT_CATEGORY_START + 23,
              "The operation is forbidden by the server")

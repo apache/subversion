@@ -134,7 +134,8 @@ typedef enum svn_wc__db_status_t {
     svn_wc__db_status_normal,
 
     /* The node has been added (potentially obscuring a delete or move of
-       the BASE node; see HAVE_BASE param). The text will be marked as
+       the BASE node; see HAVE_BASE param [### What param? This is an enum
+       not a function.] ). The text will be marked as
        modified, and if properties exist, they will be marked as modified.
 
        In many cases svn_wc__db_status_added means any of added, moved-here
@@ -511,6 +512,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         apr_array_header_t *new_iprops,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
@@ -593,6 +595,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            apr_array_header_t *new_iprops,
                             svn_boolean_t keep_recorded_info,
                             svn_boolean_t insert_base_deleted,
                             const svn_skel_t *conflict,
@@ -1918,6 +1921,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t op_root;
 
   svn_boolean_t has_checksum;
+  svn_boolean_t copied;
   svn_boolean_t had_props;
   svn_boolean_t props_mod;
 
@@ -2090,6 +2094,26 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+
+/**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a local_abspath from the ACTUAL tree above
+ * @a local_abspath (looking through to the WORKING or BASE tree as
+ * required), up to and including the root of the working copy and
+ * any cached inherited properties inherited by the root.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
 /* Read a BASE node's inherited property information.
 
    Set *IPROPS to to a depth-first ordered array of
@@ -2112,9 +2136,11 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 /* Find BASE nodes with cached inherited properties.
 
    Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
-   paths to the same for each path in the working copy at or below
-   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
-   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   paths to the repos_relpath of the path for each path in the working copy
+   at or below LOCAL_ABSPATH, limited by DEPTH, that has cached inherited
+   properties for the BASE node of the path.
+
+   Allocate *IPROP_PATHS in RESULT_POOL.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
@@ -2286,6 +2312,21 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
+/* Checks if LOCAL_ABSPATH is a working copy root, switched and a directory.
+   With these answers we can answer all 'is anchor' questions that we need for
+   the different ra operations with just a single sqlite transaction and
+   filestat.
+
+   All output arguments can be null to specify that the result is not
+   interesting to the caller
+ */
+svn_error_t *
+svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
+                       svn_boolean_t *is_switched,
+                       svn_kind_t *kind,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /* @} */
@@ -3027,9 +3068,11 @@ svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
    leaving any subtree additions and copies as-is.  This allows the
    base node tree to be removed. */
 svn_error_t *
-svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
+svn_wc__db_op_make_copy(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const svn_skel_t *conflicts,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool);
 
 /* Close the wc root LOCAL_ABSPATH and remove any per-directory
    handles associated with it. */
@@ -3204,8 +3247,8 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
  * need to run as part of marking the conflict resolved. */
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             const char *victim_abspath,
                                              svn_wc__db_t *db,
+                                             const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,

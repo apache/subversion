@@ -41,6 +41,8 @@ struct svn_error_t;
 
 #define JAVA_PACKAGE "org/apache/subversion/javahl"
 
+struct svn_string_t;
+
 /**
  * Class to hold a number of JNI related utility methods.  No Objects
  * of this class are ever created.
@@ -62,7 +64,8 @@ class JNIUtil
                                    int aprErr = -1);
 
   static void throwNullPointerException(const char *message);
-  static jbyteArray makeJByteArray(const signed char *data, int length);
+  static jbyteArray makeJByteArray(const void *data, int length);
+  static jbyteArray makeJByteArray(const svn_string_t *str);
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();

@@ -52,26 +52,22 @@ const char *svn_utf__utf8proc_version(void)
  * STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING is
  * NUL-terminated; otherwise look only at the first LENGTH bytes in
  * STRING. Upon return, BUFFER->data points at an array of UCS-4
- * characters and BUFFER->len contains the length of the array.
- *
- * This function really horribly abuses stringbufs, because the result
- * does not conform to published stringbuf semantics. However, these
- * results are never used outside the utf8proc wrappers.
+ * characters and *RESULT_LENGTH contains the length of the array.
  *
  * A returned error may indicate that STRING contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
  */
 static svn_error_t *
 decompose_normalized(const char *string, apr_size_t length,
-                     svn_stringbuf_t *buffer)
+                     svn_membuf_t *buffer, apr_size_t *result_length)
 {
   const int nullterm = (length == SVN_UTF__UNKNOWN_LENGTH
                         ? UTF8PROC_NULLTERM : 0);
 
   for (;;)
     {
-      apr_int32_t *const ucs4buf = (void *)buffer->data;
-      const ssize_t ucs4len = buffer->blocksize / sizeof(*ucs4buf);
+      apr_int32_t *const ucs4buf = buffer->data;
+      const ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
       const ssize_t result =
         utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
                            UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
@@ -82,12 +78,12 @@ decompose_normalized(const char *string, apr_size_t length,
 
       if (result <= ucs4len)
         {
-          buffer->len = result;
+          *result_length = result;
           return SVN_NO_ERROR;
         }
 
       /* Increase the decomposition buffer size and retry */
-      svn_stringbuf__reserve(buffer, result * sizeof(*ucs4buf));
+      svn_membuf__ensure(buffer, result * sizeof(*ucs4buf));
     }
 }
 
@@ -118,9 +114,12 @@ ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
 svn_error_t *
 svn_utf__normcmp(const char *str1, apr_size_t len1,
                  const char *str2, apr_size_t len2,
-                 svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+                 svn_membuf_t *buf1, svn_membuf_t *buf2,
                  int *result)
 {
+  apr_size_t buflen1;
+  apr_size_t buflen2;
+
   /* Shortcut-circuit the decision if at least one of the strings is empty. */
   const svn_boolean_t empty1 =
     (0 == len1 || (len1 == SVN_UTF__UNKNOWN_LENGTH && !*str1));
@@ -132,51 +131,52 @@ svn_utf__normcmp(const char *str1, apr_size_t len1,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(decompose_normalized(str1, len1, buf1));
-  SVN_ERR(decompose_normalized(str2, len2, buf2));
-  *result = ucs4cmp((void *)buf1->data, buf1->len,
-                    (void *)buf2->data, buf2->len);
+  SVN_ERR(decompose_normalized(str1, len1, buf1, &buflen1));
+  SVN_ERR(decompose_normalized(str2, len2, buf2, &buflen2));
+  *result = ucs4cmp(buf1->data, buflen1, buf2->data, buflen2);
   return SVN_NO_ERROR;
 }
 
 
 /* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
+ * Assume BUFFER is already filled to *LENGTH and return the new size there.
  * This function does *not* nul-terminate the stringbuf!
  *
  * A returned error indicates that the codepoint is invalud.
  */
 static svn_error_t *
-encode_ucs4(svn_stringbuf_t *buffer, apr_int32_t ucs4chr)
+encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
 {
   apr_size_t utf8len;
 
-  if (buffer->blocksize - buffer->len < 4)
-    svn_stringbuf_ensure(buffer, 2 * buffer->blocksize - 1);
+  if (buffer->size - *length < 4)
+    svn_membuf__resize(buffer, buffer->size + 4);
 
-  utf8len = utf8proc_encode_char(ucs4chr,
-                                 (void *)(buffer->data + buffer->len));
+  utf8len = utf8proc_encode_char(ucs4chr, ((uint8_t*)buffer->data + *length));
   if (!utf8len)
     return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
                              "Invalid Unicode character U+%04lX",
                              (long)ucs4chr);
-  buffer->len += utf8len;
+  *length += utf8len;
   return SVN_NO_ERROR;
 }
 
 /* Decode an UCS-4 string to UTF-8, placing the result into BUFFER.
  * While utf8proc does have a similar function, it does more checking
- * and processing than we want here.
+ * and processing than we want here. Return the lenght of the result
+ * (excluding the NUL terminator) in *result_length.
  *
  * A returned error indicates that the codepoint is invalud.
  */
 static svn_error_t *
-encode_ucs4_string(svn_stringbuf_t *buffer,
-                   apr_int32_t *ucs4str, apr_size_t len)
+encode_ucs4_string(svn_membuf_t *buffer,
+                   apr_int32_t *ucs4str, apr_size_t len,
+                   apr_size_t *result_length)
 {
-  svn_stringbuf_setempty(buffer);
+  *result_length = 0;
   while (len-- > 0)
-    SVN_ERR(encode_ucs4(buffer, *ucs4str++));
-  buffer->data[buffer->len] = '\0';
+    SVN_ERR(encode_ucs4(buffer, *ucs4str++, result_length));
+  ((char*)buffer->data)[*result_length] = '\0';
   return SVN_NO_ERROR;
 }
 
@@ -186,11 +186,14 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
               svn_boolean_t sql_like,
-              svn_stringbuf_t *pattern_buf,
-              svn_stringbuf_t *string_buf,
-              svn_stringbuf_t *temp_buf,
+              svn_membuf_t *pattern_buf,
+              svn_membuf_t *string_buf,
+              svn_membuf_t *temp_buf,
               svn_boolean_t *match)
 {
+  apr_size_t patternbuf_len;
+  apr_size_t tempbuf_len;
+
   /* If we're in LIKE mode, we don't do custom escape chars. */
   if (escape && !sql_like)
     return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
@@ -199,15 +202,14 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
 
   /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
      because apr_fnmatch can't handle it.*/
-  SVN_ERR(decompose_normalized(pattern, pattern_len, temp_buf));
+  SVN_ERR(decompose_normalized(pattern, pattern_len, temp_buf, &tempbuf_len));
   if (!sql_like)
-    SVN_ERR(encode_ucs4_string(pattern_buf,
-                               (void *)temp_buf->data,
-                               temp_buf->len));
+    SVN_ERR(encode_ucs4_string(pattern_buf, temp_buf->data, tempbuf_len,
+                               &patternbuf_len));
   else
     {
       /* Convert a LIKE pattern to a GLOB pattern that apr_fnmatch can use. */
-      const apr_int32_t *like = (void *)temp_buf->data;
+      const apr_int32_t *like = temp_buf->data;
       apr_int32_t ucs4esc;
       svn_boolean_t escaped;
       apr_size_t i;
@@ -233,17 +235,17 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
                                      (long)ucs4esc);
         }
 
-      svn_stringbuf_setempty(pattern_buf);
-      for (i = 0, escaped = FALSE; i < temp_buf->len; ++i, ++like)
+      patternbuf_len = 0;
+      for (i = 0, escaped = FALSE; i < tempbuf_len; ++i, ++like)
         {
           if (*like == ucs4esc && !escaped)
             {
-              svn_stringbuf_appendbyte(pattern_buf, '\\');
+              ((char*)pattern_buf->data)[patternbuf_len++] = '\\';
               escaped = TRUE;
             }
           else if (escaped)
             {
-              SVN_ERR(encode_ucs4(pattern_buf, *like));
+              SVN_ERR(encode_ucs4(pattern_buf, *like, &patternbuf_len));
               escaped = FALSE;
             }
           else
@@ -252,7 +254,7 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
                 {
                   /* Escape brackets and backslashes which are always
                      literals in LIKE patterns. */
-                  svn_stringbuf_appendbyte(pattern_buf, '\\');
+                  ((char*)pattern_buf->data)[patternbuf_len++] = '\\';
                   escaped = TRUE;
                   --i; --like;
                   continue;
@@ -260,21 +262,20 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
 
               /* Replace LIKE wildcards with their GLOB equivalents. */
               if (*like == '%')
-                  svn_stringbuf_appendbyte(pattern_buf, '*');
+                ((char*)pattern_buf->data)[patternbuf_len++] = '*';
               else if (*like == '_')
-                  svn_stringbuf_appendbyte(pattern_buf, '?');
+                ((char*)pattern_buf->data)[patternbuf_len++] = '?';
               else
-                SVN_ERR(encode_ucs4(pattern_buf, *like));
+                SVN_ERR(encode_ucs4(pattern_buf, *like, &patternbuf_len));
             }
         }
-      pattern_buf->data[pattern_buf->len] = '\0';
+      ((char*)pattern_buf->data)[patternbuf_len] = '\0';
     }
 
   /* Now normalize the string */
-  SVN_ERR(decompose_normalized(string, string_len, temp_buf));
-    SVN_ERR(encode_ucs4_string(string_buf,
-                               (void *)temp_buf->data,
-                               temp_buf->len));
+  SVN_ERR(decompose_normalized(string, string_len, temp_buf, &tempbuf_len));
+  SVN_ERR(encode_ucs4_string(string_buf, temp_buf->data,
+                             tempbuf_len, &tempbuf_len));
 
   *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;

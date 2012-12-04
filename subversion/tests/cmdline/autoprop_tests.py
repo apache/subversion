@@ -345,10 +345,12 @@ enable-auto-props = %s
   svntest.main.create_config_dir(config_dir, config_contents)
 
 #----------------------------------------------------------------------
-def check_inheritable_autoprops(sbox, auto_props_enabled):
+def check_inheritable_autoprops(sbox, auto_props_cfg_enabled,
+                                inheritable_auto_props_enabled):
   """Check that the autoprops added or imported by inheritable_autoprops_test
-     are as expected based on whether traditional auto props are active or
-     not, as indicated by AUTO_PROPS_ENABLED."""
+     are as expected based on whether auto props are active or
+     not, as indicated by AUTO_PROPS_CFG_ENABLED and
+     INHERITABLE_AUTO_PROPS_ENABLED."""
 
   foo_path = sbox.ospath('foo.c')
   bar_path = sbox.ospath('B/bar.c')
@@ -358,7 +360,7 @@ def check_inheritable_autoprops(sbox, auto_props_enabled):
   snk_path = sbox.ospath('D/H/snk.py')
   sir_path = sbox.ospath('D/H/sir.c')
 
-  if auto_props_enabled:
+  if auto_props_cfg_enabled:
     check_proplist(foo_path, {'svn:eol-style':'CRLF',
                               'svn:keywords':'Author Date Id Rev URL'})
     check_proplist(bar_path, {'svn:eol-style':'CR',
@@ -371,7 +373,8 @@ def check_inheritable_autoprops(sbox, auto_props_enabled):
     check_proplist(snk_path, {'svn:mime-type':'text/x-python'})
     check_proplist(sir_path, {'svn:eol-style':'CRLF',
                               'svn:keywords':'Author Date Id Rev URL'})
-  else:
+  elif inheritable_auto_props_enabled: # Config auto-props disabled,
+                                          # but not svn:auto-props.
     check_proplist(foo_path, {'svn:eol-style':'CRLF'})
     check_proplist(bar_path, {'svn:eol-style':'CR',
                               'svn:keywords':'Date'})
@@ -381,6 +384,14 @@ def check_inheritable_autoprops(sbox, auto_props_enabled):
     check_proplist(rip_path, {'svn:executable':'*'})
     check_proplist(snk_path, {'svn:mime-type':'text/x-python'})
     check_proplist(sir_path, {'svn:eol-style':'CRLF'})
+  else: # No autoprops of any kind.
+    check_proplist(foo_path, {})
+    check_proplist(bar_path, {})
+    check_proplist(baf_path, {})
+    check_proplist(qux_path, {})
+    check_proplist(rip_path, {})
+    check_proplist(snk_path, {})
+    check_proplist(sir_path, {})
 
 #----------------------------------------------------------------------
 def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
@@ -421,14 +432,16 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   create_inherited_autoprops_config(config_dir, cfgenable)
 
   # add comandline flags
+  inheritable_auto_props_enabled = 1
   if clienable == 1:
     parameters = parameters + ['--auto-props']
-    enable_flag = 1
+    auto_props_cfg_enabled = 1
   elif clienable == -1:
     parameters = parameters + ['--no-auto-props']
-    enable_flag = 0
+    auto_props_cfg_enabled = 0
+    inheritable_auto_props_enabled = 0
   else:
-    enable_flag = cfgenable
+    auto_props_cfg_enabled = cfgenable
 
   # setup subdirectory if needed
   if len(subdir) > 0:
@@ -503,7 +516,8 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
       svntest.main.run_svn(None, 'checkout', repos_url + '/A', files_wc_dir,
                           '--config-dir', config_dir)
 
-    check_inheritable_autoprops(sbox, enable_flag)
+    check_inheritable_autoprops(sbox, auto_props_cfg_enabled,
+                                inheritable_auto_props_enabled)
 
   return config_dir
 
@@ -608,8 +622,50 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   svntest.main.run_svn(None, 'add', '.', '--force', '--config-dir',
                        config_dir)
   os.chdir(saved_wd)
+  check_inheritable_autoprops(sbox, True, True)
 
-  check_inheritable_autoprops(sbox, True)
+  # Revert additions and try with --no-auto-props
+  svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
+
+  # When the add above sets svn:executable on D/rip.bat, subversion
+  # also sets the execute bits on the file (on systems that support
+  # that).  The revert above does not return the file to its original
+  # permissions, so we do so manually now.  Otherwise the follwing
+  # addition will notice the executable bits and set svn:executable
+  # again, which is not what we are here to test.
+  if os.name == 'posix':
+    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'), 0664)
+    
+  os.chdir(sbox.wc_dir)
+  svntest.main.run_svn(None, 'add', '.', '--force', '--no-auto-props',
+                       '--config-dir', config_dir)
+  os.chdir(saved_wd)
+  check_inheritable_autoprops(sbox, False, False)
+
+  # Create a new config with auto-props disabled.
+  #
+  # Then revert the previous additions and add again, only the
+  # svn:auto-props should be applied.
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir,
+                            'autoprops_config_disabled_' + sbox.name)
+  create_inherited_autoprops_config(config_dir, False)
+
+  svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
+  svntest.main.run_svn(None, 'add', '.', '--force',
+                       '--config-dir', config_dir)
+  os.chdir(saved_wd)
+  check_inheritable_autoprops(sbox, False, True)
+
+  # Revert  a final time and add again with the --auto-props switch.
+  # Both the config defined and svn:auto-props should be applied.
+  svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
+  svntest.main.run_svn(None, 'add', '.', '--force', '--auto-props',
+                       '--config-dir', config_dir)
+  os.chdir(saved_wd)
+  check_inheritable_autoprops(sbox, True, True)
 
 #----------------------------------------------------------------------
 # Can't set svn:auto-props on files.

@@ -36,16 +36,6 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
                                      apr_pool_t *pool);
 
 /**
- * Combine the numbers @a a and @a b in a space efficient way such that no
- * other combination of numbers can produce the same result.
- * Allocate temporaries as well as the result from @a pool.
- */
-const char*
-svn_fs_fs__combine_two_numbers(apr_int64_t a,
-                               apr_int64_t b,
-                               apr_pool_t *pool);
-
-/**
  * Serialize a @a noderev_p within the serialization @a context.
  */
 void

@@ -35,6 +35,7 @@
 #include "diff.h"
 #include "svn_private_config.h"
 #include "private/svn_adler32.h"
+#include "private/svn_diff_private.h"
 
 typedef struct source_tokens_t
 {
@@ -363,6 +364,9 @@ typedef struct unified_output_baton_t
   /* The delimiters of the hunk header, '@@' for text hunks and '##' for
    * property hunks. */
   const char *hunk_delimiter;
+  /* The string to print after a line that does not end with a newline.
+   * It must start with a '\'.  Typically "\ No newline at end of file". */
+  const char *no_newline_string;
 
   /* Pool for allocation of temporary memory in the callbacks
      Should be cleared on entry of each iteration of a callback */
@@ -418,13 +422,10 @@ output_unified_token_range(output_baton_t *btn,
   if (past_last == source->tokens->nelts && source->ends_without_eol)
     {
       const char *out_str;
-      SVN_ERR(svn_utf_cstring_from_utf8_ex2
-              (&out_str,
-               /* The string below is intentionally not marked for translation:
-                  it's vital to correct operation of the diff(1)/patch(1)
-                  program pair. */
-               APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
-               btn->header_encoding, btn->pool));
+
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(
+                &out_str, btn->no_newline_string,
+                btn->header_encoding, btn->pool));
       svn_stringbuf_appendcstr(btn->hunk, out_str);
     }
 
@@ -459,45 +460,19 @@ output_unified_flush_hunk(output_baton_t *baton,
   if (hunk_delimiter == NULL)
     hunk_delimiter = "@@";
 
-  /* Write the hunk header */
+  /* Convert our 0-based line numbers into unidiff 1-based numbers */
   if (baton->hunk_length[0] > 0)
-    /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[0]++;
-  SVN_ERR(svn_stream_printf_from_utf8(
-            baton->output_stream, baton->header_encoding,
-            baton->pool,
-            /* Hunk length 1 is implied, don't show the
-               length field if we have a hunk that long */
-            (baton->hunk_length[0] == 1)
-            ? ("%s -%" APR_OFF_T_FMT)
-            : ("%s -%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT),
-            hunk_delimiter,
-            baton->hunk_start[0], baton->hunk_length[0]));
-
   if (baton->hunk_length[1] > 0)
-    /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[1]++;
 
-
-  /* Hunk length 1 is implied, don't show the
-     length field if we have a hunk that long */
-  if (baton->hunk_length[1] == 1)
-    {
-      SVN_ERR(svn_stream_printf_from_utf8(
-                baton->output_stream, baton->header_encoding,
-                baton->pool,
-                " +%" APR_OFF_T_FMT " %s" APR_EOL_STR,
-                baton->hunk_start[1], hunk_delimiter));
-    }
-  else
-    {
-      SVN_ERR(svn_stream_printf_from_utf8(
-                baton->output_stream, baton->header_encoding,
-                baton->pool,
-                " +%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT " %s" APR_EOL_STR,
-                baton->hunk_start[1], baton->hunk_length[1],
-                hunk_delimiter));
-    }
+  /* Write the hunk header */
+  SVN_ERR(svn_diff__unified_write_hunk_header(
+            baton->output_stream, baton->header_encoding, hunk_delimiter,
+            baton->hunk_start[0], baton->hunk_length[0],
+            baton->hunk_start[1], baton->hunk_length[1],
+            NULL /* hunk_extra_context */,
+            baton->pool));
 
   hunk_len = baton->hunk->len;
   SVN_ERR(svn_stream_write(baton->output_stream,
@@ -586,6 +561,10 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
       baton.header_encoding = header_encoding;
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.hunk_delimiter = hunk_delimiter;
+      baton.no_newline_string
+        = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
+          ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
+          : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",
@@ -602,12 +581,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
 
       if (with_diff_header)
         {
-          SVN_ERR(svn_stream_printf_from_utf8(output_stream,
-                                              header_encoding, pool,
-                                              "--- %s" APR_EOL_STR
-                                              "+++ %s" APR_EOL_STR,
-                                              original_header,
-                                              modified_header));
+          SVN_ERR(svn_diff__unidiff_write_header(
+                    output_stream, header_encoding,
+                    original_header, modified_header, pool));
         }
 
       SVN_ERR(svn_diff_output(diff, &baton,

@@ -155,3 +155,239 @@ svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
   SVN_ERR(svn_wc_context_create(&sandbox->wc_ctx, NULL, pool, pool));
   return SVN_NO_ERROR;
 }
+
+void
+sbox_file_write(svn_test__sandbox_t *b, const char *path, const char *text)
+{
+  FILE *f = fopen(sbox_wc_path(b, path), "w");
+
+  fputs(text, f);
+  fclose(f);
+}
+
+svn_error_t *
+sbox_wc_add(svn_test__sandbox_t *b, const char *path)
+{
+  const char *parent_abspath;
+
+  path = sbox_wc_path(b, path);
+  parent_abspath = svn_dirent_dirname(path, b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_add_from_disk(b->wc_ctx, path, NULL, NULL, b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_disk_mkdir(svn_test__sandbox_t *b, const char *path)
+{
+  path = sbox_wc_path(b, path);
+  SVN_ERR(svn_io_dir_make(path, APR_FPROT_OS_DEFAULT, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_wc_mkdir(svn_test__sandbox_t *b, const char *path)
+{
+  SVN_ERR(sbox_disk_mkdir(b, path));
+  SVN_ERR(sbox_wc_add(b, path));
+  return SVN_NO_ERROR;
+}
+
+#if 0 /* not used */
+/* Copy the file or directory tree FROM_PATH to TO_PATH which must not exist
+ * beforehand. */
+svn_error_t *
+sbox_disk_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
+{
+  const char *to_dir, *to_name;
+
+  from_path = sbox_wc_path(b, from_path);
+  to_path = sbox_wc_path(b, to_path);
+  svn_dirent_split(&to_dir, &to_name, to_path, b->pool);
+  return svn_io_copy_dir_recursively(from_path, to_dir, to_name,
+                                     FALSE, NULL, NULL, b->pool);
+}
+#endif
+
+svn_error_t *
+sbox_wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
+{
+  const char *parent_abspath;
+
+  from_path = sbox_wc_path(b, from_path);
+  to_path = sbox_wc_path(b, to_path);
+  parent_abspath = svn_dirent_dirname(to_path, b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_copy3(b->wc_ctx, from_path, to_path, FALSE,
+                       NULL, NULL, NULL, NULL, b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
+{
+  const char *abspath = sbox_wc_path(b, path);
+  const char *dir_abspath;
+  const char *lock_root_abspath;
+
+  if (strcmp(abspath, b->wc_abspath))
+    dir_abspath = svn_dirent_dirname(abspath, b->pool);
+  else
+    dir_abspath = abspath;
+
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     dir_abspath, FALSE /* lock_anchor */,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_wc_delete(svn_test__sandbox_t *b, const char *path)
+{
+  const char *abspath = sbox_wc_path(b, path);
+  const char *dir_abspath = svn_dirent_dirname(abspath, b->pool);
+  const char *lock_root_abspath;
+
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     dir_abspath, FALSE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_delete4(b->wc_ctx, abspath, FALSE, TRUE,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_wc_exclude(svn_test__sandbox_t *b, const char *path)
+{
+  const char *abspath = sbox_wc_path(b, path);
+  const char *lock_root_abspath;
+
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     abspath, TRUE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_exclude(b->wc_ctx, abspath,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *targets = apr_array_make(b->pool, 1,
+                                               sizeof(const char *));
+
+  APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(b, path);
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  return svn_client_commit5(targets, svn_depth_infinity,
+                            FALSE, FALSE, TRUE, /* keep locks/cl's/use_ops*/
+                            NULL, NULL, NULL, NULL, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *result_revs;
+  apr_array_header_t *paths = apr_array_make(b->pool, 1,
+                                             sizeof(const char *));
+  svn_opt_revision_t revision;
+
+  revision.kind = svn_opt_revision_number;
+  revision.value.number = revnum;
+
+  APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
+                            TRUE, FALSE, FALSE, FALSE, FALSE,
+                            ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_resolved(svn_test__sandbox_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  return svn_client_resolve(sbox_wc_path(b, path), svn_depth_infinity,
+                            svn_wc_conflict_choose_merged, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  return svn_client_resolve(sbox_wc_path(b, path), svn_depth_infinity,
+                            svn_wc_conflict_choose_mine_conflict,
+                            ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *paths = apr_array_make(b->pool, 1,
+                                             sizeof(const char *));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, src);
+  return svn_client_move6(paths, sbox_wc_path(b, dst),
+                          FALSE, FALSE, NULL, NULL, NULL, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_propset(svn_test__sandbox_t *b,
+           const char *name,
+           const char *value,
+           const char *path)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *paths = apr_array_make(b->pool, 1,
+                                             sizeof(const char *));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
+  return svn_client_propset_local(name, svn_string_create(value, b->pool),
+                                  paths, svn_depth_empty, TRUE, NULL, ctx,
+                                  b->pool);
+}
+
+svn_error_t *
+sbox_add_and_commit_greek_tree(svn_test__sandbox_t *b)
+{
+  const struct svn_test__tree_entry_t *node;
+
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    {
+      if (node->contents)
+        {
+          sbox_file_write(b, node->path, node->contents);
+          SVN_ERR(sbox_wc_add(b, node->path));
+        }
+      else
+        {
+          SVN_ERR(sbox_wc_mkdir(b, node->path));
+        }
+    }
+
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  return SVN_NO_ERROR;
+}

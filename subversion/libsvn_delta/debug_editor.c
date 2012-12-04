@@ -52,6 +52,8 @@ write_indent(struct edit_baton *eb, apr_pool_t *pool)
 {
   int i;
 
+  /* This is DBG_FLAG from ../libsvn_subr/debug.c */
+  SVN_ERR(svn_stream_puts(eb->out, "DBG:"));
   for (i = 0; i < eb->indent_level; ++i)
     SVN_ERR(svn_stream_puts(eb->out, " "));
 

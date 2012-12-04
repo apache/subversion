@@ -78,6 +78,19 @@ capture_commit_info(const svn_commit_info_t *commit_info,
 
 /*** From add.c ***/
 svn_error_t *
+svn_client_add4(const char *path,
+                svn_depth_t depth,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_add5(path, depth, force, no_ignore, FALSE, add_parents,
+                         ctx, pool);
+}
+
+svn_error_t *
 svn_client_add3(const char *path,
                 svn_boolean_t recursive,
                 svn_boolean_t force,
@@ -398,7 +411,7 @@ svn_client_import4(const char *path,
                    apr_pool_t *pool)
 {
   return svn_error_trace(svn_client_import5(path, url, depth, no_ignore,
-                                            ignore_unknown_node_types,
+                                            FALSE, ignore_unknown_node_types,
                                             revprop_table,
                                             NULL, NULL,
                                             commit_callback, commit_baton,
@@ -1269,6 +1282,77 @@ svn_client_export(svn_revnum_t *result_rev,
 }
 
 /*** From list.c ***/
+
+/* Baton for use with wrap_list_func */
+struct list_func_wrapper_baton {
+    void *list_func1_baton;
+    svn_client_list_func_t list_func1;
+};
+
+/* This implements svn_client_list_func2_t */
+static svn_error_t *
+list_func_wrapper(void *baton,
+                  const char *path,
+                  const svn_dirent_t *dirent,
+                  const svn_lock_t *lock,
+                  const char *abs_path,
+                  const char *external_parent_url,
+                  const char *external_target,
+                  apr_pool_t *scratch_pool)
+{
+  struct list_func_wrapper_baton *lfwb = baton;
+
+  if (lfwb->list_func1)
+    return lfwb->list_func1(lfwb->list_func1_baton, path, dirent, 
+                           lock, abs_path, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper function for svn_client_list2().  It wraps old format baton
+   and callback function in list_func_wrapper_baton and
+   returns new baton and callback to use with svn_client_list3(). */
+static void
+wrap_list_func(svn_client_list_func2_t *list_func2,
+               void **list_func2_baton,
+               svn_client_list_func_t list_func,
+               void *baton,
+               apr_pool_t *result_pool)
+{
+  struct list_func_wrapper_baton *lfwb = apr_palloc(result_pool, 
+                                                    sizeof(*lfwb));
+
+  /* Set the user provided old format callback in the baton. */
+  lfwb->list_func1_baton = baton;
+  lfwb->list_func1 = list_func;
+
+  *list_func2_baton = lfwb;
+  *list_func2 = list_func_wrapper;
+}
+
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_client_list_func2_t list_func2;
+  void *list_func2_baton;
+
+  wrap_list_func(&list_func2, &list_func2_baton, list_func, baton, pool);
+
+  return svn_client_list3(path_or_url, peg_revision, revision, depth, 
+                          dirent_fields, fetch_locks, 
+                          FALSE /* include externals */,
+                          list_func2, list_func2_baton, ctx, pool);
+}
+
 svn_error_t *
 svn_client_list(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,

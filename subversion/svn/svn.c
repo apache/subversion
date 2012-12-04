@@ -131,7 +131,7 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_show_inherited_props,
   opt_search,
-  opt_search_and,
+  opt_search_and
 } svn_cl__longopt_t;
 
 
@@ -217,7 +217,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"stop-on-copy",  opt_stop_on_copy, 0,
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
-                    N_("disregard default and svn:ignore property ignores")},
+                    N_("disregard default and svn:ignore and\n"
+                       "                             "
+                       "svn:global-ignores property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
@@ -622,7 +624,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml} },
+    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml, 
+     opt_include_externals },
+    {{opt_include_externals, N_("include externals definitions")}} },
 
   { "lock", svn_cl__lock, {0}, N_
     ("Lock working copy paths or URLs in the repository, so that\n"
@@ -1113,7 +1117,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  A unidiff patch suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
-     "  Any non-unidiff content of PATCHFILE is ignored.\n"
+     "  Any non-unidiff content of PATCHFILE is ignored, except for Subversion\n"
+     "  property diffs as produced by 'svn diff'.\n"
      "\n"
      "  Changes listed in the patch will either be applied or rejected.\n"
      "  If a change does not match at its exact line offset, it may be applied\n"
@@ -1225,17 +1230,15 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The value may be provided with the --file option instead of PROPVAL.\n"
      "\n"
-     "  Note: svn recognizes the following special versioned properties\n"
-     "  but will store any arbitrary properties set:\n"
-     "    svn:ignore     - A newline separated list of file glob patterns to ignore.\n"
+     "  Property names starting with 'svn:' are reserved.  Subversion recognizes\n"
+     "  the following special versioned properties on a file:\n"
      "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
      "      URL, HeadURL             - The URL for the head version of the object.\n"
      "      Author, LastChangedBy    - The last person to modify the file.\n"
      "      Date, LastChangedDate    - The date/time the object was last modified.\n"
      "      Rev, Revision,           - The last revision the object changed.\n"
-     "      LastChangedRevision\n"
-     "      Id                       - A compressed summary of the previous\n"
-     "                                   4 keywords.\n"
+     "        LastChangedRevision\n"
+     "      Id                       - A compressed summary of the previous four.\n"
      "      Header                   - Similar to Id but includes the full URL.\n"
      "    svn:executable - If present, make the file executable.  Use\n"
      "      'svn propdel svn:executable PATH...' to clear.\n"
@@ -1244,43 +1247,37 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      whether to merge the file, and how to serve it from Apache.\n"
      "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
      "      treated as text.  Anything else is treated as binary.\n"
-     "    svn:externals  - A newline separated list of module specifiers,\n"
-     "      each of which consists of a URL and a relative directory path,\n"
-     "      similar to the syntax of the 'svn checkout' command:\n"
-     "        http://example.com/repos/zig foo/bar\n"
-     "      A revision to check out can optionally be specified to pin the\n"
-     "      external to a known revision:\n"
-     "        -r25 http://example.com/repos/zig foo/bar\n"
-     "      To unambiguously identify an element at a path which has been\n"
-     "      deleted (possibly even deleted multiple times in its history),\n"
-     "      an optional peg revision can be appended to the URL:\n"
-     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
-     "      Relative URLs are indicated by starting the URL with one\n"
-     "      of the following strings:\n"
-     "        ../  to the parent directory of the extracted external\n"
-     "        ^/   to the repository root\n"
-     "        //   to the scheme\n"
-     "        /    to the server root\n"
-     "      The ambiguous format 'relative_path relative_path' is taken as\n"
-     "      'relative_url relative_path' with peg revision support.\n"
-     "      Lines in externals definitions starting with the '#' character\n"
-     "      are considered comments and are ignored.\n"
-     "      Subversion 1.4 and earlier only support the following formats\n"
-     "      where peg revisions can only be specified using a -r modifier\n"
-     "      and where URLs cannot be relative:\n"
-     "        foo             http://example.com/repos/zig\n"
-     "        foo/bar -r 1234 http://example.com/repos/zag\n"
-     "      Use of these formats is discouraged. They should only be used if\n"
-     "      interoperability with 1.4 clients is desired.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
      "      to clear.\n"
      "\n"
-     "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
-     "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
-     "  attempt will fail, and a recursive attempt will set the property\n"
-     "  only on the file children of the directory.\n"),
+     "  Subversion recognizes the following special versioned properties on a\n"
+     "  directory:\n"
+     "    svn:ignore         - A list of file glob patterns to ignore, one per line.\n"
+     "    svn:global-ignores - Like svn:ignore, but inheritable.\n"
+     "    svn:externals      - A list of module specifiers, one per line, in the\n"
+     "      following format similar to the syntax of 'svn checkout':\n"
+     "        [-r REV] URL[@PEG] LOCALPATH\n"
+     "      Example:\n"
+     "        http://example.com/repos/zig foo/bar\n"
+     "      The LOCALPATH is relative to the directory having this property.\n"
+     "      To pin the external to a known revision, specify the optional REV:\n"
+     "        -r25 http://example.com/repos/zig foo/bar\n"
+     "      To unambiguously identify an element at a path which may have been\n"
+     "      subsequently deleted or renamed, specify the optional PEG revision:\n"
+     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
+     "      The URL may be a full URL or a relative URL starting with one of:\n"
+     "        ../  to the parent directory of the extracted external\n"
+     "        ^/   to the repository root\n"
+     "        /    to the server root\n"
+     "        //   to the URL scheme\n"
+     "      Use of the following format is discouraged but is supported for\n"
+     "      interoperability with Subversion 1.4 and earlier clients:\n"
+     "        LOCALPATH [-r PEG] URL\n"
+     "      The ambiguous format 'relative_path relative_path' is taken as\n"
+     "      'relative_url relative_path' with peg revision support.\n"
+     "      Lines starting with a '#' character are ignored.\n"),
     {'F', opt_encoding, 'q', 'r', opt_targets, 'R', opt_depth, opt_revprop,
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },

@@ -618,14 +618,26 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           break;
       }
 
-    SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
-                                 &dst_repos_root_url, &dst_repos_uuid, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, dstdir_abspath,
-                                 scratch_pool, scratch_pool));
+    err = svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
+                               &dst_repos_root_url, &dst_repos_uuid, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, dstdir_abspath,
+                               scratch_pool, scratch_pool);
+
+    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      {
+        /* An unversioned destination directory exists on disk. */
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_dirent_local_style(dstdir_abspath,
+                                                        scratch_pool));
+      }
+    else
+      SVN_ERR(err);
 
     /* Do this now, as we know the right data is cached */
     SVN_ERR(svn_wc__db_get_wcroot(&dst_wcroot_abspath, db, dstdir_abspath,
@@ -795,6 +807,11 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              void *notify_baton,
              apr_pool_t *scratch_pool)
 {
+  /* Verify that we have the required write lock. */
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(dst_abspath, scratch_pool),
+                              scratch_pool));
+
   return svn_error_trace(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                                       metadata_only, FALSE /* is_move */,
                                       TRUE /* allow_mixed_revisions */,
@@ -930,6 +947,14 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
+
+  /* Verify that we have the required write locks. */
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(src_abspath, scratch_pool),
+                              scratch_pool));
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(dst_abspath, scratch_pool),
+                              scratch_pool));
 
   SVN_ERR(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,

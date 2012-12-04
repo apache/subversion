@@ -52,133 +52,18 @@
 #include "client.h"
 
 #include "private/svn_wc_private.h"
+#include "private/svn_diff_private.h"
 
 #include "svn_private_config.h"
 
 
-/*
- * Constant separator strings
- */
-static const char equal_string[] =
-  "===================================================================";
-static const char under_string[] =
-  "___________________________________________________________________";
-
-
-/*-----------------------------------------------------------------*/
-
 /* Utilities */
 
-
-/* A helper function for display_prop_diffs.  Output the differences between
-   the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
-   human-readable form to OUTSTREAM, using ENCODING.  Use POOL for temporary
-   allocations. */
-static svn_error_t *
-display_mergeinfo_diff(const char *old_mergeinfo_val,
-                       const char *new_mergeinfo_val,
-                       const char *encoding,
-                       svn_stream_t *outstream,
-                       apr_pool_t *pool)
-{
-  apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_index_t *hi;
-
-  if (old_mergeinfo_val)
-    SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
-  else
-    old_mergeinfo_hash = NULL;
-
-  if (new_mergeinfo_val)
-    SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo_hash, new_mergeinfo_val, pool));
-  else
-    new_mergeinfo_hash = NULL;
-
-  SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, old_mergeinfo_hash,
-                              new_mergeinfo_hash,
-                              TRUE, pool, pool));
-
-  for (hi = apr_hash_first(pool, deleted);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *from_path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
-      svn_string_t *merge_revstr;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
-                                      iterpool));
-
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
-                                          _("   Reverse-merged %s:r%s%s"),
-                                          from_path, merge_revstr->data,
-                                          APR_EOL_STR));
-    }
-
-  for (hi = apr_hash_first(pool, added);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *from_path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
-      svn_string_t *merge_revstr;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
-                                      iterpool));
-
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
-                                          _("   Merged %s:r%s%s"),
-                                          from_path, merge_revstr->data,
-                                          APR_EOL_STR));
-    }
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
 
 #define MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir) \
         svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL, \
                           _("Path '%s' must be an immediate child of " \
                             "the directory '%s'"), path, relative_to_dir)
-
-/* A helper function used by display_prop_diffs.
-   TOKEN is a string holding a property value.
-   If TOKEN is empty, or is already terminated by an EOL marker,
-   return TOKEN unmodified. Else, return a new string consisting
-   of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL.
-   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
-static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
-                 apr_pool_t *pool)
-{
-  const char *curp;
-
-  if (had_eol)
-    *had_eol = FALSE;
-
-  if (token->len == 0)
-    return token;
-
-  curp = token->data + token->len - 1;
-  if (*curp == '\r')
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
-  else if (*curp != '\n')
-    {
-      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
-    }
-  else
-    {
-      if (had_eol)
-        *had_eol = TRUE;
-      return token;
-    }
-}
 
 /* Adjust PATH to be relative to the repository root beneath ORIG_TARGET,
  * using RA_SESSION and WC_CTX, and return the result in *ADJUSTED_PATH.
@@ -548,10 +433,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *wc_root_abspath,
                    apr_pool_t *pool)
 {
-  int i;
   const char *path1 = orig_path1;
   const char *path2 = orig_path2;
-  apr_pool_t *iterpool;
 
   if (use_git_diff_format)
     {
@@ -588,8 +471,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
       SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                           "Index: %s" APR_EOL_STR
-                                          "%s" APR_EOL_STR,
-                                          path, equal_string));
+                                          SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                                          path));
 
       if (use_git_diff_format)
         SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
@@ -598,11 +481,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       SVN_INVALID_REVNUM,
                                       encoding, pool));
 
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
-                                          "--- %s" APR_EOL_STR
-                                          "+++ %s" APR_EOL_STR,
-                                          label1,
-                                          label2));
+      /* --- label1
+       * +++ label2 */
+      SVN_ERR(svn_diff__unidiff_write_header(
+        outstream, encoding, label1, label2, pool));
     }
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
@@ -612,107 +494,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       APR_EOL_STR));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
-                                      "%s" APR_EOL_STR, under_string));
+                                      SVN_DIFF__UNDER_STRING APR_EOL_STR));
 
-  iterpool = svn_pool_create(pool);
-  for (i = 0; i < propchanges->nelts; i++)
-    {
-      const char *action;
-      const svn_string_t *original_value;
-      const svn_prop_t *propchange =
-        &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-      if (original_props)
-        original_value = apr_hash_get(original_props,
-                                      propchange->name, APR_HASH_KEY_STRING);
-      else
-        original_value = NULL;
-
-      /* If the property doesn't exist on either side, or if it exists
-         with the same value, skip it.  */
-      if ((! (original_value || propchange->value))
-          || (original_value && propchange->value
-              && svn_string_compare(original_value, propchange->value)))
-        continue;
-
-      svn_pool_clear(iterpool);
-
-      if (! original_value)
-        action = "Added";
-      else if (! propchange->value)
-        action = "Deleted";
-      else
-        action = "Modified";
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
-                                          "%s: %s%s", action,
-                                          propchange->name, APR_EOL_STR));
-
-      if (strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
-        {
-          const char *orig = original_value ? original_value->data : NULL;
-          const char *val = propchange->value ? propchange->value->data : NULL;
-          svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
-                                                    outstream, iterpool);
-
-          /* Issue #3896: If we can't pretty-print mergeinfo differences
-             because invalid mergeinfo is present, then don't let the diff
-             fail, just print the diff as any other property. */
-          if (err && err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
-            {
-              svn_error_clear(err);
-            }
-          else
-            {
-              SVN_ERR(err);
-              continue;
-            }
-        }
-
-      {
-        svn_diff_t *diff;
-        svn_diff_file_options_t options = { 0 };
-        const svn_string_t *tmp;
-        const svn_string_t *orig;
-        const svn_string_t *val;
-        svn_boolean_t val_has_eol;
-
-        /* The last character in a property is often not a newline.
-           An eol character is appended to prevent the diff API to add a
-           ' \ No newline at end of file' line. We add
-           ' \ No newline at end of property' manually if needed. */
-        tmp = original_value ? original_value
-                             : svn_string_create_empty(iterpool);
-        orig = maybe_append_eol(tmp, NULL, iterpool);
-
-        tmp = propchange->value ? propchange->value :
-                                  svn_string_create_empty(iterpool);
-        val = maybe_append_eol(tmp, &val_has_eol, iterpool);
-
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
-                                         iterpool));
-
-        /* UNIX patch will try to apply a diff even if the diff header
-         * is missing. It tries to be helpful by asking the user for a
-         * target filename when it can't determine the target filename
-         * from the diff header. But there usually are no files which
-         * UNIX patch could apply the property diff to, so we use "##"
-         * instead of "@@" as the default hunk delimiter for property diffs.
-         * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(outstream, diff, FALSE,
-                                                    "##",
-                                           svn_dirent_local_style(path,
-                                                                  iterpool),
-                                           svn_dirent_local_style(path,
-                                                                  iterpool),
-                                           encoding, orig, val, iterpool));
-        if (!val_has_eol)
-          {
-            const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            SVN_ERR(svn_stream_puts(outstream, s));
-          }
-      }
-    }
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_diff__display_prop_diffs(
+            outstream, encoding, propchanges, original_props,
+            TRUE /* pretty_print_mergeinfo */, pool));
 
   return SVN_NO_ERROR;
 }
@@ -959,7 +745,9 @@ diff_content_changed(const char *path,
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
                diff_cmd_baton->header_encoding, subpool,
-               "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               "Index: %s" APR_EOL_STR
+               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+               path));
 
       /* ### Print git diff headers. */
 
@@ -1007,7 +795,9 @@ diff_content_changed(const char *path,
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
                diff_cmd_baton->header_encoding, subpool,
-               "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               "Index: %s" APR_EOL_STR
+               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+               path));
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
        * ### 'Index' and '===' line is something subversion has added. The rest
@@ -1062,8 +852,9 @@ diff_content_changed(const char *path,
           /* Print out the diff header. */
           SVN_ERR(svn_stream_printf_from_utf8(outstream,
                    diff_cmd_baton->header_encoding, subpool,
-                   "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
-                   path, equal_string));
+                   "Index: %s" APR_EOL_STR
+                   SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                   path));
 
           if (diff_cmd_baton->use_git_diff_format)
             {
@@ -1270,8 +1061,9 @@ diff_file_deleted(svn_wc_notify_state_t *state,
     {
       SVN_ERR(svn_stream_printf_from_utf8(diff_cmd_baton->outstream,
                 diff_cmd_baton->header_encoding, scratch_pool,
-                "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
-                path, equal_string));
+                "Index: %s (deleted)" APR_EOL_STR
+                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                path));
     }
   else
     {

@@ -765,6 +765,10 @@ struct file_baton
      initialized, this is never NULL, but it may have zero elements.  */
   apr_array_header_t *propchanges;
 
+  /* For existing files, whether there are local modifications. FALSE for added
+     files */
+  svn_boolean_t local_prop_mods;
+
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
 
@@ -2390,9 +2394,9 @@ close_directory(void *dir_baton,
   if (db->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                         eb->db, db->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&base_props,
+                                             eb->db, db->local_abspath,
+                                             scratch_pool, scratch_pool));
     }
   else if (!db->adding_dir)
     {
@@ -3283,7 +3287,7 @@ open_file(const char *path,
                                &fb->changed_author, NULL,
                                &fb->original_checksum, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               &conflicted, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, &fb->local_prop_mods,
                                NULL, NULL, &have_work,
                                eb->db, fb->local_abspath,
                                fb->pool, scratch_pool));
@@ -3511,6 +3515,85 @@ change_file_prop(void *file_baton,
 
   if (!fb->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));
+
+  if (! fb->shadowed
+      && strcmp(name, SVN_PROP_SPECIAL) == 0)
+    {
+      struct edit_baton *eb = fb->edit_baton;
+      svn_boolean_t modified = FALSE;
+      svn_boolean_t becomes_symlink;
+      svn_boolean_t was_symlink;
+
+      /* Let's see if we have a change as in some scenarios servers report
+         non-changes of properties. */
+      becomes_symlink = (value != NULL);
+
+      if (fb->adding_file)
+        was_symlink = becomes_symlink; /* No change */
+      else
+        {
+          apr_hash_t *props;
+
+          /* We read the server-props, not the ACTUAL props here as we just
+             want to see if this is really an incoming prop change. */
+          SVN_ERR(svn_wc__db_base_get_props(&props, eb->db,
+                                            fb->local_abspath,
+                                            scratch_pool, scratch_pool));
+
+          was_symlink = ((props
+                              && apr_hash_get(props, SVN_PROP_SPECIAL,
+                                              APR_HASH_KEY_STRING) != NULL)
+                              ? svn_tristate_true
+                              : svn_tristate_false);
+        }
+
+      if (was_symlink != becomes_symlink)
+        {
+          /* If the local node was not modified, we continue as usual, if
+             modified we want a tree conflict just like how we would handle
+             it when receiving a delete + add (aka "replace") */
+          if (fb->local_prop_mods)
+            modified = TRUE;
+          else
+            SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
+                                                     fb->local_abspath,
+                                                     FALSE, scratch_pool));
+        }
+
+      if (modified)
+        {
+          if (!fb->edit_conflict)
+            fb->edit_conflict = svn_wc__conflict_skel_create(fb->pool);
+
+          SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                                     fb->edit_conflict,
+                                     eb->db, fb->local_abspath,
+                                     svn_wc_conflict_reason_edited,
+                                     svn_wc_conflict_action_replace,
+                                     fb->pool, scratch_pool));
+
+          SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,
+                                    fb->local_abspath, fb->old_repos_relpath,
+                                    fb->old_revision, svn_node_file,
+                                    fb->pool, scratch_pool));
+
+          /* Create a copy of the existing (pre update) BASE node in WORKING,
+             mark a tree conflict and handle the rest of the update as
+             shadowed */
+          SVN_ERR(svn_wc__db_op_make_copy(eb->db, fb->local_abspath,
+                                          fb->edit_conflict, NULL,
+                                          scratch_pool));
+
+          do_notification(eb, fb->local_abspath, svn_node_file,
+                          svn_wc_notify_tree_conflict, scratch_pool);
+
+          /* Ok, we introduced a replacement, so we can now handle the rest
+             as a normal shadowed update */
+          fb->shadowed = TRUE;
+          fb->add_existed = FALSE;
+          fb->already_notified = TRUE;
+      }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3892,6 +3975,7 @@ close_file(void *file_baton,
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
   const svn_checksum_t *new_checksum;
+  apr_array_header_t *iprops = NULL;
 
   if (fb->skip_this)
     {
@@ -3993,9 +4077,9 @@ close_file(void *file_baton,
   if (fb->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
-                                         eb->db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&current_base_props,
+                                             eb->db, fb->local_abspath,
+                                             scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
   else if (!fb->adding_file)
@@ -4015,64 +4099,6 @@ close_file(void *file_baton,
   /* And new nodes need an empty set of ACTUAL props.  */
   if (current_actual_props == NULL)
     current_actual_props = apr_hash_make(scratch_pool);
-
-  /* Catch symlink-ness change.
-   * add_file() doesn't know whether the incoming added node is a file or
-   * a symlink, because symlink-ness is saved in a prop :(
-   * So add_file() cannot notice when update wants to add a symlink where
-   * locally there already is a file scheduled for addition, or vice versa.
-   * It sees incoming symlinks as simple files and may wrongly try to offer
-   * a text conflict. So flag a tree conflict here. */
-  if (!fb->shadowed
-      && (! fb->adding_file || fb->add_existed))
-    {
-      svn_boolean_t local_is_link;
-      svn_boolean_t incoming_is_link;
-      int i;
-
-      local_is_link = apr_hash_get(local_actual_props,
-                                SVN_PROP_SPECIAL,
-                                APR_HASH_KEY_STRING) != NULL;
-
-      incoming_is_link = local_is_link;
-
-      /* Does an incoming propchange affect symlink-ness? */
-      for (i = 0; i < regular_prop_changes->nelts; ++i)
-        {
-          const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
-                                                  svn_prop_t);
-
-          if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
-            {
-              incoming_is_link = (prop->value != NULL);
-              break;
-            }
-        }
-
-      if (local_is_link != incoming_is_link)
-        {
-          fb->shadowed = TRUE;
-          fb->obstruction_found = TRUE;
-          fb->add_existed = FALSE;
-
-          if (!conflict_skel)
-            conflict_skel = svn_wc__conflict_skel_create(fb->pool);
-
-          SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
-                                       conflict_skel,
-                                       eb->db, fb->local_abspath,
-                                       svn_wc_conflict_reason_added,
-                                       svn_wc_conflict_action_add,
-                                       scratch_pool, scratch_pool));
-
-          fb->already_notified = TRUE;
-          do_notification(eb, fb->local_abspath, svn_node_unknown,
-                          svn_wc_notify_tree_conflict, scratch_pool);
-
-          /* The update will be applied to PRISTINE, but not to
-             the in-working copy node */
-        }
-    }
 
   prop_state = svn_wc_notify_state_unknown;
 
@@ -4274,6 +4300,22 @@ close_file(void *file_baton,
                                         scratch_pool);
     }
 
+  /* Any inherited props to be set set for this base node? */
+  if (eb->wcroot_iprops)
+    {
+      iprops = apr_hash_get(eb->wcroot_iprops, fb->local_abspath,
+                            APR_HASH_KEY_STRING);
+
+      /* close_edit may also update iprops for switched nodes, catching
+         those for which close_directory is never called (e.g. a switch
+         with no changes).  So as a minor optimization we remove any
+         iprops from the hash so as not to set them again in
+         close_edit. */
+      if (iprops)
+        apr_hash_set(eb->wcroot_iprops, fb->local_abspath,
+                     APR_HASH_KEY_STRING, NULL);
+    }
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_relpath,
@@ -4292,6 +4334,7 @@ close_file(void *file_baton,
                                    (fb->add_existed && fb->adding_file),
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
+                                   iprops,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
                                    conflict_skel,
@@ -4973,147 +5016,25 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath, *name;
-  const char *repos_relpath, *repos_root, *repos_uuid;
-  svn_wc__db_status_t status;
-  svn_kind_t my_kind;
-
-  if (!kind)
-    kind = &my_kind;
-
-  /* Initialize our return values to the most common (code-wise) values. */
-  *wc_root = TRUE;
-  if (switched)
-    *switched = FALSE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, &repos_relpath,
-                               &repos_root, &repos_uuid, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (repos_relpath == NULL)
-    {
-      /* If we inherit our URL, then we can't be a root, nor switched.  */
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
-    }
-  if (*kind != svn_kind_dir)
-    {
-      /* File/symlinks cannot be a root.  */
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_deleted)
-    {
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_server_excluded
-           || status == svn_wc__db_status_excluded
-           || status == svn_wc__db_status_not_present)
-    {
-      return svn_error_createf(
-                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                    _("The node '%s' was not found."),
-                    svn_dirent_local_style(local_abspath, scratch_pool));
-    }
-  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-    return SVN_NO_ERROR;
-
-  if (!*wc_root && switched == NULL )
-    return SVN_NO_ERROR; /* No more info needed */
-
-  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
-
-  /* Check if the node is recorded in the parent */
-  if (*wc_root)
-    {
-      svn_boolean_t is_root;
-      SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
-
-      if (is_root)
-        {
-          /* We're not in the (versioned) parent directory's list of
-             children, so we must be the root of a distinct working copy.  */
-          return SVN_NO_ERROR;
-        }
-    }
-
-  {
-    const char *parent_repos_root;
-    const char *parent_repos_relpath;
-    const char *parent_repos_uuid;
-
-    SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
-                                       &parent_repos_root,
-                                       &parent_repos_uuid,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-
-    if (strcmp(repos_root, parent_repos_root) != 0
-        || strcmp(repos_uuid, parent_repos_uuid) != 0)
-      {
-        /* This should never happen (### until we get mixed-repos working
-           copies). If we're in the parent, then we should be from the
-           same repository. For this situation, just declare us the root
-           of a separate, unswitched working copy.  */
-        return SVN_NO_ERROR;
-      }
-
-    *wc_root = FALSE;
-
-    if (switched)
-      {
-        const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
-                                                        name, scratch_pool);
-
-        *switched = (strcmp(expected_relpath, repos_relpath) != 0);
-      }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(
+            svn_wc__db_is_switched(wc_root, switched, kind,
+                                   db, local_abspath,
+                                   scratch_pool));
 }
 
 svn_error_t *
-svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_root;
-  svn_boolean_t is_switched;
-  svn_kind_t kind;
-  svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
-                              db, local_abspath, scratch_pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
-          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_trace(err);
-
-      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
-    }
-
-  *wc_root = is_root || is_switched;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_is_wc_root2(svn_boolean_t *wc_root,
-                   svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__internal_is_wc_root(wc_root, wc_ctx->db,
-                                                     local_abspath,
-                                                     scratch_pool));
+  return svn_error_trace(svn_wc__db_is_switched(is_wcroot,is_switched, kind,
+                                                wc_ctx->db, local_abspath,
+                                                scratch_pool));
 }
 
 svn_error_t*
@@ -5217,9 +5138,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
-  const char *original_root_url;
+  const char *repos_root_url;
+  const char *repos_uuid;
   const char *original_repos_relpath;
-  const char *original_uuid;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -5256,10 +5177,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                                           scratch_pool));
       }
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, &repos_root_url,
+                               &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, dir_abspath, scratch_pool, scratch_pool));
 
   switch (status)
@@ -5294,26 +5215,30 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     {
       /* Find the repository_root via the parent directory, which
          is always versioned before this function is called */
-      SVN_ERR(svn_wc__internal_get_repos_info(&original_root_url,
-                                              &original_uuid,
-                                              wc_ctx->db,
-                                              dir_abspath,
-                                              pool, pool));
+
+      if (!repos_root_url)
+        {
+          /* The parent is an addition, scan upwards to find the right info */
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                           &repos_root_url, &repos_uuid,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           wc_ctx->db, dir_abspath,
+                                           scratch_pool, scratch_pool));
+        }
+      SVN_ERR_ASSERT(repos_root_url);
 
       original_repos_relpath =
-        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
+          svn_uri_skip_ancestor(repos_root_url, copyfrom_url, scratch_pool);
 
       if (!original_repos_relpath)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),
-                                 copyfrom_url, original_root_url);
+                                 copyfrom_url, repos_root_url);
     }
   else
     {
-      original_root_url = NULL;
       original_repos_relpath = NULL;
-      original_uuid = NULL;
       copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
     }
 
@@ -5450,8 +5375,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   changed_date,
                                   changed_author,
                                   original_repos_relpath,
-                                  original_root_url,
-                                  original_uuid,
+                                  original_repos_relpath ? repos_root_url
+                                                         : NULL,
+                                  original_repos_relpath ? repos_uuid : NULL,
                                   copyfrom_rev,
                                   new_text_base_sha1_checksum,
                                   TRUE,

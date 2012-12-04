@@ -1152,8 +1152,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                    err,
+                    editor->abort_edit(edit_baton, pool));
     }
 
   /* Close the edit. */

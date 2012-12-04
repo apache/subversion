@@ -1011,7 +1011,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
 
-/** Similar to svn_client_create_context but passes a NULL @a cfg_hash.
+/** Similar to svn_client_create_context2 but passes a NULL @a cfg_hash.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
@@ -1524,17 +1524,42 @@ svn_client_switch(svn_revnum_t *result_rev,
  * behaviour only when recursing into an already versioned directory with @a
  * force.)
  *
+ * If @a no_autoprops is TRUE, don't set any autoprops on added files. If
+ * @a no_autoprops is FALSE then all added files have autprops set as per
+ * the auto-props list in @a ctx->config and the value of any
+ * @c SVN_PROP_INHERITABLE_AUTO_PROPS properties inherited by the nearest
+ * parents of @a path which are already under version control.
+ *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
  * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENT.
+ *
+ * @a scratch_pool is used for temporary allocations only.
  *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert2().
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_add5(const char *path,
+                svn_depth_t depth,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t no_autoprops,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_add3(), but with @a no_autoprops always set to
+ * FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add4(const char *path,
                 svn_depth_t depth,
@@ -1852,7 +1877,7 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * actions: #svn_wc_notify_commit_added,
  * #svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a pool for any temporary allocation.
+ * Use @a scratch_pool for any temporary allocation.
  *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
@@ -1879,6 +1904,13 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * if the target is part of a WC the import ignores any existing
  * properties.)
  *
+ * If @a no_autoprops is TRUE, don't set any autoprops on imported files. If
+ * @a no_autoprops is FALSE then all imported files have autprops set as per
+ * the auto-props list in @a ctx->config and the value of any
+ * @c SVN_PROP_INHERITABLE_AUTO_PROPS properties inherited by and explicitly set
+ * on @a url if @a url is already under versioned control, or the nearest parents
+ * of @a path which are already under version control if not.
+ *
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
@@ -1897,6 +1929,7 @@ svn_client_import5(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t no_autoprops,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
                    svn_client_import_filter_func_t filter_callback,
@@ -1908,7 +1941,7 @@ svn_client_import5(const char *path,
 
 /**
  * Similar to svn_client_import5(), but without support for an optional
- * @a filter_callback.
+ * @a filter_callback and @a no_autoprops always set to FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -2867,8 +2900,8 @@ svn_client_blame(const char *path_or_url,
  * errstream.  @a path_or_url1 and @a path_or_url2 can be either
  * working-copy paths or URLs.
  *
- * If @a relative_to_dir is not @c NULL, the @a original_path and
- * @a modified_path will have the @a relative_to_dir stripped from the
+ * If @a relative_to_dir is not @c NULL, the original path and
+ * modified path will have the @a relative_to_dir stripped from the
  * front of the respective paths.  If @a relative_to_dir is @c NULL,
  * paths will not be modified.  If @a relative_to_dir is not
  * @c NULL but @a relative_to_dir is not a parent path of the target,
@@ -3376,19 +3409,42 @@ svn_client_diff_summarize_peg(const char *path,
  * @{
  */
 
-/* Details of an automatic merge. */
+/** Details of an automatic merge.
+ *
+ * The information includes the locations of the youngest common ancestor,
+ * merge base, and such like.  The details are private to the implementation
+ * but some of the information can be retrieved through the public APIs
+ * svn_client_automatic_merge_is_reintegrate_like() and
+ * svn_client_automatic_merge_get_locations().
+ *
+ * @since New in 1.8.
+ */
 typedef struct svn_client_automatic_merge_t svn_client_automatic_merge_t;
 
-/* Find the information needed to merge all unmerged changes from a source
- * branch into a target branch.  The information is the locations of the
- * youngest common ancestor, merge base, and such like.
+/** Find the information needed to merge all unmerged changes from a source
+ * branch into a target branch.
  *
- * Set *MERGE to the information needed to merge all unmerged changes
- * (up to SOURCE_REVISION) from the source branch SOURCE_PATH_OR_URL @
- * SOURCE_REVISION into the target WC at TARGET_WCPATH.
+ * Set @a *merge_p to the information needed to merge all unmerged changes
+ * (up to @a source_revision) from the source branch @a source_path_or_url
+ * at @a source_revision into the target WC at @a target_wcpath.
+ *
+ * The flags @a allow_mixed_rev, @a allow_local_mods and
+ * @a allow_switched_subtrees enable merging into a WC that is in any or all
+ * of the states described by their names, but only if this function decides
+ * that the merge will be in the same direction as the last automatic merge.
+ * If, on the other hand, the merge turns out to be in the opposite
+ * direction (that is, if svn_client_automatic_merge_is_reintegrate_like()
+ * would return true), then such states of the WC are not allowed regardless
+ * of these flags.  This function merely records these flags in the
+ * @a *merge_p structure; svn_client_do_automatic_merge() checks the WC
+ * state for compliance.
+ *
+ * Allocate the @a *merge_p structure in @a result_pool.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
-svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge,
+svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
                                 const char *source_path_or_url,
                                 const svn_opt_revision_t *source_revision,
                                 const char *target_wcpath,
@@ -3399,18 +3455,22 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Find out what kind of automatic merge would be needed, when the target
+/** Find out what kind of automatic merge would be needed, when the target
  * is only known as a repository location rather than a WC.
  *
- * Like svn_client_find_automatic_merge() except that SOURCE_PATH_OR_URL @
- * SOURCE_REVISION should refer to a repository location and not a WC.
+ * Like svn_client_find_automatic_merge() except that @a source_path_or_url
+ * at @a source_revision should refer to a repository location and not a WC.
  *
- * ### The result, *MERGE_P, may not be suitable for passing to
- * svn_client_do_automatic_merge().  The target WC state would not be
- * checked (as in the ALLOW_* flags).  We should resolve this problem:
- * perhaps add the allow_* params here, or provide another way of setting
- * them; and perhaps ensure __do_...() will accept the result iff given a
- * WC that matches the stored target location.
+ * @note The result, @a *merge_p, is not intended for passing to
+ * svn_client_do_automatic_merge().
+ *   ### We should do something about this.  Perhaps ensure
+ *       svn_client_do_automatic_merge() will work iff given a WC that
+ *       matches the stored repo-location of the target branch and is an
+ *       unmodified single-rev WC.
+ *
+ * Allocate the @a *merge_p structure in @a result_pool.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_client_find_automatic_merge_no_wc(
@@ -3423,19 +3483,15 @@ svn_client_find_automatic_merge_no_wc(
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
-/* Perform an automatic merge.
+/** Perform an automatic merge.
  *
- * Merge according to MERGE into the WC at TARGET_WCPATH.
+ * Perform a merge, according to the information stored in @a merge, into
+ * the WC at @a target_wcpath.  The @a merge structure would typically come
+ * from calling svn_client_find_automatic_merge().
  *
  * The other parameters are as in svn_client_merge4().
  *
- * ### TODO: There's little point in this function being the only way the
- * caller can use the result of svn_client_find_automatic_merge().  The
- * contents of MERGE should be more public, or there should be other ways
- * the caller can use it, or these two functions should be combined into
- * one.  I want to make it more public, and also possibly have more ways
- * to use it in future (for example, do_automatic_merge_with_step_by_-
- * step_confirmation).
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
@@ -3448,16 +3504,48 @@ svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool);
 
-/* Return TRUE iff the automatic merge represented by MERGE is going to be
- * a reintegrate-like merge: that is, merging in the opposite direction
- * from the last full merge.
+/** Return TRUE iff the automatic merge represented by @a merge is going to
+ * be a reintegrate-like merge: that is, merging in the opposite direction
+ * from the last automatic merge.
  *
- * This function exists because the merge is NOT really automatic and the
+ * This function exists because the automatic merge is not symmetric and the
  * client can be more friendly if it knows something about the differences.
+ *
+ * @since New in 1.8.
  */
 svn_boolean_t
 svn_client_automatic_merge_is_reintegrate_like(
         const svn_client_automatic_merge_t *merge);
+
+/** Retrieve the repository coordinates involved in an automatic merge.
+ *
+ * Set @a *yca_url, @a *yca_rev, @a *base_url, @a *base_rev, @a *right_url,
+ * @a *right_rev, @a *target_url, @a *target_rev to the repository locations
+ * of, respectively: the youngest common ancestor of the branches, the base
+ * chosen for 3-way merge, the right-hand side of the source diff, and the
+ * target WC.
+ *
+ * Set @a repos_root_url to the URL of the repository root.  The four
+ * locations are necessarily in the same repository.
+ *
+ * Allocate the results in @a result_pool.  Any of the output pointers may
+ * be NULL if not wanted.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_automatic_merge_get_locations(
+                                const char **yca_url,
+                                svn_revnum_t *yca_rev,
+                                const char **base_url,
+                                svn_revnum_t *base_rev,
+                                const char **right_url,
+                                svn_revnum_t *right_rev,
+                                const char **target_url,
+                                svn_revnum_t *target_rev,
+                                const char **repos_root_url,
+                                const svn_client_automatic_merge_t *merge,
+                                apr_pool_t *result_pool);
 
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
@@ -5280,7 +5368,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** The type of function invoked by svn_client_list2() to report the details
+/** The type of function invoked by svn_client_list3() to report the details
  * of each directory entry being listed.
  *
  * @a baton is the baton that was passed to the caller.  @a path is the
@@ -5290,11 +5378,45 @@ svn_client_export(svn_revnum_t *result_rev,
  * the entry's lock, if it is locked and if lock information is being
  * reported by the caller; otherwise @a lock is NULL.  @a abs_path is the
  * repository path of the top node of the list operation; it is relative to
- * the repository root and begins with "/".  @a pool may be used for
- * temporary allocations.
+ * the repository root and begins with "/".
  *
- * @since New in 1.4.
+ * If svn_client_list3() was called with @a include_externals set to TRUE,
+ * @a external_parent_url and @a external_target will be set.
+ * @a external_parent_url is url of the directory which has the
+ * externals definitions. @a external_target is the target subdirectory of 
+ * externals definitions which is relative to the parent directory that holds 
+ * the external item.
+ *
+ * If external_parent_url and external_target are defined, the item being
+ * listed is part of the external described by external_parent_url and
+ * external_target. Else, the item is not part of any external.
+ * Moreover, we will never mix items which are part of separate
+ * externals, and will always finish listing an external before listing
+ * the next one.
+
+ * @a scratch_pool may be used for temporary allocations.
+ *
+ * @since New in 1.8.
  */
+typedef svn_error_t *(*svn_client_list_func2_t)(
+  void *baton,
+  const char *path,
+  const svn_dirent_t *dirent,
+  const svn_lock_t *lock,
+  const char *abs_path,
+  const char *external_parent_url,
+  const char *external_target,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to #svn_client_list_func2_t, but without any information about
+ * externals definitions.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *
+ * @since New in 1.4
+ *
+ * */
 typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
                                                const char *path,
                                                const svn_dirent_t *dirent,
@@ -5318,6 +5440,10 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
+ * If @a include_externals is TRUE, also list all external items 
+ * reached by recursion. @a depth value passed to the original list target
+ * applies for the externals also. 
+ *
  * Use @a pool for temporary allocations.
  *
  * Use authentication baton cached in @a ctx to authenticate against the
@@ -5334,8 +5460,30 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_list3(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_boolean_t include_externals,
+                 svn_client_list_func2_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/** Similar to svn_client_list3(), but with @a include_externals set to FALSE, 
+ * and using a #svn_client_list_func2_t as callback.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list2(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,

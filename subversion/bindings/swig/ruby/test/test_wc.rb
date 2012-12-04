@@ -534,7 +534,7 @@ EOE
       ctx.ci(lf_path)
 
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-        _wrap_assertion do
+        _my_assert_block do
           File.open(src_path, "wb") {|f| f.print(source)}
           args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
           result = yield(access.send(*args), source)
@@ -1089,7 +1089,11 @@ EOE
         assert_not_nil context
         assert_kind_of Svn::Wc::Context, context
       end
-      assert_nil result;
+      if RUBY_VERSION > '1.9'
+        assert_equal(result,true)
+      else
+        assert_nil result
+      end
     end
   end
 

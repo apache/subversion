@@ -626,16 +626,18 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 
-dnl Ev2 experimental feature ----------------------
-dnl Note: The Ev2 compat code will be built unconditionally, but by providing
-dnl this flag, users can enforce Ev2 compliance for testing purposes
-AC_ARG_ENABLE(ev2-shims,
-  AS_HELP_STRING([--enable-ev2-shims],
-                 [Compile with Ev2 translation [EXPERIMENTAL]]),
-  [enable_ev2_shims=$enableval],[enable_ev2_shims=no])
-if test "$enable_ev2_shims" = "yes"; then
-  AC_DEFINE(ENABLE_EV2_SHIMS, 1,
-            [Define to 1 if Ev2 should be interjected into editor stacks.])
+dnl Ev2 experimental features ----------------------
+dnl Note: The Ev2 implementations will be built unconditionally, but by
+dnl providing this flag, users can choose to use the currently-shimmed Ev2
+dnl editor implementations for various operations.  This will probably
+dnl negatively impact performance, but is useful for testing.
+AC_ARG_ENABLE(ev2-impl,
+  AS_HELP_STRING([--enable-ev2-impl],
+                 [Use Ev2 implementations, where available [EXPERIMENTAL]]),
+  [enable_ev2_impl=$enableval],[enable_ev2_impl=no])
+if test "$enable_ev2_impl" = "yes"; then
+  AC_DEFINE(ENABLE_EV2_IMPL, 1,
+            [Define to 1 if Ev2 implementations should be used.])
 fi
 
 
@@ -986,7 +988,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl Enable some extra warnings. Put these before the user's flags
         dnl so the user can specify flags that override these.
         CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
-        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow $CXXFLAGS"
+        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
@@ -994,7 +996,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl switches enabled.
         dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
 
-        dnl Add each of the following flags only if the compiler accepts it.
+        dnl Add each of the following flags only if the C compiler accepts it.
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
@@ -1024,6 +1026,23 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
+
+        dnl Add each of the following flags only if the C++ compiler accepts it.
+
+        CXXFLAGS_KEEP="$CXXFLAGS"
+        AC_LANG_PUSH([C++])
+
+        CXXFLAGS="-Wextra-tokens $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wshorten-64-to-32 $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        CXXFLAGS="-Wno-system-headers $CXXFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+
+        AC_LANG_POP([C++])
+        CXXFLAGS="$CXXFLAGS_KEEP"
       fi
     fi
 ])
@@ -1093,6 +1112,30 @@ AC_SUBST(MOD_ACTIVATION)
 
 
 
+AC_ARG_ENABLE(gcov,
+AC_HELP_STRING([--enable-gcov],
+               [Turn on gcov coverage testing (GCC only).]),
+[
+    if test "$enableval" = "yes" ; then
+      dnl Probably other compilers support something similar;
+      dnl feel free to extend this to include them.
+      if test "$GCC" = "yes"; then
+        if test "$svn_enable_shared" = "yes" ; then
+          AC_MSG_ERROR([Can't have --enable-gcov without --disable-shared (we
+                        recommend also using --enable-all-static).])
+        fi
+        if test ! "$enable_all_static" = "yes" ; then
+          AC_MSG_WARN(We recommend --enable-all-static with --enable-gcov.)
+        fi
+        AC_MSG_NOTICE([Enabling gcov coverage testing.])
+        CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+        CXXFLAGS="$CXXFLAGS -fprofile-arcs -ftest-coverage"
+      else
+        AC_MSG_ERROR([We only support --enable-gcov with GCC right now.])
+      fi
+    fi
+])
+
 AC_ARG_ENABLE(gprof,
 AS_HELP_STRING([--enable-gprof],
                [Produce gprof profiling data in 'gmon.out' (GCC only).]),
@@ -1145,7 +1188,7 @@ AC_PATH_PROG(PERL, perl, none)
 if test -n "$RUBY"; then
   AC_PATH_PROG(RUBY, "$RUBY", none)
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193, none)
 fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
@@ -1154,7 +1197,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1166,14 +1209,23 @@ if test "$RUBY" != "none"; then
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 
+    AC_CACHE_CHECK([for Ruby teeny version], [svn_cv_ruby_teeny],[
+    svn_cv_ruby_teeny="`$RUBY -rrbconfig -e 'major, minor, teeny = RUBY_VERSION.split("."); print teeny;'`"
+    ])
+    RUBY_TEENY="$svn_cv_ruby_teeny"
+    
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
-    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
-      # Disallow Ruby 1.9 or later until the binding tests get fixed
-      # to run with those versions.
+    AC_SUBST(RUBY_TEENY)
+    if test \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -gt "8" -a "$RUBY_TEENY" -lt "3" \); then
+      # Disallow Ruby between 1.8.7 and 1.9.3
       RUBY="none"
-      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
-      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+      AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
+      AC_MSG_WARN([Only 1.8.x and 1.9.3 releases are supported at this time])
+    elif test \(  "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "9" -a "$RUBY_TEENY" -eq "3" \); then
+      #Warn about 1.9.3 support
+      AC_MSG_WARN([WARNING: The detected Ruby is 1.9.3])
+      AC_MSG_WARN([WARNING: Only 1.8.x releases are fully supported, 1.9.3 support is new])
     fi
   else
     AC_MSG_RESULT([no])

@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file ConflictResolverCallback.cpp
- * @brief Implementation of the class ConflictResolverCallback.
+ * @file CreateJ.cpp
+ * @brief Implementation of the class CreateJ.
  */
 
 #include "svn_error.h"
@@ -207,9 +207,8 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
     }
 
   jbyteArray jdigest
-    = JNIUtil::makeJByteArray(
-        reinterpret_cast<const signed char *>(checksum->digest),
-        static_cast<int>(svn_checksum_size(checksum)));
+    = JNIUtil::makeJByteArray(checksum->digest,
+                              static_cast<int>(svn_checksum_size(checksum)));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1020,9 +1019,8 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
     POP_AND_RETURN_NULL;
 
   apr_hash_index_t *hi;
-  int i = 0;
   for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
-       hi; hi = apr_hash_next(hi), ++i)
+       hi; hi = apr_hash_next(hi))
     {
       const char *key;
       svn_string_t *val;
@@ -1036,9 +1034,7 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jbyteArray jpropVal = JNIUtil::makeJByteArray(
-                              reinterpret_cast<const signed char *>(val->data),
-                              static_cast<int>(val->len));
+      jbyteArray jpropVal = JNIUtil::makeJByteArray(val);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 

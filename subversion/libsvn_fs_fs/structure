@@ -526,6 +526,7 @@ A transaction directory has the following layout:
   node.<nid>.<cid>           New node-rev data for node
   node.<nid>.<cid>.props     Props for new node-rev, if changed
   node.<nid>.<cid>.children  Directory contents for node-rev
+  <sha1>                     Text representation of that sha1
 
 In FS formats 1 and 2, it also contains:
 
@@ -542,6 +543,11 @@ the duration of each write.
 The two kinds of props files are all in hash dump format.  The "props"
 file will always be present.  The "node.<nid>.<cid>.props" file will
 only be present if the node-rev properties have been changed.
+
+The <sha1> files have been introduced in FS format 6. Their content
+is that of text rep references: "<rev> <offset> <length> <size> <digest>"
+They will be written for text reps in the current transaction and be
+used to eliminate duplicate reps within that transaction.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID

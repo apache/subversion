@@ -576,35 +576,6 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    const char *local_abspath,
                                    apr_pool_t *scratch_pool);
 
-/**
- * Set @a *copyfrom_url to the corresponding copy-from URL (allocated
- * from @a result_pool), and @a copyfrom_rev to the corresponding
- * copy-from revision, of @a local_abspath, using @a db.  Set @a
- * is_copy_target to TRUE iff @a local_abspath was the target of a
- * copy information (versus being a member of the subtree beneath such
- * a copy target).
- *
- * @a copyfrom_root_url and @a copyfrom_repos_relpath return the exact same
- * information as @a copyfrom_url, just still separated as root and relpath.
- *
- * If @a local_abspath is not copied, set @a *copyfrom_root_url,
- * @a *copyfrom_repos_relpath and @a copyfrom_url to NULL and
- * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
- *
- * Any out parameters may be NULL if the caller doesn't care about those
- * values.
- */
-svn_error_t *
-svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
-                                   const char **copyfrom_repos_relpath,
-                                   const char **copyfrom_url,
-                                   svn_revnum_t *copyfrom_rev,
-                                   svn_boolean_t *is_copy_target,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
 /* Internal version of svn_wc__node_get_origin() */
 svn_error_t *
 svn_wc__internal_get_origin(svn_boolean_t *is_copy,
@@ -618,18 +589,6 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             svn_boolean_t scan_deleted,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
-
-/* Internal version of svn_wc__node_get_commit_base() */
-svn_error_t *
-svn_wc__internal_get_commit_base(svn_revnum_t *commit_base_revision,
-                                 const char **repos_relpath,
-                                 const char **repos_root_url,
-                                 const char **repos_uuid,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
 
 /* Internal version of svn_wc__node_get_repos_info() */
 svn_error_t *
@@ -647,23 +606,6 @@ svn_wc__internal_get_repos_relpath(const char **repos_relpath,
                                    const char *local_abspath,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
-
-/* Internal version of svn_wc__get_iprops() */
-svn_error_t *
-svn_wc__internal_get_iprops(apr_array_header_t **inherited_props,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const char *propname,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-/* Internal version of svn_wc_is_wc_root2() */
-svn_error_t *
-svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
-
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
@@ -812,6 +754,16 @@ svn_wc__fetch_base_func(const char **filename,
                         svn_revnum_t base_revision,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/* Find duplicate targets in *EXTERNALS, a list of svn_wc_external_item2_t*
+ * elements, and store each target string in *DUPLICATE_TARGETS as const
+ * char * elements. *DUPLICATE_TARGETS will be NULL if no duplicates were
+ * found. */
+svn_error_t *
+svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
+                                   apr_array_header_t *externals,
+                                   apr_pool_t *pool,
+                                   apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

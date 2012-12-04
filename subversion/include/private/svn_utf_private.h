@@ -32,6 +32,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_string_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +97,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
 svn_error_t *
 svn_utf__normcmp(const char *str1, apr_size_t len1,
                  const char *str2, apr_size_t len2,
-                 svn_stringbuf_t *buf1, svn_stringbuf_t *buf2,
+                 svn_membuf_t *buf1, svn_membuf_t *buf2,
                  int *result);
 
 
@@ -123,9 +124,9 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
               svn_boolean_t sql_like,
-              svn_stringbuf_t *pattern_buf,
-              svn_stringbuf_t *string_buf,
-              svn_stringbuf_t *temp_buf,
+              svn_membuf_t *pattern_buf,
+              svn_membuf_t *string_buf,
+              svn_membuf_t *temp_buf,
               svn_boolean_t *match);
 
 /* Return the version of the wrapped utf8proc library. */

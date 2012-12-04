@@ -54,7 +54,7 @@ typedef struct svn_named_atomic__t svn_named_atomic__t;
 /** Returns #FALSE when named atomics are not available to our process
  * and svn_atomic_namespace__create is likely to fail.
  *
- * Please note that the actual check will be performed only once and later
+ * @note The actual check will be performed only once and later
  * changes in process privileges will not reflect in the outcome of future
  * calls to this function.
  */
@@ -76,7 +76,7 @@ svn_named_atomic__is_efficient(void);
  * the same shared memory region but have independent lifetimes.
  *
  * The access object will be allocated in @a result_pool and atomics gotten
- * from this object will become invalid when the pool is being cleaned.
+ * from this object will become invalid when the pool is being cleared.
  */
 svn_error_t *
 svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
@@ -104,8 +104,10 @@ svn_atomic_namespace__cleanup(const char *name,
  * characters and an error will be returned if the specified name is longer
  * than supported.
  *
- * Please note that the lifetime of the atomic is bound to the lifetime
+ * @note The lifetime of the atomic object is bound to the lifetime
  * of the @a ns object, i.e. the pool the latter was created in.
+ * The data in the namespace persists as long as at least one process
+ * holds an #svn_atomic_namespace__t object corresponding to it.
  */
 svn_error_t *
 svn_named_atomic__get(svn_named_atomic__t **atomic,
@@ -120,8 +122,8 @@ svn_error_t *
 svn_named_atomic__read(apr_int64_t *value,
                        svn_named_atomic__t *atomic);
 
-/** Set the data in @a atomic to @a NEW_VALUE and return its old content
- * in @a OLD_VALUE.  @a OLD_VALUE may be NULL.
+/** Set the data in @a atomic to @a new_value and return its old content
+ * in @a *old_value.  @a old_value may be NULL.
  *
  * An error will be returned if @a atomic is @c NULL.
  */
@@ -131,7 +133,7 @@ svn_named_atomic__write(apr_int64_t *old_value,
                         svn_named_atomic__t *atomic);
 
 /** Add @a delta to the data in @a atomic and return its new value in
- * @a NEW_VALUE.  @a NEW_VALUE may be NULL.
+ * @a *new_value.  @a new_value may be null.
  *
  * An error will be returned if @a atomic is @c NULL.
  */
@@ -141,8 +143,8 @@ svn_named_atomic__add(apr_int64_t *new_value,
                       svn_named_atomic__t *atomic);
 
 /** If the current data in @a atomic equals @a comperand, set it to
- * @a NEW_VALUE.  Return the initial value in @a OLD_VALUE.
- * @a OLD_VALUE may be NULL.
+ * @a new_value.  Return the initial value in @a *old_value.
+ * @a old_value may be NULL.
  *
  * An error will be returned if @a atomic is @c NULL.
  */
