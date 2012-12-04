@@ -82,6 +82,7 @@ Candidate changes:
      ('svnmucc ps foo bar https://svn.apache.org/repos')
    Votes:
      +1: danielsh, rhuijben
+     -0: philip (merge conflict svnmucc renamed)
 
  * r1407131, r1407812, r1408650
    Properly handle incoming changes on symlinks (issue #4091)
@@ -95,6 +96,7 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1407131/
    Votes:
      +1: rhuijben
+     -0: philip (needs r1295418 for test to run but it still FAILs)
 
  * r1409146
    Make sure svn_uri_get_file_url_from_dirent() returns a canonical url for
