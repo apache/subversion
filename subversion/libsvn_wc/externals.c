@@ -515,7 +515,7 @@ open_file(const char *path,
                                    NULL, NULL, NULL, &eb->changed_rev,
                                    &eb->changed_date, &eb->changed_author,
                                    NULL, &eb->original_checksum, NULL, NULL,
-                                   &eb->had_props, NULL,
+                                   &eb->had_props, NULL, NULL,
                                    eb->db, eb->local_abspath,
                                    eb->pool, file_pool));
 
@@ -1071,7 +1071,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   err = svn_wc__db_base_get_info(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &lock,
-                                 NULL, &update_root,
+                                 NULL, NULL, &update_root,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -1238,7 +1238,7 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
                                  &repos_root_url, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, xinfo->local_abspath,
                                  scratch_pool, scratch_pool);
 

@@ -172,7 +172,7 @@ file_diff(struct diff_baton *eb,
                                            &base_revision,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, &base_checksum, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
 
@@ -244,7 +244,8 @@ file_diff(struct diff_baton *eb,
 
           SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, &del_checksum, NULL,
-                                                NULL, db, local_abspath,
+                                                NULL, NULL,
+                                                db, local_abspath,
                                                 scratch_pool, scratch_pool));
         }
 
