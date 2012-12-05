@@ -332,4 +332,12 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
                                  int op_depth,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PRIVATE_H */

@@ -92,9 +92,35 @@ tc_editor_add_file(void *baton,
                    svn_revnum_t replaces_rev,
                    apr_pool_t *scratch_pool)
 {
+  struct tc_editor_baton *b = baton;
+  int parent_op_depth, op_depth = relpath_depth(b->move_root_dst_relpath);
+  const char *parent_relpath = svn_relpath_dirname(relpath, scratch_pool);
+  svn_boolean_t have_row;
+  svn_sqlite__stmt_t *stmt;
+
+  /* Extend base-delete. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                    STMT_SELECT_LOWEST_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, parent_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    parent_op_depth = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    {
+      /* Adding this deleted NODES row is valid if we add the
+         underlying normal row before completing the transaction. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_INSTALL_WORKING_NODE_FOR_DELETE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isdss", b->wcroot->wc_id, relpath,
+                                parent_op_depth, parent_relpath,
+                                "file" /* ### TODO use kind_map */ ));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+    }
+
   /* ### TODO check for, and flag, tree conflict */
 
-  /* ### TODO Extend base-delete. */
   return SVN_NO_ERROR;
 }
 
@@ -357,16 +383,18 @@ tc_editor_delete(void *baton,
 {
   struct tc_editor_baton *b = baton;
   svn_sqlite__stmt_t *stmt;
+  int op_depth = relpath_depth(b->move_root_dst_relpath);
 
   /* Deleting the ROWS is valid so long as we update the parent before
      committing the transaction. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                     STMT_DELETE_WORKING_OP_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
-                            relpath_depth(b->move_root_dst_relpath)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath, op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* ### TODO Retract base-delete. */
+  /* Retract any base-delete. */
+  SVN_ERR(svn_wc__db_retract_parent_delete(b->wcroot, relpath, op_depth,
+                                           scratch_pool));
 
   /* ### TODO check for, and flag, tree conflict */
   return SVN_NO_ERROR;
