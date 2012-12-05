@@ -3161,19 +3161,23 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    svn_io_file_del_on_pool_cleanup,
                                    report->pool, scratch_pool));
 
-#ifdef SVN_RA_SERF__UPDATES_SEND_ALL
-  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
-                        "xmlns:S", SVN_XML_NAMESPACE, "send-all", "true",
-                        NULL);
-#else
-  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
-                        "xmlns:S", SVN_XML_NAMESPACE,
-                        NULL);
-  /* Subversion 1.8+ servers can be told to send properties for newly
-     added items inline even when doing a skelta response. */
-  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
-#endif
-
+  if (sess->bulk_updates)
+    {
+      svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
+                            "S:update-report",
+                            "xmlns:S", SVN_XML_NAMESPACE, "send-all", "true",
+                            NULL);
+    }
+  else
+    {
+      svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
+                            "S:update-report",
+                            "xmlns:S", SVN_XML_NAMESPACE,
+                            NULL);
+      /* Subversion 1.8+ servers can be told to send properties for newly
+       added items inline even when doing a skelta response. */
+      make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
+    }
 
   make_simple_xml_tag(&buf, "S:src-path", report->source, scratch_pool);
 
@@ -3215,11 +3219,13 @@ make_update_reporter(svn_ra_session_t *ra_session,
   /* When in 'send-all' mode, mod_dav_svn will assume that it should
      calculate and transmit real text-deltas (instead of empty windows
      that merely indicate "text is changed") unless it finds this
-     element.  When not in 'send-all' mode, mod_dav_svn will never
-     send text-deltas at all.
+     element.
 
      NOTE: Do NOT count on servers actually obeying this, as some exist
-     which obey send-all, but do not check for this directive at all! */
+     which obey send-all, but do not check for this directive at all!
+
+     NOTE 2: When not in 'send-all' mode, mod_dav_svn can still be configured to
+     override our request and send text-deltas. */
   if (! text_deltas)
     {
       make_simple_xml_tag(&buf, "S:text-deltas", "no", scratch_pool);
