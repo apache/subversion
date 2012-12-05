@@ -89,21 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1407597
-   Fix issue #4079 ("svnmucc cp rev arg" SEGV).
-   Justification:
-     "Segmentation fault (core dumped)" is considered sub-par error reporting.
-   Notes:
-     svnmucc.c has been renamed since 1.7.x, so backporting this change should
-     be done like so:
-       $ svn merge --ignore-ancestry -c1407597 \
-                   ^/subversion/trunk/subversion/svnmucc/svnmucc.c \
-                   tools/client-side/svnmucc/svnmucc.c
-       $ svn merge --record-only -c1407597 ^/subversion/trunk
-       $ svn ci -m ...
-   Votes:
-     +1: cmpilato, danielsh, rhuijben
-
  * r1403588, r1403691
    Expand the scope of mod_dav_svn's validation of client-reported
    and client-requested revisions during update operations.
