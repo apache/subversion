@@ -12718,7 +12718,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 
 
 svn_error_t *
-svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
@@ -12734,12 +12734,12 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
   if (*local_relpath != '\0')
     {
-      *is_root = FALSE; /* Node is a file, or has a parent directory within
+      *is_wcroot = FALSE; /* Node is a file, or has a parent directory within
                            the same wcroot */
       return SVN_NO_ERROR;
     }
 
-   *is_root = TRUE;
+   *is_wcroot = TRUE;
 
    return SVN_NO_ERROR;
 }

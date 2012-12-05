@@ -262,7 +262,18 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
 
 /* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
  * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
- * information about, and outputting REPOS_ID instead of URL+UUID. */
+ * information about, and outputting REPOS_ID instead of URL+UUID, and
+ * without the LOCK or UPDATE_ROOT outputs.
+ *
+ * OR
+ *
+ * Similar to svn_wc__db_base_get_info_internal(), but taking an explicit
+ * op-depth OP_DEPTH of the node to get information about, and without the
+ * LOCK or UPDATE_ROOT outputs.
+ *
+ * ### [JAF] TODO: Harmonize svn_wc__db_base_get_info[_internal] with
+ * svn_wc__db_depth_get_info -- common API, common implementation.
+ */
 svn_error_t *
 svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           svn_kind_t *kind,
