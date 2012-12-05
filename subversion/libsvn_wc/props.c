@@ -1827,17 +1827,17 @@ do_propset(svn_wc__db_t *db,
                                      scratch_pool))
         {
           /* If the keywords have changed, then the translation of the file
-             may be different. We should invalidate the cached TRANSLATED_SIZE
-             and LAST_MOD_TIME on this node.
+             may be different. We should invalidate the RECORDED_SIZE
+             and RECORDED_TIME on this node.
 
              Note that we don't immediately re-translate the file. But a
              "has it changed?" check in the future will do a translation
              from the pristine, and it will want to compare the (new)
-             resulting TRANSLATED_SIZE against the working copy file.
+             resulting RECORDED_SIZE against the working copy file.
 
              Also, when this file is (de)translated with the new keywords,
              then it could be different, relative to the pristine. We want
-             to ensure the LAST_MOD_TIME is different, to indicate that
+             to ensure the RECORDED_TIME is different, to indicate that
              a full detranslate/compare is performed.  */
           clear_recorded_info = TRUE;
         }

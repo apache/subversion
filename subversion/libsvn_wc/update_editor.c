@@ -5325,7 +5325,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
     /* If new contents were provided, then we do NOT want to record the
        file information. We assume the new contents do not match the
-       "proper" values for TRANSLATED_SIZE and LAST_MOD_TIME.  */
+       "proper" values for RECORDED_SIZE and RECORDED_TIME.  */
     record_fileinfo = (new_contents == NULL);
 
     /* Install the working copy file (with appropriate translation) from

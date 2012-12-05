@@ -805,10 +805,10 @@ test_working_info(apr_pool_t *pool)
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
-  apr_time_t last_mod_time;
+  apr_time_t recorded_time;
   svn_depth_t depth;
   const svn_checksum_t *checksum;
-  svn_filesize_t translated_size;
+  svn_filesize_t recorded_size;
   const char *target;
   const char *changelist;
   const char *original_repos_relpath;
@@ -834,7 +834,7 @@ test_working_info(apr_pool_t *pool)
             &changed_rev, &changed_date, &changed_author,
             &depth, &checksum, &target, &original_repos_relpath,
             &original_root_url, &original_uuid, &original_revnum,
-            &lock, &translated_size, &last_mod_time, &changelist,
+            &lock, &recorded_size, &recorded_time, &changelist,
             &conflicted, &op_root, &had_props, &props_mod,
             &have_base, &have_more_work, &have_work,
             db, svn_dirent_join(local_abspath, "I", pool),
@@ -850,7 +850,7 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(changed_author, AUTHOR_2);
   SVN_TEST_ASSERT(depth == svn_depth_immediates);
   SVN_TEST_ASSERT(checksum == NULL);
-  SVN_TEST_ASSERT(translated_size == SVN_INVALID_FILESIZE);
+  SVN_TEST_ASSERT(recorded_size == SVN_INVALID_FILESIZE);
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_STRING_ASSERT(changelist, "changelist");
   SVN_TEST_STRING_ASSERT(original_repos_relpath, "some/dir");
