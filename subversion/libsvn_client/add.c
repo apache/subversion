@@ -387,14 +387,10 @@ add_file(const char *local_abspath,
  * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
  * if necessary.
  *
- * If not NULL, *CONFIG_AUTOPROPS is a hash representing the config file and
+ * If not NULL, CONFIG_AUTOPROPS is a hash representing the config file and
  * svn:auto-props autoprops which apply to DIR_ABSPATH.  It maps
  * const char * file patterns to another hash which maps const char *
- * property names to const char *property values.  If *CONFIG_AUTOPROPS is
- * NULL and DIR_ABSPATH is unversioned, then this function will populate
- * *CONFIG_AUTOPROPS (allocated in RESULT_POOL) using DIR_ABSPATH's nearest
- * versioned parent to determine the svn:auto-props which DIR_ABSPATH
- * will inherit once added.
+ * property names to const char *property values.
  *
  * If IGNORES is not NULL, then it is an array of const char * ignore patterns
  * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
@@ -416,11 +412,10 @@ add_dir_recursive(const char *dir_abspath,
                   svn_boolean_t no_ignore,
                   svn_boolean_t no_autoprops,
                   svn_magic__cookie_t *magic_cookie,
-                  apr_hash_t **config_autoprops,
+                  apr_hash_t *config_autoprops,
                   svn_boolean_t refresh_ignores,
                   apr_array_header_t *ignores,
                   svn_client_ctx_t *ctx,
-                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -466,11 +461,10 @@ add_dir_recursive(const char *dir_abspath,
        2) Explicit and inherited svn:global-ignores properties on
           DIR_ABSPATH
        3) auto-props from the CTX->CONFIG hash */
-  if (!entry_exists && *config_autoprops == NULL)
+  if (!entry_exists && config_autoprops == NULL)
     {
-      SVN_ERR(svn_client__get_all_auto_props(config_autoprops, dir_abspath,
-                                             ctx, result_pool,
-                                             scratch_pool));
+      SVN_ERR(svn_client__get_all_auto_props(&config_autoprops, dir_abspath,
+                                             ctx, scratch_pool, scratch_pool));
       found_unversioned_root = TRUE;
     }
 
@@ -521,12 +515,12 @@ add_dir_recursive(const char *dir_abspath,
                                     force, no_ignore, no_autoprops,
                                     magic_cookie, config_autoprops,
                                     refresh_ignores, ignores, ctx,
-                                    iterpool, iterpool));
+                                    iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, magic_cookie, *config_autoprops,
+          err = add_file(abspath, magic_cookie, config_autoprops,
                          no_autoprops, ctx, iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
@@ -537,11 +531,6 @@ add_dir_recursive(const char *dir_abspath,
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(iterpool);
-
-  /* Reset CONFIG_AUTOPROPS if we just finished processing the root
-     of an unversioned subtree. */
-  if (found_unversioned_root)
-    *config_autoprops = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -997,7 +986,6 @@ add(const char *local_abspath,
   svn_node_kind_t kind;
   svn_error_t *err;
   svn_magic__cookie_t *magic_cookie;
-  apr_hash_t *config_autoprops = NULL;
   apr_array_header_t *ignores = NULL;
 
   svn_magic__init(&magic_cookie, scratch_pool);
@@ -1049,11 +1037,11 @@ add(const char *local_abspath,
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(local_abspath, depth, force, no_ignore,
-                              no_autoprops, magic_cookie, &config_autoprops,
-                              TRUE, ignores, ctx, scratch_pool, scratch_pool);
+                              no_autoprops, magic_cookie, NULL,
+                              TRUE, ignores, ctx, scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(local_abspath, magic_cookie, config_autoprops,
+    err = add_file(local_abspath, magic_cookie, NULL,
                    no_autoprops, ctx, scratch_pool);
   else if (kind == svn_node_none)
     {
