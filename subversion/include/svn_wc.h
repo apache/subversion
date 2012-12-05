@@ -5404,10 +5404,10 @@ svn_wc_crawl_revisions(const char *path,
  */
 
 /** If @a is_wcroot is not @c NULL, set @a *is_wcroot to @c TRUE if @a
- * local_abspath is the root of the working, otherwise to @c FALSE.
+ * local_abspath is the root of the working copy, otherwise to @c FALSE.
  *
  * If @a is_switched is not @c NULL, set @a *is_switched to @c TRUE if @a
- * local_abspath is not the root of the working, and switched against its
+ * local_abspath is not the root of the working copy, and switched against its
  * parent.
  *
  * If @a kind is not @c NULL, set @a *kind to the node kind of @a
