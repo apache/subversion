@@ -2612,9 +2612,30 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                                       scratch_pool);
   if (err == NULL && *props == NULL)
     {
-      /* ### is this a DB constraint violation? the column "probably" should
-         ### never be null.  */
-      *props = apr_hash_make(result_pool);
+      svn_wc__db_status_t presence;
+      presence = svn_sqlite__column_token(stmt, 1, presence_map);
+
+      if (presence == svn_wc__db_status_normal
+          || presence == svn_wc__db_status_incomplete)
+        {
+          /* ### is this a DB constraint violation? the column "probably" should
+             ### never be null in this case.
+
+             ### Reproducable via:
+             ###   touch f; svn wc add f; svn ci -mm
+             ###   sqlite3 .svn/wc.db "select local_relpath, properties from nodes"
+           */
+          *props = apr_hash_make(result_pool);
+        }
+      else
+        {
+          err = svn_sqlite__reset(stmt);
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+                                   _("The node '%s' has a BASE status that"
+                                      " has no properties."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
     }
 
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
