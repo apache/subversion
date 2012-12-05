@@ -104,9 +104,9 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-/* Check if the column contains actual properties. The empty set of properties
-   is stored as "()", so we have properties if the size of the column is
-   larger than 2. */
+/* Check if column number I, a property-skel column, contains a non-empty
+   set of properties. The empty set of properties is stored as "()", so we
+   have properties if the size of the column is larger than 2. */
 #define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
                  (svn_sqlite__column_bytes(stmt, i) > 2)
 
@@ -342,7 +342,7 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *original_revision,
           svn_wc__db_lock_t **lock,
           svn_filesize_t *recorded_size,
-          apr_time_t *recorded_mod_time,
+          apr_time_t *recorded_time,
           const char **changelist,
           svn_boolean_t *conflicted,
           svn_boolean_t *op_root,
@@ -658,7 +658,7 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath, 0));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     parent_op_depth = svn_sqlite__column_int(stmt, 0);
@@ -667,7 +667,7 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
     {
       int op_depth;
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         op_depth = svn_sqlite__column_int(stmt, 0);
@@ -675,11 +675,9 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
       if (!have_row || parent_op_depth < op_depth)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSTALL_WORKING_NODE_FOR_DELETE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isdt", wcroot->wc_id,
-                                    local_relpath, parent_op_depth,
-                                    presence_map,
-                                    svn_wc__db_status_base_deleted));
+                              STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                    local_relpath, parent_op_depth));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
         }
     }
@@ -694,16 +692,18 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
    parent base and this node are both deleted and so the delete of
    this node must be removed.
  */
-static svn_error_t *
-retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
-                      const char *local_relpath,
-                      apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -722,7 +722,7 @@ insert_base_node(void *baton,
   apr_int64_t repos_id = pibb->repos_id;
   svn_sqlite__stmt_t *stmt;
   svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
-  apr_int64_t recorded_mod_time;
+  apr_int64_t recorded_time;
 
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
@@ -748,7 +748,7 @@ insert_base_node(void *baton,
         {
           /* Preserve size and modification time if caller asked us to. */
           recorded_size = get_recorded_size(stmt, 6);
-          recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
+          recorded_time = svn_sqlite__column_int64(stmt, 12);
         }
       SVN_ERR(svn_sqlite__reset(stmt));
     }
@@ -790,7 +790,7 @@ insert_base_node(void *baton,
       if (recorded_size != SVN_INVALID_FILESIZE)
         {
           SVN_ERR(svn_sqlite__bind_int64(stmt, 16, recorded_size));
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, recorded_mod_time));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, recorded_time));
         }
     }
 
@@ -856,7 +856,8 @@ insert_base_node(void *baton,
                || pibb->status == svn_wc__db_status_server_excluded
                || pibb->status == svn_wc__db_status_excluded)
         {
-          SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+          SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, 0,
+                                                   scratch_pool));
         }
     }
 
@@ -1234,6 +1235,41 @@ gather_repo_children(const apr_array_header_t **children,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   *children = result;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_get_children_op_depth(apr_hash_t **children,
+                                 svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *children = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_OP_DEPTH_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_kind_t *child_kind = apr_palloc(result_pool, sizeof(svn_kind_t));
+
+      *child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      apr_hash_set(*children,
+                   svn_relpath_basename(child_relpath, result_pool),
+                   APR_HASH_KEY_STRING, child_kind);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -2229,7 +2265,8 @@ db_base_remove(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+  SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, 0,
+                                           scratch_pool));
 
   /* Step 6: Delete actual node if we don't keep working */
   if (! keep_working)
@@ -2416,6 +2453,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
         }
       if (update_root)
         {
+          /* It's an update root iff it's a file external. */
           *update_root = svn_sqlite__column_boolean(stmt, 14);
         }
     }
@@ -2577,9 +2615,30 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                                       scratch_pool);
   if (err == NULL && *props == NULL)
     {
-      /* ### is this a DB constraint violation? the column "probably" should
-         ### never be null.  */
-      *props = apr_hash_make(result_pool);
+      svn_wc__db_status_t presence;
+      presence = svn_sqlite__column_token(stmt, 1, presence_map);
+
+      if (presence == svn_wc__db_status_normal
+          || presence == svn_wc__db_status_incomplete)
+        {
+          /* ### is this a DB constraint violation? the column "probably" should
+             ### never be null in this case.
+
+             ### Reproducable via:
+             ###   touch f; svn wc add f; svn ci -mm
+             ###   sqlite3 .svn/wc.db "select local_relpath, properties from nodes"
+           */
+          *props = apr_hash_make(result_pool);
+        }
+      else
+        {
+          err = svn_sqlite__reset(stmt);
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+                                   _("The node '%s' has a BASE status that"
+                                      " has no properties."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
     }
 
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
@@ -4984,13 +5043,14 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for db_record_fileinfo */
 struct record_baton_t {
-  svn_filesize_t translated_size;
-  apr_time_t last_mod_time;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_time;
 };
 
 
-/* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
+/* Record RECORDED_SIZE and RECORDED_TIME into top layer in NODES */
 static svn_error_t *
 db_record_fileinfo(void *baton,
                    svn_wc__db_wcroot_t *wcroot,
@@ -5004,7 +5064,7 @@ db_record_fileinfo(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            rb->translated_size, rb->last_mod_time));
+                            rb->recorded_size, rb->recorded_time));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR_ASSERT(affected_rows == 1);
@@ -5016,8 +5076,8 @@ db_record_fileinfo(void *baton,
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  svn_filesize_t translated_size,
-                                  apr_time_t last_mod_time,
+                                  svn_filesize_t recorded_size,
+                                  apr_time_t recorded_time,
                                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -5030,8 +5090,8 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  rb.translated_size = translated_size;
-  rb.last_mod_time = last_mod_time;
+  rb.recorded_size = recorded_size;
+  rb.recorded_time = recorded_time;
 
   SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
 
@@ -5120,8 +5180,8 @@ set_props_txn(void *baton,
   if (spb->clear_recorded_info)
     {
       struct record_baton_t rb;
-      rb.translated_size = SVN_INVALID_FILESIZE;
-      rb.last_mod_time = 0;
+      rb.recorded_size = SVN_INVALID_FILESIZE;
+      rb.recorded_time = 0;
       SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
     }
 
@@ -6395,7 +6455,7 @@ remove_node_txn(void *baton,
           svn_kind_t child_kind;
           svn_boolean_t have_checksum;
           svn_filesize_t recorded_size;
-          apr_int64_t recorded_mod_time;
+          apr_int64_t recorded_time;
           const svn_io_dirent2_t *dirent;
           svn_boolean_t modified_p = TRUE;
           svn_skel_t *work_item = NULL;
@@ -6412,7 +6472,7 @@ remove_node_txn(void *baton,
             {
               have_checksum = !svn_sqlite__column_is_null(stmt, 2);
               recorded_size = get_recorded_size(stmt, 3);
-              recorded_mod_time = svn_sqlite__column_int64(stmt, 4);
+              recorded_time = svn_sqlite__column_int64(stmt, 4);
             }
 
           if (rnb->cancel_func)
@@ -6437,7 +6497,7 @@ remove_node_txn(void *baton,
           else if (child_kind == svn_kind_file
                    && dirent->kind == svn_node_file
                    && dirent->filesize == recorded_size
-                   && dirent->mtime == recorded_mod_time)
+                   && dirent->mtime == recorded_time)
             {
               modified_p = FALSE; /* File matches recorded state */
             }
@@ -7488,7 +7548,7 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *original_revision,
           svn_wc__db_lock_t **lock,
           svn_filesize_t *recorded_size,
-          apr_time_t *recorded_mod_time,
+          apr_time_t *recorded_time,
           const char **changelist,
           svn_boolean_t *conflicted,
           svn_boolean_t *op_root,
@@ -7585,9 +7645,9 @@ read_info(svn_wc__db_status_t *status,
           *changed_author = svn_sqlite__column_text(stmt_info, 10,
                                                     result_pool);
         }
-      if (recorded_mod_time)
+      if (recorded_time)
         {
-          *recorded_mod_time = svn_sqlite__column_int64(stmt_info, 13);
+          *recorded_time = svn_sqlite__column_int64(stmt_info, 13);
         }
       if (depth)
         {
@@ -7767,8 +7827,8 @@ read_info(svn_wc__db_status_t *status,
         *lock = NULL;
       if (recorded_size)
         *recorded_size = 0;
-      if (recorded_mod_time)
-        *recorded_mod_time = 0;
+      if (recorded_time)
+        *recorded_time = 0;
       if (changelist)
         *changelist = svn_sqlite__column_text(stmt_act, 0, result_pool);
       if (op_root)
@@ -7826,7 +7886,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                               svn_revnum_t *original_revision,
                               svn_wc__db_lock_t **lock,
                               svn_filesize_t *recorded_size,
-                              apr_time_t *recorded_mod_time,
+                              apr_time_t *recorded_time,
                               const char **changelist,
                               svn_boolean_t *conflicted,
                               svn_boolean_t *op_root,
@@ -7845,7 +7905,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                      changed_rev, changed_date, changed_author,
                      depth, checksum, target, original_repos_relpath,
                      original_repos_id, original_revision, lock,
-                     recorded_size, recorded_mod_time, changelist, conflicted,
+                     recorded_size, recorded_time, changelist, conflicted,
                      op_root, had_props, props_mod,
                      have_base, have_more_work, have_work,
                      wcroot, local_relpath, result_pool, scratch_pool));
@@ -7871,7 +7931,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_revnum_t *original_revision,
                      svn_wc__db_lock_t **lock,
                      svn_filesize_t *recorded_size,
-                     apr_time_t *recorded_mod_time,
+                     apr_time_t *recorded_time,
                      const char **changelist,
                      svn_boolean_t *conflicted,
                      svn_boolean_t *op_root,
@@ -7899,7 +7959,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                     changed_rev, changed_date, changed_author,
                     depth, checksum, target, original_repos_relpath,
                     &original_repos_id, original_revision, lock,
-                    recorded_size, recorded_mod_time, changelist, conflicted,
+                    recorded_size, recorded_time, changelist, conflicted,
                     op_root, have_props, props_mod,
                     have_base, have_more_work, have_work,
                     wcroot, local_relpath, result_pool, scratch_pool));
@@ -8071,7 +8131,7 @@ read_children_info(void *baton,
                                     scratch_pool));
             }
 
-          child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
+          child->recorded_time = svn_sqlite__column_int64(stmt, 13);
           child->recorded_size = get_recorded_size(stmt, 7);
           child->has_checksum = !svn_sqlite__column_is_null(stmt, 6);
           child->copied = op_depth > 0 && !svn_sqlite__column_is_null(stmt, 2);
@@ -12718,7 +12778,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 
 
 svn_error_t *
-svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
@@ -12734,17 +12794,17 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
   if (*local_relpath != '\0')
     {
-      *is_root = FALSE; /* Node is a file, or has a parent directory within
+      *is_wcroot = FALSE; /* Node is a file, or has a parent directory within
                            the same wcroot */
       return SVN_NO_ERROR;
     }
 
-   *is_root = TRUE;
+   *is_wcroot = TRUE;
 
    return SVN_NO_ERROR;
 }
 
-/* This implements svn_wc__db_txn_callback_t for svn_wc_db__is_switched */
+/* This implements svn_wc__db_txn_callback_t for svn_wc__db_is_switched() */
 static svn_error_t *
 db_is_switched(void *baton,
                svn_wc__db_wcroot_t *wcroot,
@@ -13522,7 +13582,7 @@ make_copy_txn(void *baton,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)
@@ -14037,7 +14097,7 @@ has_local_mods(svn_boolean_t *is_modified,
         {
           const char *node_abspath;
           svn_filesize_t recorded_size;
-          apr_time_t recorded_mod_time;
+          apr_time_t recorded_time;
           svn_boolean_t skip_check = FALSE;
           svn_error_t *err;
 
@@ -14058,10 +14118,10 @@ has_local_mods(svn_boolean_t *is_modified,
                                          iterpool);
 
           recorded_size = get_recorded_size(stmt, 1);
-          recorded_mod_time = svn_sqlite__column_int64(stmt, 2);
+          recorded_time = svn_sqlite__column_int64(stmt, 2);
 
           if (recorded_size != SVN_INVALID_FILESIZE
-              && recorded_mod_time != 0)
+              && recorded_time != 0)
             {
               const svn_io_dirent2_t *dirent;
 
@@ -14078,7 +14138,7 @@ has_local_mods(svn_boolean_t *is_modified,
                   break;
                 }
               else if (dirent->filesize == recorded_size
-                       && dirent->mtime == recorded_mod_time)
+                       && dirent->mtime == recorded_time)
                 {
                   /* The file is not modified */
                   skip_check = TRUE;

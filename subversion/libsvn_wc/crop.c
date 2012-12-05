@@ -196,8 +196,8 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root, *repos_uuid;
 
-  SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                wc_ctx->db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_is_switched(&is_root, &is_switched, NULL,
+                                 wc_ctx->db, local_abspath, scratch_pool));
 
   if (is_root)
     {

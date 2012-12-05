@@ -1600,7 +1600,7 @@ revert_restore(svn_wc__db_t *db,
   svn_boolean_t notify_required;
   const apr_array_header_t *conflict_files;
   svn_filesize_t recorded_size;
-  apr_time_t recorded_mod_time;
+  apr_time_t recorded_time;
   apr_finfo_t finfo;
 #ifdef HAVE_SYMLINK
   svn_boolean_t special;
@@ -1620,7 +1620,7 @@ revert_restore(svn_wc__db_t *db,
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &recorded_size, &recorded_mod_time, NULL,
+                             &recorded_size, &recorded_time, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
@@ -1651,7 +1651,7 @@ revert_restore(svn_wc__db_t *db,
           status = svn_wc__db_status_normal;
           kind = svn_kind_unknown;
           recorded_size = SVN_INVALID_FILESIZE;
-          recorded_mod_time = 0;
+          recorded_time = 0;
         }
     }
   else if (err)
@@ -1774,9 +1774,9 @@ revert_restore(svn_wc__db_t *db,
                  ourselves. And we already have everything we need, because
                  we called stat ourselves. */
               if (recorded_size != SVN_INVALID_FILESIZE
-                  && recorded_mod_time != 0
+                  && recorded_time != 0
                   && recorded_size == finfo.size
-                  && recorded_mod_time == finfo.mtime)
+                  && recorded_time == finfo.mtime)
                 {
                   modified = FALSE;
                 }

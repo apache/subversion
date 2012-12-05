@@ -1723,7 +1723,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
      LOCK                    NULL
 
      RECORDED_SIZE           SVN_INVALID_FILESIZE
-     RECORDED_MOD_TIME       0
+     RECORDED_TIME       0
 
      CHANGELIST              NULL
      CONFLICTED              FALSE
@@ -1807,7 +1807,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
    If HAD_PROPS is requested and the node has pristine props, the value will
    be set to TRUE.
 
-   If PROP_MODS is requested and the node has property modification the value
+   If PROPS_MOD is requested and the node has property modification the value
    will be set to TRUE.
 
    ### add information about the need to scan upwards to get a complete
@@ -1875,7 +1875,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
 
                      /* Recorded for files present in the working copy */
                      svn_filesize_t *recorded_size,
-                     apr_time_t *recorded_mod_time,
+                     apr_time_t *recorded_time,
 
                      /* From ACTUAL */
                      const char **changelist,
@@ -1911,7 +1911,7 @@ struct svn_wc__db_info_t {
   svn_depth_t depth;
 
   svn_filesize_t recorded_size;
-  apr_time_t recorded_mod_time;
+  apr_time_t recorded_time;
 
   const char *changelist;
   svn_boolean_t conflicted;
@@ -2302,23 +2302,28 @@ svn_wc__db_node_check_replace(svn_boolean_t *is_replace_root,
    ### changelist usage -- we may already assume the list fits in memory.
 */
 
-/* Checks if LOCAL_ABSPATH has a parent directory that knows about its
- * existance. Set *IS_ROOT to FALSE if a parent is found, and to TRUE
- * if there is no such parent.
+/* The DB-private version of svn_wc__is_wcroot(), which see.
  */
 svn_error_t *
-svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
-/* Checks if LOCAL_ABSPATH is a working copy root, switched and a directory.
-   With these answers we can answer all 'is anchor' questions that we need for
-   the different ra operations with just a single sqlite transaction and
-   filestat.
+/* Check whether a node is a working copy root and/or switched.
 
-   All output arguments can be null to specify that the result is not
-   interesting to the caller
+   If LOCAL_ABSPATH is the root of a working copy, set *IS_WC_ROOT to TRUE,
+   otherwise to FALSE.
+
+   If LOCAL_ABSPATH is switched against its parent in the same working copy
+   set *IS_SWITCHED to TRUE, otherwise to FALSE.
+
+   If KIND is not null, set *KIND to the node type of LOCAL_ABSPATH.
+
+   Any of the output arguments can be null to specify that the result is not
+   interesting to the caller.
+
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
@@ -2496,23 +2501,23 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          apr_pool_t *scratch_pool);
 
 
-/* Record the TRANSLATED_SIZE and LAST_MOD_TIME for a versioned node.
+/* Record the RECORDED_SIZE and RECORDED_TIME for a versioned node.
 
    This function will record the information within the WORKING node,
    if present, or within the BASE tree. If neither node is present, then
    SVN_ERR_WC_PATH_NOT_FOUND will be returned.
 
-   TRANSLATED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
+   RECORDED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
    as such, implying "unknown size".
 
-   LAST_MOD_TIME may be 0, which will be recorded as such, implying
+   RECORDED_TIME may be 0, which will be recorded as such, implying
    "unknown last mod time".
 */
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  svn_filesize_t translated_size,
-                                  apr_time_t last_mod_time,
+                                  svn_filesize_t recorded_size,
+                                  apr_time_t recorded_time,
                                   apr_pool_t *scratch_pool);
 
 
@@ -3247,8 +3252,8 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
  * need to run as part of marking the conflict resolved. */
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             const char *victim_abspath,
                                              svn_wc__db_t *db,
+                                             const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
