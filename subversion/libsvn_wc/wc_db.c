@@ -2451,6 +2451,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
         }
       if (update_root)
         {
+          /* It's an update root iff it's a file external. */
           *update_root = svn_sqlite__column_boolean(stmt, 14);
         }
     }
