@@ -218,6 +218,13 @@ load_config(svn_ra_serf__session_t *session,
   svn_config_get(config, &session->ssl_authorities, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 
+  /* If set, read the flag that tells us to do bulk updates or not. Defaults
+     to skelta updates. */
+  SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_BULK_UPDATES,
+                              FALSE));
+
   if (config)
     server_group = svn_config_find_group(config,
                                          session->session_url.hostname,
@@ -254,6 +261,12 @@ load_config(svn_ra_serf__session_t *session,
                                   TRUE));
       svn_config_get(config, &session->ssl_authorities, server_group,
                      SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
+
+      /* Load the group bulk updates flag. */
+      SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_BULK_UPDATES,
+                                  FALSE));
     }
 
   /* Parse the connection timeout value, if any. */
