@@ -436,7 +436,7 @@ add_dir_recursive(const char *dir_abspath,
   if (refresh_ignores)
     SVN_ERR(svn_client__get_all_ignores(&ignores, dir_abspath,
                                         no_ignore, ctx, scratch_pool,
-                                        scratch_pool));
+                                        iterpool));
 
   /* Add this directory to revision control. */
   err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
@@ -469,7 +469,7 @@ add_dir_recursive(const char *dir_abspath,
   if (!entry_exists && config_autoprops == NULL)
     {
       SVN_ERR(svn_client__get_all_auto_props(&config_autoprops, dir_abspath,
-                                             ctx, scratch_pool, scratch_pool));
+                                             ctx, scratch_pool, iterpool));
       found_unversioned_root = TRUE;
     }
 
