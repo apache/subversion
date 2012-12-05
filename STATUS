@@ -61,17 +61,6 @@ Candidate changes:
             hash, and so the order of multiple keys in one bucket, was not
             controlled.)
 
- * r1403588, r1403691
-   Expand the scope of mod_dav_svn's validation of client-reported
-   and client-requested revisions during update operations.
-   Justifications:
-     mod_dav_svn should gracefully complain about revisions > HEAD 
-     in the update report all the time, not only when doing an
-     update operation that doesn't explicitly request a target
-     revision.
-   Votes:
-     +1: cmpilato, rhuijben
-
  * r1408632, r1408647, r1408676, r1408684, r1408653
    Fix 'svnmucc propset ^/'.
    Notes:
@@ -137,3 +126,13 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
 
+ * r1403588, r1403691
+   Expand the scope of mod_dav_svn's validation of client-reported
+   and client-requested revisions during update operations.
+   Justifications:
+     mod_dav_svn should gracefully complain about revisions > HEAD
+     in the update report all the time, not only when doing an
+     update operation that doesn't explicitly request a target
+     revision.
+   Votes:
+     +1: cmpilato, rhuijben, brane
