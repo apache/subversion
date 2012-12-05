@@ -104,9 +104,9 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-/* Check if the column contains actual properties. The empty set of properties
-   is stored as "()", so we have properties if the size of the column is
-   larger than 2. */
+/* Check if column number I, a property-skel column, contains a non-empty
+   set of properties. The empty set of properties is stored as "()", so we
+   have properties if the size of the column is larger than 2. */
 #define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
                  (svn_sqlite__column_bytes(stmt, i) > 2)
 
