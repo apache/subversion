@@ -96,7 +96,7 @@ typedef struct svn_wc__db_wcroot_t {
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
-  /* Map a working copy diretory to a cached adm_access baton.
+  /* Map a working copy directory to a cached adm_access baton.
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 

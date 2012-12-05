@@ -74,7 +74,7 @@ extern "C" {
    The pool that DB is allocated within (the "state" pool) is only used
    for a few, limited allocations to track each of the working copy roots
    that the DB is asked to operate upon. The memory usage on this pool
-   os O(# wcroots), which should normally be one or a few. Custom clients
+   is O(# wcroots), which should normally be one or a few. Custom clients
    which hold open structures over a significant period of time should
    pay particular attention to the number of roots touched, and the
    resulting impact on memory consumption (which should still be minimal).
@@ -213,7 +213,7 @@ typedef struct svn_wc__db_lock_t {
 
 
 /*
-  @defgroup svn_wc__db_admin  General administractive functions
+  @defgroup svn_wc__db_admin  General administrative functions
   @{
 */
 
@@ -1157,7 +1157,7 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
    When KIND is requested then the value will be set to the kind of external.
 
-   If DEFININING_ABSPATH is requested, then the value will be set to the
+   If DEFINING_ABSPATH is requested, then the value will be set to the
    absolute path of the directory which originally defined the external.
    (The path with the svn:externals property)
 
@@ -1291,7 +1291,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
  * of SRC_ABSPATH (so SRC_ABSPATH must be an op_root) to dst_abspaths
  * parents layer.
  *
- * This operation is recursive. It copies all the descandants at the lower
+ * This operation is recursive. It copies all the descendants at the lower
  * layer and adds base-deleted nodes on dst_abspath layer to mark these nodes
  * properly deleted.
  *
@@ -1825,7 +1825,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
    ### the TEXT_MOD may become an enumerated value at some point to
    ### indicate different states of knowledge about text modifications.
    ### for example, an "svn edit" command in the future might set a
-   ### flag indicating adminstratively-defined modification. and/or we
+   ### flag indicating administratively-defined modification. and/or we
    ### might have a status indicating that we saw it was modified while
    ### performing a filesystem traversal.
 
@@ -2026,7 +2026,7 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   apr_pool_t *scratch_pool);
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
-   the children of DIR_ABSPATH. "name" is the child's name relatve to
+   the children of DIR_ABSPATH. "name" is the child's name relative to
    DIR_ABSPATH, not an absolute path. */
 svn_error_t *
 svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
@@ -2184,7 +2184,7 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
    Return every path that refers to a child of the working node at
    LOCAL_ABSPATH.  Do not include a path just because it was a child of a
    deleted directory that existed at LOCAL_ABSPATH if that directory is now
-   sheduled to be replaced by the working node at LOCAL_ABSPATH.
+   scheduled to be replaced by the working node at LOCAL_ABSPATH.
 
    Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL.
@@ -2391,7 +2391,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
    CHANGED_REVISION is the new 'last changed' revision. If the node is
    modified its value is equivalent to NEW_REVISION, but in case of a
-   decendant of a copy/move it can be an older revision.
+   descendant of a copy/move it can be an older revision.
 
    CHANGED_DATE is the (server-side) date of CHANGED_REVISION. It may be 0 if
    the revprop is missing on the revision.
@@ -3134,7 +3134,7 @@ svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
  * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
  * are considered, so that added, deleted or excluded nodes do not affect
  * the result.  If COMMITTED is TRUE, set *MIN_REVISION and *MAX_REVISION
- * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * to the lowest and highest committed (i.e. "last changed") revision numbers,
  * respectively.
  *
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
@@ -3169,7 +3169,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
  * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
  * are considered, so that added, deleted or excluded nodes do not affect
  * the result.  If COMMITTED is TRUE, set *MIN_REVISION and *MAX_REVISION
- * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * to the lowest and highest committed (i.e. "last changed") revision numbers,
  * respectively. Use SCRATCH_POOL for temporary allocations.
  *
  * Either of MIN_REVISION and MAX_REVISION may be passed as NULL if
