@@ -342,7 +342,7 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *original_revision,
           svn_wc__db_lock_t **lock,
           svn_filesize_t *recorded_size,
-          apr_time_t *recorded_mod_time,
+          apr_time_t *recorded_time,
           const char **changelist,
           svn_boolean_t *conflicted,
           svn_boolean_t *op_root,
@@ -722,7 +722,7 @@ insert_base_node(void *baton,
   apr_int64_t repos_id = pibb->repos_id;
   svn_sqlite__stmt_t *stmt;
   svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
-  apr_int64_t recorded_mod_time;
+  apr_int64_t recorded_time;
 
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
@@ -748,7 +748,7 @@ insert_base_node(void *baton,
         {
           /* Preserve size and modification time if caller asked us to. */
           recorded_size = get_recorded_size(stmt, 6);
-          recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
+          recorded_time = svn_sqlite__column_int64(stmt, 12);
         }
       SVN_ERR(svn_sqlite__reset(stmt));
     }
@@ -790,7 +790,7 @@ insert_base_node(void *baton,
       if (recorded_size != SVN_INVALID_FILESIZE)
         {
           SVN_ERR(svn_sqlite__bind_int64(stmt, 16, recorded_size));
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, recorded_mod_time));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, recorded_time));
         }
     }
 
@@ -5019,13 +5019,14 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for db_record_fileinfo */
 struct record_baton_t {
-  svn_filesize_t translated_size;
-  apr_time_t last_mod_time;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_time;
 };
 
 
-/* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
+/* Record RECORDED_SIZE and RECORDED_TIME into top layer in NODES */
 static svn_error_t *
 db_record_fileinfo(void *baton,
                    svn_wc__db_wcroot_t *wcroot,
@@ -5039,7 +5040,7 @@ db_record_fileinfo(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            rb->translated_size, rb->last_mod_time));
+                            rb->recorded_size, rb->recorded_time));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR_ASSERT(affected_rows == 1);
@@ -5051,8 +5052,8 @@ db_record_fileinfo(void *baton,
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  svn_filesize_t translated_size,
-                                  apr_time_t last_mod_time,
+                                  svn_filesize_t recorded_size,
+                                  apr_time_t recorded_time,
                                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -5065,8 +5066,8 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  rb.translated_size = translated_size;
-  rb.last_mod_time = last_mod_time;
+  rb.recorded_size = recorded_size;
+  rb.recorded_time = recorded_time;
 
   SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
 
@@ -5155,8 +5156,8 @@ set_props_txn(void *baton,
   if (spb->clear_recorded_info)
     {
       struct record_baton_t rb;
-      rb.translated_size = SVN_INVALID_FILESIZE;
-      rb.last_mod_time = 0;
+      rb.recorded_size = SVN_INVALID_FILESIZE;
+      rb.recorded_time = 0;
       SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
     }
 
@@ -6430,7 +6431,7 @@ remove_node_txn(void *baton,
           svn_kind_t child_kind;
           svn_boolean_t have_checksum;
           svn_filesize_t recorded_size;
-          apr_int64_t recorded_mod_time;
+          apr_int64_t recorded_time;
           const svn_io_dirent2_t *dirent;
           svn_boolean_t modified_p = TRUE;
           svn_skel_t *work_item = NULL;
@@ -6447,7 +6448,7 @@ remove_node_txn(void *baton,
             {
               have_checksum = !svn_sqlite__column_is_null(stmt, 2);
               recorded_size = get_recorded_size(stmt, 3);
-              recorded_mod_time = svn_sqlite__column_int64(stmt, 4);
+              recorded_time = svn_sqlite__column_int64(stmt, 4);
             }
 
           if (rnb->cancel_func)
@@ -6472,7 +6473,7 @@ remove_node_txn(void *baton,
           else if (child_kind == svn_kind_file
                    && dirent->kind == svn_node_file
                    && dirent->filesize == recorded_size
-                   && dirent->mtime == recorded_mod_time)
+                   && dirent->mtime == recorded_time)
             {
               modified_p = FALSE; /* File matches recorded state */
             }
@@ -7523,7 +7524,7 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *original_revision,
           svn_wc__db_lock_t **lock,
           svn_filesize_t *recorded_size,
-          apr_time_t *recorded_mod_time,
+          apr_time_t *recorded_time,
           const char **changelist,
           svn_boolean_t *conflicted,
           svn_boolean_t *op_root,
@@ -7620,9 +7621,9 @@ read_info(svn_wc__db_status_t *status,
           *changed_author = svn_sqlite__column_text(stmt_info, 10,
                                                     result_pool);
         }
-      if (recorded_mod_time)
+      if (recorded_time)
         {
-          *recorded_mod_time = svn_sqlite__column_int64(stmt_info, 13);
+          *recorded_time = svn_sqlite__column_int64(stmt_info, 13);
         }
       if (depth)
         {
@@ -7802,8 +7803,8 @@ read_info(svn_wc__db_status_t *status,
         *lock = NULL;
       if (recorded_size)
         *recorded_size = 0;
-      if (recorded_mod_time)
-        *recorded_mod_time = 0;
+      if (recorded_time)
+        *recorded_time = 0;
       if (changelist)
         *changelist = svn_sqlite__column_text(stmt_act, 0, result_pool);
       if (op_root)
@@ -7861,7 +7862,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                               svn_revnum_t *original_revision,
                               svn_wc__db_lock_t **lock,
                               svn_filesize_t *recorded_size,
-                              apr_time_t *recorded_mod_time,
+                              apr_time_t *recorded_time,
                               const char **changelist,
                               svn_boolean_t *conflicted,
                               svn_boolean_t *op_root,
@@ -7880,7 +7881,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                      changed_rev, changed_date, changed_author,
                      depth, checksum, target, original_repos_relpath,
                      original_repos_id, original_revision, lock,
-                     recorded_size, recorded_mod_time, changelist, conflicted,
+                     recorded_size, recorded_time, changelist, conflicted,
                      op_root, had_props, props_mod,
                      have_base, have_more_work, have_work,
                      wcroot, local_relpath, result_pool, scratch_pool));
@@ -7906,7 +7907,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_revnum_t *original_revision,
                      svn_wc__db_lock_t **lock,
                      svn_filesize_t *recorded_size,
-                     apr_time_t *recorded_mod_time,
+                     apr_time_t *recorded_time,
                      const char **changelist,
                      svn_boolean_t *conflicted,
                      svn_boolean_t *op_root,
@@ -7934,7 +7935,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                     changed_rev, changed_date, changed_author,
                     depth, checksum, target, original_repos_relpath,
                     &original_repos_id, original_revision, lock,
-                    recorded_size, recorded_mod_time, changelist, conflicted,
+                    recorded_size, recorded_time, changelist, conflicted,
                     op_root, have_props, props_mod,
                     have_base, have_more_work, have_work,
                     wcroot, local_relpath, result_pool, scratch_pool));
@@ -8106,7 +8107,7 @@ read_children_info(void *baton,
                                     scratch_pool));
             }
 
-          child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
+          child->recorded_time = svn_sqlite__column_int64(stmt, 13);
           child->recorded_size = get_recorded_size(stmt, 7);
           child->has_checksum = !svn_sqlite__column_is_null(stmt, 6);
           child->copied = op_depth > 0 && !svn_sqlite__column_is_null(stmt, 2);
@@ -14072,7 +14073,7 @@ has_local_mods(svn_boolean_t *is_modified,
         {
           const char *node_abspath;
           svn_filesize_t recorded_size;
-          apr_time_t recorded_mod_time;
+          apr_time_t recorded_time;
           svn_boolean_t skip_check = FALSE;
           svn_error_t *err;
 
@@ -14093,10 +14094,10 @@ has_local_mods(svn_boolean_t *is_modified,
                                          iterpool);
 
           recorded_size = get_recorded_size(stmt, 1);
-          recorded_mod_time = svn_sqlite__column_int64(stmt, 2);
+          recorded_time = svn_sqlite__column_int64(stmt, 2);
 
           if (recorded_size != SVN_INVALID_FILESIZE
-              && recorded_mod_time != 0)
+              && recorded_time != 0)
             {
               const svn_io_dirent2_t *dirent;
 
@@ -14113,7 +14114,7 @@ has_local_mods(svn_boolean_t *is_modified,
                   break;
                 }
               else if (dirent->filesize == recorded_size
-                       && dirent->mtime == recorded_mod_time)
+                       && dirent->mtime == recorded_time)
                 {
                   /* The file is not modified */
                   skip_check = TRUE;

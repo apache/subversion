@@ -64,12 +64,12 @@ typedef struct db_node_t {
   svn_revnum_t revision;
   svn_node_kind_t kind;  /* ### should switch to svn_kind_t */
   svn_checksum_t *checksum;
-  svn_filesize_t translated_size;
+  svn_filesize_t recorded_size;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
   svn_depth_t depth;
-  apr_time_t last_mod_time;
+  apr_time_t recorded_time;
   apr_hash_t *properties;
   svn_boolean_t file_external;
 } db_node_t;
@@ -1463,7 +1463,7 @@ insert_node(svn_sqlite__db_t *sdb,
                             node->changed_rev,
                             node->changed_date,
                             node->changed_author,
-                            node->last_mod_time));
+                            node->recorded_time));
 
   if (node->repos_relpath)
     {
@@ -1513,8 +1513,8 @@ insert_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
                                         scratch_pool));
 
-  if (node->translated_size != SVN_INVALID_FILESIZE)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->translated_size));
+  if (node->recorded_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
 
   if (node->file_external)
     SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
@@ -1905,8 +1905,8 @@ write_entry(struct write_baton **entry_node,
       base_node->op_depth = 0;
       base_node->parent_relpath = parent_relpath;
       base_node->revision = entry->revision;
-      base_node->last_mod_time = entry->text_time;
-      base_node->translated_size = entry->working_size;
+      base_node->recorded_time = entry->text_time;
+      base_node->recorded_size = entry->working_size;
 
       if (entry->depth != svn_depth_exclude)
         base_node->depth = entry->depth;
@@ -2103,12 +2103,12 @@ write_entry(struct write_baton **entry_node,
             below_working_node->checksum =
               text_base_info->revert_base.sha1_checksum;
         }
-      below_working_node->translated_size = 0;
+      below_working_node->recorded_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
       below_working_node->changed_date = 0;
       below_working_node->changed_author = NULL;
       below_working_node->depth = svn_depth_infinity;
-      below_working_node->last_mod_time = 0;
+      below_working_node->recorded_time = 0;
       below_working_node->properties = NULL;
       SVN_ERR(insert_node(sdb, below_working_node, scratch_pool));
     }
@@ -2120,8 +2120,8 @@ write_entry(struct write_baton **entry_node,
       working_node->local_relpath = local_relpath;
       working_node->parent_relpath = parent_relpath;
       working_node->changed_rev = SVN_INVALID_REVNUM;
-      working_node->last_mod_time = entry->text_time;
-      working_node->translated_size = entry->working_size;
+      working_node->recorded_time = entry->text_time;
+      working_node->recorded_size = entry->working_size;
 
       if (entry->depth != svn_depth_exclude)
         working_node->depth = entry->depth;

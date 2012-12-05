@@ -1723,7 +1723,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
      LOCK                    NULL
 
      RECORDED_SIZE           SVN_INVALID_FILESIZE
-     RECORDED_MOD_TIME       0
+     RECORDED_TIME       0
 
      CHANGELIST              NULL
      CONFLICTED              FALSE
@@ -1875,7 +1875,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
 
                      /* Recorded for files present in the working copy */
                      svn_filesize_t *recorded_size,
-                     apr_time_t *recorded_mod_time,
+                     apr_time_t *recorded_time,
 
                      /* From ACTUAL */
                      const char **changelist,
@@ -1911,7 +1911,7 @@ struct svn_wc__db_info_t {
   svn_depth_t depth;
 
   svn_filesize_t recorded_size;
-  apr_time_t recorded_mod_time;
+  apr_time_t recorded_time;
 
   const char *changelist;
   svn_boolean_t conflicted;
@@ -2501,23 +2501,23 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          apr_pool_t *scratch_pool);
 
 
-/* Record the TRANSLATED_SIZE and LAST_MOD_TIME for a versioned node.
+/* Record the RECORDED_SIZE and RECORDED_TIME for a versioned node.
 
    This function will record the information within the WORKING node,
    if present, or within the BASE tree. If neither node is present, then
    SVN_ERR_WC_PATH_NOT_FOUND will be returned.
 
-   TRANSLATED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
+   RECORDED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
    as such, implying "unknown size".
 
-   LAST_MOD_TIME may be 0, which will be recorded as such, implying
+   RECORDED_TIME may be 0, which will be recorded as such, implying
    "unknown last mod time".
 */
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  svn_filesize_t translated_size,
-                                  apr_time_t last_mod_time,
+                                  svn_filesize_t recorded_size,
+                                  apr_time_t recorded_time,
                                   apr_pool_t *scratch_pool);
 
 
