@@ -1147,6 +1147,62 @@ get_editor_ev2(const svn_delta_editor_t **export_editor,
 }
 
 static svn_error_t *
+export_file_ev2(const char *from_path_or_url,
+                const char *to_path,
+                struct edit_baton *eb,
+                svn_client__pathrev_t *loc,
+                svn_ra_session_t *ra_session,
+                svn_boolean_t overwrite,
+                apr_pool_t *scratch_pool)
+{
+  svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
+  apr_hash_t *props;
+  svn_stream_t *tmp_stream;
+  svn_node_kind_t to_kind;
+
+  if (svn_path_is_empty(to_path))
+    {
+      if (from_is_url)
+        to_path = svn_uri_basename(from_path_or_url, scratch_pool);
+      else
+        to_path = svn_dirent_basename(from_path_or_url, NULL);
+      eb->root_path = to_path;
+    }
+  else
+    {
+      SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url,
+                                     from_is_url, scratch_pool));
+      eb->root_path = to_path;
+    }
+
+  SVN_ERR(svn_io_check_path(to_path, &to_kind, scratch_pool));
+
+  if ((to_kind == svn_node_file || to_kind == svn_node_unknown) &&
+      ! overwrite)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Destination file '%s' exists, and "
+                               "will not be overwritten unless forced"),
+                             svn_dirent_local_style(to_path, scratch_pool));
+  else if (to_kind == svn_node_dir)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Destination '%s' exists. Cannot "
+                               "overwrite directory with non-directory"),
+                             svn_dirent_local_style(to_path, scratch_pool));
+
+  tmp_stream = svn_stream_buffered(scratch_pool);
+
+  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev,
+                          tmp_stream, NULL, &props, scratch_pool));
+
+  /* Since you cannot actually root an editor at a file, we manually drive
+   * a function of our editor. */
+  SVN_ERR(add_file_ev2(eb, "", NULL, tmp_stream, props, SVN_INVALID_REVNUM,
+                       scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 export_file(const char *from_path_or_url,
             const char *to_path,
             struct edit_baton *eb,
@@ -1370,8 +1426,12 @@ svn_client_export5(svn_revnum_t *result_rev,
 
       if (kind == svn_node_file)
         {
-          SVN_ERR(export_file(from_path_or_url, to_path, eb, loc, ra_session,
-                              overwrite, pool));
+          if (!ENABLE_EV2_IMPL)
+            SVN_ERR(export_file(from_path_or_url, to_path, eb, loc, ra_session,
+                                overwrite, pool));
+          else
+            SVN_ERR(export_file_ev2(from_path_or_url, to_path, eb, loc,
+                                    ra_session, overwrite, pool));
         }
       else if (kind == svn_node_dir)
         {
