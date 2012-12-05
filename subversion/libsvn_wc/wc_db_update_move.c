@@ -328,7 +328,8 @@ tc_editor_alter_file(void *baton,
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &move_dst_checksum, NULL,
-                                    NULL, b->wcroot, dst_relpath,
+                                    NULL, NULL,
+                                    b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
@@ -560,7 +561,7 @@ get_tc_info(svn_wc_operation_t *operation,
           /* Construct new_version from BASE info. */
           SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision,
                                            &repos_relpath, &repos_root_url,
-                                           &repos_uuid, NULL, NULL, NULL,
+                                           &repos_uuid, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            db, src_abspath, result_pool,
                                            scratch_pool));
@@ -603,10 +604,10 @@ update_moved_away_file(svn_editor_t *tc_editor,
   /* Read post-update contents from the updated moved-away file and tell
    * the editor to merge them into the moved-here file. */
   SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &move_src_checksum, NULL, NULL, db,
-                                        svn_dirent_join(wcroot->abspath,
-                                                        src_relpath,
-                                                        scratch_pool),
+                                        &move_src_checksum, NULL, NULL, NULL,
+                                        db, svn_dirent_join(wcroot->abspath,
+                                                            src_relpath,
+                                                            scratch_pool),
                                         scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_pristine_read(&post_update_contents, NULL, db,
                                    wcroot->abspath, move_src_checksum,

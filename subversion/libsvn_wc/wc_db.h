@@ -729,6 +729,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
      LOCK               NULL
 
      HAD_PROPS          FALSE
+     PROPS              NULL
 
      UPDATE_ROOT        FALSE
 
@@ -743,6 +744,11 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
    If TARGET is requested, and the node is NOT a symlink, then it will
    be set to NULL.
+
+   *PROPS maps "const char *" names to "const svn_string_t *" values.  If
+   the base node is capable of having properties but has none, set
+   *PROPS to an empty hash.  If its status is such that it cannot have
+   properties, set *PROPS to NULL.
 
    If UPDATE_ROOT is requested, set it to TRUE if the node should only
    be updated when it is the root of an update (e.g. file externals).
@@ -765,6 +771,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          const char **target,
                          svn_wc__db_lock_t **lock,
                          svn_boolean_t *had_props,
+                         apr_hash_t **props,
                          svn_boolean_t *update_root,
                          svn_wc__db_t *db,
                          const char *local_abspath,
@@ -1975,6 +1982,11 @@ struct svn_wc__db_walker_info_t {
    calling svn_wc__db_read_info().
 
    (All other information (like original_*) can be obtained via other apis).
+
+   *PROPS maps "const char *" names to "const svn_string_t *" values.  If
+   the pristine node is capable of having properties but has none, set
+   *PROPS to an empty hash.  If its status is such that it cannot have
+   properties, set *PROPS to NULL.
  */
 svn_error_t *
 svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
@@ -1986,6 +1998,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
                               const svn_checksum_t **checksum, /* files only */
                               const char **target, /* symlinks only */
                               svn_boolean_t *had_props,
+                              apr_hash_t **props,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,

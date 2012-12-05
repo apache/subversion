@@ -148,7 +148,7 @@ run_base_remove(svn_wc__db_t *db,
                                            &not_present_rev, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
+                                           NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
         }

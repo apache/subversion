@@ -1804,7 +1804,7 @@ setup_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
       err = svn_wc__db_base_get_info(&status, &kind, &revision,
                                      &repos_relpath, &repos_root_url,
                                      &repos_uuid, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool);
 
