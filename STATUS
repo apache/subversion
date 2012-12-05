@@ -47,20 +47,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1341060
-   Sort output of 'svn import'
-   Notes: Needs a backport branch, noted here for completeness.
-   Votes:
-     +0: stsp (pending a proper conflict-free backport)
-     -0: julianfoad, rhuijben
-           (Nice behaviour enhancement but what's the justification
-            for back-porting this on its own without similar for other
-            commands?  The log msg says it was done to maintain stable output
-            with APR 1.4.6 random hash order, but it wasn't stable before
-            that because the order the directory entries were read into the
-            hash, and so the order of multiple keys in one bucket, was not
-            controlled.)
-
  * r1408632, r1408647, r1408676, r1408684, r1408653
    Fix 'svnmucc propset ^/'.
    Notes:
