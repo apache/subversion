@@ -321,7 +321,7 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
  * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
  * if there is no such parent.
  *
- * Like svn_wc_is_wc_root(), but doesn't consider switched subdirs or
+ * Like svn_wc_is_wc_root2(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
