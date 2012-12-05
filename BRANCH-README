@@ -1,5 +1,4 @@
-A simple branch intended to experiment with actually using Ev2, in this case
-for export (which is dirt simple).
-
-Currently, the above is accomplished.  Someday when we're ready to implement
-Ev2 for real on trunk, this branch will be be merged there.
+This branch contains several Ev2 driver and receiver implementations for
+various client-side functions.  It is gradually getting manually merged to
+trunk, with the implementations protected by the --enable-ev2-impl configure
+flag.
