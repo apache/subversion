@@ -117,6 +117,7 @@ svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
 }
 
 
+/* Representation of a new base row for the NODES table */
 typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
   svn_wc__db_status_t status;
@@ -175,6 +176,7 @@ typedef struct insert_base_baton_t {
 } insert_base_baton_t;
 
 
+/* Representation of a new working row for the NODES table */
 typedef struct insert_working_baton_t {
   /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
@@ -216,6 +218,7 @@ typedef struct insert_working_baton_t {
 
 } insert_working_baton_t;
 
+/* Representation of a new row for the EXTERNALS table */
 typedef struct insert_external_baton_t {
   /* common to all insertions into EXTERNALS */
   svn_kind_t kind;
@@ -383,7 +386,7 @@ wclock_owns_lock(svn_boolean_t *own_lock,
                  svn_boolean_t exact,
                  apr_pool_t *scratch_pool);
 
-/* Baton for db_is_switched */
+/* Baton for passing args to db_is_switched(). */
 struct db_is_switched_baton_t
 {
   svn_boolean_t *is_switched;
@@ -395,7 +398,8 @@ db_is_switched(void *baton,
                svn_wc__db_wcroot_t *wcroot,
                const char *local_relpath,
                apr_pool_t *scratch_pool);
- 
+
+
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
    in WCROOT.  */
 static const char *
@@ -711,7 +715,9 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
 
 
-/* */
+/* Insert the base row represented by (insert_base_baton_t *) BATON.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 insert_base_node(void *baton,
                  svn_wc__db_wcroot_t *wcroot,
@@ -886,6 +892,8 @@ insert_base_node(void *baton,
 }
 
 
+/* Initialize the baton with appropriate "blank" values. This allows the
+   insertion function to leave certain columns null.  */
 static void
 blank_iwb(insert_working_baton_t *piwb)
 {
@@ -988,7 +996,9 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 }
 
 
-/* */
+/* Insert the working row represented by (insert_working_baton_t *) BATON.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 insert_working_node(void *baton,
                     svn_wc__db_wcroot_t *wcroot,
@@ -1426,7 +1436,7 @@ does_node_exist(svn_boolean_t *exists,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-/* baton for init_db */
+/* Baton for passing args to init_db(). */
 struct init_db_baton
 {
   /* output values */
@@ -1440,9 +1450,13 @@ struct init_db_baton
   svn_depth_t root_node_depth;
 };
 
-/* Helper for create_db(). Initializes our wc.db schema */
+/* Helper for create_db(). Initializes our wc.db schema.
+ *
+ * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-init_db( void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+init_db(void *baton,
+        svn_sqlite__db_t *db,
+        apr_pool_t *scratch_pool)
 {
   struct init_db_baton *idb = baton;
   svn_sqlite__stmt_t *stmt;
@@ -2094,7 +2108,7 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
     kind, svn_wc__db_status_not_present, conflict, work_items, scratch_pool);
 }
 
-/* Baton for db_base_remove */
+/* Baton for passing args to db_base_remove(). */
 struct base_remove_baton
 {
   svn_wc__db_t *db; /* For checking conflicts */
@@ -2104,7 +2118,9 @@ struct base_remove_baton
   svn_skel_t *work_items;
 };
 
-/* This implements svn_wc__db_txn_callback_t */
+/* The body of svn_wc__db_base_remove().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 db_base_remove(void *baton,
                svn_wc__db_wcroot_t *wcroot,
@@ -2884,11 +2900,7 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
 }
 
 
-/* Helper for creating SQLite triggers, running the main transaction
-   callback, and then dropping the triggers.  It guarantees that the
-   triggers will not survive the transaction.  This could be used for
-   any general prefix/postscript statements where the postscript
-   *must* be executed if the transaction completes. */
+/* Baton for passing args to with_triggers(). */
 struct with_triggers_baton_t {
   int create_trigger;
   int drop_trigger;
@@ -2896,7 +2908,13 @@ struct with_triggers_baton_t {
   void *cb_baton;
 };
 
-/* conforms to svn_wc__db_txn_callback_t  */
+/* Helper for creating SQLite triggers, running the main transaction
+   callback, and then dropping the triggers.  It guarantees that the
+   triggers will not survive the transaction.  This could be used for
+   any general prefix/postscript statements where the postscript
+   *must* be executed if the transaction completes.
+
+   Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 with_triggers(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -2975,6 +2993,8 @@ with_finalization(svn_wc__db_wcroot_t *wcroot,
 }
 
 
+/* Initialize the baton with appropriate "blank" values. This allows the
+   insertion function to leave certain columns null.  */
 static void
 blank_ieb(insert_external_baton_t *ieb)
 {
@@ -2987,6 +3007,9 @@ blank_ieb(insert_external_baton_t *ieb)
   ieb->recorded_revision = SVN_INVALID_REVNUM;
 }
 
+/* Insert the externals row represented by (insert_external_baton_t *) BATON.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 insert_external_node(void *baton,
                      svn_wc__db_wcroot_t *wcroot,
@@ -3326,15 +3349,20 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                                 &ieb, scratch_pool));
 }
 
-/* Baton for db_external_remove */
+/* Baton for passing args to db_external_remove(). */
 struct external_remove_baton
 {
   const svn_skel_t *work_items;
 };
 
+/* The body of svn_wc__db_external_remove().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
-db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
-                   const char *local_relpath, apr_pool_t *scratch_pool)
+db_external_remove(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   struct external_remove_baton *rb = baton;
@@ -4258,7 +4286,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Baton for op_copy_txn */
+/* Baton for passing args to op_copy_txn(). */
 struct op_copy_baton
 {
   svn_wc__db_wcroot_t *src_wcroot;
@@ -4273,10 +4301,13 @@ struct op_copy_baton
   const char *dst_op_root_relpath;
 };
 
-/* Helper for svn_wc__db_op_copy.
-   Implements  svn_sqlite__transaction_callback_t */
+/* Helper for svn_wc__db_op_copy().
+ *
+ * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+op_copy_txn(void * baton,
+            svn_sqlite__db_t *sdb,
+            apr_pool_t *scratch_pool)
 {
   struct op_copy_baton *ocb = baton;
   int move_op_depth;
@@ -4550,10 +4581,12 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_wc__db_op_copy_shadowed_layer.
-   Implements  svn_sqlite__transaction_callback_t */
+/* Helper for svn_wc__db_op_copy_shadowed_layer().
+ *
+ * Implements  svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-op_copy_shadowed_layer_txn(void * baton, svn_sqlite__db_t *sdb,
+op_copy_shadowed_layer_txn(void *baton,
+                           svn_sqlite__db_t *sdb,
                            apr_pool_t *scratch_pool)
 {
   struct op_copy_baton *ocb = baton;
@@ -5045,7 +5078,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Baton for db_record_fileinfo */
+/* Baton for passing args to db_record_fileinfo(). */
 struct record_baton_t {
   svn_filesize_t recorded_size;
   apr_time_t recorded_time;
@@ -5104,16 +5137,6 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 }
 
 
-struct set_props_baton_t
-{
-  apr_hash_t *props;
-  svn_boolean_t clear_recorded_info;
-
-  const svn_skel_t *conflict;
-  const svn_skel_t *work_items;
-};
-
-
 /* Set the ACTUAL_NODE properties column for (WC_ID, LOCAL_RELPATH) to
  * PROPS. */
 static svn_error_t *
@@ -5147,11 +5170,27 @@ set_actual_props(apr_int64_t wc_id,
 }
 
 
-/* Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
+/* Baton for passing args to set_props_txn(). */
+struct set_props_baton_t
+{
+  apr_hash_t *props;
+  svn_boolean_t clear_recorded_info;
+
+  const svn_skel_t *conflict;
+  const svn_skel_t *work_items;
+};
+
+
+/* The body of svn_wc__db_op_set_props().
+
+   Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
    Create an entry in the ACTUAL table for the node if it does not yet
    have one.
    To specify no properties, BATON->props must be an empty hash, not NULL.
-   BATON is of type 'struct set_props_baton_t'. */
+   BATON is of type 'struct set_props_baton_t'.
+
+   Implements svn_wc__db_txn_callback_t.
+*/
 static svn_error_t *
 set_props_txn(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -5462,7 +5501,9 @@ struct set_changelist_baton_t
 };
 
 
-/* */
+/* The main part of svn_wc__db_op_set_changelist().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 set_changelist_txn(void *baton,
                    svn_wc__db_wcroot_t *wcroot,
@@ -5520,7 +5561,9 @@ set_changelist_txn(void *baton,
 }
 
 
-/* Implement work_callback_t. */
+/* Send notifications for svn_wc__db_op_set_changelist().
+ *
+ * Implements work_callback_t. */
 static svn_error_t *
 do_changelist_notify(void *baton,
                      svn_wc__db_wcroot_t *wcroot,
@@ -5691,7 +5734,7 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
 
 }
 
-/* Baton for db_op_mark_resolved */
+/* Baton for passing args to db_op_mark_resolved(). */
 struct op_mark_resolved_baton
 {
   svn_boolean_t resolved_text;
@@ -5701,7 +5744,9 @@ struct op_mark_resolved_baton
   svn_wc__db_t *db;
 };
 
-/* Helper for svn_wc__db_op_mark_resolved */
+/* The body of svn_wc__db_op_mark_resolved().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 db_op_mark_resolved(void *baton,
                    svn_wc__db_wcroot_t *wcroot,
@@ -5851,7 +5896,9 @@ clear_moved_to(const char *local_relpath,
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_wc__db_txn_callback_t */
+/* One of the two alternative bodies of svn_wc__db_op_revert().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 op_revert_txn(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -5968,7 +6015,9 @@ op_revert_txn(void *baton,
 }
 
 
-/* This implements svn_wc__db_txn_callback_t */
+/* One of the two alternative bodies of svn_wc__db_op_revert().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 op_revert_recursive_txn(void *baton,
                         svn_wc__db_wcroot_t *wcroot,
@@ -6128,6 +6177,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for passing args to revert_list_read(). */
 struct revert_list_read_baton {
   svn_boolean_t *reverted;
   apr_array_header_t *marker_paths;
@@ -6137,6 +6187,9 @@ struct revert_list_read_baton {
   svn_wc__db_t *db;
 };
 
+/* The body of svn_wc__db_revert_list_read().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 revert_list_read(void *baton,
                  svn_wc__db_wcroot_t *wcroot,
@@ -6246,11 +6299,15 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
 }
 
 
+/* Baton for passing args to revert_list_read_copied_children(). */
 struct revert_list_read_copied_children_baton {
   const apr_array_header_t **children;
   apr_pool_t *result_pool;
 };
 
+/* The body of svn_wc__db_revert_list_read_copied_children().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 revert_list_read_copied_children(void *baton,
                                  svn_wc__db_wcroot_t *wcroot,
@@ -6389,7 +6446,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Baton for remove_node_txn */
+/* Baton for passing args to remove_node_txn(). */
 struct remove_node_baton
 {
   svn_wc__db_t *db;
@@ -6405,7 +6462,9 @@ struct remove_node_baton
   void *cancel_baton;
 };
 
-/* Implements svn_wc__db_txn_callback_t for svn_wc__db_op_remove_node */
+/* The body of svn_wc__db_op_remove_node().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 remove_node_txn(void *baton,
                 svn_wc__db_wcroot_t *wcroot,
@@ -6702,7 +6761,7 @@ svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
 }
 
 
-/* Baton for db_op_set_base_depth */
+/* Baton for passing args to db_op_set_base_depth(). */
 struct set_base_depth_baton_t
 {
   svn_depth_t depth;
@@ -8874,7 +8933,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
 }
 
 
-/* Baton for db_read_props */
+/* Baton for passing args to db_read_props(). */
 struct db_read_props_baton_t
 {
   apr_hash_t *props;
@@ -8882,7 +8941,9 @@ struct db_read_props_baton_t
 };
 
 
-/* Helper for svn_wc__db_read_props(). Implements svn_wc__db_txn_callback_t */
+/* Helper for svn_wc__db_read_props().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 db_read_props(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -9107,14 +9168,16 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-/* Baton for db_read_cached_iprops */
+/* Baton for passing args to db_read_cached_iprops(). */
 struct read_cached_iprops_baton_t
 {
   apr_array_header_t *iprops;
   apr_pool_t *result_pool;
 };
 
-/* Implements svn_wc__db_txn_callback_t for svn_wc__db_read_cached_iprops */
+/* The body of svn_wc__db_read_cached_iprops().
+ *
+ * (Not called in a txn, but implements svn_wc__db_txn_callback_t anyway.) */
 static svn_error_t *
 db_read_cached_iprops(void *baton,
                       svn_wc__db_wcroot_t *wcroot,
@@ -9201,7 +9264,7 @@ filter_unwanted_props(apr_hash_t *prop_hash,
   return;
 }
 
-/* Baton for db_read_inherited_props */
+/* Baton for passing args to db_read_inherited_props(). */
 struct read_inherited_props_baton_t
 {
   apr_array_header_t *iprops;
@@ -9209,7 +9272,9 @@ struct read_inherited_props_baton_t
   apr_pool_t *result_pool;
 };
 
-/* Implements svn_wc__db_txn_callback_t for svn_wc__db_read_inherited_props */
+/* The body of svn_wc__db_read_inherited_props().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 db_read_inherited_props(void *baton,
                         svn_wc__db_wcroot_t *wcroot,
@@ -9364,7 +9429,7 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
   return SVN_NO_ERROR;
 }
 
-/* Baton for get_children_with_cached_iprops */
+/* Baton for passing args to get_children_with_cached_iprops(). */
 struct get_children_with_cached_baton_t
 {
   svn_depth_t depth;
@@ -9372,8 +9437,9 @@ struct get_children_with_cached_baton_t
   apr_pool_t *result_pool;
 };
 
-/* Implements svn_wc__db_txn_callback_t for
-   svn_wc__db_get_children_with_cached_iprops. */
+/* The body of svn_wc__db_get_children_with_cached_iprops().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 get_children_with_cached_iprops(void *baton,
                                 svn_wc__db_wcroot_t *wcroot,
@@ -9535,7 +9601,7 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                           result_pool, scratch_pool);
 }
 
-/* Baton for check_replace_txn */
+/* Baton for passing args to check_replace_txn(). */
 struct check_replace_baton
 {
   svn_boolean_t *is_replace_root;
@@ -9543,8 +9609,9 @@ struct check_replace_baton
   svn_boolean_t is_replace;
 };
 
-/* Helper for svn_wc__db_node_check_replace. Implements
-   svn_wc__db_txn_callback_t */
+/* Helper for svn_wc__db_node_check_replace().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 check_replace_txn(void *baton,
                   svn_wc__db_wcroot_t *wcroot,
@@ -9989,6 +10056,7 @@ descendant_commit(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Baton for passing args to commit_node(). */
 struct commit_baton_t {
   svn_revnum_t new_revision;
   svn_revnum_t changed_rev;
@@ -10003,8 +10071,9 @@ struct commit_baton_t {
   const svn_skel_t *work_items;
 };
 
-
-/* */
+/* The body of svn_wc__db_global_commit().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 commit_node(void *baton,
             svn_wc__db_wcroot_t *wcroot,
@@ -10431,7 +10500,7 @@ db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
-/* The main body of bump_revisions_post_update.
+/* The main body of bump_revisions_post_update().
  *
  * Tweak the information for LOCAL_RELPATH in WCROOT.  If NEW_REPOS_RELPATH is
  * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
@@ -10586,7 +10655,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Baton for bump_revisions_post_update */
+/* Baton for passing args to bump_revisions_post_update(). */
 struct bump_revisions_baton_t
 {
   svn_depth_t depth;
@@ -10599,6 +10668,9 @@ struct bump_revisions_baton_t
   svn_wc__db_t *db;
 };
 
+/* Helper for svn_wc__db_op_bump_revisions_post_update().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 bump_revisions_post_update(void *baton,
                            svn_wc__db_wcroot_t *wcroot,
@@ -10693,6 +10765,9 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* The body of svn_wc__db_lock_add().  BATON is the lock.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 lock_add_txn(void *baton,
              svn_wc__db_wcroot_t *wcroot,
@@ -10756,6 +10831,9 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
 }
 
 
+/* The body of svn_wc__db_lock_remove().  BATON is unused.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 lock_remove_txn(void *baton,
                 svn_wc__db_wcroot_t *wcroot,
@@ -10946,6 +11024,7 @@ get_moved_from_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
+/* Baton for passing args to scan_addition_txn(). */
 struct scan_addition_baton_t
 {
   svn_wc__db_status_t *status;
@@ -10961,6 +11040,9 @@ struct scan_addition_baton_t
   apr_pool_t *result_pool;
 };
 
+/* The body of scan_addition().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 scan_addition_txn(void *baton,
                   svn_wc__db_wcroot_t *wcroot,
@@ -11346,6 +11428,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
+/* ###
+ */
 static svn_error_t *
 follow_moved_to(apr_array_header_t **moved_tos,
                 int op_depth,
@@ -11574,6 +11658,9 @@ get_moved_to(struct scan_deletion_baton_t *b,
 }
 
 
+/* The body of svn_wc__db_scan_deletion_internal().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 scan_deletion_txn(void *baton,
                   svn_wc__db_wcroot_t *wcroot,
@@ -12153,7 +12240,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
                                         scratch_pool));
 }
 
-/* Baton for wq_fetch_next */
+/* Baton for passing args to wq_fetch_next(). */
 struct wq_fetch_next_baton_t
 {
   apr_uint64_t id;
@@ -12161,6 +12248,9 @@ struct wq_fetch_next_baton_t
   apr_pool_t *result_pool;
 };
 
+/* The body of svn_wc__db_wq_fetch_next().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 wq_fetch_next(void *baton,
              svn_wc__db_wcroot_t *wcroot,
@@ -12480,7 +12570,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   return SVN_NO_ERROR;
 }
 
-/* Baton for get_conflict_marker_files */
+/* Baton for passing args to get_conflict_marker_files(). */
 struct marker_files_baton
 {
   apr_pool_t *result_pool;
@@ -12488,10 +12578,14 @@ struct marker_files_baton
   svn_wc__db_t *db;
 };
 
-/* Locked implementation for svn_wc__db_get_conflict_marker_files */
+/* The body of svn_wc__db_get_conflict_marker_files().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
-get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
-                          const char *local_relpath, apr_pool_t *scratch_pool)
+get_conflict_marker_files(void *baton,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -12815,7 +12909,11 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
    return SVN_NO_ERROR;
 }
 
-/* This implements svn_wc__db_txn_callback_t for svn_wc__db_is_switched() */
+/* Find a node's kind and whether it is switched, putting the outputs in
+ * BATON->kind and BATON->is_switched.  Mainly used by
+ * svn_wc__db_is_switched().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 db_is_switched(void *baton,
                svn_wc__db_wcroot_t *wcroot,
@@ -12955,7 +13053,7 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
 }
 
 
-/* Baton for wclock_obtain_cb() */
+/* Baton for passing args to wclock_obtain_cb(). */
 struct wclock_obtain_baton_t
 {
   int levels_to_lock;
@@ -12980,7 +13078,9 @@ wclock_steal(svn_wc__db_wcroot_t *wcroot,
 }
 
 
-/* svn_sqlite__transaction_callback_t for svn_wc__db_wclock_obtain() */
+/* The body of svn_wc__db_wclock_obtain().
+ *
+ * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
 wclock_obtain_cb(void *baton,
                  svn_wc__db_wcroot_t *wcroot,
@@ -13197,7 +13297,9 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 }
 
 
-/* Implements svn_wc__db_txn_callback_t. */
+/* The body of svn_wc__db_wclocked().  Output is through (svn_boolean_t *)BATON.
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 is_wclocked(void *baton,
             svn_wc__db_wcroot_t *wcroot,
@@ -13416,7 +13518,9 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
   return SVN_NO_ERROR;
 }
 
-/* Lock helper for svn_wc__db_temp_op_end_directory_update */
+/* The body of svn_wc__db_temp_op_end_directory_update().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 end_directory_update(void *baton,
                      svn_wc__db_wcroot_t *wcroot,
@@ -13470,6 +13574,7 @@ svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
 }
 
 
+/* Baton for passing args to start_directory_update_txn(). */
 struct start_directory_update_baton_t
 {
   svn_revnum_t new_rev;
@@ -13477,6 +13582,9 @@ struct start_directory_update_baton_t
 };
 
 
+/* The body of svn_wc__db_temp_op_start_directory_update().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 start_directory_update_txn(void *baton,
                            svn_wc__db_wcroot_t *wcroot,
@@ -13534,7 +13642,7 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 }
 
 
-/* Baton for make_copy_txn */
+/* Baton for passing args to make_copy_txn(). */
 struct make_copy_baton_t
 {
   int op_depth;
@@ -13543,7 +13651,7 @@ struct make_copy_baton_t
 };
 
 
-/* Transaction callback for svn_wc__db_temp_op_make_copy.  This is
+/* The body of svn_wc__db_temp_op_make_copy().  This is
    used by the update editor when deleting a base node tree would be a
    tree-conflict because there are changes to subtrees.  This function
    inserts a copy of the base node tree below any existing working
@@ -13575,6 +13683,8 @@ struct make_copy_baton_t
     A/F/E normal        norm        base-del
     A/X   normal        norm
     A/X/Y incomplete  incomplete
+
+    Implements svn_wc__db_txn_callback_t.
  */
 static svn_error_t *
 make_copy_txn(void *baton,
@@ -14208,6 +14318,7 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
 }
 
 
+/* Baton for passing args to revision_status_txn(). */
 struct revision_status_baton_t
 {
   svn_revnum_t *min_revision;
@@ -14226,6 +14337,9 @@ struct revision_status_baton_t
 };
 
 
+/* The body of svn_wc__db_revision_status().
+ *
+ * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
 revision_status_txn(void *baton,
                     svn_wc__db_wcroot_t *wcroot,
