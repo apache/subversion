@@ -305,7 +305,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
         AND presence != 'base-deleted'))
 
 -- STMT_SELECT_BASE_PROPS
-SELECT properties FROM nodes
+SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_NODE_PROPS

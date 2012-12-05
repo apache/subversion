@@ -576,8 +576,6 @@ validate_node(svn_wc__db_t *db,
   SVN_TEST_ASSERT(kind == expected_kind);
   SVN_TEST_ASSERT(status == expected_status);
 
-  SVN_ERR(svn_wc__db_base_get_props(&props, db, path,
-                                    scratch_pool, scratch_pool));
   switch (status)
     {
     case svn_wc__db_status_server_excluded:
@@ -585,12 +583,17 @@ validate_node(svn_wc__db_t *db,
     case svn_wc__db_status_incomplete:
     case svn_wc__db_status_not_present:
       /* Our tests aren't setting properties on these node types, so
-         short-circuit examination of name/value pairs. */
+         short-circuit examination of name/value pairs, to avoid having
+         to handle the error from svn_wc__db_base_get_props(). */
       return SVN_NO_ERROR;
-
     default:
-      SVN_TEST_ASSERT(props != NULL);
+      break; /* Fall through */
     }
+
+  SVN_ERR(svn_wc__db_base_get_props(&props, db, path,
+                                    scratch_pool, scratch_pool));
+
+  SVN_TEST_ASSERT(props != NULL);
 
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
   SVN_TEST_STRING_ASSERT(value->data, "v1");
