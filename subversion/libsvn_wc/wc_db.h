@@ -2302,12 +2302,10 @@ svn_wc__db_node_check_replace(svn_boolean_t *is_replace_root,
    ### changelist usage -- we may already assume the list fits in memory.
 */
 
-/* Checks if LOCAL_ABSPATH has a parent directory that knows about its
- * existance. Set *IS_ROOT to FALSE if a parent is found, and to TRUE
- * if there is no such parent.
+/* The DB-private version of svn_wc__is_wcroot(), which see.
  */
 svn_error_t *
-svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);

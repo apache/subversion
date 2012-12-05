@@ -5023,13 +5023,13 @@ svn_wc_check_root(svn_boolean_t *is_wcroot,
                                                 scratch_pool));
 }
 
-svn_error_t*
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_is_wcroot(wc_root,
+  return svn_error_trace(svn_wc__db_is_wcroot(is_wcroot,
                                               wc_ctx->db,
                                               local_abspath,
                                               scratch_pool));

@@ -1119,11 +1119,11 @@ svn_client_add5(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* See if we're being asked to add a wc-root.  That's typically not
-     okay, unless we're in "force" mode.  svn_wc__strictly_is_wc_root()
+     okay, unless we're in "force" mode.  svn_wc__is_wcroot()
      will return TRUE even if LOCAL_ABSPATH is a *symlink* to a working
      copy root, which is a scenario we want to treat differently.  */
-  err = svn_wc__strictly_is_wc_root(&is_wc_root, ctx->wc_ctx,
-                                    local_abspath, scratch_pool);
+  err = svn_wc__is_wcroot(&is_wc_root, ctx->wc_ctx, local_abspath,
+                          scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND

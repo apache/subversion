@@ -231,10 +231,8 @@ switch_internal(svn_revnum_t *result_rev,
       svn_boolean_t wc_root;
       svn_boolean_t needs_iprop_cache = TRUE;
 
-      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
-                                          ctx->wc_ctx,
-                                          local_abspath,
-                                          pool));
+      SVN_ERR(svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath,
+                                pool));
 
       /* Switching the WC root to anything but the repos root means
          we need an iprop cache. */ 
