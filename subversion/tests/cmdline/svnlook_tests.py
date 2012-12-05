@@ -696,6 +696,7 @@ fp.close()"""
   # Now check the logfile
   expected_data = [ 'bogus_val\n',
                     'bogus_rev_val\n',
+                    "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
                     '  svn:check-locks\n', # internal prop, not really expected

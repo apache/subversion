@@ -1720,15 +1720,17 @@ commit_continue_txn(const svn_test_opts_t *opts,
 }
 
 
+
+/* A baton for check_location_segments(). */
 struct nls_receiver_baton
 {
   int count;
-  svn_location_segment_t *expected_segments;
+  const svn_location_segment_t *expected_segments;
 };
 
-
+/* Return a pretty-printed string representing SEGMENT. */
 static const char *
-format_segment(svn_location_segment_t *segment,
+format_segment(const svn_location_segment_t *segment,
                apr_pool_t *pool)
 {
   return apr_psprintf(pool, "[r%ld-r%ld: /%s]",
@@ -1737,14 +1739,15 @@ format_segment(svn_location_segment_t *segment,
                       segment->path ? segment->path : "(null)");
 }
 
-
+/* A location segment receiver for check_location_segments().
+ * Implements svn_location_segment_receiver_t. */
 static svn_error_t *
 nls_receiver(svn_location_segment_t *segment,
              void *baton,
              apr_pool_t *pool)
 {
   struct nls_receiver_baton *b = baton;
-  svn_location_segment_t *expected_segment = b->expected_segments + b->count;
+  const svn_location_segment_t *expected_segment = b->expected_segments + b->count;
 
   /* expected_segments->range_end can't be 0, so if we see that, it's
      our end-of-the-list sentry. */
@@ -1766,18 +1769,22 @@ nls_receiver(svn_location_segment_t *segment,
   return SVN_NO_ERROR;
 }
 
-
+/* Run a svn_repos_node_location_segments() query with REPOS, PATH, PEG_REV,
+ * START_REV, END_REV.  Check that the result exactly matches the list of
+ * segments EXPECTED_SEGMENTS, which is terminated by an entry with
+ * 'range_end'==0.
+ */
 static svn_error_t *
 check_location_segments(svn_repos_t *repos,
                         const char *path,
                         svn_revnum_t peg_rev,
                         svn_revnum_t start_rev,
                         svn_revnum_t end_rev,
-                        svn_location_segment_t *expected_segments,
+                        const svn_location_segment_t *expected_segments,
                         apr_pool_t *pool)
 {
   struct nls_receiver_baton b;
-  svn_location_segment_t *segment;
+  const svn_location_segment_t *segment;
 
   /* Run svn_repos_node_location_segments() with a receiver that
      validates against EXPECTED_SEGMENTS.  */
@@ -1799,6 +1806,21 @@ check_location_segments(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+/* Inputs and expected outputs for svn_repos_node_location_segments() tests.
+ */
+typedef struct location_segment_test_t
+{
+  /* Path and peg revision to query */
+  const char *path;
+  svn_revnum_t peg;
+  /* Start (youngest) and end (oldest) revisions to query */
+  svn_revnum_t start;
+  svn_revnum_t end;
+
+  /* Expected segments */
+  svn_location_segment_t segments[10];
+
+} location_segment_test_t;
 
 static svn_error_t *
 node_location_segments(const svn_test_opts_t *opts,
@@ -1810,6 +1832,72 @@ node_location_segments(const svn_test_opts_t *opts,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
+
+  static const location_segment_test_t subtests[] =
+  {
+    { /* Check locations for /@HEAD. */
+      "", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 0, 7, "" },
+        { 0 }
+      }
+    },
+    { /* Check locations for A/D@HEAD. */
+      "A/D", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 7, 7, "A/D" },
+        { 3, 6, "A/D2" },
+        { 1, 2, "A/D" },
+        { 0 }
+      }
+    },
+    { /* Check a subset of the locations for A/D@HEAD. */
+      "A/D", SVN_INVALID_REVNUM, 5, 2,
+      {
+        { 3, 5, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check a subset of locations for A/D2@5. */
+      "A/D2", 5, 3, 2,
+      {
+        { 3, 3, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check locations for A/D@6. */
+      "A/D", 6, 6, SVN_INVALID_REVNUM,
+      {
+        { 1, 6, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check locations for A/D/G@HEAD. */
+      "A/D/G", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 7, 7, "A/D/G" },
+        { 6, 6, "A/D2/G" },
+        { 5, 5, NULL },
+        { 3, 4, "A/D2/G" },
+        { 1, 2, "A/D/G" },
+        { 0 }
+      },
+    },
+    { /* Check a subset of the locations for A/D/G@HEAD. */
+      "A/D/G", SVN_INVALID_REVNUM, 3, 2,
+      {
+        { 3, 3, "A/D2/G" },
+        { 2, 2, "A/D/G" },
+        { 0 }
+      },
+    },
+    {
+      NULL
+    },
+  };
+  const location_segment_test_t *subtest;
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "bdb") == 0)
@@ -1884,117 +1972,19 @@ node_location_segments(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Check locations for /@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 0, 7, "" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 7, 7, "A/D" },
-        { 3, 6, "A/D2" },
-        { 1, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of the locations for A/D@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 5, "A/D2" },
-        { 2, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    SVN_INVALID_REVNUM,
-                                    5,
-                                    2,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of locations for A/D2@5. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 3, "A/D2" },
-        { 2, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D2",
-                                    5,
-                                    3,
-                                    2,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D@6. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 1, 6, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    6,
-                                    6,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D/G@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 7, 7, "A/D/G" },
-        { 6, 6, "A/D2/G" },
-        { 5, 5, NULL },
-        { 3, 4, "A/D2/G" },
-        { 1, 2, "A/D/G" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D/G",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of the locations for A/D/G@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 3, "A/D2/G" },
-        { 2, 2, "A/D/G" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D/G",
-                                    SVN_INVALID_REVNUM,
-                                    3,
-                                    2,
-                                    expected_segments, pool));
-  }
+  /*  */
+  for (subtest = subtests; subtest->path; subtest++)
+    {
+      SVN_ERR(check_location_segments(repos, subtest->path, subtest->peg,
+                                      subtest->start, subtest->end,
+                                      subtest->segments, pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
+
 /* Test that the reporter doesn't send deltas under excluded paths. */
 static svn_error_t *
 reporter_depth_exclude(const svn_test_opts_t *opts,

@@ -572,7 +572,23 @@ svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
-check-clean:
+# Create an execution coverage report from the data collected during
+# all execution since the last reset.
+gcov:
+	lcov --capture -d . -b . -o gcov-lcov.dat > gcov-lcov.log
+	genhtml gcov-lcov.dat -o gcov-report > gcov-genhtml.log
+
+# Reset all execution coverage counters to zero.
+gcov-reset:
+	lcov --zerocounters -d .
+
+# Remove the execution coverage data and the report.
+gcov-clean:
+	rm -f gcov-lcov.dat gcov-lcov.log gcov-genhtml.log
+	rm -rf gcov-report
+	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f
+
+check-clean: gcov-clean
 	rm -rf subversion/tests/cmdline/svn-test-work          \
 	       subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \

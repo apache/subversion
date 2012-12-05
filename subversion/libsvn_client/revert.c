@@ -166,8 +166,8 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.changelists = changelists;
       baton.ctx = ctx;
 
-      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root, ctx->wc_ctx,
-                                          local_abspath, pool));
+      SVN_ERR(svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath,
+                                pool));
       lock_target = wc_root ? local_abspath
                             : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
