@@ -14,10 +14,8 @@ TODO
     styles of authz paths.  So we'd need 8 different Location's to be setup,
     which seems absurd to me.  One alternative is to migrate to always using
     something akin to davautocheck.
-* schemas - non file URL schemas should error.
 * errors - DAV error messages kinda suck since it guesses what it thinks is
     the best error message at current.  When it should display the whole chain.
-* svnauthz-validate - Needs to be adjusted accordingly.
 * refactor svn_repos_authz_read* functions to share a common implementation. 
 * documentation - as in the user level docs.
 
