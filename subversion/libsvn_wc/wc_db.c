@@ -1237,6 +1237,41 @@ gather_repo_children(const apr_array_header_t **children,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_get_children_op_depth(apr_hash_t **children,
+                                 svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *children = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_OP_DEPTH_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_kind_t *child_kind = apr_palloc(result_pool, sizeof(svn_kind_t));
+
+      *child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      apr_hash_set(*children,
+                   svn_relpath_basename(child_relpath, result_pool),
+                   APR_HASH_KEY_STRING, child_kind);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Return TRUE if CHILD_ABSPATH is an immediate child of PARENT_ABSPATH.
  * Else, return FALSE. */

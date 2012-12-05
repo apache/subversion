@@ -323,4 +323,13 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     apr_pool_t *scratch_pool);
 
 
+/* Return CHILDREN mapping const char * names to svn_kind_t * for the
+   children of LOCAL_RELPATH at OP_DEPTH. */
+svn_error_t *
+svn_wc__db_get_children_op_depth(apr_hash_t **children,
+                                 svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 #endif /* WC_DB_PRIVATE_H */
