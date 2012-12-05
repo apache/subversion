@@ -658,7 +658,7 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath, 0));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     parent_op_depth = svn_sqlite__column_int(stmt, 0);
@@ -667,7 +667,7 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
     {
       int op_depth;
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         op_depth = svn_sqlite__column_int(stmt, 0);
@@ -675,11 +675,9 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
       if (!have_row || parent_op_depth < op_depth)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSTALL_WORKING_NODE_FOR_DELETE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isdt", wcroot->wc_id,
-                                    local_relpath, parent_op_depth,
-                                    presence_map,
-                                    svn_wc__db_status_base_deleted));
+                              STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                    local_relpath, parent_op_depth));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
         }
     }
@@ -694,16 +692,18 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
    parent base and this node are both deleted and so the delete of
    this node must be removed.
  */
-static svn_error_t *
-retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
-                      const char *local_relpath,
-                      apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -856,7 +856,8 @@ insert_base_node(void *baton,
                || pibb->status == svn_wc__db_status_server_excluded
                || pibb->status == svn_wc__db_status_excluded)
         {
-          SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+          SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, 0,
+                                                   scratch_pool));
         }
     }
 
@@ -2264,7 +2265,8 @@ db_base_remove(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+  SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, 0,
+                                           scratch_pool));
 
   /* Step 6: Delete actual node if we don't keep working */
   if (! keep_working)
@@ -13580,7 +13582,7 @@ make_copy_txn(void *baton,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)

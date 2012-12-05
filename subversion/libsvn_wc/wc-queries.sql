@@ -98,7 +98,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 -- STMT_SELECT_LOWEST_WORKING_NODE
 SELECT op_depth, presence
 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
 ORDER BY op_depth
 LIMIT 1
 
@@ -640,7 +640,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MIN(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3)
   AND presence = 'base-deleted'
 
 -- STMT_DELETE_ALL_LAYERS
@@ -827,14 +827,20 @@ VALUES (?1, ?2, 0,
             AND local_relpath = ?2
             AND op_depth = 0))
 
--- STMT_INSTALL_WORKING_NODE_FOR_DELETE
+-- STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth,
     parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?3 /*op_depth*/,
-       parent_relpath, ?4 /*presence*/, kind
+       parent_relpath, 'base-deleted', kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
+-- STMT_INSTALL_WORKING_NODE_FOR_DELETE
+INSERT OR REPLACE INTO nodes (
+    wc_id, local_relpath, op_depth,
+    parent_relpath, presence, kind)
+VALUES(?1, ?2, ?3, ?4, 'base-deleted', ?5)
 
 /* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE

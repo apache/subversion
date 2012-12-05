@@ -4415,6 +4415,55 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  SVN_ERR(sbox_wc_delete(&b, "A2/B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       3, ""},
+      {0, "A",        "normal",       3, "A"},
+      {0, "A/B",      "normal",       3, "A/B"},
+      {0, "A/B/f",    "normal",       3, "A/B/f"},
+      {0, "A/B/g",    "normal",       3, "A/B/g"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/g",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       3, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       3, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       3, "A/B/f", MOVED_HERE},
+      {1, "A2/B/g",   "normal",       3, "A/B/g", MOVED_HERE},
+      {2, "A2/B",     "base-deleted", NO_COPY_FROM},
+      {2, "A2/B/f",   "base-deleted", NO_COPY_FROM},
+      {2, "A2/B/g",   "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  SVN_ERR(sbox_wc_resolve(&b, "A"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/f",    "normal",       2, "A/B/f"},
+      {0, "A/B/h",    "normal",       2, "A/B/h"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE},
+      {1, "A2/B/h",   "normal",       2, "A/B/h", MOVED_HERE},
+      {2, "A2/B",     "base-deleted", NO_COPY_FROM},
+      {2, "A2/B/f",   "base-deleted", NO_COPY_FROM},
+      {2, "A2/B/h",   "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   return SVN_NO_ERROR;
 }
 
