@@ -420,6 +420,8 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(checksum == NULL);
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_ASSERT(lock == NULL);
+  SVN_TEST_ASSERT(had_props == FALSE);
+  /* SVN_TEST_ASSERT(update_root == ???); */
 
   /* Test: file-specific values. */
   SVN_ERR(svn_wc__db_base_get_info(
