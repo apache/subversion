@@ -390,7 +390,9 @@ add_file(const char *local_abspath,
  * If not NULL, CONFIG_AUTOPROPS is a hash representing the config file and
  * svn:auto-props autoprops which apply to DIR_ABSPATH.  It maps
  * const char * file patterns to another hash which maps const char *
- * property names to const char *property values.
+ * property names to const char *property values.  If CONFIG_AUTOPROPS is
+ * NULL and the config file and svn:auto-props autoprops are required by this
+ * function, then such will be obtained.
  *
  * If IGNORES is not NULL, then it is an array of const char * ignore patterns
  * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
@@ -453,14 +455,17 @@ add_dir_recursive(const char *dir_abspath,
         }
     }
 
-  /* For the root of any unversioned subtree, get some or all of the
-     following:
+  /* If DIR_ABSPATH is the root of an unversioned subtree then get the
+     following "autoprops":
 
        1) Explicit and inherited svn:auto-props properties on
           DIR_ABSPATH
-       2) Explicit and inherited svn:global-ignores properties on
-          DIR_ABSPATH
-       3) auto-props from the CTX->CONFIG hash */
+       2) auto-props from the CTX->CONFIG hash
+
+     Since this set of autoprops applies to all unversioned children of
+     DIR_ABSPATH, we will pass these along to any recursive calls to
+     add_dir_recursive() and calls to add_file() below.  Thus sparing
+     these callees from looking up the same information. */
   if (!entry_exists && config_autoprops == NULL)
     {
       SVN_ERR(svn_client__get_all_auto_props(&config_autoprops, dir_abspath,
