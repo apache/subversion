@@ -1146,6 +1146,86 @@ get_editor_ev2(const svn_delta_editor_t **export_editor,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+export_directory(const char *from_path_or_url,
+                 const char *to_path,
+                 struct edit_baton *eb,
+                 svn_client__pathrev_t *loc,
+                 svn_ra_session_t *ra_session,
+                 svn_boolean_t overwrite,
+                 svn_boolean_t ignore_externals,
+                 svn_boolean_t ignore_keywords,
+                 svn_depth_t depth,
+                 const char *native_eol,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
+{
+  void *edit_baton;
+  const svn_delta_editor_t *export_editor;
+  const svn_ra_reporter3_t *reporter;
+  void *report_baton;
+  svn_boolean_t use_sleep = FALSE;
+  svn_node_kind_t kind;
+
+  if (!ENABLE_EV2_IMPL)
+    SVN_ERR(get_editor_ev1(&export_editor, &edit_baton, eb, ctx,
+                           scratch_pool, scratch_pool));
+  else
+    SVN_ERR(get_editor_ev2(&export_editor, &edit_baton, eb, ctx,
+                           scratch_pool, scratch_pool));
+
+  /* Manufacture a basic 'report' to the update reporter. */
+  SVN_ERR(svn_ra_do_update2(ra_session,
+                            &reporter, &report_baton,
+                            loc->rev,
+                            "", /* no sub-target */
+                            depth,
+                            FALSE, /* don't want copyfrom-args */
+                            export_editor, edit_baton, scratch_pool));
+
+  SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
+                             /* Depth is irrelevant, as we're
+                                passing start_empty=TRUE anyway. */
+                             svn_depth_infinity,
+                             TRUE, /* "help, my dir is empty!" */
+                             NULL, scratch_pool));
+
+  SVN_ERR(reporter->finish_report(report_baton, scratch_pool));
+
+  /* Special case: Due to our sly export/checkout method of updating an
+   * empty directory, no target will have been created if the exported
+   * item is itself an empty directory (export_editor->open_root never
+   * gets called, because there are no "changes" to make to the empty
+   * dir we reported to the repository).
+   *
+   * So we just create the empty dir manually; but we do it via
+   * open_root_internal(), in order to get proper notification.
+   */
+  SVN_ERR(svn_io_check_path(to_path, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    SVN_ERR(open_root_internal
+            (to_path, overwrite, ctx->notify_func2,
+             ctx->notify_baton2, scratch_pool));
+
+  if (! ignore_externals && depth == svn_depth_infinity)
+    {
+      const char *repos_root_url;
+      const char *to_abspath;
+
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                     scratch_pool));
+      SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, scratch_pool));
+      SVN_ERR(svn_client__export_externals(eb->externals,
+                                           from_path_or_url,
+                                           to_abspath, repos_root_url,
+                                           depth, native_eol,
+                                           ignore_keywords, &use_sleep,
+                                           ctx, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Public Interfaces ***/
@@ -1279,67 +1359,10 @@ svn_client_export5(svn_revnum_t *result_rev,
         }
       else if (kind == svn_node_dir)
         {
-          void *edit_baton;
-          const svn_delta_editor_t *export_editor;
-          const svn_ra_reporter3_t *reporter;
-          void *report_baton;
-          svn_boolean_t use_sleep = FALSE;
-
-          if (!ENABLE_EV2_IMPL)
-            SVN_ERR(get_editor_ev1(&export_editor, &edit_baton, eb, ctx,
-                                   pool, pool));
-          else
-            SVN_ERR(get_editor_ev2(&export_editor, &edit_baton, eb, ctx,
-                                   pool, pool));
-
-          /* Manufacture a basic 'report' to the update reporter. */
-          SVN_ERR(svn_ra_do_update2(ra_session,
-                                    &reporter, &report_baton,
-                                    loc->rev,
-                                    "", /* no sub-target */
-                                    depth,
-                                    FALSE, /* don't want copyfrom-args */
-                                    export_editor, edit_baton, pool));
-
-          SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
-                                     /* Depth is irrelevant, as we're
-                                        passing start_empty=TRUE anyway. */
-                                     svn_depth_infinity,
-                                     TRUE, /* "help, my dir is empty!" */
-                                     NULL, pool));
-
-          SVN_ERR(reporter->finish_report(report_baton, pool));
-
-          /* Special case: Due to our sly export/checkout method of
-           * updating an empty directory, no target will have been created
-           * if the exported item is itself an empty directory
-           * (export_editor->open_root never gets called, because there
-           * are no "changes" to make to the empty dir we reported to the
-           * repository).
-           *
-           * So we just create the empty dir manually; but we do it via
-           * open_root_internal(), in order to get proper notification.
-           */
-          SVN_ERR(svn_io_check_path(to_path, &kind, pool));
-          if (kind == svn_node_none)
-            SVN_ERR(open_root_internal
-                    (to_path, overwrite, ctx->notify_func2,
-                     ctx->notify_baton2, pool));
-
-          if (! ignore_externals && depth == svn_depth_infinity)
-            {
-              const char *repos_root_url;
-              const char *to_abspath;
-
-              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
-              SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
-              SVN_ERR(svn_client__export_externals(eb->externals,
-                                                   from_path_or_url,
-                                                   to_abspath, repos_root_url,
-                                                   depth, native_eol,
-                                                   ignore_keywords, &use_sleep,
-                                                   ctx, pool));
-            }
+          SVN_ERR(export_directory(from_path_or_url, to_path,
+                                   eb, loc, ra_session, overwrite,
+                                   ignore_externals, ignore_keywords, depth,
+                                   native_eol, ctx, pool));
         }
       else if (kind == svn_node_none)
         {
