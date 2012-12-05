@@ -1807,7 +1807,7 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
    If HAD_PROPS is requested and the node has pristine props, the value will
    be set to TRUE.
 
-   If PROP_MODS is requested and the node has property modification the value
+   If PROPS_MOD is requested and the node has property modification the value
    will be set to TRUE.
 
    ### add information about the need to scan upwards to get a complete
