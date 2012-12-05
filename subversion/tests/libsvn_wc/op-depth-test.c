@@ -4294,12 +4294,15 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
   sbox_file_write(&b, "A/B/f", "r1 content\n");
+  sbox_file_write(&b, "A/B/h", "r1 content\n");
   SVN_ERR(sbox_wc_add(&b, "A/B/f"));
+  SVN_ERR(sbox_wc_add(&b, "A/B/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
   sbox_file_write(&b, "A/B/f", "r1 content\nr2 content\n");
   SVN_ERR(sbox_wc_commit(&b, ""));
   sbox_file_write(&b, "A/B/g", "r3 content\n");
   SVN_ERR(sbox_wc_add(&b, "A/B/g"));
+  SVN_ERR(sbox_wc_delete(&b, "A/B/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
@@ -4311,12 +4314,15 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A",        "normal",       1, "A"},
       {0, "A/B",      "normal",       1, "A/B"},
       {0, "A/B/f",    "normal",       1, "A/B/f"},
+      {0, "A/B/h",    "normal",       1, "A/B/h"},
       {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
       {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       1, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
       {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE},
+      {1, "A2/B/h",   "normal",       1, "A/B/h", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -4330,12 +4336,15 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A",        "normal",       2, "A"},
       {0, "A/B",      "normal",       2, "A/B"},
       {0, "A/B/f",    "normal",       2, "A/B/f"},
+      {0, "A/B/h",    "normal",       2, "A/B/h"},
       {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
       {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       1, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
       {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE},
+      {1, "A2/B/h",   "normal",       1, "A/B/h", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -4349,12 +4358,15 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A",        "normal",       2, "A"},
       {0, "A/B",      "normal",       2, "A/B"},
       {0, "A/B/f",    "normal",       2, "A/B/f"},
+      {0, "A/B/h",    "normal",       2, "A/B/h"},
       {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
       {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       2, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
       {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE},
+      {1, "A2/B/h",   "normal",       2, "A/B/h", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -4376,12 +4388,12 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A2",       "normal",       2, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
       {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE},
+      {1, "A2/B/h",   "normal",       2, "A/B/h", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  /* Are we going to handle this case? */
   SVN_ERR(sbox_wc_resolve(&b, "A"));
   {
     nodes_row_t nodes[] = {
@@ -4894,7 +4906,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_on_move2"),
     SVN_TEST_OPTS_PASS(move_added,
                        "move_added"),
-    SVN_TEST_OPTS_XFAIL(move_update,
+    SVN_TEST_OPTS_PASS(move_update,
                        "move_update"),
     SVN_TEST_OPTS_PASS(test_scan_delete,
                        "scan_delete"),
