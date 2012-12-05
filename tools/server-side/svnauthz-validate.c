@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_utf.h"
+#include "svn_path.h"
 
 enum {
   OPT_USERNAME = SVN_OPT_FIRST_LONGOPT_ID,
@@ -49,6 +50,8 @@ usage(const char *argv0)
          "Optionally prints the access available to USER for FSPATH in\n"
          "repository with authz name REPOS_NAME.  If FSPATH is omitted, reports\n"
          "whether USER has any access at all.\n"
+         "FILE can also be an absolute file:// URL to a authz file in a\n"
+         "repository, but cannot be a repository relative URL (^/).\n"
          "Returns:\n"
          "    0   when syntax is OK.\n"
          "    1   when syntax is invalid.\n"
@@ -141,10 +144,15 @@ main(int argc, const char **argv)
       return 2;
     }
 
-  opts.authz_file = svn_dirent_internal_style(opts.authz_file, pool);
+  /* Can't accept repos relative urls since we don't have the path to the
+   * repository and URLs don't need to be converted to internal style. */
+  if (svn_path_is_repos_relative_url(opts.authz_file))
+    return usage(argv[0]);
+  else if (!svn_path_is_url(opts.authz_file))
+    opts.authz_file = svn_dirent_internal_style(opts.authz_file, pool);
 
   /* Read the access file and validate it. */
-  err = svn_repos_authz_read(&authz, opts.authz_file, TRUE, pool);
+  err = svn_repos_authz_read2(&authz, opts.authz_file, TRUE, NULL, pool);
 
   /* Optionally, print the access a USER has to a given PATH in REPOS.
      PATH and REPOS may be NULL. */
