@@ -87,14 +87,6 @@ Candidate changes:
      +1: rhuijben
      -0: philip (needs r1295418 for test to run but it still FAILs)
 
- * r1409146
-   Make sure svn_uri_get_file_url_from_dirent() returns a canonical url for
-   Windows drive roots.
-   Justification:
-     Handles a Windows specific corner case in a generic conversion function.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
    Justification:
@@ -136,3 +128,11 @@ Approved changes:
      revision.
    Votes:
      +1: cmpilato, rhuijben, brane
+
+ * r1409146
+   Make sure svn_uri_get_file_url_from_dirent() returns a canonical url for
+   Windows drive roots.
+   Justification:
+     Handles a Windows specific corner case in a generic conversion function.
+   Votes:
+     +1: rhuijben, stefan2, pburba
