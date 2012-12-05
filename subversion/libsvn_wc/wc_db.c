@@ -12744,7 +12744,7 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
    return SVN_NO_ERROR;
 }
 
-/* This implements svn_wc__db_txn_callback_t for svn_wc_db__is_switched */
+/* This implements svn_wc__db_txn_callback_t for svn_wc__db_is_switched() */
 static svn_error_t *
 db_is_switched(void *baton,
                svn_wc__db_wcroot_t *wcroot,
