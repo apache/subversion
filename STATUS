@@ -58,6 +58,9 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
      -0: philip (merge conflict svnmucc renamed)
+     -0: pburba (I tried --ignore-ancestry file merges directly to svnmucc.c
+                 to side-step the rename tree conflict, but there are still
+                 text conflicts with r1408684)
 
  * r1407131, r1407812, r1408650
    Properly handle incoming changes on symlinks (issue #4091)
