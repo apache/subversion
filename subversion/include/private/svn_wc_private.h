@@ -317,14 +317,18 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+/** Check whether LOCAL_ABSPATH has a parent directory that knows about its
+ * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ *
+ * Like svn_wc_is_wc_root(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 
 /** Set @a *wcroot_abspath to the local abspath of the root of the
