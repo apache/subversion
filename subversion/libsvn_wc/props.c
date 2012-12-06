@@ -300,7 +300,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                               baseprops /* server_baseprops */,
                               pristine_props,
                               actual_props,
-                              propchanges, dry_run,
+                              propchanges,
                               scratch_pool, scratch_pool));
 
   if (dry_run)
@@ -1185,7 +1185,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t *pristine_props,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
-                    svn_boolean_t dry_run,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -1282,9 +1281,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
         {
           set_prop_merge_state(state, svn_wc_notify_state_conflicted);
 
-          if (dry_run)
-            continue;   /* skip to next incoming change */
-
           if (!conflict_props)
             conflict_props = apr_hash_make(result_pool);
 
@@ -1296,9 +1292,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   svn_pool_destroy(iterpool);
 
   /* Finished applying all incoming propchanges to our hashes! */
-
-  if (dry_run)
-    return SVN_NO_ERROR;
 
   *new_actual_props = actual_props;
 
