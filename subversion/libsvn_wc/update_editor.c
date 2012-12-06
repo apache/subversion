@@ -2494,8 +2494,6 @@ close_directory(void *dir_baton,
                                     actual_props,
                                     regular_prop_changes,
                                     FALSE /* dry_run */,
-                                    eb->cancel_func,
-                                    eb->cancel_baton,
                                     db->pool,
                                     scratch_pool),
                 _("Couldn't do property merge"));
@@ -4107,7 +4105,6 @@ close_file(void *file_baton,
                                   current_actual_props,
                                   regular_prop_changes, /* propchanges */
                                   FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge). */
@@ -4240,7 +4237,6 @@ close_file(void *file_baton,
                                   fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
                                   FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
 

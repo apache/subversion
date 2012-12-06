@@ -1254,7 +1254,6 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                   original_props, pristine_props, actual_props,
                                   prop_diff,
                                   dry_run,
-                                  cancel_func, cancel_baton,
                                   scratch_pool, scratch_pool));
     }
 
