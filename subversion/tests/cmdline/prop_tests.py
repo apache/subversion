@@ -2535,11 +2535,11 @@ def inheritable_ignores(sbox):
   sbox.simple_propset('svn:ignore', '*.foo', 'A/B/E')
   sbox.simple_commit()
 
-  # Some directories and files that should be added because they don't
-  # match any applicable ignores.
-  X_dir_path = os.path.join(wc_dir, 'ADD-ME-DIR-X')
-  Y_dir_path = os.path.join(wc_dir, 'A', 'ADD-ME-DIR-Y.doo')
-  Z_dir_path = os.path.join(wc_dir, 'A', 'D', 'G', 'ADD-ME-DIR-Z.doo')
+  # Some directories and files that should always be added because they
+  # don't match any applicable ignore patterns.
+  X_dir_path = sbox.ospath('ADD-ME-DIR-X')
+  Y_dir_path = sbox.ospath('A/ADD-ME-DIR-Y.doo')
+  Z_dir_path = sbox.ospath('A/D/G/ADD-ME-DIR-Z.doo')
   os.mkdir(X_dir_path)
   os.mkdir(Y_dir_path)
   os.mkdir(Z_dir_path)
@@ -2547,11 +2547,11 @@ def inheritable_ignores(sbox):
   # Some directories and files that should be ignored when adding
   # because they match an ignore pattern (unless of course they are
   # the direct target of an add, which we always add).
-  boo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo')
-  goo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo', 'IGNORE-ME-DIR.goo')
-  doo_dir_path = os.path.join(wc_dir, 'A', 'B', 'IGNORE-ME-DIR.doo')
-  moo_dir_path = os.path.join(wc_dir, 'A', 'D', 'IGNORE-ME-DIR.moo')
-  foo_dir_path = os.path.join(wc_dir, 'A', 'B', 'E', 'IGNORE-ME-DIR.foo')
+  boo_dir_path = sbox.ospath('IGNORE-ME-DIR.boo')
+  goo_dir_path = sbox.ospath('IGNORE-ME-DIR.boo/IGNORE-ME-DIR.goo')
+  doo_dir_path = sbox.ospath('A/B/IGNORE-ME-DIR.doo')
+  moo_dir_path = sbox.ospath('A/D/IGNORE-ME-DIR.moo')
+  foo_dir_path = sbox.ospath('A/B/E/IGNORE-ME-DIR.foo')
   os.mkdir(boo_dir_path)
   os.mkdir(goo_dir_path)
   os.mkdir(doo_dir_path)
@@ -2650,8 +2650,8 @@ def inheritable_ignores(sbox):
                                      '--config-dir', config_dir)
   os.chdir(saved_wd)
 
-  # Now revert and try the add with the --no-ignore flag, only the
-  # svn:global-ignores should be enforced.
+  # Now revert and try the add with the --no-ignore flag, nothing should
+  # be ignored.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_dir, '-R')
   saved_wd = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -2665,10 +2665,20 @@ def inheritable_ignores(sbox):
                                  'IGNORE-ME-DIR.goo') + '\n',
      'A         ' + os.path.join('A', 'B', 'E', 'IGNORE-ME-DIR.foo') + '\n',
      'A         ' + os.path.join('A', 'B', 'E', 'ignore-me-file.foo') + '\n',
-     'A         ' + os.path.join('A', 'D', 'G', 'ignore-me-file.goo') + '\n'])
-  svntest.actions.run_and_verify_svn("Adds in spite of ignores", expected,
-                                     [], 'add', '.', '--force','--no-ignore',
-                                     '--config-dir', config_dir)
+     'A         ' + os.path.join('A', 'D', 'G', 'ignore-me-file.goo') + '\n',
+
+     'A         ' + os.path.join('A', 'B', 'E', 'ignore-me-file.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo',
+                                 'ignore-me-file.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo',
+                                 'ignore-me-file.roo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'IGNORE-ME-DIR.moo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'ignore-me-file.moo') + '\n'])
+  svntest.actions.run_and_verify_svn("Files ignored with --no-ignore",
+                                     expected, [], 'add', '.', '--force',
+                                     '--no-ignore', '--config-dir',
+                                     config_dir)
 
 def almost_known_prop_names(sbox):
   "propset with svn: prefix but unknown name"
