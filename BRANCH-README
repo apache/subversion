@@ -8,27 +8,6 @@ TODO
 
 * svnserve - I have partial support written, but need to deal with the whole
     --config-file issue.
-* tests - Need to finish writing the tests for svn_repos_authz_read2().
-    It's not really feasable to handle DAV testing with the way our test
-    suite is currently written.  We have two authz directives and 4 different
-    styles of authz paths.  So we'd need 8 different Location's to be setup,
-    which seems absurd to me.  One alternative is to migrate to always using
-    something akin to davautocheck.
 * errors - DAV error messages kinda suck since it guesses what it thinks is
     the best error message at current.  When it should display the whole chain.
-* refactor svn_repos_authz_read* functions to share a common implementation. 
 * documentation - as in the user level docs.
-
-TESTS
-
-Following tests should be developed (+ means we should look for success,
-- means we should look for failure).
-
-+ absolute path on OS file system.
-+ relative path on OS file system.
-+ file:// url to repo path.
-+ relative path in repo (^/)
-- http:// url
-- svn:// url
-- OS path that does not exist
-- repo path that does not exist
