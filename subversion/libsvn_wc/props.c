@@ -200,7 +200,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   svn_wc__db_status_t status;
   svn_kind_t kind;
   apr_hash_t *pristine_props = NULL;
-  apr_hash_t *actual_props = NULL;
+  apr_hash_t *actual_props;
   apr_hash_t *new_pristine_props;
   apr_hash_t *new_actual_props;
   svn_boolean_t had_props, props_mod;
@@ -289,7 +289,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
     SVN_ERR(svn_wc__get_actual_props(&actual_props, db, local_abspath,
                                      scratch_pool, scratch_pool));
   else
-    actual_props = apr_hash_copy(scratch_pool, pristine_props);
+    actual_props = pristine_props;
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -1191,19 +1191,14 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   apr_pool_t *iterpool;
   int i;
   apr_hash_t *conflict_props = NULL;
-  apr_hash_t *old_actual_props;
   apr_hash_t *their_props;
 
   SVN_ERR_ASSERT(pristine_props != NULL);
   SVN_ERR_ASSERT(actual_props != NULL);
 
-  /* Just copy the pointers as we copy the data in the skel if
-     necessary */
-  old_actual_props = apr_hash_copy(scratch_pool, actual_props);
-
   if (new_pristine_props)
     *new_pristine_props = apr_hash_copy(result_pool, pristine_props);
-  *new_actual_props = NULL;
+  *new_actual_props = apr_hash_copy(result_pool, actual_props);
 
   if (!server_baseprops)
     server_baseprops = pristine_props;
@@ -1255,21 +1250,21 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       if (! from_val)  /* adding a new property */
         SVN_ERR(apply_single_prop_add(state, &conflict_remains,
                                       db, local_abspath,
-                                      actual_props,
+                                      *new_actual_props,
                                       propname, base_val, to_val,
                                       result_pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(state, &conflict_remains,
                                          db, local_abspath,
-                                         actual_props,
+                                         *new_actual_props,
                                          propname, base_val, from_val,
                                          result_pool, iterpool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(state, &conflict_remains,
                                          db, local_abspath,
-                                         actual_props,
+                                         *new_actual_props,
                                          propname, base_val, from_val, to_val,
                                          result_pool, iterpool));
 
@@ -1292,8 +1287,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
   /* Finished applying all incoming propchanges to our hashes! */
 
-  *new_actual_props = actual_props;
-
   if (conflict_props != NULL)
     {
       /* Ok, we got some conflict. Lets store all the property knowledge we
@@ -1305,7 +1298,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(*conflict_skel,
                                                       db, local_abspath,
                                                       NULL /* reject_path */,
-                                                      old_actual_props,
+                                                      actual_props,
                                                       server_baseprops,
                                                       their_props,
                                                       conflict_props,

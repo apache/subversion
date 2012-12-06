@@ -1145,7 +1145,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   svn_skel_t *work_items;
   svn_skel_t *conflict_skel = NULL;
   apr_hash_t *pristine_props = NULL;
-  apr_hash_t *actual_props = NULL;
+  apr_hash_t *actual_props;
   apr_hash_t *new_actual_props = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
@@ -1222,7 +1222,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                       scratch_pool, scratch_pool));
       }
     else if (pristine_props)
-      actual_props = apr_hash_copy(scratch_pool, pristine_props);
+      actual_props = pristine_props;
     else
       actual_props = apr_hash_make(scratch_pool);
   }
