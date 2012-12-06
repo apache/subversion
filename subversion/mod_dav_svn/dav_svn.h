@@ -56,7 +56,7 @@ extern "C" {
 typedef enum dav_svn__bulk_upd_conf {
     CONF_BULKUPD_ON,
     CONF_BULKUPD_OFF,
-    CONF_BULKUPD_FORCE
+    CONF_BULKUPD_PREFER
 } dav_svn__bulk_upd_conf;
 
 /* dav_svn_repos
