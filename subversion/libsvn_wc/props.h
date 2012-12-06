@@ -104,8 +104,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t dry_run,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 

@@ -301,7 +301,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                               pristine_props,
                               actual_props,
                               propchanges, dry_run,
-                              cancel_func, cancel_baton,
                               scratch_pool, scratch_pool));
 
   if (dry_run)
@@ -1187,8 +1186,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t dry_run,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -1235,10 +1232,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       const svn_string_t *to_val; /* Merge right */
 
       svn_pool_clear(iterpool);
-
-      /* Should we stop the prop merging process?  */
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
 
       /* For the incoming propchange, figure out the TO and FROM values. */
       incoming_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);

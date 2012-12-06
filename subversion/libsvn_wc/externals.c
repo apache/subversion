@@ -743,7 +743,6 @@ close_file(void *file_baton,
                                       actual_props,
                                       regular_prop_changes,
                                       FALSE /* dry_run */,
-                                      eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
         }
       else
