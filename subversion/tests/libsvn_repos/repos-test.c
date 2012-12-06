@@ -1455,20 +1455,20 @@ in_repo_authz(const svn_test_opts_t *opts,
   /* http:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "http://example.com/repo/authz",
                               TRUE, repos_root, pool);
-  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
-                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             "SVN_ERR_RA_ILLEGAL_URL",
                              err ? "unexpected" : "no");
   svn_error_clear(err);
 
   /* svn:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "svn://example.com/repo/authz",
                               TRUE, repos_root, pool);
-  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
-                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             "SVN_ERR_RA_ILLEGAL_URL",
                              err ? "unexpected" : "no");
   svn_error_clear(err);
 
