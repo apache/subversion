@@ -1016,11 +1016,17 @@ dav_svn__update_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  /* If server configuration permits bulk updates (a report with props
-     and textdeltas inline, rather than placeholder tags that tell the
-     client to do further fetches), look to see if client requested as
-     much.  */
-  if (repos->bulk_updates)
+  /* SVNAllowBulkUpdates On: server configuration permits bulk updates (a report
+     with props and textdeltas inline, rather than placeholder tags that tell
+     the client to do further fetches), look to see if client requested as
+     much.
+   
+     SVNAllowBulkUpdates Force: always use bulk updates, no matter what the
+     client requested.
+   
+     SVNAllowBulkUpdates Off: no bulk updates allowed, force skelta mode.
+   */
+  if (repos->bulk_updates == CONF_BULKUPD_ON)
     {
       apr_xml_attr *this_attr;
 
@@ -1034,6 +1040,11 @@ dav_svn__update_report(const dav_resource *resource,
               break;
             }
         }
+    }
+  else if (repos->bulk_updates == CONF_BULKUPD_FORCE)
+    {
+      uc.send_all = TRUE;
+      uc.include_props = TRUE;
     }
 
   /* Ask the repository about its youngest revision (which we'll need

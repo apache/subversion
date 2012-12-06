@@ -286,7 +286,7 @@ read_info(const struct svn_wc__db_info_t **info,
 
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       lock_arg, NULL, &update_root,
+                                       lock_arg, NULL, NULL, &update_root,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
 

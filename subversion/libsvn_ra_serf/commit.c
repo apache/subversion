@@ -1466,15 +1466,9 @@ open_root(void *edit_baton,
       for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *name;
-          svn_string_t *value;
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
           const char *ns;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          value = val;
 
           if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
             {
