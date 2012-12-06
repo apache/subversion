@@ -342,11 +342,11 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
     if (status == svn_wc__db_status_added)
-      SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                new_base_props, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_working_set_props(
+                db, local_abspath, new_pristine_props, scratch_pool));
     else
-      SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
-                                             new_base_props, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_base_set_props(
+                db, local_abspath, new_pristine_props, scratch_pool));
 #else
     if (base_merge)
       return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
