@@ -73,25 +73,20 @@ svn_wc__internal_propget(const svn_string_t **value,
    SERVER_BASEPROPS, calculate what changes should be applied to the working
    copy.
 
-   Return working queue operations in WORK_ITEMS and a new set of actual
-   (NEW_ACTUAL_PROPS) and pristine properties (NEW_PRISTINE_PROPS).
-
    We return the new property collections to the caller, so the caller
    can combine the property update with other operations.
 
    If SERVER_BASEPROPS is NULL then use the pristine props as PROPCHANGES
    base.
 
-   If BASE_MERGE is FALSE then only change working properties; if TRUE,
-   change both the pristine and working properties. (Only the update editor
-   should use BASE_MERGE is TRUE)
+   Return the new set of actual properties in *NEW_ACTUAL_PROPS.  If
+   NEW_PRISTINE_PROPS is non-null, then also apply PROPCHANGES to
+   PRISTINE_PROPS and return the new set of pristine properties in
+   *NEW_PRISTINE_PROPS.
 
-   If conflicts are found when merging, create a temporary .prej file,
-   and provide working queue operations to write the conflict information
-   into the .prej file later. Modify base properties unconditionally,
-   if BASE_MERGE is TRUE, they do not generate conficts.
-
-   TODO ### DRY_RUN ...
+   Return any conflicts of the actual props in *CONFLICT_SKEL.  (Changes
+   made to the pristine properties, if BASE_MERGE is TRUE, do not
+   generate conficts.)
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
@@ -102,15 +97,10 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_kind_t kind,
-                    apr_hash_t *server_baseprops,
-                    apr_hash_t *pristine_props,
-                    apr_hash_t *actual_props,
+                    /*const*/ apr_hash_t *server_baseprops,
+                    /*const*/ apr_hash_t *pristine_props,
+                    /*const*/ apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
-                    svn_boolean_t base_merge,
-                    svn_boolean_t dry_run,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
@@ -144,7 +134,13 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         apr_pool_t *scratch_pool);
 
 
-/* Just like svn_wc_merge_props3(), but WITH a BASE_MERGE parameter.  */
+/* Just like svn_wc_merge_props3(), but WITH a BASE_MERGE parameter.
+
+   If SVN__SUPPORT_BASE_MERGE is defined and BASE_MERGE is true, then
+   also use PROPCHANGES to modify the node's pristine properties.  (That
+   cannot generate conficts.)  If SVN__SUPPORT_BASE_MERGE is not defined
+   and BASE_MERGE is true, throw an error.
+ */
 svn_error_t *
 svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                             svn_wc__db_t *db,

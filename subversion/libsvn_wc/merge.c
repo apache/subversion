@@ -1145,7 +1145,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   svn_skel_t *work_items;
   svn_skel_t *conflict_skel = NULL;
   apr_hash_t *pristine_props = NULL;
-  apr_hash_t *actual_props = NULL;
+  apr_hash_t *actual_props;
   apr_hash_t *new_actual_props = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
@@ -1222,7 +1222,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                       scratch_pool, scratch_pool));
       }
     else if (pristine_props)
-      actual_props = apr_hash_copy(scratch_pool, pristine_props);
+      actual_props = pristine_props;
     else
       actual_props = apr_hash_make(scratch_pool);
   }
@@ -1230,7 +1230,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   if (merge_props_outcome)
     {
       int i;
-      apr_hash_t *new_pristine_props;
+
       /* The PROPCHANGES may not have non-"normal" properties in it. If entry
          or wc props were allowed, then the following code would install them
          into the BASE and/or WORKING properties(!).  */
@@ -1249,12 +1249,10 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
 
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   merge_props_outcome,
-                                  &new_pristine_props, &new_actual_props,
-                                  wc_ctx->db, target_abspath, svn_kind_file,
+                                  NULL, &new_actual_props,
+                                  wc_ctx->db, target_abspath,
                                   original_props, pristine_props, actual_props,
-                                  prop_diff, FALSE /* base_merge */,
-                                  dry_run,
-                                  cancel_func, cancel_baton,
+                                  prop_diff,
                                   scratch_pool, scratch_pool));
     }
 

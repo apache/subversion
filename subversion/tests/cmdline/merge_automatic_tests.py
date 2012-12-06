@@ -762,10 +762,11 @@ def cherry3_fwd(sbox):
 def subtree_to_and_fro(sbox):
   "reintegrate considers source subtree mergeinfo"
 
-#     A (--o-o-o-o---------x
-#       ( \         \     /
-#       (  \         \   /
-#     B (   o--o------s--
+  #   A      (-----o-o-o-o------------x
+  #          ( \            \        /
+  #          (  \            \      /
+  #   A_COPY (   o---------o--s--o--
+  #              2 3 4 5 6 7  8  9
 
   # Some paths we'll care about.
   A_COPY_gamma_path = sbox.ospath('A_COPY/D/gamma')
@@ -777,7 +778,7 @@ def subtree_to_and_fro(sbox):
   wc_dir = sbox.wc_dir
 
   # Setup a simple 'trunk & branch': Copy ^/A to ^/A_COPY in r2 and then
-  # make a few edits under A in r3-6:
+  # make a few edits under A in r3-6 (edits r3, r4, r6 are under subtree 'D'):
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Edit a file on the branch.
