@@ -785,7 +785,8 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 }
 
 /* Add the property with name PROPNAME to the set of ACTUAL_PROPS on
- * PATH, setting *STATE or *CONFLICT_REMAINS according to merge outcomes.
+ * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
+ * the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -868,9 +869,9 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
 }
 
 
-/* Delete the property with name PROPNAME from the set of
- * ACTUAL_PROPS on PATH, setting *STATE or *CONFLICT_REMAINS according to
- * merge outcomes.
+/* Delete the property with name PROPNAME from the set of ACTUAL_PROPS on
+ * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
+ * the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -1087,8 +1088,9 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of ACTUAL_PROPS
- * on PATH, setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
+/* Change the property with name PROPNAME in the set of ACTUAL_PROPS on
+ * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
+ * the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_prop_merge_state(). (May be null.).
@@ -1684,7 +1686,7 @@ get_file_for_validation(const svn_string_t **mime_type,
     {
       svn_stream_t *read_stream;
 
-      /* Open PATH. */
+      /* Open GB->LOCAL_ABSPATH. */
       SVN_ERR(svn_stream_open_readonly(&read_stream, gb->local_abspath,
                                        pool, pool));
 
