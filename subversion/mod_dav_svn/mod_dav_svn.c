@@ -369,9 +369,9 @@ SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, const char *arg1)
     {
       conf->bulk_updates = CONF_BULKUPD_OFF;
     }
-  else if (apr_strnatcasecmp("force", arg1) == 0)
+  else if (apr_strnatcasecmp("prefer", arg1) == 0)
     {
-      conf->bulk_updates = CONF_BULKUPD_FORCE;
+      conf->bulk_updates = CONF_BULKUPD_PREFER;
     }
   else
     {
@@ -1160,8 +1160,8 @@ static const command_rec cmds[] =
                 ACCESS_CONF|RSRC_CONF,
                 "enables support for bulk update-style requests (On, default), "
                 "as opposed to only skeletal reports that require additional "
-                "per-file downloads (Off). Use Force to always use bulk update "
-                "responses, regardless of what the client requested."),
+                "per-file downloads (Off). Use Prefer to tell the svn client "
+                "to always use bulk update requests, if supported."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNAdvertiseV2Protocol", SVNAdvertiseV2Protocol_cmd, NULL,
