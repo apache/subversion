@@ -79,8 +79,6 @@ svn_wc__internal_propget(const svn_string_t **value,
    If SERVER_BASEPROPS is NULL then use the pristine props as PROPCHANGES
    base.
 
-   TODO ### DRY_RUN ...
-
    Return the new set of actual properties in *NEW_ACTUAL_PROPS.  If
    NEW_PRISTINE_PROPS is non-null, then also apply PROPCHANGES to
    PRISTINE_PROPS and return the new set of pristine properties in
@@ -103,7 +101,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t *pristine_props,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
-                    svn_boolean_t dry_run,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 

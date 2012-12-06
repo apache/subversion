@@ -742,7 +742,6 @@ close_file(void *file_baton,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
-                                      FALSE /* dry_run */,
                                       pool, pool));
         }
       else

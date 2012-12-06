@@ -1253,7 +1253,6 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                   wc_ctx->db, target_abspath,
                                   original_props, pristine_props, actual_props,
                                   prop_diff,
-                                  dry_run,
                                   scratch_pool, scratch_pool));
     }
 
