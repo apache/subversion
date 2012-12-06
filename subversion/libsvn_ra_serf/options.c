@@ -280,6 +280,10 @@ capabilities_headers_iterator_callback(void *baton,
         {
           opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_ALLOW_BULK_UPDATES) == 0)
+        {
+          session->server_allows_bulk = apr_pstrdup(session->pool, val);
+        }
       else if (svn_cstring_casecmp(key, SVN_DAV_SUPPORTED_POSTS_HEADER) == 0)
         {
           /* May contain multiple values, separated by commas. */
