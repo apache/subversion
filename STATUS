@@ -102,11 +102,3 @@ Approved changes:
      revision.
    Votes:
      +1: cmpilato, rhuijben, brane
-
- * r1409146
-   Make sure svn_uri_get_file_url_from_dirent() returns a canonical url for
-   Windows drive roots.
-   Justification:
-     Handles a Windows specific corner case in a generic conversion function.
-   Votes:
-     +1: rhuijben, stefan2, pburba
