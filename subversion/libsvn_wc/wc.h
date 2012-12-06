@@ -388,17 +388,24 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  apr_pool_t *scratch_pool);
 
 
-/* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
-   TARGET_ABSPATH, return the appropriate work queue operations in
-   *WORK_ITEMS.
+/* Prepare to merge a file content change into the working copy.  This
+   does not merge properties; see svn_wc__merge_props() for that.  This
+   ### [does | does not]
+   change the working file on disk as well as returning work items.
 
-   Note that, in the case of updating, the update can have sent new
-   properties, which could affect the way the wc target is
-   detranslated and compared with LEFT and RIGHT for merging.
+   Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
+   TARGET_ABSPATH.
 
-   The merge result is stored in *MERGE_OUTCOME and merge conflicts
-   are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
-   TARGET_LABEL.
+   Set *WORK_ITEMS to the appropriate work queue operations.
+
+   If there are any conflicts, append a conflict description to
+   *CONFLICT_SKEL.  (First allocate *CONFLICT_SKEL from RESULT_POOL if
+   it is initially NULL.  CONFLICT_SKEL itself must not be NULL.)
+   Also, unless it is considered to be a 'binary' file, mark any
+   conflicts in the text of the file TARGET_ABSPATH using LEFT_LABEL,
+   RIGHT_LABEL and TARGET_LABEL.
+
+   Set *MERGE_OUTCOME to indicate the result.
 
    When DRY_RUN is true, no actual changes are made to the working copy.
 
@@ -412,11 +419,17 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    retrieved. (Interesting for merging file externals).
 
    ACTUAL_PROPS is the set of actual properties before merging; used for
-   detranslating the file before merging.
+   detranslating the file before merging.  This is necessary because, in
+   the case of updating, the update can have sent new properties, so we
+   cannot simply fetch and use the current actual properties.
+
+     ### Is ACTUAL_PROPS still necessary, now that we first prepare the
+         content change and property change and then apply them both to
+         the WC together?
 
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge3() for which this is
+   For a complete description, see svn_wc_merge5() for which this is
    the (loggy) implementation.
 
    *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
