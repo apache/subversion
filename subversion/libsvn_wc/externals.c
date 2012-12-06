@@ -742,7 +742,6 @@ close_file(void *file_baton,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
-                                      TRUE /* base_merge */,
                                       FALSE /* dry_run */,
                                       eb->cancel_func, eb->cancel_baton,
                                       pool, pool));

@@ -294,12 +294,13 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&conflict_skel, state,
-                              &new_pristine_props, &new_actual_props,
+                              base_merge ? &new_pristine_props : NULL,
+                              &new_actual_props,
                               db, local_abspath,
                               baseprops /* server_baseprops */,
                               pristine_props,
                               actual_props,
-                              propchanges, base_merge, dry_run,
+                              propchanges, dry_run,
                               cancel_func, cancel_baton,
                               scratch_pool, scratch_pool));
 
@@ -1185,7 +1186,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                     apr_hash_t *pristine_props,
                     apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
-                    svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
@@ -1205,7 +1205,8 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
      necessary */
   old_actual_props = apr_hash_copy(scratch_pool, actual_props);
 
-  *new_pristine_props = NULL;
+  if (new_pristine_props)
+    *new_pristine_props = apr_hash_copy(result_pool, pristine_props);
   *new_actual_props = NULL;
 
   if (!server_baseprops)
@@ -1248,8 +1249,9 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       base_val = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
 
-      if (base_merge)
-        apr_hash_set(pristine_props, propname, APR_HASH_KEY_STRING, to_val);
+      if (new_pristine_props)
+        apr_hash_set(*new_pristine_props, propname, APR_HASH_KEY_STRING,
+                     to_val);
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
 
@@ -1305,7 +1307,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  *new_pristine_props = pristine_props;
   *new_actual_props = actual_props;
 
   if (conflict_props != NULL)
