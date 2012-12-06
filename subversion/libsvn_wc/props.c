@@ -1206,7 +1206,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   *new_actual_props = NULL;
 
   if (!server_baseprops)
-    server_baseprops = apr_hash_copy(scratch_pool, pristine_props);
+    server_baseprops = pristine_props;
 
   their_props = apr_hash_copy(scratch_pool, server_baseprops);
 
@@ -1282,10 +1282,9 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
           set_prop_merge_state(state, svn_wc_notify_state_conflicted);
 
           if (!conflict_props)
-            conflict_props = apr_hash_make(result_pool);
+            conflict_props = apr_hash_make(scratch_pool);
 
-          apr_hash_set(conflict_props, apr_pstrdup(result_pool, propname),
-                       APR_HASH_KEY_STRING, "");
+          apr_hash_set(conflict_props, propname, APR_HASH_KEY_STRING, "");
         }
 
     }  /* foreach propchange ... */
