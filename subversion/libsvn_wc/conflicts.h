@@ -261,6 +261,8 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
  * Output arguments can be NULL if the value is not necessary.
  *
  * ### stsp asks: what is LOCATIONS?
+ * ### Set *LOCATIONS to an array of (svn_wc_conflict_version_t *)
+ *     representing ...
  *
  * TEXT_, PROP_ and TREE_CONFLICTED (when not NULL) will be set to TRUE
  * when the conflict contains the specified kind of conflict, otherwise
