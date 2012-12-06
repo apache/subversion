@@ -904,6 +904,33 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
+                      svn_boolean_t must_exist, svn_boolean_t accept_urls,
+                      const char *repos_root, apr_pool_t *pool)
+{
+  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
+  struct authz_validate_baton baton = { 0 };
+
+  baton.err = SVN_NO_ERROR;
+
+  /* Load the rule file */
+  if (accept_urls)
+    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, repos_root,
+                                  pool));
+  else
+    SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
+  baton.config = authz->cfg;
+
+  /* Step through the entire rule file, stopping on error. */
+  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
+                                 &baton, pool);
+  SVN_ERR(baton.err);
+
+  *authz_p = authz;
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Public functions. ***/
@@ -913,44 +940,11 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
                       svn_boolean_t must_exist, const char *repos_root,
                       apr_pool_t *pool)
 {
-  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
-  struct authz_validate_baton baton = { 0 };
-
-  baton.err = SVN_NO_ERROR;
-  SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, repos_root,
-                                pool));
-  baton.config = authz->cfg;
-
-  /* Step through the entire rule file, stopping on error. */
-  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
-
-  *authz_p = authz;
-  return SVN_NO_ERROR;
+  return svn_repos__authz_read(authz_p, path, must_exist, TRUE, repos_root,
+                               pool);
 }
 
-svn_error_t *
-svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
-                     svn_boolean_t must_exist, apr_pool_t *pool)
-{
-  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
-  struct authz_validate_baton baton = { 0 };
 
-  baton.err = SVN_NO_ERROR;
-
-  /* Load the rule file. */
-  SVN_ERR(svn_config_read2(&authz->cfg, file, must_exist, TRUE, pool));
-  baton.config = authz->cfg;
-
-  /* Step through the entire rule file, stopping on error. */
-  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
-
-  *authz_p = authz;
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
