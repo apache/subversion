@@ -496,19 +496,6 @@ cleanup_edit_baton(void *edit_baton)
   return APR_SUCCESS;
 }
 
-/* An APR pool cleanup handler.  This is a child handler, it removes
-   the mail pool handler.
-   <stsp> mail pool?
-   <hwright> that's where the missing commit mails are going!  */
-static apr_status_t
-cleanup_edit_baton_child(void *edit_baton)
-{
-  struct edit_baton *eb = edit_baton;
-  apr_pool_cleanup_kill(eb->pool, eb, cleanup_edit_baton);
-  return APR_SUCCESS;
-}
-
-
 /* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
    If PATH and PB are NULL, this is the root directory of the edit; in this
    case, make the new dir baton in a subpool of EB->pool.
@@ -4633,7 +4620,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->ext_patterns             = preserved_exts;
 
   apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
-                            cleanup_edit_baton_child);
+                            apr_pool_cleanup_null);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
