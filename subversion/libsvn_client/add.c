@@ -381,9 +381,6 @@ add_file(const char *local_abspath,
  * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
  * addition, add will fail and return an error unless FORCE is TRUE.
  *
- * Files and directories that match ignore patterns will not be added unless
- * NO_IGNORE is TRUE.
- *
  * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
  * if necessary.
  *
@@ -411,7 +408,6 @@ static svn_error_t *
 add_dir_recursive(const char *dir_abspath,
                   svn_depth_t depth,
                   svn_boolean_t force,
-                  svn_boolean_t no_ignore,
                   svn_boolean_t no_autoprops,
                   svn_magic__cookie_t *magic_cookie,
                   apr_hash_t *config_autoprops,
@@ -435,7 +431,7 @@ add_dir_recursive(const char *dir_abspath,
 
   if (refresh_ignores)
     SVN_ERR(svn_client__get_all_ignores(&ignores, dir_abspath,
-                                        no_ignore, ctx, scratch_pool,
+                                        ctx, scratch_pool,
                                         iterpool));
 
   /* Add this directory to revision control. */
@@ -517,7 +513,7 @@ add_dir_recursive(const char *dir_abspath,
             refresh_ignores = FALSE;
 
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
-                                    force, no_ignore, no_autoprops,
+                                    force, no_autoprops,
                                     magic_cookie, config_autoprops,
                                     refresh_ignores, ignores, ctx,
                                     iterpool));
@@ -892,7 +888,6 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
 
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool)
@@ -951,11 +946,8 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
 
   /* Now that we are sure we have an existing parent, get the config ignore
      and the local ignore patterns... */
-  if (!no_ignore)
-    SVN_ERR(svn_wc_get_ignores2(ignores, ctx->wc_ctx, local_abspath,
-                                ctx->config, result_pool, scratch_pool));
-  else
-    *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
+  SVN_ERR(svn_wc_get_ignores2(ignores, ctx->wc_ctx, local_abspath,
+                              ctx->config, result_pool, scratch_pool));
 
   /* ...and add the inherited ignores to it. */
   for (i = 0; i < inherited_ignores->nelts; i++)
@@ -1041,9 +1033,9 @@ add(const char *local_abspath,
       /* We use add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(local_abspath, depth, force, no_ignore,
+      err = add_dir_recursive(local_abspath, depth, force,
                               no_autoprops, magic_cookie, NULL,
-                              TRUE, ignores, ctx, scratch_pool);
+                              !no_ignore, ignores, ctx, scratch_pool);
     }
   else if (kind == svn_node_file)
     err = add_file(local_abspath, magic_cookie, NULL,
