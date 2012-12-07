@@ -655,7 +655,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   handler->handler_pool = pool;
   handler->method = "REPORT";
-  handler->path = session->session_url_str;
+  handler->path = session->session_url.path;
   handler->body_delegate = create_replay_body;
   handler->body_delegate_baton = replay_ctx;
   handler->body_type = "text/xml";
@@ -798,7 +798,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           handler->handler_pool = replay_ctx->src_rev_pool;
           handler->method = "REPORT";
-          handler->path = session->session_url_str;
+          handler->path = session->session_url.path;
           handler->body_delegate = create_replay_body;
           handler->body_delegate_baton = replay_ctx;
           handler->conn = session->conns[0];
