@@ -337,6 +337,13 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
 
 
 svn_error_t *
+svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                svn_kind_t kind,
+                                int op_depth,
+                                apr_pool_t *scratch_pool);
+
+svn_error_t *
 svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                  const char *local_relpath,
                                  int op_depth,

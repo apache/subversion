@@ -641,17 +641,19 @@ blank_ibb(insert_base_baton_t *pibb)
    A/B/C/D    normal              base-del            normal
    A/B/C/D/E  normal              base-del
 
-   When adding a base node if the parent has a working node then the
-   parent base is deleted and this must be extended to cover new base
-   node.
+   When adding a node if the parent has a higher working node then the
+   parent node is deleted (or replaced) and the delete must be extended
+   to cover new node.
 
    In the example above A/B/C/D and A/B/C/D/E are the nodes that get
    the extended delete, A/B/C is already deleted.
  */
-static svn_error_t *
-extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                svn_kind_t kind,
+                                int op_depth,
+                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t have_row;
   svn_sqlite__stmt_t *stmt;
@@ -662,26 +664,29 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath, 0));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath,
+                            op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     parent_op_depth = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     {
-      int op_depth;
+      int existing_op_depth;
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                                op_depth));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
-        op_depth = svn_sqlite__column_int(stmt, 0);
+        existing_op_depth = svn_sqlite__column_int(stmt, 0);
       SVN_ERR(svn_sqlite__reset(stmt));
-      if (!have_row || parent_op_depth < op_depth)
+      if (!have_row || parent_op_depth < existing_op_depth)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                              STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                                    local_relpath, parent_op_depth));
+                              STMT_INSTALL_WORKING_NODE_FOR_DELETE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isdst", wcroot->wc_id,
+                                    local_relpath, parent_op_depth,
+                                    parent_relpath, kind_map, kind));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
         }
     }
@@ -690,11 +695,11 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 }
 
 
-/* This is the reverse of extend_parent_delete.
+/* This is the reverse of svn_wc__db_extend_parent_delete.
 
-   When removing a base node if the parent has a working node then the
-   parent base and this node are both deleted and so the delete of
-   this node must be removed.
+   When removing a node if the parent has a higher working node then
+   the parent node and this node are both deleted or replaced and any
+   delete over this node must be removed.
  */
 svn_error_t *
 svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
@@ -856,7 +861,9 @@ insert_base_node(void *baton,
               || (pibb->status == svn_wc__db_status_incomplete))
           && ! pibb->file_external)
         {
-          SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
+          SVN_ERR(svn_wc__db_extend_parent_delete(wcroot, local_relpath,
+                                                  pibb->kind, 0,
+                                                  scratch_pool));
         }
       else if (pibb->status == svn_wc__db_status_not_present
                || pibb->status == svn_wc__db_status_server_excluded
