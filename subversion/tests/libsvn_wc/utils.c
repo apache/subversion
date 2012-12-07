@@ -329,14 +329,14 @@ sbox_wc_resolved(svn_test__sandbox_t *b, const char *path)
 }
 
 svn_error_t *
-sbox_wc_resolve(svn_test__sandbox_t *b, const char *path)
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path,
+                svn_wc_conflict_choice_t conflict_choice)
 {
   svn_client_ctx_t *ctx;
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   return svn_client_resolve(sbox_wc_path(b, path), svn_depth_infinity,
-                            svn_wc_conflict_choose_mine_conflict,
-                            ctx, b->pool);
+                            conflict_choice, ctx, b->pool);
 }
 
 svn_error_t *
