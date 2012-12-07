@@ -14661,3 +14661,19 @@ svn_wc__db_bump_format(int *result_format,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_vacuum(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_VACUUM));
+
+  return SVN_NO_ERROR;
+}
