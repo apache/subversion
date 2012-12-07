@@ -766,6 +766,9 @@ WHERE refcount = 0
 DELETE FROM pristine
 WHERE checksum = ?1 AND refcount = 0
 
+-- STMT_VACUUM
+VACUUM
+
 -- STMT_SELECT_CONFLICT_VICTIMS
 SELECT local_relpath, conflict_data
 FROM actual_node
