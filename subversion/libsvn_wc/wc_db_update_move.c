@@ -173,7 +173,15 @@ check_shadowed_node(svn_boolean_t *is_shadowed,
   return SVN_NO_ERROR;
 }
 
-/* Update text and prop contents of the working file at LOCAL_RELPATH.
+/* All the info we need about one version of a file node. */
+typedef struct file_version_t
+{
+  svn_wc_conflict_version_t *location_and_kind;
+  const svn_checksum_t *checksum;
+} file_version_t;
+
+/* Merge the difference between OLD_VERSION and NEW_VERSION into
+ * the working file at LOCAL_RELPATH.
  *
  * The term 'old' refers to the pre-update state, which is the state of
  * (some layer of) LOCAL_RELPATH while this function runs; and 'new'
@@ -183,9 +191,6 @@ check_shadowed_node(svn_boolean_t *is_shadowed,
  * LOCAL_RELPATH is a file in the working copy at WCROOT in DB, and
  * REPOS_RELPATH is the repository path it would be committed to.
  *
- * Merge the changes between OLD_VERSION to NEW_VERSION, whose pristine
- * contents are identified by OLD_CHECKSUM and NEW_CHECKSUM.
- *
  * Use NOTIFY_FUNC and NOTIFY_BATON for notifications.
  * Add any required work items to *WORK_ITEMS, allocated in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
@@ -193,10 +198,8 @@ static svn_error_t *
 update_working_file(svn_skel_t **work_items,
                     const char *local_relpath,
                     const char *repos_relpath,
-                    const svn_checksum_t *old_checksum,
-                    const svn_checksum_t *new_checksum,
-                    svn_wc_conflict_version_t *old_version,
-                    svn_wc_conflict_version_t *new_version,
+                    const file_version_t *old_version,
+                    const file_version_t *new_version,
                     svn_wc__db_wcroot_t *wcroot,
                     svn_wc__db_t *db,
                     svn_wc_notify_func2_t notify_func,
@@ -209,7 +212,7 @@ update_working_file(svn_skel_t **work_items,
                                                  scratch_pool);
   const char *old_pristine_abspath;
   const char *new_pristine_abspath;
-  svn_skel_t *conflict_skel;
+  svn_skel_t *conflict_skel = NULL;
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_wc_notify_state_t content_state;
 
@@ -221,11 +224,11 @@ update_working_file(svn_skel_t **work_items,
    */
   SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
                                        db, wcroot->abspath,
-                                       old_checksum,
+                                       old_version->checksum,
                                        scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
                                        db, wcroot->abspath,
-                                       new_checksum,
+                                       new_version->checksum,
                                        scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__internal_merge(work_items, &conflict_skel,
                                  &merge_outcome, db,
@@ -244,13 +247,13 @@ update_working_file(svn_skel_t **work_items,
 
   if (merge_outcome == svn_wc_merge_conflict)
     {
-      svn_skel_t *work_item;
-      svn_wc_conflict_version_t *original_version;
-
       if (conflict_skel)
         {
-          original_version = svn_wc_conflict_version_dup(old_version,
-                                                         scratch_pool);
+          svn_skel_t *work_item;
+          svn_wc_conflict_version_t *original_version;
+
+          original_version = svn_wc_conflict_version_dup(
+                               old_version->location_and_kind, scratch_pool);
           original_version->path_in_repos = repos_relpath;
           original_version->node_kind = svn_node_file;
           SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
@@ -290,8 +293,8 @@ update_working_file(svn_skel_t **work_items,
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
-      notify->old_revision = old_version->peg_rev;
-      notify->revision = new_version->peg_rev;
+      notify->old_revision = old_version->location_and_kind->peg_rev;
+      notify->revision = new_version->location_and_kind->peg_rev;
       notify_func(notify_baton, notify, scratch_pool);
     }
 
@@ -312,15 +315,15 @@ tc_editor_alter_file(void *baton,
                      apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  const svn_checksum_t *move_dst_checksum;
   const char *move_dst_repos_relpath;
   svn_revnum_t move_dst_revision;
   svn_kind_t move_dst_kind;
+  file_version_t old_version, new_version;
 
   /* Get kind, revision, and checksum of the moved-here node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, &move_dst_checksum, NULL,
+                                    NULL, NULL, &old_version.checksum, NULL,
                                     NULL, NULL,
                                     b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
@@ -328,10 +331,16 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
   SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
+  old_version.location_and_kind = b->old_version;
+  new_version.location_and_kind = b->new_version;
+
+  /* If new checksum is null that means no change. */
+  new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
+
   /* ### TODO update revision etc. in NODES table */
 
   /* Update file and prop contents if the update has changed them. */
-  if (!svn_checksum_match(new_checksum, move_dst_checksum)
+  if (!svn_checksum_match(new_checksum, old_version.checksum)
       /* ### || props have changed */)
     {
       svn_boolean_t is_shadowed;
@@ -348,8 +357,7 @@ tc_editor_alter_file(void *baton,
       else
         SVN_ERR(update_working_file(b->work_items, dst_relpath,
                                     move_dst_repos_relpath,
-                                    move_dst_checksum, new_checksum,
-                                    b->old_version, b->new_version,
+                                    &old_version, &new_version,
                                     b->wcroot, b->db,
                                     b->notify_func, b->notify_baton,
                                     b->result_pool, scratch_pool));
