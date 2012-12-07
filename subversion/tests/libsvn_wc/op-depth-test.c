@@ -4284,6 +4284,8 @@ move_added(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test the result of 'update' when the incoming changes are inside a
+ * directory that is locally moved. */
 static svn_error_t *
 move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
@@ -4291,6 +4293,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(svn_test__sandbox_create(&b, "move_update", opts, pool));
 
+  /* r1: Create files 'f', 'h' */
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
   sbox_file_write(&b, "A/B/f", "r1 content\n");
@@ -4298,12 +4301,18 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_add(&b, "A/B/f"));
   SVN_ERR(sbox_wc_add(&b, "A/B/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r2: Modify 'f' */
   sbox_file_write(&b, "A/B/f", "r1 content\nr2 content\n");
   SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r3: Delete 'h', add 'g' */
   sbox_file_write(&b, "A/B/g", "r3 content\n");
   SVN_ERR(sbox_wc_add(&b, "A/B/g"));
   SVN_ERR(sbox_wc_delete(&b, "A/B/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r4: Add a new subtree 'X' */
   SVN_ERR(sbox_wc_mkdir(&b, "X"));
   sbox_file_write(&b, "X/f", "r4 content\n");
   sbox_file_write(&b, "X/g", "r4 content\n");
@@ -4312,6 +4321,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_add(&b, "X/g"));
   SVN_ERR(sbox_wc_add(&b, "X/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
+
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
   /* A is single-revision so A2 is a single-revision copy */
