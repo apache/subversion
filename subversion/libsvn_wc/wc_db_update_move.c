@@ -233,7 +233,6 @@ update_working_file(svn_skel_t **work_items,
   svn_skel_t *conflict_skel;
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_wc_notify_state_t content_state;
-  svn_wc_notify_t *notify;
 
   /*
    * Run a 3-way merge to update the file, using the pre-update
@@ -302,15 +301,20 @@ update_working_file(svn_skel_t **work_items,
         content_state = svn_wc_notify_state_changed;
     }
 
-  notify = svn_wc_create_notify(local_abspath,
-                                svn_wc_notify_update_update,
-                                scratch_pool);
-  notify->kind = svn_node_file;
-  notify->content_state = content_state;
-  notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
-  notify->old_revision = old_version->peg_rev;
-  notify->revision = new_version->peg_rev;
-  notify_func(notify_baton, notify, scratch_pool);
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_update_update,
+                                    scratch_pool);
+      notify->kind = svn_node_file;
+      notify->content_state = content_state;
+      notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
+      notify->old_revision = old_version->peg_rev;
+      notify->revision = new_version->peg_rev;
+      notify_func(notify_baton, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -447,18 +451,22 @@ tc_editor_complete(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  svn_wc_notify_t *notify;
 
-  notify = svn_wc_create_notify(svn_dirent_join(b->wcroot->abspath,
-                                                b->move_root_dst_relpath,
-                                                scratch_pool),
-                                svn_wc_notify_update_completed,
-                                scratch_pool);
-  notify->kind = svn_node_none;
-  notify->content_state = svn_wc_notify_state_inapplicable;
-  notify->prop_state = svn_wc_notify_state_inapplicable;
-  notify->revision = b->new_version->peg_rev;
-  b->notify_func(b->notify_baton, notify, scratch_pool);
+  if (b->notify_func)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(svn_dirent_join(b->wcroot->abspath,
+                                                    b->move_root_dst_relpath,
+                                                    scratch_pool),
+                                    svn_wc_notify_update_completed,
+                                    scratch_pool);
+      notify->kind = svn_node_none;
+      notify->content_state = svn_wc_notify_state_inapplicable;
+      notify->prop_state = svn_wc_notify_state_inapplicable;
+      notify->revision = b->new_version->peg_rev;
+      b->notify_func(b->notify_baton, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
