@@ -827,15 +827,6 @@ VALUES (?1, ?2, 0,
             AND local_relpath = ?2
             AND op_depth = 0))
 
--- STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE
-INSERT OR REPLACE INTO nodes (
-    wc_id, local_relpath, op_depth,
-    parent_relpath, presence, kind)
-SELECT wc_id, local_relpath, ?3 /*op_depth*/,
-       parent_relpath, 'base-deleted', kind
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
 -- STMT_INSTALL_WORKING_NODE_FOR_DELETE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth,

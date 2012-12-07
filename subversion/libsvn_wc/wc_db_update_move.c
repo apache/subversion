@@ -93,31 +93,10 @@ tc_editor_add_file(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
-  int parent_op_depth, op_depth = relpath_depth(b->move_root_dst_relpath);
-  const char *parent_relpath = svn_relpath_dirname(relpath, scratch_pool);
-  svn_boolean_t have_row;
-  svn_sqlite__stmt_t *stmt;
+  int op_depth = relpath_depth(b->move_root_dst_relpath);
 
-  /* Extend base-delete. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                    STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, parent_relpath,
-                            op_depth));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    parent_op_depth = svn_sqlite__column_int(stmt, 0);
-  SVN_ERR(svn_sqlite__reset(stmt));
-  if (have_row)
-    {
-      /* Adding this deleted NODES row is valid if we add the
-         underlying normal row before completing the transaction. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_INSTALL_WORKING_NODE_FOR_DELETE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isdss", b->wcroot->wc_id, relpath,
-                                parent_op_depth, parent_relpath,
-                                "file" /* ### TODO use kind_map */ ));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
-    }
+  SVN_ERR(svn_wc__db_extend_parent_delete(b->wcroot, relpath, svn_kind_file,
+                                          op_depth, scratch_pool));
 
   /* ### TODO check for, and flag, tree conflict */
 
@@ -816,9 +795,6 @@ replace_moved_layer(const char *src_relpath,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* TODO: extend/retract any base-deleted layers to account for
-     added/removed nodes in the replaced layer. */
 
   return SVN_NO_ERROR;
 }
