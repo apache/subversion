@@ -361,12 +361,13 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   svn_client_ctx_t *ctx;
   apr_array_header_t *paths = apr_array_make(b->pool, 1,
                                              sizeof(const char *));
+  svn_string_t *pval = value ? svn_string_create(value, b->pool) : NULL;
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
-  return svn_client_propset_local(name, svn_string_create(value, b->pool),
-                                  paths, svn_depth_empty, TRUE, NULL, ctx,
-                                  b->pool);
+  return svn_client_propset_local(name, pval, paths, svn_depth_empty,
+                                  TRUE /* skip_checks */,
+                                  NULL, ctx, b->pool);
 }
 
 svn_error_t *
