@@ -4351,7 +4351,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Resolve should update the move. */
-  SVN_ERR(sbox_wc_resolve(&b, "A"));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -4394,7 +4394,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "A"));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       3, ""},
@@ -4440,7 +4440,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A"));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
