@@ -804,21 +804,12 @@ def subtree_to_and_fro(sbox):
   # not considered a merge.  So the changes which exist on A/D and were
   # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
   #
-  #   C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
-  #     working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
-  #   DBG: merge.c:11461: base on source: file:///C:/SVN/src-trunk/Debug/
-  #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11462: base on target: file:///C:/SVN/src-trunk/Debug/
-  #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11567: yca   file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11568: base  file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11571: right file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/
-  #     A_COPY@8
+  #   C:\...\working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
+  #   DBG: merge.c:11461: base on source: ^/A@1
+  #   DBG: merge.c:11462: base on target: ^/A@1
+  #   DBG: merge.c:11567: yca   ^/A@1
+  #   DBG: merge.c:11568: base  ^/A@1
+  #   DBG: merge.c:11571: right ^/A_COPY@8
   #   Conflict discovered in file 'A\D\H\psi'.
   #   Select: (p) postpone, (df) diff-full, (e) edit,
   #           (mc) mine-conflict, (tc) theirs-conflict,

@@ -1416,8 +1416,8 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
    If PROPS is NULL, set the properties to be the same as the pristine
    properties.
 
-   CONFLICT is used to register a conflict on this node at the same time
-   the properties are changed.
+   If CONFLICT is not NULL, it is used to register a conflict on this
+   node at the same time the properties are changed.
 
    WORK_ITEMS are inserted into the work queue, as additional things that
    need to be completed before the working copy is stable.
@@ -3273,6 +3273,13 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                                              void *cancel_baton,
                                              apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool);
+
+/* Recover space from the database file for LOCAL_ABSPATH by running
+ * the "vacuum" command. */
+svn_error_t *
+svn_wc__db_vacuum(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 /* @} */
 

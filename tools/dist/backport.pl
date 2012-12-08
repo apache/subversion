@@ -233,6 +233,9 @@ sub main {
   die "A vim with the +ex_extra feature is required"
       if `${VIM} --version` !~ /[+]ex_extra/;
 
+  # ### TODO: need to run 'revert' here
+  # ### TODO: both here and in merge(), unlink files that previous merges added
+  die "Local mods to STATUS file $STATUS" if `$SVN status -q $STATUS`;
   @ARGV = $STATUS;
 
   # Skip most of the file

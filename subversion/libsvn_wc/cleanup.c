@@ -217,6 +217,8 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, local_abspath,
                                                     scratch_pool));
 
+  SVN_ERR(svn_wc__db_vacuum(db, local_abspath, scratch_pool));
+
   /* We're done with this DB, so proactively close it.  */
   SVN_ERR(svn_wc__db_close(db));
 

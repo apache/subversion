@@ -247,7 +247,8 @@ get_option(const dav_resource *resource,
     {
       int i;
       svn_version_t *master_version = dav_svn__get_master_version(r);
-
+      dav_svn__bulk_upd_conf bulk_upd_conf = dav_svn__get_bulk_updates_flag(r);
+      
       /* The list of Subversion's custom POSTs and which versions of
          Subversion support them.  We need this latter information
          when acting as a WebDAV slave -- we don't want to claim
@@ -286,6 +287,9 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
                                 dav_svn__get_vtxn_stub(r), (char *)NULL));
+      apr_table_set(r->headers_out, SVN_DAV_ALLOW_BULK_UPDATES,
+                    bulk_upd_conf == CONF_BULKUPD_ON ? "On" :
+                      bulk_upd_conf == CONF_BULKUPD_OFF ? "Off" : "Prefer");
 
       /* Report the supported POST types. */
       for (i = 0; i < sizeof(posts_versions)/sizeof(posts_versions[0]); ++i)

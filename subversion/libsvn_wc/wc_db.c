@@ -641,17 +641,19 @@ blank_ibb(insert_base_baton_t *pibb)
    A/B/C/D    normal              base-del            normal
    A/B/C/D/E  normal              base-del
 
-   When adding a base node if the parent has a working node then the
-   parent base is deleted and this must be extended to cover new base
-   node.
+   When adding a node if the parent has a higher working node then the
+   parent node is deleted (or replaced) and the delete must be extended
+   to cover new node.
 
    In the example above A/B/C/D and A/B/C/D/E are the nodes that get
    the extended delete, A/B/C is already deleted.
  */
-static svn_error_t *
-extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                svn_kind_t kind,
+                                int op_depth,
+                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t have_row;
   svn_sqlite__stmt_t *stmt;
@@ -662,26 +664,29 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath, 0));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, parent_relpath,
+                            op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     parent_op_depth = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     {
-      int op_depth;
+      int existing_op_depth;
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                                op_depth));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
-        op_depth = svn_sqlite__column_int(stmt, 0);
+        existing_op_depth = svn_sqlite__column_int(stmt, 0);
       SVN_ERR(svn_sqlite__reset(stmt));
-      if (!have_row || parent_op_depth < op_depth)
+      if (!have_row || parent_op_depth < existing_op_depth)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                              STMT_INSTALL_WORKING_NODE_FOR_DELETE_FROM_BASE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                                    local_relpath, parent_op_depth));
+                              STMT_INSTALL_WORKING_NODE_FOR_DELETE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isdst", wcroot->wc_id,
+                                    local_relpath, parent_op_depth,
+                                    parent_relpath, kind_map, kind));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
         }
     }
@@ -690,11 +695,11 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
 }
 
 
-/* This is the reverse of extend_parent_delete.
+/* This is the reverse of svn_wc__db_extend_parent_delete.
 
-   When removing a base node if the parent has a working node then the
-   parent base and this node are both deleted and so the delete of
-   this node must be removed.
+   When removing a node if the parent has a higher working node then
+   the parent node and this node are both deleted or replaced and any
+   delete over this node must be removed.
  */
 svn_error_t *
 svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
@@ -856,7 +861,9 @@ insert_base_node(void *baton,
               || (pibb->status == svn_wc__db_status_incomplete))
           && ! pibb->file_external)
         {
-          SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
+          SVN_ERR(svn_wc__db_extend_parent_delete(wcroot, local_relpath,
+                                                  pibb->kind, 0,
+                                                  scratch_pool));
         }
       else if (pibb->status == svn_wc__db_status_not_present
                || pibb->status == svn_wc__db_status_server_excluded
@@ -14611,29 +14618,62 @@ svn_wc__db_bump_format(int *result_format,
                        svn_wc__db_t *db,
                        apr_pool_t *scratch_pool)
 {
+  svn_sqlite__db_t *sdb;
+  svn_error_t *err;
+  int format;
 
+  /* Do not scan upwards for a working copy root here to prevent accidental
+   * upgrades of any working copies the WCROOT might be nested in.
+   * Just try to open a DB at the specified path instead. */
+  err = svn_wc__db_util_open_db(&sdb, wcroot_abspath, SDB_FILE,
+                                svn_sqlite__mode_readwrite,
+                                TRUE, /* exclusive */
+                                NULL, /* my statements */
+                                scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_t *err2;
+      apr_hash_t *entries;
+
+      /* Could not open an sdb. Check for an entries file instead. */
+      err2 = svn_wc__read_entries_old(&entries, wcroot_abspath,
+                                      scratch_pool, scratch_pool);
+      if (err2 || apr_hash_count(entries) == 0)
+        return svn_error_createf(SVN_ERR_WC_INVALID_OP_ON_CWD,
+                  svn_error_compose_create(err, err2),
+                  _("Can't upgrade '%s' as it is not a working copy root"),
+                  svn_dirent_local_style(wcroot_abspath, scratch_pool));
+
+      /* An entries file was found. This is a pre-wc-ng working copy
+       * so suggest an upgrade. */
+      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, err,
+                _("Working copy '%s' is too old and must be upgraded to "
+                  "at least format %d, as created by Subversion %s"),
+                svn_dirent_local_style(wcroot_abspath, scratch_pool),
+                SVN_WC__WC_NG_VERSION,
+                svn_wc__version_string_from_format(SVN_WC__WC_NG_VERSION));
+    }
+
+  SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
+  SVN_ERR(svn_wc__upgrade_sdb(result_format, wcroot_abspath,
+                              sdb, format, scratch_pool));
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_vacuum(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
+{
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, wcroot_abspath,
+                                                db, local_abspath,
                                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_VACUUM));
 
-  /* This function is indirectly called from the upgrade code, so we
-     can't verify the wcroot here. Just check that it is not NULL */
-  SVN_ERR_ASSERT(wcroot != NULL);
-
-  /* Reject attempts to upgrade subdirectories of a working copy. */
-  if (strcmp(wcroot_abspath, wcroot->abspath) != 0)
-    return svn_error_createf(
-             SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-              _("Can't upgrade '%s' as it is not a working copy root,"
-                " the root is '%s'"),
-              svn_dirent_local_style(wcroot_abspath, scratch_pool),
-              svn_dirent_local_style(wcroot->abspath, scratch_pool));
-
-  SVN_ERR(svn_wc__upgrade_sdb(result_format, wcroot->abspath,
-                              wcroot->sdb, wcroot->format,
-                              scratch_pool));
   return SVN_NO_ERROR;
 }
