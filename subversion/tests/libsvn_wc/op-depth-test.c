@@ -35,6 +35,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 
 #include "utils.h"
 
@@ -98,6 +99,7 @@ typedef struct nodes_row_t {
     svn_boolean_t file_external;
     const char *moved_to;
     svn_boolean_t moved_here;
+    const char *props;  /* comma-separated list of prop names */
 } nodes_row_t;
 
 /* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
@@ -105,12 +107,40 @@ typedef struct nodes_row_t {
 #define NO_COPY_FROM SVN_INVALID_REVNUM, NULL, FALSE
 #define MOVED_HERE FALSE, NULL, TRUE
 
+/* Return a comma-separated list of the prop names in PROPS, in lexically
+ * ascending order, or NULL if PROPS is empty or NULL.  (Here, we don't
+ * care about the difference between 'has no props' and 'can't have props',
+ * and we choose to represent both of those as NULL.) */
+static const char *
+props_hash_to_text(apr_hash_t *props, apr_pool_t *pool)
+{
+  apr_array_header_t *props_sorted;
+  svn_stringbuf_t *str;
+  int i;
+
+  if (! props)
+    return NULL;
+
+  str = svn_stringbuf_create_empty(pool);
+  props_sorted = svn_sort__hash(props, svn_sort_compare_items_lexically, pool);
+  for (i = 0; i < props_sorted->nelts; i++)
+    {
+      const svn_sort__item_t *item
+        = &APR_ARRAY_IDX(props_sorted, i, svn_sort__item_t);
+
+      if (str->len)
+        svn_stringbuf_appendbyte(str, ',');
+      svn_stringbuf_appendcstr(str, item->key);
+    }
+  return str->len ? str->data : NULL;
+}
+
 /* Return a human-readable string representing ROW. */
 static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
 {
-  const char *file_external_str, *moved_here_str, *moved_to_str;
+  const char *file_external_str, *moved_here_str, *moved_to_str, *props;
 
   if (row == NULL)
     return "(null)";
@@ -130,18 +160,23 @@ print_row(const nodes_row_t *row,
   else
     file_external_str = "";
 
+  if (row->props)
+    props = apr_psprintf(result_pool, ", p=(%s)", row->props);
+  else
+    props = "";
+
   if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, %s, %s%s%s%s",
+    return apr_psprintf(result_pool, "%d, %s, %s%s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
                         moved_here_str, moved_to_str,
-                        file_external_str);
+                        file_external_str, props);
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, %s ^/%s@%d%s%s%s",
+    return apr_psprintf(result_pool, "%d, %s, %s, %s ^/%s@%d%s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
                         row->op_depth == 0 ? "base" : "copyfrom",
                         row->repo_relpath, (int)row->repo_revnum,
                         moved_here_str, moved_to_str,
-                        file_external_str);
+                        file_external_str, props);
 }
 
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
@@ -188,7 +223,9 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
            || (expected->moved_to && !found->moved_to)
            || (!expected->moved_to && found->moved_to)
            || (expected->moved_to
-               && strcmp(expected->moved_to, found->moved_to)))
+               && strcmp(expected->moved_to, found->moved_to))
+           || (expected->props != NULL
+               && strcmp_null(expected->props, found->props) != 0))
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
@@ -218,7 +255,8 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_sqlite__stmt_t *stmt;
   static const char *const statements[] = {
     "SELECT op_depth, nodes.presence, nodes.local_relpath, revision,"
-    "       repos_path, file_external, def_local_relpath, moved_to, moved_here"
+    "       repos_path, file_external, def_local_relpath, moved_to, moved_here,"
+    "       properties"
     " FROM nodes "
     " LEFT OUTER JOIN externals"
     "             ON nodes.local_relpath = externals.local_relpath"
@@ -248,6 +286,7 @@ check_db_rows(svn_test__sandbox_t *b,
     {
       const char *key;
       nodes_row_t *row = apr_palloc(b->pool, sizeof(*row));
+      apr_hash_t *props_hash;
 
       row->op_depth = svn_sqlite__column_int(stmt, 0);
       row->presence = svn_sqlite__column_text(stmt, 1, b->pool);
@@ -261,6 +300,9 @@ check_db_rows(svn_test__sandbox_t *b,
                               "incomplete {%s}", print_row(row, b->pool));
       row->moved_to = svn_sqlite__column_text(stmt, 7, b->pool);
       row->moved_here = svn_sqlite__column_boolean(stmt, 8);
+      SVN_ERR(svn_sqlite__column_properties(&props_hash, stmt, 9,
+                                            b->pool, b->pool));
+      row->props = props_hash_to_text(props_hash, b->pool);
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
