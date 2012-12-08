@@ -56,8 +56,8 @@ Candidate changes:
      Tries to access the parent of the repository root as a repository.
      ('svnmucc ps foo bar https://svn.apache.org/repos')
    Votes:
-     +1: danielsh, rhuijben
-     -0: philip (merge conflict svnmucc renamed)
+     +1: rhuijben
+     -0: philip (merge conflict svnmucc renamed), danielsh
      -0: pburba (I tried --ignore-ancestry file merges directly to svnmucc.c
                  to side-step the rename tree conflict, but there are still
                  text conflicts with r1408684)
