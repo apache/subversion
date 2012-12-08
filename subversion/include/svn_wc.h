@@ -1662,10 +1662,10 @@ typedef struct svn_wc_conflict_version_t
   const char *path_in_repos;
   /** @} */
 
-  /** Info about this node */
-  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+  /** The node kind.  Can be any kind, even 'none' or 'unknown'. */
+  svn_node_kind_t node_kind;
 
-  /** UUID of the repository
+  /** UUID of the repository. Can be NULL meaning unknown.
    * @since New in 1.8. */
   const char *repos_uuid;
 
@@ -1680,10 +1680,14 @@ typedef struct svn_wc_conflict_version_t
  * Allocate an #svn_wc_conflict_version_t structure in @a pool,
  * initialize to contain a conflict origin, and return it.
  *
- * Set the @c repos_url field of the created struct to @a repos_url, the
- * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
- * @a peg_rev and the @c node_kind to @c node_kind. Make only shallow
+ * Set the @c repos_url field of the created struct to @a repos_root_url,
+ * the @c path_in_repos field to @a repos_relpath, the @c peg_rev field to
+ * @a revision and the @c node_kind to @a kind. Make only shallow
  * copies of the pointer arguments.
+ *
+ * @a repos_root_url, @a repos_relpath and @a revision must be valid,
+ * non-null values. @a repos_uuid should be a valid UUID, but can be
+ * NULL if unknown. @a kind can be any kind, even 'none' or 'unknown'.
  *
  * @since New in 1.8.
  */

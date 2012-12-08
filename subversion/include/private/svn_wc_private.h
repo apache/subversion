@@ -1629,6 +1629,25 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *
+ *
  * @since New in 1.8.
  */
 svn_error_t *

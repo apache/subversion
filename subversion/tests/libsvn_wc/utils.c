@@ -321,22 +321,24 @@ sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 svn_error_t *
 sbox_wc_resolved(svn_test__sandbox_t *b, const char *path)
 {
-  svn_client_ctx_t *ctx;
-
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  return svn_client_resolve(sbox_wc_path(b, path), svn_depth_infinity,
-                            svn_wc_conflict_choose_merged, ctx, b->pool);
+  return sbox_wc_resolve(b, path, svn_wc_conflict_choose_merged);
 }
 
 svn_error_t *
-sbox_wc_resolve(svn_test__sandbox_t *b, const char *path)
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path,
+                svn_wc_conflict_choice_t conflict_choice)
 {
-  svn_client_ctx_t *ctx;
-
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  return svn_client_resolve(sbox_wc_path(b, path), svn_depth_infinity,
-                            svn_wc_conflict_choose_mine_conflict,
-                            ctx, b->pool);
+  SVN_ERR(svn_wc__resolve_conflicts(b->wc_ctx, sbox_wc_path(b, path),
+                                    svn_depth_infinity,
+                                    TRUE /* resolve_text */,
+                                    "" /* resolve_prop (ALL props) */,
+                                    TRUE /* resolve_tree */,
+                                    conflict_choice,
+                                    NULL, NULL, /* conflict func */
+                                    NULL, NULL, /* cancellation */
+                                    NULL, NULL, /* notification */
+                                    b->pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -361,12 +363,13 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   svn_client_ctx_t *ctx;
   apr_array_header_t *paths = apr_array_make(b->pool, 1,
                                              sizeof(const char *));
+  svn_string_t *pval = value ? svn_string_create(value, b->pool) : NULL;
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
-  return svn_client_propset_local(name, svn_string_create(value, b->pool),
-                                  paths, svn_depth_empty, TRUE, NULL, ctx,
-                                  b->pool);
+  return svn_client_propset_local(name, pval, paths, svn_depth_empty,
+                                  TRUE /* skip_checks */,
+                                  NULL, ctx, b->pool);
 }
 
 svn_error_t *

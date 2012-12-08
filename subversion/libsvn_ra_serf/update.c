@@ -3161,6 +3161,30 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    svn_io_file_del_on_pool_cleanup,
                                    report->pool, scratch_pool));
 
+  if (sess->server_allows_bulk)
+    {
+      if (apr_strnatcasecmp(sess->server_allows_bulk, "off") == 0)
+        {
+          /* Server doesn't want bulk updates */
+          sess->bulk_updates = FALSE;
+        }
+      else if (apr_strnatcasecmp(sess->server_allows_bulk, "prefer") == 0)
+        {
+          /* Server prefers bulk updates, and we respect that */
+          sess->bulk_updates = TRUE;
+        }
+      else
+        {
+          /* Server allows bulk updates, but doesn't dictate its use. Do
+             whatever is the default or what the user defined in the config. */
+        }
+    }
+  else
+    {
+      /* Pre-1.8 server didn't send the bulk_updates header. Do
+         whatever is the default or what the user defined in the config. */
+    }
+
   if (sess->bulk_updates)
     {
       svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
