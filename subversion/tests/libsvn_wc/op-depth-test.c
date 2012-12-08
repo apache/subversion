@@ -106,6 +106,7 @@ typedef struct nodes_row_t {
  * that has no copy-from info. */
 #define NO_COPY_FROM SVN_INVALID_REVNUM, NULL, FALSE
 #define MOVED_HERE FALSE, NULL, TRUE
+#define NOT_MOVED  FALSE, NULL, FALSE
 
 /* Return a comma-separated list of the prop names in PROPS, in lexically
  * ascending order, or NULL if PROPS is empty or NULL.  (Here, we don't
@@ -4986,6 +4987,125 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test the result of 'update' when the incoming changes are inside a
+ * directory that is locally moved. */
+static svn_error_t *
+update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "update_prop_mod_into_moved", opts, pool));
+
+  /* r1: Create files 'f', 'h' */
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  sbox_file_write(&b, "A/B/f", "r1 content\n");
+  sbox_file_write(&b, "A/B/h", "r1 content\n");
+  SVN_ERR(sbox_wc_add(&b, "A/B/f"));
+  SVN_ERR(sbox_wc_add(&b, "A/B/h"));
+  SVN_ERR(sbox_wc_propset(&b, "pd", "f1", "A/B/f"));
+  SVN_ERR(sbox_wc_propset(&b, "pn", "f1", "A/B/f"));
+  SVN_ERR(sbox_wc_propset(&b, "pm", "f1", "A/B/f"));
+  SVN_ERR(sbox_wc_propset(&b, "p", "h1", "A/B/h"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r2: Modify 'f'. Delete prop 'pd', modify prop 'pm', add prop 'pa',
+   * leave prop 'pn' unchanged. */
+  sbox_file_write(&b, "A/B/f", "r1 content\nr2 content\n");
+  SVN_ERR(sbox_wc_propset(&b, "pd", NULL, "A/B/f"));
+  SVN_ERR(sbox_wc_propset(&b, "pm", "f2", "A/B/f"));
+  SVN_ERR(sbox_wc_propset(&b, "pa", "f2", "A/B/f"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r3: Delete 'h', add 'g' */
+  sbox_file_write(&b, "A/B/g", "r3 content\n");
+  SVN_ERR(sbox_wc_add(&b, "A/B/g"));
+  SVN_ERR(sbox_wc_propset(&b, "p", "g3", "A/B/g"));
+  SVN_ERR(sbox_wc_delete(&b, "A/B/h"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       1, "A/B"},
+      {0, "A/B/f",    "normal",       1, "A/B/f", NOT_MOVED,  "pd,pm,pn"},
+      {0, "A/B/h",    "normal",       1, "A/B/h", NOT_MOVED,  "p"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* A is single-revision so A2 is a single-revision copy */
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       1, "A/B"},
+      {0, "A/B/f",    "normal",       1, "A/B/f", NOT_MOVED,  "pd,pm,pn"},
+      {0, "A/B/h",    "normal",       1, "A/B/h", NOT_MOVED,  "p"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE, "pd,pm,pn"},
+      {1, "A2/B/h",   "normal",       1, "A/B/h", MOVED_HERE, "p"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Update causes a tree-conflict on A due to incoming text-change. */
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/f",    "normal",       2, "A/B/f", NOT_MOVED,  "pa,pm,pn"},
+      {0, "A/B/h",    "normal",       2, "A/B/h", NOT_MOVED,  "p"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE, "pd,pm,pn"},
+      {1, "A2/B/h",   "normal",       1, "A/B/h", MOVED_HERE, "p"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Resolve should update the move. */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/f",    "normal",       2, "A/B/f", NOT_MOVED,  "pa,pm,pn"},
+      {0, "A/B/h",    "normal",       2, "A/B/h", NOT_MOVED,  "p"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/h",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE, "pa,pm,pn"},
+      {1, "A2/B/h",   "normal",       2, "A/B/h", MOVED_HERE, "p"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -5083,5 +5203,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "follow_moved_to"),
     SVN_TEST_OPTS_PASS(mixed_rev_move,
                        "mixed_rev_move"),
+    SVN_TEST_OPTS_PASS(update_prop_mod_into_moved,
+                       "update_prop_mod_into_moved"),
     SVN_TEST_NULL
   };

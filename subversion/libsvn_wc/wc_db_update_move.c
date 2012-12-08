@@ -39,6 +39,7 @@
 #include "svn_editor.h"
 #include "svn_error.h"
 #include "svn_wc.h"
+#include "svn_props.h"
 #include "svn_pools.h"
 
 #include "private/svn_skel.h"
@@ -46,6 +47,7 @@
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
+#include "props.h"
 #include "wc_db_private.h"
 #include "wc-queries.h"
 #include "conflicts.h"
@@ -177,6 +179,7 @@ check_shadowed_node(svn_boolean_t *is_shadowed,
 typedef struct file_version_t
 {
   svn_wc_conflict_version_t *location_and_kind;
+  apr_hash_t *props;
   const svn_checksum_t *checksum;
 } file_version_t;
 
@@ -213,8 +216,36 @@ update_working_file(svn_skel_t **work_items,
   const char *old_pristine_abspath;
   const char *new_pristine_abspath;
   svn_skel_t *conflict_skel = NULL;
+  apr_hash_t *actual_props, *new_actual_props;
+  apr_array_header_t *propchanges;
   enum svn_wc_merge_outcome_t merge_outcome;
-  svn_wc_notify_state_t content_state;
+  svn_wc_notify_state_t prop_state, content_state;
+
+  /*
+   * Run a 3-way prop merge to update the props, using the pre-update
+   * props as the merge base, the post-update props as the
+   * merge-left version, and the current props of the
+   * moved-here working file as the merge-right version.
+   */
+  SVN_ERR(svn_wc__db_read_props(&actual_props,
+                                db, local_abspath,
+                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_prop_diffs(&propchanges,
+                         new_version->props, old_version->props,
+                         scratch_pool));
+  SVN_ERR(svn_wc__merge_props(&conflict_skel, &prop_state,
+                              NULL, &new_actual_props,
+                              db, local_abspath,
+                              old_version->props, old_version->props,
+                              actual_props, propchanges,
+                              scratch_pool, scratch_pool));
+  /* ### TODO: Make a WQ item in WORK_ITEMS to set new_actual_props ... */
+  /* ### Not a direct DB op like this... */
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
+                                  new_actual_props,
+                                  svn_wc__has_magic_property(propchanges),
+                                  NULL/*conflict_skel*/, NULL/*work_items*/,
+                                  scratch_pool));
 
   /*
    * Run a 3-way merge to update the file, using the pre-update
@@ -237,36 +268,40 @@ update_working_file(svn_skel_t **work_items,
                                  local_abspath,
                                  local_abspath,
                                  NULL, NULL, NULL, /* diff labels */
-                                 NULL, /* actual props */
+                                 actual_props,
                                  FALSE, /* dry-run */
                                  NULL, /* diff3-cmd */
                                  NULL, /* merge options */
-                                 NULL, /* prop_diff */
+                                 propchanges,
                                  NULL, NULL, /* cancel_func + baton */
                                  result_pool, scratch_pool));
 
-  if (merge_outcome == svn_wc_merge_conflict)
+  /* If there are any conflicts to be stored, convert them into work items
+   * too. */
+  if (conflict_skel)
     {
-      if (conflict_skel)
-        {
-          svn_skel_t *work_item;
-          svn_wc_conflict_version_t *original_version;
+      svn_skel_t *work_item;
+      svn_wc_conflict_version_t *original_version;
 
-          original_version = svn_wc_conflict_version_dup(
-                               old_version->location_and_kind, scratch_pool);
-          original_version->path_in_repos = repos_relpath;
-          original_version->node_kind = svn_node_file;
-          SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                                      original_version,
-                                                      scratch_pool,
-                                                      scratch_pool));
-          SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
-                                                  local_abspath,
-                                                  conflict_skel,
+      original_version = svn_wc_conflict_version_dup(
+                           old_version->location_and_kind, scratch_pool);
+      original_version->path_in_repos = repos_relpath;
+      original_version->node_kind = svn_node_file;
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
+                                                  original_version,
                                                   scratch_pool,
                                                   scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-        }
+      /* According to this func's doc string, it is "Currently only used for
+       * property conflicts as text conflict markers are just in-wc files." */
+      SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
+                                              local_abspath,
+                                              conflict_skel,
+                                              scratch_pool,
+                                              scratch_pool));
+      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+    }
+  if (merge_outcome == svn_wc_merge_conflict)
+    {
       content_state = svn_wc_notify_state_conflicted;
     }
   else
@@ -292,7 +327,7 @@ update_working_file(svn_skel_t **work_items,
                                     scratch_pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
-      notify->prop_state = svn_wc_notify_state_unknown; /* ### TODO */
+      notify->prop_state = prop_state;
       notify->old_revision = old_version->location_and_kind->peg_rev;
       notify->revision = new_version->location_and_kind->peg_rev;
       notify_func(notify_baton, notify, scratch_pool);
@@ -324,7 +359,7 @@ tc_editor_alter_file(void *baton,
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &old_version.checksum, NULL,
-                                    NULL, NULL,
+                                    NULL, &old_version.props,
                                     b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
@@ -334,8 +369,9 @@ tc_editor_alter_file(void *baton,
   old_version.location_and_kind = b->old_version;
   new_version.location_and_kind = b->new_version;
 
-  /* If new checksum is null that means no change. */
+  /* If new checksum is null that means no change; similarly props. */
   new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
+  new_version.props = new_props ? new_props : old_version.props;
 
   /* ### TODO update revision etc. in NODES table */
 
@@ -605,11 +641,12 @@ update_moved_away_file(svn_editor_t *tc_editor,
   svn_kind_t kind;
   svn_stream_t *new_contents;
   const svn_checksum_t *new_checksum;
+  apr_hash_t *new_props;
 
   /* Read post-update contents from the updated moved-away file and tell
    * the editor to merge them into the moved-here file. */
   SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &new_checksum, NULL, NULL, NULL,
+                                        &new_checksum, NULL, NULL, &new_props,
                                         db, svn_dirent_join(wcroot->abspath,
                                                             src_relpath,
                                                             scratch_pool),
@@ -627,8 +664,7 @@ update_moved_away_file(svn_editor_t *tc_editor,
   else
     SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
                                   move_root_dst_revision,
-                                  NULL, /* ### TODO props */
-                                  new_checksum,
+                                  new_props, new_checksum,
                                   new_contents));
 
   SVN_ERR(svn_stream_close(new_contents));
