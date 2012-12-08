@@ -47,21 +47,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1408632, r1408647, r1408676, r1408684, r1408653
-   Fix 'svnmucc propset ^/'.
-   Notes:
-     r1408653 extends the regression test.
-     r1408684 adds a missing editor API call.
-   Justification:
-     Tries to access the parent of the repository root as a repository.
-     ('svnmucc ps foo bar https://svn.apache.org/repos')
-   Votes:
-     +1: rhuijben
-     -0: philip (merge conflict svnmucc renamed), danielsh
-     -0: pburba (I tried --ignore-ancestry file merges directly to svnmucc.c
-                 to side-step the rename tree conflict, but there are still
-                 text conflicts with r1408684)
-
  * r1407131, r1407812, r1408650
    Properly handle incoming changes on symlinks (issue #4091)
    Justification:
