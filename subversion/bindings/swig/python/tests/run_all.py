@@ -19,8 +19,8 @@
 #
 #
 import unittest, setup_path
-import mergeinfo, core, client, delta, pool, ra, wc, repository, auth, \
-       trac.versioncontrol.tests
+import mergeinfo, core, client, delta, checksum, pool, ra, wc, repository, \
+       auth, trac.versioncontrol.tests
 
 # Run all tests
 
@@ -28,6 +28,7 @@ def suite():
   """Run all tests"""
   s = unittest.TestSuite()
   s.addTest(core.suite())
+  s.addTest(checksum.suite())
   s.addTest(mergeinfo.suite())
   s.addTest(client.suite())
   s.addTest(delta.suite())

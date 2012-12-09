@@ -786,6 +786,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_dirent_uri_h.swg
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
+%include svn_checksum_h.swg
 
 
 
