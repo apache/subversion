@@ -2261,7 +2261,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
-  apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
   svn_boolean_t supports_ephemeral_props;
@@ -2273,17 +2272,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->session = session;
   ctx->conn = session->conns[0];
 
-  ctx->revprop_table = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
-                   svn_string_dup(val, pool));
-    }
+  ctx->revprop_table = svn_prop_hash_dup(revprop_table, pool);
 
   /* If the server supports ephemeral properties, add some carrying
      interesting version information. */
