@@ -47,7 +47,7 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1407131, r1407812, r1408650
+ * r1295418, r1407131, r1407812, r1408650
    Properly handle incoming changes on symlinks (issue #4091)
    Justification:
      Regression since 1.6.x. Users get unexpected tree conflicts
@@ -58,8 +58,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1407131/
    Votes:
-     +1: rhuijben
-     -0: philip (needs r1295418 for test to run but it still FAILs)
+     +1: rhuijben (not r1295418 and associated change), philip
 
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
