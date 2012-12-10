@@ -472,8 +472,7 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   if (props == NULL)
     return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
-  SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
-                                     scratch_pool));
+  SVN_ERR(svn_skel__unparse_proplist(&skel, props, scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                slot,

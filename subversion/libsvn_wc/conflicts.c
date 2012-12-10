@@ -409,10 +409,10 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
                                         const char *marker_abspath,
-                                        apr_hash_t *mine_props,
-                                        apr_hash_t *their_old_props,
-                                        apr_hash_t *their_props,
-                                        apr_hash_t *conflicted_prop_names,
+                                        const apr_hash_t *mine_props,
+                                        const apr_hash_t *their_old_props,
+                                        const apr_hash_t *their_props,
+                                        const apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
@@ -464,7 +464,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
     svn_skel__prepend_str("", prop_conflict, result_pool); /* No old_props */
 
   conflict_names = svn_skel__make_empty_list(result_pool);
-  for (hi = apr_hash_first(scratch_pool, conflicted_prop_names);
+  for (hi = apr_hash_first(scratch_pool, (apr_hash_t *)conflicted_prop_names);
        hi;
        hi = apr_hash_next(hi))
     {
