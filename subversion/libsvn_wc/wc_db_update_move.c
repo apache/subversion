@@ -247,8 +247,8 @@ update_working_file(svn_skel_t **work_items,
                               old_version->props, old_version->props,
                               actual_props, propchanges,
                               scratch_pool, scratch_pool));
-  /* ### TODO: Make a WQ item in WORK_ITEMS to set new_actual_props ... */
-  /* ### Not a direct DB op like this... */
+  /* Install the new actual props. Don't set the conflict_skel yet, because
+     we might need to add a text conflict to it as well. */
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
                                   new_actual_props,
                                   svn_wc__has_magic_property(propchanges),
