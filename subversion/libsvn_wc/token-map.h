@@ -28,20 +28,20 @@
 
 static const svn_token_map_t kind_map[] = {
   { "file", svn_kind_file }, /* MAP_FILE */
-  { "dir", svn_kind_dir },
-  { "symlink", svn_kind_symlink },
-  { "unknown", svn_kind_unknown },
+  { "dir", svn_kind_dir }, /* MAP_DIR */
+  { "symlink", svn_kind_symlink }, /* MAP_SYMLINK */
+  { "unknown", svn_kind_unknown }, /* MAP_UNKNOWN */
   { NULL }
 };
 
 /* Note: we only decode presence values from the database. These are a
    subset of all the status values. */
 static const svn_token_map_t presence_map[] = {
-  { "normal", svn_wc__db_status_normal },
+  { "normal", svn_wc__db_status_normal }, /* MAP_NORMAL */
   { "server-excluded", svn_wc__db_status_server_excluded },
-  { "excluded", svn_wc__db_status_excluded },
+  { "excluded", svn_wc__db_status_excluded }, /* MAP_EXCLUDED */
   { "not-present", svn_wc__db_status_not_present },
-  { "incomplete", svn_wc__db_status_incomplete },
+  { "incomplete", svn_wc__db_status_incomplete }, /* MAP_INCOMPLETE */
   { "base-deleted", svn_wc__db_status_base_deleted },
   { NULL }
 };
