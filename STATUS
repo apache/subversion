@@ -63,15 +63,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1295418, r1407131, r1407812, r1408650
-   Properly handle incoming changes on symlinks (issue #4091)
-   Justification:
-     Regression since 1.6.x. Users get unexpected tree conflicts
-     and assertions.
-   Notes:
-     The backport branch contains some testsuite plumbing to allow running
-     the test to run on operating systems where we don't support symlinks.
-   Branch:
-     ^/subversion/branches/1.7.x-r1407131/
-   Votes:
-     +1: philip, rhuijben, breser

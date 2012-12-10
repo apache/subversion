@@ -937,6 +937,115 @@ def externals_as_symlink_targets(sbox):
   sbox.simple_commit()
     
 
+#----------------------------------------------------------------------
+def incoming_symlink_changes(sbox):
+  "verify incoming symlink change behavior"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_symlink('iota', 's-replace')
+  sbox.simple_add_symlink('iota', 's-in-place')
+  sbox.simple_add_symlink('iota', 's-type')
+  sbox.simple_append('s-reverse', 'link iota')
+  sbox.simple_add('s-reverse')
+  sbox.simple_commit() # r2
+
+  # Replace s-replace
+  sbox.simple_rm('s-replace')
+  # Note that we don't use 'A/mu' as the length of that matches 'iota', which
+  # would make us depend on timestamp changes for detecting differences.
+  sbox.simple_add_symlink('A/D/G/pi', 's-replace')
+
+  # Change target of s-in-place
+  if svntest.main.is_posix_os():
+    os.remove(sbox.ospath('s-in-place'))
+    os.symlink('A/D/G/pi', sbox.ospath('s-in-place'))
+  else:
+    sbox.simple_append('s-in-place', 'link A/D/G/pi', truncate = True)
+
+  # r3
+  expected_output = svntest.wc.State(wc_dir, {
+    's-replace'         : Item(verb='Replacing'),
+    's-in-place'        : Item(verb='Sending'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        wc_dir)
+
+  # r4
+  svntest.main.run_svnmucc('propdel', 'svn:special',
+                           sbox.repo_url + '/s-type',
+                           '-m', 'Turn s-type into a file')
+
+  # r5
+  svntest.main.run_svnmucc('propset', 'svn:special', 'X',
+                           sbox.repo_url + '/s-reverse',
+                           '-m', 'Turn s-reverse into a symlink')
+
+  # Currently we expect to see 'U'pdates, but we would like to see
+  # replacements
+  expected_output = svntest.wc.State(wc_dir, {
+    's-reverse'         : Item(status=' U'),
+    's-type'            : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.add({
+    's-type'            : Item(status='  ', wc_rev='5'),
+    's-replace'         : Item(status='  ', wc_rev='5'),
+    's-reverse'         : Item(status='  ', wc_rev='5'),
+    's-in-place'        : Item(status='  ', wc_rev='5'),
+  })
+
+  # Update to HEAD/r5 to fetch the r4 and r5 symlink changes
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        check_props=True)
+
+  # Update back to r2, to prepare some local changes
+  expected_output = svntest.wc.State(wc_dir, {
+    # s-replace is D + A
+    's-replace'         : Item(status='A '),
+    's-in-place'        : Item(status='U '),
+    's-reverse'         : Item(status=' U'),
+    's-type'            : Item(status=' U'),
+  })
+  expected_status.tweak(wc_rev=2)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True,
+                                        wc_dir, '-r', '2')
+
+  # Ok, now add a property on all of them to make future symlinkness changes
+  # a tree conflict
+  # ### We should also try this with a 'textual change'
+  sbox.simple_propset('x', 'y', 's-replace', 's-in-place', 's-reverse', 's-type')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    's-replace'         : Item(status='  ', treeconflict='A'),
+    's-in-place'        : Item(status='U '),
+    's-reverse'         : Item(status='  ', treeconflict='C'),
+    's-type'            : Item(status='  ', treeconflict='C'),
+  })
+  expected_status.tweak(wc_rev=5)
+  expected_status.tweak('s-replace', 's-reverse', 's-type', status='RM',
+                        copied='+', treeconflict='C', wc_rev='-')
+  expected_status.tweak('s-in-place', status=' M')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
 ########################################################################
 # Run the tests
 
@@ -965,6 +1074,7 @@ test_list = [ None,
               symlink_to_wc_svnversion,
               update_symlink,
               externals_as_symlink_targets,
+              incoming_symlink_changes,
              ]
 
 if __name__ == '__main__':
