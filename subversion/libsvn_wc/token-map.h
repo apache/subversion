@@ -27,7 +27,7 @@
 #include "private/svn_token.h"
 
 static const svn_token_map_t kind_map[] = {
-  { "file", svn_kind_file },
+  { "file", svn_kind_file }, /* MAP_FILE */
   { "dir", svn_kind_dir },
   { "symlink", svn_kind_symlink },
   { "unknown", svn_kind_unknown },

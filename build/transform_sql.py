@@ -89,10 +89,11 @@ class Processor(object):
 
     self.output.write('  APR_STRINGIFY(%s) \\\n' % define)
 
-  def __init__(self, dirpath, output, var_name):
+  def __init__(self, dirpath, output, var_name, token_map):
     self.dirpath = dirpath
     self.output = output
     self.var_name = var_name
+    self.token_map = token_map
 
     self.stmt_count = 0
     self.var_printed = False
@@ -140,6 +141,11 @@ class Processor(object):
             r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
             line)
 
+      # Another preprocessing.
+      for symbol, string in self.token_map.iteritems():
+        # ### This doesn't sql-escape 'string'
+        line = line.replace(symbol, "'%s'" % string)
+
       if line.strip():
         handled = False
 
@@ -172,9 +178,33 @@ class Processor(object):
       self.var_printed = False
 
 
+def extract_token_map(filename):
+  try:
+    fd = open(filename)
+  except IOError:
+    return {}
+
+  pattern = re.compile(r'"(.*?)".*(MAP_\w*)')
+  map = {}
+  hotspot = False
+  for line in fd:
+    if ('svn_token_map_t', '\x7d;')[hotspot] in line:
+      # hotspot is TRUE within definitions of static const svn_token_map_t[].
+      hotspot = not hotspot
+      continue
+    if hotspot:
+      match = pattern.search(line)
+      if match:
+        val, key = match.groups()
+        map[key] = val
+  return map
+
 def main(input_filepath, output):
   filename = os.path.basename(input_filepath)
   input = open(input_filepath, 'r').read()
+
+  token_map_filename = os.path.dirname(input_filepath) + '/token-map.h'
+  token_map = extract_token_map(token_map_filename)
 
   var_name = re.sub('[-.]', '_', filename).upper()
 
@@ -184,7 +214,7 @@ def main(input_filepath, output):
     '\n'
     % (filename,))
 
-  proc = Processor(os.path.dirname(input_filepath), output, var_name)
+  proc = Processor(os.path.dirname(input_filepath), output, var_name, token_map)
   proc.process_file(input)
 
   ### the STMT_%d naming precludes *multiple* transform_sql headers from

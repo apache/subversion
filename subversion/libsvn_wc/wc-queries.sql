@@ -451,7 +451,7 @@ WHERE wc_id = ?1
   AND local_relpath = (SELECT local_relpath FROM targets_list AS t
                        WHERE wc_id = ?1
                          AND t.local_relpath = actual_node.local_relpath
-                         AND kind = 'file')
+                         AND kind = MAP_FILE)
 
 -- STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST
 UPDATE actual_node SET changelist = NULL
