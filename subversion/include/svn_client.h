@@ -4208,21 +4208,26 @@ svn_client_resolved(const char *path,
 
 /** Perform automatic conflict resolution on a working copy @a path.
  *
- * If @a depth is #svn_depth_empty, act only on @a path; if
- * #svn_depth_files, resolve @a path and its conflicted file
- * children (if any); if #svn_depth_immediates, resolve @a path and
- * all its immediate conflicted children (both files and directories,
- * if any); if #svn_depth_infinity, resolve @a path and every
- * conflicted file or directory anywhere beneath it.
- * Note that this operation will try to lock the parent directory of
- * @a path in order to be able to resolve tree-conflicts on @a path.
+ * If @a conflict_choice is
  *
- * If @a conflict_choice is #svn_wc_conflict_choose_base, resolve the
- * conflict with the old file contents; if
- * #svn_wc_conflict_choose_mine_full, use the original working contents;
- * if #svn_wc_conflict_choose_theirs_full, the new contents; and if
- * #svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status, which is the pre-1.5 behavior.
+ *   - #svn_wc_conflict_choose_base:
+ *     resolve the conflict with the old file contents
+ *
+ *   - #svn_wc_conflict_choose_mine_full:
+ *     use the original working contents
+ *
+ *   - #svn_wc_conflict_choose_theirs_full:
+ *     use the new contents
+ *
+ *   - #svn_wc_conflict_choose_merged:
+ *     don't change the contents at all, just remove the conflict
+ *     status, which is the pre-1.5 behavior.
+ *
+ *   - #svn_wc_conflict_choose_theirs_conflict
+ *     ###...
+ *
+ *   - #svn_wc_conflict_choose_mine_conflict
+ *     ###...
  *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
@@ -4231,6 +4236,16 @@ svn_client_resolved(const char *path,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * If @a depth is #svn_depth_empty, act only on @a path; if
+ * #svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if #svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if #svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
+ *
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * @since New in 1.5.
  */
