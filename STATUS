@@ -58,7 +58,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1407131/
    Votes:
-     +1: rhuijben (not r1295418 and associated change), philip
+     +1: philip, rhuijben
 
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
