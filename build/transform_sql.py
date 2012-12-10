@@ -144,7 +144,7 @@ class Processor(object):
       # Another preprocessing.
       for symbol, string in self.token_map.iteritems():
         # ### This doesn't sql-escape 'string'
-        line = line.replace(symbol, "'%s'" % string)
+        line = re.sub(r'\b%s\b' % re.escape(symbol), "'%s'" % string, line)
 
       if line.strip():
         handled = False
