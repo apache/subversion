@@ -179,7 +179,8 @@ class Processor(object):
 
 
 class NonRewritableDict(dict):
-  """A dictionary that does not allow self[k]=v when k in self.
+  """A dictionary that does not allow self[k]=v when k in self
+  (unless v is equal to the stored value).
 
   (An entry would have to be explicitly deleted before a new value
   may be entered.)
