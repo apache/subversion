@@ -374,7 +374,10 @@ def compare_changes(repos, branch, revision):
     if stderr:
       raise RuntimeError('svn mergeinfo failed: %s' % stderr)
     if stdout:
-      raise RuntimeError('CHANGES has unmerged revisions: %s' % stdout)
+      # Treat this as a warning since we are now putting entries for future
+      # minor releases in CHANGES on trunk.
+      logging.warning('CHANGES has unmerged revisions: %s' %
+		      stdout.replace("\n", " "))
 
 def roll_tarballs(args):
     'Create the release artifacts.'
