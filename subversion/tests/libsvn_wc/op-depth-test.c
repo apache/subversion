@@ -4365,6 +4365,10 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_add(&b, "X/h"));
   SVN_ERR(sbox_wc_commit(&b, ""));
 
+  /* r5: Add a subtree 'A/B/C' */
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
   /* A is single-revision so A2 is a single-revision copy */
@@ -4584,6 +4588,41 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
+
+  SVN_ERR(sbox_wc_update(&b, "", 5));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       5, ""},
+      {0, "A",        "normal",       5, "A"},
+      {0, "A/B",      "normal",       5, "A/B"},
+      {0, "A/B/f",    "normal",       5, "A/B/f"},
+      {0, "A/B/g",    "normal",       5, "A/B/g"},
+      {0, "A/B/C",    "normal",       5, "A/B/C"},
+      {0, "X",        "normal",       5, "X"},
+      {0, "X/f",      "normal",       5, "X/f"},
+      {0, "X/g",      "normal",       5, "X/g"},
+      {0, "X/h",      "normal",       5, "X/h"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/g",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       5, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       5, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       5, "A/B/f", MOVED_HERE},
+      {1, "A2/B/g",   "normal",       5, "A/B/g", MOVED_HERE},
+      {1, "A2/B/C",   "normal",       5, "A/B/C", MOVED_HERE},
+      {2, "A2/B",     "normal",       4, "X"},
+      {2, "A2/B/f",   "normal",       4, "X/f"},
+      {2, "A2/B/g",   "normal",       4, "X/g"},
+      {2, "A2/B/h",   "normal",       4, "X/h"},
+      {2, "A2/B/C",   "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
 
   return SVN_NO_ERROR;
 }
