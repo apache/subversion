@@ -47,7 +47,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
   - Client-side bugfixes:
     * Fix "svn status -u --depth empty FILE" (r1348822, r1349215)
     * Fix example output of 'svn help status' (issue #3962)
-    * svn propset of svn:eol-style might not notice related text changes (r1353572)
+    * propset of svn:eol-style might not notice related text changes (r1353572)
     * sort output of 'svn propget -R' (r1355699)
     * sort output of 'svn proplist' (r1355698)
     * sort output of 'svn status' (r1341012)
