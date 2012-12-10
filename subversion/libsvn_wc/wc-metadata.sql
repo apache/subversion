@@ -553,7 +553,7 @@ CREATE TABLE EXTERNALS (
   /* Repository location fields */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
-  /* Either 'normal' or 'excluded' */
+  /* Either MAP_NORMAL or MAP_EXCLUDED */
   presence  TEXT NOT NULL,
 
   /* the kind of the external. */
