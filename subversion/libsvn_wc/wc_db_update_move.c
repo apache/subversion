@@ -203,7 +203,7 @@ typedef struct file_version_t
  * REPOS_RELPATH is the repository path it would be committed to.
  *
  * Use NOTIFY_FUNC and NOTIFY_BATON for notifications.
- * Add any required work items to *WORK_ITEMS, allocated in RESULT_POOL.
+ * Set *WORK_ITEMS to any required work items, allocated in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 update_working_file(svn_skel_t **work_items,
@@ -399,12 +399,18 @@ tc_editor_alter_file(void *baton,
           /* ### TODO flag tree conflict */
         }
       else
-        SVN_ERR(update_working_file(b->work_items, dst_relpath,
-                                    move_dst_repos_relpath,
-                                    &old_version, &new_version,
-                                    b->wcroot, b->db,
-                                    b->notify_func, b->notify_baton,
-                                    b->result_pool, scratch_pool));
+        {
+          svn_skel_t *work_item;
+
+          SVN_ERR(update_working_file(&work_item, dst_relpath,
+                                      move_dst_repos_relpath,
+                                      &old_version, &new_version,
+                                      b->wcroot, b->db,
+                                      b->notify_func, b->notify_baton,
+                                      b->result_pool, scratch_pool));
+          *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
+                                            b->result_pool);
+        }
     }
 
   return SVN_NO_ERROR;
