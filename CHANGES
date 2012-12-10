@@ -68,7 +68,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.8
     * fix svn patch ignoring hunks after no trailing newline (r139917)
     * fix hang with ra_serf during error processing (r1403583)
     * ignore file externals with mergeinfo when merging (r1401915)
-    * fix SEGV with "svnmucc cp rev arg" during arg processing (issue #4079)
+    * fix SEGV with "svnmucc cp rev arg" during argv processing (issue #4079)
     * fix conflict handling on symlinks (issue #4091)
     
   - Server-side bugfixes:
