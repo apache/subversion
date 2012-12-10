@@ -198,12 +198,12 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
                  WHERE w.wc_id = ?1
                    AND w.local_relpath = actual_node.local_relpath
                    AND op_depth > 0
-                   AND presence in (MAP_NORMAL, MAP_INCOMPLETE, 'not-present'))
+                   AND presence in (MAP_NORMAL, MAP_INCOMPLETE, MAP_NOT_PRESENT))
 
 -- STMT_DELETE_WORKING_BASE_DELETE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND presence = 'base-deleted'
+  AND presence = MAP_BASE_DELETED
   AND op_depth > 0
   AND op_depth = (SELECT MIN(op_depth) FROM nodes n
                     WHERE n.wc_id = ?1
@@ -256,7 +256,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != 'base-deleted'))
+  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
 UNION ALL
 SELECT 1 FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2
@@ -267,21 +267,21 @@ DELETE FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND (op_depth < ?3
-       OR (op_depth = ?3 AND presence = 'base-deleted'))
+       OR (op_depth = ?3 AND presence = MAP_BASE_DELETED))
 
 /* Get not-present descendants of a copied node. Not valid for the wc-root */
 -- STMT_SELECT_NOT_PRESENT_DESCENDANTS
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND presence = 'not-present'
+  AND presence = MAP_NOT_PRESENT
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
   moved_here = NULL, moved_to = NULL, dav_cache = NULL,
   presence = CASE presence WHEN MAP_NORMAL THEN MAP_NORMAL
                            WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
-                           ELSE 'not-present' END
+                           ELSE MAP_NOT_PRESENT END
 WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
 
 -- STMT_SELECT_NODE_CHILDREN
@@ -302,7 +302,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
        OR
        (op_depth = (SELECT MAX(op_depth) FROM nodes
                     WHERE wc_id = ?1 AND local_relpath = ?2)
-        AND presence != 'base-deleted'))
+        AND presence != MAP_BASE_DELETED))
 
 -- STMT_SELECT_BASE_PROPS
 SELECT properties, presence FROM nodes
@@ -641,7 +641,7 @@ DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MIN(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3)
-  AND presence = 'base-deleted'
+  AND presence = MAP_BASE_DELETED
 
 -- STMT_DELETE_ALL_LAYERS
 DELETE FROM nodes
@@ -834,20 +834,20 @@ VALUES (?1, ?2, 0,
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth,
     parent_relpath, presence, kind)
-VALUES(?1, ?2, ?3, ?4, 'base-deleted', ?5)
+VALUES(?1, ?2, ?3, ?4, MAP_BASE_DELETED, ?5)
 
 /* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
-SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
+SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, MAP_BASE_DELETED,
        kind
 FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
-  AND presence NOT IN ('base-deleted', 'not-present', MAP_EXCLUDED, 'server-excluded')
+  AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -866,7 +866,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath,
-    'base-deleted', kind
+    MAP_BASE_DELETED, kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
@@ -885,7 +885,7 @@ LIMIT 1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = 0 AND presence = 'server-excluded'
+  AND op_depth = 0 AND presence = MAP_SERVER_EXCLUDED
 LIMIT 1
 
 /* Select all excluded nodes. Not valid on the WC-root */
@@ -894,7 +894,7 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
-  AND (presence = 'server-excluded' OR presence = MAP_EXCLUDED)
+  AND (presence = MAP_SERVER_EXCLUDED OR presence = MAP_EXCLUDED)
 
 /* Creates a copy from one top level NODE to a different location */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM
@@ -1131,7 +1131,7 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
 INSERT INTO target_prop_cache(local_relpath, kind, properties)
  SELECT n.local_relpath, n.kind,
         CASE n.presence
-          WHEN 'base-deleted'
+          WHEN MAP_BASE_DELETED
           THEN (SELECT properties FROM nodes AS p
                  WHERE p.wc_id = n.wc_id
                    AND p.local_relpath = n.local_relpath
@@ -1144,7 +1144,7 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
   WHERE t.wc_id = ?1
     AND (presence = MAP_NORMAL
          OR presence = MAP_INCOMPLETE
-         OR presence = 'base-deleted')
+         OR presence = MAP_BASE_DELETED)
 
 -- STMT_SELECT_ALL_TARGET_PROP_CACHE
 SELECT local_relpath, properties FROM target_prop_cache
@@ -1267,7 +1267,7 @@ WHERE wc_id = ?1
   AND op_depth = (SELECT MAX(s.op_depth) FROM nodes AS s
                   WHERE s.wc_id = ?1
                     AND s.local_relpath = n.local_relpath)
-  AND presence NOT IN ('base-deleted', 'not-present', MAP_EXCLUDED, 'server-excluded')
+  AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
@@ -1297,7 +1297,7 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
-  AND (presence IN ('server-excluded', MAP_EXCLUDED)
+  AND (presence IN (MAP_SERVER_EXCLUDED, MAP_EXCLUDED)
         OR depth NOT IN ('infinity', MAP_UNKNOWN))
   AND file_external IS NULL
 LIMIT 1
