@@ -46,6 +46,7 @@
 #include "conflicts.h"
 #include "wc_db_private.h"
 #include "workqueue.h"
+#include "token-map.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
@@ -267,27 +268,6 @@ typedef struct insert_external_baton_t {
   const svn_skel_t *work_items;
 
 } insert_external_baton_t;
-
-
-static const svn_token_map_t kind_map[] = {
-  { "file", svn_kind_file },
-  { "dir", svn_kind_dir },
-  { "symlink", svn_kind_symlink },
-  { "unknown", svn_kind_unknown },
-  { NULL }
-};
-
-/* Note: we only decode presence values from the database. These are a subset
-   of all the status values. */
-static const svn_token_map_t presence_map[] = {
-  { "normal", svn_wc__db_status_normal },
-  { "server-excluded", svn_wc__db_status_server_excluded },
-  { "excluded", svn_wc__db_status_excluded },
-  { "not-present", svn_wc__db_status_not_present },
-  { "incomplete", svn_wc__db_status_incomplete },
-  { "base-deleted", svn_wc__db_status_base_deleted },
-  { NULL }
-};
 
 
 /* Forward declarations  */
