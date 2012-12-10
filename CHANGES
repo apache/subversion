@@ -63,25 +63,25 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.8
     * Fix typos in pt_BR, es and zh_TW translations (r1402417, r1402421)
 
   - Client-side bugfixes:
-    * fix crash with --username option (r1396285)
+    * fix crash with --username option on Windows (r1396285)
     * add missing attributes to "svn log -v --xml" output (r1398100)
-    * fix error with svn patch (r1399174)
-    * fix hang with ra_serf (r1403583)
+    * fix svn patch ignoring hunks after no trailing newline (r139917)
+    * fix hang with ra_serf during error processing (r1403583)
     * ignore file externals with mergeinfo when merging (r1401915)
-    * fix SEGV with "svnmucc cp rev arg" (issue #4079)
+    * fix SEGV with "svnmucc cp rev arg" during arg processing (issue #4079)
     * fix conflict handling on symlinks (issue #4091)
     
   - Server-side bugfixes:
     * properly detect threading availability (r1398325)
     * fix "svnadmin load --bypass-prop-validation" (r1237779)
-    * fix group parsing in authz file (issue #3531)
-    * add Vary: header to GET responses (r1390653)
+    * fix parsing of [groupsfoo] sections in authz file (issue #3531)
+    * add Vary: header to GET responses to improve cacheability (r1390653)
     * fix fs_fs to cleanup after failed rep transmission (r1403964, et al)
     * fix mod_dav_svn to complain about revisions > HEAD (r1403588)
 
  Developer-visible changes:
   - General:
-    * fix incorrect status returned by 1.6 api (r1403258)
+    * fix incorrect status returned by 1.6 API (r1403258)
     * fix compilation with g++ 4.7 (r1345740)
     * fix svn_uri_get_file_url_from_dirent on Windows (r1409146)
 
