@@ -38,11 +38,11 @@ static const svn_token_map_t kind_map[] = {
    subset of all the status values. */
 static const svn_token_map_t presence_map[] = {
   { "normal", svn_wc__db_status_normal }, /* MAP_NORMAL */
-  { "server-excluded", svn_wc__db_status_server_excluded },
+  { "server-excluded", svn_wc__db_status_server_excluded }, /* MAP_SERVER_EXCLUDED */
   { "excluded", svn_wc__db_status_excluded }, /* MAP_EXCLUDED */
-  { "not-present", svn_wc__db_status_not_present },
+  { "not-present", svn_wc__db_status_not_present }, /* MAP_NOT_PRESENT */
   { "incomplete", svn_wc__db_status_incomplete }, /* MAP_INCOMPLETE */
-  { "base-deleted", svn_wc__db_status_base_deleted },
+  { "base-deleted", svn_wc__db_status_base_deleted }, /* MAP_BASE_DELETED */
   { NULL }
 };
 
