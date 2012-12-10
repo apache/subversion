@@ -178,6 +178,20 @@ class Processor(object):
       self.var_printed = False
 
 
+class NonRewritableDict(dict):
+  """A dictionary that does not allow self[k]=v when k in self.
+
+  (An entry would have to be explicitly deleted before a new value
+  may be entered.)
+  """
+
+  def __setitem__(self, key, val):
+    if self.__contains__(key) and self.__getitem__(key) != val:
+      raise Exception("Can't re-insert key %r with value %r "
+                      "(already present with value %r)"
+                      % (key, val, self.__getitem__(key)))
+    super(NonRewritableDict, self).__setitem__(key, val)
+
 def extract_token_map(filename):
   try:
     fd = open(filename)
@@ -185,7 +199,7 @@ def extract_token_map(filename):
     return {}
 
   pattern = re.compile(r'"(.*?)".*(MAP_\w*)')
-  map = {}
+  map = NonRewritableDict()
   hotspot = False
   for line in fd:
     if ('svn_token_map_t', '\x7d;')[hotspot] in line:
