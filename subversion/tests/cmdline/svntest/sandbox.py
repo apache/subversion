@@ -291,6 +291,10 @@ class Sandbox:
                          self.repo_url + '/' + source,
                          self.repo_url + '/' + dest)
 
+  def simple_append(self, dest, contents, truncate=False):
+    """Append CONTENTS to file DEST, optionally truncating it first."""
+    open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
+
 
 def is_url(target):
   return (target.startswith('^/')

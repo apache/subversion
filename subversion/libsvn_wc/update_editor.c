@@ -3584,7 +3584,7 @@ change_file_prop(void *file_baton,
           SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                       svn_wc__db_status_added,
                                       svn_wc__db_kind_file, TRUE,
-                                      svn_wc_conflict_action_add,
+                                      svn_wc_conflict_action_edit,
                                       svn_node_file, fb->new_relpath,
                                       scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
