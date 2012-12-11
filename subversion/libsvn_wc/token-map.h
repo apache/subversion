@@ -55,11 +55,11 @@ static const svn_token_map_t presence_map[] = {
 
 /* The subset of svn_depth_t used in the database. */
 static const svn_token_map_t depth_map[] = {
-  { "unknown", svn_depth_unknown },
+  { "unknown", svn_depth_unknown }, /* MAP_DEPTH_UNKNOWN */
   { "empty", svn_depth_empty },
   { "files", svn_depth_files },
   { "immediates", svn_depth_immediates },
-  { "infinity", svn_depth_infinity },
+  { "infinity", svn_depth_infinity }, /* MAP_DEPTH_INFINITY */
   { NULL }
 };
 
