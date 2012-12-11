@@ -288,6 +288,15 @@ svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
                          int column,
                          const svn_token_map_t *map);
 
+/* Fetch the word at COLUMN, look it up in the MAP, and return its value.
+   Returns NULL_VAL if the column is null. MALFUNCTION is thrown if the
+   column contains an unknown word.  */
+int
+svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
+                              int column,
+                              const svn_token_map_t *map,
+                              int null_val);
+
 /* Return the column as a hash of const char * => const svn_string_t *.
    If the column is null, then NULL will be stored into *PROPS. The
    results will be allocated in RESULT_POOL, and any temporary allocations
