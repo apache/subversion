@@ -25,12 +25,10 @@ class ChecksumTestCases(unittest.TestCase):
     def test_checksum(self):
         # Checking primarily the return type for the svn_checksum_create
         # function
-        val = svn.core.svn_checksum_create(svn.core.svn_checksum_md5)
+        kind, expected_length = svn.core.svn_checksum_md5, 128/8
+        val = svn.core.svn_checksum_create(kind)
         check_val = svn.core.svn_checksum_to_cstring_display(val)
-        expected_length = svn.core.svn_checksum_size(
-                            svn.core.svn_checksum_create(
-                              svn.core.svn_checksum_md5))
-        
+
         self.assertTrue(isinstance(check_val, str),
                               "Type of digest not string")
         self.assertEqual(len(check_val), 2*expected_length,
