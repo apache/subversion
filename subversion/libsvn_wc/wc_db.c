@@ -2615,43 +2615,24 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   svn_wc__db_status_t presence;
-  svn_error_t *err;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_BASE_PROPS, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    {
-      err = svn_sqlite__reset(stmt);
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, err,
-                               _("The node '%s' was not found."),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-    }
-
-  presence = svn_sqlite__column_token(stmt, 1, presence_map);
+  SVN_ERR(svn_wc__db_base_get_info(&presence, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, props, NULL,
+                                   db, local_abspath,
+                                   result_pool, scratch_pool));
   if (presence != svn_wc__db_status_normal
       && presence != svn_wc__db_status_incomplete)
     {
-      err = svn_sqlite__reset(stmt);
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("The node '%s' has a BASE status that"
                                   " has no properties."),
                                svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
     }
-  err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
-                                      scratch_pool);
-  if (err == NULL && *props == NULL)
-    {
-      /* an empty skel or NULL indicates no properties */
-      *props = apr_hash_make(result_pool);
-    }
 
-  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
 }
 
 
