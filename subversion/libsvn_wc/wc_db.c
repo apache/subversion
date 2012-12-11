@@ -477,11 +477,11 @@ fetch_repos_info(const char **repos_root_url,
 }
 
 
-/* Set *REPOS_ID, *REVISION and *REPOS_RELPATH from the
-   given columns of the SQLITE statement STMT, or to NULL if the respective
+/* Set *REPOS_ID, *REVISION and *REPOS_RELPATH from the given columns of the
+   SQLITE statement STMT, or to NULL/SVN_INVALID_REVNUM if the respective
    column value is null.  Any of the output parameters may be NULL if not
    required.  */
-static svn_error_t *
+static void
 repos_location_from_columns(apr_int64_t *repos_id,
                             svn_revnum_t *revision,
                             const char **repos_relpath,
@@ -491,8 +491,6 @@ repos_location_from_columns(apr_int64_t *repos_id,
                             int col_repos_relpath,
                             apr_pool_t *result_pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   if (repos_id)
     {
       /* Fetch repository information via REPOS_ID. */
@@ -510,8 +508,6 @@ repos_location_from_columns(apr_int64_t *repos_id,
       *repos_relpath = svn_sqlite__column_text(stmt, col_repos_relpath,
                                                result_pool);
     }
-
-  return err;
 }
 
 
@@ -2391,8 +2387,8 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
         {
           *status = node_status;
         }
-      err = repos_location_from_columns(repos_id, revision, repos_relpath,
-                                        stmt, 0, 4, 1, result_pool);
+      repos_location_from_columns(repos_id, revision, repos_relpath,
+                                  stmt, 0, 4, 1, result_pool);
       SVN_ERR_ASSERT(!repos_id || *repos_id != INVALID_REPOS_ID);
       SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
@@ -2798,8 +2794,8 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
           if (op_depth > 0)
             SVN_ERR(convert_to_working_status(status, *status));
         }
-      err = repos_location_from_columns(repos_id, revision, repos_relpath,
-                                        stmt, 0, 4, 1, result_pool);
+      repos_location_from_columns(repos_id, revision, repos_relpath,
+                                  stmt, 0, 4, 1, result_pool);
 
       if (changed_rev)
         {
@@ -7662,9 +7658,8 @@ read_info(svn_wc__db_status_t *status,
              WORKING_NODE (and have been added), then the repository
              we're being added to will be dependent upon a parent. The
              caller can scan upwards to locate the repository.  */
-          err = svn_error_compose_create(
-            err, repos_location_from_columns(repos_id, revision, repos_relpath,
-                                             stmt_info, 1, 5, 2, result_pool));
+          repos_location_from_columns(repos_id, revision, repos_relpath,
+                                      stmt_info, 1, 5, 2, result_pool);
         }
       if (changed_rev)
         {
@@ -7738,11 +7733,10 @@ read_info(svn_wc__db_status_t *status,
         }
       else
         {
-          err = svn_error_compose_create(
-            err, repos_location_from_columns(original_repos_id,
-                                             original_revision,
-                                             original_repos_relpath,
-                                             stmt_info, 1, 5, 2, result_pool));
+          repos_location_from_columns(original_repos_id,
+                                      original_revision,
+                                      original_repos_relpath,
+                                      stmt_info, 1, 5, 2, result_pool);
         }
       if (props_mod)
         {
