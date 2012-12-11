@@ -253,6 +253,8 @@ class DumpfileSource(LineBufferedSource):
                 stash += "V %d%s" % (len(properties[key]), os.linesep) 
                 stash += "%s%s" % (properties[key], os.linesep) 
         stash += self.flush()
+        while self.peek() == '\n':
+            stash += self.readline()
         if self.baton:
             self.baton.twirl()
         return (revision, stash, properties)
@@ -447,10 +449,10 @@ def report(source, selection, hook):
     if not source.has_line_buffered():    
         return
     while True:
+        nodecount = 0
         (revision,stash,properties) = source.read_revision_header()
         if revision in selection:
-            sys.stdout.write(stash)
-            emit = True
+            pass
         elif revision == selection.upperbound()+1:
             return
         else:
@@ -465,11 +467,18 @@ def report(source, selection, hook):
                 continue
             elif line.startswith("Revision-number:"):
                 source.push(line)
+                if stash and nodecount == 0:
+                    sys.stdout.write(stash)
                 break
             elif line.startswith("Node-path:"):
+                nodecount += 1
                 source.push(line)
                 (header, properties, content) = source.read_node()
-                hook(header, properties, content)
+                emit = hook(header, properties, content)
+                if emit and stash:
+                    emit = stash + emit
+                    stash = ""
+                sys.stdout.write(emit)
                 continue
             else:
                 sys.stderr.write("svncutter: parse at %s doesn't look right (%s), aborting!\n" % (revision, repr(line)))
@@ -701,13 +710,15 @@ def setlog(source, logpatch, selection):
 
 def skeletonize(source, selection):
     "Skeletonize a portion of the dump file defined by a revision selection."
-    report(source, selection, lambda h, p, c: sys.stdout.write(h + p))
+    report(source, selection, lambda h, p, c: h + p)
 
 def branchdel(source, selection, branchname):
     "Strip out ops defined by a revision selection and a branch name."
     def __branchdel(header, properties, content):
-        if not re.search("Node-path: " + branchname, header):
-            sys.stdout.write(header + properties + content)
+        if re.search("Node-path: " + branchname, header):
+            return ""
+        else:
+            return header + properties + content
     report(source, selection, __branchdel)
 
 if __name__ == '__main__':
