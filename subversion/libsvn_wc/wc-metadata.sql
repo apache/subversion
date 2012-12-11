@@ -408,8 +408,11 @@ CREATE TABLE NODES (
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
 
-  /* serialized skel of this node's properties. NULL if we
-     have no information about the properties (a non-present node). */
+  /* serialized skel of this node's properties (when presence is 'normal' or
+     'incomplete'); an empty skel or NULL indicates no properties.  NULL if
+     we have no information about the properties (any other presence).
+     TODO: Choose & require a single representation for 'no properties'.
+  */
   properties  BLOB,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */

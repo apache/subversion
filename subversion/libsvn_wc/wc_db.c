@@ -781,6 +781,10 @@ insert_base_node(void *baton,
         }
     }
 
+  /* Set properties.  Must be null if presence not normal or incomplete. */
+  assert(pibb->status == svn_wc__db_status_normal
+         || pibb->status == svn_wc__db_status_incomplete
+         || pibb->props == NULL);
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
 
@@ -1030,6 +1034,10 @@ insert_working_node(void *baton,
       SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, piwb->original_revnum));
     }
 
+  /* Set properties.  Must be null if presence not normal or incomplete. */
+  assert(piwb->presence == svn_wc__db_status_normal
+         || piwb->presence == svn_wc__db_status_incomplete
+         || piwb->props == NULL);
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -2451,11 +2459,19 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
         }
       if (props)
         {
-          SVN_ERR(svn_sqlite__column_properties(props, stmt, 13,
-                                                result_pool, scratch_pool));
-          /* Column should be non-null if status is 'normal'. */
-          /* ### Except for a bug: see body of svn_wc__db_base_get_props(). */
-          assert(*props || node_status != svn_wc__db_status_normal);
+          if (node_status == svn_wc__db_status_normal
+              || node_status == svn_wc__db_status_incomplete)
+            {
+              SVN_ERR(svn_sqlite__column_properties(props, stmt, 13,
+                                                    result_pool, scratch_pool));
+              if (*props == NULL)
+                *props = apr_hash_make(result_pool);
+            }
+          else
+            {
+              assert(svn_sqlite__column_is_null(stmt, 13));
+              *props = NULL;
+            }
         }
       if (update_root)
         {
@@ -2601,6 +2617,7 @@ svn_wc__db_base_get_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_wc__db_status_t presence;
   svn_error_t *err;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
@@ -2615,34 +2632,23 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                                                       scratch_pool));
     }
 
+  presence = svn_sqlite__column_token(stmt, 1, presence_map);
+  if (presence != svn_wc__db_status_normal
+      && presence != svn_wc__db_status_incomplete)
+    {
+      err = svn_sqlite__reset(stmt);
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+                               _("The node '%s' has a BASE status that"
+                                  " has no properties."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
   err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                       scratch_pool);
   if (err == NULL && *props == NULL)
     {
-      svn_wc__db_status_t presence;
-      presence = svn_sqlite__column_token(stmt, 1, presence_map);
-
-      if (presence == svn_wc__db_status_normal
-          || presence == svn_wc__db_status_incomplete)
-        {
-          /* ### is this a DB constraint violation? the column "probably" should
-             ### never be null in this case.
-
-             ### Reproducable via:
-             ###   touch f; svn wc add f; svn ci -mm
-             ###   sqlite3 .svn/wc.db "select local_relpath, properties from nodes"
-           */
-          *props = apr_hash_make(result_pool);
-        }
-      else
-        {
-          err = svn_sqlite__reset(stmt);
-          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
-                                   _("The node '%s' has a BASE status that"
-                                      " has no properties."),
-                                   svn_dirent_local_style(local_abspath,
-                                                          scratch_pool));
-        }
+      /* an empty skel or NULL indicates no properties */
+      *props = apr_hash_make(result_pool);
     }
 
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
@@ -2853,11 +2859,19 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
         }
       if (props)
         {
-          SVN_ERR(svn_sqlite__column_properties(props, stmt, 13,
-                                                result_pool, scratch_pool));
-          /* Column should be non-null if status is 'normal' */
-          /* ### Except for a bug: see body of svn_wc__db_base_get_props(). */
-          assert(*props || node_status != svn_wc__db_status_normal);
+          if (node_status == svn_wc__db_status_normal
+              || node_status == svn_wc__db_status_incomplete)
+            {
+              SVN_ERR(svn_sqlite__column_properties(props, stmt, 13,
+                                                    result_pool, scratch_pool));
+              if (*props == NULL)
+                *props = apr_hash_make(result_pool);
+            }
+          else
+            {
+              assert(svn_sqlite__column_is_null(stmt, 13));
+              *props = NULL;
+            }
         }
     }
   else
@@ -8436,11 +8450,19 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
     }
   if (props)
     {
-      SVN_ERR(svn_sqlite__column_properties(props, stmt, 14,
-                                            result_pool, scratch_pool));
-      /* Column should be non-null if status is 'normal' */
-      /* ### Except for a bug: see body of svn_wc__db_base_get_props(). */
-      assert(*props || raw_status != svn_wc__db_status_normal);
+      if (raw_status == svn_wc__db_status_normal
+          || raw_status == svn_wc__db_status_incomplete)
+        {
+          SVN_ERR(svn_sqlite__column_properties(props, stmt, 14,
+                                                result_pool, scratch_pool));
+          if (*props == NULL)
+            *props = apr_hash_make(result_pool);
+        }
+      else
+        {
+          assert(svn_sqlite__column_is_null(stmt, 14));
+          *props = NULL;
+        }
     }
 
   return svn_error_trace(
@@ -8556,8 +8578,13 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
         err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
 
       if (!err && pristine_props)
-        err = svn_sqlite__column_properties(pristine_props, stmt, 14,
-                                            result_pool, scratch_pool);
+        {
+          err = svn_sqlite__column_properties(pristine_props, stmt, 14,
+                                              result_pool, scratch_pool);
+          /* Null means no props (assuming presence normal or incomplete). */
+          if (*pristine_props == NULL)
+            *pristine_props = apr_hash_make(result_pool);
+        }
 
       if (changed_date)
         *changed_date = svn_sqlite__column_int64(stmt, 9);
