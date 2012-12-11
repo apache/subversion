@@ -22,9 +22,16 @@
  * statements to refer to string values by symbolic names.
  */
 
+#ifndef SVN_WC_TOKEN_MAP_H
+#define SVN_WC_TOKEN_MAP_H
+
 #include "svn_types.h"
 #include "wc_db.h"
 #include "private/svn_token.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 static const svn_token_map_t kind_map[] = {
   { "file", svn_kind_file }, /* MAP_FILE */
@@ -46,4 +53,8 @@ static const svn_token_map_t presence_map[] = {
   { NULL }
 };
 
+#ifdef __cplusplus
+}
+#endif
 
+#endif
