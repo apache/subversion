@@ -304,10 +304,6 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
                     WHERE wc_id = ?1 AND local_relpath = ?2)
         AND presence != MAP_BASE_DELETED))
 
--- STMT_SELECT_BASE_PROPS
-SELECT properties, presence FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
 -- STMT_SELECT_NODE_PROPS
 SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
