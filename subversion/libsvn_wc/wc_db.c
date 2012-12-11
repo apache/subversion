@@ -757,7 +757,7 @@ insert_base_node(void *baton,
                             pibb->revision,
                             presence_map, pibb->status, /* 8 */
                             (pibb->kind == svn_kind_dir) ? /* 9 */
-                               svn_depth_to_word(pibb->depth) : NULL,
+                             svn_token__to_word(depth_map, pibb->depth) : NULL,
                             kind_map, pibb->kind, /* 10 */
                             pibb->changed_rev,    /* 11 */
                             pibb->changed_date,   /* 12 */
@@ -1011,7 +1011,7 @@ insert_working_node(void *baton,
                 parent_relpath,
                 presence_map, piwb->presence,
                 (piwb->kind == svn_kind_dir)
-                            ? svn_depth_to_word(piwb->depth) : NULL,
+                            ? svn_token__to_word(depth_map, piwb->depth) : NULL,
                 kind_map, piwb->kind,
                 piwb->changed_rev,
                 piwb->changed_date,
@@ -1480,7 +1480,8 @@ init_db(void *baton,
                                 idb->root_node_repos_relpath,
                                 idb->root_node_revision,
                                 presence_map, status, /* 8 */
-                                svn_depth_to_word(idb->root_node_depth),
+                                svn_token__to_word(depth_map,
+                                                   idb->root_node_depth),
                                 kind_map, svn_kind_dir /* 10 */));
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -2419,12 +2420,8 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
             }
           else
             {
-              const char *depth_str = svn_sqlite__column_text(stmt, 10, NULL);
-
-              if (depth_str == NULL)
-                *depth = svn_depth_unknown;
-              else
-                *depth = svn_depth_from_word(depth_str);
+              *depth = svn_sqlite__column_token_null(stmt, 10, depth_map,
+                                                     svn_depth_unknown);
             }
         }
       if (checksum)
@@ -2561,7 +2558,6 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
       struct svn_wc__db_base_info_t *info;
       svn_error_t *err;
       apr_int64_t repos_id;
-      const char *depth_str;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, result_pool);
 
@@ -2573,10 +2569,8 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
       info->kind = svn_sqlite__column_token(stmt, 4, kind_map);
       info->revnum = svn_sqlite__column_revnum(stmt, 5);
 
-      depth_str = svn_sqlite__column_text(stmt, 6, NULL);
-
-      info->depth = (depth_str != NULL) ? svn_depth_from_word(depth_str)
-                                        : svn_depth_unknown;
+      info->depth = svn_sqlite__column_token_null(stmt, 6, depth_map,
+                                                  svn_depth_unknown);
 
       info->update_root = svn_sqlite__column_boolean(stmt, 7);
 
@@ -2828,12 +2822,8 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
             }
           else
             {
-              const char *depth_str = svn_sqlite__column_text(stmt, 10, NULL);
-
-              if (depth_str == NULL)
-                *depth = svn_depth_unknown;
-              else
-                *depth = svn_depth_from_word(depth_str);
+              *depth = svn_sqlite__column_token_null(stmt, 10, depth_map,
+                                                     svn_depth_unknown);
             }
         }
       if (checksum)
@@ -3647,15 +3637,14 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
 
           if (depths)
             {
-              const char *depth_word = svn_sqlite__column_text(stmt, 2, NULL);
-              svn_depth_t depth = svn_depth_unknown;
-
-              if (depth_word)
-                depth = svn_depth_from_word(depth_word);
+              svn_depth_t depth
+                = svn_sqlite__column_token_null(stmt, 2, depth_map,
+                                                svn_depth_unknown);
 
               apr_hash_set(*depths, node_abspath,
                            APR_HASH_KEY_STRING,
-                           svn_depth_to_word(depth)); /* Use static string */
+                           svn_token__to_word(depth_map,
+                                              depth)); /* Use static string */
             }
         }
 
@@ -6768,7 +6757,7 @@ db_op_set_base_depth(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_BASE_DEPTH));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                                         svn_depth_to_word(sbd->depth)));
+                            svn_token__to_word(depth_map, sbd->depth)));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   if (affected_rows == 0)
@@ -7705,14 +7694,8 @@ read_info(svn_wc__db_status_t *status,
             }
           else
             {
-              const char *depth_str;
-
-              depth_str = svn_sqlite__column_text(stmt_info, 11, NULL);
-
-              if (depth_str == NULL)
-                *depth = svn_depth_unknown;
-              else
-                *depth = svn_depth_from_word(depth_str);
+              *depth = svn_sqlite__column_token_null(stmt_info, 11, depth_map,
+                                                     svn_depth_unknown);
             }
         }
       if (checksum)
@@ -8167,13 +8150,8 @@ read_children_info(void *baton,
             child->depth = svn_depth_unknown;
           else
             {
-              const char *depth = svn_sqlite__column_text(stmt, 11,
-                                                          scratch_pool);
-              if (depth)
-                child->depth = svn_depth_from_word(depth);
-              else
-                child->depth = svn_depth_unknown;
-
+              child->depth = svn_sqlite__column_token_null(stmt, 11, depth_map,
+                                                           svn_depth_unknown);
               if (new_child)
                 SVN_ERR(is_wclocked(&child->locked, wcroot, child_relpath,
                                     scratch_pool));
@@ -8424,14 +8402,8 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
         }
       else
         {
-          const char *depth_str;
-
-          depth_str = svn_sqlite__column_text(stmt, 11, NULL);
-
-          if (depth_str == NULL)
-            *depth = svn_depth_unknown;
-          else
-            *depth = svn_depth_from_word(depth_str);
+          *depth = svn_sqlite__column_token_null(stmt, 11, depth_map,
+                                                 svn_depth_unknown);
         }
     }
   if (checksum)

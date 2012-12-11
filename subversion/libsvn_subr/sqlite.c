@@ -581,6 +581,21 @@ svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
   return svn_token__from_word_strict(map, word);
 }
 
+int
+svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
+                              int column,
+                              const svn_token_map_t *map,
+                              int null_val)
+{
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  if (!word)
+    return null_val;
+
+  return svn_token__from_word_strict(map, word);
+}
+
 svn_error_t *
 svn_sqlite__column_properties(apr_hash_t **props,
                               svn_sqlite__stmt_t *stmt,

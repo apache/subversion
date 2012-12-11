@@ -53,6 +53,16 @@ static const svn_token_map_t presence_map[] = {
   { NULL }
 };
 
+/* The subset of svn_depth_t used in the database. */
+static const svn_token_map_t depth_map[] = {
+  { "unknown", svn_depth_unknown },
+  { "empty", svn_depth_empty },
+  { "files", svn_depth_files },
+  { "immediates", svn_depth_immediates },
+  { "infinity", svn_depth_infinity },
+  { NULL }
+};
+
 #ifdef __cplusplus
 }
 #endif
