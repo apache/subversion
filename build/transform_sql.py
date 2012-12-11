@@ -215,7 +215,7 @@ def extract_token_map(filename):
   except IOError:
     return {}
 
-  pattern = re.compile(r'"(.*?)".*(MAP_\w*)')
+  pattern = re.compile(r'"(.*?)".*?(MAP_\w*)')
   return \
     NonRewritableDict(
       map(operator.itemgetter(1,0),
