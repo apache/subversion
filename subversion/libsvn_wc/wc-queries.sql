@@ -1298,7 +1298,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND (presence IN (MAP_SERVER_EXCLUDED, MAP_EXCLUDED)
-        OR depth NOT IN ('infinity', MAP_UNKNOWN))
+        OR depth NOT IN (MAP_DEPTH_INFINITY, MAP_DEPTH_UNKNOWN))
   AND file_external IS NULL
 LIMIT 1
 
