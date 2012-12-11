@@ -27,18 +27,20 @@ class ChecksumTestCases(unittest.TestCase):
         # function
         val = svn.core.svn_checksum_create(svn.core.svn_checksum_md5)
         check_val = svn.core.svn_checksum_to_cstring_display(val)
-
-        # The svn_checksum_to_cstring_display should return a str type object
-        # from the check_val object passed to it
-        if(type(check_val) == str):
-            # The intialized value created from a checksum should be 0
-            if(int(check_val) != 0):
-                self.assertRaises(AssertionError)
-        else:
-            self.assertRaises(TypeError, test_checksum)
+        expected_length = svn.core.svn_checksum_size(
+                            svn.core.svn_checksum_create(
+                              svn.core.svn_checksum_md5))
+        
+        self.assertTrue(isinstance(check_val, str),
+                              "Type of digest not string")
+        self.assertEqual(len(check_val), 2*expected_length,
+                         "Length of digest does not match kind")
+        self.assertEqual(int(check_val), 0,
+                         "Value of initialized digest is not 0")
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(ChecksumTestCases)
+
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()
     runner.run(suite())
