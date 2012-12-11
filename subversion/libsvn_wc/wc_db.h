@@ -807,7 +807,8 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
    *PROPS maps "const char *" names to "const svn_string_t *" values.
    If the node has no properties, set *PROPS to an empty hash.
    *PROPS will never be set to NULL.
-   If the node is not present in the BASE tree, return an error.
+   If the node is not present in the BASE tree (with presence 'normal'
+   or 'incomplete'), return an error.
    Allocate *PROPS and its keys and values in RESULT_POOL.
 */
 svn_error_t *
