@@ -31,6 +31,13 @@ import re
 import sys
 
 
+# operator.methodcaller doesn't exist in Python 2.5.
+if not hasattr(operator, 'methodcaller'):
+  def methodcaller(method, *args, **kwargs):
+    return lambda x: getattr(x, method)(*args, **kwargs)
+  operator.methodcaller = methodcaller
+  del methodcaller
+
 DEFINE_END = '  ""\n\n'
 
 
