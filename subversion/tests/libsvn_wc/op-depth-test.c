@@ -5145,6 +5145,87 @@ update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "nested_move_update", opts, pool));
+
+  /* r1: Create file 'f' */
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  sbox_file_write(&b, "A/B/C/f", "r1 content\n");
+  SVN_ERR(sbox_wc_add(&b, "A/B/C/f"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* r2: Modify 'f' */
+  sbox_file_write(&b, "A/B/C/f", "r1 content\nr2 content\n");
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  SVN_ERR(sbox_wc_move(&b, "A2/B/C", "A2/B/C2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       1, ""},
+      {0, "A",         "normal",       1, "A"},
+      {0, "A/B",       "normal",       1, "A/B"},
+      {0, "A/B/C",     "normal",       1, "A/B/C"},
+      {0, "A/B/C/f",   "normal",       1, "A/B/C/f"},
+      {1, "A",         "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/f",   "base-deleted", NO_COPY_FROM},
+      {1, "A2",        "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",      "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/C",    "normal",       1, "A/B/C", MOVED_HERE},
+      {1, "A2/B/C/f",  "normal",       1, "A/B/C/f", MOVED_HERE},
+      {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "A2/B/C2"},
+      {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
+      {3, "A2/B/C2",   "normal",       1, "A/B/C", MOVED_HERE},
+      {3, "A2/B/C2/f", "normal",       1, "A/B/C/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+
+  /* Following the A->A2 move should raise a tree-conflict on A2/B/C,
+     resolving that may require an explicit resolve. */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       2, ""},
+      {0, "A",         "normal",       2, "A"},
+      {0, "A/B",       "normal",       2, "A/B"},
+      {0, "A/B/C",     "normal",       2, "A/B/C"},
+      {0, "A/B/C/f",   "normal",       2, "A/B/C/f"},
+      {1, "A",         "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/f",   "base-deleted", NO_COPY_FROM},
+      {1, "A2",        "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",      "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/C",    "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "A2/B/C/f",  "normal",       2, "A/B/C/f", MOVED_HERE},
+      {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "A2/B/C2"},
+      {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
+      {3, "A2/B/C2",   "normal",       2, "A/B/C", MOVED_HERE},
+      {3, "A2/B/C2/f", "normal",       2, "A/B/C/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -5244,5 +5325,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "mixed_rev_move"),
     SVN_TEST_OPTS_PASS(update_prop_mod_into_moved,
                        "update_prop_mod_into_moved"),
+    SVN_TEST_OPTS_XFAIL(nested_move_update,
+                       "nested_move_update"),
     SVN_TEST_NULL
   };
