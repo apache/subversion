@@ -372,7 +372,10 @@ svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val);
 svn_error_t *
 svn_sqlite__finalize(svn_sqlite__stmt_t *stmt);
 
-/* Error-handling wrapper around sqlite3_reset. */
+/* Reset STMT by calling sqlite3_reset(), and also clear any bindings to it.
+
+   Note: svn_sqlite__get_statement() calls this function automatically if
+   the requested statement has been used and has not yet been reset. */
 svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 
