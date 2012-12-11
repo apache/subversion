@@ -2071,11 +2071,8 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
- * op_depth).
- *
- * If BASE_PROPS is FALSE and, PRISTINE is TRUE, the local modifications will
- * be suppressed. If PRISTINE is FALSE, local modifications will be visible.
+ * If PRISTINE is FALSE, read the properties from the WORKING layer (highest
+ * op_depth); if PRISTINE is FALSE, local modifications will be visible.
  */
 svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
