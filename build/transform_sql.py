@@ -25,6 +25,7 @@
 #
 
 
+import operator
 import os
 import re
 import sys
@@ -193,6 +194,14 @@ class NonRewritableDict(dict):
                       % (key, val, self.__getitem__(key)))
     super(NonRewritableDict, self).__setitem__(key, val)
 
+def hotspots(fd):
+  hotspot = False
+  for line in fd:
+    # hotspot is TRUE within definitions of static const svn_token_map_t[].
+    hotspot ^= int(('svn_token_map_t', '\x7d;')[hotspot] in line)
+    if hotspot:
+      yield line
+
 def extract_token_map(filename):
   try:
     fd = open(filename)
@@ -200,19 +209,13 @@ def extract_token_map(filename):
     return {}
 
   pattern = re.compile(r'"(.*?)".*(MAP_\w*)')
-  map = NonRewritableDict()
-  hotspot = False
-  for line in fd:
-    if ('svn_token_map_t', '\x7d;')[hotspot] in line:
-      # hotspot is TRUE within definitions of static const svn_token_map_t[].
-      hotspot = not hotspot
-      continue
-    if hotspot:
-      match = pattern.search(line)
-      if match:
-        val, key = match.groups()
-        map[key] = val
-  return map
+  return \
+    NonRewritableDict(
+      map(operator.itemgetter(1,0),
+        map(operator.methodcaller('groups'),
+          filter(None,
+            map(pattern.search,
+              hotspots(fd))))))
 
 def main(input_filepath, output):
   filename = os.path.basename(input_filepath)
