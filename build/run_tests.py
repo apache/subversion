@@ -434,7 +434,7 @@ class TestHarness:
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
       print("Don't know what to do about " + progbase)
-      raise
+      sys.exit(1)
 
     import svntest.main
 
