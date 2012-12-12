@@ -87,7 +87,7 @@ svn_wc__internal_propget(const svn_string_t **value,
    Append any conflicts of the actual props to *CONFLICT_SKEL.  (First
    allocate *CONFLICT_SKEL from RESULT_POOL if it is initially NULL.
    CONFLICT_SKEL itself must not be NULL.)  (Changes made to the pristine
-   properties, if BASE_MERGE is TRUE, do not generate conficts.)
+   properties, if NEW_PRISTINE_PROPS is non-null, do not generate conficts.)
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
