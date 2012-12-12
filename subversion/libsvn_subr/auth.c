@@ -422,9 +422,9 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       const char *library_label, *library_name;
       const char *provider_function_name, *version_function_name;
       library_name = apr_psprintf(pool,
-                                  "libsvn_auth_%s-%d.so.0",
+                                  "libsvn_auth_%s-%d.so.%d",
                                   provider_name,
-                                  SVN_VER_MAJOR);
+                                  SVN_VER_MAJOR, SVN_SOVERSION);
       library_label = apr_psprintf(pool, "svn_%s", provider_name);
       provider_function_name = apr_psprintf(pool,
                                             "svn_auth_get_%s_%s_provider",
