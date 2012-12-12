@@ -433,7 +433,7 @@ class TestHarness:
       prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
-      print('Don\'t know what to do about ' + progbase)
+      print("Don't know what to do about " + progbase)
       raise
 
     import svntest.main
