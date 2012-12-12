@@ -337,16 +337,20 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
     /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
-    SVN_ERR_ASSERT(new_pristine_props != NULL && new_actual_props != NULL);
+    SVN_ERR_ASSERT(new_pristine_props != NULL);
 
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
-    if (status == svn_wc__db_status_added)
-      SVN_ERR(svn_wc__db_temp_working_set_props(
-                db, local_abspath, new_pristine_props, scratch_pool));
-    else
-      SVN_ERR(svn_wc__db_temp_base_set_props(
-                db, local_abspath, new_pristine_props, scratch_pool));
+    if (base_merge)
+      {
+        SVN_ERR_ASSERT(new_actual_props != NULL);
+        if (status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_temp_working_set_props(
+                    db, local_abspath, new_pristine_props, scratch_pool));
+        else
+          SVN_ERR(svn_wc__db_temp_base_set_props(
+                    db, local_abspath, new_pristine_props, scratch_pool));
+      }
 #else
     if (base_merge)
       return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
