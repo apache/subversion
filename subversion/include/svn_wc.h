@@ -6891,8 +6891,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  *
  * This function has the @a base_merge parameter which (when TRUE) will
  * apply @a propchanges to this node's pristine set of properties. This
- * functionality is not supported on newer APIs -- pristine information
- * should only be changed through an update editor drive.
+ * functionality is not supported since API version 1.7 and will give an
+ * error if requested (unless @a dry_run is TRUE). For details see
+ * 'notes/api-errata/1.7/wc006.txt'.
  *
  * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
  * svn_wc_conflict_resolver_func2_t.
@@ -6901,7 +6902,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  * #SVN_ERR_UNVERSIONED_RESOURCE, when svn_wc_merge_props3 would return either
  * #SVN_ERR_WC_PATH_NOT_FOUND or #SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
  *
- * @since New in 1.5.
+ * @since New in 1.5. The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -6922,6 +6923,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
  * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
  * baton) of NULL.
  *
+ * @since New in 1.3. The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -6943,7 +6945,9 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
  * correct for 'svn update', it's incorrect for 'svn merge', and can
  * cause flawed behavior.  (See issue #2035.)
  *
+ * @since The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.2 API.
+ * Replaced by svn_wc_merge_props().
  */
 SVN_DEPRECATED
 svn_error_t *

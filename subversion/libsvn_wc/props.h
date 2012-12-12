@@ -37,18 +37,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* BASE_MERGE is a pre-1.7 concept on property merging. It allowed callers
-   to alter the pristine properties *outside* of an editor drive. That is
-   very dangerous: the pristines should always correspond to something from
-   the repository, and that should only arrive through the update editor.
-
-   For 1.7, we're removing this support. Some old code is being left around
-   in case we decide to change this.
-
-   For more information, see ^/notes/api-errata/1.7/wc006.txt
-*/
-#undef SVN__SUPPORT_BASE_MERGE
-
 /* Internal function for diffing props. See svn_wc_get_prop_diffs2(). */
 svn_error_t *
 svn_wc__internal_propdiff(apr_array_header_t **propchanges,
@@ -135,13 +123,7 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         apr_pool_t *scratch_pool);
 
 
-/* Just like svn_wc_merge_props3(), but WITH a BASE_MERGE parameter.
-
-   If SVN__SUPPORT_BASE_MERGE is defined and BASE_MERGE is true, then
-   also use PROPCHANGES to modify the node's pristine properties.  (That
-   cannot generate conficts.)  If SVN__SUPPORT_BASE_MERGE is not defined
-   and BASE_MERGE is true, throw an error.
- */
+/* Just like svn_wc_merge_props3(). */
 svn_error_t *
 svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                             svn_wc__db_t *db,
@@ -150,7 +132,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                             const svn_wc_conflict_version_t *right_version,
                             apr_hash_t *baseprops,
                             const apr_array_header_t *propchanges,
-                            svn_boolean_t base_merge,
                             svn_boolean_t dry_run,
                             svn_wc_conflict_resolver_func2_t conflict_func,
                             void *conflict_baton,
