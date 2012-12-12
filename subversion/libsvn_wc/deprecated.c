@@ -2473,6 +2473,11 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
   svn_error_t *err;
   struct conflict_func_1to2_baton conflict_wrapper;
 
+  if (base_merge && !dry_run)
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            U_("base_merge=TRUE is no longer supported; "
+                               "see notes/api-errata/1.7/wc006.txt"));
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   conflict_wrapper.inner_func = conflict_func;
@@ -2485,7 +2490,6 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
                                     NULL /* right_version */,
                                     baseprops,
                                     propchanges,
-                                    base_merge,
                                     dry_run,
                                     conflict_func ? conflict_func_1to2_wrapper
                                                   : NULL,

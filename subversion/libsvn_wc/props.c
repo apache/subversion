@@ -188,7 +188,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                             const svn_wc_conflict_version_t *right_version,
                             apr_hash_t *baseprops,
                             const apr_array_header_t *propchanges,
-                            svn_boolean_t base_merge,
                             svn_boolean_t dry_run,
                             svn_wc_conflict_resolver_func2_t conflict_func,
                             void *conflict_baton,
@@ -201,7 +200,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   svn_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props;
-  apr_hash_t *new_pristine_props;
   apr_hash_t *new_actual_props;
   svn_boolean_t had_props, props_mod;
   svn_boolean_t have_base;
@@ -294,8 +292,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&conflict_skel, state,
-                              base_merge ? &new_pristine_props : NULL,
-                              &new_actual_props,
+                              NULL, &new_actual_props,
                               db, local_abspath,
                               baseprops /* server_baseprops */,
                               pristine_props,
@@ -338,24 +335,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
     /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
     SVN_ERR_ASSERT(new_actual_props != NULL);
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-    if (base_merge)
-      {
-        SVN_ERR_ASSERT(new_pristine_props != NULL);
-        if (status == svn_wc__db_status_added)
-          SVN_ERR(svn_wc__db_temp_working_set_props(
-                    db, local_abspath, new_pristine_props, scratch_pool));
-        else
-          SVN_ERR(svn_wc__db_temp_base_set_props(
-                    db, local_abspath, new_pristine_props, scratch_pool));
-      }
-#else
-    if (base_merge)
-      return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              U_("base_merge=TRUE is no longer supported"));
-#endif
 
     SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
                                     svn_wc__has_magic_property(propchanges),
@@ -400,7 +379,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                            left_version, right_version,
                            baseprops,
                            propchanges,
-                           FALSE /* base_merge */,
                            dry_run,
                            conflict_func, conflict_baton,
                            cancel_func, cancel_baton,

@@ -5232,67 +5232,6 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
 }
 
 
-#ifdef SVN__SUPPORT_BASE_MERGE
-
-/* Set properties in a given table. The row must exist.  */
-static svn_error_t *
-set_properties(svn_wc__db_t *db,
-               const char *local_abspath,
-               const apr_hash_t *props,
-               int stmt_idx,
-               const char *table_name,
-               apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
-
-  SVN_ERR_ASSERT(props != NULL);
-
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath, stmt_idx,
-                                 scratch_pool));
-
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  if (affected_rows != 1)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("Can't store properties for '%s' in '%s'."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool),
-                             table_name);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const apr_hash_t *props,
-                               apr_pool_t *scratch_pool)
-{
-  SVN_ERR(set_properties(db, local_abspath, props,
-                         STMT_UPDATE_NODE_BASE_PROPS,
-                         "base node", scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const apr_hash_t *props,
-                                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(set_properties(db, local_abspath, props,
-                         STMT_UPDATE_NODE_WORKING_PROPS,
-                         "working node", scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-#endif /* SVN__SUPPORT_BASE_MERGE  */
-
-
 svn_error_t *
 svn_wc__db_op_modified(svn_wc__db_t *db,
                        const char *local_abspath,

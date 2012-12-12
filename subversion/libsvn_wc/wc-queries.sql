@@ -313,17 +313,6 @@ ORDER BY op_depth DESC
 SELECT properties FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_UPDATE_NODE_BASE_PROPS
-UPDATE nodes SET properties = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_PROPS
-UPDATE nodes SET properties = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth =
-   (SELECT MAX(op_depth) FROM nodes
-    WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
-
 -- STMT_UPDATE_ACTUAL_PROPS
 UPDATE actual_node SET properties = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
