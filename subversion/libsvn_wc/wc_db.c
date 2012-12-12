@@ -284,12 +284,6 @@ set_actual_props(apr_int64_t wc_id,
                  apr_pool_t *scratch_pool);
 
 static svn_error_t *
-mark_conflict(svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              const svn_skel_t *conflict_skel,
-              apr_pool_t *scratch_pool);
-
-static svn_error_t *
 insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_int64_t wc_id,
                            const char *local_relpath,
@@ -873,7 +867,8 @@ insert_base_node(void *baton,
 
   SVN_ERR(add_work_items(wcroot->sdb, pibb->work_items, scratch_pool));
   if (pibb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, pibb->conflict, scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              pibb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1115,8 +1110,8 @@ insert_working_node(void *baton,
 
   SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
   if (piwb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, piwb->conflict,
-                          scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              piwb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2307,7 +2302,8 @@ db_base_remove(void *baton,
 
   SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
   if (rb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, rb->conflict, scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              rb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -5196,7 +5192,8 @@ set_props_txn(void *baton,
   /* And finally.  */
   SVN_ERR(add_work_items(wcroot->sdb, spb->work_items, scratch_pool));
   if (spb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, spb->conflict, scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              spb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -5565,11 +5562,11 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 }
 
 /* Implementation of svn_wc__db_op_mark_conflict() */
-static svn_error_t *
-mark_conflict(svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              const svn_skel_t *conflict_skel,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  const svn_skel_t *conflict_skel,
+                                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
@@ -5628,7 +5625,8 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(mark_conflict(wcroot, local_relpath, conflict_skel, scratch_pool));
+  SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                            conflict_skel, scratch_pool));
 
   /* ### Should be handled in the same transaction as setting the conflict */
   if (work_items)
@@ -6608,7 +6606,8 @@ remove_node_txn(void *baton,
 
   SVN_ERR(add_work_items(wcroot->sdb, rnb->work_items, scratch_pool));
   if (rnb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, rnb->conflict, scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              rnb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -7233,7 +7232,8 @@ delete_node(void *baton,
 
   SVN_ERR(add_work_items(wcroot->sdb, b->work_items, scratch_pool));
   if (b->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, b->conflict, scratch_pool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              b->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -13682,7 +13682,8 @@ make_copy_txn(void *baton,
                                                 svn_depth_empty, iterpool));
 
   if (mcb->conflicts)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, mcb->conflicts, iterpool));
+    SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+                                              mcb->conflicts, iterpool));
 
   SVN_ERR(add_work_items(wcroot->sdb, mcb->work_items, iterpool));
 
