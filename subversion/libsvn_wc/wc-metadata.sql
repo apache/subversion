@@ -181,7 +181,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -485,7 +486,8 @@ CREATE TABLE NODES (
 
   );
 
-CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
 /* I_NODES_MOVED is introduced in format 30 */
 CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
@@ -576,7 +578,6 @@ CREATE TABLE EXTERNALS (
   PRIMARY KEY (wc_id, local_relpath)
 );
 
-CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
@@ -826,6 +827,7 @@ WHERE wc_id = ?1 and local_relpath = ?2
 -- STMT_UPGRADE_TO_31
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
+DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
 
 PRAGMA user_version = 31;
 
@@ -857,6 +859,16 @@ WHERE (l.local_relpath = '' AND l.repos_path != '')
 
 /* Drop old index. ### Remove this part from the upgrade to 31 once bumped */
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
+DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+
+DROP INDEX I_NODES_PARENT;
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
+
+DROP INDEX I_ACTUAL_PARENT;
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL (wc_id, parent_relpath,
+                                               local_relpath);
 
 /* ------------------------------------------------------------------------- */
 
@@ -915,7 +927,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 INSERT INTO ACTUAL_NODE SELECT
   wc_id, local_relpath, parent_relpath, properties, conflict_old,
