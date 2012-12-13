@@ -306,6 +306,18 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR;
     }
 
+  {
+    const char *dir_abspath;
+
+    if (kind == svn_kind_dir)
+      dir_abspath = local_abspath;
+    else
+      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+    /* Verify that we're holding this directory's write lock.  */
+    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
+  }
+
   if (conflict_skel)
     {
       svn_skel_t *work_item;
@@ -323,30 +335,18 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  {
-    const char *dir_abspath;
+  /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+  SVN_ERR_ASSERT(new_actual_props != NULL);
 
-    if (kind == svn_kind_dir)
-      dir_abspath = local_abspath;
-    else
-      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
+                                  svn_wc__has_magic_property(propchanges),
+                                  conflict_skel,
+                                  work_items,
+                                  scratch_pool));
 
-    /* Verify that we're holding this directory's write lock.  */
-    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
-
-    /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
-    SVN_ERR_ASSERT(new_actual_props != NULL);
-
-    SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
-                                    svn_wc__has_magic_property(propchanges),
-                                    conflict_skel,
-                                    work_items,
-                                    scratch_pool));
-
-    if (work_items != NULL)
-      SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
-                             scratch_pool));
-  }
+  if (work_items != NULL)
+    SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                           scratch_pool));
 
   if (conflict_skel && conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
