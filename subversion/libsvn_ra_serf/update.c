@@ -2858,7 +2858,7 @@ finish_report(void *report_baton,
         }
 
       /* Open extra connections if we have enough requests to send. */
-      if (sess->num_conns < MAX_NR_OF_CONNS)
+      if (sess->num_conns < sess->max_connections)
         SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
                                           report->num_active_propfinds));
 
