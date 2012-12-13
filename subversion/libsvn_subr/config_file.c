@@ -830,8 +830,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              unencrypted (i.e., as plaintext)." NL
 #endif
         "###   store-auth-creds           Specifies whether any auth info"   NL
-        "###                              (passwords as well as server certs)"
-                                                                             NL
+        "###                              (passwords, server certs, etc.)"   NL
         "###                              may be cached to disk."            NL
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
