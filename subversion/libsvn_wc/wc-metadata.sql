@@ -670,6 +670,9 @@ PRAGMA user_version = 22;
 -- STMT_UPGRADE_TO_23
 PRAGMA user_version = 23;
 
+-- STMT_UPGRADE_23_HAS_WORKING_NODES
+SELECT 1 FROM nodes WHERE op_depth > 0
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 
