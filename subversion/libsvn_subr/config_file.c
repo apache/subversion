@@ -807,10 +807,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections."                      NL
-        "###   bulk-updates               Whether to request bulk update" NL
-        "###                              responses, or fetch each file in "
-                                                                             NL
-        "###                              an individual request. "           NL
+        "###   http-bulk-updates          Whether to request bulk update"    NL
+        "###                              responses or to fetch each file"   NL
+        "###                              in an individual request. "        NL
         "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL

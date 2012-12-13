@@ -87,7 +87,7 @@ typedef struct svn_config_t svn_config_t;
                                           "store-ssl-client-cert-pp-plaintext"
 #define SVN_CONFIG_OPTION_USERNAME                  "username"
 /** @since New in 1.8. */
-#define SVN_CONFIG_OPTION_BULK_UPDATES              "bulk-updates"
+#define SVN_CONFIG_OPTION_HTTP_BULK_UPDATES         "http-bulk-updates"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
