@@ -921,18 +921,18 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
             set_prop_merge_state(state, svn_wc_notify_state_merged);
           else
             {
-                  /* We have base, WC, and new values.  Discover
-                     deltas between base <-> WC, and base <->
-                     incoming.  Combine those deltas, and apply
-                     them to base to get the new value. */
-                  SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                         working_val,
-                                                         new_val,
-                                                         result_pool,
-                                                         scratch_pool));
-                  apr_hash_set(actual_props, propname,
-                               APR_HASH_KEY_STRING, new_val);
-                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+              /* We have base, WC, and new values.  Discover
+                 deltas between base <-> WC, and base <->
+                 incoming.  Combine those deltas, and apply
+                 them to base to get the new value. */
+              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                     working_val,
+                                                     new_val,
+                                                     result_pool,
+                                                     scratch_pool));
+              apr_hash_set(actual_props, propname,
+                           APR_HASH_KEY_STRING, new_val);
+              set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
         }
 
@@ -946,19 +946,19 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
   else if (! working_val) /* means !working_val && !base_val due
                              to conditions above: no prop at all */
     {
-          /* Discover any mergeinfo additions in the
-             incoming value relative to the base, and
-             "combine" those with the empty WC value. */
-          svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
-          svn_string_t *mergeinfo_string;
+      /* Discover any mergeinfo additions in the
+         incoming value relative to the base, and
+         "combine" those with the empty WC value. */
+      svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
+      svn_string_t *mergeinfo_string;
 
-          SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
-                                       &added_mergeinfo,
-                                       old_val, new_val, scratch_pool));
-          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
-                                          added_mergeinfo, result_pool));
-          apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING,
-                       mergeinfo_string);
+      SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
+                                   &added_mergeinfo,
+                                   old_val, new_val, scratch_pool));
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
+                                      added_mergeinfo, result_pool));
+      apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING,
+                   mergeinfo_string);
     }
 
   else /* means working && base && svn_string_compare(working, base) */
@@ -968,17 +968,17 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
 
       else
         {
-              /* We have base, WC, and new values.  Discover
-                 deltas between base <-> WC, and base <->
-                 incoming.  Combine those deltas, and apply
-                 them to base to get the new value. */
-              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                     working_val,
-                                                     new_val, result_pool,
-                                                     scratch_pool));
-              apr_hash_set(actual_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
-              set_prop_merge_state(state, svn_wc_notify_state_merged);
+          /* We have base, WC, and new values.  Discover
+             deltas between base <-> WC, and base <->
+             incoming.  Combine those deltas, and apply
+             them to base to get the new value. */
+          SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                 working_val,
+                                                 new_val, result_pool,
+                                                 scratch_pool));
+          apr_hash_set(actual_props, propname,
+                       APR_HASH_KEY_STRING, new_val);
+          set_prop_merge_state(state, svn_wc_notify_state_merged);
         }
     }
 
