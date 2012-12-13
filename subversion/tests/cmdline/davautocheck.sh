@@ -523,6 +523,12 @@ if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
 
+if type time > /dev/null; then
+  TIME_CMD=time
+else
+  TIME_CMD=""
+fi
+
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
@@ -540,13 +546,13 @@ else
 fi
 
 if [ $# = 0 ]; then
-  time make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  $TIME_CMD make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
+  $TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
   r=$?
 fi
 
