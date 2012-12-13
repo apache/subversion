@@ -847,6 +847,7 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
+    # write-announcement
     subparser = subparsers.add_parser('write-announcement',
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
@@ -854,6 +855,7 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
+    # write-downloads
     subparser = subparsers.add_parser('write-downloads',
                     help='''Output to stdout template text for the download
                             table for subversion.apache.org''')
@@ -861,7 +863,7 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
-    # The check sigs subcommand
+    # check-sigs
     subparser = subparsers.add_parser('check-sigs',
                     help='''Output to stdout the signatures collected for this
                             release''')
