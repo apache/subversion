@@ -92,6 +92,12 @@ random_port() {
   fi
 }
 
+if type time > /dev/null; then
+  TIME_CMD=time
+else
+  TIME_CMD=""
+fi
+
 SVNSERVE_PORT=$(random_port)
 while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
   SVNSERVE_PORT=$(random_port)
@@ -113,13 +119,13 @@ fi
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# = 0 ]; then
-  time make check "BASE_URL=$BASE_URL"
+  $TIME_CMD make check "BASE_URL=$BASE_URL"
   r=$?
 else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  $TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   cd - > /dev/null
 fi
