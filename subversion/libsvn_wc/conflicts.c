@@ -409,10 +409,10 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
                                         const char *marker_abspath,
-                                        apr_hash_t *mine_props,
-                                        apr_hash_t *their_old_props,
-                                        apr_hash_t *their_props,
-                                        apr_hash_t *conflicted_prop_names,
+                                        const apr_hash_t *mine_props,
+                                        const apr_hash_t *their_old_props,
+                                        const apr_hash_t *their_props,
+                                        const apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
@@ -464,7 +464,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
     svn_skel__prepend_str("", prop_conflict, result_pool); /* No old_props */
 
   conflict_names = svn_skel__make_empty_list(result_pool);
-  for (hi = apr_hash_first(scratch_pool, conflicted_prop_names);
+  for (hi = apr_hash_first(scratch_pool, (apr_hash_t *)conflicted_prop_names);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -1804,7 +1804,7 @@ setup_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
       err = svn_wc__db_base_get_info(&status, &kind, &revision,
                                      &repos_relpath, &repos_root_url,
                                      &repos_uuid, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool);
 
@@ -2864,4 +2864,20 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                                                    cancel_func, cancel_baton,
                                                    notify_func, notify_baton,
                                                    scratch_pool));
+}
+
+/* Constructor for the result-structure returned by conflict callbacks. */
+svn_wc_conflict_result_t *
+svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
+                              const char *merged_file,
+                              apr_pool_t *pool)
+{
+  svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->choice = choice;
+  result->merged_file = merged_file;
+  result->save_merged = FALSE;
+
+  /* If we add more fields to svn_wc_conflict_result_t, add them here. */
+
+  return result;
 }

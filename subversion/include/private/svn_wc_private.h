@@ -1619,7 +1619,11 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.
+ * then diff fully recursively. If @a depth is #svn_depth_unknown, then...
+ *
+ *   ### ... then the @a server_performs_filtering option is meaningful.
+ *   ### But what does this depth mean exactly? Something about 'ambient'
+ *   ### depth? How does it compare with depth 'infinity'?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -1646,9 +1650,28 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
-  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *
  *
  * @since New in 1.8.
  */

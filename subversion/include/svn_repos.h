@@ -1321,7 +1321,8 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @a repos is a previously opened repository.  @a repos_url is the
  * decoded URL to the base of the repository, and is used to check
- * copyfrom paths.  @a txn is a filesystem transaction object to use
+ * copyfrom paths.  copyfrom paths passed to the editor must be full,
+ * URI-encoded, URLs.  @a txn is a filesystem transaction object to use
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *

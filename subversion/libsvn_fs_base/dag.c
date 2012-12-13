@@ -579,7 +579,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
 
 svn_error_t *
 svn_fs_base__dag_set_proplist(dag_node_t *node,
-                              apr_hash_t *proplist,
+                              const apr_hash_t *proplist,
                               const char *txn_id,
                               trail_t *trail,
                               apr_pool_t *pool)

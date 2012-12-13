@@ -223,6 +223,16 @@ struct svn_ra_serf__session_t {
   /*** End HTTP v2 stuff ***/
 
   svn_ra_serf__blncache_t *blncache;
+
+  /* Flag that indicates if we request the server for bulk updates (TRUE) with
+     all the properties and content in the update-report response. If FALSE,
+     request a skelta update-report with inlined properties. */
+  svn_boolean_t bulk_updates;
+
+  /* Indicates if the server wants bulk update requests (Prefer) or only
+     accepts skelta requests (Off). If this value is On both options are 
+     allowed. */
+  const char *server_allows_bulk;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

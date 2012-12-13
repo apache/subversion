@@ -394,7 +394,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);

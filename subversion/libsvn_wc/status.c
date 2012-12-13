@@ -261,7 +261,7 @@ read_info(const struct svn_wc__db_info_t **info,
                                &mtb->changed_author, &mtb->depth,
                                &checksum, NULL, &original_repos_relpath, NULL,
                                NULL, NULL, &mtb->lock, &mtb->recorded_size,
-                               &mtb->recorded_mod_time, &mtb->changelist,
+                               &mtb->recorded_time, &mtb->changelist,
                                &mtb->conflicted, &mtb->op_root,
                                &mtb->had_props, &mtb->props_mod,
                                &mtb->have_base, &mtb->have_more_work, NULL,
@@ -286,7 +286,7 @@ read_info(const struct svn_wc__db_info_t **info,
 
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       lock_arg, NULL, &update_root,
+                                       lock_arg, NULL, NULL, &update_root,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
 
@@ -621,9 +621,9 @@ assemble_status(svn_wc_status3_t **status,
           else if (ignore_text_mods
                   ||(dirent
                      && info->recorded_size != SVN_INVALID_FILESIZE
-                     && info->recorded_mod_time != 0
+                     && info->recorded_time != 0
                      && info->recorded_size == dirent->filesize
-                     && info->recorded_mod_time == dirent->mtime))
+                     && info->recorded_time == dirent->mtime))
             text_modified_p = FALSE;
           else
             {

@@ -723,7 +723,7 @@ svn_wc__node_get_base(svn_revnum_t *revision,
   err = svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
                                  repos_root_url, repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL,
+                                 NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -782,7 +782,7 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
                                      changed_rev, changed_date, changed_author,
                                      NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
                                      wc_ctx->db, local_abspath,
                                      result_pool, scratch_pool));
   else
@@ -811,7 +811,7 @@ svn_wc__node_get_lock_info(const char **lock_token,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &lock, NULL,
-                                 NULL,
+                                 NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
 
@@ -1117,7 +1117,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
         SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
                                          repos_root_url, repos_uuid, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL,
+                                         NULL, NULL, NULL,
                                          db, local_abspath,
                                          result_pool, scratch_pool));
       }
@@ -1203,7 +1203,7 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
     {
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
     }

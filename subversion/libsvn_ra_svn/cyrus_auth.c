@@ -179,7 +179,7 @@ svn_ra_svn__sasl_common_init(apr_pool_t *pool)
                  sasl_mutex_unlock_cb,
                  sasl_mutex_free_cb);
   free_mutexes = apr_array_make(sasl_pool, 0, sizeof(svn_mutex__t *));
-  return svn_mutex__init(&array_mutex, TRUE, sasl_pool);
+  SVN_ERR(svn_mutex__init(&array_mutex, TRUE, sasl_pool));
 
 #endif /* APR_HAS_THREADS */
 

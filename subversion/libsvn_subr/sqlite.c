@@ -472,8 +472,7 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   if (props == NULL)
     return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
-  SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
-                                     scratch_pool));
+  SVN_ERR(svn_skel__unparse_proplist(&skel, props, scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                slot,
@@ -578,6 +577,21 @@ svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
 {
   /* cast from 'unsigned char' to regular 'char'  */
   const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  return svn_token__from_word_strict(map, word);
+}
+
+int
+svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
+                              int column,
+                              const svn_token_map_t *map,
+                              int null_val)
+{
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  if (!word)
+    return null_val;
 
   return svn_token__from_word_strict(map, word);
 }

@@ -496,19 +496,6 @@ cleanup_edit_baton(void *edit_baton)
   return APR_SUCCESS;
 }
 
-/* An APR pool cleanup handler.  This is a child handler, it removes
-   the mail pool handler.
-   <stsp> mail pool?
-   <hwright> that's where the missing commit mails are going!  */
-static apr_status_t
-cleanup_edit_baton_child(void *edit_baton)
-{
-  struct edit_baton *eb = edit_baton;
-  apr_pool_cleanup_kill(eb->pool, eb, cleanup_edit_baton);
-  return APR_SUCCESS;
-}
-
-
 /* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
    If PATH and PB are NULL, this is the root directory of the edit; in this
    case, make the new dir baton in a subpool of EB->pool.
@@ -1200,7 +1187,7 @@ open_root(void *edit_baton,
                                        &db->old_repos_relpath, NULL, NULL,
                                        &db->changed_rev, &db->changed_date,
                                        &db->changed_author, &db->ambient_depth,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        eb->db, db->local_abspath,
                                        db->pool, pool));
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
@@ -1660,7 +1647,7 @@ delete_entry(const char *path,
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, &old_revision,
                                      &repos_relpath,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -2236,7 +2223,7 @@ open_directory(const char *path,
                                      &db->old_repos_relpath, NULL, NULL,
                                      &db->changed_rev, &db->changed_date,
                                      &db->changed_author, &db->ambient_depth,
-                                     NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, db->local_abspath,
                                      db->pool, pool));
 
@@ -2502,15 +2489,10 @@ close_directory(void *dir_baton,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
-                                    svn_kind_dir,
                                     NULL /* use baseprops */,
                                     base_props,
                                     actual_props,
                                     regular_prop_changes,
-                                    TRUE /* base_merge */,
-                                    FALSE /* dry_run */,
-                                    eb->cancel_func,
-                                    eb->cancel_baton,
                                     db->pool,
                                     scratch_pool),
                 _("Couldn't do property merge"));
@@ -2563,7 +2545,7 @@ close_directory(void *dir_baton,
             /* ### We just check if there is some node in BASE at this path */
             err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
                                            eb->db, child_abspath,
                                            iterpool, iterpool);
 
@@ -3298,7 +3280,7 @@ open_file(const char *path,
                                      &fb->changed_rev, &fb->changed_date,
                                      &fb->changed_author, NULL,
                                      &fb->original_checksum, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
 
@@ -4117,14 +4099,10 @@ close_file(void *file_baton,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
-                                  svn_kind_file,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   current_base_props,
                                   current_actual_props,
                                   regular_prop_changes, /* propchanges */
-                                  TRUE /* base_merge */,
-                                  FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge). */
@@ -4252,14 +4230,10 @@ close_file(void *file_baton,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
-                                  svn_kind_file,
                                   NULL /* server_baseprops (not merging) */,
                                   current_base_props /* pristine_props */,
                                   fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
-                                  TRUE /* base_merge */,
-                                  FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
 
@@ -4476,7 +4450,7 @@ close_edit(void *edit_baton,
              have to worry about removing it. */
           err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
                                          eb->db, eb->target_abspath,
                                          scratch_pool, scratch_pool);
           if (err)
@@ -4633,7 +4607,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->ext_patterns             = preserved_exts;
 
   apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
-                            cleanup_edit_baton_child);
+                            apr_pool_cleanup_null);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -4674,7 +4648,7 @@ make_editor(svn_revnum_t *target_revision,
       err = svn_wc__db_base_get_info(&dir_status, &dir_kind, NULL,
                                      &dir_repos_relpath, NULL, NULL, NULL,
                                      NULL, NULL, &dir_depth, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL,
                                      db, eb->target_abspath,
                                      scratch_pool, scratch_pool);
 
@@ -4730,7 +4704,7 @@ make_editor(svn_revnum_t *target_revision,
                                                    NULL, &dir_repos_relpath,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, &dir_depth, NULL,
-                                                   NULL, NULL, NULL,
+                                                   NULL, NULL, NULL, NULL,
                                                    NULL,
                                                    db, child_abspath,
                                                    iterpool, iterpool));
@@ -5325,7 +5299,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
     /* If new contents were provided, then we do NOT want to record the
        file information. We assume the new contents do not match the
-       "proper" values for TRANSLATED_SIZE and LAST_MOD_TIME.  */
+       "proper" values for RECORDED_SIZE and RECORDED_TIME.  */
     record_fileinfo = (new_contents == NULL);
 
     /* Install the working copy file (with appropriate translation) from
