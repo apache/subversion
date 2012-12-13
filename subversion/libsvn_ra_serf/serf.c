@@ -222,6 +222,12 @@ load_config(svn_ra_serf__session_t *session,
                               SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
                               FALSE));
 
+  /* Load the maximum number of parallel session connections. */
+  svn_config_get_int64(config, &session->max_connections,
+                       SVN_CONFIG_SECTION_GLOBAL,
+                       SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                       SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS);
+
   if (config)
     server_group = svn_config_find_group(config,
                                          session->session_url.hostname,
@@ -270,7 +276,21 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
                                   session->bulk_updates));
+
+      /* Load the maximum number of parallel session connections,
+         overriding global values. */
+      svn_config_get_int64(config, &session->max_connections,
+                           server_group, SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                           session->max_connections);
     }
+
+  /* Don't allow the http-max-connections value to be larger than our
+     compiled-in limit, or to be too small to operate.  Broken
+     functionality and angry administrators are equally undesirable. */
+  if (session->max_connections > SVN_RA_SERF__MAX_CONNECTIONS_LIMIT)
+    session->max_connections = SVN_RA_SERF__MAX_CONNECTIONS_LIMIT;
+  if (session->max_connections < 2)
+    session->max_connections = 2;
 
   /* Parse the connection timeout value, if any. */
   session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);

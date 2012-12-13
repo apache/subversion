@@ -796,6 +796,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-timeout               Timeout for HTTP requests in seconds"
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
+        "###   http-max-connections       Maximum number of parallel server" NL
+        "###                              connections to use for any given"  NL
+        "###                              HTTP operation."                   NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
