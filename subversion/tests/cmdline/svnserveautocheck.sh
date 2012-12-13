@@ -80,8 +80,6 @@ fi
 # for it and "make check-clean".
 SVNSERVE_PID=$ABS_BUILDDIR/subversion/tests/svnserveautocheck.pid
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
-
 SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
