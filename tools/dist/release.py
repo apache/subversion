@@ -34,6 +34,9 @@
 # It'd be kind of nice to use the Subversion python bindings in this script,
 # but people.apache.org doesn't currently have them installed
 
+# Futures (Python 2.5 compatibility)
+from __future__ import with_statement
+
 # Stuff we need
 import os
 import re
@@ -88,6 +91,7 @@ secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+KEYS = 'https://people.apache.org/keys/group/subversion-pmc.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -740,6 +744,15 @@ def check_sigs(args):
         print("   %s" % fp[1])
 
 
+def get_keys(args):
+    'Import the LDAP-based KEYS file to gpg'
+    # We use a tempfile because urlopen() objects don't have a .fileno()
+    with tempfile.SpooledTemporaryFile() as fd:
+	fd.write(urllib2.urlopen(KEYS).read())
+	fd.flush()
+        fd.seek(0)
+	subprocess.check_call(['gpg', '--import'], stdin=fd)
+
 #----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
 
@@ -873,6 +886,11 @@ def main():
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
+
+    # get-keys
+    subparser = subparsers.add_parser('get-keys',
+                    help='''Import committers' public keys to ~/.gpg/''')
+    subparser.set_defaults(func=get_keys)
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
