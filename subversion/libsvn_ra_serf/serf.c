@@ -222,7 +222,7 @@ load_config(svn_ra_serf__session_t *session,
      to skelta updates. */
   SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_BULK_UPDATES,
+                              SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
                               FALSE));
 
   if (config)
@@ -265,7 +265,7 @@ load_config(svn_ra_serf__session_t *session,
       /* Load the group bulk updates flag. */
       SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
                                   server_group,
-                                  SVN_CONFIG_OPTION_BULK_UPDATES,
+                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
                                   FALSE));
     }
 
