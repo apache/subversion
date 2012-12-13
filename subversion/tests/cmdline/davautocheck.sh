@@ -219,7 +219,13 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-BUILDDIR_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+for d in `find "$ABS_BUILDDIR" -type d -name .libs`; do
+  if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
+    BUILDDIR_LIBRARY_PATH="$d"
+  else
+    BUILDDIR_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$d"
+  fi
+done
 
 case "`uname`" in
   Darwin*)
