@@ -738,9 +738,8 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
   *state = new_value;
 }
 
-/* Add the property with name PROPNAME to the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Add the property with name PROPNAME to the set of ACTUAL_PROPS,
+ * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -752,8 +751,6 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 static svn_error_t *
 apply_single_prop_add(svn_wc_notify_state_t *state,
                       svn_boolean_t *conflict_remains,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
                       apr_hash_t *actual_props,
                       const char *propname,
                       const svn_string_t *base_val,
@@ -823,9 +820,8 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
 }
 
 
-/* Delete the property with name PROPNAME from the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Delete the property with name PROPNAME from the set of ACTUAL_PROPS,
+ * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -838,8 +834,6 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
 static svn_error_t *
 apply_single_prop_delete(svn_wc_notify_state_t *state,
                          svn_boolean_t *conflict_remains,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
                          apr_hash_t *actual_props,
                          const char *propname,
                          const svn_string_t *base_val,
@@ -903,8 +897,6 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 static svn_error_t *
 apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                    svn_boolean_t *conflict_remains,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
                                    apr_hash_t *actual_props,
                                    const char *propname,
                                    const svn_string_t *base_val,
@@ -1002,8 +994,6 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
 static svn_error_t *
 apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                  svn_boolean_t *conflict_remains,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
                                  apr_hash_t *actual_props,
                                  const char *propname,
                                  const svn_string_t *base_val,
@@ -1042,9 +1032,8 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Change the property with name PROPNAME in the set of ACTUAL_PROPS,
+ * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_prop_merge_state(). (May be null.).
@@ -1059,8 +1048,6 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
 static svn_error_t *
 apply_single_prop_change(svn_wc_notify_state_t *state,
                          svn_boolean_t *conflict_remains,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
                          apr_hash_t *actual_props,
                          const char *propname,
                          const svn_string_t *base_val,
@@ -1090,7 +1077,6 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
          it instead. */
       svn_error_t *err = apply_single_mergeinfo_prop_change(state,
                                                             conflict_remains,
-                                                            db, local_abspath,
                                                             actual_props,
                                                             propname,
                                                             base_val,
@@ -1117,7 +1103,6 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
          pass any other kind of merge to maybe_generate_propconflict(). */
 
       SVN_ERR(apply_single_generic_prop_change(state, conflict_remains,
-                                               db, local_abspath,
                                                actual_props,
                                                propname, base_val, old_val,
                                                new_val,
@@ -1203,21 +1188,18 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       if (! from_val)  /* adding a new property */
         SVN_ERR(apply_single_prop_add(state, &conflict_remains,
-                                      db, local_abspath,
                                       *new_actual_props,
                                       propname, base_val, to_val,
                                       result_pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(state, &conflict_remains,
-                                         db, local_abspath,
                                          *new_actual_props,
                                          propname, base_val, from_val,
                                          result_pool, iterpool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(state, &conflict_remains,
-                                         db, local_abspath,
                                          *new_actual_props,
                                          propname, base_val, from_val, to_val,
                                          result_pool, iterpool));
