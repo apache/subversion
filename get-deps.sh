@@ -27,8 +27,9 @@ APR=apr-1.4.6
 APR_UTIL=apr-util-1.4.1
 SERF=serf-1.0.1
 ZLIB=zlib-1.2.7
-SQLITE_VERSION=3.7.12
-SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
+SQLITE_VERSION=3.7.12.0
+3071200
+SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
 
 HTTPD=httpd-2.2.22
 APR_ICONV=apr-iconv-1.2.1
