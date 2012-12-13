@@ -220,12 +220,43 @@ update_working_props(svn_wc_notify_state_t *prop_state,
 }
 
 
-/* ### forward declaration */
+/* Check whether the node at LOCAL_RELPATH in the working copy at WCROOT
+ * is shadowed by some node at a higher op depth than EXPECTED_OP_DEPTH. */
 static svn_error_t *
 check_shadowed_node(svn_boolean_t *is_shadowed,
                     int expected_op_depth,
                     const char *local_relpath,
-                    svn_wc__db_wcroot_t *wcroot);
+                    svn_wc__db_wcroot_t *wcroot)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      int op_depth = svn_sqlite__column_int(stmt, 0);
+
+      if (op_depth > expected_op_depth)
+        {
+          *is_shadowed = TRUE;
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *is_shadowed = FALSE;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 tc_editor_alter_directory(void *baton,
@@ -322,43 +353,6 @@ tc_editor_alter_directory(void *baton,
   return SVN_NO_ERROR;
 }
 
-
-/* Check whether the node at LOCAL_RELPATH in the working copy at WCROOT
- * is shadowed by some node at a higher op depth than EXPECTED_OP_DEPTH. */
-static svn_error_t *
-check_shadowed_node(svn_boolean_t *is_shadowed,
-                    int expected_op_depth,
-                    const char *local_relpath,
-                    svn_wc__db_wcroot_t *wcroot)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  while (have_row)
-    {
-      int op_depth = svn_sqlite__column_int(stmt, 0);
-
-      if (op_depth > expected_op_depth)
-        {
-          *is_shadowed = TRUE;
-          SVN_ERR(svn_sqlite__reset(stmt));
-
-          return SVN_NO_ERROR;
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  *is_shadowed = FALSE;
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  return SVN_NO_ERROR;
-}
 
 /* Merge the difference between OLD_VERSION and NEW_VERSION into
  * the working file at LOCAL_RELPATH.
