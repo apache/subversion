@@ -57,14 +57,6 @@ Candidate changes:
      -0: rhuijben (I'm not sure if this should be in a patch release and the
                    stacktrace where this refers to is maintainer only)
 
- * r1421103
-   Fix segfault with kwallet support.
-   Justification:
-     Users may get segfaults when using the kwallet support since the pool
-     cleanup is setup wrong.
-   Votes:
-     +1: breser, rhuijben
-
  * r1421380
    Issue #4272: s/assertion/error/ in the DAV proxy code.
    Justification:
@@ -77,4 +69,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1421103
+   Fix segfault with kwallet support.
+   Justification:
+     Users may get segfaults when using the kwallet support since the pool
+     cleanup is setup wrong.
+   Votes:
+     +1: breser, rhuijben, danielsh
 
