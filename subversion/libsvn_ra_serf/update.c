@@ -3199,7 +3199,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
                             "xmlns:S", SVN_XML_NAMESPACE,
                             NULL);
       /* Subversion 1.8+ servers can be told to send properties for newly
-       added items inline even when doing a skelta response. */
+         added items inline even when doing a skelta response. */
       make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
     }
 
