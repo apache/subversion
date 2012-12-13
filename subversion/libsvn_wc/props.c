@@ -181,19 +181,19 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
 
 
 svn_error_t *
-svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const svn_wc_conflict_version_t *left_version,
-                            const svn_wc_conflict_version_t *right_version,
-                            apr_hash_t *baseprops,
-                            const apr_array_header_t *propchanges,
-                            svn_boolean_t dry_run,
-                            svn_wc_conflict_resolver_func2_t conflict_func,
-                            void *conflict_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *scratch_pool)
+svn_wc_merge_props3(svn_wc_notify_state_t *state,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func2_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
 {
   int i;
   svn_wc__db_status_t status;
@@ -206,6 +206,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
+  svn_wc__db_t *db = wc_ctx->db;
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
@@ -354,35 +355,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                                              scratch_pool));
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_merge_props3(svn_wc_notify_state_t *state,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    const svn_wc_conflict_version_t *left_version,
-                    const svn_wc_conflict_version_t *right_version,
-                    apr_hash_t *baseprops,
-                    const apr_array_header_t *propchanges,
-                    svn_boolean_t dry_run,
-                    svn_wc_conflict_resolver_func2_t conflict_func,
-                    void *conflict_baton,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__perform_props_merge(
-                           state,
-                           wc_ctx->db,
-                           local_abspath,
-                           left_version, right_version,
-                           baseprops,
-                           propchanges,
-                           dry_run,
-                           conflict_func, conflict_baton,
-                           cancel_func, cancel_baton,
-                           scratch_pool));
 }
 
 

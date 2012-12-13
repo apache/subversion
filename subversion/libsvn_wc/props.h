@@ -122,23 +122,6 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-
-/* Just like svn_wc_merge_props3(). */
-svn_error_t *
-svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const svn_wc_conflict_version_t *left_version,
-                            const svn_wc_conflict_version_t *right_version,
-                            apr_hash_t *baseprops,
-                            const apr_array_header_t *propchanges,
-                            svn_boolean_t dry_run,
-                            svn_wc_conflict_resolver_func2_t conflict_func,
-                            void *conflict_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

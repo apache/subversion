@@ -2471,6 +2471,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 {
   const char *local_abspath;
   svn_error_t *err;
+  svn_wc_context_t *wc_ctx;
   struct conflict_func_1to2_baton conflict_wrapper;
 
   if (base_merge && !dry_run)
@@ -2483,19 +2484,23 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
   conflict_wrapper.inner_func = conflict_func;
   conflict_wrapper.inner_baton = conflict_baton;
 
-  err = svn_wc__perform_props_merge(state,
-                                    svn_wc__adm_get_db(adm_access),
-                                    local_abspath,
-                                    NULL /* left_version */,
-                                    NULL /* right_version */,
-                                    baseprops,
-                                    propchanges,
-                                    dry_run,
-                                    conflict_func ? conflict_func_1to2_wrapper
-                                                  : NULL,
-                                    &conflict_wrapper,
-                                    NULL, NULL,
-                                    scratch_pool);
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         scratch_pool));
+
+  err = svn_wc_merge_props3(state,
+                            wc_ctx,
+                            local_abspath,
+                            NULL /* left_version */,
+                            NULL /* right_version */,
+                            baseprops,
+                            propchanges,
+                            dry_run,
+                            conflict_func ? conflict_func_1to2_wrapper
+                                          : NULL,
+                            &conflict_wrapper,
+                            NULL, NULL,
+                            scratch_pool);
 
   if (err)
     switch(err->apr_err)
@@ -2505,7 +2510,9 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
           err->apr_err = SVN_ERR_UNVERSIONED_RESOURCE;
           break;
       }
-  return svn_error_trace(err);
+  return svn_error_trace(
+            svn_error_compose_create(err,
+                                     svn_wc_context_destroy(wc_ctx)));
 }
 
 svn_error_t *
