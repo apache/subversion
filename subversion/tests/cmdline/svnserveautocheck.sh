@@ -21,16 +21,16 @@
 #
 # -*- mode: shell-script; -*-
 
-# This script simplifies the preparation of the environment for a Subversion client
-# communicating with an svnserve server.
+# This script simplifies the preparation of the environment for a Subversion
+# client communicating with an svnserve server.
 #
-# The script runs svnserve, runs "make check", and kills the svnserve afterwards.
-# It makes sure to kill the svnserve even if the test run dies.
+# The script runs svnserve, runs "make check", and kills the svnserve
+# afterwards.  It makes sure to kill the svnserve even if the test run dies.
 #
 # This script should be run from the top level of the Subversion
-# distribution; it's easiest to just run it as "make
-# svnserveautocheck".  Like "make check", you can specify further options
-# like "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
+# distribution; it's easiest to just run it as "make svnserveautocheck".
+# Like "make check", you can specify further options like
+# "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
 
 PYTHON=${PYTHON:-python}
 
