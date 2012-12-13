@@ -1323,20 +1323,3 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   
   return SVN_NO_ERROR;
 }
-
-
-/* Constructor for the result-structure returned by conflict callbacks. */
-svn_wc_conflict_result_t *
-svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
-                              const char *merged_file,
-                              apr_pool_t *pool)
-{
-  svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->choice = choice;
-  result->merged_file = merged_file;
-  result->save_merged = FALSE;
-
-  /* If we add more fields to svn_wc_conflict_result_t, add them here. */
-
-  return result;
-}
