@@ -63,7 +63,7 @@ Candidate changes:
      Users may get segfaults when using the kwallet support since the pool
      cleanup is setup wrong.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
 Veto-blocked changes:
 =====================
