@@ -182,7 +182,6 @@ CREATE TABLE ACTUAL_NODE (
   );
 
 CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 
 /* ------------------------------------------------------------------------- */
@@ -826,6 +825,7 @@ WHERE wc_id = ?1 and local_relpath = ?2
    inherited properties */
 -- STMT_UPGRADE_TO_31
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 
 PRAGMA user_version = 31;
 
@@ -850,6 +850,13 @@ WHERE (l.local_relpath = '' AND l.repos_path != '')
                                                  length(l.parent_relpath) + 1),
                                           '/'),
                                  '/'))
+
+/* ------------------------------------------------------------------------- */
+/* Format 32 ....  */
+-- STMT_UPGRADE_TO_32
+
+/* Drop old index. ### Remove this part from the upgrade to 31 once bumped */
+DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 
 /* ------------------------------------------------------------------------- */
 
@@ -909,7 +916,6 @@ CREATE TABLE ACTUAL_NODE (
   );
 
 CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 INSERT INTO ACTUAL_NODE SELECT
   wc_id, local_relpath, parent_relpath, properties, conflict_old,
