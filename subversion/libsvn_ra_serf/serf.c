@@ -148,7 +148,6 @@ load_config(svn_ra_serf__session_t *session,
   const char *timeout_str = NULL;
   const char *exceptions;
   apr_port_t proxy_port;
-  svn_boolean_t is_exception = FALSE;
 
   if (config_hash)
     {
@@ -191,23 +190,21 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
     {
-      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
-      is_exception = svn_cstring_match_glob_list(session->session_url.hostname,
-                                                 l);
-    }
-  if (! is_exception)
-    {
-      /* Load the global proxy server settings, if set. */
-      svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-      svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-      svn_config_get(config, &session->proxy_username,
-                     SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-      svn_config_get(config, &session->proxy_password,
-                     SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+      if (! svn_cstring_match_glob_list(session->session_url.hostname,
+                                        svn_cstring_split(exceptions, ",",
+                                                          TRUE, pool)))
+        {
+          svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                         SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+          svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                         SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+          svn_config_get(config, &session->proxy_username,
+                         SVN_CONFIG_SECTION_GLOBAL,
+                         SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+          svn_config_get(config, &session->proxy_password,
+                         SVN_CONFIG_SECTION_GLOBAL,
+                         SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+        }
     }
 
   /* Load the global ssl settings, if set. */
@@ -244,29 +241,35 @@ load_config(svn_ra_serf__session_t *session,
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
-      /* Load the group proxy server settings, overriding global settings. */
+      /* Load the group proxy server settings, overriding global
+         settings.  We intentionally ignore 'http-proxy-exceptions'
+         here because, well, if this site was an exception, why is
+         there a per-server proxy configuration for it?  */
       svn_config_get(config, &proxy_host, server_group,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, proxy_host);
       svn_config_get(config, &port_str, server_group,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, port_str);
       svn_config_get(config, &session->proxy_username, server_group,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME,
+                     session->proxy_username);
       svn_config_get(config, &session->proxy_password, server_group,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD,
+                     session->proxy_password);
 
       /* Load the group ssl settings. */
       SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
                                   server_group,
                                   SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
-                                  TRUE));
+                                  session->trust_default_ca));
       svn_config_get(config, &session->ssl_authorities, server_group,
-                     SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
+                     SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
+                     session->ssl_authorities);
 
       /* Load the group bulk updates flag. */
       SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
-                                  FALSE));
+                                  session->bulk_updates));
     }
 
   /* Parse the connection timeout value, if any. */
@@ -307,7 +310,9 @@ load_config(svn_ra_serf__session_t *session,
       proxy_port = (apr_port_t) port;
     }
   else
-    proxy_port = 80;
+    {
+      proxy_port = 80;
+    }
 
   if (proxy_host)
     {
@@ -327,7 +332,9 @@ load_config(svn_ra_serf__session_t *session,
       serf_config_proxy(session->context, proxy_addr);
     }
   else
-    session->using_proxy = FALSE;
+    {
+      session->using_proxy = FALSE;
+    }
 
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
