@@ -115,7 +115,11 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target; do
-        get_$target || usage
+        if [ "$target" -ne "deps" ]; then
+          get_$target || usage
+        else
+          usage
+        fi
       done
     else
       get_apr
