@@ -1169,7 +1169,8 @@ bump_to_23(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_HAS_WORKING_NODES));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPGRADE_23_HAS_WORKING_NODES));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
