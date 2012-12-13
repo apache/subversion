@@ -148,9 +148,8 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.12"
-SQLITE_RECOMMENDED_VER_URL="3071200"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER_URL}.zip"
+SQLITE_RECOMMENDED_VER="3.7.15"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
