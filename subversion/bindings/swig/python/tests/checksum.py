@@ -19,26 +19,30 @@
 #
 #
 import unittest, setup_path
-import mergeinfo, core, client, delta, checksum, pool, ra, wc, repository, \
-       auth, trac.versioncontrol.tests
+import svn.core
 
-# Run all tests
+class ChecksumTestCases(unittest.TestCase):
+    def test_checksum(self):
+        # Checking primarily the return type for the svn_checksum_create
+        # function
+        kind, expected_length = svn.core.svn_checksum_md5, 128/8
+        val = svn.core.svn_checksum_create(kind)
+        check_val = svn.core.svn_checksum_to_cstring_display(val)
+
+        self.assertTrue(isinstance(check_val, str),
+                              "Type of digest not string")
+        self.assertEqual(len(check_val), 2*expected_length,
+                         "Length of digest does not match kind")
+        self.assertEqual(int(check_val), 0,
+                         "Value of initialized digest is not 0")
 
 def suite():
-  """Run all tests"""
-  s = unittest.TestSuite()
-  s.addTest(core.suite())
-  s.addTest(checksum.suite())
-  s.addTest(mergeinfo.suite())
-  s.addTest(client.suite())
-  s.addTest(delta.suite())
-  s.addTest(pool.suite())
-  s.addTest(ra.suite())
-  s.addTest(wc.suite())
-  s.addTest(repository.suite())
-  s.addTest(auth.suite())
-  s.addTest(trac.versioncontrol.tests.suite())
-  return s
+    return unittest.defaultTestLoader.loadTestsFromTestCase(ChecksumTestCases)
 
 if __name__ == '__main__':
-  unittest.main(defaultTest='suite')
+    runner = unittest.TextTestRunner()
+    runner.run(suite())
+    
+
+
+

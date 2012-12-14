@@ -7110,6 +7110,7 @@ choose_delta_base(representation_t **rep,
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t maybe_shared_rep = FALSE;
 
   /* If we have no predecessors, then use the empty stream as a
      base. */
@@ -7149,12 +7150,83 @@ choose_delta_base(representation_t **rep,
      walk back two predecessors.) */
   base = noderev;
   while ((count++) < noderev->predecessor_count)
-    SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
-                                         base->predecessor_id, pool));
+    {
+      SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
+                                           base->predecessor_id, pool));
+
+      /* If there is a shared rep along the way, we need to limit the
+       * length of the deltification chain.
+       * 
+       * Please note that copied nodes - such as branch directories - will
+       * look the same (false positive) while reps shared within the same
+       * revision will not be caught (false negative).
+       */
+      if (props)
+        {
+          if (   base->prop_rep
+              && svn_fs_fs__id_rev(base->id) > base->prop_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+      else
+        {
+          if (   base->data_rep
+              && svn_fs_fs__id_rev(base->id) > base->data_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+    }
 
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
+  /* if we encountered a shared rep, it's parent chain may be different
+   * from the node-rev parent chain. */
+  if (*rep && maybe_shared_rep)
+    {
+      /* Check whether the length of the deltification chain is acceptable.
+       * Otherwise, shared reps may form a non-skipping delta chain in
+       * extreme cases. */
+      apr_pool_t *sub_pool = svn_pool_create(pool);
+      representation_t base_rep = **rep;
+      
+      /* Some reasonable limit, depending on how acceptable longer linear
+       * chains are in this repo.  Also, allow for some minimal chain. */
+      int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
+
+      /* re-use open files between iterations */
+      svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+      apr_file_t *file_hint = NULL;
+
+      /* follow the delta chain towards the end but for at most
+       * MAX_CHAIN_LENGTH steps. */
+      for (; max_chain_length; --max_chain_length)
+        {
+          struct rep_state *rep_state;
+          struct rep_args *rep_args;
+
+          SVN_ERR(create_rep_state_body(&rep_state,
+                                        &rep_args,
+                                        &file_hint,
+                                        &rev_hint,
+                                        &base_rep,
+                                        fs,
+                                        sub_pool));
+          if (!rep_args->is_delta  || !rep_args->base_revision)
+            break;
+
+          base_rep.revision = rep_args->base_revision;
+          base_rep.offset = rep_args->base_offset;
+          base_rep.size = rep_args->base_length;
+          base_rep.txn_id = NULL;
+        }
+
+      /* start new delta chain if the current one has grown too long */
+      if (max_chain_length == 0)
+        *rep = NULL;
+
+      apr_pool_destroy(sub_pool);
+    }
+
+  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 

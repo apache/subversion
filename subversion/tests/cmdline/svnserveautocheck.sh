@@ -21,16 +21,16 @@
 #
 # -*- mode: shell-script; -*-
 
-# This script simplifies the preparation of the environment for a Subversion client
-# communicating with an svnserve server.
+# This script simplifies the preparation of the environment for a Subversion
+# client communicating with an svnserve server.
 #
-# The script runs svnserve, runs "make check", and kills the svnserve afterwards.
-# It makes sure to kill the svnserve even if the test run dies.
+# The script runs svnserve, runs "make check", and kills the svnserve
+# afterwards.  It makes sure to kill the svnserve even if the test run dies.
 #
 # This script should be run from the top level of the Subversion
-# distribution; it's easiest to just run it as "make
-# svnserveautocheck".  Like "make check", you can specify further options
-# like "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
+# distribution; it's easiest to just run it as "make svnserveautocheck".
+# Like "make check", you can specify further options like
+# "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
 
 PYTHON=${PYTHON:-python}
 
@@ -80,8 +80,6 @@ fi
 # for it and "make check-clean".
 SVNSERVE_PID=$ABS_BUILDDIR/subversion/tests/svnserveautocheck.pid
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
-
 SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
@@ -93,6 +91,12 @@ random_port() {
     $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
   fi
 }
+
+if type time > /dev/null; then
+  TIME_CMD=time
+else
+  TIME_CMD=""
+fi
 
 SVNSERVE_PORT=$(random_port)
 while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
@@ -115,13 +119,13 @@ fi
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# = 0 ]; then
-  time make check "BASE_URL=$BASE_URL"
+  $TIME_CMD make check "BASE_URL=$BASE_URL"
   r=$?
 else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  $TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   cd - > /dev/null
 fi

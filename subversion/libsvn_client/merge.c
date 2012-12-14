@@ -8511,6 +8511,8 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   svn_merge_range_t *youngest_gap_rev;
   svn_rangelist_t *inoperative_ranges;
   apr_pool_t *iterpool;
+  const char *longest_common_subtree_ancestor = NULL;
+  svn_error_t *err;
 
   assert(session_url_is(ra_session, source->loc2->url, scratch_pool));
 
@@ -8548,6 +8550,19 @@ remove_noop_subtree_ranges(const merge_source_t *source,
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
 
       svn_pool_clear(iterpool);
+
+      /* Issue #4269: Keep track of the longest common ancestor of all the
+         subtrees which require merges.  This may be a child of
+         TARGET->ABSPATH, which will allow us to narrow the log request
+         below. */
+      if (child->remaining_ranges && child->remaining_ranges->nelts)
+        {
+          if (longest_common_subtree_ancestor)
+            longest_common_subtree_ancestor = svn_dirent_get_longest_ancestor(
+              longest_common_subtree_ancestor, child->abspath, scratch_pool);
+          else
+            longest_common_subtree_ancestor = child->abspath;
+        }
 
       /* CHILD->REMAINING_RANGES will be NULL if child is absent. */
       if (child->remaining_ranges && child->remaining_ranges->nelts)
@@ -8589,24 +8604,53 @@ remove_noop_subtree_ranges(const merge_source_t *source,
                                                   sizeof(svn_revnum_t *));
   log_gap_baton.pool = svn_pool_create(scratch_pool);
 
+  /* Find the longest common ancestor of all subtrees relative to
+     RA_SESSION's URL. */
+  if (longest_common_subtree_ancestor)
+    longest_common_subtree_ancestor =
+      svn_dirent_skip_ancestor(target->abspath,
+                               longest_common_subtree_ancestor);
+  else
+    longest_common_subtree_ancestor = "";
+
   /* Invoke the svn_log_entry_receiver_t receiver log_noop_revs() from
      oldest to youngest.  The receiver is optimized to add ranges to
      log_gap_baton.merged_ranges and log_gap_baton.operative_ranges, but
      requires that the revs arrive oldest to youngest -- see log_noop_revs()
      and rangelist_merge_revision(). */
-  SVN_ERR(get_log(ra_session, "", oldest_gap_rev->start + 1,
-                  youngest_gap_rev->end, TRUE,
-                  log_noop_revs, &log_gap_baton, scratch_pool));
+  err = get_log(ra_session, longest_common_subtree_ancestor,
+                oldest_gap_rev->start + 1, youngest_gap_rev->end, TRUE,
+                log_noop_revs, &log_gap_baton, scratch_pool);
 
-  inoperative_ranges = svn_rangelist__initialize(oldest_gap_rev->start,
-                                                 youngest_gap_rev->end,
-                                                 TRUE, scratch_pool);
-  SVN_ERR(svn_rangelist_remove(&(inoperative_ranges),
-                               log_gap_baton.operative_ranges,
-                               inoperative_ranges, FALSE, scratch_pool));
+  /* It's possible that the only subtrees with mergeinfo in TARGET don't have
+     any corresponding subtree in SOURCE between SOURCE->REV1 < SOURCE->REV2.
+     So it's also possible that we may ask for the logs of non-existent paths.
+     If we do, then assume that no subtree requires any ranges that are not
+     already required by the TARGET. */
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND
+          && longest_common_subtree_ancestor[0] != '\0')
+        return svn_error_trace(err);
 
-  SVN_ERR(svn_rangelist_merge2(log_gap_baton.merged_ranges, inoperative_ranges,
-                               scratch_pool, scratch_pool));
+      /* Asked about a non-existent subtree in SOURCE. */
+      svn_error_clear(err);
+      log_gap_baton.merged_ranges =
+        svn_rangelist__initialize(oldest_gap_rev->start,
+                                  youngest_gap_rev->end,
+                                  TRUE, scratch_pool);
+    }
+  else
+    {
+      inoperative_ranges = svn_rangelist__initialize(oldest_gap_rev->start,
+                                                     youngest_gap_rev->end,
+                                                     TRUE, scratch_pool);
+      SVN_ERR(svn_rangelist_remove(&(inoperative_ranges),
+                                   log_gap_baton.operative_ranges,
+                                   inoperative_ranges, FALSE, scratch_pool));
+      SVN_ERR(svn_rangelist_merge2(log_gap_baton.merged_ranges, inoperative_ranges,
+                                   scratch_pool, scratch_pool));
+    }
 
   for (i = 1; i < children_with_mergeinfo->nelts; i++)
     {

@@ -274,7 +274,7 @@ add_file(const char *local_abspath,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_hash_t* properties = NULL;
+  apr_hash_t *properties;
   apr_hash_index_t *hi;
   const char *mimetype;
   svn_node_kind_t kind;
@@ -290,6 +290,9 @@ add_file(const char *local_abspath,
   if (is_special)
     {
       mimetype = NULL;
+      properties = apr_hash_make(pool);
+      apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
+                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
     }
   else
     {
@@ -310,54 +313,42 @@ add_file(const char *local_abspath,
         }
 
       /* This may fail on write-only files:
-         we open them to estimate file type.
-         That's why we postpone the add until after this step. */
+         we open them to estimate file type. */
       SVN_ERR(svn_client__get_paths_auto_props(&properties, &mimetype,
                                                local_abspath, magic_cookie,
                                                file_autoprops, ctx, pool,
                                                pool));
     }
 
-  if (is_special)
-    /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_SPECIAL,
-                             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
+  /* loop through the hashtable and add the properties */
+  for (hi = apr_hash_first(pool, properties);
+       hi != NULL; hi = apr_hash_next(hi))
+    {
+      const char *pname = svn__apr_hash_index_key(hi);
+      const svn_string_t *pval = svn__apr_hash_index_val(hi);
+      svn_error_t *err;
+
+      /* It's probably best to pass 0 for force, so that if
+         the autoprops say to set some weird combination,
+         we just error and let the user sort it out. */
+      err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
                              svn_depth_empty, FALSE, NULL,
                              NULL, NULL /* cancellation */,
                              NULL, NULL /* notification */,
-                             pool));
-  else if (properties)
-    {
-      /* loop through the hashtable and add the properties */
-      for (hi = apr_hash_first(pool, properties);
-           hi != NULL; hi = apr_hash_next(hi))
+                             pool);
+      if (err)
         {
-          const char *pname = svn__apr_hash_index_key(hi);
-          const svn_string_t *pval = svn__apr_hash_index_val(hi);
-          svn_error_t *err;
-
-          /* It's probably best to pass 0 for force, so that if
-             the autoprops say to set some weird combination,
-             we just error and let the user sort it out. */
-          err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
-                                 svn_depth_empty, FALSE, NULL,
-                                 NULL, NULL /* cancellation */,
-                                 NULL, NULL /* notification */,
-                                 pool);
-          if (err)
-            {
-              /* Don't leave the job half-done. If we fail to set a property,
-               * (try to) un-add the file. */
-              return svn_error_compose_create(
-                              err,
-                              svn_wc_revert4(ctx->wc_ctx,
-                                             local_abspath,
-                                             svn_depth_empty,
-                                             FALSE /* use_commit_times */,
-                                             NULL /* changelists */,
-                                             NULL, NULL, NULL, NULL,
-                                             pool));
-            }
+          /* Don't leave the job half-done. If we fail to set a property,
+           * (try to) un-add the file. */
+          return svn_error_compose_create(
+                   err,
+                   svn_wc_revert4(ctx->wc_ctx,
+                                  local_abspath,
+                                  svn_depth_empty,
+                                  FALSE /* use_commit_times */,
+                                  NULL /* changelists */,
+                                  NULL, NULL, NULL, NULL,
+                                  pool));
         }
     }
 

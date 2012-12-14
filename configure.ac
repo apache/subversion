@@ -99,18 +99,21 @@ SVN_LIB_APR($APR_VER_REGEXES)
 if test `expr $apr_version : 2` -ne 0; then
   dnl Bump the library so-version to 2 if using APR-2
   dnl (Debian uses so-version 1 for APR-1-with-largefile)
-  SVN_LT_SOVERSION="-version-info 2"
+  svn_lib_ver=2
   dnl APR-2 provides APRUTIL
   apu_config=$apr_config
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
 else
-  SVN_LT_SOVERSION="-version-info 0"
+  svn_lib_ver=0
   APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
 fi
+SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
+AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
+                   [Subversion library major verson])
 
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
@@ -145,9 +148,8 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.12"
-SQLITE_RECOMMENDED_VER_URL="3071200"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER_URL}.zip"
+SQLITE_RECOMMENDED_VER="3.7.15"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -1382,12 +1384,12 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
+  SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
 
 # Clang also doesn't (yet) support the '-ansi' flag
 if test "$CC" = "clang"; then
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+  SVN_STRIP_FLAG(CFLAGS, [-ansi ])
 fi
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

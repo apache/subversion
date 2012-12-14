@@ -133,10 +133,14 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
   lib->compiled_version = APR_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apr_version_string());
 
+/* Don't list APR-Util if it isn't linked in, which it may not be if
+ * we're using APR 2.x+ which combined APR-Util into APR. */
+#ifdef APU_VERSION_STRING
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "APR-Util";
   lib->compiled_version = APU_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+#endif
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "SQLite";

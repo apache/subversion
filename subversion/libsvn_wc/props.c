@@ -181,33 +181,32 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
 
 
 svn_error_t *
-svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const svn_wc_conflict_version_t *left_version,
-                            const svn_wc_conflict_version_t *right_version,
-                            apr_hash_t *baseprops,
-                            const apr_array_header_t *propchanges,
-                            svn_boolean_t base_merge,
-                            svn_boolean_t dry_run,
-                            svn_wc_conflict_resolver_func2_t conflict_func,
-                            void *conflict_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *scratch_pool)
+svn_wc_merge_props3(svn_wc_notify_state_t *state,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func2_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
 {
   int i;
   svn_wc__db_status_t status;
   svn_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props;
-  apr_hash_t *new_pristine_props;
   apr_hash_t *new_actual_props;
   svn_boolean_t had_props, props_mod;
   svn_boolean_t have_base;
   svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
+  svn_wc__db_t *db = wc_ctx->db;
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
@@ -294,8 +293,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&conflict_skel, state,
-                              base_merge ? &new_pristine_props : NULL,
-                              &new_actual_props,
+                              NULL, &new_actual_props,
                               db, local_abspath,
                               baseprops /* server_baseprops */,
                               pristine_props,
@@ -307,6 +305,18 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
     {
       return SVN_NO_ERROR;
     }
+
+  {
+    const char *dir_abspath;
+
+    if (kind == svn_kind_dir)
+      dir_abspath = local_abspath;
+    else
+      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+    /* Verify that we're holding this directory's write lock.  */
+    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
+  }
 
   if (conflict_skel)
     {
@@ -325,44 +335,18 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  {
-    const char *dir_abspath;
+  /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+  SVN_ERR_ASSERT(new_actual_props != NULL);
 
-    if (kind == svn_kind_dir)
-      dir_abspath = local_abspath;
-    else
-      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
+                                  svn_wc__has_magic_property(propchanges),
+                                  conflict_skel,
+                                  work_items,
+                                  scratch_pool));
 
-    /* Verify that we're holding this directory's write lock.  */
-    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
-
-    /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
-    SVN_ERR_ASSERT(new_pristine_props != NULL && new_actual_props != NULL);
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-    if (status == svn_wc__db_status_added)
-      SVN_ERR(svn_wc__db_temp_working_set_props(
-                db, local_abspath, new_pristine_props, scratch_pool));
-    else
-      SVN_ERR(svn_wc__db_temp_base_set_props(
-                db, local_abspath, new_pristine_props, scratch_pool));
-#else
-    if (base_merge)
-      return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              U_("base_merge=TRUE is no longer supported"));
-#endif
-
-    SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
-                                    svn_wc__has_magic_property(propchanges),
-                                    conflict_skel,
-                                    work_items,
-                                    scratch_pool));
-
-    if (work_items != NULL)
-      SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
-                             scratch_pool));
-  }
+  if (work_items != NULL)
+    SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                           scratch_pool));
 
   if (conflict_skel && conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
@@ -371,36 +355,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                                              scratch_pool));
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_merge_props3(svn_wc_notify_state_t *state,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    const svn_wc_conflict_version_t *left_version,
-                    const svn_wc_conflict_version_t *right_version,
-                    apr_hash_t *baseprops,
-                    const apr_array_header_t *propchanges,
-                    svn_boolean_t dry_run,
-                    svn_wc_conflict_resolver_func2_t conflict_func,
-                    void *conflict_baton,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__perform_props_merge(
-                           state,
-                           wc_ctx->db,
-                           local_abspath,
-                           left_version, right_version,
-                           baseprops,
-                           propchanges,
-                           FALSE /* base_merge */,
-                           dry_run,
-                           conflict_func, conflict_baton,
-                           cancel_func, cancel_baton,
-                           scratch_pool));
 }
 
 
@@ -784,33 +738,26 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
   *state = new_value;
 }
 
-/* Add the property with name PROPNAME to the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Apply the addition of a property with name PROPNAME and value NEW_VAL to
+ * the existing property with value WORKING_VAL, that originally had value
+ * PRISTINE_VAL.
  *
- * *STATE is an input and output parameter, its value is to be
- * set using set_merge_prop_state().
- *
- * BASE_VAL contains the working copy base property value
- *
- * NEW_VAL contains the value to be set.
+ * Sets *RESULT_VAL to the resulting value.
+ * Sets *CONFLICT_REMAINS to TRUE if the change caused a conflict.
+ * Sets *DID_MERGE to true if the result is caused by a merge
  */
 static svn_error_t *
-apply_single_prop_add(svn_wc_notify_state_t *state,
+apply_single_prop_add(const svn_string_t **result_val,
                       svn_boolean_t *conflict_remains,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_hash_t *actual_props,
+                      svn_boolean_t *did_merge,
                       const char *propname,
-                      const svn_string_t *base_val,
+                      const svn_string_t *pristine_val,
                       const svn_string_t *new_val,
+                      const svn_string_t *working_val,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 
 {
-  svn_string_t *working_val
-    = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
-
   *conflict_remains = FALSE;
 
   if (working_val)
@@ -819,7 +766,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
 
       if (svn_string_compare(working_val, new_val))
         /* The value we want is already there, so it's a merge. */
-        set_prop_merge_state(state, svn_wc_notify_state_merged);
+        *did_merge = TRUE;
 
       else
         {
@@ -849,9 +796,8 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
               else
                 {
                   merged_prop = TRUE;
-                  apr_hash_set(actual_props, propname,
-                               APR_HASH_KEY_STRING, merged_val);
-                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+                  *result_val = merged_val;
+                  *did_merge = TRUE;
                 }
             }
 
@@ -859,43 +805,34 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
             *conflict_remains = TRUE;
         }
     }
-  else if (base_val)
+  else if (pristine_val)
     *conflict_remains = TRUE;
   else  /* property doesn't yet exist in actual_props...  */
     /* so just set it */
-    apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING, new_val);
+    *result_val = new_val;
 
   return SVN_NO_ERROR;
 }
 
 
-/* Delete the property with name PROPNAME from the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Apply the deletion of a property with name PROPNAME to the existing
+ * property with value WORKING_VAL, that originally had value PRISTINE_VAL.
  *
- * *STATE is an input and output parameter, its value is to be
- * set using set_merge_prop_state().
- *
- * BASE_VAL contains the working copy base property value
- *
- * OLD_VAL contains the value the of the property the server
- * thinks it's deleting.
+ * Sets *RESULT_VAL to the resulting value.
+ * Sets *CONFLICT_REMAINS to TRUE if the change caused a conflict.
+ * Sets *DID_MERGE to true if the result is caused by a merge
  */
 static svn_error_t *
-apply_single_prop_delete(svn_wc_notify_state_t *state,
+apply_single_prop_delete(const svn_string_t **result_val,
                          svn_boolean_t *conflict_remains,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_hash_t *actual_props,
+                         svn_boolean_t *did_merge,
                          const char *propname,
                          const svn_string_t *base_val,
                          const svn_string_t *old_val,
+                         const svn_string_t *working_val,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_string_t *working_val
-    = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
-
   *conflict_remains = FALSE;
 
   if (! base_val)
@@ -908,11 +845,11 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
         }
       else
         {
-          apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING, NULL);
+          *result_val = NULL;
           if (old_val)
             /* This is a merge, merging a delete into non-existent
                property or a local addition of same prop value. */
-            set_prop_merge_state(state, svn_wc_notify_state_merged);
+            *did_merge = TRUE;
         }
     }
 
@@ -922,14 +859,14 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
          {
            if (svn_string_compare(working_val, old_val))
              /* they have the same values, so it's an update */
-             apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING, NULL);
+             *result_val = NULL;
            else
              *conflict_remains = TRUE;
          }
        else
          /* The property is locally deleted from the same value, so it's
             a merge */
-         set_prop_merge_state(state, svn_wc_notify_state_merged);
+         *did_merge = TRUE;
     }
 
   else
@@ -947,21 +884,17 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
    were not followed for this property, but with no attempt to rationalize
    the remainder. */
 static svn_error_t *
-apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
+apply_single_mergeinfo_prop_change(const svn_string_t **result_val,
                                    svn_boolean_t *conflict_remains,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_hash_t *actual_props,
+                                   svn_boolean_t *did_merge,
                                    const char *propname,
                                    const svn_string_t *base_val,
                                    const svn_string_t *old_val,
                                    const svn_string_t *new_val,
+                                   const svn_string_t *working_val,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
-  svn_string_t *working_val
-    = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
-
   if ((working_val && ! base_val)
       || (! working_val && base_val)
       || (working_val && base_val
@@ -972,24 +905,22 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
         {
           if (svn_string_compare(working_val, new_val))
             /* The new value equals the changed value: a no-op merge */
-            set_prop_merge_state(state, svn_wc_notify_state_merged);
+            *did_merge = TRUE;
           else
             {
-                  /* We have base, WC, and new values.  Discover
-                     deltas between base <-> WC, and base <->
-                     incoming.  Combine those deltas, and apply
-                     them to base to get the new value. */
-                  SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                         working_val,
-                                                         new_val,
-                                                         result_pool,
-                                                         scratch_pool));
-                  apr_hash_set(actual_props, propname,
-                               APR_HASH_KEY_STRING, new_val);
-                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+              /* We have base, WC, and new values.  Discover
+                 deltas between base <-> WC, and base <->
+                 incoming.  Combine those deltas, and apply
+                 them to base to get the new value. */
+              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                     working_val,
+                                                     new_val,
+                                                     result_pool,
+                                                     scratch_pool));
+              *result_val = new_val;
+              *did_merge = TRUE;
             }
         }
-
       else
         {
           /* There is a base_val but no working_val */
@@ -1000,39 +931,36 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
   else if (! working_val) /* means !working_val && !base_val due
                              to conditions above: no prop at all */
     {
-          /* Discover any mergeinfo additions in the
-             incoming value relative to the base, and
-             "combine" those with the empty WC value. */
-          svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
-          svn_string_t *mergeinfo_string;
+      /* Discover any mergeinfo additions in the
+         incoming value relative to the base, and
+         "combine" those with the empty WC value. */
+      svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
+      svn_string_t *mergeinfo_string;
 
-          SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
-                                       &added_mergeinfo,
-                                       old_val, new_val, scratch_pool));
-          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
-                                          added_mergeinfo, result_pool));
-          apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING,
-                       mergeinfo_string);
+      SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
+                                   &added_mergeinfo,
+                                   old_val, new_val, scratch_pool));
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
+                                      added_mergeinfo, result_pool));
+      *result_val = mergeinfo_string;
     }
 
   else /* means working && base && svn_string_compare(working, base) */
     {
       if (svn_string_compare(old_val, base_val))
-        apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING, new_val);
-
+        *result_val = new_val;
       else
         {
-              /* We have base, WC, and new values.  Discover
-                 deltas between base <-> WC, and base <->
-                 incoming.  Combine those deltas, and apply
-                 them to base to get the new value. */
-              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                     working_val,
-                                                     new_val, result_pool,
-                                                     scratch_pool));
-              apr_hash_set(actual_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
-              set_prop_merge_state(state, svn_wc_notify_state_merged);
+          /* We have base, WC, and new values.  Discover
+             deltas between base <-> WC, and base <->
+             incoming.  Combine those deltas, and apply
+             them to base to get the new value. */
+          SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                 working_val,
+                                                 new_val, result_pool,
+                                                 scratch_pool));
+          *result_val = new_val;
+          *did_merge = TRUE;
         }
     }
 
@@ -1046,21 +974,17 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
    The definition of the arguments and behaviour is the same as
    apply_single_prop_change(). */
 static svn_error_t *
-apply_single_generic_prop_change(svn_wc_notify_state_t *state,
+apply_single_generic_prop_change(const svn_string_t **result_val,
                                  svn_boolean_t *conflict_remains,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_hash_t *actual_props,
+                                 svn_boolean_t *did_merge,
                                  const char *propname,
                                  const svn_string_t *base_val,
                                  const svn_string_t *old_val,
                                  const svn_string_t *new_val,
+                                 const svn_string_t *working_val,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_string_t *working_val
-    = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
-
   SVN_ERR_ASSERT(old_val != NULL);
 
   /* If working_val is the same as new_val already then there is
@@ -1070,14 +994,14 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
     {
       /* All values identical is a trivial, non-notifiable merge */
       if (! old_val || ! svn_string_compare(old_val, new_val))
-        set_prop_merge_state(state, svn_wc_notify_state_merged);
+        *did_merge = TRUE;
     }
   /* If working_val is the same as old_val... */
   else if (working_val && old_val
       && svn_string_compare(working_val, old_val))
     {
       /* A trivial update: change it to new_val. */
-      apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING, new_val);
+      *result_val = new_val;
     }
   else
     {
@@ -1088,9 +1012,8 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of ACTUAL_PROPS on
- * DB/LOCAL_ABSPATH, setting *STATE or *CONFLICT_REMAINS according to
- * the merge outcome.
+/* Change the property with name PROPNAME in the set of ACTUAL_PROPS,
+ * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_prop_merge_state(). (May be null.).
@@ -1103,15 +1026,14 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
  * NEW_VAL contains the value to be set. (Not null.)
  */
 static svn_error_t *
-apply_single_prop_change(svn_wc_notify_state_t *state,
+apply_single_prop_change(const svn_string_t **result_val,
                          svn_boolean_t *conflict_remains,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_hash_t *actual_props,
+                         svn_boolean_t *did_merge,
                          const char *propname,
                          const svn_string_t *base_val,
                          const svn_string_t *old_val,
                          const svn_string_t *new_val,
+                         const svn_string_t *working_val,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1134,14 +1056,14 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
          gracefully' might thwart us.  If bogus mergeinfo is present we
          can't merge intelligently, so let the standard method deal with
          it instead. */
-      svn_error_t *err = apply_single_mergeinfo_prop_change(state,
+      svn_error_t *err = apply_single_mergeinfo_prop_change(result_val,
                                                             conflict_remains,
-                                                            db, local_abspath,
-                                                            actual_props,
+                                                            did_merge,
                                                             propname,
                                                             base_val,
                                                             old_val,
                                                             new_val,
+                                                            working_val,
                                                             result_pool,
                                                             scratch_pool);
        if (err)
@@ -1162,11 +1084,10 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
       /* The standard method: perform a simple update automatically, but
          pass any other kind of merge to maybe_generate_propconflict(). */
 
-      SVN_ERR(apply_single_generic_prop_change(state, conflict_remains,
-                                               db, local_abspath,
-                                               actual_props,
+      SVN_ERR(apply_single_generic_prop_change(result_val, conflict_remains,
+                                               did_merge,
                                                propname, base_val, old_val,
-                                               new_val,
+                                               new_val, working_val,
                                                result_pool, scratch_pool));
     }
 
@@ -1224,6 +1145,9 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       const svn_string_t *base_val; /* Pristine in WC */
       const svn_string_t *from_val; /* Merge left */
       const svn_string_t *to_val; /* Merge right */
+      const svn_string_t *working_val; /* Mine */
+      const svn_string_t *result_val;
+      svn_boolean_t did_merge = FALSE;
 
       svn_pool_clear(iterpool);
 
@@ -1235,39 +1159,45 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
 
       base_val = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
+      working_val = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
 
       if (new_pristine_props)
         apr_hash_set(*new_pristine_props, propname, APR_HASH_KEY_STRING,
                      to_val);
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
+      
 
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
       set_prop_merge_state(state, svn_wc_notify_state_changed);
 
+      result_val = working_val;
+
       if (! from_val)  /* adding a new property */
-        SVN_ERR(apply_single_prop_add(state, &conflict_remains,
-                                      db, local_abspath,
-                                      *new_actual_props,
-                                      propname, base_val, to_val,
+        SVN_ERR(apply_single_prop_add(&result_val, &conflict_remains,
+                                      &did_merge, propname,
+                                      base_val, to_val, working_val,
                                       result_pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
-        SVN_ERR(apply_single_prop_delete(state, &conflict_remains,
-                                         db, local_abspath,
-                                         *new_actual_props,
-                                         propname, base_val, from_val,
+        SVN_ERR(apply_single_prop_delete(&result_val, &conflict_remains,
+                                         &did_merge, propname,
+                                         base_val, from_val, working_val,
                                          result_pool, iterpool));
 
       else  /* changing an existing property */
-        SVN_ERR(apply_single_prop_change(state, &conflict_remains,
-                                         db, local_abspath,
-                                         *new_actual_props,
-                                         propname, base_val, from_val, to_val,
+        SVN_ERR(apply_single_prop_change(&result_val, &conflict_remains,
+                                         &did_merge, propname,
+                                         base_val, from_val, to_val, working_val,
                                          result_pool, iterpool));
 
+      if (result_val != working_val)
+        apr_hash_set(*new_actual_props, propname, APR_HASH_KEY_STRING,
+                     result_val);
+      if (did_merge)
+        set_prop_merge_state(state, svn_wc_notify_state_merged);
 
       /* merging logic complete, now we need to possibly log conflict
          data to tmpfiles.  */

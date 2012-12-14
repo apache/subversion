@@ -354,7 +354,7 @@ class TestHarness:
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
     else:
-      print('Don\'t know what to do about ' + progbase)
+      print("Don't know what to do about " + progbase)
       sys.exit(1)
 
     if self.verbose is not None:
@@ -433,8 +433,8 @@ class TestHarness:
       prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
-      print('Don\'t know what to do about ' + progbase)
-      raise
+      print("Don't know what to do about " + progbase)
+      sys.exit(1)
 
     import svntest.main
 
