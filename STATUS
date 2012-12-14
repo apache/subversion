@@ -77,11 +77,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1421103
-   Fix segfault with kwallet support.
-   Justification:
-     Users may get segfaults when using the kwallet support since the pool
-     cleanup is setup wrong.
-   Votes:
-     +1: breser, rhuijben, danielsh
-
