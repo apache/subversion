@@ -21,22 +21,17 @@
  * @endcopyright
  */
 
-#include "types/svn_cxxhl_tristate.h"
+#ifndef __cplusplus
+#error "This is a C++ header file."
+#endif
 
-#include "svn_types.h"
-#undef TRUE
-#undef FALSE
+#ifndef SVN_CXXHL_HPP
+#define SVN_CXXHL_HPP
 
-namespace apache {
-namespace subversion {
-namespace cxxhl {
+// Expose the whole API and alias the default version namespace
+#include "svncxxhl/exception.hpp"
+#include "svncxxhl/tristate.hpp"
 
-Tristate::Tristate(short value) : m_value(value) {}
+namespace svn = ::subversion::cxxhl::version_1_9_dev;
 
-const Tristate Tristate::TRUE(svn_tristate_true);
-const Tristate Tristate::FALSE(svn_tristate_false);
-const Tristate Tristate::UNKNOWN(svn_tristate_unknown);
-
-} // namespace cxxhl
-} // namespace subversion
-} // namespace apache
+#endif  // SVN_CXXHL_HPP
