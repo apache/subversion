@@ -384,7 +384,11 @@ svn_boolean_t
 svn_error__is_tracing_link(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
-  return (err && err->message == error_tracing_link);
+  /* ### A strcmp()?  Really?  I think it's the best we can do unless
+     ### we add a boolean field to svn_error_t that's set only for
+     ### these "placeholder error chain" items.  Not such a bad idea,
+     ### really...  */
+  return (err && err->message && !strcmp(err->message, error_tracing_link));
 #else
   return FALSE;
 #endif
