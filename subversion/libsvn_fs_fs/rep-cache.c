@@ -151,16 +151,15 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
   /* Check global invariants. */
   if (start == 0)
     {
-      svn_sqlite__stmt_t *stmt2;
       svn_revnum_t max;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt2, ffd->rep_cache_db,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
                                         STMT_GET_MAX_REV));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt2));
-      max = svn_sqlite__column_revnum(stmt2, 0);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      max = svn_sqlite__column_revnum(stmt, 0);
+      SVN_ERR(svn_sqlite__reset(stmt));
       if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
         SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
-      SVN_ERR(svn_sqlite__reset(stmt2));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
@@ -174,6 +173,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
     {
       representation_t *rep;
       const char *sha1_digest;
+      svn_error_t *err;
 
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
@@ -181,21 +181,29 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
       /* Check for cancellation. */
       if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+        {
+          err = cancel_func(cancel_baton);
+          if (err)
+            return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+        }
 
       /* Construct a representation_t. */
       rep = apr_pcalloc(iterpool, sizeof(*rep));
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
-      SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum,
-                                     svn_checksum_sha1, sha1_digest,
-                                     iterpool));
+      err = svn_checksum_parse_hex(&rep->sha1_checksum,
+                                   svn_checksum_sha1, sha1_digest,
+                                   iterpool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
       rep->revision = svn_sqlite__column_revnum(stmt, 1);
       rep->offset = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
 
       /* Walk. */
-      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
+      err = walker(rep, walker_baton, fs, iterpool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -247,10 +255,12 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   else
     *rep = NULL;
 
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   if (*rep)
     SVN_ERR(rep_has_been_born(*rep, fs, pool));
 
-  return svn_sqlite__reset(stmt);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
