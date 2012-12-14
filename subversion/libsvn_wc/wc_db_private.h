@@ -304,6 +304,14 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_op_mark_conflict(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  const svn_skel_t *conflict_skel,
+                                  apr_pool_t *scratch_pool);
+
 
 /* Transaction handling */
 

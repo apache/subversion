@@ -698,8 +698,8 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
  * optimally. Originally we used 5 as the max. number of outstanding
  * requests, but this turned out to be too low.
  *
- * Serf doesn't exit out of the serf_context_run loop as long as it
- * has data to send or receive. With small responses (revs of a few
+ * Serf doesn't exit out of the svn_ra_serf__context_run_wait loop as long as
+ * it has data to send or receive. With small responses (revs of a few
  * kB), serf doesn't come out of this loop at all. So with
  * MAX_OUTSTANDING_REQUESTS set to a low number, there's a big chance
  * that serf handles those requests completely in its internal loop,
@@ -732,14 +732,11 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   svn_revnum_t rev = start_revision;
   const char *report_target;
   int active_reports = 0;
-  apr_interval_time_t waittime_left = session->timeout;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   while (active_reports || rev <= end_revision)
     {
-      apr_status_t status;
-      svn_error_t *err;
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
@@ -834,62 +831,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           active_reports++;
         }
 
-      /* Run the serf loop, send outgoing and process incoming requests.
-         This request will block when there are no more requests to send or
-         responses to receive, so we have to be careful on our bookkeeping.
-
-         ### we should probably adjust this timeout. if we get (say) 3
-         ### requests completed, then we want to exit immediately rather
-         ### than block for a few seconds. that will allow us to clear up
-         ### those 3 requests. if we have queued all of our revisions,
-         ### then we may want to block until timeout since we really don't
-         ### have much work other than destroying memory. (though that
-         ### is important, as we could end up with 50 src_rev_pool pools)
-
-         ### idea: when a revision is marked DONE, we can probably destroy
-         ### most of the memory. that will reduce pressue to have serf
-         ### return control to us, to complete the major memory disposal.
-
-         ### theoretically, we should use an iterpool here, but it turns
-         ### out that serf doesn't even use the pool param. if we grow
-         ### an iterpool in this loop for other purposes, then yeah: go
-         ### ahead and apply it here, too, in case serf eventually uses
-         ### that parameter.
-      */
-      status = serf_context_run(session->context,
-                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
-                                pool);
-
-      err = session->pending_error;
-      session->pending_error = NULL;
-
-      /* If the context duration timeout is up, we'll subtract that
-         duration from the total time alloted for such things.  If
-         there's no time left, we fail with a message indicating that
-         the connection timed out.  */
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          status = 0;
-
-          if (session->timeout)
-            {
-              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
-                {
-                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-                }
-              else
-                {
-                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                          _("Connection timed out"));
-                }
-            }
-        }
-      else
-        {
-          waittime_left = session->timeout;
-        }
+      /* Run the serf loop. */
+      SVN_ERR(svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool));
 
       /* Substract the number of completely handled responses from our
          total nr. of open requests', so we'll know when to stop this loop.
@@ -904,12 +847,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           active_reports--;
         }
 
-      SVN_ERR(err);
-      if (status)
-        {
-          return svn_ra_serf__wrap_err(status,
-                                       _("Error retrieving replay REPORT"));
-        }
       done_reports = NULL;
     }
 

@@ -172,6 +172,16 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
   fi
 ])
 
+dnl SVN_STRIP_FLAG(FLAG_VAR_NAME, FLAG)
+dnl
+dnl Remove FLAG from the variable FLAG_VAR_NAME, if it exists.  This macro
+dnl is primarily used for removing unwanted compiler flags, but is really
+dnl just a general wrapper around `sed'.
+AC_DEFUN(SVN_STRIP_FLAG,
+[
+  $1=`echo "$$1" | $SED -e 's/$2//'`
+])
+
 dnl SVN_REMOVE_STANDARD_LIB_DIRS(OPTIONS)
 dnl
 dnl Remove standard library search directories.

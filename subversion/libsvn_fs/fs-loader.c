@@ -120,8 +120,8 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
                                  _("Invalid name for FS type '%s'"),
                                  name);
 
-    libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.0",
-                           name, SVN_VER_MAJOR);
+    libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.%d",
+                           name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_fs_%s__init", name);
 
     /* Find/load the specified library.  If we get an error, assume

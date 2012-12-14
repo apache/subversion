@@ -807,7 +807,8 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
    *PROPS maps "const char *" names to "const svn_string_t *" values.
    If the node has no properties, set *PROPS to an empty hash.
    *PROPS will never be set to NULL.
-   If the node is not present in the BASE tree, return an error.
+   If the node is not present in the BASE tree (with presence 'normal'
+   or 'incomplete'), return an error.
    Allocate *PROPS and its keys and values in RESULT_POOL.
 */
 svn_error_t *
@@ -1444,42 +1445,6 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);
 
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-/* ### Set the properties of the node LOCAL_ABSPATH in the BASE tree to PROPS.
-   ###
-   ### This function should not exist because properties should be stored
-   ### onto the BASE node at construction time, in a single atomic operation.
-   ###
-   ### PROPS maps "const char *" names to "const svn_string_t *" values.
-   ### To specify no properties, PROPS must be an empty hash, not NULL.
-   ### If the node is not present, SVN_ERR_WC_PATH_NOT_FOUND is returned.
-*/
-svn_error_t *
-svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const apr_hash_t *props,
-                               apr_pool_t *scratch_pool);
-
-
-/* ### Set the properties of the node LOCAL_ABSPATH in the WORKING tree
-   ### to PROPS.
-   ###
-   ### This function should not exist because properties should be stored
-   ### onto the WORKING node at construction time, in a single atomic
-   ### operation.
-   ###
-   ### PROPS maps "const char *" names to "const svn_string_t *" values.
-   ### To specify no properties, PROPS must be an empty hash, not NULL.
-   ### If the node is not present, SVN_ERR_WC_PATH_NOT_FOUND is returned.
-*/
-svn_error_t *
-svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const apr_hash_t *props,
-                                  apr_pool_t *scratch_pool);
-#endif
-
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
  * This function removes the file externals (and if DELETE_DIR_EXTERNALS is
@@ -2070,11 +2035,8 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
- * op_depth).
- *
- * If BASE_PROPS is FALSE and, PRISTINE is TRUE, the local modifications will
- * be suppressed. If PRISTINE is FALSE, local modifications will be visible.
+ * If PRISTINE is FALSE, read the properties from the WORKING layer (highest
+ * op_depth); if PRISTINE is FALSE, local modifications will be visible.
  */
 svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
