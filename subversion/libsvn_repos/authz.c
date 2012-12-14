@@ -750,22 +750,21 @@ static svn_boolean_t authz_validate_section(const char *name,
   return TRUE;
 }
 
-/* Retrieve the file at URL and then parse it as a config file placing the
- * result into CFG_P allocated in POOL.
+/* Retrieve the file at DIRENT (contained in a repo) then parse it as a config
+ * file placing the result into CFG_P allocated in POOL.
  *
- * If URL is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
+ * If DIRENT is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
  * as the error.  The contents of CFG_P is then undefined.  If MUST_EXIST is
  * TRUE, a missing authz file is also an error.
  *
  * SCRATCH_POOL will be used for temporary allocations. */
 static svn_error_t *
-authz_retrieve_config_url(svn_config_t **cfg_p, const char *url,
+authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
                           svn_boolean_t must_exist,
                           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_repos_t *repos;
-  const char *repos_dirent;
   const char *repos_root_dirent;
   const char *fs_path;
   svn_fs_t *fs;
@@ -773,26 +772,24 @@ authz_retrieve_config_url(svn_config_t **cfg_p, const char *url,
   svn_revnum_t youngest_rev;
   svn_node_kind_t node_kind;
   svn_stream_t *contents;
-  const char *canon_url = svn_uri_canonicalize(url, scratch_pool);
-
-  SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dirent, canon_url,
-                                           scratch_pool));
+  const char *canon_dirent = svn_dirent_canonicalize(dirent, scratch_pool);
 
   /* Search for a repository in the full path. */
-  repos_root_dirent = svn_repos_find_root_path(repos_dirent, scratch_pool);
+  repos_root_dirent = svn_repos_find_root_path(canon_dirent, scratch_pool);
   if (!repos_root_dirent)
     return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                             "Unable to find repository at '%s'", url);
+                             "Unable to find repository at '%s'", dirent);
 
-  /* Attempt to open a repository at url. */
+  /* Attempt to open a repository at repos_root_dirent. */
   SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
 
-  fs_path = &repos_dirent[strlen(repos_root_dirent)];
+  fs_path = &canon_dirent[strlen(repos_root_dirent)];
 
   /* Root path is always a directory so no reason to go any further */
   if (*fs_path == '\0')
     return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                             "'%s' is not a file", url);
+                             "'/' is not a file in repo '%s'",
+                             repos_root_dirent);
 
   /* We skip some things that are non-important for how we're going to use
    * this repo connection.  We do not set any capabilities since none of
@@ -818,13 +815,15 @@ authz_retrieve_config_url(svn_config_t **cfg_p, const char *url,
       else
         {
           return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                   "'%s' path not found", url);
+                                   "'%s' path not found in repo '%s'", fs_path,
+                                   repos_root_dirent);
         }
     }
   else if (node_kind != svn_node_file)
     {
       return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                               "'%s' is not a file", url);
+                               "'%s' is not a file in repo '%s'", fs_path,
+                               repos_root_dirent);
     }
 
   SVN_ERR(svn_fs_file_contents(&contents, root, fs_path, scratch_pool));
@@ -833,7 +832,8 @@ authz_retrieve_config_url(svn_config_t **cfg_p, const char *url,
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
     return svn_error_createf(err->apr_err, err, 
-                             "Error parsing config file: %s:", url);
+                             "Error parsing config file: '%s' in repo '%s':",
+                             fs_path, repos_root_dirent);
 
   return SVN_NO_ERROR;
 }
@@ -859,23 +859,16 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
 {
   if (svn_path_is_repos_relative_url(path))
     {
-      const char *repos_root_url;
-      const char *abs_url;
+      const char *dirent;
       svn_error_t *err;
       apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-      /* Convert the repos_root to a file schema URL first. */
-      err = svn_uri_get_file_url_from_dirent(&repos_root_url, repos_root,
-                                             scratch_pool);
-
-      if (err == SVN_NO_ERROR)
-        err = svn_path_resolve_repos_relative_url(&abs_url, path,
-                                                  repos_root_url,
-                                                  scratch_pool);
+      err = svn_path_resolve_repos_relative_url(&dirent, path,
+                                                repos_root, scratch_pool);
 
       if (err == SVN_NO_ERROR) 
-        err = authz_retrieve_config_url(cfg_p, abs_url, must_exist, pool,
-                                        scratch_pool);
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
+                                         scratch_pool);
 
       /* Close the repos and streams we opened. */
       svn_pool_destroy(scratch_pool);
@@ -884,11 +877,15 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
     }
   else if (svn_path_is_url(path))
     {
+      const char *dirent;
       svn_error_t *err;
       apr_pool_t *scratch_pool = svn_pool_create(pool); 
 
-      err = authz_retrieve_config_url(cfg_p, path, must_exist, pool,
-                                      scratch_pool);
+      err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
+
+      if (err == SVN_NO_ERROR)
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
+                                         scratch_pool);
 
       /* Close the repos and streams we opened. */
       svn_pool_destroy(scratch_pool);
