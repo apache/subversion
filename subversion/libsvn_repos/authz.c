@@ -34,6 +34,7 @@
 #include "svn_config.h"
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
+#include "repos.h"
 
 
 /*** Structures. ***/
