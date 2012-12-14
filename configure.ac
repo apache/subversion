@@ -1384,12 +1384,12 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
+  SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
 
 # Clang also doesn't (yet) support the '-ansi' flag
 if test "$CC" = "clang"; then
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+  SVN_STRIP_FLAG(CFLAGS, [-ansi ])
 fi
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
