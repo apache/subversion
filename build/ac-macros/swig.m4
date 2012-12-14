@@ -214,6 +214,17 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 
+    dnl The swig bindings create a lot of spurious warnings with several of
+    dnl our standard compiler flags, so filter them out here
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wall])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wunused])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wshadow])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wstrict-prototypes])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wmissing-declarations])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wmissing-prototypes])
+    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wredundant-decls])
+    SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
+
     AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
       svn_cv_ruby_link="`$RUBY -e 'ARGV.shift; print ARGV.join(%q( ))' \
                            $rbconfig_LDSHARED`"
