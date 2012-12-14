@@ -107,7 +107,7 @@ get_sqlite() {
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in neon zlib serf sqlite-amalgamation apr apr-util; do
+    for i in zlib serf sqlite-amalgamation apr apr-util; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
