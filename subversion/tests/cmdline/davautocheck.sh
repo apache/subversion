@@ -219,7 +219,7 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-for d in `find "$ABS_BUILDDIR" -type d -name .libs`; do
+for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
   if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
     BUILDDIR_LIBRARY_PATH="$d"
   else
