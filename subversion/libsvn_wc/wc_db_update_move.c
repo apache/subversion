@@ -233,7 +233,7 @@ check_shadowed_node(svn_boolean_t *is_shadowed,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
                             expected_op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
