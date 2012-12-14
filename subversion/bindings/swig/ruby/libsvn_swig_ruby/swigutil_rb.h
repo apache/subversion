@@ -112,7 +112,7 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
+void *svn_swig_rb_to_swig_type(VALUE value, const void *ctx, apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_from_swig_type(void *value, void *ctx);
 
