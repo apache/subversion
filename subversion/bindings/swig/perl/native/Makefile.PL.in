@@ -54,6 +54,13 @@ my $includes = '@SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@';
 # SWIG is using C++ style comments in an extern "C" code.
 $cflags =~ s/-ansi\s+//g;
 $cflags =~ s/-std=c89\s+//g;
+$cflags =~ s/-Wall//g;
+$cflags =~ s/-Wunused//g;
+$cflags =~ s/-Wshadow//g;
+$cflags =~ s/-Wstrict-prototypes//g;
+$cflags =~ s/-Wmissing-declarations//g;
+$cflags =~ s/-Wmissing-prototypes//g;
+$cflags =~ s/-Wredundant-decls//g;
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
