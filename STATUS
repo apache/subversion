@@ -78,6 +78,12 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1422100
+   Delay storing handle to fix assert when rep-cache is inaccessible.
+   Justification:
+     It's an assert.
+   Votes: philip, danielsh
+   
 Veto-blocked changes:
 =====================
 
