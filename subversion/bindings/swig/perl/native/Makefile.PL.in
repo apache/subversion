@@ -39,8 +39,8 @@ my $swig_builddir = "${svnlib_builddir}/bindings/swig";
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = (abs_path($swig_builddir) . "/perl/libsvn_swig_perl/.libs",
                map { abs_path($svnlib_builddir) . "/libsvn_$_/.libs" }
-                   @modules, qw/diff subr ra_local ra_svn ra_neon
-                                ra_serf fs_base fs_util fs_fs/);
+                   @modules, qw/diff subr ra_local ra_svn ra_serf
+                                fs_base fs_util fs_fs/);
 
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
