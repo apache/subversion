@@ -2683,7 +2683,7 @@ def inheritable_ignores(sbox):
 def almost_known_prop_names(sbox):
   "propset with svn: prefix but unknown name"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
   iota_path = sbox.ospath('iota')
 

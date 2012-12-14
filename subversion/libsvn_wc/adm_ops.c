@@ -903,8 +903,6 @@ static svn_error_t *
 add_from_disk(svn_wc__db_t *db,
               const char *local_abspath,
               svn_node_kind_t kind,
-              svn_wc_notify_func2_t notify_func,
-              void *notify_baton,
               apr_pool_t *scratch_pool)
 {
   if (kind == svn_node_file)
@@ -1275,7 +1273,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      SVN_ERR(add_from_disk(db, local_abspath, kind, notify_func, notify_baton,
+      SVN_ERR(add_from_disk(db, local_abspath, kind,
                             scratch_pool));
       if (kind == svn_node_dir && !db_row_exists)
         {
@@ -1361,7 +1359,6 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
   SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx->db, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(add_from_disk(wc_ctx->db, local_abspath, kind,
-                        notify_func, notify_baton,
                         scratch_pool));
 
   /* Report the addition to the caller. */

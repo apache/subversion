@@ -796,6 +796,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-timeout               Timeout for HTTP requests in seconds"
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
+        "###   http-max-connections       Maximum number of parallel server" NL
+        "###                              connections to use for any given"  NL
+        "###                              HTTP operation."                   NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
@@ -807,10 +810,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections."                      NL
-        "###   bulk-updates               Whether to request bulk update" NL
-        "###                              responses, or fetch each file in "
-                                                                             NL
-        "###                              an individual request. "           NL
+        "###   http-bulk-updates          Whether to request bulk update"    NL
+        "###                              responses or to fetch each file"   NL
+        "###                              in an individual request. "        NL
         "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
@@ -830,8 +832,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              unencrypted (i.e., as plaintext)." NL
 #endif
         "###   store-auth-creds           Specifies whether any auth info"   NL
-        "###                              (passwords as well as server certs)"
-                                                                             NL
+        "###                              (passwords, server certs, etc.)"   NL
         "###                              may be cached to disk."            NL
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
