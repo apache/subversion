@@ -120,9 +120,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
-    dnl Swig-generated code results in a number of shadowed variables, so
-    dnl ignore those warnings when compiling swig-py
-    SWIG_PY_COMPILE=`echo "$SWIG_PY_COMPILE" | $SED -e 's/-Wshadow //'`
+    dnl Swig-generated code results in a number of shadowed variables and other
+    dnl warnings, so ignore them when compiling swig-py
+    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wall])
+    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wunused])
+    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wshadow])
+    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wmissing-prototypes])
+    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wmissing-declarations])
 
     AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
       ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
