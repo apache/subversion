@@ -250,6 +250,8 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
       return SVN_NO_ERROR;
     }
 
+  *is_conflicted = TRUE;
+
   while (relpath_depth(conflict_root_relpath) > op_depth)
     conflict_root_relpath = svn_relpath_dirname(conflict_root_relpath,
                                                 scratch_pool);
@@ -277,7 +279,6 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, conflict_root_relpath,
                                             conflict, scratch_pool));
 
-  *is_conflicted = TRUE;
   return SVN_NO_ERROR;
 }
 
