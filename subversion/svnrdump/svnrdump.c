@@ -413,16 +413,55 @@ dump_revision_header(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+dump_initial_full_revision(svn_ra_session_t *session,
+                           svn_ra_session_t *extra_ra_session,
+                           svn_stream_t *stdout_stream,
+                           svn_revnum_t revision,
+                           svn_boolean_t quiet,
+                           apr_pool_t *pool)
+{
+  const svn_ra_reporter3_t *reporter;
+  void *report_baton;
+  const svn_delta_editor_t *dump_editor;
+  void *dump_baton;
+
+  /* Start with a revision record header. */
+  SVN_ERR(dump_revision_header(session, stdout_stream, revision, pool));
+
+  /* Then, we'll drive the dump editor with what would look like a
+     full checkout of the repository as it looked in START_REVISION.
+     We do this by manufacturing a basic 'report' to the update
+     reporter, telling it that we have nothing to start with.  The
+     delta between nothing and everything-at-REV is, effectively, a
+     full dump of REV. */
+  SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, revision,
+                                     stdout_stream, extra_ra_session,
+                                     check_cancel, NULL, pool));
+  SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton, revision,
+                            "", svn_depth_infinity, FALSE,
+                            dump_editor, dump_baton, pool));
+  SVN_ERR(reporter->set_path(report_baton, "", revision,
+                             svn_depth_infinity, TRUE, NULL, pool));
+  SVN_ERR(reporter->finish_report(report_baton, pool));
+
+  /* All finished with START_REVISION! */
+  if (! quiet)
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
+
+  return SVN_NO_ERROR;
+}
+
 /* Replay revisions START_REVISION thru END_REVISION (inclusive) of
- * the repository located at URL, using callbacks which generate
- * Subversion repository dumpstreams describing the changes made in
- * those revisions.  If QUIET is set, don't generate progress
- * messages.
+ * the repository URL at which SESSION is rooted, using callbacks
+ * which generate Subversion repository dumpstreams describing the
+ * changes made in those revisions.  If QUIET is set, don't generate
+ * progress messages.
  */
 static svn_error_t *
 replay_revisions(svn_ra_session_t *session,
                  svn_ra_session_t *extra_ra_session,
-                 const char *url,
                  svn_revnum_t start_revision,
                  svn_revnum_t end_revision,
                  svn_boolean_t quiet,
@@ -465,60 +504,23 @@ replay_revisions(svn_ra_session_t *session,
       incremental = TRUE;
     }
 
-  if (incremental)
+  /* If what remains to be dumped is not going to be dumped
+     incrementally, then dump the first revision in full. */
+  if (!incremental)
+    {
+      SVN_ERR(dump_initial_full_revision(session, extra_ra_session,
+                                         stdout_stream, start_revision,
+                                         quiet, pool));
+      start_revision++;
+    }
+
+  /* If there are still revisions left to be dumped, do so. */
+  if (start_revision <= end_revision)
     {
 #ifndef USE_EV2_IMPL
       SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                                   0, TRUE, replay_revstart, replay_revend,
                                   replay_baton, pool));
-#else
-      SVN_ERR(svn_ra__replay_range_ev2(session, start_revision, end_revision,
-                                       0, TRUE, replay_revstart_v2,
-                                       replay_revend_v2, replay_baton,
-                                       NULL, NULL, NULL, NULL, pool));
-#endif
-    }
-  else
-    {
-      const svn_ra_reporter3_t *reporter;
-      void *report_baton;
-      const svn_delta_editor_t *dump_editor;
-      void *dump_baton;
-
-      /* First, we need to dump the start_revision in full.  We'll
-         start with a revision record header. */
-      SVN_ERR(dump_revision_header(session, stdout_stream,
-                                   start_revision, pool));
-
-      /* Then, we'll drive the dump editor with what would look like a
-         full checkout of the repository as it looked in
-         START_REVISION.  We do this by manufacturing a basic 'report'
-         to the update reporter, telling it that we have nothing to
-         start with.  The delta between nothing and everything-at-REV
-         is, effectively, a full dump of REV. */
-      SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton,
-                                         start_revision,
-                                         stdout_stream, extra_ra_session,
-                                         check_cancel, NULL, pool));
-      SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
-                                start_revision, "", svn_depth_infinity,
-                                FALSE, dump_editor, dump_baton, pool));
-      SVN_ERR(reporter->set_path(report_baton, "", start_revision,
-                                 svn_depth_infinity, TRUE, NULL, pool));
-      SVN_ERR(reporter->finish_report(report_baton, pool));
-
-      /* All finished with START_REVISION! */
-      if (! quiet)
-        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
-                                    start_revision));
-      start_revision++;
-
-      /* Now go pick up additional revisions in the range, if any. */
-      if (start_revision <= end_revision)
-#ifndef USE_EV2_IMPL
-        SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
-                                    0, TRUE, replay_revstart, replay_revend,
-                                    replay_baton, pool));
 #else
       SVN_ERR(svn_ra__replay_range_ev2(session, start_revision, end_revision,
                                        0, TRUE, replay_revstart_v2,
@@ -635,7 +637,6 @@ dump_cmd(apr_getopt_t *os,
   SVN_ERR(svn_ra_reparent(extra_ra_session, repos_root, pool));
 
   return replay_revisions(opt_baton->session, extra_ra_session,
-                          opt_baton->url,
                           opt_baton->start_revision.value.number,
                           opt_baton->end_revision.value.number,
                           opt_baton->quiet, opt_baton->incremental, pool);
