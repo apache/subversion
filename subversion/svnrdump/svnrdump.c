@@ -223,7 +223,7 @@ replay_revstart(svn_revnum_t revision,
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
                                      rb->stdout_stream, rb->extra_ra_session,
-                                     check_cancel, NULL, pool));
+                                     NULL, check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -298,7 +298,7 @@ replay_revstart_v2(svn_revnum_t revision,
   SVN_ERR(svn_rdump__get_dump_editor_v2(editor, revision,
                                         rb->stdout_stream,
                                         rb->extra_ra_session,
-                                        check_cancel, NULL, pool, pool));
+                                        NULL, check_cancel, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -425,6 +425,19 @@ dump_initial_full_revision(svn_ra_session_t *session,
   void *report_baton;
   const svn_delta_editor_t *dump_editor;
   void *dump_baton;
+  const char *session_url, *source_relpath;
+
+  /* Determine whether we're dumping the repository root URL or some
+     child thereof.  If we're dumping a subtree of the repository
+     rather than the root, we have to jump through some hoops to make
+     our update-driven dump generation work the way a replay-driven
+     one would.
+
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=4101
+  */
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &source_relpath,
+                                           session_url, pool));
 
   /* Start with a revision record header. */
   SVN_ERR(dump_revision_header(session, stdout_stream, revision, pool));
@@ -437,7 +450,7 @@ dump_initial_full_revision(svn_ra_session_t *session,
      full dump of REV. */
   SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, revision,
                                      stdout_stream, extra_ra_session,
-                                     check_cancel, NULL, pool));
+                                     source_relpath, check_cancel, NULL, pool));
   SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton, revision,
                             "", svn_depth_infinity, FALSE,
                             dump_editor, dump_baton, pool));
