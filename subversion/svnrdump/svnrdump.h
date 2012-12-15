@@ -39,9 +39,13 @@ extern "C" {
 
 /**
  * Get a dump editor @a editor along with a @a edit_baton allocated in
- * @a pool.  The editor will write output to @a stream.  Use @a
- * cancel_func and @a cancel_baton to check for user cancellation of
- * the operation (for timely-but-safe termination).
+ * @a pool.  The editor will write output to @a stream.
+ *
+ * @a edit_root_relpath is the relative repository path of the drive
+ * which will happen on @a *editor.
+ *
+ * Use @a cancel_func and @a cancel_baton to check for user
+ * cancellation of the operation (for timely-but-safe termination).
  */
 svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
@@ -49,6 +53,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            svn_revnum_t revision,
                            svn_stream_t *stream,
                            svn_ra_session_t *ra_session,
+                           const char *edit_root_relpath,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool);
@@ -59,6 +64,7 @@ svn_rdump__get_dump_editor_v2(svn_editor_t **editor,
                               svn_revnum_t revision,
                               svn_stream_t *stream,
                               svn_ra_session_t *ra_session,
+                              const char *edit_root_relpath,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool,
