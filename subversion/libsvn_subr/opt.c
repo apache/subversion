@@ -34,6 +34,10 @@
 #include <apr_lib.h>
 #include <apr_file_info.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 #include "svn_cmdline.h"
 #include "svn_version.h"
 #include "svn_types.h"
@@ -1120,6 +1124,24 @@ svn_opt__print_version_info(const char *pgm_name,
                              svn_version_ext_build_time(info),
                              svn_version_ext_build_host(info)));
   SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
+
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+  {
+    const char *warnstart = "";
+    const char *warnend = "";
+#ifndef WIN32
+    if (isatty(fileno(stdout)))
+      {
+        warnstart = "\033[1;31m";
+        warnend = "\033[0;m";
+      }
+#endif /* WIN32 */
+    SVN_ERR(svn_cmdline_printf(
+                pool,
+                _("%sWARNING: Plaintext password storage is enabled!%s\n\n"),
+                warnstart, warnend));
+  }
+#endif /* SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE */
 
   if (footer)
     {
