@@ -1234,27 +1234,16 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
-# FIXME: The following should use information retreived from "svn --version"
-#        However, at the time of writing this predicate, that piece of
-#        information was not available from a running Subversion client.
 def is_plaintext_password_storage_disabled():
-  confighandle = None
   try:
-    predicate = re.compile(r"^\s*#\s*define\s+"
-                           r"SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE")
-    configfile = os.path.abspath(general_wc_dir)
-    for i in range(4):
-      configfile = os.path.dirname(configfile)
-    configfile = os.path.join(configfile, "svn_private_config.h")
-    confighandle = open(configfile, 'rt')
-    for line in confighandle.readlines():
+    predicate = re.compile("^[^W]*WARNING: Plaintext password storage is enabled!")
+    code, out, err = run_svn(False, "--version")
+    for line in out:
       if predicate.match(line):
-        return True
+        return False
   except:
-    pass
-  if confighandle:
-    confighandle.close()
-  return False
+    return False
+  return True
 
 ######################################################################
 
