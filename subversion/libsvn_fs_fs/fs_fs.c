@@ -2329,10 +2329,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
                                   pool));
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  if (svn_fs_fs__id_txn_id(id) == NULL)
-    (*noderev_p)->is_fresh_txn_root = FALSE;
-
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
   return set_cached_node_revision_body(*noderev_p, fs, id, pool);
@@ -8139,9 +8135,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep)
     noderev->prop_rep->sha1_checksum = NULL;
 
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
   /* Write out our new node-revision. */
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
+
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
