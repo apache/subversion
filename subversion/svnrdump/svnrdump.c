@@ -23,6 +23,7 @@
  */
 
 #include <apr_signal.h>
+#include <apr_uri.h>
 
 #include "svn_pools.h"
 #include "svn_cmdline.h"
@@ -328,6 +329,8 @@ replay_revend_v2(svn_revnum_t revision,
  * allocated from POOL.  Use CONFIG_DIR and pass USERNAME, PASSWORD,
  * CONFIG_DIR and NO_AUTH_CACHE to initialize the authorization baton.
  * CONFIG_OPTIONS (if not NULL) is a list of configuration overrides.
+ * REPOS_URL is used to fiddle with server-specific configuration
+ * options.
  */
 static svn_error_t *
 init_client_context(svn_client_ctx_t **ctx_p,
@@ -335,13 +338,14 @@ init_client_context(svn_client_ctx_t **ctx_p,
                     const char *username,
                     const char *password,
                     const char *config_dir,
+                    const char *repos_url,
                     svn_boolean_t no_auth_cache,
                     svn_boolean_t trust_server_cert,
                     apr_array_header_t *config_options,
                     apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
-  svn_config_t *cfg_config;
+  svn_config_t *cfg_config, *cfg_servers;
 
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -356,6 +360,47 @@ init_client_context(svn_client_ctx_t **ctx_p,
 
   cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
+
+  /* ### FIXME: This is a hack to work around the fact that our dump
+     ### editor simply can't handle the way ra_serf violates the
+     ### editor v1 drive ordering requirements.
+     ###
+     ### We'll override both the global value and server-specific one
+     ### for the 'http-bulk-updates' and 'http-max-connections'
+     ### options in order to get ra_serf to try a bulk-update if the
+     ### server will allow it, or at least try to limit all its
+     ### auxiliary GETs/PROPFINDs to happening (well-ordered) on a
+     ### single server connection.
+     ### 
+     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+  */
+  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
+                             APR_HASH_KEY_STRING);
+  svn_config_set_bool(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
+                      SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
+  svn_config_set_int64(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
+                       SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS, 2);
+  if (cfg_servers)
+    {
+      apr_status_t status;
+      apr_uri_t parsed_url;
+
+      status = apr_uri_parse(pool, repos_url, &parsed_url);
+      if (! status)
+        {
+          const char *server_group;
+
+          server_group = svn_config_find_group(cfg_servers, parsed_url.hostname,
+                                               SVN_CONFIG_SECTION_GROUPS, pool);
+          if (server_group)
+            {
+              svn_config_set_bool(cfg_servers, server_group,
+                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
+              svn_config_set_int64(cfg_servers, server_group,
+                                   SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS, 2);
+            }
+        }
+    }
 
   /* Set up our cancellation support. */
   ctx->cancel_func = check_cancel;
@@ -1064,6 +1109,7 @@ main(int argc, const char **argv)
                                    username,
                                    password,
                                    config_dir,
+                                   opt_baton->url,
                                    no_auth_cache,
                                    trust_server_cert,
                                    config_options,
