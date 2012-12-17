@@ -1125,7 +1125,7 @@ svn_opt__print_version_info(const char *pgm_name,
                              svn_version_ext_build_host(info)));
   SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
 
-#if defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE) && !defined(WIN32)
+#if !defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE) && !defined(WIN32)
   {
     const char *warnstart = "";
     const char *warnend = "";
