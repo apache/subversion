@@ -103,15 +103,21 @@ void svn_wc__eol_value_from_string(const char **value,
    If a keyword is in the list, but no corresponding value is
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
+     ### THIS LOOKS WRONG -- it creates a hash entry for every recognized kw
+         and expands each missing value as an empty string or "-1" or similar.
 
    Use LOCAL_ABSPATH to expand keyword values.
 
    If WRI_ABSPATH is not NULL, retrieve the information for LOCAL_ABSPATH
    from the working copy identified by WRI_ABSPATH. Falling back to file
    external information if the file is not present as versioned node.
+     ### THIS IS NOT IMPLEMENTED -- WRI_ABSPATH is ignored
 
    If FOR_NORMALIZATION is TRUE, just return a list of keywords instead of
    calculating their intended values.
+     ### This would be better done by a separate API, since in this case
+         only the KEYWORD_LIST input parameter is needed. (And there is no
+         need to print "-1" as the revision value.)
 
    Use SCRATCH_POOL for any temporary allocations.
 */
