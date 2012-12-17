@@ -101,6 +101,14 @@ struct dump_edit_baton {
   /* A backdoor ra session to fetch additional information during the edit. */
   svn_ra_session_t *ra_session;
 
+  /* The repository relpath of the anchor of the editor when driven
+     via the RA update mechanism; NULL otherwise. (When the editor is
+     driven via the RA "replay" mechanism instead, the editor is
+     always anchored at the repository, we don't need to prepend an
+     anchor path to the dumped node paths, and open_root() doesn't
+     need to manufacture directory additions.)  */
+  const char *update_anchor_relpath;
+
   /* Pool for per-revision allocations */
   apr_pool_t *pool;
 
@@ -308,12 +316,18 @@ dump_node(struct dump_edit_baton *eb,
           svn_revnum_t copyfrom_rev,
           apr_pool_t *pool)
 {
+  const char *node_relpath = repos_relpath;
+
   assert(svn_relpath_is_canonical(repos_relpath));
   assert(!copyfrom_path || svn_relpath_is_canonical(copyfrom_path));
 
+  /* Add the edit root relpath prefix if necessary. */
+  if (eb->update_anchor_relpath)
+    node_relpath = svn_relpath_join(eb->update_anchor_relpath, node_relpath, pool);
+
   /* Node-path: commons/STATUS */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", repos_relpath));
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", node_relpath));
 
   /* Node-kind: file */
   if (kind == svn_node_file)
@@ -416,23 +430,41 @@ dump_node(struct dump_edit_baton *eb,
 }
 
 static svn_error_t *
-open_root(void *edit_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *pool,
-          void **root_baton)
+dump_mkdir(struct dump_edit_baton *eb,
+           const char *repos_relpath,
+           apr_pool_t *pool)
 {
-  struct dump_edit_baton *eb = edit_baton;
+  svn_stringbuf_t *prop_header, *prop_content;
+  apr_size_t len;
+  const char *buf;
 
-  /* Clear the per-revision pool after each revision */
-  svn_pool_clear(eb->pool);
+  /* Node-path: ... */
+  SVN_ERR(svn_stream_printf(eb->stream, pool,
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", repos_relpath));
 
-  eb->props = apr_hash_make(eb->pool);
-  eb->deleted_props = apr_hash_make(eb->pool);
-  eb->propstring = svn_stringbuf_create_empty(eb->pool);
+  /* Node-kind: dir */
+  SVN_ERR(svn_stream_printf(eb->stream, pool,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
-  *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                               edit_baton, NULL, FALSE, eb->pool);
-  LDR_DBG(("open_root %p\n", *root_baton));
+  /* Node-action: add */
+  SVN_ERR(svn_stream_puts(eb->stream,
+                          SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+
+  /* Dump the (empty) property block. */
+  SVN_ERR(get_props_content(&prop_header, &prop_content,
+                            apr_hash_make(pool), apr_hash_make(pool),
+                            pool, pool));
+  len = prop_header->len;
+  SVN_ERR(svn_stream_write(eb->stream, prop_header->data, &len));
+  len = prop_content->len;
+  buf = apr_psprintf(pool, SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                     ": %" APR_SIZE_T_FMT "\n", len);
+  SVN_ERR(svn_stream_puts(eb->stream, buf));
+  SVN_ERR(svn_stream_puts(eb->stream, "\n"));
+  SVN_ERR(svn_stream_write(eb->stream, prop_content->data, &len));
+
+  /* Newlines to tie it all off. */
+  SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
 
   return SVN_NO_ERROR;
 }
@@ -452,6 +484,77 @@ dump_pending(struct dir_baton *pb,
   /* Some pending newlines to dump? */
   SVN_ERR(do_dump_newlines(pb->eb, &(pb->eb->dump_newlines), scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+open_root(void *edit_baton,
+          svn_revnum_t base_revision,
+          apr_pool_t *pool,
+          void **root_baton)
+{
+  struct dump_edit_baton *eb = edit_baton;
+  struct dir_baton *new_db = NULL;
+  
+  /* Clear the per-revision pool after each revision */
+  svn_pool_clear(eb->pool);
+
+  eb->props = apr_hash_make(eb->pool);
+  eb->deleted_props = apr_hash_make(eb->pool);
+  eb->propstring = svn_stringbuf_create_empty(eb->pool);
+
+  LDR_DBG(("open_root %p\n", *root_baton));
+
+  if (eb->update_anchor_relpath)
+    {
+      int i;
+      const char *parent_path = eb->update_anchor_relpath;
+      apr_array_header_t *dirs_to_add =
+        apr_array_make(pool, 4, sizeof(const char *));
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      while (! svn_path_is_empty(parent_path))
+        {
+          APR_ARRAY_PUSH(dirs_to_add, const char *) = parent_path;
+          parent_path = svn_relpath_dirname(parent_path, pool);
+        }
+
+      for (i = dirs_to_add->nelts; i; --i)
+        {
+          const char *dir_to_add =
+            APR_ARRAY_IDX(dirs_to_add, i - 1, const char *);
+
+          svn_pool_clear(iterpool);
+
+          /* For parents of the source directory, we just manufacture
+             the adds ourselves. */
+          if (i > 1)
+            {
+              SVN_ERR(dump_mkdir(eb, dir_to_add, iterpool));
+            }
+          else
+            {
+              /* ... but for the source directory itself, we'll defer
+                 to letting the typical plumbing handle this task. */
+              new_db = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
+                                      edit_baton, NULL, TRUE, pool);
+              SVN_ERR(dump_node(eb, new_db->repos_relpath, svn_node_dir,
+                                svn_node_action_add, FALSE, NULL, SVN_INVALID_REVNUM,
+                                pool));
+              new_db->written_out = TRUE;
+            }
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  if (! new_db)
+    {
+      new_db = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
+                              edit_baton, NULL, FALSE, pool);
+    }
+
+  *root_baton = new_db;
+    
   return SVN_NO_ERROR;
 }
 
@@ -1014,6 +1117,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            svn_revnum_t revision,
                            svn_stream_t *stream,
                            svn_ra_session_t *ra_session,
+                           const char *update_anchor_relpath,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool)
@@ -1026,6 +1130,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
   eb->ra_session = ra_session;
+  eb->update_anchor_relpath = update_anchor_relpath;
   eb->current_revision = revision;
 
   /* Create a special per-revision pool */

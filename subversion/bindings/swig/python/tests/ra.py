@@ -375,8 +375,9 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     reporter.finish_report(reporter_baton)
 
   def test_namestring(self):
-    # Only ra-{neon,serf} support this right now.
-    if self.repos_uri.startswith('http'):
+    # Only ra-{svn,serf} support this right now.
+    uri = self.repos_uri
+    if uri.startswith('http') or uri.startswith('svn'):
       called = [False]
       def cb(pool):
         called[0] = True

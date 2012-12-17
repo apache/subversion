@@ -1234,6 +1234,17 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
+def is_plaintext_password_storage_disabled():
+  try:
+    predicate = re.compile("^[^W]*WARNING: Plaintext password storage is enabled!")
+    code, out, err = run_svn(False, "--version")
+    for line in out:
+      if predicate.match(line):
+        return False
+  except:
+    return False
+  return True
+
 ######################################################################
 
 

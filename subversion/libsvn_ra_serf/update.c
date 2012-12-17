@@ -503,26 +503,42 @@ update_cdata(svn_ra_serf__xml_estate_t *xes,
 static svn_ra_serf__connection_t *
 get_best_connection(report_context_t *ctx)
 {
-  svn_ra_serf__connection_t * conn;
-  int first_conn;
+  svn_ra_serf__connection_t *conn;
+  int first_conn = 1;
 
   /* Skip the first connection if the REPORT response hasn't been completely
-     received yet. */
-  first_conn = ctx->report_received ? 0: 1;
+     received yet or if we're being told to limit our connections to
+     2 (because this could be an attempt to ensure that we do all our
+     auxiliary GETs/PROPFINDs on a single connection).
 
+     ### FIXME: This latter requirement (max_connections > 2) is
+     ### really just a hack to work around the fact that some update
+     ### editor implementations (such as svnrdump's dump editor)
+     ### simply can't handle the way ra_serf violates the editor v1
+     ### drive ordering requirements.
+     ### 
+     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+  */
+  if (ctx->report_received && (ctx->sess->max_connections > 2))
+    first_conn = 0;
+
+  /* Currently, we just cycle connections.  In the future we could
+     store the number of pending requests on each connection, or
+     perform other heuristics, to achieve better connection usage.
+     (As an optimization, if there's only one available auxiliary
+     connection to use, don't bother doing all the cur_conn math --
+     just return that one connection.)  */
   if (ctx->sess->num_conns - first_conn == 1)
-    return ctx->sess->conns[first_conn];
-
-  /* Currently just cycle connections. In future we could store number of
-   * pending requests on each connection for better connection usage. */
-  conn = ctx->sess->conns[ctx->sess->cur_conn];
-
-  /* Switch our connection. */
-  ctx->sess->cur_conn++;
-
-  if (ctx->sess->cur_conn >= ctx->sess->num_conns)
-      ctx->sess->cur_conn = first_conn;
-
+    {
+      conn = ctx->sess->conns[first_conn];
+    }
+  else
+    {
+      conn = ctx->sess->conns[ctx->sess->cur_conn];
+      ctx->sess->cur_conn++;
+      if (ctx->sess->cur_conn >= ctx->sess->num_conns)
+        ctx->sess->cur_conn = first_conn;
+    }
   return conn;
 }
 
