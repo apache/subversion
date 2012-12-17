@@ -503,10 +503,8 @@ int main(int argc, const char *argv[])
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.base = NULL;
   params.cfg = NULL;
-  params.pwdb = NULL;
-  params.authzdb = NULL;
-  params.authz_repos_relative = svn_tristate_unknown;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
   params.vhost = FALSE;
@@ -749,21 +747,12 @@ int main(int argc, const char *argv[])
    * password and authorization files. */
   if (config_filename)
     {
-      const char *base = svn_dirent_dirname(config_filename, pool);
+      params.base = svn_dirent_dirname(config_filename, pool);
 
       SVN_INT_ERR(svn_config_read2(&params.cfg, config_filename,
                                    TRUE, /* must_exist */
                                    FALSE, /* section_names_case_sensitive */
                                    pool));
-      SVN_INT_ERR(load_pwdb_config(&params.pwdb, params.cfg, base,
-                                   NULL, NULL, /* server baton, conn */
-                                   pool));
-
-      SVN_INT_ERR(load_authz_config(&params.authzdb, &params.username_case,
-                                    &params.authz_repos_relative, params.cfg,
-                                    base, NULL, /* repos_root */
-                                    NULL, NULL, /*server baton, conn */
-                                    pool));
     }
 
   if (log_filename)
