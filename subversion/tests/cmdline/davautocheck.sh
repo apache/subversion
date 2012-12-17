@@ -441,7 +441,7 @@ MaxRequestsPerChild 0
 <IfModule worker.c>
   ThreadsPerChild   8
 </IfModule>
-MaxClients          16
+MaxClients          32
 HostNameLookups     Off
 LogFormat           "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" format
 CustomLog           "$HTTPD_ROOT/req" format
