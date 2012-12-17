@@ -315,8 +315,6 @@ svn_handle_warning(FILE *stream,
  * @since New in 1.7.
  */
 #ifdef SVN_ERR__TRACING
-#define SVN_ERR__TRACED "traced call"
-
 svn_error_t *
 svn_error__trace(const char *file, long line, svn_error_t *err);
 

@@ -5325,7 +5325,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "mixed_rev_move"),
     SVN_TEST_OPTS_PASS(update_prop_mod_into_moved,
                        "update_prop_mod_into_moved"),
-    SVN_TEST_OPTS_XFAIL(nested_move_update,
+    SVN_TEST_OPTS_PASS(nested_move_update,
                        "nested_move_update"),
     SVN_TEST_NULL
   };

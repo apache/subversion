@@ -128,8 +128,14 @@ typedef struct svn_subst_keywords_t
  * given a @a keywords_string (the contents of the svn:keywords
  * property for the file in question), the revision @a rev, the @a url,
  * the @a date the file was committed on, and the @a author of the last
- * commit.  Any of these can be @c NULL to indicate that the information is
- * not present, or @c 0 for @a date.
+ * commit.
+ *
+ * Any of the inputs @a rev, @a url, @a date and @a author can be @c NULL,
+ * or @c 0 for @a date, to indicate that the information is not present.
+ * Each piece of information that is not present expands to the empty
+ * string wherever it appears in an expanded keyword value.  (This can
+ * result in multiple adjacent spaces in the expansion of a multi-valued
+ * keyword such as "Id".)
  *
  * Hash keys are of type <tt>const char *</tt>.
  * Hash values are of type <tt>svn_string_t *</tt>.
