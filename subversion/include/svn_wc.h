@@ -1132,7 +1132,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_add,
 
-  /** A node below an exising node was updated during update.
+  /** A node below an existing node was updated during update.
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_update,
 
@@ -6658,7 +6658,7 @@ typedef enum svn_wc_merge_outcome_t
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.
- * Furtheremore, merging into an unversioned file is a lossy operation.)
+ * Furthermore, merging into an unversioned file is a lossy operation.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a target_abspath to be modified, when
@@ -7048,7 +7048,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_cleanup3() but uses relative paths and creates its own
- * swn_wc_context_t.
+ * #svn_wc_context_t.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
