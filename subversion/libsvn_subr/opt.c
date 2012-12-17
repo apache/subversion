@@ -1126,21 +1126,14 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
 
 #if !defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE) && !defined(WIN32)
-  {
-    const char *warnstart = "";
-    const char *warnend = "";
-
-    if (isatty(fileno(stdout)))
-      {
-        warnstart = "\033[1;31m";
-        warnend = "\033[0;m";
-      }
-
-    SVN_ERR(svn_cmdline_printf(
-                pool,
-                _("%sWARNING: Plaintext password storage is enabled!%s\n\n"),
-                warnstart, warnend));
-  }
+  /* FIXME: Checking this config variable is the wrong thing to do,
+            since it apparently means that the simple auth provider is
+            disabled, not that plaintext password storage is disabled.
+            So in either the configure option is misnamed, or its
+            implementation is too simplistic. */
+  SVN_ERR(svn_cmdline_fputs(
+              _("WARNING: Plaintext password storage is enabled!\n\n"),
+              stdout, pool));
 #endif /* SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE && !WIN32 */
 
   if (footer)
