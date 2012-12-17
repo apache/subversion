@@ -70,6 +70,8 @@ del_lines_res = [
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
                  re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"\* fs_(base|fs) :"),
+                 re.compile(r"WARNING: Plaintext"),
+                 re.compile(r"$"), # blank line
                 ]
 
 # This is a list of lines to search and replace text on.
