@@ -98,7 +98,7 @@ svn_mutex__unlock(svn_mutex__t *mutex,
  * releases the @a mutex. If any of these steps fail, the function using
  * this macro will return an @ref svn_error_t. This macro guarantees that
  * the @a mutex will always be unlocked again if it got locked successfully
- * locked by the first step.
+ * by the first step.
  *
  * @note Prefer using this macro instead of explicit lock aquisition and
  * release.
