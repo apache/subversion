@@ -6,8 +6,6 @@ http://wiki.apache.org/subversion/InRepoAuthz
 
 TODO
 
-* svnserve - I have partial support written, but need to deal with the whole
-    --config-file issue.
 * errors - DAV error messages kinda suck since it guesses what it thinks is
     the best error message at current.  When it should display the whole chain.
 * documentation - as in the user level docs.
