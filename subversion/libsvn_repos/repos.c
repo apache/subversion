@@ -1022,7 +1022,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### directory containing this file.  The specified path may be a"           NL
 "### repository relative URL (^/) or an absolute file:// URL to a text"      NL
 "### file in a Subversion repository.  If you don't specify an authz-db,"    NL
-"### no path-based access control is done."                                     NL
+"### no path-based access control is done."                                  NL
 "### Uncomment the line below to use the default authorization file."        NL
 "# authz-db = " SVN_REPOS__CONF_AUTHZ                                        NL
 "### This option specifies the authentication realm of the repository."      NL
