@@ -133,13 +133,17 @@ static const command_rec authz_svn_cmds[] =
                 NULL,
                 OR_AUTHCFG,
                 "Path to text file containing permissions of repository "
-                "paths."),
+                "paths.  Path may be an repository relative URL (^/) or "
+                "absolute file:// URL to a text file in a Subversion "
+                "repository."),
   AP_INIT_TAKE1("AuthzSVNReposRelativeAccessFile",
                 AuthzSVNReposRelativeAccessFile_cmd,
                 NULL,
                 OR_AUTHCFG,
                 "Path (relative to repository 'conf' directory) to text "
-                "file containing permissions of repository paths. "),
+                "file containing permissions of repository paths. Path may "
+                "be an repository relative URL (^/) or absolute file:// URL "
+                "to a text file in a Subversion repository."),
   AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
                (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
                OR_AUTHCFG,
