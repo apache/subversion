@@ -855,6 +855,8 @@ set_revision_property(void *baton,
 {
   struct revision_baton *rb = baton;
 
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, rb->pool));
+  
   SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
 
   if (rb->rev > 0)
@@ -933,6 +935,8 @@ set_node_property(void *baton,
           value = mergeinfo_val;
         }
     }
+
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, pool));
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 
