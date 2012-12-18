@@ -1608,7 +1608,16 @@ get_file_for_validation(const svn_string_t **mime_type,
 }
 
 
-/* */
+/* Validate that a file has a 'non-binary' MIME type and contains
+ * self-consistent line endings.  If not, then return an error.
+ *
+ * Call GETTER (which must not be NULL) with GETTER_BATON to get the
+ * file's MIME type and/or content.  If the MIME type is non-null and
+ * is categorized as 'binary' then return an error and do not request
+ * the file content.
+ *
+ * Use PATH (a local path or a URL) only for error messages.
+ */
 static svn_error_t *
 validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,
