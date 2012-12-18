@@ -375,6 +375,13 @@ def copy_bad_line_endings_dump(sbox):
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
 
+@XFail()
+@Issue(4263)
+def copy_bad_line_endings_load(sbox):
+  "load: inconsistent line endings in svn:* props"
+  run_load_test(sbox, "copy-bad-line-endings.dump",
+                expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+          
 @Skip(svntest.main.is_ra_type_dav_serf)
 def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
@@ -796,6 +803,7 @@ test_list = [ None,
               move_and_modify_in_the_same_revision_dump,
               move_and_modify_in_the_same_revision_load,
               copy_bad_line_endings_dump,
+              copy_bad_line_endings_load,
               copy_bad_line_endings2_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
