@@ -8,4 +8,3 @@ TODO
 
 * errors - DAV error messages kinda suck since it guesses what it thinks is
     the best error message at current.  When it should display the whole chain.
-* documentation - as in the user level docs.
