@@ -323,13 +323,15 @@ dump_node(struct dump_edit_baton *eb,
 
   /* Add the edit root relpath prefix if necessary. */
   if (eb->update_anchor_relpath)
-    node_relpath = svn_relpath_join(eb->update_anchor_relpath, node_relpath, pool);
+    node_relpath = svn_relpath_join(eb->update_anchor_relpath,
+                                    node_relpath, pool);
 
-  /* Node-path: commons/STATUS */
+  /* Node-path: ... */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", node_relpath));
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
+                            node_relpath));
 
-  /* Node-kind: file */
+  /* Node-kind: "file" | "dir" */
   if (kind == svn_node_file)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
@@ -344,13 +346,24 @@ dump_node(struct dump_edit_baton *eb,
     case svn_node_action_change:
       /* We are here after a change_file_prop or change_dir_prop. They
          set up whatever dump_props they needed to- nothing to
-         do here but print node action information */
+         do here but print node action information.
+
+         Node-action: change.  */
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
       break;
 
     case svn_node_action_replace:
-      if (!is_copy)
+      if (is_copy)
+        {
+          /* Delete the original, and then re-add the replacement as a
+             copy using recursive calls into this function. */
+          SVN_ERR(dump_node(eb, repos_relpath, kind, svn_node_action_delete,
+                            FALSE, NULL, SVN_INVALID_REVNUM, pool));
+          SVN_ERR(dump_node(eb, repos_relpath, kind, svn_node_action_add,
+                            is_copy, copyfrom_path, copyfrom_rev, pool));
+        }
+      else
         {
           /* Node-action: replace */
           SVN_ERR(svn_stream_puts(eb->stream,
@@ -360,24 +373,11 @@ dump_node(struct dump_edit_baton *eb,
           /* Wait for a change_*_prop to be called before dumping
              anything */
           eb->dump_props = TRUE;
-          break;
         }
-      /* More complex case: is_copy is true, and copyfrom_path/
-         copyfrom_rev are present: delete the original, and then re-add
-         it */
-
-      SVN_ERR(svn_stream_puts(eb->stream,
-                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n\n"));
-
-      /* Recurse: Print an additional add-with-history record. */
-      SVN_ERR(dump_node(eb, repos_relpath, kind, svn_node_action_add,
-                        is_copy, copyfrom_path, copyfrom_rev, pool));
-
-      /* We can leave this routine quietly now, don't need to dump any
-         content; that was already done in the second record. */
       break;
 
     case svn_node_action_delete:
+      /* Node-action: delete */
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
@@ -385,44 +385,54 @@ dump_node(struct dump_edit_baton *eb,
          print a couple of newlines because we're not dumping props or
          text. */
       SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
+
       break;
 
     case svn_node_action_add:
+      /* Node-action: add */
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
-      if (!is_copy)
+      if (is_copy)
         {
-          /* eb->dump_props for files is handled in close_file
-             which is called immediately.  However, directories are not
-             closed until all the work inside them has been done;
-             eb->dump_props for directories is handled in all the
-             functions that can possibly be called after add_directory:
-             add_directory, open_directory, delete_entry, close_directory,
-             add_file, open_file. change_dir_prop is a special case. */
+          /* Node-copyfrom-rev / Node-copyfrom-path */
+          SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                    SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
+                                    ": %ld\n"
+                                    SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
+                                    ": %s\n",
+                                    copyfrom_rev, copyfrom_path));
 
-          /* Wait for a change_*_prop to be called before dumping
-             anything */
-          eb->dump_props = TRUE;
-          break;
+          /* Ugly hack: If a directory was copied from a previous
+             revision, nothing like close_file() will be called to write two
+             blank lines. If change_dir_prop() is called, props are dumped
+             (along with the necessary PROPS-END\n\n and we're good. So
+             set DUMP_NEWLINES here to print the newlines unless
+             change_dir_prop() is called next otherwise the `svnadmin load`
+             parser will fail.  */
+          if (kind == svn_node_dir)
+            eb->dump_newlines = TRUE;
         }
+      else
+        {
+          /* eb->dump_props (for files) is handled in close_file()
+             which is called immediately.
 
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
-                                ": %ld\n"
-                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
-                                ": %s\n",
-                                copyfrom_rev, copyfrom_path));
+             However, directories are not closed until all the work
+             inside them has been done; eb->dump_props (for directories)
+             is handled (via dump_pending()) in all the functions that
+             can possibly be called after add_directory():
 
-      /* Ugly hack: If a directory was copied from a previous
-         revision, nothing like close_file() will be called to write two
-         blank lines. If change_dir_prop() is called, props are dumped
-         (along with the necessary PROPS-END\n\n and we're good. So
-         set DUMP_NEWLINES here to print the newlines unless
-         change_dir_prop() is called next otherwise the `svnadmin load`
-         parser will fail.  */
-      if (kind == svn_node_dir)
-        eb->dump_newlines = TRUE;
+               - add_directory()
+               - open_directory()
+               - delete_entry()
+               - close_directory()
+               - add_file()
+               - open_file()
+
+             change_dir_prop() is a special case. */
+          eb->dump_props = TRUE;
+        }
 
       break;
     }
@@ -440,7 +450,8 @@ dump_mkdir(struct dump_edit_baton *eb,
 
   /* Node-path: ... */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", repos_relpath));
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
+                            repos_relpath));
 
   /* Node-kind: dir */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
