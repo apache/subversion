@@ -34,10 +34,6 @@
 #include <apr_lib.h>
 #include <apr_file_info.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 #include "svn_cmdline.h"
 #include "svn_version.h"
 #include "svn_types.h"
