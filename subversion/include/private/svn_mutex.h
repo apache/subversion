@@ -57,8 +57,8 @@ typedef void svn_mutex__t;
 
 /** Initialize the @a *mutex. If @a mutex_required is TRUE, the mutex will
  * actually be created with a lifetime defined by @a result_pool. Otherwise,
- * the pointer will be set to @c NULL and @ref svn_mutex__lock as well as
- * @ref svn_mutex__unlock will be no-ops.
+ * the pointer will be set to @c NULL and svn_mutex__lock() as well as
+ * svn_mutex__unlock() will be no-ops.
  *
  * If threading is not supported by APR, this function is a no-op.
  */
@@ -67,27 +67,27 @@ svn_mutex__init(svn_mutex__t **mutex,
                 svn_boolean_t mutex_required,
                 apr_pool_t *result_pool);
 
-/** Acquire the @a mutex, if that has been enabled in @ref svn_mutex__init.
- * Make sure to call @ref svn_mutex__unlock some time later in the same
+/** Acquire the @a mutex, if that has been enabled in svn_mutex__init().
+ * Make sure to call svn_mutex__unlock() some time later in the same
  * thread to release the mutex again. Recursive locking are not supported.
  *
- * @note You should use @ref SVN_MUTEX__WITH_LOCK instead of explicit lock
+ * @note You should use #SVN_MUTEX__WITH_LOCK instead of explicit lock
  * aquisition and release.
  */
 svn_error_t *
 svn_mutex__lock(svn_mutex__t *mutex);
 
-/** Release the @a mutex, previously acquired using @ref svn_mutex__lock
- * that has been enabled in @ref svn_mutex__init.
+/** Release the @a mutex, previously acquired using svn_mutex__lock()
+ * that has been enabled in svn_mutex__init().
  *
  * Since this is often used as part of the calling function's exit
  * sequence, we accept that function's current return code in @a err.
- * If it is not @ref SVN_NO_ERROR, it will be used as the return value -
+ * If it is not #SVN_NO_ERROR, it will be used as the return value -
  * irrespective of the possible internal failures during unlock. If @a err
- * is @ref SVN_NO_ERROR, internal failures of this function will be
+ * is #SVN_NO_ERROR, internal failures of this function will be
  * reported in the return value.
  *
- * @note You should use @ref SVN_MUTEX__WITH_LOCK instead of explicit lock
+ * @note You should use #SVN_MUTEX__WITH_LOCK instead of explicit lock
  * aquisition and release.
  */
 svn_error_t *
@@ -96,7 +96,7 @@ svn_mutex__unlock(svn_mutex__t *mutex,
 
 /** Aquires the @a mutex, executes the expression @a expr and finally
  * releases the @a mutex. If any of these steps fail, the function using
- * this macro will return an @ref svn_error_t. This macro guarantees that
+ * this macro will return an #svn_error_t. This macro guarantees that
  * the @a mutex will always be unlocked again if it got locked successfully
  * by the first step.
  *
