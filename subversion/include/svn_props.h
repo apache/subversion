@@ -110,7 +110,7 @@ typedef struct svn_prop_inherited_item_t
  * @since New in 1.5.
  */
 apr_array_header_t *
-svn_prop_hash_to_array(apr_hash_t *hash,
+svn_prop_hash_to_array(const apr_hash_t *hash,
                        apr_pool_t *pool);
 
 /**
@@ -133,7 +133,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
  * @since New in 1.6.
  */
 apr_hash_t *
-svn_prop_hash_dup(apr_hash_t *hash,
+svn_prop_hash_dup(const apr_hash_t *hash,
                   apr_pool_t *pool);
 
 /**
@@ -144,7 +144,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
  * @since New in 1.7.
  */
 const char *
-svn_prop_get_value(apr_hash_t *properties,
+svn_prop_get_value(const apr_hash_t *properties,
                    const char *prop_name);
 
 /**
@@ -317,8 +317,8 @@ svn_categorize_props(const apr_array_header_t *proplist,
  */
 svn_error_t *
 svn_prop_diffs(apr_array_header_t **propdiffs,
-               apr_hash_t *target_props,
-               apr_hash_t *source_props,
+               const apr_hash_t *target_props,
+               const apr_hash_t *source_props,
                apr_pool_t *pool);
 
 
