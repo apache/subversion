@@ -1578,12 +1578,17 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
 /* Make the working tree under LOCAL_ABSPATH to depth DEPTH match the
    versioned tree.  This function is called after svn_wc__db_op_revert
    has done the database revert and created the revert list.  Notifies
-   for all paths equal to or below LOCAL_ABSPATH that are reverted. */
+   for all paths equal to or below LOCAL_ABSPATH that are reverted.
+
+   REVERT_ROOT is true for explicit revert targets and FALSE for targets
+   reached via recursion.
+ */
 static svn_error_t *
 revert_restore(svn_wc__db_t *db,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
+               svn_boolean_t revert_root,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -1604,9 +1609,30 @@ revert_restore(svn_wc__db_t *db,
 #endif
   svn_boolean_t copied_here;
   svn_kind_t reverted_kind;
+  svn_boolean_t is_wcroot;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, scratch_pool));
+  if (is_wcroot && !revert_root)
+    {
+      /* Issue #4162: Obstructing working copy. We can't access the working
+         copy data from the parent working copy for this node by just using
+         local_abspath */
+
+      if (notify_func)
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify(
+                                        local_abspath,
+                                        svn_wc_notify_update_skip_obstruction,
+                                        scratch_pool);
+
+          notify_func(notify_baton, notify, scratch_pool);
+        }
+
+      return SVN_NO_ERROR; /* We don't revert obstructing working copies */
+    }
 
   SVN_ERR(svn_wc__db_revert_list_read(&notify_required,
                                       &conflict_files,
@@ -1920,7 +1946,7 @@ revert_restore(svn_wc__db_t *db,
                                           iterpool);
 
           SVN_ERR(revert_restore(db, child_abspath, depth,
-                                 use_commit_times,
+                                 use_commit_times, FALSE /* revcert root */,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
                                  iterpool));
@@ -1974,7 +2000,7 @@ revert_internal(svn_wc__db_t *db,
 
   if (!err)
     err = revert_restore(db, local_abspath, depth,
-                         use_commit_times,
+                         use_commit_times, TRUE /* revert root */,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          scratch_pool);
