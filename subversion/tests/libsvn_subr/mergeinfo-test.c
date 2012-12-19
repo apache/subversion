@@ -1702,7 +1702,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "turning rangelist back into a string"),
     SVN_TEST_PASS2(test_mergeinfo_to_string,
                    "turning mergeinfo back into a string"),
-    SVN_TEST_XFAIL2(test_rangelist_merge,
+    SVN_TEST_PASS2(test_rangelist_merge,
                    "merge of rangelists"),
     SVN_TEST_PASS2(test_rangelist_diff,
                    "diff of rangelists"),

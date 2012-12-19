@@ -50,11 +50,20 @@ svn_rangelist__set_inheritance(svn_rangelist_t *rangelist,
  * R1 >= R2 in a "R1-R2" range element).
  *
  * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
- * or combine adjacent and overlapping ranges. */
+ * or combine adjacent and overlapping ranges.
+ *
+ * The compaction can be done with svn_rangelist__combine_adjecent_ranges().
+ */
 svn_error_t *
 svn_rangelist__parse(svn_rangelist_t **rangelist,
                      const char *str,
                      apr_pool_t *result_pool);
+
+/* In-place combines adjecent ranges in a rangelist.
+   SCRATCH_POOL is just used for providing error messages. */
+svn_error_t *
+svn_rangelist__combine_adjecent_ranges(svn_rangelist_t *rangelist,
+                                       apr_pool_t *scratch_pool);
 
 /* Set inheritability of all rangelists in MERGEINFO to INHERITABLE.
    If MERGEINFO is NULL do nothing.  If a rangelist in MERGEINFO is
