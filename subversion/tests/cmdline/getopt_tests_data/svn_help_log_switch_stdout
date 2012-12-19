@@ -116,7 +116,8 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-  --non-interactive        : do no interactive prompting
+  --non-interactive        : do no interactive prompting (default is to prompt
+                             only if standard input is a terminal device)
   --force-interactive      : do interactive prompting even if standard input
                              is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown
@@ -198,7 +199,8 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-  --non-interactive        : do no interactive prompting
+  --non-interactive        : do no interactive prompting (default is to prompt
+                             only if standard input is a terminal device)
   --force-interactive      : do interactive prompting even if standard input
                              is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown

@@ -230,11 +230,13 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
-                    N_("do no interactive prompting")},
+                    N_("do no interactive prompting (default is to prompt\n"
+                       "                             "
+                       "only if standard input is a terminal device)")},
   {"force-interactive", opt_force_interactive, 0,
-                       N_("do interactive prompting even if standard input\n"
-                          "                             "
-                          "is not a terminal device")},
+                    N_("do interactive prompting even if standard input\n"
+                       "                             "
+                       "is not a terminal device")},
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
