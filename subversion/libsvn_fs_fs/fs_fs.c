@@ -8560,23 +8560,6 @@ write_reps_to_cache(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
-                           apr_pool_t *scratch_pool)
-{
-  struct commit_baton *cb = baton;
-
-  /* Write new entries to the rep-sharing database.
-   *
-   * We use an sqlite transcation to speed things up;
-   * see <http://www.sqlite.org/faq.html#q19>.
-   */
-  SVN_ERR(write_reps_to_cache(cb->fs, cb->reps_to_cache, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -8611,9 +8594,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   if (ffd->rep_sharing_allowed)
     {
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
-      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                           commit_sqlite_txn_callback,
-                                           &cb, pool));
+
+      /* Write new entries to the rep-sharing database.
+       *
+       * We use an sqlite transaction to speed things up;
+       * see <http://www.sqlite.org/faq.html#q19>.
+       */
+      SVN_SQLITE__WITH_TXN(
+        write_reps_to_cache(fs, cb.reps_to_cache, pool),
+        ffd->rep_cache_db);
     }
 
   return SVN_NO_ERROR;

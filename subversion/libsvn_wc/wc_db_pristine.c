@@ -288,20 +288,6 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
 }
 
 
-/* Data for pristine_install_txn(). */
-typedef struct pristine_install_baton_t
-{
-  /* The path to the source file that is to be moved into place. */
-  const char *tempfile_abspath;
-  /* The target path for the file (within the pristine store). */
-  const char *pristine_abspath;
-  /* The pristine text's SHA-1 checksum. */
-  const svn_checksum_t *sha1_checksum;
-  /* The pristine text's MD-5 checksum. */
-  const svn_checksum_t *md5_checksum;
-} pristine_install_baton_t;
-
-
 /* Install the pristine text described by BATON into the pristine store of
  * SDB.  If it is already stored then just delete the new file
  * BATON->tempfile_abspath.
@@ -312,11 +298,17 @@ typedef struct pristine_install_baton_t
  * Implements 'notes/wc-ng/pristine-store' section A-3(a).
  * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-pristine_install_txn(void *baton,
-                     svn_sqlite__db_t *sdb,
+pristine_install_txn(svn_sqlite__db_t *sdb,
+                     /* The path to the source file that is to be moved into place. */
+                     const char *tempfile_abspath,
+                     /* The target path for the file (within the pristine store). */
+                     const char *pristine_abspath,
+                     /* The pristine text's SHA-1 checksum. */
+                     const svn_checksum_t *sha1_checksum,
+                     /* The pristine text's MD-5 checksum. */
+                     const svn_checksum_t *md5_checksum,
                      apr_pool_t *scratch_pool)
 {
-  pristine_install_baton_t *b = baton;
   apr_finfo_t finfo;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -325,7 +317,7 @@ pristine_install_txn(void *baton,
   /* If this pristine text is already present in the store, just keep it:
    * delete the new one and return. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, b->sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
@@ -335,30 +327,30 @@ pristine_install_txn(void *baton,
        * ### We could check much more. */
       {
         apr_finfo_t finfo1, finfo2;
-        SVN_ERR(svn_io_stat(&finfo1, b->tempfile_abspath, APR_FINFO_SIZE,
+        SVN_ERR(svn_io_stat(&finfo1, tempfile_abspath, APR_FINFO_SIZE,
                             scratch_pool));
-        SVN_ERR(svn_io_stat(&finfo2, b->pristine_abspath, APR_FINFO_SIZE,
+        SVN_ERR(svn_io_stat(&finfo2, pristine_abspath, APR_FINFO_SIZE,
                             scratch_pool));
         if (finfo1.size != finfo2.size)
           {
             return svn_error_createf(
               SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
               _("New pristine text '%s' has different size: %ld versus %ld"),
-              svn_checksum_to_cstring_display(b->sha1_checksum, scratch_pool),
+              svn_checksum_to_cstring_display(sha1_checksum, scratch_pool),
               (long int)finfo1.size, (long int)finfo2.size);
           }
       }
 #endif
 
       /* Remove the temp file: it's already there */
-      SVN_ERR(svn_io_remove_file2(b->tempfile_abspath,
+      SVN_ERR(svn_io_remove_file2(tempfile_abspath,
                                   FALSE /* ignore_enoent */, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   /* Move the file to its target location.  (If it is already there, it is
    * an orphan file and it doesn't matter if we overwrite it.) */
-  err = svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
+  err = svn_io_file_rename(tempfile_abspath, pristine_abspath,
                            scratch_pool);
 
   /* Maybe the directory doesn't exist yet? */
@@ -366,7 +358,7 @@ pristine_install_txn(void *baton,
     {
       svn_error_t *err2;
 
-      err2 = svn_io_dir_make(svn_dirent_dirname(b->pristine_abspath,
+      err2 = svn_io_dir_make(svn_dirent_dirname(pristine_abspath,
                                                 scratch_pool),
                              APR_OS_DEFAULT, scratch_pool);
 
@@ -377,19 +369,19 @@ pristine_install_txn(void *baton,
         /* We could create a directory: retry install */
         svn_error_clear(err);
 
-      SVN_ERR(svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
+      SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
                            scratch_pool));
     }
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_io_stat(&finfo, b->pristine_abspath, APR_FINFO_SIZE,
+  SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
                       scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, b->sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, b->md5_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -407,7 +399,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   const char *wri_abspath;
-  struct pristine_install_baton_t b;
+  const char *pristine_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
@@ -429,19 +421,18 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  b.tempfile_abspath = tempfile_abspath;
-  b.sha1_checksum = sha1_checksum;
-  b.md5_checksum = md5_checksum;
-
-  SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              sha1_checksum,
                              scratch_pool, scratch_pool));
 
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
    * at the disk, to ensure no concurrent pristine install/delete txn. */
-  SVN_ERR(svn_sqlite__with_immediate_transaction(wcroot->sdb,
-                                                 pristine_install_txn, &b,
-                                                 scratch_pool));
+  SVN_SQLITE__WITH_IMMEDIATE_TXN(
+    pristine_install_txn(wcroot->sdb,
+                         tempfile_abspath, pristine_abspath,
+                         sha1_checksum, md5_checksum,
+                         scratch_pool),
+    wcroot->sdb);
 
   return SVN_NO_ERROR;
 }
@@ -531,8 +522,15 @@ struct pristine_transfer_baton
   svn_cancel_func_t cancel_func;
   void * cancel_baton;
 
-  /* pristine install baton, filled from pristine_transfer() */
-  struct pristine_install_baton_t ib;
+  /* The following fields are filled in by pristine_transfer(). */
+  /* The path to the source file that is to be moved into place. */
+  const char *tempfile_abspath;
+  /* The target path for the file (within the pristine store). */
+  const char *pristine_abspath;
+  /* The pristine text's SHA-1 checksum. */
+  const svn_checksum_t *sha1_checksum;
+  /* The pristine text's MD-5 checksum. */
+  const svn_checksum_t *md5_checksum;
 };
 
 /* Transaction implementation of svn_wc__db_pristine_transfer().
@@ -555,8 +553,12 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
                                   pristine_transfer, tb, scratch_pool));
 
       /* And do the final install, while we still have the dst lock */
-      if (tb->ib.tempfile_abspath)
-        SVN_ERR(pristine_install_txn(&(tb->ib), tb->dst_wcroot->sdb,
+      if (tb->tempfile_abspath)
+        SVN_ERR(pristine_install_txn(tb->dst_wcroot->sdb,
+                                     tb->tempfile_abspath,
+                                     tb->pristine_abspath,
+                                     tb->sha1_checksum,
+                                     tb->md5_checksum,
                                      scratch_pool));
       return SVN_NO_ERROR;
     }
@@ -564,7 +566,7 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
   /* We have a lock on tb->dst_wcroot and tb->src_wcroot */
 
   /* Get the right checksum if it wasn't passed */
-  if (!tb->ib.sha1_checksum)
+  if (!tb->sha1_checksum)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, tb->src_wcroot->sdb,
                                         STMT_SELECT_NODE_INFO));
@@ -575,19 +577,19 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (have_row)
-        SVN_ERR(svn_sqlite__column_checksum(&(tb->ib.sha1_checksum), stmt, 6,
+        SVN_ERR(svn_sqlite__column_checksum(&(tb->sha1_checksum), stmt, 6,
                                             scratch_pool));
 
       SVN_ERR(svn_sqlite__reset(stmt));
 
-      if (!tb->ib.sha1_checksum)
+      if (!tb->sha1_checksum)
         return SVN_NO_ERROR; /* Nothing to transfer */
     }
 
   /* Check if we have the pristine in the destination wcroot */
   SVN_ERR(svn_sqlite__get_statement(&stmt, tb->dst_wcroot->sdb,
                                     STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, tb->ib.sha1_checksum,
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, tb->sha1_checksum,
                                     scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -599,7 +601,7 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
   /* Verify if the pristine actually exists and get the MD5 in one query */
   SVN_ERR(svn_sqlite__get_statement(&stmt, tb->src_wcroot->sdb,
                                     STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, tb->ib.sha1_checksum,
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, tb->sha1_checksum,
                                     scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -609,9 +611,9 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
                                _("The pristine text with checksum '%s' was "
                                  "not found"),
                                svn_checksum_to_cstring_display(
-                                        tb->ib.sha1_checksum, scratch_pool));
+                                        tb->sha1_checksum, scratch_pool));
     }
-  SVN_ERR(svn_sqlite__column_checksum(&(tb->ib.md5_checksum), stmt, 0,
+  SVN_ERR(svn_sqlite__column_checksum(&(tb->md5_checksum), stmt, 0,
                                       scratch_pool));
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -631,7 +633,7 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
                                    scratch_pool, scratch_pool));
 
     SVN_ERR(get_pristine_fname(&src_abspath, tb->src_wcroot->abspath,
-                               tb->ib.sha1_checksum,
+                               tb->sha1_checksum,
                                scratch_pool, scratch_pool));
 
     SVN_ERR(svn_stream_open_readonly(&src_stream, src_abspath,
@@ -645,11 +647,11 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
     /* And now set the right information to install once we leave the
        src transaction */
 
-    SVN_ERR(get_pristine_fname(&(tb->ib.pristine_abspath),
+    SVN_ERR(get_pristine_fname(&(tb->pristine_abspath),
                                tb->dst_wcroot->abspath,
-                               tb->ib.sha1_checksum,
+                               tb->sha1_checksum,
                                scratch_pool, scratch_pool));
-    tb->ib.tempfile_abspath = tmp_abspath;
+    tb->tempfile_abspath = tmp_abspath;
   }
   return SVN_NO_ERROR;
 }
@@ -730,17 +732,8 @@ remove_file(const char *file_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Data for pristine_remove_if_unreferenced_txn(). */
-typedef struct pristine_remove_baton_t
-{
-  svn_wc__db_wcroot_t *wcroot;
-  /* The pristine text's SHA-1 checksum. */
-  const svn_checksum_t *sha1_checksum;
-  /* The path to the pristine file (within the pristine store). */
-  const char *pristine_abspath;
-} pristine_remove_baton_t;
-
-/* If the pristine text referenced by BATON in SDB has a reference count of
+/* If the pristine text referenced by SHA1_CHECKSUM in WCROOT/SDB, whose path
+ * within the pristine store is PRISTINE_ABSPATH, has a reference count of
  * zero, delete it (both the database row and the disk file).
  *
  * This function expects to be executed inside a SQLite txn that has already
@@ -748,18 +741,19 @@ typedef struct pristine_remove_baton_t
  *
  * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-pristine_remove_if_unreferenced_txn(void *baton,
-                                    svn_sqlite__db_t *sdb,
+pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
+                                    svn_wc__db_wcroot_t *wcroot,
+                                    const svn_checksum_t *sha1_checksum,
+                                    const char *pristine_abspath,
                                     apr_pool_t *scratch_pool)
 {
-  pristine_remove_baton_t *b = baton;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
   /* Remove the DB row, if refcount is 0. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_DELETE_PRISTINE_IF_UNREFERENCED));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, b->sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   /* If we removed the DB row, then remove the file. */
@@ -774,7 +768,7 @@ pristine_remove_if_unreferenced_txn(void *baton,
       svn_boolean_t ignore_enoent = TRUE;
 #endif
 
-      SVN_ERR(remove_file(b->pristine_abspath, b->wcroot, ignore_enoent,
+      SVN_ERR(remove_file(pristine_abspath, wcroot, ignore_enoent,
                           scratch_pool));
     }
 
@@ -791,17 +785,17 @@ pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
                                 const svn_checksum_t *sha1_checksum,
                                 apr_pool_t *scratch_pool)
 {
-  pristine_remove_baton_t b;
+  const char *pristine_abspath;
 
-  b.wcroot = wcroot;
-  b.sha1_checksum = sha1_checksum;
-  SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              sha1_checksum, scratch_pool, scratch_pool));
 
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
    * at the disk, to ensure no concurrent pristine install/delete txn. */
-  SVN_ERR(svn_sqlite__with_immediate_transaction(
-    wcroot->sdb, pristine_remove_if_unreferenced_txn, &b, scratch_pool));
+  SVN_SQLITE__WITH_IMMEDIATE_TXN(
+    pristine_remove_if_unreferenced_txn(
+      wcroot->sdb, wcroot, sha1_checksum, pristine_abspath, scratch_pool),
+    wcroot->sdb);
 
   return SVN_NO_ERROR;
 }
