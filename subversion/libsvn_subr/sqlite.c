@@ -493,7 +493,7 @@ svn_sqlite__bind_iprops(svn_sqlite__stmt_t *stmt,
     return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
   SVN_ERR(svn_skel__unparse_iproplist(&skel, inherited_props,
-                                      scratch_pool));
+                                      scratch_pool, scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                slot,
