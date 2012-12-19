@@ -2210,9 +2210,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
-  /* If stdin is not a terminal and --force-interactive was not passed,
-   * set --non-interactive. */
-  if (!opt_state.force_interactive)
+  /* If neither --non-interactive nor --force-interactive was passed,
+   * and stdin is not a terminal, set --non-interactive. */
+  if (!opt_state.force_interactive && !opt_state.non_interactive)
       opt_state.non_interactive = !svn_cmdline__stdin_isatty();
 
   /* Turn our hash of changelists into an array of unique ones. */
