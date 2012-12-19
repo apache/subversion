@@ -65,7 +65,6 @@ svn_cl__copy(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_client_copy_source_t *source = apr_palloc(pool, sizeof(*source));
       const char *src;
-      svn_error_t *err;
       svn_opt_revision_t *peg_revision = apr_palloc(pool,
                                                     sizeof(*peg_revision));
 
