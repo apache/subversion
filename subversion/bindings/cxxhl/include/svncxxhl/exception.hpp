@@ -29,8 +29,14 @@
 #define SVN_CXXHL_EXCEPTION_HPP
 
 #include <exception>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "svncxxhl/_compat.hpp"
+
+// Forward declaration of implementation-specific structure
+struct svn_error_t;
 
 namespace subversion {
 namespace cxxhl {
@@ -38,7 +44,8 @@ namespace cxxhl {
 namespace compat {} // Announce the compat namespace for shared_ptr lookup
 
 namespace detail {
-struct error_description;
+// Forward declaration of implementation-specific structure
+class error_description;
 } // namespace detail
 
 namespace version_1_9_dev {
@@ -48,33 +55,74 @@ class error : public std::exception
 public:
   typedef compat::shared_ptr<error> shared_ptr;
 
-  error(const char* description, int errno);
-  error(const char* description, int errno, shared_ptr nested);
+  error(const char* description, int error_code);
+  error(const char* description, int error_code, shared_ptr nested_error);
 
   error(const error& that) throw();
   error& operator=(const error& that) throw();
   virtual ~error() throw();
 
+  /**
+   * Returns the error code associated with the exception.
+   */
   virtual int code() const throw() { return m_errno; }
-  virtual const char* what() const throw();
-  virtual shared_ptr nested() const throw() { return m_nested; }
-
-private:
-  int m_errno;                ///< The (SVN or APR) error code
-  shared_ptr m_nested;        ///< Optional pointer to nessted error
-
-  /// Error message; will be @c NULL if this is a trace link.
-  detail::error_description* m_description;
 
   /**
-   * The location of the error in @a m_loc_file at @a m_loc_line.
-   *
-   * @a m_loc_file will be @c NULL if the location is not available
-   * (i.e., if the wrapped Subversion library was not compiled in
-   * maintaner mode.
+   * Returns a shared pointer to the nested exception object, if any.
    */
-  const char* m_loc_file;
-  int m_loc_line;
+  virtual shared_ptr nested() const throw() { return m_nested; }
+
+  /// Returns the message associated with this exception object.
+  virtual const char* what() const throw();
+
+  /**
+   * Error message description.
+   *
+   * The first element of this pair is the error code, the second the
+   * associated error message. If the error code is 0, the message
+   * describes the location in the source code where the error was
+   * generated from.
+   */
+  typedef std::pair<int, std::string> message;
+
+  /**
+   * The list of messages associated with an error.
+   */
+  typedef std::vector<message> message_list;
+
+  /**
+   * Returns the complete list of error messages, including those from
+   * nested exceptions.
+   */
+  virtual message_list messages() const
+    {
+      return compile_messages(false);
+    }
+
+  /**
+   * Like error::messages(), but includes debugging traceback.
+   *
+   * @note
+   * Traceback is only available if the Subversion libraries were
+   * compiled with tracing enabled.
+   */
+  virtual message_list traced_messages() const
+    {
+      return compile_messages(true);
+    }
+
+public:
+  /** Used internally by the implementation. */
+  static void throw_svn_error(svn_error_t*);
+
+private:
+  error(int error_code, detail::error_description* description) throw();
+  std::vector<message> compile_messages(bool show_traces) const;
+
+  int m_errno;                /**< The (SVN or APR) error code. */
+  shared_ptr m_nested;        /**< Optional pointer to nessted error. */
+  /** Error description and trace location information. */
+  detail::error_description* m_description;
 };
 
 class canceled : public error {};

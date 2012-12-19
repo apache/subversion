@@ -1573,12 +1573,15 @@ validate_prop_against_node_kind(const char *name,
 
 
 struct getter_baton {
+  const svn_string_t *mime_type;
   const char *local_abspath;
-  svn_wc__db_t *db;
 };
 
 
-/* */
+/* Provide the MIME_TYPE and/or push the content to STREAM for the file
+ * referenced by (getter_baton *) BATON.
+ *
+ * Implements svn_wc_canonicalize_svn_prop_get_file_t. */
 static svn_error_t *
 get_file_for_validation(const svn_string_t **mime_type,
                         svn_stream_t *stream,
@@ -1588,18 +1591,15 @@ get_file_for_validation(const svn_string_t **mime_type,
   struct getter_baton *gb = baton;
 
   if (mime_type)
-    SVN_ERR(svn_wc__internal_propget(mime_type, gb->db, gb->local_abspath,
-                                     SVN_PROP_MIME_TYPE, pool, pool));
+    *mime_type = gb->mime_type;
 
   if (stream)
     {
       svn_stream_t *read_stream;
 
-      /* Open GB->LOCAL_ABSPATH. */
+      /* Copy the text of GB->LOCAL_ABSPATH into STREAM. */
       SVN_ERR(svn_stream_open_readonly(&read_stream, gb->local_abspath,
                                        pool, pool));
-
-      /* Copy from the file into the translating stream. */
       SVN_ERR(svn_stream_copy3(read_stream, svn_stream_disown(stream, pool),
                                NULL, NULL, pool));
     }
@@ -1608,7 +1608,16 @@ get_file_for_validation(const svn_string_t **mime_type,
 }
 
 
-/* */
+/* Validate that a file has a 'non-binary' MIME type and contains
+ * self-consistent line endings.  If not, then return an error.
+ *
+ * Call GETTER (which must not be NULL) with GETTER_BATON to get the
+ * file's MIME type and/or content.  If the MIME type is non-null and
+ * is categorized as 'binary' then return an error and do not request
+ * the file content.
+ *
+ * Use PATH (a local path or a URL) only for error messages.
+ */
 static svn_error_t *
 validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,
@@ -1670,6 +1679,10 @@ do_propset(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
+                                  scratch_pool, scratch_pool),
+            _("Failed to load current properties"));
+
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
      inappropriate property is allowed, however, since older clients
@@ -1680,8 +1693,9 @@ do_propset(svn_wc__db_t *db,
       const svn_string_t *new_value;
       struct getter_baton gb;
 
+      gb.mime_type = apr_hash_get(prophash,
+                                  SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
       gb.local_abspath = local_abspath;
-      gb.db = db;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
                                            local_abspath, kind,
@@ -1698,10 +1712,6 @@ do_propset(svn_wc__db_t *db,
       SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
                                                scratch_pool, scratch_pool));
     }
-
-  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
-                                  scratch_pool, scratch_pool),
-            _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
