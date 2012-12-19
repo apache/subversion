@@ -1946,7 +1946,7 @@ revert_restore(svn_wc__db_t *db,
                                           iterpool);
 
           SVN_ERR(revert_restore(db, child_abspath, depth,
-                                 use_commit_times, FALSE /* revcert root */,
+                                 use_commit_times, FALSE /* revert root */,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
                                  iterpool));
