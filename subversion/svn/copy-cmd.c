@@ -70,7 +70,7 @@ svn_cl__copy(apr_getopt_t *os,
 
       err = svn_opt_parse_path(peg_revision, &src, target, pool);
 
-      if (err && err->apr_err == SVN_ERR_BAD_FILENAME)
+      if (err)
         {
           /* Issue #3606: 'svn cp .@HEAD target' gives
              svn: '@HEAD' is just a peg revision. Maybe try '@HEAD@' instead? 
@@ -79,7 +79,7 @@ svn_cl__copy(apr_getopt_t *os,
              svn_cl__args_to_target_array_print_reserved(). Undo that in an
              attempt to fix this issue without revving many apis.
            */
-          if (*target == '@')
+          if (*target == '@' && err->apr_err == SVN_ERR_BAD_FILENAME)
             {
               svn_error_t *err2;
 
