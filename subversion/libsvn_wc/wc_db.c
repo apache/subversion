@@ -1422,29 +1422,21 @@ does_node_exist(svn_boolean_t *exists,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-/* Baton for passing args to init_db(). */
-struct init_db_baton
-{
-  /* output values */
-  apr_int64_t wc_id;
-  apr_int64_t repos_id;
-  /* input values */
-  const char *repos_root_url;
-  const char *repos_uuid;
-  const char *root_node_repos_relpath;
-  svn_revnum_t root_node_revision;
-  svn_depth_t root_node_depth;
-};
-
 /* Helper for create_db(). Initializes our wc.db schema.
- *
- * Implements svn_sqlite__transaction_callback_t. */
+ */
 static svn_error_t *
-init_db(void *baton,
+init_db(/* output values */
+        apr_int64_t *repos_id,
+        apr_int64_t *wc_id,
+        /* input values */
         svn_sqlite__db_t *db,
+        const char *repos_root_url,
+        const char *repos_uuid,
+        const char *root_node_repos_relpath,
+        svn_revnum_t root_node_revision,
+        svn_depth_t root_node_depth,
         apr_pool_t *scratch_pool)
 {
-  struct init_db_baton *idb = baton;
   svn_sqlite__stmt_t *stmt;
 
   /* Create the database's schema.  */
@@ -1454,33 +1446,33 @@ init_db(void *baton,
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
 
   /* Insert the repository. */
-  SVN_ERR(create_repos_id(&idb->repos_id, idb->repos_root_url, idb->repos_uuid,
+  SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid,
                           db, scratch_pool));
 
   /* Insert the wcroot. */
   /* ### Right now, this just assumes wc metadata is being stored locally. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(&idb->wc_id, stmt));
+  SVN_ERR(svn_sqlite__insert(wc_id, stmt));
 
-  if (idb->root_node_repos_relpath)
+  if (root_node_repos_relpath)
     {
       svn_wc__db_status_t status = svn_wc__db_status_normal;
 
-      if (idb->root_node_revision > 0)
+      if (root_node_revision > 0)
         status = svn_wc__db_status_incomplete; /* Will be filled by update */
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isdsisrtst",
-                                idb->wc_id,          /* 1 */
+                                *wc_id,              /* 1 */
                                 "",                  /* 2 */
                                 0,                   /* op_depth is 0 for base */
                                 NULL,                /* 4 */
-                                idb->repos_id,
-                                idb->root_node_repos_relpath,
-                                idb->root_node_revision,
+                                *repos_id,
+                                root_node_repos_relpath,
+                                root_node_revision,
                                 presence_map, status, /* 8 */
                                 svn_token__to_word(depth_map,
-                                                   idb->root_node_depth),
+                                                   root_node_depth),
                                 kind_map, svn_kind_dir /* 10 */));
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -1513,23 +1505,16 @@ create_db(svn_sqlite__db_t **sdb,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
-  struct init_db_baton idb;
-
   SVN_ERR(svn_wc__db_util_open_db(sdb, dir_abspath, sdb_fname,
                                   svn_sqlite__mode_rwcreate, exclusive,
                                   NULL /* my_statements */,
                                   result_pool, scratch_pool));
 
-  idb.repos_root_url = repos_root_url;
-  idb.repos_uuid = repos_uuid;
-  idb.root_node_repos_relpath = root_node_repos_relpath;
-  idb.root_node_revision = root_node_revision;
-  idb.root_node_depth = root_node_depth;
-
-  SVN_ERR(svn_sqlite__with_lock(*sdb, init_db, &idb, scratch_pool));
-
-  *repos_id = idb.repos_id;
-  *wc_id = idb.wc_id;
+  SVN_SQLITE__WITH_LOCK(init_db(repos_id, wc_id,
+                                *sdb, repos_root_url, repos_uuid,
+                                root_node_repos_relpath, root_node_revision,
+                                root_node_depth, scratch_pool),
+                        *sdb);
 
   return SVN_NO_ERROR;
 }
