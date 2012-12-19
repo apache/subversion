@@ -1617,6 +1617,50 @@ def revert_nonexistent(sbox):
   svntest.actions.run_and_verify_svn(None, 'Skipped.*nonexistent', [],
                                      'revert', '-R', sbox.ospath('nonexistent'))
 
+@XFail()
+@Issue(4168)
+def revert_obstructing_wc(sbox):
+  "revert with an obstructing working copy"
+  
+  sbox.build(create_wc=False, read_only=True)
+  wc_dir = sbox.wc_dir
+  
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.wc.State(wc_dir, {})  
+  
+  # Checkout wc as depth empty
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_dir,
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          '--depth', 'empty')
+
+  # And create an obstructing working copy as A
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_dir + '/A',
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          '--depth', 'empty')
+
+  # Now try to fetch the entire wc, which will find an obstruction
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'     : Item(verb='Skipped'),
+    'iota'  : Item(status='A '),
+  })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''      : Item(status='  ', wc_rev='1'),
+    'iota'  : Item(status='  ', wc_rev='1'),
+    # A is not versioned but exists
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '--set-depth', 'infinity')
+
+  # Revert should do nothing (no local changes), but currently reports an error
+  svntest.actions.run_and_verify_revert([], '-R', wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1656,6 +1700,7 @@ test_list = [ None,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
               revert_nonexistent,
+              revert_obstructing_wc
              ]
 
 if __name__ == '__main__':
