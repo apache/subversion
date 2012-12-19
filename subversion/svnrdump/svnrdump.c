@@ -80,6 +80,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_password,
     opt_auth_nocache,
     opt_non_interactive,
+    opt_force_interactive,
     opt_incremental,
     opt_trust_server_cert,
     opt_version
@@ -91,7 +92,8 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_password, \
                                    opt_auth_nocache, \
                                    opt_trust_server_cert, \
-                                   opt_non_interactive
+                                   opt_non_interactive, \
+                                   opt_force_interactive
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
 {
@@ -127,7 +129,13 @@ static const apr_getopt_option_t svnrdump__options[] =
     {"password",      opt_auth_password, 1,
                       N_("specify a password ARG")},
     {"non-interactive", opt_non_interactive, 0,
-                      N_("do no interactive prompting")},
+                      N_("do no interactive prompting (default is to prompt\n"
+                         "                             "
+                         "only if standard input is a terminal device)")},
+    {"force-interactive", opt_force_interactive, 0,
+                      N_("do interactive prompting even if standard input\n"
+                         "                             "
+                         "is not a terminal device")},
     {"no-auth-cache", opt_auth_nocache, 0,
                       N_("do not cache authentication tokens")},
     {"help",          'h', 0,
@@ -839,6 +847,7 @@ main(int argc, const char **argv)
   svn_boolean_t no_auth_cache = FALSE;
   svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
@@ -957,6 +966,9 @@ main(int argc, const char **argv)
         case opt_non_interactive:
           non_interactive = TRUE;
           break;
+        case opt_force_interactive:
+          force_interactive = TRUE;
+          break;
         case opt_incremental:
           opt_baton->incremental = TRUE;
           break;
@@ -974,6 +986,22 @@ main(int argc, const char **argv)
                                                           opt_arg, pool));
         }
     }
+
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+    }
+  /* If neither --non-interactive nor --force-interactive was passed,
+   * and stdin is not a terminal, set --non-interactive. */
+  else if (!force_interactive && !non_interactive)
+    non_interactive = !svn_cmdline__stdin_isatty();
+  else if (force_interactive) 
+    non_interactive = FALSE;
 
   if (opt_baton->help)
     {
