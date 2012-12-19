@@ -3966,6 +3966,7 @@ def update_accept_conflicts(sbox):
                                         % (pi_path_backup)],
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
+                                      '--force-interactive',
                                       pi_path_backup)
 
   # rho: --accept=launch
@@ -3978,6 +3979,7 @@ def update_accept_conflicts(sbox):
                                       '  Text conflicts: 1\n'],
                                      [],
                                      'update', '--accept=launch',
+                                     '--force-interactive',
                                      rho_path_backup)
 
   # Set the expected disk contents for the test
