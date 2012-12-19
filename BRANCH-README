@@ -1,10 +1,5 @@
-This branch is work in progress towards implementing in repo authz.  In repo
-authz allows authz configuration files to be stored directly in the repository.
+This branch is a complete implementation of in repo authz.  In repo authz
+allows authz configuration files to be stored directly in the repository.
 
 The design for this code is here:
 http://wiki.apache.org/subversion/InRepoAuthz
-
-TODO
-
-* errors - DAV error messages kinda suck since it guesses what it thinks is
-    the best error message at current.  When it should display the whole chain.
