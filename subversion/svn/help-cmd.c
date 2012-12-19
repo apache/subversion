@@ -74,8 +74,6 @@ svn_cl__help(apr_getopt_t *os,
   if (baton)
     {
       svn_cl__cmd_baton_t *const cmd_baton = baton;
-      opt_state = cmd_baton->opt_state;
-
 #ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
       /* Windows never actually stores plaintext passwords, it
          encrypts the contents using CryptoAPI. ...
@@ -85,7 +83,6 @@ svn_cl__help(apr_getopt_t *os,
          days before the scheduled end of the world, when this comment
          is being written. */
 #  ifndef WIN32
-
       svn_boolean_t store_auth_creds =
         SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
       svn_boolean_t store_passwords =
@@ -134,6 +131,8 @@ svn_cl__help(apr_getopt_t *os,
         }
 #  endif /* !WIN32 */
 #endif /* !SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE */
+
+      opt_state = cmd_baton->opt_state;
     }
 
   if (!version_footer)
