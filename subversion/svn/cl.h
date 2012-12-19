@@ -238,7 +238,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   svn_boolean_t show_inherited_props; /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
-  svn_boolean_t force_interactive; /* force interactive prompting */
 } svn_cl__opt_state_t;
 
 

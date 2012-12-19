@@ -1665,6 +1665,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
   const char *sqlite_exclusive;
@@ -1989,7 +1990,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.non_interactive = TRUE;
         break;
       case opt_force_interactive:
-        opt_state.force_interactive = TRUE;
+        force_interactive = TRUE;
         break;
       case opt_trust_server_cert:
         opt_state.trust_server_cert = TRUE;
@@ -2202,7 +2203,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* The --non-interactive and --force-interactive options are mutually
    * exclusive. */
-  if (opt_state.non_interactive && opt_state.force_interactive)
+  if (opt_state.non_interactive && force_interactive)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("--non-interactive and --force-interactive "
@@ -2211,9 +2212,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
   /* If neither --non-interactive nor --force-interactive was passed,
    * and stdin is not a terminal, set --non-interactive. */
-  else if (!opt_state.force_interactive && !opt_state.non_interactive)
+  else if (!force_interactive && !opt_state.non_interactive)
     opt_state.non_interactive = !svn_cmdline__stdin_isatty();
-  else if (opt_state.force_interactive) 
+  else if (force_interactive) 
     opt_state.non_interactive = FALSE;
 
   /* Turn our hash of changelists into an array of unique ones. */
