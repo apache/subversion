@@ -116,4 +116,5 @@ Approved changes:
    Delay storing handle to fix assert when rep-cache is inaccessible.
    Justification:
      It's an assert.
-   Votes: philip, danielsh, rhuijben
+   Votes:
+     +1: philip, danielsh, rhuijben
