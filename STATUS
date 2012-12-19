@@ -62,7 +62,7 @@ Candidate changes:
    Justification:
      The assertion has been run into in the wild
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1421541
    Fix infinite recursion in './get-deps.sh'.
@@ -70,19 +70,14 @@ Candidate changes:
      Trivial fix to plug an edge case.
    Votes:
      +1: danielsh
+     -0: rhuijben (Is this needed on this branch?)
 
  * r1422053
    Remove .swig_checked from tarball.
    Justification:
      Unnecessary file in tarballs.
    Votes:
-     +1: breser
-
- * r1422100
-   Delay storing handle to fix assert when rep-cache is inaccessible.
-   Justification:
-     It's an assert.
-   Votes: philip, danielsh
+     +1: breser, rhuijben
 
  * ^/subversion/branches/1.7.x-issue4263
    Fix svnrdump inability to load dump files with non-LF line endings in
@@ -94,14 +89,13 @@ Candidate changes:
    Votes:
      +1: breser
 
- * ^/subversion/branches/1.7.x-r1423646
-   Work around http://www.freebsd.org/cgi/query-pr.cgi?pr=174521 .
+ * r1423837, r1423840, r1423848
+   Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
    Justification:
-     Small fix, avoids cryptic error message, works elsewhere.
-   Branch:
-     ^/subversion/branches/1.7.x-r1423646
+     Accessing the wrong database from the revert code gives an ugly error
+     which might not be easy to work around.
    Votes:
-     +1: danielsh, arfrever
+     +1: rhuijben   
 
 Veto-blocked changes:
 =====================
@@ -109,3 +103,17 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * ^/subversion/branches/1.7.x-r1423646
+   Work around http://www.freebsd.org/cgi/query-pr.cgi?pr=174521 .
+   Justification:
+     Small fix, avoids cryptic error message, works elsewhere.
+   Branch:
+     ^/subversion/branches/1.7.x-r1423646
+   Votes:
+     +1: danielsh, arfrever, rhuijben
+
+ * r1422100
+   Delay storing handle to fix assert when rep-cache is inaccessible.
+   Justification:
+     It's an assert.
+   Votes: philip, danielsh, rhuijben
