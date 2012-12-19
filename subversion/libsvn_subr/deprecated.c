@@ -1127,7 +1127,7 @@ svn_rangelist_merge(svn_rangelist_t **rangelist,
                                pool, pool));
 
   return svn_error_trace(
-            svn_rangelist__combine_adjecent_ranges(*rangelist, pool));
+            svn_rangelist__combine_adjacent_ranges(*rangelist, pool));
 }
 
 svn_error_t *

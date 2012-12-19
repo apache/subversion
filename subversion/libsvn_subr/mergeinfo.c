@@ -612,7 +612,7 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
 }
 
 svn_error_t *
-svn_rangelist__combine_adjecent_ranges(svn_rangelist_t *rangelist,
+svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
                                        apr_pool_t *scratch_pool)
 {
   int i;
@@ -703,7 +703,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
       qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
             svn_sort_compare_ranges);
 
-      SVN_ERR(svn_rangelist__combine_adjecent_ranges(rangelist, scratch_pool));
+      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
     }
 
   /* Handle any funky mergeinfo with relative merge source paths that
