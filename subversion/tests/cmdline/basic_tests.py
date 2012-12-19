@@ -2249,12 +2249,14 @@ def automatic_conflict_resolution(sbox):
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=edit')
+                                     'resolve', '--accept=edit',
+                                     '--force-interactive')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=launch')
+                                     'resolve', '--accept=launch',
+                                     '--force-interactive')
   # Run 'svn resolved --accept=NOPE.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolve command", None,
                                      ".*NOPE' is not a valid --accept value",
