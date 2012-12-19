@@ -1617,7 +1617,6 @@ def revert_nonexistent(sbox):
   svntest.actions.run_and_verify_svn(None, 'Skipped.*nonexistent', [],
                                      'revert', '-R', sbox.ospath('nonexistent'))
 
-@XFail()
 @Issue(4168)
 def revert_obstructing_wc(sbox):
   "revert with an obstructing working copy"
@@ -1657,8 +1656,11 @@ def revert_obstructing_wc(sbox):
                                         None, None, None,
                                         wc_dir, '--set-depth', 'infinity')
 
-  # Revert should do nothing (no local changes), but currently reports an error
-  svntest.actions.run_and_verify_revert([], '-R', wc_dir)
+  # Revert should do nothing (no local changes), and report the obstruction
+  # (reporting the obstruction is nice for debuging, but not really required
+  #  in this specific case, as the node was not modified)
+  svntest.actions.run_and_verify_svn(None, "Skipped '.*A' -- .*obstruct.*", [],
+                                     'revert', '-R', wc_dir)
 
 
 ########################################################################
