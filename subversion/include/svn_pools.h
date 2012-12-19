@@ -87,7 +87,7 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
 #define svn_pool_destroy apr_pool_destroy
 
 /** Return a new allocator.  This function limits the unused memory in the
- * new allocator to @ref SVN_ALLOCATOR_RECOMMENDED_MAX_FREE and ensures
+ * new allocator to #SVN_ALLOCATOR_RECOMMENDED_MAX_FREE and ensures
  * proper synchronization if the allocator is used by multiple threads.
  *
  * If your application uses multiple threads, creating a separate allocator
