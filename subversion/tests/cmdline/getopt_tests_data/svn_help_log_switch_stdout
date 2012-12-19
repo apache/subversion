@@ -117,6 +117,8 @@ Global options:
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
+  --force-interactive      : do interactive prompting even if standard input
+                             is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown
                              certificate authorities without prompting (but only
                              with '--non-interactive')
@@ -197,6 +199,8 @@ Global options:
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
+  --force-interactive      : do interactive prompting even if standard input
+                             is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown
                              certificate authorities without prompting (but only
                              with '--non-interactive')

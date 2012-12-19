@@ -33,8 +33,10 @@
 #include <unistd.h>
 #else
 #include <crtdbg.h>
+#include <io.h>
 #endif
 
+#include <apr.h>                /* for STDIN_FILENO */
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
@@ -922,4 +924,14 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
     }
 
     return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_cmdline__stdin_isatty(void)
+{
+#ifdef WIN32
+  return (_isatty(STDIN_FILENO) != 0);
+#else
+  return (isatty(STDIN_FILENO) != 0);
+#endif
 }
