@@ -45,6 +45,7 @@
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "svn_private_config.h"
 
@@ -1122,8 +1123,11 @@ svn_rangelist_merge(svn_rangelist_t **rangelist,
                     const svn_rangelist_t *changes,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
-                                              pool, pool));
+  SVN_ERR(svn_rangelist_merge2(*rangelist, changes,
+                               pool, pool));
+
+  return svn_error_trace(
+            svn_rangelist__combine_adjecent_ranges(*rangelist, pool));
 }
 
 svn_error_t *
