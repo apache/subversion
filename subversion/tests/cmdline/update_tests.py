@@ -4108,7 +4108,8 @@ interactive-conflicts = true
   svntest.actions.run_and_verify_update(wc_dir, None, None, None,
                                         "Can't read stdin: End of file found",
                                         None, None, None, None, 1,
-                                        wc_dir, '--config-dir', config_dir)
+                                        wc_dir, '--force-interactive',
+                                        '--config-dir', config_dir)
 
   # Now update -r1 again.  Hopefully we don't get a checksum error!
   expected_output = svntest.wc.State(wc_dir, {

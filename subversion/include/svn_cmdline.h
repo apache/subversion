@@ -381,6 +381,11 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          const char *argv[],
                          apr_pool_t *pool);
 
+/* Determine whether standard input is associated with a terminal.
+ * @since New in 1.8. */
+svn_boolean_t
+svn_cmdline__stdin_isatty(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

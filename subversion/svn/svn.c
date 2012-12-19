@@ -101,6 +101,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_ignore,
   opt_no_unlock,
   opt_non_interactive,
+  opt_force_interactive,
   opt_old_cmd,
   opt_record_only,
   opt_relocate,
@@ -230,6 +231,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
+  {"force-interactive", opt_force_interactive, 0,
+                       N_("do interactive prompting even if standard input\n"
+                          "                             "
+                          "is not a terminal device")},
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
@@ -401,7 +406,8 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_trust_server_cert, opt_config_dir, opt_config_options, 0
+  opt_force_interactive, opt_trust_server_cert, opt_config_dir,
+  opt_config_options, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -1982,6 +1988,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_non_interactive:
         opt_state.non_interactive = TRUE;
         break;
+      case opt_force_interactive:
+        opt_state.force_interactive = TRUE;
+        break;
       case opt_trust_server_cert:
         opt_state.trust_server_cert = TRUE;
         break;
@@ -2190,6 +2199,21 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       }
     }
+
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (opt_state.non_interactive && opt_state.force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+
+  /* If stdin is not a terminal and --force-interactive was not passed,
+   * set --non-interactive. */
+  if (!opt_state.force_interactive)
+      opt_state.non_interactive = !svn_cmdline__stdin_isatty();
 
   /* Turn our hash of changelists into an array of unique ones. */
   SVN_INT_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
