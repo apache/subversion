@@ -41,10 +41,12 @@
 /*** Code. ***/
 
 /* Determine if LOCAL_ABSPATH needs an inherited property cache.  If it does,
-   then set *NEEDS_CACHE to TRUE, set it to FALSE otherwise. */
+   then set *NEEDS_CACHE to TRUE, set it to FALSE otherwise.  All other args
+   are as per svn_client__get_inheritable_props(). */
 static svn_error_t *
 need_to_cache_iprops(svn_boolean_t *needs_cache,
                      const char *local_abspath,
+                     svn_ra_session_t *ra_session,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
@@ -71,7 +73,25 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
         }
     }
 
-  *needs_cache = (is_wc_root || is_switched);
+  /* Starting assumption. */
+  *needs_cache = FALSE;
+
+  if (is_wc_root || is_switched)
+    {
+      const char *session_url;
+      const char *session_root_url;
+
+      /* Looks likely that we need an inherited properties cache...Unless
+         LOCAL_ABSPATH is a WC root that points to the repos root.  Then it
+         doesn't need a cache because it has nowhere to inherit from.  Check
+         for that case. */
+      SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &session_root_url,
+                                     scratch_pool));
+
+      if (strcmp(session_root_url, session_url) != 0)
+        *needs_cache = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -112,7 +132,7 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
           svn_boolean_t needs_cached_iprops;
 
           SVN_ERR(need_to_cache_iprops(&needs_cached_iprops, local_abspath,
-                                       ctx, iterpool));
+                                       ra_session, ctx, iterpool));
           if (needs_cached_iprops)
             {
               const char *target_abspath = apr_pstrdup(scratch_pool,
