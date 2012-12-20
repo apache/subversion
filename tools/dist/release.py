@@ -627,7 +627,13 @@ def write_news(args):
 
 def get_sha1info(args, replace=False):
     'Return a list of sha1 info for the release'
-    sha1s = glob.glob(os.path.join(get_deploydir(args.base_dir), '*.sha1'))
+
+    if args.target:
+        target = args.target
+    else:
+        target = get_deploydir(args.base_dir)
+
+    sha1s = glob.glob(os.path.join(target, '*.sha1'))
 
     class info(object):
         pass
@@ -651,10 +657,11 @@ def get_sha1info(args, replace=False):
 def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
+    siginfo = "\n".join(get_siginfo(args, True)) + "\n"
 
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
-             'siginfo'              : open('getsigs-output', 'r').read(),
+             'siginfo'              : siginfo,
              'major-minor'          : '%d.%d' % (args.version.major,
                                                  args.version.minor),
              'major-minor-patch'    : args.version.base,
@@ -689,8 +696,8 @@ def write_downloads(args):
 key_start = '-----BEGIN PGP SIGNATURE-----'
 fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
 
-def check_sigs(args):
-    'Check the signatures for the release.'
+def get_siginfo(args, quiet=False):
+    'Returns a list of signatures for the release.'
 
     try:
         import gnupg
@@ -704,13 +711,15 @@ def check_sigs(args):
         target = get_deploydir(args.base_dir)
 
     good_sigs = {}
+    output = []
 
     glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
     for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 
-        logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
+        if not quiet:
+            logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
         for key in keys[1:]:
             fd, fn = tempfile.mkstemp()
             os.write(fd, key_start + key)
@@ -740,9 +749,17 @@ def check_sigs(args):
                                                      if l[0:7] != 'Warning' ])
 
         fp = fp_pattern.match(gpg_output).groups()
-        print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
-        print("   %s" % fp[1])
+        output.append("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
+        output.append("   %s" % fp[1])
 
+    return output
+
+def check_sigs(args):
+    'Check the signatures for the release.'
+
+    output = get_siginfo(args)
+    for line in output:
+        print(line)
 
 def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
@@ -865,6 +882,9 @@ def main():
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
