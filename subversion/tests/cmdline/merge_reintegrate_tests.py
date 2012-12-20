@@ -825,15 +825,6 @@ def reintegrate_on_shallow_wc(sbox):
                        'Some more work on the A_COPY branch', wc_dir)
   # Reuse the same expectations as the prior merge, except that
   # non-inheritable mergeinfo is set on the root of the missing subtree...
-  expected_mergeinfo_output.add({
-      'D' : Item(status=' U')
-      })
-  expected_A_status.tweak('D', status=' M')
-  expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
-  # ... a depth-restricted item is skipped ...
-  expected_A_skip.add({
-      'D/H' : Item()
-  })
   # ... and the mergeinfo on the target root includes the latest rev on the branch.
   expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
   svntest.actions.run_and_verify_merge(A_path, None, None,
