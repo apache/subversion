@@ -565,7 +565,7 @@ class TestHarness:
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      test_info = '[%02d/%d] %s' % (test_nr + 1, total_tests, progbase)
       if self.list_tests:
         sys.stdout.write('Listing tests in %s' % (test_info, ))
       else:
