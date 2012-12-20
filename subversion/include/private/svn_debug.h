@@ -52,7 +52,7 @@ svn_dbg__print_props(apr_hash_t *props,
   __attribute__((format(printf, 2, 3)));
 
 /* Print to stdout. Edit this line if you need stderr.  */
-#define SVN_DBG_OUTPUT stdout
+#define SVN_DBG_OUTPUT stderr
 
 
 /* Defining this symbol in the source file, BEFORE INCLUDING THIS HEADER,
