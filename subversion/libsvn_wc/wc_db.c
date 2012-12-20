@@ -4910,6 +4910,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const apr_hash_t *props,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
@@ -4933,6 +4934,11 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_dir;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.work_items = work_items;
 
@@ -4950,6 +4956,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
+                       const apr_hash_t *props,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
@@ -4973,6 +4980,11 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_file;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.work_items = work_items;
 
@@ -4988,6 +5000,7 @@ svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *target,
+                          const apr_hash_t *props,
                           const svn_skel_t *work_items,
                           apr_pool_t *scratch_pool)
 {
@@ -5014,6 +5027,11 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_symlink;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.target = target;
 

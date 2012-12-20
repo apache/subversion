@@ -174,7 +174,8 @@ sbox_wc_add(svn_test__sandbox_t *b, const char *path)
   parent_abspath = svn_dirent_dirname(path, b->pool);
   SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
                                      b->pool, b->pool));
-  SVN_ERR(svn_wc_add_from_disk(b->wc_ctx, path, NULL, NULL, b->pool));
+  SVN_ERR(svn_wc_add_from_disk2(b->wc_ctx, path, NULL /*props*/,
+                                NULL, NULL, b->pool));
   SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
   return SVN_NO_ERROR;
 }
