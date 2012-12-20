@@ -55,10 +55,12 @@ AC_DEFUN([SVN_CXXFLAGS_ADD_IFELSE],
 
 AC_DEFUN([SVN_PROG_CC],
 [
-  AC_PROG_CC
-
-  CFLAGS_KEEP="$CFLAGS"
+  dnl Keep user-supplied compiler flags separate
+  AC_SUBST(CUSERFLAGS)
+  CUSERFLAGS="$CFLAGS"
   CFLAGS=""
+
+  AC_PROG_CC
 
   dnl Find flags to force C90 mode
                 dnl gcc and clang
@@ -70,16 +72,18 @@ AC_DEFUN([SVN_PROG_CC],
 
   AC_SUBST(CMODEFLAGS)
   CMODEFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS_KEEP"
+  CFLAGS=""
 ])
 
 
 AC_DEFUN([SVN_PROG_CXX],
 [
-  AC_PROG_CXX
-
-  CXXFLAGS_KEEP="$CXXFLAGS"
+  dnl Keep user-supplied compiler flags separate
+  AC_SUBST(CXXUSERFLAGS)
+  CXXUSERFLAGS="$CXXFLAGS"
   CXXFLAGS=""
+
+  AC_PROG_CXX
 
   dnl Find flags to force C++98 mode
                 dnl g++ and clang++
@@ -87,5 +91,5 @@ AC_DEFUN([SVN_PROG_CXX],
 
   AC_SUBST(CXXMODEFLAGS)
   CXXMODEFLAGS="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAGS_KEEP"
+  CXXFLAGS=""
 ])
