@@ -79,6 +79,7 @@ class Revision:
         self.rev = r.get('revision')
         self.repos = r.get('repos')
         self.dirs_changed = r.get('dirs_changed')
+        self.changed = r.get('changed')
         self.author = r.get('author')
         self.log = r.get('log')
         self.date = r.get('date')
@@ -88,6 +89,7 @@ class Revision:
             return json.dumps({'commit': {'repository': self.repos,
                                           'revision': self.rev,
                                           'dirs_changed': self.dirs_changed,
+                                          'changed': self.changed,
                                           'author': self.author,
                                           'log': self.log,
                                           'date': self.date}}) +","
@@ -100,6 +102,11 @@ class Revision:
             for p in self.dirs_changed:
                 x = ET.SubElement(d, 'path')
                 x.text = p.encode('unicode_escape')
+            ch = ET.SubElement(c, 'changed')
+            for chp in self.changed.keys():
+                x = ET.SubElement(ch, 'path', self.changed[chp])
+                x.text = chp.encode('unicode_escape')
+
             str = ET.tostring(c, 'UTF-8') + "\n"
             return str[39:]
         else:
