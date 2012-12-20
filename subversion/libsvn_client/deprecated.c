@@ -527,7 +527,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 {
   return svn_client_commit6(targets, depth, keep_locks, keep_changelists,
                             commit_as_operations,
-                            TRUE,  /* include_file_externals */
+                            FALSE,  /* include_file_externals */
                             FALSE, /* include_dir_externals */
                             changelists, revprop_table, commit_callback,
                             commit_baton, ctx, pool);
