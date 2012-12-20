@@ -102,10 +102,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1422100
-   Delay storing handle to fix assert when rep-cache is inaccessible.
-   Justification:
-     It's an assert.
-   Votes:
-     +1: philip, danielsh, rhuijben
