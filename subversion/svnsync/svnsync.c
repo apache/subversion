@@ -2101,12 +2101,10 @@ main(int argc, const char *argv[])
                                "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
-  /* If neither --non-interactive nor --force-interactive was passed,
-   * and stdin is not a terminal, set --non-interactive. */
-  else if (!force_interactive && !opt_baton.non_interactive)
-    opt_baton.non_interactive = !svn_cmdline__stdin_isatty();
-  else if (force_interactive) 
-    opt_baton.non_interactive = FALSE;
+  else
+    opt_baton.non_interactive = !svn_cmdline__be_interactive(
+                                  opt_baton.non_interactive,
+                                  force_interactive);
 
   /* Disallow the mixing --username/password with their --source- and
      --sync- variants.  Treat "--username FOO" as "--source-username

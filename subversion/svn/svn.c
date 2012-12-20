@@ -2213,12 +2213,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                "are mutually exclusive"));
       return EXIT_ERROR(err);
     }
-  /* If neither --non-interactive nor --force-interactive was passed,
-   * and stdin is not a terminal, set --non-interactive. */
-  else if (!force_interactive && !opt_state.non_interactive)
-    opt_state.non_interactive = !svn_cmdline__stdin_isatty();
-  else if (force_interactive) 
-    opt_state.non_interactive = FALSE;
+  else
+    opt_state.non_interactive = !svn_cmdline__be_interactive(
+                                  opt_state.non_interactive,
+                                  force_interactive);
 
   /* Turn our hash of changelists into an array of unique ones. */
   SVN_INT_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
