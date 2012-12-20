@@ -1378,31 +1378,37 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 
 /* ### add a new versioned directory. a list of children is NOT passed
    ### since they are added in future, distinct calls to db_op_add_*.
-   ### this is freshly added, so it has no properties.  */
+   PROPS gives the properties; empty or NULL means none. */
 /* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const apr_hash_t *props,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
-/* ### as a new file, there are no properties. this file has no "pristine"
+/* Add a file.
+   PROPS gives the properties; empty or NULL means none.
+   ### this file has no "pristine"
    ### contents, so a checksum [reference] is not required.  */
 /* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
+                       const apr_hash_t *props,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 
-/* ### newly added symlinks have no properties.  */
+/* Add a symlink.
+   PROPS gives the properties; empty or NULL means none. */
 /* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *target,
+                          const apr_hash_t *props,
                           const svn_skel_t *work_items,
                           apr_pool_t *scratch_pool);
 
