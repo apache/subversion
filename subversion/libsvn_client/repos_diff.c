@@ -236,7 +236,7 @@ make_dir_baton(const char *path,
   dir_baton->skip_children = FALSE;
   dir_baton->pool = dir_pool;
   dir_baton->path = apr_pstrdup(dir_pool, path);
-  dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  dir_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
   dir_baton->base_revision = base_revision;
 
   return dir_baton;
@@ -262,7 +262,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = file_pool;
   file_baton->path = apr_pstrdup(file_pool, path);
-  file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  file_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
   file_baton->base_revision = edit_baton->revision;
 
   return file_baton;
@@ -988,7 +988,8 @@ close_file(void *file_baton,
           SVN_ERR(get_file_from_ra(fb, TRUE, scratch_pool));
         }
 
-      remove_non_prop_changes(fb->pristine_props, fb->propchanges);
+      if (! fb->pristine_props)
+        remove_non_prop_changes(fb->pristine_props, fb->propchanges);
 
       get_file_mime_types(&mimetype1, &mimetype2, fb);
 
