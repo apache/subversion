@@ -143,6 +143,9 @@ struct dir_baton {
   /* A cache of any property changes (svn_prop_t) received for this dir. */
   apr_array_header_t *propchanges;
 
+  /* Boolean indicating whether a node property was changed */
+  svn_boolean_t has_propchange;
+
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
   apr_pool_t *pool;
@@ -198,6 +201,9 @@ struct file_baton {
 
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
+
+  /* Boolean indicating whether a node property was changed */
+  svn_boolean_t has_propchange;
 
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
@@ -971,9 +977,11 @@ close_file(void *file_baton,
                                       fb->path));
     }
 
-  if (!fb->added && fb->propchanges->nelts > 0)
+  if (fb->path_end_revision || fb->has_propchange)
     {
-      if (!fb->pristine_props)
+      const char *mimetype1, *mimetype2;
+
+      if (!fb->added && !fb->pristine_props)
         {
           /* We didn't receive a text change, so we have no pristine props.
              Retrieve just the props now. */
@@ -981,11 +989,7 @@ close_file(void *file_baton,
         }
 
       remove_non_prop_changes(fb->pristine_props, fb->propchanges);
-    }
 
-  if (fb->path_end_revision || fb->propchanges->nelts > 0)
-    {
-      const char *mimetype1, *mimetype2;
       get_file_mime_types(&mimetype1, &mimetype2, fb);
 
 
@@ -1100,37 +1104,40 @@ close_directory(void *dir_baton,
 
   scratch_pool = db->pool;
 
-  if (db->added)
+  if (db->has_propchange)
     {
-      pristine_props = eb->empty_hash;
-    }
-  else
-    {
-      SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &pristine_props,
-                              db->path, db->base_revision, 0, scratch_pool));
-    }
-
-  if (db->propchanges->nelts > 0)
-    {
-      remove_non_prop_changes(pristine_props, db->propchanges);
-    }
-
-  if (db->propchanges->nelts > 0)
-    {
-      svn_boolean_t tree_conflicted = FALSE;
-      SVN_ERR(eb->diff_callbacks->dir_props_changed(
-               &prop_state, &tree_conflicted,
-               db->path, db->added,
-               db->propchanges, pristine_props,
-               eb->diff_cmd_baton, scratch_pool));
-      if (tree_conflicted)
-        db->tree_conflicted = TRUE;
-
-      if (prop_state == svn_wc_notify_state_obstructed
-          || prop_state == svn_wc_notify_state_missing)
+      if (db->added)
         {
-          content_state = prop_state;
-          skipped = TRUE;
+          pristine_props = eb->empty_hash;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &pristine_props,
+                                  db->path, db->base_revision, 0, scratch_pool));
+        }
+
+      if (db->propchanges->nelts > 0)
+        {
+          remove_non_prop_changes(pristine_props, db->propchanges);
+        }
+
+      if (db->propchanges->nelts > 0)
+        {
+          svn_boolean_t tree_conflicted = FALSE;
+          SVN_ERR(eb->diff_callbacks->dir_props_changed(
+                   &prop_state, &tree_conflicted,
+                   db->path, db->added,
+                   db->propchanges, pristine_props,
+                   eb->diff_cmd_baton, scratch_pool));
+          if (tree_conflicted)
+            db->tree_conflicted = TRUE;
+
+          if (prop_state == svn_wc_notify_state_obstructed
+              || prop_state == svn_wc_notify_state_missing)
+            {
+              content_state = prop_state;
+              skipped = TRUE;
+            }
         }
     }
 
@@ -1218,6 +1225,9 @@ change_file_prop(void *file_baton,
   if (fb->skip)
     return SVN_NO_ERROR;
 
+  if (!fb->has_propchange && svn_property_kind2(name) == svn_prop_regular_kind)
+    fb->has_propchange = TRUE;
+
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
@@ -1240,6 +1250,9 @@ change_dir_prop(void *dir_baton,
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (db->skip)
     return SVN_NO_ERROR;
+
+  if (!db->has_propchange && svn_property_kind2(name) == svn_prop_regular_kind)
+    db->has_propchange = TRUE;
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
