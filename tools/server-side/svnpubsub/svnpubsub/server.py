@@ -78,7 +78,7 @@ class Revision:
         # thus creating invalid XML, so the XML code paths do escaping.
         self.rev = r.get('revision')
         self.repos = r.get('repos')
-        self.dirs_changed = [x for x in r.get('dirs_changed')]
+        self.dirs_changed = r.get('dirs_changed')
         self.author = r.get('author')
         self.log = r.get('log')
         self.date = r.get('date')
