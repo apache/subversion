@@ -711,6 +711,7 @@ def get_siginfo(args, quiet=False):
         target = get_deploydir(args.base_dir)
 
     good_sigs = {}
+    fingerprints = {}
     output = []
 
     glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
@@ -749,6 +750,10 @@ def get_siginfo(args, quiet=False):
                                                      if l[0:7] != 'Warning' ])
 
         fp = fp_pattern.match(gpg_output).groups()
+        fingerprints["%s [%s] %s" % (fp[3], fp[0], fp[1])] = fp
+
+    for entry in sorted(fingerprints.keys()):
+        fp = fingerprints[entry]
         output.append("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
         output.append("   %s" % fp[1])
 
