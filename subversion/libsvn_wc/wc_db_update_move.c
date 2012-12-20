@@ -233,6 +233,7 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   int dst_op_depth = relpath_depth(b->move_root_dst_relpath);
   int op_depth;
   const char *conflict_root_relpath = local_relpath;
+  const char *moved_to_relpath;
   svn_skel_t *conflict;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
@@ -264,12 +265,19 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
     /* ### TODO: check this is the right sort of tree-conflict? */
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &moved_to_relpath,
+                                            NULL, NULL,
+                                            b->wcroot, conflict_root_relpath,
+                                            scratch_pool, scratch_pool));
+
   conflict = svn_wc__conflict_skel_create(scratch_pool);
   SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
                      conflict, NULL,
                      svn_dirent_join(b->wcroot->abspath, conflict_root_relpath,
                                      scratch_pool),
-                     svn_wc_conflict_reason_moved_away,
+                     (moved_to_relpath
+                      ? svn_wc_conflict_reason_moved_away
+                      : svn_wc_conflict_reason_deleted),
                      svn_wc_conflict_action_edit,
                      scratch_pool,
                      scratch_pool));
