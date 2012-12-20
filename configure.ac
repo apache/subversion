@@ -49,10 +49,10 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
-AC_PROG_CC
+SVN_PROG_CC
 
 # Look for a C++ compiler
-AC_PROG_CXX
+SVN_PROG_CXX
 
 # Look for a C pre-processor
 AC_PROG_CPP
@@ -927,11 +927,8 @@ AS_HELP_STRING([--enable-debug],
 
 
 dnl Add -Werror=implicit-function-declaration to CFLAGS
-CFLAGS_KEEP="$CFLAGS"
-CFLAGS="$CFLAGS_KEEP -Werror=implicit-function-declaration"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-CFLAGS="$CFLAGS_KEEP"
-
+dnl FIXME: Shouldn't this only be set in maintainer mode?
+SVN_CFLAGS_ADD_IFELSE([-Werror=implicit-function-declaration])
 
 dnl Use -Wl,--no-undefined during linking of some libraries
 AC_ARG_ENABLE(disallowing-of-undefined-references,
@@ -985,66 +982,55 @@ AS_HELP_STRING([--enable-maintainer-mode],
         AC_MSG_ERROR([Can't have --disable-debug and --enable-maintainer-mode])
       fi
       enable_debugging=yes
+
+      dnl Enable some extra warnings. Put these before the user's flags
+      dnl so the user can specify flags that override these.
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        dnl Enable some extra warnings. Put these before the user's flags
-        dnl so the user can specify flags that override these.
-        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
-        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+        dnl CMAINTAINERFLAGS="-Wswitch-enum -Wswitch-default $CMAINTAINERFLAGS"
 
         dnl Add each of the following flags only if the C compiler accepts it.
-
         CFLAGS_KEEP="$CFLAGS"
-        AC_LANG_PUSH([C])
+        CFLAGS=""
 
-        CFLAGS="-Werror=declaration-after-statement $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+        SVN_CFLAGS_ADD_IFELSE([-Werror=declaration-after-statement])
+        SVN_CFLAGS_ADD_IFELSE([-Wextra-tokens])
+        SVN_CFLAGS_ADD_IFELSE([-Wnewline-eof])
+        SVN_CFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
+        SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
 
-        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        dnl Put this flag behind -Wall:
-
-        CFLAGS="$CFLAGS_KEEP -Wno-format-nonliteral"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        AC_LANG_POP([C])
+        AC_SUBST(CMAINTAINERFLAGS)
+        CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
+        dnl Add flags that all versions of GCC (should) support
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long $CMAINTAINERFLAGS"
+      fi
+      if test "$GXX" = "yes"; then
+        AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
+
         dnl Add each of the following flags only if the C++ compiler accepts it.
-
         CXXFLAGS_KEEP="$CXXFLAGS"
-        AC_LANG_PUSH([C++])
+        CXXFLAGS=""
 
-        CXXFLAGS="-Wextra-tokens $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wextra-tokens])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wnewline-eof])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wno-system-headers])
 
-        CXXFLAGS="-Wshorten-64-to-32 $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
-
-        CXXFLAGS="-Wno-system-headers $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
-
-        AC_LANG_POP([C++])
+        AC_SUBST(CXXMAINTAINERFLAGS)
+        CXXMAINTAINERFLAGS="$CXXFLAGS"
         CXXFLAGS="$CXXFLAGS_KEEP"
+
+        dnl Add flags that all versions of G++ (should) support
+        CXXMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wunused -Wunreachable-code $CXXMAINTAINERFLAGS"
       fi
     fi
 ])
@@ -1385,11 +1371,6 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
-fi
-
-# Clang also doesn't (yet) support the '-ansi' flag
-if test "$CC" = "clang"; then
-  SVN_STRIP_FLAG(CFLAGS, [-ansi ])
 fi
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
