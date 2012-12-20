@@ -988,7 +988,7 @@ close_file(void *file_baton,
           SVN_ERR(get_file_from_ra(fb, TRUE, scratch_pool));
         }
 
-      if (! fb->pristine_props)
+      if (fb->pristine_props)
         remove_non_prop_changes(fb->pristine_props, fb->propchanges);
 
       get_file_mime_types(&mimetype1, &mimetype2, fb);
