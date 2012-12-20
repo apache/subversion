@@ -818,14 +818,13 @@ def reintegrate_on_shallow_wc(sbox):
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
   # to the missing (shallow) portion of the source.  The reintegrate
-  # should still succeed, albeit skipping some paths.
+  # should still succeed.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.main.file_write(psi_COPY_path, "more branch work")
   svntest.main.run_svn(None, 'commit', '-m',
                        'Some more work on the A_COPY branch', wc_dir)
-  # Reuse the same expectations as the prior merge, except that
-  # non-inheritable mergeinfo is set on the root of the missing subtree...
-  # ... and the mergeinfo on the target root includes the latest rev on the branch.
+  # Reuse the same expectations as the prior merge, except for the mergeinfo
+  # on the target root that now includes the latest rev on the branch.
   expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
   svntest.actions.run_and_verify_merge(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
