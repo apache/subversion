@@ -569,7 +569,7 @@ class TestHarness:
       if self.list_tests:
         sys.stdout.write('Listing tests in %s' % (test_info, ))
       else:
-        sys.stdout.write('Running tests in %s' % (test_info, ))
+        sys.stdout.write('%s' % (test_info, ))
       sys.stdout.flush()
     else:
       # ### Hack for --log-to-stdout to work (but not print any dots).
@@ -589,7 +589,6 @@ class TestHarness:
     line_length = _get_term_width()
     dots_needed = line_length \
                     - len(test_info) \
-                    - len('Running tests in ') \
                     - len('success')
     try:
       os.chdir(progdir)
