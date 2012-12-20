@@ -120,14 +120,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
-    dnl Swig-generated code results in a number of shadowed variables and other
-    dnl warnings, so ignore them when compiling swig-py
-    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wall])
-    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wunused])
-    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wshadow])
-    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wmissing-prototypes])
-    SVN_STRIP_FLAG(SWIG_PY_COMPILE, [-Wmissing-declarations])
-
     AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
       ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
     ])
@@ -213,20 +205,10 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-      # Ruby doesn't like '-ansi', so strip that out of CFLAGS
-      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | $SED -e "s/ -ansi//g;s/ -std=c89//g"`"
+      svn_cv_ruby_compile="$rbconfig_CC $CFLAGS"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
-
-    dnl The swig bindings create a lot of spurious warnings with several of
-    dnl our standard compiler flags, so filter them out here
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wall])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wunused])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wshadow])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wstrict-prototypes])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wmissing-declarations])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wmissing-prototypes])
-    SVN_STRIP_FLAG(SWIG_RB_COMPILE, [-Wredundant-decls])
+    dnl FIXME: Check that the compiler for Ruby actually supports this flag
     SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
 
     AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
@@ -245,7 +227,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"
     old_LIBS="$LIBS"
-    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g;s/ -std=c89//g"` $svn_cv_ruby_includes"
+    CFLAGS="$CFLAGS $svn_cv_ruby_includes"
     LIBS="$SWIG_RB_LIBS"
     AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>
