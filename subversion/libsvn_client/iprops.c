@@ -81,6 +81,7 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   const char *local_abspath,
                                   svn_revnum_t revision,
                                   svn_depth_t depth,
+                                  svn_boolean_t use_relpath_keys,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,
@@ -163,8 +164,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
             }
 
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                             "", revision, result_pool,
-                                             iterpool));
+                                             "", revision, use_relpath_keys,
+                                             result_pool, iterpool));
           apr_hash_set(*wcroot_iprops,
                        apr_pstrdup(result_pool, child_abspath),
                        APR_HASH_KEY_STRING,
