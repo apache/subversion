@@ -103,15 +103,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.7.x-r1423646
-   Work around http://www.freebsd.org/cgi/query-pr.cgi?pr=174521 .
-   Justification:
-     Small fix, avoids cryptic error message, works elsewhere.
-   Branch:
-     ^/subversion/branches/1.7.x-r1423646
-   Votes:
-     +1: danielsh, arfrever, rhuijben
-
  * r1422100
    Delay storing handle to fix assert when rep-cache is inaccessible.
    Justification:

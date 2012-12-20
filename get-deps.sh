@@ -29,7 +29,8 @@ NEON=neon-0.29.6
 SERF=serf-0.7.2
 ZLIB=zlib-1.2.5
 SQLITE_VERSION=3.7.6.3
-SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
+SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
+
 
 HTTPD=httpd-2.2.19
 APR_ICONV=apr-iconv-1.2.1
