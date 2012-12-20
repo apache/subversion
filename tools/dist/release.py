@@ -381,7 +381,7 @@ def compare_changes(repos, branch, revision):
       # Treat this as a warning since we are now putting entries for future
       # minor releases in CHANGES on trunk.
       logging.warning('CHANGES has unmerged revisions: %s' %
-		      stdout.replace("\n", " "))
+                      stdout.replace("\n", " "))
 
 def roll_tarballs(args):
     'Create the release artifacts.'
@@ -765,10 +765,10 @@ def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
     # We use a tempfile because urlopen() objects don't have a .fileno()
     with tempfile.SpooledTemporaryFile() as fd:
-	fd.write(urllib2.urlopen(KEYS).read())
-	fd.flush()
+        fd.write(urllib2.urlopen(KEYS).read())
+        fd.flush()
         fd.seek(0)
-	subprocess.check_call(['gpg', '--import'], stdin=fd)
+        subprocess.check_call(['gpg', '--import'], stdin=fd)
 
 #----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
