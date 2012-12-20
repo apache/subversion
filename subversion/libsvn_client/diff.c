@@ -613,6 +613,8 @@ static svn_error_t *
 diff_props_changed(svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *path,
+                   svn_revnum_t rev1,
+                   svn_revnum_t rev2,
                    svn_boolean_t dir_was_added,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -642,8 +644,8 @@ diff_props_changed(svn_wc_notify_state_t *state,
       SVN_ERR(display_prop_diffs(props, original_props, path,
                                  diff_cmd_baton->orig_path_1,
                                  diff_cmd_baton->orig_path_2,
-                                 diff_cmd_baton->revnum1,
-                                 diff_cmd_baton->revnum2,
+                                 rev1,
+                                 rev2,
                                  diff_cmd_baton->header_encoding,
                                  diff_cmd_baton->outstream,
                                  diff_cmd_baton->relative_to_dir,
@@ -686,6 +688,10 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
 
   return svn_error_trace(diff_props_changed(state,
                                             tree_conflicted, path,
+                                            /* ### These revs be filled
+                                             * ### with per node info */
+                                            diff_cmd_baton->revnum1,
+                                            diff_cmd_baton->revnum2,
                                             dir_was_added,
                                             propchanges,
                                             original_props,
@@ -952,7 +958,7 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
                                  SVN_INVALID_REVNUM, diff_cmd_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
-                               path, FALSE, prop_changes,
+                               path, rev1, rev2, FALSE, prop_changes,
                                original_props, diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
@@ -1025,7 +1031,8 @@ diff_file_added(svn_wc_notify_state_t *content_state,
                                  diff_cmd_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
-                               path, FALSE, prop_changes,
+                               path, rev1, rev2,
+                               FALSE, prop_changes,
                                original_props, diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
@@ -1877,6 +1884,8 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
                              scratch_pool));
       if (prop_changes->nelts > 0)
         SVN_ERR(diff_props_changed(NULL, NULL, child_relpath,
+                                   b->callback_baton->revnum1,
+                                   b->callback_baton->revnum2,
                                    b->recursing_within_added_subtree,
                                    prop_changes, original_props,
                                    b->callback_baton, scratch_pool));
