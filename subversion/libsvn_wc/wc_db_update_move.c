@@ -175,6 +175,8 @@ tc_editor_add_directory(void *baton,
   if (is_conflicted)
     return SVN_NO_ERROR;
 
+  /* TODO: check for obstructions and raise a conflict. */
+
   SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db,
                                        svn_dirent_join(b->wcroot->abspath,
                                                        relpath,
@@ -208,6 +210,8 @@ tc_editor_add_file(void *baton,
                               scratch_pool));
   if (is_conflicted)
     return SVN_NO_ERROR;
+
+  /* TODO: check for obstructions and raise a conflict. */
 
   SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
                                         svn_dirent_join(b->wcroot->abspath,
