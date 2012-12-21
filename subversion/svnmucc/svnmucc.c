@@ -925,7 +925,7 @@ usage(apr_pool_t *pool, int exit_val)
       "  -F [--file] ARG        : read log message from file ARG\n"
       "  -u [--username] ARG    : commit the changes as username ARG\n"
       "  -p [--password] ARG    : use ARG as the password\n"
-      "  -U [--root-url] ARG    : interpret all action URLs are relative to ARG\n"
+      "  -U [--root-url] ARG    : interpret all action URLs relative to ARG\n"
       "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
       "  --with-revprop ARG     : set revision property in the following format:\n"
       "                               NAME[=VALUE]\n"
