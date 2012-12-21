@@ -195,10 +195,12 @@ AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
 SQLITE_VERSION_OKAY
 #endif],
                  [AC_MSG_RESULT([amalgamation found and is okay])
+                  dnl No additional include dirs since sources use a
+                  dnl relative path to include the amalgamated files.
+                  SVN_SQLITE_INCLUDES=""
                   _SVN_SQLITE_DSO_LIBS
                   AC_DEFINE(SVN_SQLITE_INLINE, 1,
                   [Defined if svn should use the amalgamated version of sqlite])
-                  SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
                   if test -n "$svn_sqlite_dso_ldflags"; then
                     SVN_SQLITE_LIBS="$svn_sqlite_dso_ldflags -lpthread"
                   else
