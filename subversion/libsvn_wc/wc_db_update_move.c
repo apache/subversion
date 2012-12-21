@@ -75,7 +75,7 @@ struct tc_editor_baton {
   apr_pool_t *result_pool;
 };
 
-/* If LOCAL_ABSPATH is shadowed then raise a tree-conflict on the root
+/* If LOCAL_RELPATH is shadowed then raise a tree-conflict on the root
    of the obstruction if such a tree-conflict does not already exist. */
 static svn_error_t *
 check_tree_conflict(svn_boolean_t *is_conflicted,
