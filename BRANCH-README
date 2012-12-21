@@ -16,9 +16,9 @@ Changes on this branch:
 
  ** Now that warning and standards-compliance mode macros are no
     longer part of CFLAGS, stop stripping them in the Swig wrapper
-    configury.
+    configury, except for Ruby, which is more delicate.
 
-    $ svn diff -c1424330 \
+    $ svn diff -r1424329:1425040 \
       ^/subversion/branches/tweak-build-take-two/build/ac-macros/swig.m4
 
  ** Allow optimization and debugging to coexist, including in
