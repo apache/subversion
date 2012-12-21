@@ -1,0 +1,39 @@
+This branch is for minor build system improvements.
+
+Changes on this branch:
+
+ ** Split standards-compliance mode and maintainer mode compiler flags
+    out of CFLAGS, so that compilation command lines that do not
+    generate (too many) warnings or are not forced to comply with ISO
+    C '90 can be constructed without having to resort to stripping
+    individual flags out of CFLAGS.
+
+    $ svn diff -r1424288:1424822 \
+      ^/subversion/branches/tweak-build-take-two/configure.ac \
+      ^/subversion/branches/tweak-build-take-two/aclocal.m4 \
+      ^/subversion/branches/tweak-build-take-two/build/ac-macros/compiler.m4 \
+      ^/subversion/branches/tweak-build-take-two/Makefile.in
+
+ ** Now that warning and standards-compliance mode macros are no
+    longer part of CFLAGS, stop stripping them in the Swig wrapper
+    configury.
+
+    $ svn diff -c1424330 \
+      ^/subversion/branches/tweak-build-take-two/build/ac-macros/swig.m4
+
+ ** Allow optimization and debugging to coexist, including in
+    maintainer mode, adding a new configure option
+    --enable-optimize. Neither --enable-optimize nor --enable-debug
+    will override any optimization or debugging flags set by the user
+    in C(XX)FLAGS at configure time. If debugging and optimization are
+    enabled at the same time, we will try to use -O1, then -O; if
+    debuggin is not enabled, we will try -O2 first.
+
+    $ svn diff -c1424860 \
+      ^/subversion/branches/tweak-build-take-two/configure.ac
+
+ ** Remove an obsolete autoconf macro that was not used anywhere and
+    is superceded with SVN_CFLAGS_ADD_IFELSE.
+
+    $ svn diff -c1424297 \
+      ^/subversion/branches/tweak-build-take-two/build/ac-macros/svn-macros.m4
