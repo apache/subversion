@@ -49,10 +49,14 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
-SVN_PROG_CC
+CUSERFLAGS="$CFLAGS"
+AC_PROG_CC
+SVN_CC_MODE_SETUP
 
-# Look for a C++ compiler
-SVN_PROG_CXX
+# Look for a C++ compiler (before anything can set CXXFLAGS)
+CXXUSERFLAGS="$CXXFLAGS"
+AC_PROG_CXX
+SVN_CXX_MODE_SETUP
 
 # Look for a C pre-processor
 AC_PROG_CPP
