@@ -1271,6 +1271,7 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
              ) ], False)
 
 #----------------------------------------------------------------------
+@XFail()
 def tree_conflicts_merge_edit_onto_missing(sbox):
   "tree conflicts: tree missing, leaf edit"
 
@@ -1329,11 +1330,20 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
     expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
+  # Currently this fails due to r1424469, we are not showing the roots of
+  # missing subtrees as skipped even though there are operative changes
+  # within those subtrees.
+  # See http://svn.haxx.se/dev/archive-2012-12/0472.shtml
+  # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notification. Please review!
+    #     I get the following Skip notifications. Please review!
     'D/D1'              : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
     })
 
 
@@ -1349,6 +1359,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
              ) ], False, do_commit_conflicts=False, ignore_ancestry=True)
 
 #----------------------------------------------------------------------
+@XFail()
 def tree_conflicts_merge_del_onto_missing(sbox):
   "tree conflicts: tree missing, leaf del"
 
@@ -1407,9 +1418,21 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
     expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
+  # Currently this fails due to r1424469, we are not showing the roots of
+  # missing subtrees as skipped even though there are operative changes
+  # within those subtrees.
+  # See http://svn.haxx.se/dev/archive-2012-12/0472.shtml
+  # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     'D/D1'              : Item(),
+    # BH: After fixing several issues in the obstruction handling
+    #     I get the following Skip notifications. Please review!
+    'D/D1'              : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
