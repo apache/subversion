@@ -381,10 +381,14 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          const char *argv[],
                          apr_pool_t *pool);
 
-/* Determine whether standard input is associated with a terminal.
+/* Determine whether interactive mode should be enabled, based on whether
+ * the user passed the --non-interactive or --force-interactive options.
+ * If neither option was passed, interactivity is enabled if standard
+ * input is connected to a terminal device.
  * @since New in 1.8. */
 svn_boolean_t
-svn_cmdline__stdin_isatty(void);
+svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+                            svn_boolean_t force_interactive);
 
 #ifdef __cplusplus
 }

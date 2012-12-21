@@ -119,10 +119,15 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
     self.rev = None
     self.chars = ''
+    self.parent = None
+    self.attrs = [ ] 
 
   def startElement(self, name, attrs):
+    self.attrs = attrs
     if name == 'commit':
       self.rev = Revision(attrs['repository'], int(attrs['revision']))
+    elif name == "dirs_changed" or name == "changed":
+      self.parent = name
     # No other elements to worry about.
 
   def characters(self, data):
@@ -134,10 +139,15 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
       self.rev = None
     elif name == 'stillalive':
       self.event_callback('ping')
+    elif name == self.parent:
+      self.parent = None
     elif self.chars and self.rev:
       value = self.chars.strip()
-      if name == 'path':
+      if self.parent == 'dirs_changed' and name == 'path':
         self.rev.dirs_changed.append(value.decode('unicode_escape'))
+      elif self.parent == 'changed' and name == 'path':
+        path = value.decode('unicode_escape')
+        self.rev.changed[path] = dict(p for p in self.attrs.items())
       elif name == 'author':
         self.rev.author = value.decode('unicode_escape')
       elif name == 'date':
@@ -147,6 +157,8 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
     # Toss out any accumulated characters for this element.
     self.chars = ''
+    # Toss out the saved attributes for this element.
+    self.attrs = [ ]
 
 
 class Revision(object):
@@ -154,6 +166,7 @@ class Revision(object):
     self.uuid = uuid
     self.rev = rev
     self.dirs_changed = [ ]
+    self.changed = { } 
     self.author = None
     self.date = None
     self.log = None

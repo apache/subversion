@@ -639,7 +639,7 @@ remote_propget(apr_hash_t *props,
       /* We will filter out all but PROPNAME later, making a final copy
          in RESULT_POOL, so pass SCRATCH_POOL for both pools. */
       SVN_ERR(svn_ra_get_inherited_props(ra_session, inherited_props,
-                                         target_relative, revnum,
+                                         target_relative, revnum, FALSE,
                                          scratch_pool, scratch_pool));
     }
 
@@ -1125,7 +1125,7 @@ remote_proplist(const char *target_prefix,
 
   if (get_target_inherited_props)
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                       target_relative, revnum,
+                                       target_relative, revnum, FALSE,
                                        result_pool, scratch_pool));
   else
     inherited_props = NULL;

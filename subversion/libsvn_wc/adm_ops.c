@@ -898,20 +898,41 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
 
 /* Schedule the single node at LOCAL_ABSPATH, of kind KIND, for addition in
- * its parent directory in the WC.  It will have no properties. */
+ * its parent directory in the WC.  It will have the regular properties
+ * provided in PROPS, or none if that is NULL.
+ *
+ * If the node is a file, set its on-disk executable and read-only bits to
+ * match its properties and lock state,
+ * ### only if it has an svn:executable or svn:needs-lock property.
+ * ### This is to match the previous behaviour of setting its props
+ *     afterwards by calling svn_wc_prop_set4(), but is not very clean.
+ *
+ * Sync the on-disk executable and read-only bits accordingly.
+ */
 static svn_error_t *
 add_from_disk(svn_wc__db_t *db,
               const char *local_abspath,
               svn_node_kind_t kind,
+              const apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   if (kind == svn_node_file)
     {
-      SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
+      svn_skel_t *work_item = NULL;
+
+      if (props && (svn_prop_get_value(props, SVN_PROP_EXECUTABLE)
+                    || svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK)))
+        SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, props, work_item,
+                                     scratch_pool));
+      if (work_item)
+        SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
     }
   else
     {
-      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, props, NULL,
                                           scratch_pool));
     }
 
@@ -1273,7 +1294,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      SVN_ERR(add_from_disk(db, local_abspath, kind,
+      SVN_ERR(add_from_disk(db, local_abspath, kind, NULL,
                             scratch_pool));
       if (kind == svn_node_dir && !db_row_exists)
         {
@@ -1346,11 +1367,12 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
 
 svn_error_t *
-svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     svn_wc_notify_func2_t notify_func,
-                     void *notify_baton,
-                     apr_pool_t *scratch_pool)
+svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const apr_hash_t *props,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
 
@@ -1358,7 +1380,21 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                              NULL, SVN_INVALID_REVNUM, scratch_pool));
   SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx->db, local_abspath,
                                   scratch_pool, scratch_pool));
-  SVN_ERR(add_from_disk(wc_ctx->db, local_abspath, kind,
+
+  /* Canonicalize and check the props */
+  if (props)
+    {
+      apr_hash_t *new_props;
+
+      SVN_ERR(svn_wc__canonicalize_props(
+                &new_props,
+                local_abspath, kind, props, FALSE /* skip_some_checks */,
+                scratch_pool, scratch_pool));
+      props = new_props;
+    }
+
+  /* Add to the DB and maybe update on-disk executable read-only bits */
+  SVN_ERR(add_from_disk(wc_ctx->db, local_abspath, kind, props,
                         scratch_pool));
 
   /* Report the addition to the caller. */
@@ -1368,6 +1404,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                                                      svn_wc_notify_add,
                                                      scratch_pool);
       notify->kind = kind;
+      notify->mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
 

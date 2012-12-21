@@ -1968,6 +1968,83 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Check that NAME names a regular prop. Return an error if it names an
+ * entry prop or a WC prop. */
+static svn_error_t *
+ensure_prop_is_regular_kind(const char *name)
+{
+  enum svn_prop_kind prop_kind = svn_property_kind2(name);
+
+  /* we don't do entry properties here */
+  if (prop_kind == svn_prop_entry_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is an entry property"), name);
+
+  /* Check to see if we're setting the dav cache. */
+  if (prop_kind == svn_prop_wc_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is a WC property, not "
+                               "a regular property"), name);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__canonicalize_props(apr_hash_t **prepared_props,
+                           const char *local_abspath,
+                           svn_node_kind_t node_kind,
+                           const apr_hash_t *props,
+                           svn_boolean_t skip_some_checks,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const svn_string_t *mime_type;
+  struct getter_baton gb;
+  apr_hash_index_t *hi;
+
+  /* While we allocate new parts of *PREPARED_PROPS in RESULT_POOL, we
+     don't promise to deep-copy the unchanged keys and values. */
+  *prepared_props = apr_hash_make(result_pool);
+
+  /* Before we can canonicalize svn:eol-style we need to know svn:mime-type,
+   * so process that first. */
+  mime_type = apr_hash_get((apr_hash_t *)props,
+                           SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+  if (mime_type)
+    {
+      SVN_ERR(svn_wc_canonicalize_svn_prop(
+                &mime_type, SVN_PROP_MIME_TYPE, mime_type,
+                local_abspath, node_kind, skip_some_checks,
+                NULL, NULL, scratch_pool));
+      apr_hash_set(*prepared_props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING,
+                   mime_type);
+    }
+
+  /* Set up the context for canonicalizing the other properties. */
+  gb.mime_type = mime_type;
+  gb.local_abspath = local_abspath;
+
+  /* Check and canonicalize the other properties. */
+  for (hi = apr_hash_first(scratch_pool, (apr_hash_t *)props); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_string_t *value = svn__apr_hash_index_val(hi);
+
+      if (strcmp(name, SVN_PROP_MIME_TYPE) == 0)
+        continue;
+
+      SVN_ERR(ensure_prop_is_regular_kind(name));
+      SVN_ERR(svn_wc_canonicalize_svn_prop(
+                &value, name, value,
+                local_abspath, node_kind, skip_some_checks,
+                get_file_for_validation, &gb, scratch_pool));
+      apr_hash_set(*prepared_props, name, APR_HASH_KEY_STRING, value);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,

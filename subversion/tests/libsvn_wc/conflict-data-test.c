@@ -202,8 +202,8 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__sandbox_create(&sbox, "read_write_tree_conflicts", opts, pool));
   parent_abspath = svn_dirent_join(sbox.wc_abspath, "A", pool);
-  SVN_ERR(svn_wc__db_op_add_directory(sbox.wc_ctx->db, parent_abspath, NULL,
-                                      pool));
+  SVN_ERR(svn_wc__db_op_add_directory(sbox.wc_ctx->db, parent_abspath,
+                                      NULL /*props*/, NULL, pool));
   child1_abspath = svn_dirent_join(parent_abspath, "foo", pool);
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
 
