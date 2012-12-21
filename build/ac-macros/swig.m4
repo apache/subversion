@@ -208,6 +208,9 @@ AC_DEFUN(SVN_FIND_SWIG,
       svn_cv_ruby_compile="$rbconfig_CC $CFLAGS"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-ansi])
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c89])
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c90])
     dnl FIXME: Check that the compiler for Ruby actually supports this flag
     SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
 
@@ -228,6 +231,9 @@ AC_DEFUN(SVN_FIND_SWIG,
     old_CFLAGS="$CFLAGS"
     old_LIBS="$LIBS"
     CFLAGS="$CFLAGS $svn_cv_ruby_includes"
+    SVN_STRIP_FLAG([CFLAGS], [-ansi])
+    SVN_STRIP_FLAG([CFLAGS], [-std=c89])
+    SVN_STRIP_FLAG([CFLAGS], [-std=c90])
     LIBS="$SWIG_RB_LIBS"
     AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>
