@@ -1212,7 +1212,7 @@ authz(apr_pool_t *pool)
   svn_error_t *err;
   svn_boolean_t access_granted;
   apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
+
   /* Definition of the paths to test and expected replies for each. */
   struct check_access_tests test_set[] = {
     /* Test that read rules are correctly used. */
