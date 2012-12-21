@@ -44,3 +44,12 @@ Changes on this branch:
 
     $ svn diff -c1425050 \
       ^/subversion/branches/tweak-build-take-two
+
+ ** Allow a user to set a custom set of compiler flags at configure time that
+    are used for Subversion sources, but not, e.g., Swig-generated sources,
+    like this:
+
+    $ ./configure CUSERFLAGS=--flags-for-C CXXUSERFLAGS=--flags-for-C++
+
+    $ svn diff -c1425086 \
+      ^/subversion/branches/tweak-build-take-two
