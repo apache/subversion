@@ -588,6 +588,12 @@ blank_ibb(insert_base_baton_t *pibb)
 
 /* Extend any delete of the parent of LOCAL_RELPATH to LOCAL_RELPATH.
 
+   ### What about KIND and OP_DEPTH?  KIND ought to be redundant; I'm
+       discussing on dev@ whether we can let that be null for presence
+       == base-deleted.  OP_DEPTH is the op-depth of what, and why?
+       It is used to select the lowest working node higher than OP_DEPTH,
+       so, in terms of the API, OP_DEPTH means ...?
+
    Given a wc:
 
               0         1         2         3         4
