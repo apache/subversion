@@ -1132,7 +1132,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_add,
 
-  /** A node below an exising node was updated during update.
+  /** A node below an existing node was updated during update.
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_update,
 
@@ -4528,7 +4528,16 @@ svn_wc_delete(const char *path,
 
 /**
  * Schedule the single node that exists on disk at @a local_abspath for
- * addition to the working copy.  The added node will have no properties.
+ * addition to the working copy.  The added node will have the properties
+ * provided in @a props, or none if that is NULL.
+ *
+ * Check and canonicalize the properties in the same way as
+ * svn_wc_prop_set4().  Return an error and don't add the node if the
+ * properties are not valid on this node.  Unlike svn_wc_prop_set4()
+ * there is no option to skip some of the checks and canonicalizations.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     preferably should be a single code.
  *
  * The versioned state of the parent path must be a modifiable directory,
  * and the versioned state of @a local_abspath must be either nonexistent or
@@ -4537,14 +4546,28 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * This is a replacement for svn_wc_add4() case 2a.
- *
- * ### TODO: Allow the caller to provide the node's properties?
- *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const apr_hash_t *props,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool);
+
+
+/**
+ * Similar to svn_wc_add4(), but gives the new node an empty set of properties.
+ *
+ * This is a replacement for svn_wc_add4() case 2a.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
@@ -6033,19 +6056,29 @@ svn_wc_prop_get(const svn_string_t **value,
  * NULL, remove property @a name from @a local_abspath.  Use @a wc_ctx to
  * access @a local_abspath.
  *
- * If @a skip_checks is TRUE, do no validity checking.  But if @a
- * skip_checks is FALSE, and @a name is not a valid property for @a
- * path, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
+ * @a name may be a regular property or a "wc property".  If @a name is
+ * an "entry property", return the error #SVN_ERR_BAD_PROP_KIND (even if
+ * @a skip_checks is TRUE).
+ *
+ * If @a name is a "wc property", then just update the WC DAV cache for
+ * @a local_abspath with @a name and @a value.  In this case, @a depth
+ * must be #svn_depth_empty.
+ *
+ * The rest of this description applies when @a name is a regular property.
+ *
+ * If @a name is a name in the reserved "svn:" name space, and @a value is
+ * non-null, then canonicalize the property value and check the property
+ * name and value as documented for svn_wc_canonicalize_svn_prop().
+ * @a skip_checks controls the level of checking as documented there.
+ *
+ * Return an error if the canonicalization or the check fails.
+ * The error will be either #SVN_ERR_ILLEGAL_TARGET (if the
  * property is not appropriate for @a path), or
  * #SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
  * is not a valid mime-type).
+ * ### That is not currently right -- several other errors can be raised.
  *
- * @a depth follows the usual semeatic for depth.  If the property is a
- * wc property, @a depth must be #svn_depth_empty.
- *
- * @a name may be a wc property or a regular property; but if it is an
- * entry property, return the error #SVN_ERR_BAD_PROP_KIND, even if
- * @a skip_checks is TRUE.
+ * @a depth follows the usual semantics for depth.
  *
  * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose properties are
@@ -6062,6 +6095,14 @@ svn_wc_prop_get(const svn_string_t **value,
  * if you are not interested in this information.
  *
  * Use @a scratch_pool for temporary allocation.
+ *
+ * @note If the caller is setting both svn:mime-type and svn:eol-style in
+ * separate calls, and @a skip_checks is false, there is an ordering
+ * dependency between them, as the validity check for svn:eol-style makes
+ * use of the current value of svn:mime-type.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     should be a single code or a very small set of possibilities.
  *
  * @since New in 1.7.
  */
@@ -6081,7 +6122,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 
 /** Similar to svn_wc_prop_set4(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair, no @a depth parameter, no changelist
- * filtering (for the depth-based property setting), and no cancelation.
+ * filtering (for the depth-based property setting), and no cancellation.
  *
  * @since New in 1.6.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
@@ -6182,20 +6223,54 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
  * to a canonicalized version of the property value.
  *
- * If @a skip_some_checks is TRUE, some validity checks and
- * canonicalizations are skipped. Presently, these are:
- *   - For svn:eol-style: strip white space; check value is recognized;
- *       check file content matches value.
- *   - For svn:mime-type: strip white space; check value has reasonable
- *       syntax.
+ * The exact set of canonicalizations and checks may vary across different
+ * versions of this API.  Currently:
  *
- * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a prop_getter with @a
- * getter_baton, which then needs to set the MIME type and print the
- * contents of the file to the given stream.
+ *   - svn:executable
+ *   - svn:needs-lock
+ *   - svn:special
+ *     - set the value to '*'
+ *
+ *   - svn:keywords
+ *     - strip leading and trailing white space
+ *
+ *   - svn:ignore
+ *   - svn:global-ignores
+ *   - svn:auto-props
+ *     - add a final a newline character if missing
+ *
+ *   - svn:externals
+ *     - add a final a newline character if missing
+ *     - check for valid syntax
+ *     - check for no duplicate entries
+ *
+ *   - svn:mergeinfo
+ *     - canonicalize
+ *     - check for validity
+ *
+ * Also, unless @a skip_some_checks is TRUE:
+ *
+ *   - svn:eol-style
+ *     - strip leading and trailing white space
+ *     - check value is recognized
+ *     - check file content has a self-consistent EOL style
+ *       (but not necessarily that it matches @a propval)
+ *
+ *   - svn:mime-type
+ *     - strip white space
+ *     - check for reasonable syntax
+ *
+ * The EOL-style check (if not skipped) requires access to the contents and
+ * MIME type of the target if it is a file.  It will call @a prop_getter with
+ * @a getter_baton.  The callback must set the MIME type and/or write the
+ * contents of the file to the given stream.  If @a skip_some_checks is true,
+ * then @a prop_getter is not used and may be NULL.
  *
  * @a path should be the path of the file in question; it is only used
  * for error messages.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     should be a single code or a very small set of possibilities.
  *
  * ### This is not actually related to the WC, but it does need to call
  * ### svn_wc_parse_externals_description3.
@@ -6658,7 +6733,7 @@ typedef enum svn_wc_merge_outcome_t
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.
- * Furtheremore, merging into an unversioned file is a lossy operation.)
+ * Furthermore, merging into an unversioned file is a lossy operation.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a target_abspath to be modified, when
@@ -7048,7 +7123,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_cleanup3() but uses relative paths and creates its own
- * swn_wc_context_t.
+ * #svn_wc_context_t.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.

@@ -1299,6 +1299,7 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_array_header_t **iprops,
                            const char *path,
                            svn_revnum_t revision,
+                           svn_boolean_t use_relpath_keys,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -1322,6 +1323,23 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
       /* Fallback for legacy servers. */
       SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision, iprops,
                                                result_pool, scratch_pool));
+    }
+
+  if (use_relpath_keys && (*iprops)->nelts)
+    {
+      const char *repos_root_url;
+      int i;
+
+      SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+      for (i = 0; i < (*iprops)->nelts; i++)
+        {
+          svn_prop_inherited_item_t *elt =
+            APR_ARRAY_IDX(*iprops, i, svn_prop_inherited_item_t *);
+          elt->path_or_url =
+            svn_dirent_skip_ancestor(repos_root_url, elt->path_or_url);
+          elt->path_or_url = svn_path_uri_decode(elt->path_or_url,
+                                                 result_pool);
+        }
     }
 
   return SVN_NO_ERROR;

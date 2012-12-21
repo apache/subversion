@@ -219,7 +219,7 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-for d in `find "$ABS_BUILDDIR" -type d -name .libs`; do
+for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
   if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
     BUILDDIR_LIBRARY_PATH="$d"
   else
@@ -441,7 +441,7 @@ MaxRequestsPerChild 0
 <IfModule worker.c>
   ThreadsPerChild   8
 </IfModule>
-MaxClients          16
+MaxClients          32
 HostNameLookups     Off
 LogFormat           "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" format
 CustomLog           "$HTTPD_ROOT/req" format

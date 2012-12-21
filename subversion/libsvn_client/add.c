@@ -275,7 +275,6 @@ add_file(const char *local_abspath,
          apr_pool_t *pool)
 {
   apr_hash_t *properties;
-  apr_hash_index_t *hi;
   const char *mimetype;
   svn_node_kind_t kind;
   svn_boolean_t is_special;
@@ -283,10 +282,7 @@ add_file(const char *local_abspath,
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special, pool));
 
-  /* Add the file */
-  SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
-                               NULL, NULL, pool));
-
+  /* Determine the properties that the file should have */
   if (is_special)
     {
       mimetype = NULL;
@@ -320,47 +316,9 @@ add_file(const char *local_abspath,
                                                pool));
     }
 
-  /* loop through the hashtable and add the properties */
-  for (hi = apr_hash_first(pool, properties);
-       hi != NULL; hi = apr_hash_next(hi))
-    {
-      const char *pname = svn__apr_hash_index_key(hi);
-      const svn_string_t *pval = svn__apr_hash_index_val(hi);
-      svn_error_t *err;
-
-      /* It's probably best to pass 0 for force, so that if
-         the autoprops say to set some weird combination,
-         we just error and let the user sort it out. */
-      err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
-                             svn_depth_empty, FALSE, NULL,
-                             NULL, NULL /* cancellation */,
-                             NULL, NULL /* notification */,
-                             pool);
-      if (err)
-        {
-          /* Don't leave the job half-done. If we fail to set a property,
-           * (try to) un-add the file. */
-          return svn_error_compose_create(
-                   err,
-                   svn_wc_revert4(ctx->wc_ctx,
-                                  local_abspath,
-                                  svn_depth_empty,
-                                  FALSE /* use_commit_times */,
-                                  NULL /* changelists */,
-                                  NULL, NULL, NULL, NULL,
-                                  pool));
-        }
-    }
-
-  /* Report the addition to the caller. */
-  if (ctx->notify_func2 != NULL)
-    {
-      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
-                                                     svn_wc_notify_add, pool);
-      notify->kind = svn_node_file;
-      notify->mime_type = mimetype;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-    }
+  /* Add the file */
+  SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, local_abspath, properties,
+                                ctx->notify_func2, ctx->notify_baton2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -425,9 +383,9 @@ add_dir_recursive(const char *dir_abspath,
                                         iterpool));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
-                             ctx->notify_func2, ctx->notify_baton2,
-                             iterpool);
+  err = svn_wc_add_from_disk2(ctx->wc_ctx, dir_abspath, NULL /*props*/,
+                              ctx->notify_func2, ctx->notify_baton2,
+                              iterpool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
@@ -1009,9 +967,10 @@ add(const char *local_abspath,
                                      parent_abspath, local_abspath);
 
           SVN_ERR(svn_io_make_dir_recursively(parent_abspath, scratch_pool));
-          SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, parent_abspath,
-                                       ctx->notify_func2, ctx->notify_baton2,
-                                       scratch_pool));
+          SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, parent_abspath,
+                                        NULL /*props*/,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        scratch_pool));
         }
       svn_pool_destroy(iterpool);
     }

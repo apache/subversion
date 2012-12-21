@@ -493,7 +493,7 @@ svn_sqlite__bind_iprops(svn_sqlite__stmt_t *stmt,
     return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
   SVN_ERR(svn_skel__unparse_iproplist(&skel, inherited_props,
-                                      scratch_pool));
+                                      scratch_pool, scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                slot,
@@ -992,18 +992,44 @@ reset_all_statements(svn_sqlite__db_t *db,
   return err;
 }
 
-/* The body of svn_sqlite__with_transaction() and
-   svn_sqlite__with_immediate_transaction(), which see. */
-static svn_error_t *
-with_transaction(svn_sqlite__db_t *db,
-                 svn_sqlite__transaction_callback_t cb_func,
-                 void *cb_baton,
-                 apr_pool_t *scratch_pool /* NULL allowed */)
+svn_error_t *
+svn_sqlite__begin_transaction(svn_sqlite__db_t *db)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_error_t *err;
 
-  err = cb_func(cb_baton, db, scratch_pool);
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__begin_immediate_transaction(svn_sqlite__db_t *db)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_IMMEDIATE_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__begin_savepoint(svn_sqlite__db_t *db)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_SAVEPOINT_SVN));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
+                               svn_error_t *err)
+{
+  svn_sqlite__stmt_t *stmt;
 
   /* Commit or rollback the sqlite transaction. */
   if (err)
@@ -1051,46 +1077,10 @@ with_transaction(svn_sqlite__db_t *db,
 }
 
 svn_error_t *
-svn_sqlite__with_transaction(svn_sqlite__db_t *db,
-                             svn_sqlite__transaction_callback_t cb_func,
-                             void *cb_baton,
-                             apr_pool_t *scratch_pool /* NULL allowed */)
+svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
+                             svn_error_t *err)
 {
   svn_sqlite__stmt_t *stmt;
-  SVN_ERR(get_internal_statement(&stmt, db,
-                                 STMT_INTERNAL_BEGIN_TRANSACTION));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                          scratch_pool));
-}
-
-svn_error_t *
-svn_sqlite__with_immediate_transaction(
-  svn_sqlite__db_t *db,
-  svn_sqlite__transaction_callback_t cb_func,
-  void *cb_baton,
-  apr_pool_t *scratch_pool /* NULL allowed */)
-{
-  svn_sqlite__stmt_t *stmt;
-  SVN_ERR(get_internal_statement(&stmt, db,
-                                 STMT_INTERNAL_BEGIN_IMMEDIATE_TRANSACTION));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                          scratch_pool));
-}
-
-svn_error_t *
-svn_sqlite__with_lock(svn_sqlite__db_t *db,
-                      svn_sqlite__transaction_callback_t cb_func,
-                      void *cb_baton,
-                      apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_SAVEPOINT_SVN));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  err = cb_func(cb_baton, db, scratch_pool);
 
   if (err)
     {
@@ -1128,6 +1118,37 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
                                  STMT_INTERNAL_RELEASE_SAVEPOINT_SVN));
 
   return svn_error_trace(svn_sqlite__step_done(stmt));
+}
+
+svn_error_t *
+svn_sqlite__with_transaction(svn_sqlite__db_t *db,
+                             svn_sqlite__transaction_callback_t cb_func,
+                             void *cb_baton,
+                             apr_pool_t *scratch_pool /* NULL allowed */)
+{
+  SVN_SQLITE__WITH_TXN(cb_func(cb_baton, db, scratch_pool), db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__with_immediate_transaction(
+  svn_sqlite__db_t *db,
+  svn_sqlite__transaction_callback_t cb_func,
+  void *cb_baton,
+  apr_pool_t *scratch_pool /* NULL allowed */)
+{
+  SVN_SQLITE__WITH_IMMEDIATE_TXN(cb_func(cb_baton, db, scratch_pool), db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__with_lock(svn_sqlite__db_t *db,
+                      svn_sqlite__transaction_callback_t cb_func,
+                      void *cb_baton,
+                      apr_pool_t *scratch_pool /* NULL allowed */)
+{
+  SVN_SQLITE__WITH_LOCK(cb_func(cb_baton, db, scratch_pool), db);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

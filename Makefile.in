@@ -404,7 +404,7 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	echo $(CLEAN_FILES) | xargs rm -f
+	echo $(CLEAN_FILES) | xargs rm -f --
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
@@ -586,11 +586,12 @@ gcov-reset:
 gcov-clean:
 	rm -f gcov-lcov.dat gcov-lcov.log gcov-genhtml.log
 	rm -rf gcov-report
-	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f
+	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	rm -rf subversion/tests/cmdline/svn-test-work          \
-	       subversion/tests/libsvn_fs/test-repo-*          \
+	find subversion/tests/cmdline/svn-test-work -print0    \
+	       -mindepth 1 -maxdepth 1 | xargs -0 rm -rf --;   \
+	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
 	       subversion/tests/libsvn_ra_local/test-repo-*    \

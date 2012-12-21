@@ -1023,25 +1023,3 @@ svn_client_commit6(const apr_array_header_t *targets,
   return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
                                           pool));
 }
-
-svn_error_t *
-svn_client_commit5(const apr_array_header_t *targets,
-                   svn_depth_t depth,
-                   svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelists,
-                   svn_boolean_t commit_as_operations,
-                   const apr_array_header_t *changelists,
-                   const apr_hash_t *revprop_table,
-                   svn_commit_callback2_t commit_callback,
-                   void *commit_baton,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_commit6(targets, depth, keep_locks, keep_changelists,
-                            commit_as_operations,
-                            TRUE,  /* include_file_externals */
-                            FALSE, /* include_dir_externals */
-                            changelists, revprop_table, commit_callback,
-                            commit_baton, ctx, pool);
-}
-

@@ -2329,10 +2329,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
                                   pool));
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  if (svn_fs_fs__id_txn_id(id) == NULL)
-    (*noderev_p)->is_fresh_txn_root = FALSE;
-
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
   return set_cached_node_revision_body(*noderev_p, fs, id, pool);
@@ -8139,9 +8135,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep)
     noderev->prop_rep->sha1_checksum = NULL;
 
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
   /* Write out our new node-revision. */
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
+
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -8560,23 +8560,6 @@ write_reps_to_cache(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
-                           apr_pool_t *scratch_pool)
-{
-  struct commit_baton *cb = baton;
-
-  /* Write new entries to the rep-sharing database.
-   *
-   * We use an sqlite transcation to speed things up;
-   * see <http://www.sqlite.org/faq.html#q19>.
-   */
-  SVN_ERR(write_reps_to_cache(cb->fs, cb->reps_to_cache, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -8611,9 +8594,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   if (ffd->rep_sharing_allowed)
     {
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
-      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                           commit_sqlite_txn_callback,
-                                           &cb, pool));
+
+      /* Write new entries to the rep-sharing database.
+       *
+       * We use an sqlite transaction to speed things up;
+       * see <http://www.sqlite.org/faq.html#q19>.
+       */
+      SVN_SQLITE__WITH_TXN(
+        write_reps_to_cache(fs, cb.reps_to_cache, pool),
+        ffd->rep_cache_db);
     }
 
   return SVN_NO_ERROR;

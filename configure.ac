@@ -148,8 +148,8 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.15"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
+SQLITE_RECOMMENDED_VER="3.7.15.1"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -1384,12 +1384,12 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
+  SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
 
 # Clang also doesn't (yet) support the '-ansi' flag
 if test "$CC" = "clang"; then
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+  SVN_STRIP_FLAG(CFLAGS, [-ansi ])
 fi
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

@@ -4202,6 +4202,7 @@ def patch_git_with_index_line(sbox):
                                        1) # dry-run
 
 @XFail()
+@Issue(4273)
 def patch_change_symlink_target(sbox):
   "patch changes symlink target"
 
