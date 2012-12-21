@@ -91,7 +91,7 @@ get_zlib() {
 }
 
 get_sqlite() {
-    test -d $BASEDIR/sqlite-amalgamation && return
+    test -d $BASEDIR/subversion/include/private/sqlite-amalgamation && return
 
     cd $TEMPDIR
     $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
@@ -99,7 +99,7 @@ get_sqlite() {
 
     unzip -q $TEMPDIR/$SQLITE.zip
 
-    mv $SQLITE sqlite-amalgamation
+    mv $SQLITE subversion/include/private/sqlite-amalgamation
 
 }
 
@@ -107,7 +107,7 @@ get_sqlite() {
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in zlib serf sqlite-amalgamation apr apr-util; do
+    for i in zlib serf subversion/include/private/sqlite-amalgamation apr apr-util; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
