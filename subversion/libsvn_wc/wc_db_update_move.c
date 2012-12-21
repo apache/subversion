@@ -899,6 +899,7 @@ update_moved_away_file(svn_editor_t *tc_editor,
 static svn_error_t *
 update_moved_away_dir(svn_editor_t *tc_editor,
                       svn_boolean_t add,
+                      apr_hash_t *children_hash,
                       const char *src_relpath,
                       const char *dst_relpath,
                       int src_op_depth,
@@ -908,35 +909,25 @@ update_moved_away_dir(svn_editor_t *tc_editor,
                       svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
-  apr_hash_t *children_hash;
   apr_array_header_t *new_children;
   apr_hash_t *new_props;
   const char *src_abspath = svn_dirent_join(wcroot->abspath,
                                             src_relpath,
                                             scratch_pool);
 
-  if (add)
-    {
-      /* ### TODO children and props */
-      SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
-                                       apr_array_make(scratch_pool, 0,
-                                                      sizeof (const char *)),
-                                       apr_hash_make(scratch_pool),
-                                       move_root_dst_revision));
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__db_get_children_op_depth(&children_hash, wcroot,
-                                           src_relpath, src_op_depth,
-                                           scratch_pool, scratch_pool));
   SVN_ERR(svn_hash_keys(&new_children, children_hash, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_pristine_props(&new_props, db, src_abspath,
                                          scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_editor_alter_directory(tc_editor, dst_relpath,
-                                     move_root_dst_revision,
-                                     new_children, new_props));
+  if (add)
+    SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
+                                     new_children, new_props,
+                                     move_root_dst_revision));
+  else
+    SVN_ERR(svn_editor_alter_directory(tc_editor, dst_relpath,
+                                       move_root_dst_revision,
+                                       new_children, new_props));
 
   return SVN_NO_ERROR;
 }
@@ -959,14 +950,16 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
   apr_pool_t *iterpool;
   apr_hash_index_t *hi;
 
-  SVN_ERR(update_moved_away_dir(tc_editor, add, src_relpath, dst_relpath,
+  SVN_ERR(svn_wc__db_get_children_op_depth(&src_children, wcroot,
+                                           src_relpath, src_op_depth,
+                                           scratch_pool, scratch_pool));
+
+  SVN_ERR(update_moved_away_dir(tc_editor, add, src_children,
+                                src_relpath, dst_relpath,
                                 src_op_depth, move_root_dst_relpath,
                                 move_root_dst_revision,
                                 db, wcroot, scratch_pool));
 
-  SVN_ERR(svn_wc__db_get_children_op_depth(&src_children, wcroot,
-                                           src_relpath, src_op_depth,
-                                           scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_get_children_op_depth(&dst_children, wcroot,
                                            dst_relpath,
                                            relpath_depth(move_root_dst_relpath),
