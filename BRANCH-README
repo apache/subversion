@@ -37,3 +37,10 @@ Changes on this branch:
 
     $ svn diff -c1424297 \
       ^/subversion/branches/tweak-build-take-two/build/ac-macros/svn-macros.m4
+
+ ** Move the sqlite-amalgamation directory from the root of the source tree
+    under subversion/include/private to make include paths safer from
+    possible collision with sqlite include files from other install locations.
+
+    $ svn diff -c1425050 \
+      ^/subversion/branches/tweak-build-take-two
