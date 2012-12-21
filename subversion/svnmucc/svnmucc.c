@@ -56,6 +56,8 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
 
+#include "svn_private_config.h"
+
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
   if (err)
@@ -899,37 +901,42 @@ static void
 usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
-  static const char *msg =
-    "Multiple URL Command Client (for Subversion)\n"
-    "\nUsage: svnmucc [OPTION]... [ACTION]...\n"
-    "\nActions:\n"
-    "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
-    "  mkdir URL             create new directory URL\n"
-    "  mv URL1 URL2          move URL1 to URL2\n"
-    "  rm URL                delete URL\n"
-    "  put SRC-FILE URL      add or modify file URL with contents copied from\n"
-    "                        SRC-FILE (use \"-\" to read from standard input)\n"
-    "  propset NAME VAL URL  set property NAME on URL to value VAL\n"
-    "  propsetf NAME VAL URL set property NAME on URL to value from file VAL\n"
-    "  propdel NAME URL      delete property NAME from URL\n"
-    "\nOptions:\n"
-    "  -h, --help, -?        display this text\n"
-    "  -m, --message ARG     use ARG as a log message\n"
-    "  -F, --file ARG        read log message from file ARG\n"
-    "  -u, --username ARG    commit the changes as username ARG\n"
-    "  -p, --password ARG    use ARG as the password\n"
-    "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
-    "  -r, --revision ARG    use revision ARG as baseline for changes\n"
-    "  --with-revprop A[=B]  set revision property A in new revision to B\n"
-    "                        if specified, else to the empty string\n"
-    "  -n, --non-interactive don't prompt the user about anything\n"
-    "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
-    "                        use \"-\" to read from standard input)\n"
-    "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG to override a configuration option\n"
-    "  --no-auth-cache       do not cache authentication tokens\n"
-    "  --version             print version information\n";
-  svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
+  svn_error_clear(svn_cmdline_fputs(
+    _("Subversion multiple URL command client\n"
+      "usage: svnmucc [OPTION]... [ACTION]...\n"
+      "\n"
+      "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
+      "  the result as a (single) new revision.\n"
+      "\n"
+      "Actions:\n"
+      "  cp REV URL1 URL2       : copy URL1@REV to URL2\n"
+      "  mkdir URL              : create new directory URL\n"
+      "  mv URL1 URL2           : move URL1 to URL2\n"
+      "  rm URL                 : delete URL\n"
+      "  put SRC-FILE URL       : add or modify file URL with contents copied from\n"
+      "                           SRC-FILE (use \"-\" to read from standard input)\n"
+      "  propset NAME VAL URL   : set property NAME on URL to value VAL\n"
+      "  propsetf NAME VAL URL  : set property NAME on URL to value from file VAL\n"
+      "  propdel NAME URL       : delete property NAME from URL\n"
+      "\n"
+      "Valid options:\n"
+      "  -h, -? [--help]        : display this text\n"
+      "  -m [--message] ARG     : use ARG as a log message\n"
+      "  -F [--file] ARG        : read log message from file ARG\n"
+      "  -u [--username] ARG    : commit the changes as username ARG\n"
+      "  -p [--password] ARG    : use ARG as the password\n"
+      "  -U [--root-url] ARG    : interpret all action URLs are relative to ARG\n"
+      "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
+      "  --with-revprop ARG     : set revision property in the following format:\n"
+      "                               NAME[=VALUE]\n"
+      "  -n [--non-interactive] : don't prompt the user about anything\n"
+      "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
+      "                         : use \"-\" to read from standard input)\n"
+      "  --config-dir ARG       : use ARG to override the config directory\n"
+      "  --config-option ARG    : use ARG to override a configuration option\n"
+      "  --no-auth-cache        : do not cache authentication tokens\n"
+      "  --version              : print version information\n"),
+                  stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
 }
