@@ -215,6 +215,12 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__wq_build_dir_install(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool,
+                             apr_pool_t *result_pool);
 
 svn_error_t *
 svn_wc__wq_build_postupgrade(svn_skel_t **work_item,
