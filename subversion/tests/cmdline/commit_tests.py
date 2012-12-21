@@ -1974,6 +1974,7 @@ def from_wc_top_with_bad_editor(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "Commit succeeded when should have failed.",
     None, svntest.verify.AnyOutput,
+    '--force-interactive',
     'ci', '--editor-cmd', 'no_such-editor')
 
   err = " ".join([x.strip() for x in err])

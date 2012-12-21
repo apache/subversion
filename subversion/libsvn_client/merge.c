@@ -4429,13 +4429,24 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 
   if (rangelist->nelts > 1) /* Copy */
     {
+      const svn_merge_range_t *gap;
       /* As mentioned above, multiple gaps *shouldn't* be possible. */
       SVN_ERR_ASSERT(apr_hash_count(implicit_src_mergeinfo) == 1);
 
+      gap = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
+                          const svn_merge_range_t *);
+
       *gap_start = MIN(source->loc1->rev, source->loc2->rev);
-      *gap_end = (APR_ARRAY_IDX(rangelist,
-                                rangelist->nelts - 1,
-                                svn_merge_range_t *))->start;
+      *gap_end = gap->start;
+
+      /* ### Issue #4132:
+         ### This assertion triggers in merge_tests.py svnmucc_abuse_1()
+         ### when a node is replaced by an older copy of itself.
+
+         BH: I think we should review this and the 'rename' case to find
+             out which behavior we really want, and if we can really
+             determine what happened this way. */
+      SVN_ERR_ASSERT(*gap_start < *gap_end);
     }
   else if (apr_hash_count(implicit_src_mergeinfo) > 1) /* Rename */
     {
