@@ -174,7 +174,8 @@ sbox_wc_add(svn_test__sandbox_t *b, const char *path)
   parent_abspath = svn_dirent_dirname(path, b->pool);
   SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
                                      b->pool, b->pool));
-  SVN_ERR(svn_wc_add_from_disk(b->wc_ctx, path, NULL, NULL, b->pool));
+  SVN_ERR(svn_wc_add_from_disk2(b->wc_ctx, path, NULL /*props*/,
+                                NULL, NULL, b->pool));
   SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
   return SVN_NO_ERROR;
 }
@@ -294,8 +295,12 @@ sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
 
   APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  return svn_client_commit5(targets, svn_depth_infinity,
-                            FALSE, FALSE, TRUE, /* keep locks/cl's/use_ops*/
+  return svn_client_commit6(targets, svn_depth_infinity,
+                            FALSE /* keep_locks */,
+                            FALSE /* keep_changelist */,
+                            TRUE  /* commit_as_operations */,
+                            TRUE  /* include_file_externals */,
+                            FALSE /* include_dir_externals */,
                             NULL, NULL, NULL, NULL, ctx, b->pool);
 }
 

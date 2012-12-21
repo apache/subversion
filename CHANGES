@@ -34,6 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
     * client version info now reported to commit hooks (issue #4124)
     * 'svn merge' now uses reintegrate mode automatically when needed
+    * 'svn' is now non-interactive when not run in a terminal device (r1424037)
 
   - Client-side bugfixes:
     *

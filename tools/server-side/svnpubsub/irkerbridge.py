@@ -145,6 +145,12 @@ class BigDoEverythingClass(object):
     return result
 
   def fill_in_extra_args(self, rev):
+    # Set any empty members to the string "<null>"
+    v = vars(rev)
+    for k in v.keys():
+      if not v[k]:
+        v[k] = '<null>'
+       
     # Add entries to the rev object that are useful for
     # formatting.
     rev.log_firstline = rev.log.split("\n",1)[0]

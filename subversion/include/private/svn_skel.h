@@ -226,7 +226,8 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
 svn_error_t *
 svn_skel__unparse_iproplist(svn_skel_t **skel_p,
                             const apr_array_header_t *inherited_props,
-                            apr_pool_t *result_pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
