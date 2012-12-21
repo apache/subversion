@@ -670,6 +670,58 @@ svn_path_cstring_to_utf8(const char **path_utf8,
 
 /** @} */
 
+
+/** Repository relative URLs
+ *
+ * @defgroup svn_path_repos_relative_urls Repository relative URLs
+ * @{
+ */
+
+
+/**
+ * Return true iff @a path is a repository-relative URL: specifically that
+ * it starts with the characters "^/"
+ *
+ * @a path is in UTF-8 encoding.
+ *
+ * Does not check whether @a path is a properly URI-encoded, canonical, or
+ * valid in any other way.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_path_is_repos_relative_url(const char *path);
+
+/**
+ * Set @a absolute_url to the absolute URL represented by @a relative_url
+ * relative to @a repos_root_url.  @a absolute_url will be allocated in
+ * @a pool.
+ *
+ * @a absolute_url will end with a peg revision specifier if @a relative_url
+ * did.
+ *
+ * @a relative_url is in repository-relative syntax: "^/[REL-URL][@PEG]"
+ *
+ * @a repos_root_url is the absolute url of the repository root.
+ *
+ * All strings are in UTF-8 encoding.
+ *
+ * @a repos_root_url and @a relative_url do not have to be properly
+ * URI-encoded, canonical, or valid in any other way.  The caller is expected
+ * to perform canonicalization on @a absolute_url after the call to the
+ * function.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_path_resolve_repos_relative_url(const char **absolute_url,
+                                    const char *relative_url,
+                                    const char *repos_root_url,
+                                    apr_pool_t *pool);
+
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

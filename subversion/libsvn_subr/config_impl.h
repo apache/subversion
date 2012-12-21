@@ -32,6 +32,7 @@
 #include <apr_hash.h>
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_io.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
 
@@ -74,6 +75,12 @@ svn_error_t *svn_config__parse_file(svn_config_t *cfg,
                                     const char *file,
                                     svn_boolean_t must_exist,
                                     apr_pool_t *pool);
+
+/* Read sections and options from a stream. */
+svn_error_t *svn_config__parse_stream(svn_config_t *cfg,
+                                      svn_stream_t *stream,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /* The name of the magic [DEFAULT] section. */
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
