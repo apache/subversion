@@ -100,6 +100,50 @@ II.   Configuration
          NOTE: AuthzSVNReposRelativeAccessFile filename causes the authz file
          to be read from <repo path>/conf/<filename>
 
+      E. Example 5: Authz file stored in a Subversion repository
+
+         This configuration allows storing of the authz file in a repository.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile file:///path/to/repos/authz
+
+           Require valid-user
+         </Location>
+
+         NOTE: http:// and svn:// URLs are not supported, only local file://
+         absolute URLs may be used.  The URL does not have to point to the
+         same repository as the repository being accessed.  If you wish to 
+         restrict access to this authz file and it is in the same repository
+         you should include a rule for it.
+
+      F. Example 5: Authz file stored inside the repository being accessed.
+
+         This configuration allows providing a relative path within the
+         repository being accessed.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile ^/authz
+
+           Require valid-user
+         </Location>
+
+         NOTE: You should include rules in your authz file to restirct access
+         to the authz file as desired.  
+
    2. Specifying permissions
 
       The file format of the access file looks like this:

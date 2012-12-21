@@ -4528,7 +4528,16 @@ svn_wc_delete(const char *path,
 
 /**
  * Schedule the single node that exists on disk at @a local_abspath for
- * addition to the working copy.  The added node will have no properties.
+ * addition to the working copy.  The added node will have the properties
+ * provided in @a props, or none if that is NULL.
+ *
+ * Check and canonicalize the properties in the same way as
+ * svn_wc_prop_set4().  Return an error and don't add the node if the
+ * properties are not valid on this node.  Unlike svn_wc_prop_set4()
+ * there is no option to skip some of the checks and canonicalizations.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     preferably should be a single code.
  *
  * The versioned state of the parent path must be a modifiable directory,
  * and the versioned state of @a local_abspath must be either nonexistent or
@@ -4537,14 +4546,28 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * This is a replacement for svn_wc_add4() case 2a.
- *
- * ### TODO: Allow the caller to provide the node's properties?
- *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const apr_hash_t *props,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool);
+
+
+/**
+ * Similar to svn_wc_add4(), but gives the new node an empty set of properties.
+ *
+ * This is a replacement for svn_wc_add4() case 2a.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,

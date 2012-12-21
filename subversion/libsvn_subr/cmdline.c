@@ -927,11 +927,22 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
 }
 
 svn_boolean_t
-svn_cmdline__stdin_isatty(void)
+svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+                            svn_boolean_t force_interactive)
 {
+  /* If neither --non-interactive nor --force-interactive was passed,
+   * be interactive if stdin is a terminal.
+   * If --force-interactive was passed, always be interactive. */
+  if (!force_interactive && !non_interactive)
+    {
 #ifdef WIN32
-  return (_isatty(STDIN_FILENO) != 0);
+      return (_isatty(STDIN_FILENO) != 0);
 #else
-  return (isatty(STDIN_FILENO) != 0);
+      return (isatty(STDIN_FILENO) != 0);
 #endif
+    }
+  else if (force_interactive) 
+    return TRUE;
+
+  return !non_interactive;
 }

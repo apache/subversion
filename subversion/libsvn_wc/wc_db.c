@@ -4910,6 +4910,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const apr_hash_t *props,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
@@ -4933,6 +4934,11 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_dir;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.work_items = work_items;
 
@@ -4950,6 +4956,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
+                       const apr_hash_t *props,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
@@ -4973,6 +4980,11 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_file;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.work_items = work_items;
 
@@ -4988,6 +5000,7 @@ svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *target,
+                          const apr_hash_t *props,
                           const svn_skel_t *work_items,
                           apr_pool_t *scratch_pool)
 {
@@ -5014,6 +5027,11 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_kind_symlink;
   iwb.op_depth = relpath_depth(local_relpath);
+  if (props && apr_hash_count((apr_hash_t *)props))
+    {
+      iwb.update_actual_props = TRUE;
+      iwb.new_actual_props = props;
+    }
 
   iwb.target = target;
 
@@ -9151,6 +9169,7 @@ struct read_inherited_props_baton_t
 {
   apr_array_header_t *iprops;
   const char *propname;
+  const char *repos_root_url;
   apr_pool_t *result_pool;
 };
 
@@ -9273,7 +9292,15 @@ db_read_inherited_props(void *baton,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(&cached_iprop, ripb->iprops, 0);
+            {
+              /* Convert the repository relative path in the
+                 cache to a full URL. */
+              cached_iprop->path_or_url =
+                svn_path_url_add_component2(ripb->repos_root_url,
+                                            cached_iprop->path_or_url,
+                                            result_pool);
+              svn_sort__array_insert(&cached_iprop, ripb->iprops, 0);
+            }
         }
     }
 
@@ -9292,8 +9319,13 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct read_inherited_props_baton_t ripb;
+  const char *repos_root_url;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url, NULL, db,
+                                          local_abspath, scratch_pool,
+                                          scratch_pool));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
@@ -9302,6 +9334,7 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
 
   ripb.iprops = NULL;
   ripb.propname = propname;
+  ripb.repos_root_url = repos_root_url;
   ripb.result_pool = result_pool;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_read_inherited_props,
