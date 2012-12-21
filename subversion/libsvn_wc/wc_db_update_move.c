@@ -30,6 +30,30 @@
  *
  * Both the driver and receiver components of the editor are implemented
  * in this file.
+ *
+ * The driver sees two NODES trees: the move source tree and the move
+ * destination tree.  When the move is initially made these trees are
+ * equivalent, the destination is a copy of the source.  The source is
+ * a single-op-depth, single-revision, deleted layer and the
+ * destination has an equivalent single-op-depth, single-revision
+ * layer. The destination may have additional higher op-depths
+ * representing adds, deletes, moves within the move destination.
+ *
+ * After the intial move an update has modified the NODES in the move
+ * source, and introduced a tree-conflict since the source and
+ * destination trees are no longer equivalent.  The source is a
+ * different revision and may have text, property and tree changes
+ * compared to the destination.  The driver will compare the two NODES
+ * trees and drive an editor to change the destination tree so that it
+ * once again matches the source tree.  Changes made to the
+ * destination NODES tree to achieve this match will be merged into
+ * the working files/directories.
+ *
+ * The whole drive occurs as one single wc.db transaction.  At the end
+ * of the transaction the destination NODES table should have a layer
+ * that is equivalent to the source NODES layer, and there should be
+ * workqueue items to make any required changes to working
+ * files/directories.
  */
 
 #define SVN_WC__I_AM_WC_DB
