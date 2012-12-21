@@ -35,10 +35,10 @@
  * The driver sees two NODES trees: the move source tree and the move
  * destination tree.  When the move is initially made these trees are
  * equivalent, the destination is a copy of the source.  The source is
- * a single-op-depth, single-revision, deleted layer and the
+ * a single-op-depth, single-revision, deleted layer [1] and the
  * destination has an equivalent single-op-depth, single-revision
  * layer. The destination may have additional higher op-depths
- * representing adds, deletes, moves within the move destination.
+ * representing adds, deletes, moves within the move destination. [2]
  *
  * After the intial move an update, or this editor for trees that have
  * been moved more than once, has modified the NODES in the move
@@ -58,6 +58,15 @@
  * files/directories in the move destination, and there should be
  * tree-conflicts in the move destination where it was not possible to
  * update the working files/directories.
+ *
+ * [1] The move source tree is single-revision because we currently do
+ *     not allow a mixed-rev move, and therefore it is single op-depth
+ *     regardless whether it is a base layer or a nested move.
+ *
+ * [2] The source tree also may have additional higher op-depths,
+ *     representing a replacement, but this editor only reads from the
+ *     single-op-depth layer of it, and makes no changes of any kind
+ *     within the source tree.
  */
 
 #define SVN_WC__I_AM_WC_DB
