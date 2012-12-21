@@ -53,9 +53,10 @@ Candidate changes:
      Allow users to tell where the second error chain starts -- avoids
      misrepresentation that the first error is caused by the second.
    Votes:
-     +1: danielsh
      -0: rhuijben (I'm not sure if this should be in a patch release and the
                    stacktrace where this refers to is maintainer only)
+     +1: danielsh (err->file and err->line are only in maintainer builds.
+                   this is about err->message which is valid in all builds)
 
  * r1421380
    Issue #4272: s/assertion/error/ in the DAV proxy code.
@@ -69,15 +70,8 @@ Candidate changes:
    Justification:
      Trivial fix to plug an edge case.
    Votes:
-     +1: danielsh
      -0: rhuijben (Is this needed on this branch?)
-
- * r1422053
-   Remove .swig_checked from tarball.
-   Justification:
-     Unnecessary file in tarballs.
-   Votes:
-     +1: breser, rhuijben
+     +1: danielsh (as much as it's needed on trunk)
 
  * ^/subversion/branches/1.7.x-issue4263
    Fix svnrdump inability to load dump files with non-LF line endings in
@@ -87,7 +81,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4263
    Votes:
-     +1: breser
+     +1: breser, danielsh
 
  * r1423837, r1423840, r1423848
    Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
@@ -102,3 +96,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1422053
+   Remove .swig_checked from tarball.
+   Justification:
+     Unnecessary file in tarballs.
+   Votes:
+     +1: breser, rhuijben, danielsh
