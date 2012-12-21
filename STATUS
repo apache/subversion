@@ -65,7 +65,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r1421541
+ * r1421541, r1424977
    Fix infinite recursion in './get-deps.sh'.
    Justification:
      Trivial fix to plug an edge case.
