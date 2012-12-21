@@ -304,6 +304,31 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
                              apr_pool_t *pool);
 
 
+/*** Authz Functions ***/
+
+/* Read authz configuration data from PATH into *AUTHZ_P, allocated
+   in POOL.
+  
+   PATH may be a file or a registry path and iff ACCEPT_URLS is set
+   it may also be a repos relative url or an absolute file url.  When
+   ACCEPT_URLS is FALSE REPOS_ROOT can be NULL.
+  
+   If PATH is not a valid authz rule file, then return 
+   SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
+   undefined.  If MUST_EXIST is TRUE, a missing authz file is also
+   an error.
+  
+   If PATH is a repos relative URL then REPOS_ROOT must be set to
+   the root of the repository the authz configuration will be used with. */
+svn_error_t *
+svn_repos__authz_read(svn_authz_t **authz_p,
+                      const char *path,
+                      svn_boolean_t must_exist,
+                      svn_boolean_t accept_urls,
+                      const char *repos_root,
+                      apr_pool_t *pool);
+
+
 /*** Utility Functions ***/
 
 /* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
