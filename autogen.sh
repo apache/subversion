@@ -202,6 +202,7 @@ echo ""
 echo "./configure --enable-maintainer-mode"
 echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
+echo "./configure CUSERFLAGS='--C-flags' CXXUSERFLAGS='--C++-flags'
 echo ""
 echo "Note:  If you wish to run a Subversion HTTP server, you will need"
 echo "Apache 2.x.  See the INSTALL file for details."
