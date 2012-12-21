@@ -1,5 +1,0 @@
-This branch is a complete implementation of in repo authz.  In repo authz
-allows authz configuration files to be stored directly in the repository.
-
-The design for this code is here:
-http://wiki.apache.org/subversion/InRepoAuthz
