@@ -23,8 +23,9 @@
 
 /* This editor is used during resolution of tree conflicts.
  *
- * An operation such as update can produce incoming changes for a
- * locally moved-away subtree, causing a tree-conflict to be flagged.
+ * When an update (or switch) produces incoming changes for a locally
+ * moved-away subtree, it updates the base nodes of the moved-away tree
+ * and flags a tree-conflict on the moved-away root node.
  * This editor transfers these changes from the moved-away part of the
  * working copy to the corresponding moved-here part of the working copy.
  *
