@@ -732,8 +732,8 @@ svn_cl__get_log_message(const char **log_msg,
   while (! message)
     {
       /* We still don't have a valid commit message.  Use $EDITOR to
-         get one.  Note that svn_cl__edit_externally will still return
-         a UTF-8'ized log message. */
+         get one.  Note that svn_cl__edit_string_externally will still
+         return a UTF-8'ized log message. */
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup(default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
