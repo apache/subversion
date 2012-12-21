@@ -920,19 +920,22 @@ AS_HELP_STRING([--enable-debug],
 [
     # Neither --enable-debug nor --disable-debug was passed.
     enable_debugging="maybe"
-
-        # We leave this as 'maybe' because setting it to 'no' would modify the
-        # CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
-        # and we don't want to force that.
-    #
-    # TODO: set enable_debugging='no' here, and provide another way to disable
-    #       the CFLAGS/CXXFLAGS munging.
 ])
 
-
-dnl Add -Werror=implicit-function-declaration to CFLAGS
-dnl FIXME: Shouldn't this only be set in maintainer mode?
-SVN_CFLAGS_ADD_IFELSE([-Werror=implicit-function-declaration])
+AC_ARG_ENABLE(optimize,
+AS_HELP_STRING([--enable-optimize],
+               [Turn on optimizations]),
+[
+    if test "$enableval" = "yes" ; then
+      enable_optimization="yes"
+    else
+      enable_optimization="no"
+    fi
+],
+[
+    # Neither --enable-optimize nor --disable-optimize was passed.
+    enable_optimization="maybe"
+])
 
 dnl Use -Wl,--no-undefined during linking of some libraries
 AC_ARG_ENABLE(disallowing-of-undefined-references,
@@ -1002,6 +1005,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS_KEEP="$CFLAGS"
         CFLAGS=""
 
+        SVN_CFLAGS_ADD_IFELSE([-Werror=implicit-function-declaration])
         SVN_CFLAGS_ADD_IFELSE([-Werror=declaration-after-statement])
         SVN_CFLAGS_ADD_IFELSE([-Wextra-tokens])
         SVN_CFLAGS_ADD_IFELSE([-Wnewline-eof])
@@ -1041,22 +1045,83 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
 if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
-  dnl debugging.
-  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
-  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  dnl debugging. Unless optiization was explicitly enabled.
+  if test "$enable_optimization" != "yes"; then
+    AC_MSG_NOTICE([Disabling optimizations for debugging])
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  fi
+  dnl Add debugging flags, unless they were set by the user
+  if test -z ["`echo $CUSERFLAGS' ' | $EGREP -- '-g[0-9]? '`"]; then
+    AC_MSG_NOTICE([Enabling debugging for C])
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+    SVN_CFLAGS_ADD_IFELSE([-fno-inline])
+    SVN_CFLAGS_ADD_IFELSE([-fno-omit-frame-pointer])
+    SVN_CFLAGS_ADD_IFELSE([-g3],[],[
+      SVN_CFLAGS_ADD_IFELSE([-g2],[],[
+        SVN_CFLAGS_ADD_IFELSE([-g])])])
+  fi
+  if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-g[0-9]? '`"]; then
+    AC_MSG_NOTICE([Enabling debugging for C++])
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+    SVN_CXXFLAGS_ADD_IFELSE([-fno-inline])
+    SVN_CXXFLAGS_ADD_IFELSE([-fno-omit-frame-pointer])
+    SVN_CXXFLAGS_ADD_IFELSE([-g3],[],[
+      SVN_CXXFLAGS_ADD_IFELSE([-g2],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-g])])])
+  fi
   dnl SVN_DEBUG enables specific features for developer builds
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
 elif test "$enable_debugging" = "no" ; then
-    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
-    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
-    dnl Compile with NDEBUG to get rid of assertions
-    CFLAGS="$CFLAGS -DNDEBUG"
-    CXXFLAGS="$CXXFLAGS -DNDEBUG"
+  AC_MSG_NOTICE([Disabling debugging])
+  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+  dnl Compile with NDEBUG to get rid of assertions
+  CFLAGS="$CFLAGS -DNDEBUG"
+  CXXFLAGS="$CXXFLAGS -DNDEBUG"
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
 fi
+
+if test "$enable_optimization" = "yes"; then
+  dnl Add optimization flags, unless they were set by the user
+  if test -z ["`echo $CUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    if test "$enable_debugging" = "yes"; then
+      AC_MSG_NOTICE([Enabling optimizations for C (with debugging enabled)])
+      SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O])])
+    else
+      AC_MSG_NOTICE([Enabling optimizations for C])
+      SVN_CFLAGS_ADD_IFELSE([-O2],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+          SVN_CFLAGS_ADD_IFELSE([-O])])])
+    fi
+  fi
+  if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    if test "$enable_debugging" = "yes"; then
+      AC_MSG_NOTICE([Enabling optimizations for C++ (with debugging enabled)])
+      SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O])])
+    else
+      AC_MSG_NOTICE([Enabling optimizations for C++])
+      SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-O])])])
+    fi
+  fi
+elif test "$enable_optimization" = "no"; then
+  dnl Remove all optimization flags
+  AC_MSG_NOTICE([Disabling optimizations])
+  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+# elif test "$enable_optimization" = "maybe" ; then
+#   # do nothing
+fi
+
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],
