@@ -215,6 +215,8 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will install the working
+   copy directory at LOCAL_ABSPATH. */
 svn_error_t *
 svn_wc__wq_build_dir_install(svn_skel_t **work_item,
                              svn_wc__db_t *db,
