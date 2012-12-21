@@ -765,7 +765,7 @@ close_directory(void *dir_baton,
   LDR_DBG(("close_directory %p\n", dir_baton));
 
   /* Remember if this directory is the one currently pending. */
-  this_pending = (db->eb->pending_kind && (db->eb->pending_baton == db));
+  this_pending = (db->eb->pending_baton == db);
 
   SVN_ERR(dump_pending(db->eb, pool));
 
@@ -778,15 +778,11 @@ close_directory(void *dir_baton,
      nodes), we might need to generate a second "change" record just
      to carry the information we've since learned about the
      directory. */ 
-  if (! this_pending)
+  if ((! this_pending) && (db->dump_props))
     {
-      if (db->written_out)
-        {
-          LDR_DBG(("*** directory add -> change %s", db->repos_relpath));
-          SVN_ERR(dump_node(db->eb, db->repos_relpath, db, NULL,
-                            svn_node_action_change, FALSE,
-                            NULL, SVN_INVALID_REVNUM, pool));
-        }
+      SVN_ERR(dump_node(db->eb, db->repos_relpath, db, NULL,
+                        svn_node_action_change, FALSE,
+                        NULL, SVN_INVALID_REVNUM, pool));
       db->eb->pending_baton = db;
       db->eb->pending_kind = svn_node_dir;
       SVN_ERR(dump_pending(db->eb, pool));
@@ -885,10 +881,15 @@ change_dir_prop(void *parent_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = parent_baton;
-
+  svn_boolean_t this_pending;
+  
   LDR_DBG(("change_dir_prop %p\n", parent_baton));
 
-  SVN_ERR(dump_pending(db->eb, pool));
+  /* This directory is not pending, but something else is, so handle
+     the "something else".  */
+  this_pending = (db->eb->pending_baton == db);
+  if (! this_pending)
+    SVN_ERR(dump_pending(db->eb, pool));
 
   if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
