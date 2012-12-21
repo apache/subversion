@@ -42,11 +42,11 @@ def svncmd_uuid(repo):
 def svncmd_info(repo, revision):
     cmd = "%s info -r %s %s" % (SVNLOOK, revision, repo)
     p = svncmd(cmd)
-    data = p.stdout.read().strip().split("\n")
+    data = p.stdout.read().split("\n")
     #print data
-    return {'author': data[0],
-            'date': data[1],
-            'log': "\n".join(data[3:])}
+    return {'author': data[0].strip(),
+            'date': data[1].strip(),
+            'log': "\n".join(data[3:]).strip()}
 
 def svncmd_dirs(repo, revision):
     cmd = "%s dirs-changed  -r %s %s" % (SVNLOOK, revision, repo)
