@@ -91,6 +91,13 @@ Candidate changes:
    Votes:
      +1: rhuijben   
 
+ * r1425368
+   Use the right api for generating the repository dirent in mod_dav_svn.
+   Justification:
+     Using the wrong api might cause assertions. Especially in maintainer mode.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
