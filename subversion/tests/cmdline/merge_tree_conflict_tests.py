@@ -1271,7 +1271,6 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
              ) ], False)
 
 #----------------------------------------------------------------------
-@XFail()
 def tree_conflicts_merge_edit_onto_missing(sbox):
   "tree conflicts: tree missing, leaf edit"
 
@@ -1333,14 +1332,14 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     # Obstruction handling improvements in 1.7 and 1.8 added
-    'DDF/D1/D2/gamma'   : Item(),
     'DF/D1/beta'        : Item(),
-    # BH: At some point we got reported skips at or below
-    # these, which I could and cannot explain. These might be cases
-    # of issue #2910
-    #'D/D1'              : Item(),
-    #'DD/D1'             : Item(),
-    #'DDD/D1'            : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    'DDF/D1/D2/gamma'   : Item(),
+    'D/D1/delta'        : Item(),
+    'D/D1'              : Item(),
+    'DD/D1/D2/epsilon'  : Item(),
+    'DD/D1/D2'          : Item(),
     })
 
   # Currently this test fails because some parts of the merge

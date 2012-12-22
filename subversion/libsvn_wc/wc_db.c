@@ -12944,6 +12944,9 @@ svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
   isb.is_switched = is_switched;
   isb.kind = kind;
 
+  if (! is_switched && ! kind)
+    return SVN_NO_ERROR;
+
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                              db_is_switched, &isb,
                                              scratch_pool));
