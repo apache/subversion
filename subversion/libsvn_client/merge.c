@@ -313,6 +313,23 @@ typedef struct merge_cmd_baton_t {
      meet the criteria or DRY_RUN is true. */
   apr_hash_t *paths_with_deleted_mergeinfo;
 
+  /* The list of absolute skipped paths, which should be examined and
+     cleared after each invocation of the callback.  The paths
+     are absolute.  Is NULL if MERGE_B->SOURCES_ANCESTRAL and
+     MERGE_B->REINTEGRATE_MERGE are both false. */
+  apr_hash_t *skipped_abspaths;
+
+  /* The list of absolute merged paths.  Unused if MERGE_B->SOURCES_ANCESTRAL
+     and MERGE_B->REINTEGRATE_MERGE are both false. */
+  apr_hash_t *merged_abspaths;
+
+  /* A hash of (const char *) absolute WC paths mapped to the same which
+     represent the roots of subtrees added by the merge. */
+  apr_hash_t *added_abspaths;
+
+  /* A list of tree conflict victim absolute paths which may be NULL. */
+  apr_hash_t *tree_conflicted_abspaths;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -1920,6 +1937,21 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     {
     case svn_node_none:
       {
+        svn_node_kind_t parent_kind;
+
+        /* Does the parent exist on disk (vs missing). If no we should
+           report an obstruction. Or svn_wc_add_repos_file4() will just
+           do its work and the workqueue will create the missing dirs */
+        SVN_ERR(svn_io_check_path(
+                        svn_dirent_dirname(mine_abspath, scratch_pool), 
+                        &parent_kind, scratch_pool));
+
+        if (parent_kind != svn_node_dir)
+          {
+            *content_state = svn_wc_notify_state_obstructed;
+            return SVN_NO_ERROR;
+          }
+
         if (! merge_b->dry_run)
           {
             const char *copyfrom_url;
@@ -2013,8 +2045,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                                merge_b->ctx->cancel_func,
                                                merge_b->ctx->cancel_baton,
                                                scratch_pool));
-
-                /* ### delete 'yours' ? */
               }
           }
         if (content_state)
@@ -2723,7 +2753,45 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
 
   if (obstr_state != svn_wc_notify_state_inapplicable)
     {
-      /* In Subversion <= 1.7 we skipped descendants here */
+      /* In Subversion <= 1.7 we always skipped descendants here */
+      if (obstr_state == svn_wc_notify_state_obstructed)
+        {
+          svn_boolean_t is_wcroot;
+
+          SVN_ERR(svn_wc_check_root(&is_wcroot, NULL, NULL,
+                                  merge_b->ctx->wc_ctx,
+                                  local_abspath, scratch_pool));
+
+          if (is_wcroot)
+            {
+              const char *skipped_path;
+
+              skipped_path = apr_pstrdup(apr_hash_pool_get(
+                                                  merge_b->skipped_abspaths),
+                                         local_abspath);
+
+              apr_hash_set(merge_b->skipped_abspaths, skipped_path,
+                           APR_HASH_KEY_STRING, skipped_path);
+
+              *skip = TRUE;
+              *skip_children = TRUE;
+
+              if (merge_b->ctx->notify_func2)
+                {
+                  svn_wc_notify_t *notify;
+
+                  notify = svn_wc_create_notify(
+                                        skipped_path,
+                                        svn_wc_notify_update_skip_obstruction,
+                                        scratch_pool);
+                  notify->kind = svn_node_dir;
+                  notify->content_state = obstr_state;
+                  merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
+                                             notify, scratch_pool);
+                }
+            }
+        }
+
       return SVN_NO_ERROR;
     }
 
@@ -2841,25 +2909,6 @@ typedef struct notification_receiver_baton_t
 
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
-
-  /* The list of absolute merged paths.  Is NULL if MERGE_B->SOURCES_ANCESTRAL
-     and MERGE_B->REINTEGRATE_MERGE are both false. */
-  apr_hash_t *merged_abspaths;
-
-  /* The list of absolute skipped paths, which should be examined and
-     cleared after each invocation of the callback.  The paths
-     are absolute.  Is NULL if MERGE_B->SOURCES_ANCESTRAL and
-     MERGE_B->REINTEGRATE_MERGE are both false. */
-  apr_hash_t *skipped_abspaths;
-
-  /* A hash of (const char *) absolute WC paths mapped to the same which
-     represent the roots of subtrees added by the merge.  May be NULL. */
-  apr_hash_t *added_abspaths;
-
-  /* A list of tree conflict victim absolute paths which may be NULL.  Is NULL
-     if MERGE_B->SOURCES_ANCESTRAL and MERGE_B->REINTEGRATE_MERGE are both
-     false. */
-  apr_hash_t *tree_conflicted_abspaths;
 
   /* Flag indicating whether it is a single file merge or not. */
   svn_boolean_t is_single_file_merge;
@@ -3081,6 +3130,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
 {
   notification_receiver_baton_t *notify_b = baton;
+  merge_cmd_baton_t *merge_b = notify_b->merge_b;
   svn_boolean_t is_operative_notification = IS_OPERATIVE_NOTIFICATION(notify);
   const char *notify_abspath;
 
@@ -3102,7 +3152,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    * not yet implemented.
    * ### We should stash the info about which moves have been followed and
    * retrieve that info here, instead of querying the WC again here. */
-  notify_abspath = svn_dirent_join(notify_b->merge_b->target->abspath,
+  notify_abspath = svn_dirent_join(merge_b->target->abspath,
                                    notify->path, pool);
   if (notify->action == svn_wc_notify_update_update
       && notify->kind == svn_node_file)
@@ -3111,7 +3161,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       const char *moved_to_abspath;
 
       err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
-                                        notify_b->merge_b->ctx->wc_ctx,
+                                        merge_b->ctx->wc_ctx,
                                         notify_abspath, pool, pool);
       if (err)
         {
@@ -3132,8 +3182,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     }
 
   /* Update the lists of merged, skipped, tree-conflicted and added paths. */
-  if (notify_b->merge_b->merge_source.ancestral
-      || notify_b->merge_b->reintegrate_merge)
+  if (merge_b->merge_source.ancestral
+      || merge_b->reintegrate_merge)
     {
       if (notify->content_state == svn_wc_notify_state_merged
           || notify->content_state == svn_wc_notify_state_changed
@@ -3144,10 +3194,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const char *merged_path = apr_pstrdup(notify_b->pool,
                                                 notify_abspath);
 
-          if (notify_b->merged_abspaths == NULL)
-            notify_b->merged_abspaths = apr_hash_make(notify_b->pool);
-
-          apr_hash_set(notify_b->merged_abspaths, merged_path,
+          apr_hash_set(merge_b->merged_abspaths, merged_path,
                        APR_HASH_KEY_STRING, merged_path);
         }
 
@@ -3156,10 +3203,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const char *skipped_path = apr_pstrdup(notify_b->pool,
                                                  notify_abspath);
 
-          if (notify_b->skipped_abspaths == NULL)
-            notify_b->skipped_abspaths = apr_hash_make(notify_b->pool);
-
-          apr_hash_set(notify_b->skipped_abspaths, skipped_path,
+          apr_hash_set(merge_b->skipped_abspaths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
         }
 
@@ -3168,30 +3212,26 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const char *tree_conflicted_path = apr_pstrdup(notify_b->pool,
                                                          notify_abspath);
 
-          if (notify_b->tree_conflicted_abspaths == NULL)
-            notify_b->tree_conflicted_abspaths =
-              apr_hash_make(notify_b->pool);
-
-          apr_hash_set(notify_b->tree_conflicted_abspaths,
+          apr_hash_set(merge_b->tree_conflicted_abspaths,
                        tree_conflicted_path, APR_HASH_KEY_STRING,
                        tree_conflicted_path);
         }
 
       if (notify->action == svn_wc_notify_update_add)
         {
-          update_the_list_of_added_subtrees(notify_b->merge_b->target->abspath,
+          update_the_list_of_added_subtrees(merge_b->target->abspath,
                                             notify_abspath,
-                                            &(notify_b->added_abspaths),
+                                            &(merge_b->added_abspaths),
                                             notify_b->pool, pool);
         }
 
       if (notify->action == svn_wc_notify_update_delete
-          && notify_b->added_abspaths)
+          && merge_b->added_abspaths)
         {
           /* Issue #4166: If a previous merge added NOTIFY_ABSPATH, but we
              are now deleting it, then remove it from the list of added
              paths. */
-          apr_hash_set(notify_b->added_abspaths, notify_abspath,
+          apr_hash_set(merge_b->added_abspaths, notify_abspath,
                        APR_HASH_KEY_STRING, NULL);
         }
     }
@@ -3199,7 +3239,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   /* Notify that a merge is beginning, if we haven't already done so.
    * (A single-file merge is notified separately: see single_file_merge_notify().) */
   /* If our merge sources are ancestors of one another... */
-  if (notify_b->merge_b->merge_source.ancestral)
+  if (merge_b->merge_source.ancestral)
     {
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
@@ -3234,8 +3274,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                   notify_merge_begin(child->abspath,
                                      APR_ARRAY_IDX(child->remaining_ranges, 0,
                                                    svn_merge_range_t *),
-                                     notify_b->merge_b->same_repos,
-                                     notify_b->merge_b->ctx, pool);
+                                     merge_b->same_repos,
+                                     merge_b->ctx, pool);
                 }
             }
         }
@@ -3245,9 +3285,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
            && notify_b->nbr_operative_notifications == 1
            && is_operative_notification)
     {
-      notify_merge_begin(notify_b->merge_b->target->abspath, NULL,
-                         notify_b->merge_b->same_repos,
-                         notify_b->merge_b->ctx, pool);
+      notify_merge_begin(merge_b->target->abspath, NULL,
+                         merge_b->same_repos,
+                         merge_b->ctx, pool);
     }
 
   if (notify_b->wrapped_func)
@@ -4904,7 +4944,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
 
    Record override mergeinfo on any paths skipped during a merge.
 
-   Set empty mergeinfo on each path in SKIPPED_ABSPATHS so the path
+   Set empty mergeinfo on each path in MERGE_B->SKIPPED_ABSPATHS so the path
    does not incorrectly inherit mergeinfo that will later be describing
    the merge.
 
@@ -4918,14 +4958,12 @@ static svn_error_t *
 record_skips(const char *mergeinfo_path,
              const svn_rangelist_t *rangelist,
              svn_boolean_t is_rollback,
-             apr_hash_t *skipped_abspaths,
              merge_cmd_baton_t *merge_b,
              apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *merges;
-  apr_size_t nbr_skips = (skipped_abspaths != NULL ?
-                          apr_hash_count(skipped_abspaths) : 0);
+  apr_size_t nbr_skips = apr_hash_count(merge_b->skipped_abspaths);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (nbr_skips == 0)
@@ -4934,7 +4972,7 @@ record_skips(const char *mergeinfo_path,
   merges = apr_hash_make(scratch_pool);
 
   /* Override the mergeinfo for child paths which weren't actually merged. */
-  for (hi = apr_hash_first(scratch_pool, skipped_abspaths); hi;
+  for (hi = apr_hash_first(scratch_pool, merge_b->skipped_abspaths); hi;
        hi = apr_hash_next(hi))
     {
       const char *skipped_abspath = svn__apr_hash_index_key(hi);
@@ -7217,8 +7255,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          self-referential mergeinfo, but don't record mergeinfo if
          TARGET_WCPATH was skipped. */
       if (filtered_rangelist->nelts
-          && (!notify_b->skipped_abspaths
-              || (apr_hash_count(notify_b->skipped_abspaths) == 0)))
+          && (apr_hash_count(notify_b->merge_b->skipped_abspaths) == 0))
         {
           apr_hash_t *merges = apr_hash_make(iterpool);
 
@@ -7418,11 +7455,11 @@ subtree_touched_by_merge(const char *local_abspath,
                          notification_receiver_baton_t *notify_b,
                          apr_pool_t *pool)
 {
-  return (path_is_subtree(local_abspath, notify_b->merged_abspaths, pool)
-          || path_is_subtree(local_abspath, notify_b->skipped_abspaths, pool)
-          || path_is_subtree(local_abspath, notify_b->added_abspaths, pool)
-          || path_is_subtree(local_abspath,
-                             notify_b->tree_conflicted_abspaths,
+  merge_cmd_baton_t *merge_b = notify_b->merge_b;
+  return (path_is_subtree(local_abspath, merge_b->merged_abspaths, pool)
+          || path_is_subtree(local_abspath, merge_b->skipped_abspaths, pool)
+          || path_is_subtree(local_abspath, merge_b->added_abspaths, pool)
+          || path_is_subtree(local_abspath, merge_b->tree_conflicted_abspaths,
                              pool));
 }
 
@@ -7706,9 +7743,8 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
         continue;
 
       /* Don't record mergeinfo on skipped paths. */
-      if (notify_b->skipped_abspaths
-          && apr_hash_get(notify_b->skipped_abspaths, child->abspath,
-                          APR_HASH_KEY_STRING))
+      if (apr_hash_get(notify_b->merge_b->skipped_abspaths, child->abspath,
+                       APR_HASH_KEY_STRING))
         continue;
 
       /* ### ptb: Yes, we could combine the following into a single
@@ -7759,7 +7795,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
               if (!merge_b->reintegrate_merge
                   && child->missing_child
                   && !path_is_subtree(child->abspath,
-                                      notify_b->skipped_abspaths,
+                                      notify_b->merge_b->skipped_abspaths,
                                       iterpool))
                 {
                   child->missing_child = FALSE;
@@ -7988,8 +8024,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
              don't incorrectly inherit the mergeinfo we are about to set. */
           if (i == 0)
             SVN_ERR(record_skips(mergeinfo_fspath, child_merge_rangelist,
-                                 is_rollback, notify_b->skipped_abspaths,
-                                 merge_b, iterpool));
+                                 is_rollback, merge_b, iterpool));
 
           /* We may need to record non-inheritable mergeinfo that applies
              only to CHILD->ABSPATH. */
@@ -9014,7 +9049,7 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
           err = record_mergeinfo_for_added_subtrees(
                   &range, mergeinfo_path, depth,
                   squelch_mergeinfo_notifications,
-                  notify_b->added_abspaths, merge_b, scratch_pool);
+                  merge_b->added_abspaths, merge_b, scratch_pool);
         }
     }
 
@@ -9256,13 +9291,14 @@ do_merge(apr_hash_t **modified_subtrees,
   /* Do we already know the specific subtrees with mergeinfo we want
      to record-only mergeinfo on? */
   if (record_only && record_only_paths)
-    notify_baton.merged_abspaths = record_only_paths;
+    merge_cmd_baton.merged_abspaths = record_only_paths;
   else
-    notify_baton.merged_abspaths = NULL;
+    merge_cmd_baton.merged_abspaths = apr_hash_make(result_pool);
 
-  notify_baton.skipped_abspaths = NULL;
-  notify_baton.added_abspaths = NULL;
-  notify_baton.tree_conflicted_abspaths = NULL;
+  merge_cmd_baton.skipped_abspaths = apr_hash_make(result_pool);
+  merge_cmd_baton.added_abspaths = apr_hash_make(result_pool);
+  merge_cmd_baton.tree_conflicted_abspaths = apr_hash_make(result_pool);
+
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_abspath = NULL;
   notify_baton.merge_b = &merge_cmd_baton;
@@ -9350,22 +9386,18 @@ do_merge(apr_hash_t **modified_subtrees,
           /* ### Why only if the target is a dir and not a file? */
           if (modified_subtrees)
             {
-              if (notify_baton.merged_abspaths)
-                *modified_subtrees =
+              *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
-                                   notify_baton.merged_abspaths);
-              if (notify_baton.added_abspaths)
-                *modified_subtrees =
+                                   merge_cmd_baton.merged_abspaths);
+              *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
-                                   notify_baton.added_abspaths);
-              if (notify_baton.skipped_abspaths)
-                *modified_subtrees =
+                                   merge_cmd_baton.added_abspaths);
+              *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
-                                   notify_baton.skipped_abspaths);
-              if (notify_baton.tree_conflicted_abspaths)
-                *modified_subtrees =
+                                   merge_cmd_baton.skipped_abspaths);
+              *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
-                                   notify_baton.tree_conflicted_abspaths);
+                                   merge_cmd_baton.tree_conflicted_abspaths);
             }
         }
 
