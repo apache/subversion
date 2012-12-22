@@ -1068,6 +1068,7 @@ def lock_update_only(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3469)
+@XFail()
 def at_directory_external(sbox):
   "tree conflict at directory external"
 
