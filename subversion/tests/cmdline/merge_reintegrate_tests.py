@@ -740,7 +740,6 @@ def reintegrate_fail_on_switched_wc(sbox):
 # Test for issue #3603 'allow reintegrate merges into WCs with
 # missing subtrees'.
 @Issue(3603)
-@XFail()
 def reintegrate_on_shallow_wc(sbox):
   "merge --reintegrate in shallow wc"
 
@@ -833,7 +832,7 @@ def reintegrate_on_shallow_wc(sbox):
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
   # ... a depth-restricted item is skipped ...
   expected_A_skip.add({
-      'D/H' : Item()
+      'D/H/psi' : Item()
   })
   # Currently this fails due to r1424469.  For a full explanation see
   # http://svn.haxx.se/dev/archive-2012-12/0472.shtml

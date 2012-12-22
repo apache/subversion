@@ -2723,9 +2723,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
 
   if (obstr_state != svn_wc_notify_state_inapplicable)
     {
-      if (skip_children)
-        *skip_children = TRUE;
-      /* But don't skip THIS, to allow a skip notification */
+      /* In Subversion <= 1.7 we skipped descendants here */
       return SVN_NO_ERROR;
     }
 
@@ -2747,8 +2745,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
           if (parent_depth != svn_depth_unknown &&
               parent_depth < svn_depth_immediates)
             {
-              if (skip_children)
-                *skip_children = TRUE;
+              /* In Subversion <= 1.7 we skipped descendants here */
               return SVN_NO_ERROR;
             }
         }

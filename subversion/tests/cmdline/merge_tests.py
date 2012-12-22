@@ -7731,7 +7731,6 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
 # Handle merge info for sparsely-populated directories
 @Issue(2827)
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 def merge_to_sparse_directories(sbox):
   "merge to sparse directories"
 
@@ -7850,10 +7849,8 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
-    'D/H'               : Item(),
-    'B/E'               : Item(),
-    })
-  expected_skip = svntest.wc.State(immediates_dir, {
+    'D/H/omega'         : Item(),
+    'B/E/beta'          : Item(),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7906,7 +7903,8 @@ def merge_to_sparse_directories(sbox):
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
   expected_skip = svntest.wc.State(files_dir, {
-    'D'               : Item(),
+    'D/H/omega'       : Item(),
+    'B/E/beta'        : Item(),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7949,7 +7947,8 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(empty_dir, {
     'mu'               : Item(),
-    'D'               : Item(),
+    'D/H/omega'        : Item(),
+    'B/E/beta'         : Item(),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
