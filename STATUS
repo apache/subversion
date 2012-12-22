@@ -96,10 +96,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1422053
-   Remove .swig_checked from tarball.
-   Justification:
-     Unnecessary file in tarballs.
-   Votes:
-     +1: breser, rhuijben, danielsh
