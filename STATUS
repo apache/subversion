@@ -94,7 +94,8 @@ Candidate changes:
  * r1425368
    Use the right api for generating the repository dirent in mod_dav_svn.
    Justification:
-     Using the wrong api might cause assertions. Especially in maintainer mode.
+     Using dav_svn_get_repos_path() causes an assertion on Windows. This
+     public api was unused until the in-repo-authz was merged to trunk.
    Votes:
      +1: rhuijben
 
