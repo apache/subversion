@@ -37,6 +37,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_cmdline_private.h"
 #include "private/svn_dep_compat.h"
 
 #if APR_HAVE_SYS_IOCTL_H
@@ -491,8 +492,8 @@ edit_chunk(apr_array_header_t **merged_chunk,
     }
   SVN_ERR(svn_io_file_flush_to_disk(temp_file, scratch_pool));
 
-  err = svn_cl__edit_file_externally(temp_file_name, editor_cmd,
-                                     config, scratch_pool);
+  err = svn_cmdline__edit_file_externally(temp_file_name, editor_cmd,
+                                          config, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
     {
       svn_error_t *root_err = svn_error_root_cause(err);

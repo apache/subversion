@@ -474,7 +474,8 @@ alter_directory_cb(void *baton,
   SVN_ERR(get_root(&root, eb));
   SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
 
-  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+  if (props)
+    SVN_ERR(alter_props(root, fspath, props, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -5653,7 +5653,6 @@ def update_moved_dir_file_add(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-@XFail()
 def update_moved_dir_dir_add(sbox):
   "update locally moved dir with incoming dir"
   sbox.build()
@@ -5672,8 +5671,9 @@ def update_moved_dir_dir_add(sbox):
 
   # the incoming file should auto-merge
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E2/foo'      : Item(status='A '),
-    'A/B/E2/foo/bar'  : Item(status='A '),
+      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E/foo'     : Item(status='  ', treeconflict='A'),
+      'A/B/E/foo/bar' : Item(status='  ', treeconflict='A'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
@@ -5681,19 +5681,16 @@ def update_moved_dir_dir_add(sbox):
     'A/B/E2'           : Item(),
     'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
     'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
-    'A/B/E2/foo'       : Item(),
-    'A/B/E2/foo/bar'   : Item(contents=bar_content),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E', treeconflict='C')
   expected_status.add({
     'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
     'A/B/E/foo/bar'     : Item(status='D ', wc_rev='2'),
     'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
-    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E2/foo/bar'    : Item(status='A ', copied='+', wc_rev='-'),
   })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -5701,6 +5698,16 @@ def update_moved_dir_dir_add(sbox):
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict', wc_dir)
+  expected_status.tweak(treeconflict=None)
+  expected_status.add({
+    'A/B/E2/foo'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/foo/bar'    : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
 @Issue(4037)

@@ -43,51 +43,6 @@
 
 #define DEFAULT_ARRAY_SIZE 5
 
-/* Return true iff ARG is a repository-relative URL: specifically that
- * it starts with the characters "^/".
- * ARG is in UTF-8 encoding.
- * Do not check whether ARG is properly URI-encoded, canonical, or valid
- * in any other way. */
-static svn_boolean_t
-arg_is_repos_relative_url(const char *arg)
-{
-  return (0 == strncmp("^/", arg, 2));
-}
-
-/* Set *ABSOLUTE_URL to the absolute URL represented by RELATIVE_URL
- * relative to REPOS_ROOT_URL.
- * *ABSOLUTE_URL will end with a peg revision specifier if RELATIVE_URL did.
- * RELATIVE_URL is in repository-relative syntax:
- * "^/[REL-URL][@PEG]",
- * REPOS_ROOT_URL is the absolute URL of the repository root.
- * All strings are in UTF-8 encoding.
- * Allocate *ABSOLUTE_URL in POOL.
- *
- * REPOS_ROOT_URL and RELATIVE_URL do not have to be properly URI-encoded,
- * canonical, or valid in any other way.  The caller is expected to perform
- * canonicalization on *ABSOLUTE_URL after the call to the function.
- */
-static svn_error_t *
-resolve_repos_relative_url(const char **absolute_url,
-                           const char *relative_url,
-                           const char *repos_root_url,
-                           apr_pool_t *pool)
-{
-  if (! arg_is_repos_relative_url(relative_url))
-    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             _("Improper relative URL '%s'"),
-                             relative_url);
-
-  /* No assumptions are made about the canonicalization of the input
-   * arguments, it is presumed that the output will be canonicalized after
-   * this function, which will remove any duplicate path separator.
-   */
-  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
-                              (char *)NULL);
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Attempt to find the repository root url for TARGET, possibly using CTX for
  * authentication.  If one is found and *ROOT_URL is not NULL, then just check
@@ -189,7 +144,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
       SVN_ERR(svn_utf_cstring_to_utf8(&utf8_target,
                                       raw_target, pool));
 
-      if (arg_is_repos_relative_url(utf8_target))
+      if (svn_path_is_repos_relative_url(utf8_target))
         rel_url_found = TRUE;
 
       APR_ARRAY_PUSH(input_targets, const char *) = utf8_target;
@@ -204,7 +159,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
           const char *utf8_target = APR_ARRAY_IDX(known_targets,
                                                   i, const char *);
 
-          if (arg_is_repos_relative_url(utf8_target))
+          if (svn_path_is_repos_relative_url(utf8_target))
             rel_url_found = TRUE;
 
           APR_ARRAY_PUSH(input_targets, const char *) = utf8_target;
@@ -220,7 +175,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
       /* Relative urls will be canonicalized when they are resolved later in
        * the function
        */
-      if (arg_is_repos_relative_url(utf8_target))
+      if (svn_path_is_repos_relative_url(utf8_target))
         {
           APR_ARRAY_PUSH(output_targets, const char *) = utf8_target;
         }
@@ -367,7 +322,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
           const char *target = APR_ARRAY_IDX(output_targets, i,
                                              const char *);
 
-          if (arg_is_repos_relative_url(target))
+          if (svn_path_is_repos_relative_url(target))
             {
               const char *abs_target;
               const char *true_target;
@@ -376,8 +331,9 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
               SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg_rev,
                                                          target, pool));
 
-              SVN_ERR(resolve_repos_relative_url(&abs_target, true_target,
-                                                 root_url, pool));
+              SVN_ERR(svn_path_resolve_repos_relative_url(&abs_target,
+                                                          true_target,
+                                                          root_url, pool));
 
               SVN_ERR(svn_opt__arg_canonicalize_url(&true_target, abs_target,
                                                     pool));

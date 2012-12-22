@@ -34,6 +34,7 @@
 #include "svn_config.h"
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
+#include "repos.h"
 
 
 /*** Structures. ***/
@@ -750,21 +751,173 @@ static svn_boolean_t authz_validate_section(const char *name,
   return TRUE;
 }
 
+/* Retrieve the file at DIRENT (contained in a repo) then parse it as a config
+ * file placing the result into CFG_P allocated in POOL.
+ *
+ * If DIRENT is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
+ * as the error.  The contents of CFG_P is then undefined.  If MUST_EXIST is
+ * TRUE, a missing authz file is also an error.
+ *
+ * SCRATCH_POOL will be used for temporary allocations. */
+static svn_error_t *
+authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
+                          svn_boolean_t must_exist,
+                          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_repos_t *repos;
+  const char *repos_root_dirent;
+  const char *fs_path;
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest_rev;
+  svn_node_kind_t node_kind;
+  svn_stream_t *contents;
+  const char *canon_dirent = svn_dirent_canonicalize(dirent, scratch_pool);
 
-
-/*** Public functions. ***/
+  /* Search for a repository in the full path. */
+  repos_root_dirent = svn_repos_find_root_path(canon_dirent, scratch_pool);
+  if (!repos_root_dirent)
+    return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                             "Unable to find repository at '%s'", dirent);
+
+  /* Attempt to open a repository at repos_root_dirent. */
+  SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+
+  fs_path = &canon_dirent[strlen(repos_root_dirent)];
+
+  /* Root path is always a directory so no reason to go any further */
+  if (*fs_path == '\0')
+    return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                             "'/' is not a file in repo '%s'",
+                             repos_root_dirent);
+
+  /* We skip some things that are non-important for how we're going to use
+   * this repo connection.  We do not set any capabilities since none of
+   * the current ones are important for what we're doing.  We also do not
+   * setup the environment that repos hooks would run under since we won't
+   * be triggering any. */
+
+  /* Get the filesystem. */
+  fs = svn_repos_fs(repos);
+
+  /* Find HEAD and the revision root */
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, root, fs_path, scratch_pool));
+  if (node_kind == svn_node_none)
+    {
+      if (!must_exist)
+        {
+          SVN_ERR(svn_config_create(cfg_p, TRUE, scratch_pool));
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                   "'%s' path not found in repo '%s'", fs_path,
+                                   repos_root_dirent);
+        }
+    }
+  else if (node_kind != svn_node_file)
+    {
+      return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                               "'%s' is not a file in repo '%s'", fs_path,
+                               repos_root_dirent);
+    }
+
+  SVN_ERR(svn_fs_file_contents(&contents, root, fs_path, scratch_pool));
+  err = svn_config_parse(cfg_p, contents, TRUE, result_pool);
+
+  /* Add the URL to the error stack since the parser doesn't have it. */
+  if (err != SVN_NO_ERROR)
+    return svn_error_createf(err->apr_err, err, 
+                             "Error parsing config file: '%s' in repo '%s':",
+                             fs_path, repos_root_dirent);
+
+  return SVN_NO_ERROR;
+}
+
+/* Given a PATH which might be a realative repo URL (^/), an absolute
+ * local repo URL (file://), an absolute path outside of the repo
+ * or a location in the Windows registry.
+ *
+ * Retrieve the configuration data that PATH points at and parse it into
+ * CFG_P allocated in POOL.
+ *
+ * If PATH is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
+ * as the error.  The contents of CFG_P is then undefined.  If MUST_EXIST is
+ * TRUE, a missing authz file is also an error.
+ *
+ * REPOS_ROOT points at the root of the repos you are
+ * going to apply the authz against, can be NULL if you are sure that you
+ * don't have a repos relative URL in PATH. */
+static svn_error_t *
+authz_retrieve_config(svn_config_t **cfg_p, const char *path,
+                      svn_boolean_t must_exist, const char *repos_root,
+                      apr_pool_t *pool)
+{
+  if (svn_path_is_repos_relative_url(path))
+    {
+      const char *dirent;
+      svn_error_t *err;
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+      err = svn_path_resolve_repos_relative_url(&dirent, path,
+                                                repos_root, scratch_pool);
+
+      if (err == SVN_NO_ERROR) 
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
+                                         scratch_pool);
+
+      /* Close the repos and streams we opened. */
+      svn_pool_destroy(scratch_pool);
+
+      return err;
+    }
+  else if (svn_path_is_url(path))
+    {
+      const char *dirent;
+      svn_error_t *err;
+      apr_pool_t *scratch_pool = svn_pool_create(pool); 
+
+      err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
+
+      if (err == SVN_NO_ERROR)
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
+                                         scratch_pool);
+
+      /* Close the repos and streams we opened. */
+      svn_pool_destroy(scratch_pool);
+
+      return err;
+    }
+  else
+    {
+      /* Outside of repo file or Windows registry*/
+      SVN_ERR(svn_config_read2(cfg_p, path, must_exist, TRUE, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
-svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
-                     svn_boolean_t must_exist, apr_pool_t *pool)
+svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
+                      svn_boolean_t must_exist, svn_boolean_t accept_urls,
+                      const char *repos_root, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
   struct authz_validate_baton baton = { 0 };
 
   baton.err = SVN_NO_ERROR;
 
-  /* Load the rule file. */
-  SVN_ERR(svn_config_read2(&authz->cfg, file, must_exist, TRUE, pool));
+  /* Load the rule file */
+  if (accept_urls)
+    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, repos_root,
+                                  pool));
+  else
+    SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
   baton.config = authz->cfg;
 
   /* Step through the entire rule file, stopping on error. */
@@ -775,6 +928,20 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
   *authz_p = authz;
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Public functions. ***/
+
+svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
+                      svn_boolean_t must_exist, const char *repos_root,
+                      apr_pool_t *pool)
+{
+  return svn_repos__authz_read(authz_p, path, must_exist, TRUE, repos_root,
+                               pool);
+}
+
 
 
 svn_error_t *
