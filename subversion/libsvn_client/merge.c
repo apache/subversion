@@ -521,7 +521,7 @@ dry_run_added_parent_p(const merge_cmd_baton_t *merge_b,
                        apr_pool_t *scratch_pool)
 {
   const char *abspath = local_abspath;
-  int i;
+  apr_size_t i;
 
   if (!merge_b->dry_run)
     return FALSE;
