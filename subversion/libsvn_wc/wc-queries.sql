@@ -760,12 +760,6 @@ SELECT local_relpath, tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND tree_conflict_data IS NOT NULL
 
--- STMT_SELECT_CONFLICT_DETAILS
-SELECT prop_reject, conflict_old, conflict_new, conflict_working,
-    tree_conflict_data
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2
-
 -- STMT_CLEAR_TEXT_CONFLICT
 UPDATE actual_node SET
   conflict_old = NULL,

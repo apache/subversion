@@ -3109,10 +3109,12 @@ public class BasicTests extends SVNTests
                 conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
         assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
 
-        assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
-        assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
-        assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
-
+        if (conflict.getSrcRightVersion() != null)
+        {
+            assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
+            assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
+            assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+        }
     }
 
     /**
