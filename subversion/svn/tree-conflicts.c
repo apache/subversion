@@ -63,7 +63,6 @@ static const svn_token_map_t map_conflict_reason_human[] =
   { N_("replace"),      svn_wc_conflict_reason_replaced },
   { N_("unversioned"),  svn_wc_conflict_reason_unversioned },
   { N_("moved away"),   svn_wc_conflict_reason_moved_away },
-  { N_("moved away and edited"), svn_wc_conflict_reason_moved_away_and_edited },
   { N_("moved here"),   svn_wc_conflict_reason_moved_here },
   { NULL,               0 }
 };
@@ -79,7 +78,6 @@ static const svn_token_map_t map_conflict_reason_xml[] =
   { "replace",          svn_wc_conflict_reason_replaced },
   { "unversioned",      svn_wc_conflict_reason_unversioned },
   { "moved-away",       svn_wc_conflict_reason_moved_away },
-  { "moved-away-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
   { "moved-here",       svn_wc_conflict_reason_moved_here },
   { NULL,               0 }
 };
