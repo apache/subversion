@@ -624,9 +624,17 @@ $(DISTDIR)/$(NEON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
+NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
+	# fix build with OpenSSL lacking SSLv2 support:
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
+		$(NEON_SVN_URL)/src/ne_session.c | patch -p0
 	touch $@
 
 # OpenBSD does not have krb5-config in PATH, but the neon port has

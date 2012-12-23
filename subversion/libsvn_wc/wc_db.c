@@ -12502,7 +12502,8 @@ svn_wc__db_read_kind(svn_kind_t *kind,
         SVN_ERR(convert_to_working_status(&status, status));
 
       if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_excluded)
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_server_excluded)
         {
           *kind = svn_kind_none;
           SVN_ERR(svn_sqlite__reset(stmt_info));

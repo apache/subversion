@@ -27,6 +27,7 @@
 
 /*** Includes ***/
 
+#include <assert.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
@@ -362,6 +363,21 @@ typedef struct merge_cmd_baton_t {
 /*-----------------------------------------------------------------------*/
 
 /*** Utilities ***/
+
+/* Return TRUE iff the session URL of RA_SESSION is equal to URL.  Useful in
+ * asserting preconditions. */
+static svn_boolean_t
+session_url_is(svn_ra_session_t *ra_session,
+               const char *url,
+               apr_pool_t *scratch_pool)
+{
+  const char *session_url;
+  svn_error_t *err
+    = svn_ra_get_session_url(ra_session, &session_url, scratch_pool);
+
+  SVN_ERR_ASSERT_NO_RETURN(! err);
+  return strcmp(url, session_url) == 0;
+}
 
 /* Return a new merge_source_t structure, allocated in RESULT_POOL,
  * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
@@ -3525,6 +3541,10 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t is_rollback = source->loc2->rev < source->loc1->rev;
+
+  assert(session_url_is(ra_session,
+                        (is_rollback ? source->loc1 : source->loc2)->url,
+                        scratch_pool));
 
   /* CHILDREN_WITH_MERGEINFO is sorted in depth-first order, so
      start at index 1 to examine only subtrees. */
@@ -8413,6 +8433,7 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   apr_array_header_t *inoperative_ranges;
   apr_pool_t *iterpool;
 
+  assert(session_url_is(ra_session, source->loc2->url, scratch_pool));
 
   /* This function is only intended to work with forward merges. */
   if (source->loc1->rev > source->loc2->rev)
@@ -9275,6 +9296,9 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
      clear between each of the three.  If the merge target has a lot of
      subtree mergeinfo, then this will help keep memory use in check. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
+  assert(session_url_is(URL1_ra_session, source->loc1->url, scratch_pool));
+  assert(session_url_is(URL2_ra_session, source->loc2->url, scratch_pool));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
   SVN_ERR_ASSERT(! source->ancestral);
@@ -10255,6 +10279,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
+
   *youngest_merged_rev = SVN_INVALID_REVNUM;
 
   /* Examine the natural history of each path in the reintegrate target
@@ -10486,6 +10513,9 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
   svn_revnum_t youngest_merged_rev;
   svn_client__pathrev_t *yc_ancestor;
 
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
+
   /* Initialize our return variables. */
   *left_p = NULL;
 
@@ -10610,7 +10640,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
  * from SOURCE_LOC into the working copy at TARGET.
  *
  * SOURCE_RA_SESSION and TARGET_RA_SESSION are RA sessions opened to the
- * source and target branches respectively.
+ * URLs of SOURCE_LOC and TARGET->loc respectively.
  *
  * Set *SOURCE_P to
  * the source-left and source-right locations of the required merge.  Set
@@ -10637,6 +10667,9 @@ find_reintegrate_merge(merge_source_t **source_p,
   svn_mergeinfo_catalog_t merged_to_source_mergeinfo_catalog;
   svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
+
+  assert(session_url_is(source_ra_session, source_loc->url, scratch_pool));
+  assert(session_url_is(target_ra_session, target->loc.url, scratch_pool));
 
   /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's
@@ -11617,22 +11650,25 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   if (merge->mid)
     {
       merge_source_t source;
-      svn_ra_session_t *ra_session = NULL;
+      svn_ra_session_t *base_ra_session = NULL;
+      svn_ra_session_t *right_ra_session = NULL;
+      svn_ra_session_t *target_ra_session = NULL;
+
+      SVN_ERR(ensure_ra_session_url(&base_ra_session, merge->base->url,
+                                    ctx, scratch_pool));
+      SVN_ERR(ensure_ra_session_url(&right_ra_session, merge->right->url,
+                                    ctx, scratch_pool));
+      SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
+                                    ctx, scratch_pool));
 
       /* Check for and reject any abnormalities -- such as revisions that
        * have not yet been merged in the opposite direction -- that a
        * 'reintegrate' merge would have rejected. */
       {
         merge_source_t *source2;
-        svn_ra_session_t *source_ra_session = NULL;
-        svn_ra_session_t *target_ra_session = NULL;
 
-        SVN_ERR(ensure_ra_session_url(&source_ra_session, merge->right->url,
-                                      ctx, scratch_pool));
-        SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
-                                      ctx, scratch_pool));
         SVN_ERR(find_reintegrate_merge(&source2, NULL,
-                                       source_ra_session, merge->right,
+                                       right_ra_session, merge->right,
                                        target_ra_session, target,
                                        ctx, scratch_pool, scratch_pool));
       }
@@ -11641,11 +11677,9 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       source.loc2 = merge->right;
       source.ancestral = (merge->mid == NULL);
 
-      SVN_ERR(ensure_ra_session_url(&ra_session, source.loc1->url,
-                                    ctx, scratch_pool));
-
       err = merge_cousins_and_supplement_mergeinfo(target,
-                                                   ra_session, ra_session,
+                                                   base_ra_session,
+                                                   right_ra_session,
                                                    &source, merge->yca,
                                                    TRUE /* same_repos */,
                                                    depth, ignore_ancestry,
