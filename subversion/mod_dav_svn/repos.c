@@ -2718,6 +2718,13 @@ set_headers(request_rec *r, const dav_resource *resource)
       if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
         {
           mimetype = SVN_SVNDIFF_MIME_TYPE;
+
+          /* Note the base that this svndiff is based on, and tell any
+             intermediate caching proxies that this header is
+             significant.  */
+          apr_table_setn(r->headers_out, "Vary", SVN_DAV_DELTA_BASE_HEADER);
+          apr_table_setn(r->headers_out, SVN_DAV_DELTA_BASE_HEADER,
+                         resource->info->delta_base);
         }
       svn_error_clear(serr);
     }
