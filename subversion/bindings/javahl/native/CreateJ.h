@@ -77,7 +77,7 @@ class CreateJ
   CommitInfo(const svn_commit_info_t *info);
 
   static jobject
-  RevisionRangeList(apr_array_header_t *ranges);
+  RevisionRangeList(svn_rangelist_t *ranges);
 
   static jobject
   StringSet(apr_array_header_t *strings);
