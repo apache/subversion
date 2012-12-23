@@ -1085,15 +1085,15 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Like svn_wc_get_pristine_contents2(), but keyed on the
-   SHA1_CHECKSUM rather than on the local absolute path of the working
-   file.  WRI_ABSPATH is any versioned path of the working copy in
-   whose pristine database we'll be looking for these contents.  */
+/* Like svn_wc_get_pristine_contents2(), but keyed on the CHECKSUM
+   rather than on the local absolute path of the working file.
+   WRI_ABSPATH is any versioned path of the working copy in whose
+   pristine database we'll be looking for these contents.  */
 svn_error_t *
 svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           svn_wc_context_t *wc_ctx,
                                           const char *wri_abspath,
-                                          const svn_checksum_t *sha1_checksum,
+                                          const svn_checksum_t *checksum,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 

@@ -121,16 +121,16 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
                                                           apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to fetch the
- * cached pristine file contents whose SHA1 checksum is @a
- * sha1_checksum, if any.  @a *contents will be a read stream
- * containing those contents if they are found; NULL otherwise.
+ * cached pristine file contents whose checksum is @a checksum, if
+ * any.  @a *contents will be a read stream containing those contents
+ * if they are found; NULL otherwise.
  *
  * @since New in 1.8.
  */
 typedef svn_error_t *
 (*svn_ra_get_wc_contents_func_t)(void *baton,
                                  svn_stream_t **contents,
-                                 const svn_checksum_t *sha1_checksum,
+                                 const svn_checksum_t *checksum,
                                  apr_pool_t *pool);
 
 

@@ -1649,13 +1649,16 @@ typedef struct svn_wc_conflict_version_t
   svn_revnum_t peg_rev;
 
   /** path within repos; must not start with '/' */
+   /* ### should have been called repos_relpath, but we can't change this. */
   const char *path_in_repos;
-  /* @todo We may decide to add the repository UUID, to handle conflicts
-   * properly during a repository move. */
   /** @} */
 
   /** Info about this node */
   svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+
+  /** UUID of the repository
+   * @since New in 1.8. */
+  const char *repos_uuid;
 
   /* @todo Add metadata about a local copy of the node, if and when
    * we store one. */
@@ -1673,8 +1676,23 @@ typedef struct svn_wc_conflict_version_t
  * @a peg_rev and the the @c node_kind to @c node_kind. Make only shallow
  * copies of the pointer arguments.
  *
- * @since New in 1.6.
+ * @since New in 1.8.
  */
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create2(const char *repos_root_url,
+                                const char *repos_uuid,
+                                const char *repos_relpath,
+                                svn_revnum_t revision,
+                                svn_node_kind_t kind,
+                                apr_pool_t *result_pool);
+
+/** Similar to svn_wc_conflict_version_create2(), but doesn't set all
+ * required values.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
                                const char *path_in_repos,
