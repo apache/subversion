@@ -13124,7 +13124,7 @@ def merge_two_edits_to_same_prop(sbox):
       " C   %s\n" % mu_path,
       ], prop_conflicts=1,
       args=['--allow-mixed-revisions',
-            '--accept=theirs-conflict'],
+            '--accept=working'],
       resolved=[mu_path])
   svn_merge(rev4, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,

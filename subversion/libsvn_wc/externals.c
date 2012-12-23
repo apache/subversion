@@ -1554,7 +1554,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
   /* The remaining URLs are relative to either the scheme or server root
      and can only refer to locations inside that scope, so backpaths are
      not allowed. */
-  if (svn_path_is_backpath_present(url + 2))
+  if (svn_path_is_backpath_present(url))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),

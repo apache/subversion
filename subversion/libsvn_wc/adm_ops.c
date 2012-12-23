@@ -109,11 +109,19 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue)
  *   - queue deletion of the old pristine texts by the remembered checksums.
  *
  * CHECKSUM is the checksum of the new text base for LOCAL_ABSPATH, and must
- * be provided if there is one, else NULL. */
+ * be provided if there is one, else NULL.
+ *
+ * STATUS, KIND, PROP_MODS and OLD_CHECKSUM are the current in-db values of
+ * the node LOCAL_ABSPATH.
+ */
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t via_recurse,
+                       svn_wc__db_status_t status,
+                       svn_kind_t kind,
+                       svn_boolean_t prop_mods,
+                       const svn_checksum_t *old_checksum,
                        svn_revnum_t new_revnum,
                        apr_time_t new_changed_date,
                        const char *new_changed_author,
@@ -123,22 +131,10 @@ process_committed_leaf(svn_wc__db_t *db,
                        const svn_checksum_t *checksum,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
-  svn_kind_t kind;
-  const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
-  svn_boolean_t prop_mods;
   svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &copied_checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &prop_mods,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
 
   {
     const char *adm_abspath;
@@ -185,9 +181,9 @@ process_committed_leaf(svn_wc__db_t *db,
         {
           /* It was copied and not modified. We must have a text
              base for it. And the node should have a checksum. */
-          SVN_ERR_ASSERT(copied_checksum != NULL);
+          SVN_ERR_ASSERT(old_checksum != NULL);
 
-          checksum = copied_checksum;
+          checksum = old_checksum;
 
           /* Is the node completely unmodified and are we recursing? */
           if (via_recurse && !prop_mods)
@@ -249,26 +245,41 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
   svn_kind_t kind;
+  const svn_checksum_t *old_checksum;
+  svn_boolean_t prop_mods;
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &old_checksum, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &prop_mods, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   /* NOTE: be wary of making crazy semantic changes in this function, since
      svn_wc_process_committed4() calls this.  */
 
   SVN_ERR(process_committed_leaf(db, local_abspath, !top_of_recurse,
+                                 status, kind, prop_mods, old_checksum,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
                                  sha1_checksum,
                                  scratch_pool));
 
-  /* Only check kind after processing the node itself. The node might
-     have been deleted */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
-                               TRUE /* allow_missing */,
-                               TRUE /* show_hidden */,
-                               scratch_pool));
+  /* Only check for recursion on nodes that have children */
+  if (kind != svn_kind_file
+      || status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_server_excluded
+      /* Node deleted -> then no longer a directory */
+      || status == svn_wc__db_status_deleted)
+    {
+      return SVN_NO_ERROR;
+    }
 
-  if (recurse && kind == svn_kind_dir)
+  if (recurse)
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -283,38 +294,17 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           const char *this_abspath;
-          svn_wc__db_status_t status;
+          const committed_queue_item_t *cqi;
 
           svn_pool_clear(iterpool);
 
           this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, this_abspath,
-                                       iterpool, iterpool));
-
-          /* We come to this branch since we have committed a copied tree.
-             svn_depth_exclude is possible in this situation. So check and
-             skip */
-          if (status == svn_wc__db_status_excluded)
-            continue;
-
           sha1_checksum = NULL;
-          if (kind != svn_kind_dir && queue != NULL)
-            {
-              const committed_queue_item_t *cqi;
+          cqi = apr_hash_get(queue->queue, this_abspath, APR_HASH_KEY_STRING);
 
-              cqi = apr_hash_get(queue->queue, this_abspath,
-                                 APR_HASH_KEY_STRING);
-              if (cqi != NULL)
-                {
-                  sha1_checksum = cqi->sha1_checksum;
-                }
-            }
+          if (cqi != NULL)
+            sha1_checksum = cqi->sha1_checksum;
 
           /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
@@ -1962,12 +1952,14 @@ revert_internal(svn_wc__db_t *db,
      when local_abspath is the working copy root. */
   {
     const char *dir_abspath;
+    svn_boolean_t is_wcroot;
 
-    SVN_ERR(svn_wc__db_get_wcroot(&dir_abspath, db, local_abspath,
-                                  scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, scratch_pool));
 
-    if (svn_dirent_is_child(dir_abspath, local_abspath, NULL))
+    if (! is_wcroot)
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    else
+      dir_abspath = local_abspath;
 
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
   }

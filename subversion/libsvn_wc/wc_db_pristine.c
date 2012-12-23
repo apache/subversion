@@ -855,11 +855,12 @@ pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
                         apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  svn_error_t *err = NULL;
 
   /* Find each unreferenced pristine in the DB and remove it. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_UNREFERENCED_PRISTINES));
-  while (1)
+  while (! err)
     {
       svn_boolean_t have_row;
       const svn_checksum_t *sha1_checksum;
@@ -870,12 +871,12 @@ pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
                                           scratch_pool));
-      SVN_ERR(pristine_remove_if_unreferenced(wcroot, sha1_checksum,
-                                              scratch_pool));
+      err = pristine_remove_if_unreferenced(wcroot, sha1_checksum,
+                                            scratch_pool);
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(
+      svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 }
 
 svn_error_t *
