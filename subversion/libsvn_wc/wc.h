@@ -151,6 +151,9 @@ extern "C" {
  *
  * == 1.7.x shipped with format 29
  *
+ * The bump to 30 switched the conflict storage to a skel inside conflict_data.
+ * Also clears some known invalid state.
+ *
  * Please document any further format changes here.
  */
 
@@ -181,6 +184,9 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
+
+/* The first version that uses conflict skels for all conflicts */
+#define SVN_WC__USES_CONFLICT_SKELS 30
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -392,16 +398,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    When MERGE_OPTIONS are specified, they are used by the internal
    diff3 routines, or passed to the external diff3 tool.
 
-   If CONFLICT_FUNC is non-NULL, then call it with CONFLICT_BATON if a
-   conflict is encountered, giving the callback a chance to resolve
-   the conflict (before marking the file 'conflicted').
-
-   When LEFT_VERSION and RIGHT_VERSION are non-NULL, pass them to the
-   conflict resolver as older_version and their_version.
-
-   ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION
-            in the working copy for future retrieval via svn info.
-
    WRI_ABSPATH describes in which working copy information should be
    retrieved. (Interesting for merging file externals).
 
@@ -418,12 +414,11 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 */
 svn_error_t *
 svn_wc__internal_merge(svn_skel_t **work_items,
+                       svn_skel_t **conflict_skel,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
-                       const svn_wc_conflict_version_t *left_version,
                        const char *right_abspath,
-                       const svn_wc_conflict_version_t *right_version,
                        const char *target_abspath,
                        const char *wri_abspath,
                        const char *left_label,
@@ -434,8 +429,6 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
-                       svn_wc_conflict_resolver_func2_t conflict_func,
-                       void *conflict_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *result_pool,
@@ -709,6 +702,7 @@ svn_wc__write_check(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
+                           svn_skel_t **conflict_skel,
                            enum svn_wc_merge_outcome_t *merge_outcome,
                            svn_wc__db_t *db,
                            const char *local_abspath,
@@ -721,8 +715,6 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
-                           svn_wc_conflict_resolver_func2_t conflict_func,
-                           void *conflict_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,

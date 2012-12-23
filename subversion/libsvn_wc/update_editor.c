@@ -46,6 +46,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "entries.h"
 #include "translate.h"
 #include "workqueue.h"
@@ -298,6 +299,9 @@ struct dir_baton
   /* The revision of the directory before updating */
   svn_revnum_t old_revision;
 
+  /* The repos_relpath before updating/switching */
+  const char *old_repos_relpath;
+
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -325,7 +329,7 @@ struct dir_baton
   const char *changed_author;
 
   /* If not NULL, contains a mapping of const char* basenames of children that
-     have been deleted to their svn_wc_conflict_description2_t* tree conflicts.
+     have been deleted to their svn_skel_t* tree conflicts.
      We store this hash to allow replacements to continue under a just
      installed tree conflict.
 
@@ -355,7 +359,7 @@ struct dir_baton
   svn_boolean_t edited;
 
   /* The tree conflict to install once the node is really edited */
-  svn_wc_conflict_description2_t *edit_conflict;
+  svn_skel_t *edit_conflict;
 
   /* The bump information for this directory. */
   struct bump_dir_info *bump_info;
@@ -720,6 +724,9 @@ struct file_baton
   /* The revision of the file before updating */
   svn_revnum_t old_revision;
 
+  /* The repos_relpath before updating/switching */
+  const char *old_repos_relpath;
+
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -774,7 +781,7 @@ struct file_baton
   svn_boolean_t edited;
 
   /* The tree conflict to install once the node is really edited */
-  svn_wc_conflict_description2_t *edit_conflict;
+  svn_skel_t *edit_conflict;
 };
 
 
@@ -866,10 +873,10 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
   if (db->edit_conflict)
     {
       /* We have a (delayed) tree conflict to install */
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(db->edit_baton->db,
-                                              db->local_abspath,
-                                              db->edit_conflict,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_op_mark_conflict(db->edit_baton->db,
+                                          db->local_abspath,
+                                          db->edit_conflict, NULL,
+                                          scratch_pool));
 
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
@@ -894,10 +901,10 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
   if (fb->edit_conflict)
     {
       /* We have a (delayed) tree conflict to install */
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(fb->edit_baton->db,
-                                              fb->local_abspath,
-                                              fb->edit_conflict,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_op_mark_conflict(fb->edit_baton->db,
+                                          fb->local_abspath,
+                                          fb->edit_conflict, NULL,
+                                          scratch_pool));
 
       do_notification(fb->edit_baton, fb->local_abspath, svn_node_file,
                       svn_wc_notify_tree_conflict, scratch_pool);
@@ -1131,7 +1138,8 @@ open_root(void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
       /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &db->old_revision,
+                                       &db->old_repos_relpath, NULL, NULL,
                                        &db->changed_rev, &db->changed_date,
                                        &db->changed_author, &db->ambient_depth,
                                        NULL, NULL, NULL, NULL, NULL,
@@ -1285,37 +1293,28 @@ node_has_local_mods(svn_boolean_t *modified,
  *
  * The REASON is stored directly in the tree conflict info.
  *
- * All temporary allocactions are be made in SCRATCH_POOL, while allocations
+ * All temporary allocations are be made in SCRATCH_POOL, while allocations
  * needed for the returned conflict struct are made in RESULT_POOL.
  *
  * All other parameters are identical to and described by
  * check_tree_conflict(), with the slight modification that this function
  * relies on the reason passed in REASON instead of actively looking for one. */
 static svn_error_t *
-create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
+create_tree_conflict(svn_skel_t **pconflict,
                      struct edit_baton *eb,
                      const char *local_abspath,
                      svn_wc_conflict_reason_t reason,
                      svn_wc_conflict_action_t action,
-                     svn_node_kind_t their_node_kind,
-                     const char *their_relpath,
                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char *repos_root_url = NULL;
-  const char *repos_uuid = NULL;
   const char *left_repos_relpath;
   svn_revnum_t left_revision;
   svn_node_kind_t left_kind;
-  const char *right_repos_relpath;
-  const char *added_repos_relpath = NULL;
-  svn_node_kind_t conflict_node_kind;
   svn_wc_conflict_version_t *src_left_version;
-  svn_wc_conflict_version_t *src_right_version;
 
   *pconflict = NULL;
 
   SVN_ERR_ASSERT(reason != SVN_WC_CONFLICT_REASON_NONE);
-  SVN_ERR_ASSERT(their_relpath != NULL);
 
   /* Get the source-left information, i.e. the local state of the node
    * before any changes were made to the working copy, i.e. the state the
@@ -1323,8 +1322,6 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   if (reason == svn_wc_conflict_reason_added ||
       reason == svn_wc_conflict_reason_moved_here)
     {
-      svn_wc__db_status_t added_status;
-
       /* ###TODO: It would be nice to tell the user at which URL and
        * ### revision source-left was empty, which could be quite difficult
        * ### to code, and is a slight theoretical leap of the svn mind.
@@ -1342,22 +1339,6 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       left_kind = svn_node_none;
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
-
-      /* Still get the repository root needed by both 'update' and 'switch',
-       * and the would-be repos_relpath needed to construct the source-right
-       * in case of an 'update'. Check sanity while we're at it. */
-      SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
-                                       &added_repos_relpath,
-                                       &repos_root_url,
-                                       &repos_uuid,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, eb->db, local_abspath,
-                                       result_pool, scratch_pool));
-
-      /* This better really be an added status. */
-      SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
-                     || added_status == svn_wc__db_status_copied
-                     || added_status == svn_wc__db_status_moved_here);
     }
   else if (reason == svn_wc_conflict_reason_unversioned)
     {
@@ -1366,8 +1347,6 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       left_kind = svn_node_none;
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
-      repos_root_url = eb->repos_root;
-      repos_uuid = eb->repos_uuid;
     }
   else
     {
@@ -1386,8 +1365,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       SVN_ERR(svn_wc__db_base_get_info(NULL, &base_kind,
                                        &left_revision,
                                        &left_repos_relpath,
-                                       &repos_root_url,
-                                       &repos_uuid,
+                                       NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
                                        eb->db, local_abspath,
@@ -1402,40 +1380,6 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
         SVN_ERR_MALFUNCTION();
     }
 
-  SVN_ERR_ASSERT(strcmp(repos_root_url, eb->repos_root) == 0);
-
-  /* Find the source-right information, i.e. the state in the repository
-   * to which we would like to update. */
-  if (eb->switch_relpath)
-    {
-      /* This is a 'switch' operation. */
-      right_repos_relpath = their_relpath;
-    }
-  else
-    {
-      /* This is an 'update', so REPOS_RELPATH would be the same as for
-       * source-left. However, we don't have a source-left for locally
-       * added files. */
-      right_repos_relpath = ((reason == svn_wc_conflict_reason_added ||
-                              reason == svn_wc_conflict_reason_moved_here) ?
-                             added_repos_relpath : left_repos_relpath);
-      if (! right_repos_relpath)
-        right_repos_relpath = their_relpath;
-    }
-
-  SVN_ERR_ASSERT(right_repos_relpath != NULL);
-
-  /* Determine PCONFLICT's overall node kind, which is not allowed to be
-   * svn_node_none. We give it the source-right revision (THEIR_NODE_KIND)
-   * -- unless source-right is deleted and hence == svn_node_none, in which
-   * case we take it from source-left, which has to be the node kind that
-   * was deleted. */
-  conflict_node_kind = (action == svn_wc_conflict_action_delete ?
-                        left_kind : their_node_kind);
-  SVN_ERR_ASSERT(conflict_node_kind == svn_node_file
-                 || conflict_node_kind == svn_node_dir);
-
-
   /* Construct the tree conflict info structs. */
 
   if (left_repos_relpath == NULL)
@@ -1443,27 +1387,29 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
      * Send an 'empty' left revision. */
     src_left_version = NULL;
   else
-    src_left_version = svn_wc_conflict_version_create2(repos_root_url,
-                                                       repos_uuid,
+    src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                       eb->repos_uuid,
                                                        left_repos_relpath,
                                                        left_revision,
                                                        left_kind,
                                                        result_pool);
 
-  src_right_version = svn_wc_conflict_version_create2(repos_root_url,
-                                                      repos_uuid,
-                                                      right_repos_relpath,
-                                                      *eb->target_revision,
-                                                      their_node_kind,
-                                                      result_pool);
+  *pconflict = svn_wc__conflict_skel_create(result_pool);
 
-  *pconflict = svn_wc_conflict_description_create_tree2(
-                   local_abspath, conflict_node_kind,
-                   eb->switch_relpath ?
-                     svn_wc_operation_switch : svn_wc_operation_update,
-                   src_left_version, src_right_version, result_pool);
-  (*pconflict)->action = action;
-  (*pconflict)->reason = reason;
+  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(*pconflict,
+                                                  eb->db, local_abspath,
+                                                  reason,
+                                                  action,
+                                                  result_pool, scratch_pool));
+
+  if (eb->switch_relpath)
+    SVN_ERR(svn_wc__conflict_skel_set_op_switch(*pconflict,
+                                                src_left_version,
+                                                result_pool, scratch_pool));
+  else
+    SVN_ERR(svn_wc__conflict_skel_set_op_update(*pconflict,
+                                                src_left_version,
+                                                result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1484,28 +1430,17 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
  * tree conflict info is returned in *PCONFLICT. PCONFLICT must be non-NULL,
  * while *PCONFLICT is always overwritten.
  *
- * THEIR_NODE_KIND should be the node kind reflected by the incoming edit
- * function. E.g. dir_opened() should pass svn_node_dir, etc.
- * In some cases of delete, svn_node_none may be used here.
- *
- * THEIR_RELPATH should be the involved node's repository-relative path on the
- * source-right side, the side that the target should become after the update.
- * Simply put, that's the URL obtained from the node's dir_baton->new_relpath
- * or file_baton->new_relpath (but it's more complex for a delete).
- *
  * The tree conflict is allocated in RESULT_POOL. Temporary allocations use
  * SCRACTH_POOl.
  */
 static svn_error_t *
-check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
+check_tree_conflict(svn_skel_t **pconflict,
                     struct edit_baton *eb,
                     const char *local_abspath,
                     svn_wc__db_status_t working_status,
                     svn_kind_t working_kind,
                     svn_boolean_t exists_in_repos,
                     svn_wc_conflict_action_t action,
-                    svn_node_kind_t their_node_kind,
-                    const char *their_relpath,
                     const char *moved_to_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -1514,8 +1449,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   svn_boolean_t locally_replaced = FALSE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
-
-  SVN_ERR_ASSERT(their_relpath != NULL);
 
   *pconflict = NULL;
 
@@ -1679,8 +1612,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
   return svn_error_trace(create_tree_conflict(pconflict, eb, local_abspath,
-                                              reason, action, their_node_kind,
-                                              their_relpath,
+                                              reason, action,
                                               result_pool, scratch_pool));
 }
 
@@ -1781,7 +1713,7 @@ delete_entry(const char *path,
   svn_boolean_t conflicted;
   svn_boolean_t have_base;
   svn_boolean_t have_work;
-  svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_skel_t *tree_conflict = NULL;
   svn_skel_t *work_item = NULL;
   svn_wc__db_status_t status;
   svn_wc__db_status_t base_status;
@@ -1894,13 +1826,13 @@ delete_entry(const char *path,
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, kind, TRUE,
-                                  svn_wc_conflict_action_delete, svn_node_none,
-                                  repos_relpath, moved_to_abspath,
-                                  pb->pool, scratch_pool));
+                                  svn_wc_conflict_action_delete,
+                                  moved_to_abspath, pb->pool, scratch_pool));
     }
 
   if (tree_conflict != NULL)
     {
+      svn_wc_conflict_reason_t reason;
       /* When we raise a tree conflict on a node, we don't want to mark the
        * node as skipped, to allow a replacement to continue doing at least
        * a bit of its work (possibly adding a not present node, for the
@@ -1911,15 +1843,12 @@ delete_entry(const char *path,
       apr_hash_set(pb->deletion_conflicts, apr_pstrdup(pb->pool, base),
                    APR_HASH_KEY_STRING, tree_conflict);
 
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                              local_abspath,
-                                              tree_conflict,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                  eb->db, local_abspath,
+                                                  tree_conflict,
+                                                  scratch_pool, scratch_pool));
 
-      do_notification(eb, local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, scratch_pool);
-
-      if (tree_conflict->reason == svn_wc_conflict_reason_edited)
+      if (reason == svn_wc_conflict_reason_edited)
         {
           /* The item exists locally and has some sort of local mod.
            * It no longer exists in the repository at its target URL@REV.
@@ -1933,11 +1862,10 @@ delete_entry(const char *path,
           /* Fall through to remove the BASE_NODEs properly, with potentially
              keeping a not-present marker */
         }
-      else if (tree_conflict->reason == svn_wc_conflict_reason_deleted
-               || tree_conflict->reason == svn_wc_conflict_reason_moved_away
-               || tree_conflict->reason ==
-                     svn_wc_conflict_reason_moved_away_and_edited
-               || tree_conflict->reason == svn_wc_conflict_reason_replaced)
+      else if (reason == svn_wc_conflict_reason_deleted
+               || reason == svn_wc_conflict_reason_moved_away
+               || reason == svn_wc_conflict_reason_moved_away_and_edited
+               || reason == svn_wc_conflict_reason_replaced)
         {
           /* The item does not exist locally because it was already shadowed.
            * We must complete the deletion, leaving the tree conflict info
@@ -1994,15 +1922,25 @@ delete_entry(const char *path,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
-                                scratch_pool));
+  if (tree_conflict)
+  {
+    SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, local_abspath,
+                                        tree_conflict, work_item,
+                                        scratch_pool));
+  }
+  else
+    SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
+                              scratch_pool));
 
   SVN_ERR(svn_wc__wq_run(eb->db, pb->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));
 
-  /* Notify. (If tree_conflict, we've already notified.) */
-  if (tree_conflict == NULL)
+  /* Notify. */
+  if (tree_conflict)
+    do_notification(eb, local_abspath, svn_node_unknown,
+                    svn_wc_notify_tree_conflict, scratch_pool);
+  else
     {
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
       svn_node_kind_t node_kind;
@@ -2041,7 +1979,7 @@ add_directory(const char *path,
   svn_kind_t wc_kind;
   svn_boolean_t conflicted;
   svn_boolean_t versioned_locally_and_present;
-  svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_skel_t *tree_conflict = NULL;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
@@ -2169,15 +2107,37 @@ add_directory(const char *path,
 
       if (tree_conflict)
         {
+          svn_wc_conflict_reason_t reason;
           /* So this deletion wasn't just a deletion, it is actually a
-             replacement. Luckily we still have the conflict so we can
-             just update it. */
+             replacement. Let's install a better tree conflict. */
 
-          /* ### What else should we update? */
-          tree_conflict->action = svn_wc_conflict_action_replace;
+          /* ### Should store the conflict in DB to allow reinstalling
+             ### with theoretically more data in close_directory() */
 
-          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
-                                                  tree_conflict, pool));
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                      eb->db,
+                                                      db->local_abspath,
+                                                      tree_conflict,
+                                                      db->pool, db->pool));
+
+          tree_conflict = svn_wc__conflict_skel_create(db->pool);
+
+          SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                                        tree_conflict,
+                                        eb->db, db->local_abspath,
+                                        reason, svn_wc_conflict_action_replace,
+                                        db->pool, db->pool));
+
+          /* Node does not pre-exist so no original location */
+          if (eb->switch_relpath)
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(tree_conflict, NULL,
+                                                        db->pool, db->pool));
+          else
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(tree_conflict, NULL,
+                                                        db->pool, db->pool));
+
+          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, db->local_abspath,
+                                              tree_conflict, NULL, db->pool));
 
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
@@ -2273,7 +2233,6 @@ add_directory(const char *path,
                                       db->local_abspath,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
-                                      svn_node_dir, db->new_relpath,
                                       NULL, pool, pool));
         }
 
@@ -2299,8 +2258,7 @@ add_directory(const char *path,
                                        db->local_abspath,
                                        svn_wc_conflict_reason_unversioned,
                                        svn_wc_conflict_action_add,
-                                       svn_node_dir,
-                                       db->new_relpath, pool, pool));
+                                       pool, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
     }
@@ -2336,8 +2294,9 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
-                                              tree_conflict, pool));
+      SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, db->local_abspath,
+                                          tree_conflict, NULL,
+                                          db->pool));
 
       db->already_notified = TRUE;
 
@@ -2395,7 +2354,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_boolean_t have_work;
   svn_boolean_t conflicted;
-  svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_skel_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
   svn_kind_t wc_kind;
   svn_error_t *err;
@@ -2430,8 +2389,9 @@ open_directory(const char *path,
   /* We should have a write lock on every directory touched.  */
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision, NULL,
-                               NULL, NULL, &db->changed_rev, &db->changed_date,
+  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision,
+                               &db->old_repos_relpath, NULL, NULL,
+                               &db->changed_rev, &db->changed_date,
                                &db->changed_author, &db->ambient_depth,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2444,10 +2404,10 @@ open_directory(const char *path,
     base_status = status;
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
-                                     NULL, NULL, NULL, &db->changed_rev,
-                                     &db->changed_date, &db->changed_author,
-                                     &db->ambient_depth, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     &db->old_repos_relpath, NULL, NULL,
+                                     &db->changed_rev, &db->changed_date,
+                                     &db->changed_author, &db->ambient_depth,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      eb->db, db->local_abspath,
                                      db->pool, pool));
 
@@ -2498,21 +2458,24 @@ open_directory(const char *path,
   if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
-                                svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_relpath, db->moved_to_abspath,
-                                db->pool, pool));
+                                svn_wc_conflict_action_edit,
+                                db->moved_to_abspath, db->pool, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
+      svn_wc_conflict_reason_t reason;
       db->edit_conflict = tree_conflict;
       /* Other modifications wouldn't be a tree conflict */
-      SVN_ERR_ASSERT(
-                tree_conflict->reason == svn_wc_conflict_reason_deleted ||
-                tree_conflict->reason == svn_wc_conflict_reason_moved_away ||
-                tree_conflict->reason ==
-                  svn_wc_conflict_reason_moved_away_and_edited ||
-                tree_conflict->reason == svn_wc_conflict_reason_replaced);
+
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                  eb->db, db->local_abspath,
+                                                  tree_conflict,
+                                                  db->pool, db->pool));
+      SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
+                     || reason == svn_wc_conflict_reason_moved_away
+                     || reason == svn_wc_conflict_reason_moved_away_and_edited
+                     || reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
       db->shadowed = TRUE;
@@ -2592,6 +2555,7 @@ close_directory(void *dir_baton,
   const char *new_changed_author = NULL;
   apr_pool_t *scratch_pool = db->pool;
   svn_skel_t *all_work_items = NULL;
+  svn_skel_t *conflict_skel = NULL;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -2601,6 +2565,9 @@ close_directory(void *dir_baton,
 
       return SVN_NO_ERROR;
     }
+
+  if (db->edited)
+    conflict_skel = db->edit_conflict;
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_prop_changes,
                                &dav_prop_changes, &regular_prop_changes, pool));
@@ -2674,8 +2641,6 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_prop_changes->nelts)
     {
-      svn_skel_t *work_item;
-
       /* If recording traversal info, then see if the
          SVN_PROP_EXTERNALS property on this directory changed,
          and record before and after for the change. */
@@ -2723,23 +2688,19 @@ close_directory(void *dir_baton,
 
       /* Merge pending properties into temporary files (ignoring
          conflicts). */
-      SVN_ERR_W(svn_wc__merge_props(&work_item,
+      SVN_ERR_W(svn_wc__merge_props(&conflict_skel,
                                     &prop_state,
                                     &new_base_props,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
                                     svn_kind_dir,
-                                    NULL, /* left_version */
-                                    NULL, /* right_version */
                                     NULL /* use baseprops */,
                                     base_props,
                                     actual_props,
                                     regular_prop_changes,
                                     TRUE /* base_merge */,
                                     FALSE /* dry_run */,
-                                    eb->conflict_func,
-                                    eb->conflict_baton,
                                     eb->cancel_func,
                                     eb->cancel_baton,
                                     db->pool,
@@ -2747,8 +2708,6 @@ close_directory(void *dir_baton,
                 _("Couldn't do property merge"));
       /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
     }
 
   SVN_ERR(accumulate_last_change(&new_changed_rev, &new_changed_date,
@@ -2919,6 +2878,54 @@ close_directory(void *dir_baton,
       if (props == NULL)
         props = base_props;
 
+      if (conflict_skel)
+        {
+          svn_skel_t *work_item;
+          svn_boolean_t completed;
+
+          SVN_ERR(svn_wc__conflict_skel_is_complete(&completed,
+                                                    conflict_skel));
+
+          if (completed)
+            {
+              /* Avoid assertion */
+            }
+          else if (eb->switch_relpath)
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                        conflict_skel,
+                        db->adding_dir
+                            ? NULL
+                            : svn_wc_conflict_version_create2(
+                                            eb->repos_root,
+                                            eb->repos_uuid,
+                                            db->old_repos_relpath,
+                                            db->old_revision,
+                                            svn_node_dir,
+                                            scratch_pool),
+                        db->pool, db->pool));
+          else
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                        conflict_skel,
+                        db->adding_dir
+                            ? NULL
+                            : svn_wc_conflict_version_create2(
+                                            eb->repos_root,
+                                            eb->repos_uuid,
+                                            db->old_repos_relpath,
+                                            db->old_revision,
+                                            svn_node_dir,
+                                            scratch_pool),
+                        db->pool, db->pool));
+
+          SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                  eb->db, db->local_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool, scratch_pool));
+
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
+        }
+
       /* Update the BASE data for the directory and mark the directory
          complete */
       SVN_ERR(svn_wc__db_base_add_directory(
@@ -2934,7 +2941,7 @@ close_directory(void *dir_baton,
                 (dav_prop_changes->nelts > 0)
                     ? svn_prop_array_to_hash(dav_prop_changes, pool)
                     : NULL,
-                NULL /* conflict */,
+                conflict_skel,
                 (! db->shadowed) && new_base_props != NULL,
                 new_actual_props,
                 all_work_items,
@@ -2980,6 +2987,14 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));
+
+  if (conflict_skel && eb->conflict_func)
+    SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                             conflict_skel,
+                                             NULL /* merge_options */,
+                                             eb->conflict_func,
+                                             eb->conflict_baton,
+                                             scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
      it's an added or skipped directory, because notification has already
@@ -3156,7 +3171,7 @@ add_file(const char *path,
   apr_pool_t *scratch_pool;
   svn_boolean_t conflicted = FALSE;
   svn_boolean_t versioned_locally_and_present = FALSE;
-  svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_skel_t *tree_conflict = NULL;
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
@@ -3270,15 +3285,37 @@ add_file(const char *path,
 
       if (tree_conflict)
         {
+          svn_wc_conflict_reason_t reason;
           /* So this deletion wasn't just a deletion, it is actually a
-             replacement. Luckily we still have the conflict so we can
-             just update it. */
+             replacement. Let's install a better tree conflict. */
 
-          /* ### What else should we update? */
-          tree_conflict->action = svn_wc_conflict_action_replace;
+          /* ### Should store the conflict in DB to allow reinstalling
+             ### with theoretically more data in close_directory() */
 
-          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, fb->local_abspath,
-                                                  tree_conflict, pool));
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                      eb->db,
+                                                      fb->local_abspath,
+                                                      tree_conflict,
+                                                      fb->pool, fb->pool));
+
+          tree_conflict = svn_wc__conflict_skel_create(fb->pool);
+
+          SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                                        tree_conflict,
+                                        eb->db, fb->local_abspath,
+                                        reason, svn_wc_conflict_action_replace,
+                                        fb->pool, fb->pool));
+
+          /* Node does not pre-exist so no original location */
+          if (eb->switch_relpath)
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(tree_conflict, NULL,
+                                                        fb->pool, fb->pool));
+          else
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(tree_conflict, NULL,
+                                                        fb->pool, fb->pool));
+
+          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db, fb->local_abspath,
+                                              tree_conflict, NULL, fb->pool));
 
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
@@ -3369,8 +3406,7 @@ add_file(const char *path,
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
                                       status, wc_kind, FALSE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath, NULL,
+                                      svn_wc_conflict_action_add, NULL,
                                       scratch_pool, scratch_pool));
         }
 
@@ -3397,8 +3433,6 @@ add_file(const char *path,
                                        fb->local_abspath,
                                        svn_wc_conflict_reason_unversioned,
                                        svn_wc_conflict_action_add,
-                                       svn_node_file,
-                                       fb->new_relpath,
                                        scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
@@ -3417,10 +3451,10 @@ add_file(const char *path,
 
   if (tree_conflict != NULL)
     {
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                              fb->local_abspath,
-                                              tree_conflict,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
+                                          fb->local_abspath,
+                                          tree_conflict, NULL,
+                                          scratch_pool));
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_file,
@@ -3457,7 +3491,7 @@ open_file(const char *path,
   svn_boolean_t have_work;
   svn_wc__db_status_t status;
   svn_kind_t wc_kind;
-  svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_skel_t *tree_conflict = NULL;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -3493,8 +3527,9 @@ open_file(const char *path,
   /* Sanity check. */
 
   /* If replacing, make sure the .svn entry already exists. */
-  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision, NULL,
-                               NULL, NULL, &fb->changed_rev, &fb->changed_date,
+  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision,
+                               &fb->old_repos_relpath, NULL, NULL,
+                               &fb->changed_rev, &fb->changed_date,
                                &fb->changed_author, NULL,
                                &fb->original_checksum, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -3505,9 +3540,10 @@ open_file(const char *path,
 
   if (have_work)
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
-                                     NULL, NULL, NULL, &fb->changed_rev,
-                                     &fb->changed_date, &fb->changed_author,
-                                     NULL, &fb->original_checksum, NULL, NULL,
+                                     &fb->old_repos_relpath, NULL, NULL,
+                                     &fb->changed_rev, &fb->changed_date,
+                                     &fb->changed_author, NULL,
+                                     &fb->original_checksum, NULL, NULL,
                                      NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
@@ -3544,22 +3580,24 @@ open_file(const char *path,
   if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
-                                svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, fb->moved_to_abspath,
-                                fb->pool, scratch_pool));
+                                svn_wc_conflict_action_edit,
+                                fb->moved_to_abspath, fb->pool, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict != NULL)
     {
+      svn_wc_conflict_reason_t reason;
       fb->edit_conflict = tree_conflict;
-
       /* Other modifications wouldn't be a tree conflict */
-      SVN_ERR_ASSERT(
-                tree_conflict->reason == svn_wc_conflict_reason_deleted ||
-                tree_conflict->reason == svn_wc_conflict_reason_moved_away ||
-                tree_conflict->reason ==
-                  svn_wc_conflict_reason_moved_away_and_edited ||
-                tree_conflict->reason == svn_wc_conflict_reason_replaced);
+
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                  eb->db, fb->local_abspath,
+                                                  tree_conflict,
+                                                  fb->pool, fb->pool));
+      SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
+                     || reason == svn_wc_conflict_reason_moved_away
+                     || reason == svn_wc_conflict_reason_moved_away_and_edited
+                     || reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
       fb->shadowed = TRUE;
@@ -3746,6 +3784,7 @@ change_file_prop(void *file_baton,
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
+                           svn_skel_t **conflict_skel,
                            enum svn_wc_merge_outcome_t *merge_outcome,
                            svn_wc__db_t *db,
                            const char *local_abspath,
@@ -3758,8 +3797,6 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
-                           svn_wc_conflict_resolver_func2_t conflict_func,
-                           void *conflict_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
@@ -3827,17 +3864,17 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      Remember that this function wants full paths! */
   /* ### TODO: Pass version info here. */
   SVN_ERR(svn_wc__internal_merge(&work_item,
+                                 conflict_skel,
                                  merge_outcome,
                                  db,
-                                 merge_left, NULL,
-                                 new_text_base_tmp_abspath, NULL,
+                                 merge_left,
+                                 new_text_base_tmp_abspath,
                                  local_abspath,
                                  wri_abspath,
                                  oldrev_str, newrev_str, mine_str,
                                  actual_props,
                                  FALSE /* dry_run */,
                                  diff3_cmd, NULL, propchanges,
-                                 conflict_func, conflict_baton,
                                  cancel_func, cancel_baton,
                                  result_pool, scratch_pool));
 
@@ -3879,6 +3916,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
  */
 static svn_error_t *
 merge_file(svn_skel_t **work_items,
+           svn_skel_t **conflict_skel,
            svn_boolean_t *install_pristine,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
@@ -3980,6 +4018,7 @@ merge_file(svn_skel_t **work_items,
          Now we need to let loose svn_wc__merge_internal() to merge
          the textual changes into the working file. */
       SVN_ERR(svn_wc__perform_file_merge(work_items,
+                                         conflict_skel,
                                          &merge_outcome,
                                          eb->db,
                                          working_abspath,
@@ -3994,7 +4033,6 @@ merge_file(svn_skel_t **work_items,
                                          *eb->target_revision,
                                          fb->propchanges,
                                          eb->diff3_cmd,
-                                         eb->conflict_func, eb->conflict_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          result_pool, scratch_pool));
     } /* end: working file exists and has mods */
@@ -4108,6 +4146,7 @@ close_file(void *file_baton,
   apr_hash_t *current_actual_props = NULL;
   apr_hash_t *local_actual_props = NULL;
   svn_skel_t *all_work_items = NULL;
+  svn_skel_t *conflict_skel = NULL;
   svn_skel_t *work_item;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
@@ -4121,6 +4160,9 @@ close_file(void *file_baton,
       svn_pool_destroy(fb->pool);
       return SVN_NO_ERROR;
     }
+
+  if (fb->edited)
+    conflict_skel = fb->edit_conflict;
 
   if (expected_md5_digest)
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
@@ -4270,7 +4312,7 @@ close_file(void *file_baton,
 
       if (local_is_link != incoming_is_link)
         {
-          svn_wc_conflict_description2_t *tree_conflict = NULL;
+          svn_skel_t *tree_conflict = NULL;
 
           fb->shadowed = TRUE;
           fb->obstruction_found = TRUE;
@@ -4280,12 +4322,11 @@ close_file(void *file_baton,
                                        fb->local_abspath,
                                        svn_wc_conflict_reason_added,
                                        svn_wc_conflict_action_add,
-                                       svn_node_file, fb->new_relpath,
                                        scratch_pool, scratch_pool));
-          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                                  fb->local_abspath,
-                                                  tree_conflict,
-                                                  scratch_pool));
+          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
+                                              fb->local_abspath,
+                                              tree_conflict, NULL,
+                                              scratch_pool));
 
           fb->already_notified = TRUE;
           do_notification(eb, fb->local_abspath, svn_node_unknown,
@@ -4304,35 +4345,31 @@ close_file(void *file_baton,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR(svn_wc__merge_props(&work_item,
+      SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   working_abspath,
                                   svn_kind_file,
-                                  NULL /* left_version */,
-                                  NULL /* right_version */,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   current_base_props,
                                   current_actual_props,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  eb->conflict_func, eb->conflict_baton,
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge). */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
 
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
         {
           svn_error_t *err;
-          err = merge_file(&work_item, &install_pristine, &install_from,
+          err = merge_file(&work_item, &conflict_skel,
+                           &install_pristine, &install_from,
                            &content_state, fb, current_actual_props,
                            fb->changed_date, scratch_pool, scratch_pool);
 
@@ -4443,28 +4480,22 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props
          and create a set of new actual props to use for notifications */
-      SVN_ERR(svn_wc__merge_props(&work_item,
+      SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
                                   svn_kind_file,
-                                  NULL /* left_version */,
-                                  NULL /* right_version */,
                                   NULL /* server_baseprops (not merging) */,
                                   current_base_props /* pristine_props */,
                                   fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  NULL, NULL, /* No conflict handling */
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
-
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
 
       if (fb->new_text_base_sha1_checksum)
         content_state = svn_wc_notify_state_changed;
@@ -4484,6 +4515,52 @@ close_file(void *file_baton,
   if (new_checksum == NULL)
     new_checksum = fb->original_checksum;
 
+  if (conflict_skel)
+    {
+      svn_skel_t *work_item;
+      svn_boolean_t completed;
+
+      SVN_ERR(svn_wc__conflict_skel_is_complete(&completed,
+                                                    conflict_skel));
+
+      if (completed)
+        {
+          /* Avoid assertion */
+        }
+      else if (eb->switch_relpath)
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                    conflict_skel,
+                    fb->adding_file
+                      ? NULL
+                      : svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        fb->old_repos_relpath,
+                                                        fb->old_revision,
+                                                        svn_node_file,
+                                                        fb->pool),
+                    fb->pool, fb->pool));
+      else
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                    conflict_skel,
+                    fb->adding_file
+                      ? NULL
+                      : svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        fb->old_repos_relpath,
+                                                        fb->old_revision,
+                                                        svn_node_file,
+                                                        fb->pool),
+                    fb->pool, fb->pool));
+
+      SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                              eb->db, fb->local_abspath,
+                                              conflict_skel,
+                                              scratch_pool, scratch_pool));
+
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
+    }
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_relpath,
@@ -4499,7 +4576,7 @@ close_file(void *file_baton,
                                                       dav_prop_changes,
                                                       scratch_pool)
                                      : NULL,
-                                   NULL /* conflict */,
+                                   conflict_skel,
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
                                    keep_recorded_info,

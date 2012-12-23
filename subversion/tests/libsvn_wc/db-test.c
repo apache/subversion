@@ -1416,6 +1416,7 @@ test_externals_store(apr_pool_t *pool)
                                        FALSE, NULL,
                                        FALSE,
                                        NULL,
+                                       NULL,
                                        pool));
 
   SVN_ERR(svn_wc__db_external_add_dir(db,

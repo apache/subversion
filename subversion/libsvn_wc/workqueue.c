@@ -34,6 +34,7 @@
 #include "wc_db.h"
 #include "workqueue.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "translate.h"
 
 #include "svn_private_config.h"
@@ -1322,58 +1323,64 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
                                       scratch_pool, scratch_pool));
     }
 
-  return svn_error_trace(
-          svn_wc__db_temp_op_set_text_conflict_marker_files(db,
-                                                            local_abspath,
-                                                            old_abspath,
-                                                            new_abspath,
-                                                            wrk_abspath,
-                                                            scratch_pool));
-}
+  /* Upgrade scenario: We have a workqueue item that describes how to install a
+     non skel conflict. Fetch all the information we can to create a new style
+     conflict. */
+  /* ### Before format 30 this is/was a common code path as we didn't install
+     ### the conflict directly in the db. It just calls the wc_db code
+     ### to set the right fields. */
 
+  {
+    /* Check if we also have a property conflict... */
+    const apr_array_header_t *conflicts;
+    svn_skel_t *conflict_skel;
+    int i;
 
-svn_error_t *
-svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
-                                               svn_wc__db_t *db,
-                                               const char *local_abspath,
-                                               const char *old_abspath,
-                                               const char *new_abspath,
-                                               const char *wrk_abspath,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool)
-{
-  const char *local_relpath;
-  *work_item = svn_skel__make_empty_list(result_pool);
+    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                      scratch_pool, scratch_pool));
 
-  /* Abspaths in the workqueue won't work if the WC is moved. */
-  if (wrk_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  wrk_abspath, result_pool, scratch_pool));
+    if (conflicts)
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          svn_wc_conflict_description2_t *desc =
+                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
+          apr_hash_t *prop_names;
 
-  svn_skel__prepend_str(wrk_abspath ? local_relpath : "",
-                        *work_item, result_pool);
+          if (desc->kind != svn_wc_conflict_kind_property)
+            continue;
 
-  if (new_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  new_abspath, result_pool, scratch_pool));
-  svn_skel__prepend_str(new_abspath ? local_relpath : "",
-                        *work_item, result_pool);
+          prop_names = apr_hash_make(scratch_pool);
 
-  if (old_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  old_abspath, result_pool, scratch_pool));
-  svn_skel__prepend_str(old_abspath ? local_relpath : "",
-                        *work_item, result_pool);
+          /* Add the absolute minimal property conflict */
+          SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
+                                                          local_abspath,
+                                                          desc->their_abspath,
+                                                          NULL, NULL, NULL,
+                                                          prop_names,
+                                                          scratch_pool,
+                                                          scratch_pool));
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                local_abspath, result_pool, scratch_pool));
+          break;
+        }
 
-  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_TMP_SET_TEXT_CONFLICT_MARKERS, *work_item,
-                        result_pool);
+    SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_skel, db,
+                                                    local_abspath,
+                                                    wrk_abspath,
+                                                    old_abspath,
+                                                    new_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
 
+    /* ### Set some 'none' operation? */
+    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
+                                                scratch_pool,
+                                                scratch_pool));
+
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+                                        NULL, scratch_pool));
+  }
   return SVN_NO_ERROR;
 }
 
@@ -1409,40 +1416,57 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
                                     local_relpath,
                                     scratch_pool, scratch_pool));
 
-  return svn_error_trace(
-          svn_wc__db_temp_op_set_property_conflict_marker_file(db,
-                                                               local_abspath,
-                                                               prej_abspath,
-                                                               scratch_pool));
-}
+  {
+    /* Check if we also have a property conflict... */
+    const apr_array_header_t *conflicts;
+    svn_skel_t *conflict_skel;
+    int i;
+    apr_hash_t *prop_names;
 
-svn_error_t *
-svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
-                                                  svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *prej_abspath,
-                                                  apr_pool_t *result_pool,
-                                                  apr_pool_t *scratch_pool)
-{
-  const char *local_relpath;
-  *work_item = svn_skel__make_empty_list(result_pool);
+    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                      scratch_pool, scratch_pool));
 
-  if (prej_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  prej_abspath, result_pool, scratch_pool));
+    if (conflicts)
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          svn_wc_conflict_description2_t *desc =
+                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
 
-  svn_skel__prepend_str(prej_abspath ? local_relpath : "",
-                        *work_item, result_pool);
+          if (desc->kind != svn_wc_conflict_kind_text)
+            continue;
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                local_abspath, result_pool, scratch_pool));
+          /* Add the existing text conflict */
+          SVN_ERR(svn_wc__conflict_skel_add_text_conflict(
+                                                conflict_skel, db,
+                                                local_abspath,
+                                                desc->my_abspath,
+                                                desc->base_abspath,
+                                                desc->their_abspath,
+                                                scratch_pool,
+                                                scratch_pool));
 
-  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_TMP_SET_PROPERTY_CONFLICT_MARKER, *work_item,
-                        result_pool);
+          break;
+        }
 
+    prop_names = apr_hash_make(scratch_pool);
+    SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
+                                                    local_abspath,
+                                                    prej_abspath,
+                                                    NULL, NULL, NULL,
+                                                    prop_names,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+    /* ### Set some 'none' operation? */
+    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
+                                                scratch_pool,
+                                                scratch_pool));
+
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+                                        NULL, scratch_pool));
+  }
   return SVN_NO_ERROR;
 }
 

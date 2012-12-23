@@ -200,47 +200,6 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-
-/* ### Temporary helper to store text conflict marker locations as a wq
-   ### operation. Eventually the data must be stored in the pristine store+db
-   ### before the wq runs (within the operation transaction) and then a wq
-   ### operation will create the markers.
-
-   Set *WORK_ITEM to a new work item that sets the conflict marker values
-   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
-
-   Allocate the result in RESULT_POOL and perform temporary allocations
-   in SCRATCH_POOL
-*/
-svn_error_t *
-svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
-                                               svn_wc__db_t *db,
-                                               const char *local_abspath,
-                                               const char *old_abspath,
-                                               const char *new_abspath,
-                                               const char *wrk_abspath,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool);
-
-/* ### Temporary helper to store the property conflict marker location as a wq
-   ### operation. Eventually the data must be stored in the pristine store+db
-   ### before the wq runs (within the operation transaction) and then a wq
-   ### operation will create the marker.
-
-   Set *WORK_ITEM to a new work item that sets the conflict marker values
-   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
-
-   Allocate the result in RESULT_POOL and perform temporary allocations
-   in SCRATCH_POOL
-*/
-svn_error_t *
-svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
-                                                  svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *prej_abspath,
-                                                  apr_pool_t *result_pool,
-                                                  apr_pool_t *scratch_pool);
-
 /* Handle the final post-commit step of retranslating and recording the
    working copy state of a committed file.
 
