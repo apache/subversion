@@ -205,7 +205,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
 
   conflict1 = tree_conflict_create(child1_abspath, svn_node_file,
-                                   svn_wc_operation_update,
+                                   svn_wc_operation_merge,
                                    svn_wc_conflict_action_delete,
                                    svn_wc_conflict_reason_edited,
                                    "dummy://localhost", "path/to/foo",
@@ -224,9 +224,9 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
                                    52, svn_node_file,
                                    pool);
 
-  /* Write (conflict1 through WC-DB API, conflict2 through WC API) */
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(sbox.wc_ctx->db, child1_abspath,
-                                          conflict1, pool));
+  /* Write */
+  SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child1_abspath,*/
+                                    conflict1, pool));
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child2_abspath,*/
                                     conflict2, pool));
 
@@ -245,12 +245,12 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(! text_c && ! prop_c);
   }
 
-  /* Read one (conflict1 through WC-DB API, conflict2 through WC API) */
+  /* Read conflicts back */
   {
     const svn_wc_conflict_description2_t *read_conflict;
 
-    SVN_ERR(svn_wc__db_op_read_tree_conflict(&read_conflict, sbox.wc_ctx->db,
-                                             child1_abspath, pool, pool));
+    SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
+                                      child1_abspath, pool, pool));
     SVN_ERR(compare_conflict(conflict1, read_conflict));
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
@@ -258,32 +258,17 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
     SVN_ERR(compare_conflict(conflict2, read_conflict));
   }
 
-  /* Read many (both through WC-DB API, both through WC API) */
+  /* Read many */
   {
-    apr_hash_t *all_conflicts;
-    const svn_wc_conflict_description2_t *read_conflict;
+    const apr_array_header_t *victims;
 
-    SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(
-              &all_conflicts, sbox.wc_ctx->db, parent_abspath, pool, pool));
-    SVN_TEST_ASSERT(apr_hash_count(all_conflicts) == 2);
-    read_conflict = apr_hash_get(all_conflicts, "foo", APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
-    read_conflict = apr_hash_get(all_conflicts, "bar", APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
-
-    SVN_ERR(svn_wc__get_all_tree_conflicts(
-              &all_conflicts, sbox.wc_ctx, parent_abspath, pool, pool));
-    SVN_TEST_ASSERT(apr_hash_count(all_conflicts) == 2);
-    read_conflict = apr_hash_get(all_conflicts, child1_abspath,
-                                 APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
-    read_conflict = apr_hash_get(all_conflicts, child2_abspath,
-                                 APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
+    SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
+                                             sbox.wc_ctx->db, parent_abspath,
+                                             pool, pool));
+    SVN_TEST_ASSERT(victims->nelts == 2);
   }
 
   /* ### TODO: to test...
-   * svn_wc__db_read_conflict_victims
    * svn_wc__db_read_conflicts
    * svn_wc__node_get_conflict_info
    * svn_wc__del_tree_conflict
@@ -463,6 +448,36 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(locs != NULL && locs->nelts == 2);
     SVN_TEST_ASSERT(APR_ARRAY_IDX(locs, 0, svn_wc_conflict_version_t*) != NULL);
     SVN_TEST_ASSERT(APR_ARRAY_IDX(locs, 1, svn_wc_conflict_version_t*) != NULL);
+  }
+
+  {
+    const apr_array_header_t *markers;
+    const char *old_their_abspath;
+    const char *their_abspath;
+    const char *mine_abspath;
+
+    SVN_ERR(svn_wc__conflict_read_markers(&markers,
+                                          sbox.wc_ctx->db, sbox.wc_abspath,
+                                          conflict_skel, pool, pool));
+
+    SVN_TEST_ASSERT(markers != NULL);
+    SVN_TEST_ASSERT(markers->nelts == 3);
+
+    old_their_abspath = APR_ARRAY_IDX(markers, 0, const char *);
+    mine_abspath = APR_ARRAY_IDX(markers, 1, const char *);
+    their_abspath = APR_ARRAY_IDX(markers, 2, const char *);
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, mine_abspath),
+        "mine");
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, old_their_abspath),
+        "old-theirs");
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, their_abspath),
+        "theirs");
   }
 
   return SVN_NO_ERROR;

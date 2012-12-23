@@ -185,8 +185,6 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
-                svn_wc_conflict_resolver_func2_t conflict_func2,
-                void *conflict_baton2,
                 apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
@@ -376,7 +374,7 @@ update_internal(svn_revnum_t *result_rev,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    conflict_func2, conflict_baton2,
+                                    ctx->conflict_func2, ctx->conflict_baton2,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -467,8 +465,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
-                            svn_wc_conflict_resolver_func2_t conflict_func2,
-                            void *conflict_baton2,
                             apr_pool_t *pool)
 {
   const char *anchor_abspath, *lockroot_abspath;
@@ -518,8 +514,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
-                                FALSE, ctx, conflict_func2, conflict_baton2,
-                                pool);
+                                FALSE, ctx, pool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -543,7 +538,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
-                        TRUE, ctx, conflict_func2, conflict_baton2, pool);
+                        TRUE, ctx, pool);
  cleanup:
   err = svn_error_compose_create(
             err,
@@ -604,7 +599,6 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         make_parents,
                                         FALSE, &sleep,
                                         ctx,
-                                        NULL, NULL, /* postpone conflicts */
                                         iterpool);
 
       if (err)
@@ -629,44 +623,10 @@ svn_client_update4(apr_array_header_t **result_revs,
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
+  svn_pool_destroy(iterpool);
 
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
-
-  if (ctx->conflict_func2)
-    {
-      for (i = 0; i < paths->nelts; ++i)
-        {
-          svn_error_t *err = SVN_NO_ERROR;
-          const char *local_abspath;
-
-          svn_pool_clear(iterpool);
-          path = APR_ARRAY_IDX(paths, i, const char *);
-
-          /* Resolve conflicts within the updated subtree. */
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
-          err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath, depth,
-                                          TRUE /* resolve_text */,
-                                          "" /* resolve_prop (ALL props) */,
-                                          TRUE /* resolve_tree */,
-                                          svn_wc_conflict_choose_unspecified,
-                                          ctx->conflict_func2,
-                                          ctx->conflict_baton2,
-                                          ctx->cancel_func, ctx->cancel_baton,
-                                          ctx->notify_func2, ctx->notify_baton2,
-                                          iterpool);
-          if (err)
-            {
-              if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-                  && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
-                return svn_error_trace(err);
-
-              svn_error_clear(err);
-            }
-        }
-    }
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

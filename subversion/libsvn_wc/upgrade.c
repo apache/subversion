@@ -31,6 +31,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "entries.h"
 #include "wc_db.h"
 #include "tree_conflicts.h"
@@ -1364,6 +1365,202 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
+                                       svn_wc__db_t *db,
+                                       const char *wri_abspath,
+                                       const char *local_relpath,
+                                       const char *conflict_old,
+                                       const char *conflict_wrk,
+                                       const char *conflict_new,
+                                       const char *prej_file,
+                                       const char *tree_conflict_data,
+                                       apr_size_t tree_conflict_len,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict_data = NULL;
+  
+  if (conflict_old || conflict_new || conflict_wrk)
+    {
+      const char *old_abspath = NULL;
+      const char *new_abspath = NULL;
+      const char *wrk_abspath = NULL;
+
+      conflict_data = svn_wc__conflict_skel_create(result_pool);
+
+      if (conflict_old)
+        SVN_ERR(svn_wc__db_from_relpath(&old_abspath, db, wri_abspath,
+                                        conflict_old,
+                                        scratch_pool, scratch_pool));
+
+      if (conflict_new)
+        SVN_ERR(svn_wc__db_from_relpath(&new_abspath, db, wri_abspath,
+                                        conflict_new,
+                                        scratch_pool, scratch_pool));
+
+      if (conflict_wrk)
+        SVN_ERR(svn_wc__db_from_relpath(&wrk_abspath, db, wri_abspath,
+                                        conflict_wrk,
+                                        scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      wrk_abspath,
+                                                      old_abspath,
+                                                      new_abspath,
+                                                      scratch_pool,
+                                                      scratch_pool));
+    }
+
+  if (prej_file)
+    {
+      const char *prej_abspath;
+
+      if (!conflict_data)
+        conflict_data = svn_wc__conflict_skel_create(result_pool);
+
+      SVN_ERR(svn_wc__db_from_relpath(&prej_abspath, db, wri_abspath,
+                                      prej_file,
+                                      scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      prej_abspath,
+                                                      NULL, NULL, NULL,
+                                                apr_hash_make(scratch_pool),
+                                                      scratch_pool,
+                                                      scratch_pool));
+    }
+
+  if (tree_conflict_data)
+    {
+      svn_skel_t *tc_skel;
+      const svn_wc_conflict_description2_t *tc;
+      const char *local_abspath;
+
+      if (!conflict_data)
+        conflict_data = svn_wc__conflict_skel_create(scratch_pool);
+
+      tc_skel = svn_skel__parse(tree_conflict_data, tree_conflict_len,
+                                scratch_pool);
+
+      SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                      local_relpath,
+                                      scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__deserialize_conflict(&tc, tc_skel,
+                                           svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                           scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      tc->reason,
+                                                      tc->action,
+                                                      scratch_pool,
+                                                      scratch_pool));
+
+      switch (tc->operation)
+        {
+          case svn_wc_operation_update:
+          default:
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data,
+                                                       tc->src_left_version,
+                                                       scratch_pool,
+                                                       scratch_pool));
+            break;
+          case svn_wc_operation_switch:
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_data,
+                                                        tc->src_left_version,
+                                                        scratch_pool,
+                                                        scratch_pool));
+            break;
+          case svn_wc_operation_merge:
+            SVN_ERR(svn_wc__conflict_skel_set_op_merge(conflict_data,
+                                                       tc->src_left_version,
+                                                       tc->src_right_version,
+                                                       scratch_pool,
+                                                       scratch_pool));
+            break;
+        }
+    }
+  else if (conflict_data)
+    {
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data, NULL,
+                                                  scratch_pool,
+                                                  scratch_pool));
+    }
+
+  *conflicts = conflict_data;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct bump_baton *bb = baton;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__stmt_t *stmt_store;
+  svn_wc__db_t *db; /* Read only temp db */
+  const char *wri_abspath = bb->wcroot_abspath;
+
+  SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, FALSE,
+                          scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
+                                    STMT_UPGRADE_30_SET_CONFLICT));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      svn_stringbuf_t *skel_data;
+      svn_skel_t *conflict_data;
+      apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
+      const char *local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+      const char *conflict_old = svn_sqlite__column_text(stmt, 2, NULL);
+      const char *conflict_wrk = svn_sqlite__column_text(stmt, 3, NULL);
+      const char *conflict_new = svn_sqlite__column_text(stmt, 4, NULL);
+      const char *prop_reject = svn_sqlite__column_text(stmt, 5, NULL);
+      apr_size_t tree_conflict_size;
+      const char *tree_conflict_data = svn_sqlite__column_blob(stmt, 6,
+                                               &tree_conflict_size, NULL);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(&conflict_data,
+                                                     db, wri_abspath,
+                                                     local_relpath,
+                                                     conflict_old,
+                                                     conflict_wrk,
+                                                     conflict_new,
+                                                     prop_reject,
+                                                     tree_conflict_data,
+                                                     tree_conflict_size,
+                                                     iterpool, iterpool));
+
+      SVN_ERR_ASSERT(conflict_data != NULL);
+
+      skel_data = svn_skel__unparse(conflict_data, iterpool);
+
+      SVN_ERR(svn_sqlite__bindf(stmt_store, "isb", wc_id, local_relpath,
+                                skel_data->data, skel_data->len));
+      SVN_ERR(svn_sqlite__step_done(stmt_store));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_30));
+  SVN_ERR(svn_wc__db_close(db));
+  return SVN_NO_ERROR;
+}
+
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
@@ -1637,6 +1834,13 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 29;
         /* FALLTHROUGH  */
 
+#if SVN_WC__VERSION >= 30
+      case 29:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_30, &bb,
+                                             scratch_pool));
+        *result_format = 30;
+        /* FALLTHROUGH  */
+#endif
       /* ### future bumps go here.  */
 #if 0
       case XXX-1:

@@ -96,7 +96,7 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&key, txn_name);
   svn_fs_base__skel_to_dbt(&value, txn_skel, pool);
   svn_fs_base__trail_debug(trail, "transactions", "put");
-  return BDB_WRAP(fs, _("storing transaction record"),
+  return BDB_WRAP(fs, N_("storing transaction record"),
                   bfd->transactions->put(bfd->transactions, trail->db_txn,
                                          &key, &value, 0));
 }
@@ -120,7 +120,7 @@ allocate_txn_id(const char **id_p,
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs_base__trail_debug(trail, "transactions", "get");
-  SVN_ERR(BDB_WRAP(fs, "allocating new transaction ID (getting 'next-key')",
+  SVN_ERR(BDB_WRAP(fs, N_("allocating new transaction ID (getting 'next-key')"),
                    bfd->transactions->get(bfd->transactions, trail->db_txn,
                                           &query,
                                           svn_fs_base__result_dbt(&result),
@@ -139,7 +139,7 @@ allocate_txn_id(const char **id_p,
   db_err = bfd->transactions->put(bfd->transactions, trail->db_txn,
                                   &query, &result, 0);
 
-  return BDB_WRAP(fs, "bumping next transaction key", db_err);
+  return BDB_WRAP(fs, N_("bumping next transaction key"), db_err);
 }
 
 
@@ -185,7 +185,7 @@ svn_fs_bdb__delete_txn(svn_fs_t *fs,
   /* Delete the transaction from the `transactions' table. */
   svn_fs_base__str_to_dbt(&key, txn_name);
   svn_fs_base__trail_debug(trail, "transactions", "del");
-  return BDB_WRAP(fs, "deleting entry from 'transactions' table",
+  return BDB_WRAP(fs, N_("deleting entry from 'transactions' table"),
                   bfd->transactions->del(bfd->transactions,
                                          trail->db_txn, &key, 0));
 }
@@ -215,7 +215,7 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
 
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_txn(fs, txn_name);
-  SVN_ERR(BDB_WRAP(fs, "reading transaction", db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("reading transaction"), db_err));
 
   /* Parse TRANSACTION skel */
   skel = svn_skel__parse(value.data, value.size, pool);
@@ -248,7 +248,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
 
   /* Create a database cursor to list the transaction names. */
   svn_fs_base__trail_debug(trail, "transactions", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "reading transaction list (opening cursor)",
+  SVN_ERR(BDB_WRAP(fs, N_("reading transaction list (opening cursor)"),
                    bfd->transactions->cursor(bfd->transactions,
                                              trail->db_txn, &cursor, 0)));
 
@@ -311,10 +311,10 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
   db_c_err = svn_bdb_dbc_close(cursor);
   if (db_err != DB_NOTFOUND)
     {
-      SVN_ERR(BDB_WRAP(fs, "reading transaction list (listing keys)",
+      SVN_ERR(BDB_WRAP(fs, N_("reading transaction list (listing keys)"),
                        db_err));
     }
-  SVN_ERR(BDB_WRAP(fs, "reading transaction list (closing cursor)",
+  SVN_ERR(BDB_WRAP(fs, N_("reading transaction list (closing cursor)"),
                    db_c_err));
 
   /* Destroy the per-iteration subpool */

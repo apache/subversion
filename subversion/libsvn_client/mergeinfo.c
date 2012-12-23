@@ -1087,7 +1087,6 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     }
   else /* ! svn_path_is_url() */
     {
-      /* Acquire return values. */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
         mergeinfo_catalog, NULL, NULL, include_descendants, FALSE,
         ignore_invalid_mergeinfo, svn_mergeinfo_inherited,
@@ -2095,9 +2094,9 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
       mergeinfo = NULL;
     }
 
-  SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision,
-                                      &copyfrom_path, &copyfrom_rev,
-                                      ctx, pool));
+  SVN_ERR(svn_client__get_copy_source(&copyfrom_path, &copyfrom_rev,
+                                      path_or_url, peg_revision, ctx,
+                                      pool, pool));
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =

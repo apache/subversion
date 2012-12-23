@@ -1564,7 +1564,8 @@ svn_repos_has_capability(svn_repos_t *repos,
 
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
-      err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);
+      err = svn_fs_get_mergeinfo2(&ignored, root, paths, FALSE, FALSE,
+                                  TRUE, pool, pool);
 
       if (err)
         {

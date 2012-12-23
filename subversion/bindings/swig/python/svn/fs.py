@@ -115,7 +115,7 @@ class FileDiff:
           + [self.tempfile1, self.tempfile2]
 
     # open the pipe, and return the file object for reading from the child.
-    p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE,
+    p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                           close_fds=_sys.platform != "win32")
     return p.stdout
 

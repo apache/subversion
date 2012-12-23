@@ -237,7 +237,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    NULL, NULL, /* postpone conflicts */
+                                    ctx->conflict_func2, ctx->conflict_baton2,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -322,22 +322,6 @@ switch_internal(svn_revnum_t *result_rev,
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
     *result_rev = revnum;
-
-  if (ctx->conflict_func2)
-    {
-      /* Resolve conflicts within the switched target. */
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                        depth,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        ctx->conflict_func2,
-                                        ctx->conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        pool));
-    }
 
   return SVN_NO_ERROR;
 }

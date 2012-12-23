@@ -114,13 +114,27 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
 
 
 /* Set *WORK_ITEM to a new work item that will remove a single
-   file.  */
+   file LOCAL_ABSPATH from the working copy identified by the pair DB,
+   WRI_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
+                             const char *wri_abspath,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
+
+/* Set *WORK_ITEM to a new work item that will remove a single
+   directory or if RECURSIVE is TRUE a directory with all its
+   descendants.  */
+svn_error_t *
+svn_wc__wq_build_dir_remove(svn_skel_t **work_item,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const char *local_abspath,
+                            svn_boolean_t recursive,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *WORK_ITEM to a new work item that describes a move of
    a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
@@ -181,24 +195,6 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
-
-/* Set *WORK_ITEM to a new work item that will remove all the data of
-   the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
-   any WORKING_NODE data.
-
-   This function doesn't check for local modifications of the text files
-   as these would have triggered a tree conflict before.
-
-   ### This is only used from update_editor.c's do_entry_deletion().
- */
-svn_error_t *
-svn_wc__wq_build_base_remove(svn_skel_t **work_item,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             svn_revnum_t not_present_revision,
-                             svn_kind_t not_present_kind,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
 
 /* Handle the final post-commit step of retranslating and recording the
    working copy state of a committed file.

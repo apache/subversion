@@ -136,7 +136,7 @@ conflict__prepend_location(svn_skel_t *skel,
 /* Deserialize a svn_wc_conflict_version_t from the skel.
    Set *LOCATION to NULL when the data is not a svn_wc_conflict_version_t. */
 static svn_error_t *
-conflict__read_location(const svn_wc_conflict_version_t **location,
+conflict__read_location(svn_wc_conflict_version_t **location,
                         const svn_skel_t *skel,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -311,13 +311,11 @@ conflict__get_conflict(svn_skel_t **conflict,
                        const char *conflict_type)
 {
   svn_skel_t *c;
-  apr_size_t len;
+
   SVN_ERR_ASSERT(conflict_skel
                  && conflict_skel->children
                  && conflict_skel->children->next
                  && !conflict_skel->children->next->is_atom);
-
-  len = strlen(conflict_type);
 
   for(c = conflict_skel->children->next->children;
       c;
@@ -567,6 +565,91 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
+                              svn_skel_t *conflict_skel,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              svn_boolean_t resolve_text,
+                              const char *resolve_prop,
+                              svn_boolean_t resolve_tree,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_skel_t *op;
+  svn_skel_t **pconflict;
+  SVN_ERR(conflict__get_operation(&op, conflict_skel));
+
+  if (!op)
+    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                            _("Not a completed conflict skel"));
+
+  /* We are going to drop items from a linked list. Instead of keeping
+     a pointer to the item we want to drop we store a pointer to the
+     pointer of what we may drop, to allow setting it to the next item. */
+
+  pconflict = &(conflict_skel->children->next->children);
+  while (*pconflict)
+    {
+      svn_skel_t *c = (*pconflict)->children;
+
+      if (resolve_text
+          && svn_skel__matches_atom(c, SVN_WC__CONFLICT_KIND_TEXT))
+        {
+          /* Remove the text conflict from the linked list */
+          *pconflict = (*pconflict)->next;
+          continue;
+        }
+      else if (resolve_prop
+               && svn_skel__matches_atom(c, SVN_WC__CONFLICT_KIND_PROP))
+        {
+          svn_skel_t **ppropnames = &(c->next->next->children);
+
+          if (resolve_prop[0] == '\0')
+            *ppropnames = NULL; /* remove all conflicted property names */
+          else
+            while (*ppropnames)
+              {
+                if (svn_skel__matches_atom(*ppropnames, resolve_prop))
+                  {
+                    *ppropnames = (*ppropnames)->next;
+                    break;
+                  }
+                ppropnames = &((*ppropnames)->next);
+              }
+
+          /* If no conflicted property names left */
+          if (!c->next->next->children)
+            {
+              /* Remove the propery conflict skel from the linked list */
+             *pconflict = (*pconflict)->next;
+             continue;
+            }
+        }
+      else if (resolve_tree
+               && svn_skel__matches_atom(c, SVN_WC__CONFLICT_KIND_TREE))
+        {
+          /* Remove the tree conflict from the linked list */
+          *pconflict = (*pconflict)->next;
+          continue;
+        }
+
+      pconflict = &((*pconflict)->next);
+    }
+
+  if (completely_resolved)
+    {
+      /* Nice, we can just call the complete function */
+      svn_boolean_t complete_conflict;
+      SVN_ERR(svn_wc__conflict_skel_is_complete(&complete_conflict,
+                                                conflict_skel));
+
+      *completely_resolved = !complete_conflict;
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* A map for svn_wc_operation_t values. */
 static const svn_token_map_t operation_map[] =
@@ -872,6 +955,51 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__conflict_read_markers(const apr_array_header_t **markers,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *conflict;
+  apr_array_header_t *list = NULL;
+
+  SVN_ERR_ASSERT(conflict_skel != NULL);
+
+  /* Walk the conflicts */
+  for (conflict = conflict_skel->children->next->children;
+       conflict;
+       conflict = conflict->next)
+    {
+      const svn_skel_t *marker;
+
+      /* Get the list of markers stored per conflict */
+      for (marker = conflict->children->next->children;
+           marker;
+           marker = marker->next)
+        {
+          /* Skip placeholders */
+          if (! marker->is_atom)
+            continue;
+
+          if (! list)
+            list = apr_array_make(result_pool, 4, sizeof(const char *));
+
+          SVN_ERR(svn_wc__db_from_relpath(
+                        &APR_ARRAY_PUSH(list, const char*),
+                        db, wri_abspath,
+                        apr_pstrmemdup(scratch_pool, marker->data,
+                                       marker->len),
+                        result_pool, scratch_pool));
+        }
+    }
+  *markers = list;
+
+  return SVN_NO_ERROR;
+}
+
 /* --------------------------------------------------------------------
  */
 /* Helper for svn_wc__conflict_create_markers */
@@ -957,6 +1085,12 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
   if (prop_conflicted)
     {
+      const char *marker_abspath = NULL;
+      svn_node_kind_t kind;
+      const char *marker_dir;
+      const char *marker_name;
+      const char *marker_relpath;
+
       /* Ok, currently we have to do a few things for property conflicts:
          - Create a marker file
          - Create a WQ item that sets the marker name
@@ -964,41 +1098,23 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
          This can be simplified once we really store conflict_skel in wc.db */
 
-      const char *marker_abspath;
-      const char *marker_relpath;
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-      /* ### as the legacy code, check if we already have a prejfile.
-
-         ### Triggered by merge_tests.py 90 on a double property merge.
-         ### Needs further review as we will probably loose the original
-         ### conflict by overwriting. (Legacy issue)  */
-      SVN_ERR(svn_wc__get_prejfile_abspath(&marker_abspath, db, local_abspath,
-                                           scratch_pool, scratch_pool));
-
-      if (! marker_abspath)
+      if (kind == svn_node_dir)
         {
-          svn_node_kind_t kind;
-          const char *marker_dir;
-          const char *marker_name;
-
-          SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
-
-          if (kind == svn_node_dir)
-            {
-              marker_dir = local_abspath;
-              marker_name = SVN_WC__THIS_DIR_PREJ;
-            }
-          else
-            svn_dirent_split(&marker_dir, &marker_name, local_abspath,
-                             scratch_pool);
-
-          SVN_ERR(svn_io_open_uniquely_named(NULL, &marker_abspath,
-                                             marker_dir,
-                                             marker_name,
-                                             SVN_WC__PROP_REJ_EXT,
-                                             svn_io_file_del_none,
-                                             scratch_pool, scratch_pool));
+          marker_dir = local_abspath;
+          marker_name = SVN_WC__THIS_DIR_PREJ;
         }
+      else
+        svn_dirent_split(&marker_dir, &marker_name, local_abspath,
+                         scratch_pool);
+
+      SVN_ERR(svn_io_open_uniquely_named(NULL, &marker_abspath,
+                                         marker_dir,
+                                         marker_name,
+                                         SVN_WC__PROP_REJ_EXT,
+                                         svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_to_relpath(&marker_relpath, db, local_abspath,
                                     marker_abspath, result_pool, result_pool));
@@ -1491,7 +1607,7 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
     if (remove_source)
       {
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, install_from,
+                                             db, local_abspath, install_from,
                                              result_pool, scratch_pool));
         *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
       }
@@ -1787,9 +1903,177 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
         {
           SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath, TRUE, FALSE,
                                               FALSE, work_item, scratch_pool));
+          SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
         }
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict_skel;
+  apr_array_header_t *cflcts;
+  svn_boolean_t prop_conflicted;
+  svn_boolean_t text_conflicted;
+  svn_boolean_t tree_conflicted;
+  svn_wc_operation_t operation;
+  const apr_array_header_t *locations;
+
+  SVN_ERR(svn_wc__db_read_conflict(&conflict_skel, db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (!conflict_skel)
+    {
+      /* Some callers expect not NULL */
+      *conflicts = apr_array_make(result_pool, 0,
+                                  sizeof(svn_wc_conflict_description2_t*));;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__conflict_read_info(&operation, &locations, &text_conflicted,
+                                     &prop_conflicted, &tree_conflicted,
+                                     db, local_abspath, conflict_skel,
+                                     scratch_pool, scratch_pool));
+
+  cflcts = apr_array_make(result_pool, 4,
+                          sizeof(svn_wc_conflict_description2_t*));
+
+  if (prop_conflicted)
+    {
+      svn_wc_conflict_description2_t *desc;
+      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
+                                                       svn_node_unknown,
+                                                       "",
+                                                       result_pool);
+
+      SVN_ERR(svn_wc__conflict_read_prop_conflict(&desc->their_abspath,
+                                                  NULL, NULL,  NULL, NULL,
+                                                  db, local_abspath,
+                                                  conflict_skel,
+                                                  result_pool, scratch_pool));
+
+      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+    }
+
+  if (text_conflicted)
+    {
+      svn_wc_conflict_description2_t *desc;
+      desc  = svn_wc_conflict_description_create_text2(local_abspath,
+                                                       result_pool);
+
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&desc->my_abspath,
+                                                  &desc->base_abspath,
+                                                  &desc->their_abspath,
+                                                  db, local_abspath,
+                                                  conflict_skel,
+                                                  result_pool, scratch_pool));
+
+      desc->merged_file = apr_pstrdup(result_pool, local_abspath);
+
+      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+    }
+
+  if (tree_conflicted)
+    {
+      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_version_t *v1;
+      svn_wc_conflict_version_t *v2;
+      svn_node_kind_t tc_kind;
+      svn_wc_conflict_reason_t local_change;
+      svn_wc_conflict_action_t incoming_change;
+
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
+                                                  &incoming_change,
+                                                  db, local_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool, scratch_pool));
+
+      v1 = (locations && locations->nelts > 0)
+                    ? APR_ARRAY_IDX(locations, 0, svn_wc_conflict_version_t *)
+                    : NULL;
+
+      v2 = (locations && locations->nelts > 1)
+                    ? APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *)
+                    : NULL;
+
+      if (incoming_change != svn_wc_conflict_action_delete
+          && (operation == svn_wc_operation_update
+              || operation == svn_wc_operation_switch))
+        {
+          svn_wc__db_status_t status;
+          svn_revnum_t revision;
+          const char *repos_relpath;
+          const char *repos_root_url;
+          const char *repos_uuid;
+          svn_kind_t kind;
+          svn_error_t *err;
+
+          /* ### Theoretically we should just fetch the BASE information
+                 here. This code might need tweaks until all tree conflicts
+                 are installed in the proper state */
+
+          SVN_ERR_ASSERT(v2 == NULL); /* Not set for update and switch */
+
+          /* With an update or switch we have to fetch the second location
+             for a tree conflict from WORKING. (For text or prop from BASE)
+           */
+          err = svn_wc__db_base_get_info(&status, &kind, &revision,
+                                         &repos_relpath, &repos_root_url,
+                                         &repos_uuid, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool);
+
+          if (err)
+            {
+              if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                return svn_error_trace(err);
+
+              svn_error_clear(err);
+              /* Ignore BASE */
+
+              tc_kind = svn_node_file; /* Avoid assertion */
+            }
+          else if (repos_relpath)
+            {
+              v2 = svn_wc_conflict_version_create2(repos_root_url,
+                                                   repos_uuid,
+                                                   repos_relpath,
+                                                   revision,
+                                            svn__node_kind_from_kind(kind),
+                                                   scratch_pool);
+              tc_kind = svn__node_kind_from_kind(kind);
+            }
+          else
+            tc_kind = svn_node_file; /* Avoid assertion */
+        }
+      else
+        {
+          if (v1)
+            tc_kind = v1->node_kind;
+          else if (v2)
+            tc_kind = v2->node_kind;
+          else
+            tc_kind = svn_node_file; /* Avoid assertion */
+        }
+
+      desc  = svn_wc_conflict_description_create_tree2(local_abspath, tc_kind,
+                                                       operation, v1, v2,
+                                                       result_pool);
+
+      desc->reason = local_change;
+      desc->action = incoming_change;
+
+      APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description2_t *) = desc;
+    }
+
+  *conflicts = cflcts;
   return SVN_NO_ERROR;
 }
 
@@ -1820,42 +2104,42 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                          svn_wc_conflict_choice_t conflict_choice,
                          svn_cancel_func_t cancel_func_t,
                          void *cancel_baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  const char *conflict_old = NULL;
-  const char *conflict_new = NULL;
-  const char *conflict_working = NULL;
-  const char *prop_reject_file = NULL;
-  int i;
-  const apr_array_header_t *conflicts;
+  svn_skel_t *conflicts;
+  svn_boolean_t text_conflicted;
+  svn_boolean_t prop_conflicted;
+  svn_boolean_t tree_conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *work_item;
+  apr_pool_t *pool = scratch_pool;
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    pool, pool));
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
-  for (i = 0; i < conflicts->nelts; i++)
+  if (!conflicts)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,
+                                     &prop_conflicted, &tree_conflicted,
+                                     db, local_abspath, conflicts,
+                                     scratch_pool, scratch_pool));
+
+  if (resolve_text && text_conflicted)
     {
-      const svn_wc_conflict_description2_t *desc;
-
-      desc = APR_ARRAY_IDX(conflicts, i,
-                           const svn_wc_conflict_description2_t*);
-
-      if (desc->kind == svn_wc_conflict_kind_text)
-        {
-          conflict_old = desc->base_abspath;
-          conflict_new = desc->their_abspath;
-          conflict_working = desc->my_abspath;
-        }
-      else if (desc->kind == svn_wc_conflict_kind_property)
-        prop_reject_file = desc->their_abspath;
-    }
-
-  if (resolve_text)
-    {
+      const char *conflict_old = NULL;
+      const char *conflict_new = NULL;
+      const char *conflict_working = NULL;
       const char *auto_resolve_src;
+      svn_node_kind_t node_kind;
+
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&conflict_working,
+                                                  &conflict_old,
+                                                  &conflict_new,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
 
       /* Handle automatic conflict resolution before the temporary files are
        * deleted, if necessary. */
@@ -1927,11 +2211,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                     auto_resolve_src, local_abspath, pool, pool));
           work_items = svn_wc__wq_merge(work_items, work_item, pool);
         }
-    }
-
-  if (resolve_text)
-    {
-      svn_node_kind_t node_kind;
 
       /* Legacy behavior: Only report text conflicts as resolved when at least
          one conflict marker file exists.
@@ -1945,6 +2224,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_old,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -1958,6 +2238,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_new,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -1971,6 +2252,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    conflict_working,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -1978,9 +2260,16 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
             }
         }
     }
-  if (resolve_props)
+
+  if (resolve_props && prop_conflicted)
     {
       svn_node_kind_t node_kind;
+      const char *prop_reject_file;
+
+      SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
+                                                  NULL, NULL, NULL, NULL,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
 
       /* Legacy behavior: Only report property conflicts as resolved when the
          property reject file exists
@@ -1994,6 +2283,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           if (node_kind == svn_node_file)
             {
               SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   local_abspath,
                                                    prop_reject_file,
                                                    pool, pool));
               work_items = svn_wc__wq_merge(work_items, work_item, pool);
@@ -2075,8 +2365,8 @@ conflict_status_walker(void *baton,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, iterpool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                 scratch_pool, iterpool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {

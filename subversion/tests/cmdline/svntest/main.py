@@ -371,7 +371,7 @@ def _quote_arg(arg):
     # Quoting suitable for most Unix shells.
     return "'" + arg.replace("'", "'\\''") + "'"
 
-def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
+def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
   STDOUT, and STDERR.  BUFSIZE is passed to subprocess.Popen's
   argument of the same name.
@@ -444,7 +444,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
   BUFSIZE dictates the pipe buffer size used in communication with the
@@ -477,7 +477,7 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this

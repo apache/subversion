@@ -191,15 +191,19 @@ open_editor(svn_boolean_t *performed_edit,
                                          b->config, pool);
       if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
         {
+          svn_error_t *root_err = svn_error_root_cause(err);
+
           SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                      err->message ? err->message :
+                                      root_err->message ? root_err->message :
                                       _("No editor found.")));
           svn_error_clear(err);
         }
       else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
         {
+          svn_error_t *root_err = svn_error_root_cause(err);
+
           SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                      err->message ? err->message :
+                                      root_err->message ? root_err->message :
                                       _("Error running editor.")));
           svn_error_clear(err);
         }
@@ -241,14 +245,16 @@ launch_resolver(svn_boolean_t *performed_edit,
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                   err->message ? err->message :
-                                  _("No merge tool found.\n")));
+                                  _("No merge tool found, "
+                                    "try '(m) merge' instead.\n")));
       svn_error_clear(err);
     }
   else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                   err->message ? err->message :
-                             _("Error running merge tool.")));
+                             _("Error running merge tool, "
+                               "try '(m) merge' instead.")));
       svn_error_clear(err);
     }
   else if (err)
@@ -482,7 +488,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (diff_allowed)
             {
               prompt = apr_pstrcat(subpool, prompt,
-                                   _(", (df) diff-full, (e) edit"),
+                                   _(", (df) diff-full, (e) edit, (m) merge"),
                                    (char *)NULL);
 
               if (knows_something)
@@ -538,6 +544,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "\n"
                 "  (p)  postpone         - mark the conflict to be "
                                           "resolved later\n"
+                "  (m)  merge            - use internal merge tool to "
+                                          "resolve conflict\n"
                 "  (l)  launch           - launch external tool to "
                                           "resolve conflict\n"
                 "  (s)  show all         - show this list\n\n")));
@@ -656,6 +664,38 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
               if (performed_edit)
                 knows_something = TRUE;
+            }
+          else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-M") == 0)
+            {
+              if (desc->kind != svn_wc_conflict_kind_text)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; can only "
+                                                "resolve text conflicts with "
+                                                "the internal merge tool."
+                                                "\n\n")));
+                  continue;
+                }
+
+              if (desc->base_abspath && desc->their_abspath &&
+                  desc->my_abspath && desc->merged_file)
+                {
+                  svn_boolean_t remains_in_conflict;
+
+                  SVN_ERR(svn_cl__merge_file(desc->base_abspath,
+                                             desc->their_abspath,
+                                             desc->my_abspath,
+                                             desc->merged_file,
+                                             desc->local_abspath,
+                                             b->editor_cmd,
+                                             b->config,
+                                             &remains_in_conflict,
+                                             subpool));
+                  knows_something = !remains_in_conflict;
+                }
+              else
+                SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                            _("Invalid option.\n\n")));
             }
           else if (strcmp(answer, "l") == 0 || strcmp(answer, ":-l") == 0)
             {
@@ -812,5 +852,59 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
     }
 
   svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__resolve_conflicts(apr_array_header_t *targets,
+                          svn_depth_t depth,
+                          const svn_cl__opt_state_t *opt_state,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_error_t *err = SVN_NO_ERROR;
+      const char *local_abspath;
+      svn_wc_conflict_resolver_func2_t conflict_func2;
+      void *conflict_baton2;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+
+
+      /* Store old state */
+      conflict_func2 = ctx->conflict_func2;
+      conflict_baton2 = ctx->conflict_baton2;
+
+      /* Store interactive resolver */
+      ctx->conflict_func2 = opt_state->conflict_func;
+      ctx->conflict_baton2 = opt_state->conflict_baton;
+
+      err = svn_client_resolve(local_abspath, depth,
+                               svn_wc_conflict_choose_unspecified,
+                               ctx, iterpool);
+
+      /* Restore state */
+      ctx->conflict_func2 = conflict_func2;
+      ctx->conflict_baton2 = conflict_baton2;
+
+      if (err)
+        {
+          if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+              && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+        }
+    }
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }

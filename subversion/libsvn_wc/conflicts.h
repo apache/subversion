@@ -212,6 +212,42 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
+/* Allows resolving specific conflicts stored in CONFLICT_SKEL.
+
+   When RESOLVE_TEXT is TRUE and CONFLICT_SKEL contains a text conflict,
+   resolve/remove the text conflict in CONFLICT_SKEL.
+
+   When RESOLVE_PROP is "" and CONFLICT_SKEL contains a property conflict,
+   resolve/remove all property conflicts in CONFLICT_SKEL.
+
+   When RESOLVE_PROP is not NULL and not "", remove the property conflict on
+   the property RESOLVE_PROP in CONFLICT_SKEL. When RESOLVE_PROP was the last
+   property in CONFLICT_SKEL remove the property conflict info from
+   CONFLICT_SKEL.
+
+   When RESOLVE_TREE is TRUE and CONFLICT_SKEL contains a tree conflict,
+   resolve/remove the tree conflict in CONFLICT_SKEL.
+
+   If COMPLETELY_RESOLVED is not NULL, then set *COMPLETELY_RESOLVED to TRUE,
+   when no conflict registration is left in CONFLICT_SKEL after editting,
+   otherwise to FALSE.
+
+   Allocate data stored in the skel in RESULT_POOL.
+
+   This functions edits CONFLICT_SKEL. New skels might be created in
+   RESULT_POOL. Temporary allocations will use SCRATCH_POOL.
+ */
+/* ### db, wri_abspath is currently unused. Remove? */
+svn_error_t *
+svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
+                              svn_skel_t *conflict_skel,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              svn_boolean_t resolve_text,
+                              const char *resolve_prop,
+                              svn_boolean_t resolve_tree,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /*
  * -----------------------------------------------------------
@@ -301,6 +337,19 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
                                     const svn_skel_t *conflict_skel,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
+
+/* Reads in *MARKERS a list of const char * absolute paths of the marker files
+   referenced from CONFLICT_SKEL.
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__conflict_read_markers(const apr_array_header_t **markers,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Create the necessary marker files for the conflicts stored in
  * CONFLICT_SKEL and return the work items to fill the markers from

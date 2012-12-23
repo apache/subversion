@@ -87,39 +87,6 @@ append_prop_conflict(svn_stream_t *stream,
   return svn_stream_puts(stream, native_text);
 }
 
-
-/* Get the property reject file for LOCAL_ABSPATH in DB.  Set
-   *PREJFILE_ABSPATH to the name of that file, or to NULL if no such
-   file is named.  The file may, or may not, exist on disk. */
-svn_error_t *
-svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *conflicts;
-  int i;
-
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, scratch_pool));
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *cd;
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
-
-      if (cd->kind == svn_wc_conflict_kind_property)
-        {
-          *prejfile_abspath = apr_pstrdup(result_pool, cd->their_abspath);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *prejfile_abspath = NULL;
-  return SVN_NO_ERROR;
-}
-
 /*---------------------------------------------------------------------*/
 
 /*** Merging propchanges into the working copy ***/
@@ -237,6 +204,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   apr_hash_t *new_actual_props;
   svn_boolean_t had_props, props_mod;
   svn_boolean_t have_base;
+  svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
 
@@ -245,7 +213,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted, NULL,
                                &had_props, &props_mod, &have_base, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
@@ -269,6 +237,30 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                     _("The node '%s' does not have properties in this state."),
                     svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (conflicted)
+      {
+        svn_boolean_t text_conflicted;
+        svn_boolean_t prop_conflicted;
+        svn_boolean_t tree_conflicted;
+
+        SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
+                                              &prop_conflicted,
+                                              &tree_conflicted,
+                                              db, local_abspath,
+                                              scratch_pool));
+
+        /* We can't install two text/prop conflicts on a single node, so
+           avoid even checking that we have to merge it */
+        if (text_conflicted || prop_conflicted || tree_conflicted)
+          {
+            return svn_error_createf(
+                            SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                            _("Can't merge into conflicted node '%s'"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+          }
+        /* else: Conflict was resolved by removing markers */
+      }
 
   /* The PROPCHANGES may not have non-"normal" properties in it. If entry
      or wc props were allowed, then the following code would install them
@@ -641,7 +633,7 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
   if (!(original_is_binary || mine_is_binary || incoming_is_binary))
     {
       diff_opts = svn_diff_file_options_create(scratch_pool);
-      diff_opts->ignore_space = FALSE;
+      diff_opts->ignore_space = svn_diff_file_ignore_space_none;
       diff_opts->ignore_eol_style = FALSE;
       diff_opts->show_c_function = FALSE;
       SVN_ERR(svn_diff_mem_string_diff3(&diff, original, mine, incoming,
@@ -1236,7 +1228,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       svn_boolean_t conflict_remains;
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *base_val;
-      const svn_string_t *mine_val;
 
       svn_pool_clear(iterpool);
 
@@ -1255,9 +1246,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       if (base_merge)
         apr_hash_set(pristine_props, propname, APR_HASH_KEY_STRING, to_val);
-
-      /* Save MINE for later message generation.  */
-      mine_val = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
 
