@@ -988,7 +988,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *pathname = make_string_from_ob(key, pool);
-      const apr_array_header_t *ranges = svn_swig_py_seq_to_array(value,
+      const svn_rangelist_t *ranges = svn_swig_py_seq_to_array(value,
         sizeof(const svn_merge_range_t *),
         svn_swig_py_unwrap_struct_ptr,
         svn_swig_TypeQuery("svn_merge_range_t *"),
