@@ -2712,6 +2712,13 @@ main(int argc, const char *argv[])
                                                  we can change this. */
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
+  /* The new svn behavior is to postpone everything until after the operation
+     completed */
+  ctx->conflict_func = NULL;
+  ctx->conflict_baton = NULL;
+  ctx->conflict_func2 = NULL;
+  ctx->conflict_baton2 = NULL;
+
   if ((opt_state.accept_which == svn_cl__accept_unspecified
        && (!interactive_conflicts || opt_state.non_interactive))
       || opt_state.accept_which == svn_cl__accept_postpone)
@@ -2719,10 +2726,8 @@ main(int argc, const char *argv[])
       /* If no --accept option at all and we're non-interactive, we're
          leaving the conflicts behind, so don't need the callback.  Same if
          the user said to postpone. */
-      ctx->conflict_func = NULL;
-      ctx->conflict_baton = NULL;
-      ctx->conflict_func2 = NULL;
-      ctx->conflict_baton2 = NULL;
+      opt_state.conflict_func = NULL;
+      opt_state.conflict_baton = NULL;
     }
   else
     {
@@ -2748,16 +2753,14 @@ main(int argc, const char *argv[])
                pool, "svn: ");
         }
 
-      ctx->conflict_func = NULL;
-      ctx->conflict_baton = NULL;
-      ctx->conflict_func2 = svn_cl__conflict_handler;
+      opt_state.conflict_func = svn_cl__conflict_handler;
       SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
                                               opt_state.accept_which,
                                               ctx->config,
                                               opt_state.editor_cmd,
                                               pb,
                                               pool));
-      ctx->conflict_baton2 = conflict_baton2;
+      opt_state.conflict_baton = conflict_baton2;
     }
 
   /* And now we finally run the subcommand. */

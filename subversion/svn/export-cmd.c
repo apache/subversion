@@ -114,9 +114,15 @@ svn_cl__export(apr_getopt_t *os,
                 "the directory or use --force to overwrite"));
 
   if (nwb.had_externals_error)
-    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
-                            _("Failure occurred processing one or more "
-                              "externals definitions"));
+    {
+      svn_error_t *externals_err;
+
+      externals_err = svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+                                       NULL,
+                                       _("Failure occurred processing one or "
+                                         "more externals definitions"));
+      return svn_error_compose_create(externals_err, err);
+    }
 
   return svn_error_trace(err);
 }

@@ -87,16 +87,18 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                 const svn_opt_revision_t *revision,
                                 apr_pool_t *scratch_pool);
 
-/* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
-   and revision that served as the source of the copy from which PATH_OR_URL
-   at REVISION was created, or NULL and SVN_INVALID_REVNUM (respectively) if
-   PATH_OR_URL at REVISION was not the result of a copy operation. */
-svn_error_t *svn_client__get_copy_source(const char *path_or_url,
-                                         const svn_opt_revision_t *revision,
-                                         const char **copyfrom_path,
-                                         svn_revnum_t *copyfrom_rev,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *pool);
+/* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
+   that served as the source of the copy from which PATH_OR_URL at REVISION was
+   created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
+   REVISION was not the result of a copy operation. */
+svn_error_t *
+svn_client__get_copy_source(const char **original_repos_relpath,
+                            svn_revnum_t *original_revision,
+                            const char *path_or_url,
+                            const svn_opt_revision_t *revision,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one
@@ -461,10 +463,6 @@ svn_client__make_local_parents(const char *path,
    target which are missing from the working copy.
 
    NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
-
-   Use CONFLICT_FUNC2 and CONFLICT_BATON2 instead of CTX->CONFLICT_FUNC2
-   and CTX->CONFLICT_BATON2. If CONFLICT_FUNC2 is NULL, postpone all conflicts
-   allowing the caller to perform post-update conflict resolution.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
@@ -479,8 +477,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
-                            svn_wc_conflict_resolver_func2_t conflict_func2,
-                            void *conflict_baton2,
                             apr_pool_t *pool);
 
 /* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
@@ -966,32 +962,6 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_client_status_func_t status_func,
                                void *status_baton,
                                apr_pool_t *pool);
-
-/* Baton type for svn_wc__external_info_gatherer(). */
-typedef struct svn_client__external_func_baton_t
-{
-  apr_hash_t *externals_old;  /* Hash of old externals property values,
-                                 or NULL if the caller doesn't care. */
-  apr_hash_t *externals_new;  /* Hash of new externals property values,
-                                 or NULL if the caller doesn't care. */
-  apr_hash_t *ambient_depths; /* Hash of ambient depth values, or NULL
-                                 if the caller doesn't care. */
-  apr_pool_t *result_pool;    /* Pool to use for all stored values. */
-
-} svn_client__external_func_baton_t;
-
-
-/* This function gets invoked whenever external changes are encountered.
-   This implements the `svn_wc_external_update_t' interface, and can
-   be used with an svn_client__external_func_baton_t BATON to gather
-   information about changes to externals definitions. */
-svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool);
 
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t

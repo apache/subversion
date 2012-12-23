@@ -26,6 +26,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
     * new --search and --isearch options for 'svn log' (r1354666, -830)
+    * new built-in interactive text conflict merge tool (r1357864, et al)
 
   - Client-side bugfixes:
     *
@@ -45,6 +46,41 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Bindings:
     *
+
+
+Version 1.7.6
+(XX YYY 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.6
+
+ User-visible changes:
+  - Client- and server-side bugfixes:
+
+  - Client-side bugfixes:
+    * Fix "svn status -u --depth empty FILE" (r1348822, r1349215)
+    * Fix example output of 'svn help status' (issue #3962)
+    * svn propset of svn:eol-style might not notice related text changes (r1353572)
+    * sort output of 'svn propget -R' (r1355699)
+    * sort output of 'svn proplist' (r1355698)
+    * sort output of 'svn status' (r1341012)
+    * avoid a filestat per working copy find operation (r1340556)
+    * optimize 'svn upgrade' performance on large working copies (r1342984)
+    * allow 'file:///C:\repos' style arguments on Windows, like 1.6 (r1346765)
+    * fix ra_serf against Subversion 1.2 servers (r1349367)
+    * fix 'svn upgrade' on working copies with certain tree conflicts (r1345482)
+
+  - Server-side bugfixes:
+    * partial sync drops properties when converting to adds (issue #4184)
+    * replaying a copy and delete of an unreadable child fails (issue #4121)
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+    * fix running tests against httpd 2.4 (r1291594)
+
+  - Bindings:
+    * JavaHL: Don't assert on some invalid input (r1354626, r1354652)
+    * JavaHL: Add missing new in 1.7 notifications (r1351772)
 
 
 Version 1.7.5

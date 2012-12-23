@@ -228,6 +228,9 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
 /* Remove the external at LOCAL_ABSPATH from the working copy identified by
    WRI_ABSPATH using WC_CTX.
 
+   If DECLARATION_ONLY is TRUE, only remove the registration and leave the
+   on-disk structure untouched.
+
    If not NULL, call CANCEL_FUNC with CANCEL_BATON to allow canceling while
    removing the working copy files.
 
@@ -237,6 +240,7 @@ svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         const char *wri_abspath,
                         const char *local_abspath,
+                        svn_boolean_t declaration_only,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool);
@@ -304,20 +308,6 @@ svn_error_t *
 svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
-
-
-/* Return a hash @a *tree_conflicts of all the children of @a
- * local_abspath that are in tree conflicts.  The hash maps local
- * abspaths to pointers to svn_wc_conflict_description2_t, all
- * allocated in result pool.
- */
-svn_error_t *
-svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
 
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
@@ -740,27 +730,6 @@ svn_wc__node_get_lock_info(const char **lock_token,
                            const char *local_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
-/**
- * A hack to remove the last entry from libsvn_client.  This simply fetches an
- * some values from WC-NG, and puts the needed bits into the output parameters,
- * allocated in @a result_pool.
- *
- * All output arguments can be NULL to indicate that the
- * caller is not interested in the specific result.
- *
- * @a local_abspath and @a wc_ctx are what you think they are.
- */
-svn_error_t *
-svn_wc__node_get_conflict_info(const char **conflict_old,
-                               const char **conflict_new,
-                               const char **conflict_wrk,
-                               const char **prejfile,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
 
 /**
  * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor

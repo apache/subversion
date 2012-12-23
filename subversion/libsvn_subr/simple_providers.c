@@ -202,9 +202,7 @@ svn_auth__simple_creds_cache_get(void **credentials,
             }
           else
             {
-              if (0 == strcmp(default_username, username))
-                need_to_save = FALSE;
-              else
+              if (strcmp(default_username, username) != 0)
                 need_to_save = TRUE;
             }
         }
@@ -226,9 +224,7 @@ svn_auth__simple_creds_cache_get(void **credentials,
                 }
               else
                 {
-                  if (0 == strcmp(default_password, password))
-                    need_to_save = FALSE;
-                  else
+                  if (strcmp(default_password, password) != 0)
                     need_to_save = TRUE;
                 }
             }

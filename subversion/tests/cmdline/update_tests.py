@@ -3916,10 +3916,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (mu_path_backup),
                                       'C    %s\n' % (mu_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (mu_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (mu_path_backup)],
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3930,10 +3930,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (alpha_path_backup),
                                       'C    %s\n' % (alpha_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (alpha_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (alpha_path_backup)],
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3944,10 +3944,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (beta_path_backup),
                                       'C    %s\n' % (beta_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (beta_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (beta_path_backup)],
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3960,10 +3960,10 @@ def update_accept_conflicts(sbox):
                                       ["Updating '%s':\n" % (pi_path_backup),
                                        'C    %s\n' % (pi_path_backup,),
                                        'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (pi_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (pi_path_backup)],
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       pi_path_backup)
@@ -5520,6 +5520,7 @@ def update_to_HEAD_plus_1(sbox):
                                         None, None,
                                         None, None, None, wc_dir, '-r', '2')
 
+@XFail()
 def update_moved_dir_leaf_del(sbox):
   "update locally moved dir with leaf del"
   sbox.build()
@@ -5554,6 +5555,7 @@ def update_moved_dir_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_edited_leaf_del(sbox):
   "update locally moved dir with edited leaf del"
   sbox.build()
@@ -5592,6 +5594,7 @@ def update_moved_dir_edited_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_file_add(sbox):
   "update locally moved dir with incoming file"
   sbox.build()
@@ -5634,6 +5637,7 @@ def update_moved_dir_file_add(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
 def update_moved_dir_dir_add(sbox):
   "update locally moved dir with incoming dir"
   sbox.build()

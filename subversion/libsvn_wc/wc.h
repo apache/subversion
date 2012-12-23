@@ -564,7 +564,6 @@ svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
-                                              svn_boolean_t instant_error,
                                               svn_cancel_func_t cancel_func,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
@@ -653,6 +652,20 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool);
 
+/* Create a conflict skel from the old separated data */
+svn_error_t *
+svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
+                                       svn_wc__db_t *db,
+                                       const char *wri_abspath,
+                                       const char *local_relpath,
+                                       const char *conflict_old,
+                                       const char *conflict_wrk,
+                                       const char *conflict_new,
+                                       const char *prej_file,
+                                       const char *tree_conflict_data,
+                                       apr_size_t tree_conflict_len,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__wipe_postupgrade(const char *dir_abspath,
@@ -689,6 +702,22 @@ svn_error_t *
 svn_wc__write_check(svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
+
+/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
+ * for all conflicts that have LOCAL_ABSPATH as victim.
+ *
+ * Victim must be versioned or be part of a tree conflict.
+ *
+ * Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
+ * SCRATCH_POOL
+ */
+svn_error_t *
+svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 
 /* Perform the actual merge of file changes between an original file,
    identified by ORIGINAL_CHECKSUM (an empty file if NULL) to a new file

@@ -2915,7 +2915,33 @@ def commit_danglers(sbox):
                                         expected_error,
                                         wc_dir, '--cl', 'L')
 
+#----------------------------------------------------------------------
+# Test for issue 4203: Commit of moved dir with modified file in
+# dir/subdir should bump LastChangedRev of subdir in originating WC
+@XFail()
+@Issue(4203)
+def commit_moved_dir_with_nested_mod_in_subdir(sbox):
+  "commit of moved dir with nested mod in subdir"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move('A/B','A/B_copied')
+
+  B_copied = sbox.ospath('A/B_copied')
+  E_copied = sbox.ospath('A/B_copied/E')
+  alpha_copied = sbox.ospath('A/B_copied/E/alpha')
+
+  svntest.main.file_write(alpha_copied, "xxxx") 
+  
+  svntest.main.run_svn(None, 'commit', wc_dir, '-mm')
+
+  expected = {'Revision'          : '2',
+              'Last Changed Rev'  : '2',
+             }
+  svntest.actions.run_and_verify_info([expected], E_copied)
+  
+  
 ########################################################################
 # Run the tests
 
@@ -2986,6 +3012,7 @@ test_list = [ None,
               commit_incomplete,
               commit_add_subadd,
               commit_danglers,
+              commit_moved_dir_with_nested_mod_in_subdir,
              ]
 
 if __name__ == '__main__':

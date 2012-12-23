@@ -185,7 +185,7 @@ try_utf8_from_internal_style(const char *path, apr_pool_t *pool)
   /* Special case. */
   if (path == NULL)
     return "(NULL)";
-  
+
   /* (try to) convert PATH to UTF-8. If that fails, continue with the plain
    * PATH because it is the best we have. It may actually be UTF-8 already.
    */
@@ -1311,6 +1311,43 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
 
 
 svn_error_t *
+svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
+                                   svn_boolean_t *different_p23,
+                                   svn_boolean_t *different_p13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_finfo_t finfo1, finfo2, finfo3;
+  apr_status_t status1, status2, status3;
+  const char *file1_apr, *file2_apr, *file3_apr;
+
+  /* Not using svn_io_stat() because don't want to generate
+     svn_error_t objects for non-error conditions. */
+
+  SVN_ERR(cstring_from_utf8(&file1_apr, file1, scratch_pool));
+  SVN_ERR(cstring_from_utf8(&file2_apr, file2, scratch_pool));
+  SVN_ERR(cstring_from_utf8(&file3_apr, file3, scratch_pool));
+
+  /* Stat all three files */
+  status1 = apr_stat(&finfo1, file1_apr, APR_FINFO_MIN, scratch_pool);
+  status2 = apr_stat(&finfo2, file2_apr, APR_FINFO_MIN, scratch_pool);
+  status3 = apr_stat(&finfo3, file3_apr, APR_FINFO_MIN, scratch_pool);
+
+  /* If we got an error stat'ing a file, it could be because the
+     file was removed... or who knows.  Whatever the case, we
+     don't know if the filesizes are definitely different, so
+     assume that they're not. */
+  *different_p12 = !status1 && !status2 && finfo1.size != finfo2.size;
+  *different_p23 = !status2 && !status3 && finfo2.size != finfo3.size;
+  *different_p13 = !status1 && !status3 && finfo1.size != finfo3.size;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_io_file_checksum2(svn_checksum_t **checksum,
                       const char *file,
                       svn_checksum_kind_t kind,
@@ -1994,7 +2031,7 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
                               try_utf8_from_internal_style(fname, pool));
-  
+
 /* On Windows and OS/2 file locks are automatically released when
    the file handle closes */
 #if !defined(WIN32) && !defined(__OS2__)
@@ -4076,6 +4113,138 @@ contents_identical_p(svn_boolean_t *identical_p,
 
 
 
+/* Do a byte-for-byte comparison of FILE1, FILE2 and FILE3. */
+static svn_error_t *
+contents_three_identical_p(svn_boolean_t *identical_p12,
+                           svn_boolean_t *identical_p23,
+                           svn_boolean_t *identical_p13,
+                           const char *file1,
+                           const char *file2,
+                           const char *file3,
+                           apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  apr_size_t bytes_read1, bytes_read2, bytes_read3;
+  char *buf1 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf2 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf3 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  apr_file_t *file1_h;
+  apr_file_t *file2_h;
+  apr_file_t *file3_h;
+  svn_boolean_t eof1 = FALSE;
+  svn_boolean_t eof2 = FALSE;
+  svn_boolean_t eof3 = FALSE;
+  svn_boolean_t read_1, read_2, read_3;
+
+  SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
+                           scratch_pool));
+
+  err = svn_io_file_open(&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                         scratch_pool);
+
+  if (err)
+    return svn_error_trace(
+               svn_error_compose_create(err,
+                                        svn_io_file_close(file1_h, scratch_pool)));
+
+  err = svn_io_file_open(&file3_h, file3, APR_READ, APR_OS_DEFAULT,
+                         scratch_pool);
+
+  if (err)
+      return svn_error_trace(
+               svn_error_compose_create(
+                    err,
+                    svn_error_compose_create(svn_io_file_close(file1_h,
+                                                          scratch_pool),
+                                             svn_io_file_close(file2_h,
+                                                          scratch_pool))));
+
+  /* assume TRUE, until disproved below */
+  *identical_p12 = *identical_p23 = *identical_p13 = TRUE;
+  /* We need to read as long as no error occurs, and as long as one of the
+   * flags could still change due to a read operation */
+  while (!err
+        && ((*identical_p12 && !eof1 && !eof2)
+            || (*identical_p23 && !eof2 && !eof3)
+            || (*identical_p13 && !eof1 && !eof3)))
+    {
+      read_1 = read_2 = read_3 = FALSE;
+
+      /* As long as a file is not at the end yet, and it is still
+       * potentially identical to another file, we read the next chunk.*/
+      if (!eof1 && (identical_p12 || identical_p13))
+        {
+          err = svn_io_file_read_full2(file1_h, buf1,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1,
+                                   &eof1, scratch_pool);
+          if (err)
+              break;
+          read_1 = TRUE;
+        }
+
+      if (!eof2 && (identical_p12 || identical_p23))
+        {
+          err = svn_io_file_read_full2(file2_h, buf2,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2,
+                                   &eof2, scratch_pool);
+          if (err)
+              break;
+          read_2 = TRUE;
+        }
+
+      if (!eof3 && (identical_p13 || identical_p23))
+        {
+          err = svn_io_file_read_full2(file3_h, buf3,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read3,
+                                   &eof3, scratch_pool);
+          if (err)
+              break;
+          read_3 = TRUE;
+        }
+
+      /* If the files are still marked identical, and at least one of them
+       * is not at the end of file, we check whether they differ, and set
+       * their flag to false then. */
+      if (*identical_p12
+          && (read_1 || read_2)
+          && ((eof1 != eof2)
+              || (bytes_read1 != bytes_read2)
+              || memcmp(buf1, buf2, bytes_read1)))
+        {
+          *identical_p12 = FALSE;
+        }
+
+      if (*identical_p23
+          && (read_2 || read_3)
+          && ((eof2 != eof3)
+              || (bytes_read2 != bytes_read3)
+              || memcmp(buf2, buf3, bytes_read2)))
+        {
+          *identical_p23 = FALSE;
+        }
+
+      if (*identical_p13
+          && (read_1 || read_3)
+          && ((eof1 != eof3)
+              || (bytes_read1 != bytes_read3)
+              || memcmp(buf1, buf3, bytes_read3)))
+        {
+          *identical_p13 = FALSE;
+        }
+    }
+
+  return svn_error_trace(
+           svn_error_compose_create(
+                err,
+                svn_error_compose_create(
+                    svn_io_file_close(file1_h, scratch_pool),
+                    svn_error_compose_create(
+                        svn_io_file_close(file2_h, scratch_pool),
+                        svn_io_file_close(file3_h, scratch_pool)))));
+}
+
+
+
 svn_error_t *
 svn_io_files_contents_same_p(svn_boolean_t *same,
                              const char *file1,
@@ -4098,6 +4267,55 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
     *same = TRUE;
   else
     *same = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_files_contents_three_same_p(svn_boolean_t *same12,
+                                   svn_boolean_t *same23,
+                                   svn_boolean_t *same13,
+                                   const char *file1,
+                                   const char *file2,
+                                   const char *file3,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_boolean_t diff_size12, diff_size23, diff_size13;
+
+  SVN_ERR(svn_io_filesizes_three_different_p(&diff_size12,
+                                             &diff_size23,
+                                             &diff_size13,
+                                             file1,
+                                             file2,
+                                             file3,
+                                             scratch_pool));
+
+  if (diff_size12 && diff_size23 && diff_size13)
+    {
+      *same12 = *same23 = *same13 = FALSE;
+    }
+  else if (diff_size12 && diff_size23)
+    {
+      *same12 = *same23 = FALSE;
+      SVN_ERR(contents_identical_p(same13, file1, file3, scratch_pool));
+    }
+  else if (diff_size23 && diff_size13)
+    {
+      *same23 = *same13 = FALSE;
+      SVN_ERR(contents_identical_p(same12, file1, file2, scratch_pool));
+    }
+  else if (diff_size12 && diff_size13)
+    {
+      *same12 = *same13 = FALSE;
+      SVN_ERR(contents_identical_p(same23, file2, file3, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR_ASSERT(!diff_size12 && !diff_size23 && !diff_size13);
+      SVN_ERR(contents_three_identical_p(same12, same23, same13,
+                                         file1, file2, file3,
+                                         scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4348,6 +4566,89 @@ svn_io_open_unique_file3(apr_file_t **file,
 
   if (baton)
     SVN_ERR(cstring_from_utf8(&baton->fname_apr, tempname, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_file_readline(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char **eol,
+                     svn_boolean_t *eof,
+                     apr_size_t max_len,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *str;
+  const char *eol_str;
+  apr_size_t numbytes;
+  char c;
+  apr_size_t len;
+  svn_boolean_t found_eof;
+
+  str = svn_stringbuf_create_ensure(80, result_pool);
+
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  eol_str = NULL;
+  numbytes = 1;
+  len = 0;
+  found_eof = FALSE;
+  while (!found_eof)
+    {
+      if (len < max_len)
+        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                       &found_eof, scratch_pool));
+      len++;
+      if (numbytes != 1 || len > max_len)
+        {
+          found_eof = TRUE;
+          break;
+        }
+
+      if (c == '\n')
+        {
+          eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          eol_str = "\r";
+
+          if (!found_eof && len < max_len)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n')
+                {
+                  eol_str = "\r\n";
+                  len++;
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (eol_str)
+        break;
+    }
+
+  if (eol)
+    *eol = eol_str;
+  if (eof)
+    *eof = found_eof;
+  *stringbuf = str;
 
   return SVN_NO_ERROR;
 }
