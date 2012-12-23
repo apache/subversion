@@ -30,7 +30,9 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "low_level.h"
-
+#include "util.h"
+#include "pack.h"
+#include "cached_data.h"
 
 /* The 256 is an arbitrary size large enough to hold the node id and the
  * various flags. */
@@ -1003,3 +1005,143 @@ write_changed_path_info(svn_stream_t *stream,
 
   return SVN_NO_ERROR;
 }
+
+/* Given an open revision file REV_FILE in FS for REV, locate the trailer that
+   specifies the offset to the root node-id and to the changed path
+   information.  Store the root node offset in *ROOT_OFFSET and the
+   changed path offset in *CHANGES_OFFSET.  If either of these
+   pointers is NULL, do nothing with it.
+
+   If PACKED is true, REV_FILE should be a packed shard file.
+   ### There is currently no such parameter.  This function assumes that
+       is_packed_rev(FS, REV) will indicate whether REV_FILE is a packed
+       file.  Therefore FS->fsap_data->min_unpacked_rev must not have been
+       refreshed since REV_FILE was opened if there is a possibility that
+       revision REV may have become packed since then.
+       TODO: Take an IS_PACKED parameter instead, in order to remove this
+       requirement.
+
+   Allocate temporary variables from POOL. */
+svn_error_t *
+get_root_changes_offset(apr_off_t *root_offset,
+                        apr_off_t *changes_offset,
+                        apr_file_t *rev_file,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_off_t offset;
+  apr_off_t rev_offset;
+  char buf[64];
+  int i, num_bytes;
+  const char *str;
+  apr_size_t len;
+  apr_seek_where_t seek_relative;
+
+  /* Determine where to seek to in the file.
+
+     If we've got a pack file, we want to seek to the end of the desired
+     revision.  But we don't track that, so we seek to the beginning of the
+     next revision.
+
+     Unless the next revision is in a different file, in which case, we can
+     just seek to the end of the pack file -- just like we do in the
+     non-packed case. */
+  if (is_packed_rev(fs, rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+    {
+      SVN_ERR(svn_fs_fs__get_packed_offset(&offset, fs, rev + 1, pool));
+      seek_relative = APR_SET;
+    }
+  else
+    {
+      seek_relative = APR_END;
+      offset = 0;
+    }
+
+  /* Offset of the revision from the start of the pack file, if applicable. */
+  if (is_packed_rev(fs, rev))
+    SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
+  else
+    rev_offset = 0;
+
+  /* We will assume that the last line containing the two offsets
+     will never be longer than 64 characters. */
+  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
+
+  offset -= sizeof(buf);
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+
+  /* Read in this last block, from which we will identify the last line. */
+  len = sizeof(buf);
+  SVN_ERR(svn_io_file_read(rev_file, buf, &len, pool));
+
+  /* This cast should be safe since the maximum amount read, 64, will
+     never be bigger than the size of an int. */
+  num_bytes = (int) len;
+
+  /* The last byte should be a newline. */
+  if (buf[num_bytes - 1] != '\n')
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision file (r%ld) lacks trailing newline"),
+                               rev);
+    }
+
+  /* Look for the next previous newline. */
+  for (i = num_bytes - 2; i >= 0; i--)
+    {
+      if (buf[i] == '\n')
+        break;
+    }
+
+  if (i < 0)
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Final line in revision file (r%ld) longer "
+                                 "than 64 characters"),
+                               rev);
+    }
+
+  i++;
+  str = &buf[i];
+
+  /* find the next space */
+  for ( ; i < (num_bytes - 2) ; i++)
+    if (buf[i] == ' ')
+      break;
+
+  if (i == (num_bytes - 2))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Final line in revision file r%ld missing space"),
+                             rev);
+
+  if (root_offset)
+    {
+      apr_int64_t val;
+
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
+      *root_offset = rev_offset + (apr_off_t)val;
+    }
+
+  i++;
+  str = &buf[i];
+
+  /* find the next newline */
+  for ( ; i < num_bytes; i++)
+    if (buf[i] == '\n')
+      break;
+
+  if (changes_offset)
+    {
+      apr_int64_t val;
+
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
+      *changes_offset = rev_offset + (apr_off_t)val;
+    }
+
+  return SVN_NO_ERROR;
+}
+

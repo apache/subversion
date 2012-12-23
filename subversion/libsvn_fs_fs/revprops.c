@@ -29,6 +29,7 @@
 #include "fs_fs.h"
 #include "revprops.h"
 #include "util.h"
+#include "transaction.h"
 
 #include "private/svn_delta_private.h"
 #include "private/svn_string_private.h"

@@ -57,6 +57,8 @@
 #include "fs_fs.h"
 #include "id.h"
 #include "temp_serializer.h"
+#include "cached_data.h"
+#include "transaction.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"

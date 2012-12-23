@@ -355,15 +355,18 @@ check_file_buffer_numeric(const char *buf, apr_off_t offset,
 
 svn_error_t *
 read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      const char *path,
+                      svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
 
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_open(&file,
+                           path_min_unpacked_rev(fs, pool),
+                           APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT,
+                           pool));
   len = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
@@ -379,9 +382,57 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
 
-  return read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                               path_min_unpacked_rev(fs, pool),
-                               pool);
+  return read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
+}
+
+/* Write a file FILENAME in directory FS_PATH, containing a single line
+ * with the number REVNUM in ASCII decimal.  Move the file into place
+ * atomically, overwriting any existing file.
+ *
+ * Similar to write_current(). */
+svn_error_t *
+write_revnum_file(svn_fs_t *fs,
+                  svn_revnum_t revnum,
+                  apr_pool_t *scratch_pool)
+{
+  const char *final_path, *tmp_path;
+  svn_stream_t *tmp_stream;
+
+  final_path = path_min_unpacked_rev(fs, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs->path,
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
+  SVN_ERR(svn_stream_close(tmp_stream));
+  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Atomically update the 'current' file to hold the specifed REV,
+   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
+   ignored and may be NULL if the FS format does not use them.)
+   Perform temporary allocations in POOL. */
+svn_error_t *
+write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
+              const char *next_copy_id, apr_pool_t *pool)
+{
+  char *buf;
+  const char *tmp_name, *name;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* Now we can just write out this line. */
+  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    buf = apr_psprintf(pool, "%ld\n", rev);
+  else
+    buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
+
+  name = svn_fs_fs__path_current(fs, pool);
+  SVN_ERR(svn_io_write_unique(&tmp_name,
+                              svn_dirent_dirname(name, pool),
+                              buf, strlen(buf),
+                              svn_io_file_del_none, pool));
+
+  return move_into_place(tmp_name, name, name, pool);
 }
 
 
@@ -434,6 +485,21 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
     }
 
   return svn_error_trace(err);
+}
+
+/* Fetch the current offset of FILE into *OFFSET_P. */
+svn_error_t *
+get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
+{
+  apr_off_t offset;
+
+  /* Note that, for buffered files, one (possibly surprising) side-effect
+     of this call is to flush any unwritten data to disk. */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, pool));
+  *offset_p = offset;
+
+  return SVN_NO_ERROR;
 }
 
 /* Read the 'current' file FNAME and store the contents in *BUF.

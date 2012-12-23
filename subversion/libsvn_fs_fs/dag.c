@@ -33,6 +33,8 @@
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "cached_data.h"
+#include "transaction.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -909,7 +911,7 @@ svn_fs_fs__dag_get_contents(svn_stream_t **contents_p,
 
   /* Get a stream to the contents. */
   SVN_ERR(svn_fs_fs__get_contents(&contents, file->fs,
-                                  noderev, pool));
+                                  noderev->data_rep, pool));
 
   *contents_p = contents;
 

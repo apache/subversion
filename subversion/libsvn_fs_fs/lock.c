@@ -37,6 +37,7 @@
 #include "lock.h"
 #include "tree.h"
 #include "fs_fs.h"
+#include "transaction.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"

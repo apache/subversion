@@ -20,6 +20,9 @@
  * ====================================================================
  */
 
+#ifndef SVN_LIBSVN_FS__UTIL_H
+#define SVN_LIBSVN_FS__UTIL_H
+
 #include "svn_fs.h"
 
 /* Functions for dealing with recoverable errors on mutable files
@@ -208,13 +211,33 @@ check_file_buffer_numeric(const char *buf,
 
 svn_error_t *
 read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      const char *path,
+                      svn_fs_t *fs,
                       apr_pool_t *pool);
 
 svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs,
                         apr_pool_t *pool);
 
+/* Write a file FILENAME in directory FS_PATH, containing a single line
+ * with the number REVNUM in ASCII decimal.  Move the file into place
+ * atomically, overwriting any existing file.
+ *
+ * Similar to write_current(). */
+svn_error_t *
+write_revnum_file(svn_fs_t *fs,
+                  svn_revnum_t revnum,
+                  apr_pool_t *scratch_pool);
+
+/* Atomically update the 'current' file to hold the specifed REV,
+   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
+   ignored and may be NULL if the FS format does not use them.)
+   Perform temporary allocations in POOL. */
+svn_error_t *
+write_current(svn_fs_t *fs,
+              svn_revnum_t rev,
+              const char *next_node_id,
+              const char *next_copy_id,
+              apr_pool_t *pool);
 
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will
  * not be modified unless the whole file was read successfully.
@@ -231,6 +254,12 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
                         const char *path,
                         svn_boolean_t last_attempt,
                         apr_pool_t *pool);
+
+/* Fetch the current offset of FILE into *OFFSET_P. */
+svn_error_t *
+get_file_offset(apr_off_t *offset_p,
+                apr_file_t *file,
+                apr_pool_t *pool);
 
 /* Read the 'current' file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
@@ -263,3 +292,5 @@ move_into_place(const char *old_filename,
                 const char *new_filename,
                 const char *perms_reference,
                 apr_pool_t *pool);
+
+#endif
