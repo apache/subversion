@@ -88,9 +88,6 @@ static const int slow_statements[] =
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
 
-  /* Need index? */
-  STMT_SELECT_PRISTINE_BY_MD5, /* Only used by deprecated api */
-
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,
   STMT_SELECT_REVERT_LIST_RECURSIVE,

@@ -107,7 +107,8 @@ CREATE TABLE PRISTINE (
   md5_checksum  TEXT NOT NULL
   );
 
-
+CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+  
 /* ------------------------------------------------------------------------- */
 
 /* The ACTUAL_NODE table describes text changes and property changes
@@ -777,6 +778,8 @@ PRAGMA user_version = 29;
 -- STMT_UPGRADE_TO_30
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
+
+CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
 
 /* Just to be sure clear out file external skels from pre 1.7.0 development
    working copies that were never updated by 1.7.0+ style clients */

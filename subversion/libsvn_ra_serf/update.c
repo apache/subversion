@@ -464,10 +464,6 @@ set_file_props(void *baton,
   const svn_delta_editor_t *editor = info->dir->report_context->update_editor;
   const char *prop_name;
 
-  if (strcmp(name, "md5-checksum") == 0
-      && strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
-    info->final_checksum = apr_pstrdup(info->pool, val->data);
-
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
     return svn_error_trace(editor->change_file_prop(info->file_baton,
@@ -1250,18 +1246,32 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       svn_stream_t *contents = NULL;
 
       if (ctx->sess->wc_callbacks->get_wc_contents
-          && info->final_sha1_checksum)
+          && (info->final_sha1_checksum || info->final_checksum))
         {
           svn_error_t *err;
-          svn_checksum_t *sha1_checksum;
+          svn_checksum_t *checksum;
+         
+          /* Parse our checksum, preferring SHA1 to MD5. */
+          if (info->final_sha1_checksum)
+            {
+              err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                           info->final_sha1_checksum,
+                                           info->pool);
+            }
+          else if (info->final_checksum)
+            {
+              err = svn_checksum_parse_hex(&checksum, svn_checksum_md5,
+                                           info->final_checksum,
+                                           info->pool);
+            }
 
-          err = svn_checksum_parse_hex(&sha1_checksum, svn_checksum_sha1,
-                                       info->final_sha1_checksum, info->pool);
+          /* Okay so far?  Let's try to get a stream on some readily
+             available matching content. */
           if (!err)
             {
               err = ctx->sess->wc_callbacks->get_wc_contents(
                         ctx->sess->wc_callback_baton, &contents,
-                        sha1_checksum, info->pool);
+                        checksum, info->pool);
             }
 
           if (err)
@@ -2088,6 +2098,13 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
                                 ns->namespace, ns->url, set_val_str, pool);
+
+      /* Advance handling:  if we spotted the md5-checksum property on
+         the wire, remember it's value. */
+      if (strcmp(ns->url, "md5-checksum") == 0
+          && strcmp(ns->namespace, SVN_DAV_PROP_NS_DAV) == 0)
+        info->final_checksum = apr_pstrdup(info->pool, set_val_str->data);
+
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == IGNORE_PROP_NAME || state == NEED_PROP_NAME)
@@ -2862,30 +2879,14 @@ try_get_wc_contents(svn_boolean_t *found_p,
   svn_props = apr_hash_get(props, SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
   if (!svn_props)
     {
-      /* No checksum property in response. */
+      /* No properties -- therefore no checksum property -- in response. */
       return SVN_NO_ERROR;
     }
 
-  /* If we are talking to an old server, then the sha1-checksum property
-     will not exist. In our property parsing code, we don't bother to
-     check the <status> element which would indicate a 404. That section
-     needs to name the 404'd property, so our parsing code only sees:
-
-       <g0:sha1-checksum/>
-
-     That is parsed as an empty string value for the property.
-
-     When checking the property, if it is missing (NULL), or the above
-     empty string, then we know the property doesn't exist.
-
-     Strictly speaking, we could start parsing <status> and omit any
-     properties that were 404'd. But the 404 only happens when we ask
-     for a specific property, and it is easier to just check for the
-     empty string. Since it isn't a legal value in this case, we won't
-     get confused with a truly existent property.  */
   sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
-  if (sha1_checksum_prop == NULL || *sha1_checksum_prop == '\0')
+  if (sha1_checksum_prop == NULL)
     {
+      /* No checksum property in response. */
       return SVN_NO_ERROR;
     }
 

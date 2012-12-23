@@ -2565,6 +2565,34 @@ svn_client_url_from_path(const char **url,
 
 /*** From mergeinfo.c ***/
 svn_error_t *
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *target_path_or_url,
+                         const svn_opt_revision_t *target_peg_revision,
+                         const char *source_path_or_url,
+                         const svn_opt_revision_t *source_peg_revision,
+                         svn_log_entry_receiver_t receiver,
+                         void *receiver_baton,
+                         svn_boolean_t discover_changed_paths,
+                         svn_depth_t depth,
+                         const apr_array_header_t *revprops,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_opt_revision_t start_revision, end_revision;
+
+  start_revision.kind = svn_opt_revision_unspecified;
+  end_revision.kind = svn_opt_revision_unspecified;
+
+  return svn_client_mergeinfo_log2(finding_merged,
+                                   target_path_or_url, target_peg_revision,
+                                   source_path_or_url, source_peg_revision,
+                                   &start_revision, &end_revision,
+                                   receiver, receiver_baton,
+                                   discover_changed_paths, depth, revprops,
+                                   ctx, scratch_pool);
+}
+
+svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 const char *merge_source_path_or_url,

@@ -1302,6 +1302,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *repos_root_url = NULL;
+  const char *repos_uuid = NULL;
   const char *left_repos_relpath;
   svn_revnum_t left_revision;
   svn_node_kind_t left_kind;
@@ -1348,7 +1349,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
                                        &added_repos_relpath,
                                        &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &repos_uuid,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, eb->db, local_abspath,
                                        result_pool, scratch_pool));
 
@@ -1365,6 +1367,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
       repos_root_url = eb->repos_root;
+      repos_uuid = eb->repos_uuid;
     }
   else
     {
@@ -1384,12 +1387,11 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                        &left_revision,
                                        &left_repos_relpath,
                                        &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &repos_uuid,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       eb->db,
-                                       local_abspath,
-                                       result_pool,
-                                       scratch_pool));
+                                       eb->db, local_abspath,
+                                       result_pool, scratch_pool));
       /* Translate the node kind. */
       if (base_kind == svn_kind_file
           || base_kind == svn_kind_symlink)
@@ -1441,17 +1443,19 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
      * Send an 'empty' left revision. */
     src_left_version = NULL;
   else
-    src_left_version = svn_wc_conflict_version_create(repos_root_url,
-                                                      left_repos_relpath,
-                                                      left_revision,
-                                                      left_kind,
-                                                      result_pool);
+    src_left_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                       repos_uuid,
+                                                       left_repos_relpath,
+                                                       left_revision,
+                                                       left_kind,
+                                                       result_pool);
 
-  src_right_version = svn_wc_conflict_version_create(repos_root_url,
-                                                     right_repos_relpath,
-                                                     *eb->target_revision,
-                                                     their_node_kind,
-                                                     result_pool);
+  src_right_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                      repos_uuid,
+                                                      right_repos_relpath,
+                                                      *eb->target_revision,
+                                                      their_node_kind,
+                                                      result_pool);
 
   *pconflict = svn_wc_conflict_description_create_tree2(
                    local_abspath, conflict_node_kind,
