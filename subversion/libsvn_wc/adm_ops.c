@@ -127,7 +127,6 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_kind_t kind;
   const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
-  svn_boolean_t have_base;
   svn_boolean_t prop_mods;
   svn_skel_t *work_item = NULL;
 
@@ -137,7 +136,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, &copied_checksum,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, &prop_mods,
-                               &have_base, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -154,15 +153,11 @@ process_committed_leaf(svn_wc__db_t *db,
   if (status == svn_wc__db_status_deleted)
     {
       return svn_error_trace(
-                svn_wc__db_op_remove_node(
-                                NULL,
+                svn_wc__db_base_remove(
                                 db, local_abspath,
-                                FALSE, FALSE,
-                                (have_base && !via_recurse)
+                                FALSE /* keep_as_working */,
+                                (! via_recurse)
                                     ? new_revnum : SVN_INVALID_REVNUM,
-                                svn_wc__db_status_not_present,
-                                kind,
-                                NULL, NULL,
                                 NULL, NULL,
                                 scratch_pool));
     }
