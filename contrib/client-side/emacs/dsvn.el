@@ -130,6 +130,11 @@
   :type 'boolean
   :group 'dsvn)
 
+(defcustom svn-diff-args '("-x" "-p")
+  "*Additional arguments used for all invocations of `svn diff'."
+  :type '(repeat string)
+  :group 'dsvn)
+
 ;; start-file-process and process-file are needed for tramp but only appeared
 ;; in Emacs 23 and 22 respectively.
 (setq svn-start-file-process
@@ -351,23 +356,59 @@ during the run."
   "Run `svn diff'.
 Argument ARG are the command line arguments."
   (interactive "ssvn diff arguments: ")
-  (svn-run-with-output "diff" (split-string arg) 'diff-mode))
+  (svn-run-with-output "diff"
+		       (append svn-diff-args (split-string arg))
+		       'diff-mode))
+
+(defun svn-add-unversioned-files-p (files)
+  "Ask the user whether FILES should be added; return the answer."
+  (let ((buf (get-buffer-create "*svn-unversioned-files*")))
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert (mapconcat (lambda (f) f) files "\n"))
+      (setq buffer-read-only t)
+      (goto-char (point-min))
+      (save-selected-window
+        (pop-to-buffer buf)
+        (shrink-window-if-larger-than-buffer)
+        (let* ((n (length files))
+               (add-them (y-or-n-p
+                          (if (= n 1)
+                              "Add this item first? "
+                            (format "Add these %d items first? " n)))))
+          (let ((win (get-buffer-window buf)))
+            (if win
+                (condition-case nil
+                    (delete-window win)
+                  (error nil))))
+          (bury-buffer buf)
+          add-them)))))
 
 (defun svn-commit ()
   "Commit changes to one or more files."
   (interactive)
   (save-some-buffers)
-  (let ((status-buf (current-buffer))
-        (commit-buf (get-buffer-create "*svn commit*"))
-        (window-conf (and svn-restore-windows (current-window-configuration)))
-        (listfun (lambda () (with-current-buffer log-edit-parent-buffer
-                              (svn-action-files)))))
-    (log-edit 'svn-confirm-commit t
-              (if (< emacs-major-version 23)
-                  listfun
-                (list (cons 'log-edit-listfun listfun)))
-              commit-buf)
-    (set (make-local-variable 'saved-window-configuration) window-conf)))
+  (let ((unversioned-files (svn-action-files
+                            (lambda (pos) (eq (svn-file-status pos) ?\?)))))
+    (if unversioned-files
+        (if (svn-add-unversioned-files-p unversioned-files)
+            (progn
+              (message "Adding unversioned items. Please re-commit when ready.")
+              (svn-run 'add unversioned-files "Adding files"))
+          (message "Files not added; nothing committed."))
+      (let ((status-buf (current-buffer))
+            (commit-buf (get-buffer-create "*svn commit*"))
+            (window-conf (and svn-restore-windows
+                              (current-window-configuration)))
+            (listfun (lambda () (with-current-buffer log-edit-parent-buffer
+                                  (svn-action-files)))))
+        (log-edit 'svn-confirm-commit t
+                  (if (< emacs-major-version 23)
+                      listfun
+                    (list (cons 'log-edit-listfun listfun)))
+                  commit-buf)
+        (set (make-local-variable 'saved-window-configuration) window-conf)))))
 
 (defun svn-confirm-commit ()
   "Commit changes with the current buffer as commit message."
@@ -573,7 +614,7 @@ VERBOSE-P."
       (erase-buffer)
       (setq default-directory dir)
       (svn-call-process diff-buf
-                        "diff" "-r"
+                        "diff" "-x" "-p" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
 (defun svn-log-edit-files (commit-id)
@@ -601,7 +642,9 @@ VERBOSE-P."
   "Run `svn diff' for the current log entry."
   (interactive)
   (let ((commit-id (svn-log-current-commit)))
-    (svn-run-with-output "diff" (list "-c" (number-to-string commit-id))
+    (svn-run-with-output "diff"
+			 (append svn-diff-args
+				 (list "-c" (number-to-string commit-id)))
                          'diff-mode)))
 
 (defun svn-log-edit ()
@@ -1634,27 +1677,24 @@ Set it if MARK is non-NIL, and clear it if MARK is NIL."
   "Return a list of lists (FILE POS) to act on.
 Optional argument PRED is a predicate function that is called with POS as
 argument."
-  (let ((files ())
-        (pos (next-single-property-change (point-min) 'svn-file)))
-    (while pos
-      (when (and (get-text-property pos 'svn-mark)
-                 (or (not pred)
-                     (funcall pred pos)))
-        (setq files (cons (list (get-text-property pos 'svn-file)
-                                pos)
-                          files)))
-      (setq pos (next-single-property-change pos 'svn-file)))
-    (if (null files)
-        (let ((file (svn-getprop (point) 'file)))
-          (unless file
-            (error "No file on this line"))
-          (when (and pred
-                     (not (funcall pred (line-beginning-position))))
-            (error "Invalid file"))
-          (list (list file
-                      (save-excursion
-                        (beginning-of-line)
-                        (point)))))
+  (let ((positions ()))
+    (let ((pos (next-single-property-change (point-min) 'svn-file)))
+      (while pos
+        (when (get-text-property pos 'svn-mark)
+          (setq positions (cons pos positions)))
+        (setq pos (next-single-property-change pos 'svn-file))))
+    (when (null positions)
+      (unless (svn-getprop (point) 'file)
+        (error "No file on this line"))
+      (setq positions (list (line-beginning-position))))
+
+    (let ((files ()))
+      (mapc (lambda (pos)
+              (when (or (not pred) (funcall pred pos))
+                (setq files (cons (list (get-text-property pos 'svn-file)
+                                        pos)
+                                  files))))
+            (reverse positions))
       (reverse files))))
 
 (defun svn-action-files (&optional pred)
@@ -1957,7 +1997,8 @@ files instead."
                  (list (or (svn-getprop (point) 'file)
                            (svn-getprop (point) 'dir)
                            (error "No file on line"))))))
-    (unless (svn-run-with-output "diff" files 'diff-mode)
+    (unless (svn-run-with-output "diff" (append svn-diff-args files)
+				 'diff-mode)
       (message "No difference found"))))
 
 (defun svn-previous-file (arg)

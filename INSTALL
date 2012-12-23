@@ -807,7 +807,7 @@ II.   INSTALLATION
       * Python 2.5 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
-      * Awk (from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe) is
+      * Awk (from http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
         needed to compile Apache or APR.  Note that this is the actual awk
         program, not an installer - just rename it to awk.exe and it is
         ready to use.

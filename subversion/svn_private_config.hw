@@ -29,6 +29,10 @@
 #ifndef SVN_PRIVATE_CONFIG_HW
 #define SVN_PRIVATE_CONFIG_HW
 
+
+/* Define to a Windows-specific equivalent of config.guess output */
+#define SVN_BUILD_HOST "x86-microsoft-windows"
+
 /* The minimal version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR    4
 #define SVN_FS_WANT_DB_MINOR    0

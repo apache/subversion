@@ -300,15 +300,16 @@ for _dt in dep_types:
   globals()[_dt] = _dt
 
 class DependencyNode:
-  def __init__(self, filename):
+  def __init__(self, filename, when = None):
     self.filename = filename
+    self.when = when
 
   def __str__(self):
     return self.filename
 
 class ObjectFile(DependencyNode):
-  def __init__(self, filename, compile_cmd = None):
-    DependencyNode.__init__(self, filename)
+  def __init__(self, filename, compile_cmd = None, when = None):
+    DependencyNode.__init__(self, filename, when)
     self.compile_cmd = compile_cmd
     self.source_generated = 0
 
@@ -362,6 +363,7 @@ class Target(DependencyNode):
     self.name = name
     self.gen_obj = gen_obj
     self.desc = options.get('description')
+    self.when = options.get('when')
     self.path = options.get('path', '')
     self.add_deps = options.get('add-deps', '')
     self.add_install_deps = options.get('add-install-deps', '')
@@ -434,7 +436,7 @@ class TargetLinked(Target):
           else:
             raise GenError('ERROR: unknown file extension on ' + src)
 
-          ofile = ObjectFile(objname, self.compile_cmd)
+          ofile = ObjectFile(objname, self.compile_cmd, self.when)
 
           # object depends upon source
           self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
@@ -554,7 +556,7 @@ class TargetI18N(Target):
       else:
         raise GenError('ERROR: unknown file extension on ' + src)
 
-      ofile = ObjectFile(objname, self.compile_cmd)
+      ofile = ObjectFile(objname, self.compile_cmd, self.when)
 
       # object depends upon source
       self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
@@ -699,7 +701,8 @@ class TargetJavaHeaders(TargetJava):
       class_pkg_list = self.package.split('.')
       class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
-                                              class_name + self.objext))
+                                              class_name + self.objext),
+                              self.when)
       class_file.source_generated = 1
       class_file.class_name = class_name
       hfile = HeaderFile(class_header, self.package + '.' + class_name,
@@ -759,7 +762,7 @@ class TargetJavaClasses(TargetJava):
       else:
         raise GenError('ERROR: unknown file extension on "' + src + '"')
 
-      ofile = ObjectFile(objname, self.compile_cmd)
+      ofile = ObjectFile(objname, self.compile_cmd, self.when)
       sfile = SourceFile(src, reldir)
       sfile.sourcepath = sourcepath
 
@@ -1126,6 +1129,10 @@ class IncludeDependencyInfo:
       #   of <>/"" convention.
     return hdrs
 
+class FileInfo:
+    def __init__(self, filename, when):
+        self.filename = filename
+        self.when = when
 
 def _sorted_files(graph, area):
   "Given a list of targets, sort them based on their dependencies."
@@ -1163,9 +1170,9 @@ def _sorted_files(graph, area):
           s = graph.get_sources(DT_LINK, t.name)
           for d in s:
             if d not in targets:
-              files.append(d.filename)
+              files.append(FileInfo(d.filename, d.when))
         else:
-          files.append(t.filename)
+          files.append(FileInfo(t.filename, t.when))
 
         # don't consider this target any more
         targets.remove(t)

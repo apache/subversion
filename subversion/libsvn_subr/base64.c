@@ -36,7 +36,7 @@
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 
-/* When asked to format the the base64-encoded output as multiple lines,
+/* When asked to format the base64-encoded output as multiple lines,
    we put this many chars in each line (plus one new line char) unless
    we run out of data.
    It is vital for some of the optimizations below that this value is

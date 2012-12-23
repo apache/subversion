@@ -62,6 +62,10 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+/** Wait duration (in microseconds) used in calls to serf_context_run() */
+#define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
+
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
@@ -89,7 +93,9 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
-/** Max. number of connctions we'll open to the server. */
+/** Max. number of connctions we'll open to the server. 
+ *  Note: minimum 2 connections are required for ra_serf to function correctly!
+ */
 #define MAX_NR_OF_CONNS 4
 
 /*
@@ -208,6 +214,10 @@ struct svn_ra_serf__session_t {
   const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
   const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
   const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
+
+  /* Hash mapping const char * server-supported POST types to
+     disinteresting-but-non-null values. */
+  apr_hash_t *supported_posts;
 
   /*** End HTTP v2 stuff ***/
 
