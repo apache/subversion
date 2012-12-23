@@ -307,6 +307,10 @@ svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 /* for the repository referred to by this request, should httpv2 be advertised? */
 svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
+/* for the repository referred to by this request, should ephemeral
+   txnprop support be advertised? */
+svn_boolean_t dav_svn__get_ephemeral_txnprops_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
@@ -389,7 +393,7 @@ const char *dav_svn__get_root_dir(request_rec *r);
 int dav_svn__get_compression_level(void);
 
 /* Return the hook script environment parsed from the configuration. */
-apr_hash_t *dav_svn__get_hooks_env(request_rec *r);
+const char *dav_svn__get_hooks_env(request_rec *r);
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
     returned to the client in our OPTIONS response.  They all depend
@@ -627,6 +631,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "replay-report" },
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
+  { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
   { NULL, NULL },
 };
 
@@ -674,6 +679,10 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
 
+dav_error *
+dav_svn__get_inherited_props_report(const dav_resource *resource,
+                                    const apr_xml_doc *doc,
+                                    ap_filter_t *output);
 
 /*** posts/ ***/
 

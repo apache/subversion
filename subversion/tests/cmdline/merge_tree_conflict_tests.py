@@ -1671,7 +1671,6 @@ def merge_replace_setup(sbox):
 
 #----------------------------------------------------------------------
 # ra_serf causes duplicate notifications with this test:
-@XFail(svntest.main.is_ra_type_dav_serf)
 @Issue(3802)
 def merge_replace_causes_tree_conflict(sbox):
   "replace vs. edit tree-conflicts"

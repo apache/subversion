@@ -759,7 +759,6 @@ def symlink_destination_change(sbox):
 # (disk and metadata).
 @Issue(3884)
 @SkipUnless(svntest.main.is_posix_os)
-@XFail()
 def merge_foreign_symlink(sbox):
   "merge symlink-add from foreign repos"
 
@@ -790,7 +789,7 @@ def merge_foreign_symlink(sbox):
   # Verify special status.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/zeta': Item(props={ 'svn:special': '*' })
+    'A/zeta': Item(contents="link target", props={ 'svn:special': '*' })
   })
   svntest.actions.verify_disk(sbox.ospath(''), expected_disk, True)
 
@@ -820,7 +819,7 @@ def symlink_to_wc_basic(sbox):
   wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
   expected_info = [{
       'Path' : re.escape(os.path.join(symlink_path)),
-      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(wc_dir)),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
       'Revision' : '1',
@@ -829,7 +828,7 @@ def symlink_to_wc_basic(sbox):
   }, {
       'Name' : 'iota',
       'Path' : re.escape(os.path.join(symlink_path, 'iota')),
-      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(wc_dir)),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
       'Revision' : '1',

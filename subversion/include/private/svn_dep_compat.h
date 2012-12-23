@@ -87,6 +87,21 @@ typedef apr_uint32_t apr_uintptr_t;
 #endif /* !APR_VERSION_AT_LEAST(1,3,0) */
 
 /**
+ * Work around a platform dependency issue. apr_thread_rwlock_trywrlock()
+ * will make APR_STATUS_IS_EBUSY() return TRUE if the lock could not be
+ * acquired under Unix. Under Windows, this will not work. So, provide
+ * a more portable substitute.
+ *
+ * @since New in 1.8.
+ */
+#ifdef WIN32
+#define SVN_LOCK_IS_BUSY(x) \
+    (APR_STATUS_IS_EBUSY(x) || (x) == APR_FROM_OS_ERROR(WAIT_TIMEOUT))
+#else
+#define SVN_LOCK_IS_BUSY(x) APR_STATUS_IS_EBUSY(x)
+#endif
+
+/**
  * Check at compile time if the Serf version is at least a certain
  * level.
  * @param major The major version component of the version checked

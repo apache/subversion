@@ -679,6 +679,33 @@ def accepts_deltas(sbox):
 
   
 
+@Issue(4234)
+def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
+  "dumpfilter targets expect leading '/' in prefixes"
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=4234. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = open(dumpfile_location).read()
+
+  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  try:
+    targets = open(targets_file, 'w')
+
+    # Removing the leading slash in path prefixes should work.
+    targets.write('A/D/H\n')
+    targets.write('A/D/G\n')
+    targets.close()
+    _simple_dumpfilter_test(sbox, dumpfile,
+                            'exclude', '/A/B/E', '--targets', targets_file)
+  finally:
+    os.close(fd)
+    os.remove(targets_file)
+
+
 ########################################################################
 # Run the tests
 
@@ -693,6 +720,7 @@ test_list = [ None,
               dropped_but_not_renumbered_empty_revs,
               match_empty_prefix,
               accepts_deltas,
+              dumpfilter_targets_expect_leading_slash_prefixes,
               ]
 
 if __name__ == '__main__':

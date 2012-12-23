@@ -1792,7 +1792,7 @@ do_plist(svnlook_ctxt_t *c,
       if (verbose)
         {
           if (xml)
-            svn_cmdline__print_xml_prop(&sb, pname, propval, pool);
+            svn_cmdline__print_xml_prop(&sb, pname, propval, FALSE, pool);
           else
             {
               const char *pname_stdout;

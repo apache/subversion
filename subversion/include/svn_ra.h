@@ -1922,6 +1922,28 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        apr_pool_t *pool);
 
 /**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a path at @a revision (or the 'head' revision if
+ * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a path relative to
+ * the URL in @a session.  Use @a pool for all allocations.  If no
+ * inheritable properties are found, then set @a *inherited_props to
+ * an empty array.
+ *
+ * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **inherited_props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
  * @{
@@ -1992,6 +2014,21 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.7.
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
+
+/**
+ * The capability to get inherited properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_INHERITED_PROPS "inherited-props"
+
+/**
+ * The capability of a server to automatically remove transaction
+ * properties prefixed with SVN_PROP_EPHEMERAL_PREFIX.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

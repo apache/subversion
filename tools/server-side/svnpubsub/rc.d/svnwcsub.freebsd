@@ -33,6 +33,7 @@ command_args="--daemon \
               --logfile=${svnwcsub_logfile} \
               --pidfile=${pidfile} \
               --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
-              --umask=002 ${svnwcsub_config}"
+              --umask=002 \
+	      ${svnwcsub_config}"
 
 run_rc_command "$1"

@@ -152,12 +152,15 @@ extern "C" {
  * == 1.7.x shipped with format 29
  *
  * The bump to 30 switched the conflict storage to a skel inside conflict_data.
- * Also clears some known invalid state.
+ * Also clears some known invalid state. Bumped in r1387742.
+ *
+ * The bump to 31 added the inherited_props column in the NODES table.
+ * Bumped in r1395109.
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 29
+#define SVN_WC__VERSION 31
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
@@ -184,9 +187,6 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
-
-/* The first version that uses conflict skels for all conflicts */
-#define SVN_WC__USES_CONFLICT_SKELS 30
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -708,6 +708,8 @@ svn_wc__write_check(svn_wc__db_t *db,
  *
  * Victim must be versioned or be part of a tree conflict.
  *
+ * If CREATE_TEMPFILES is TRUE, create temporary files for property conflicts.
+ *
  * Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
  * SCRATCH_POOL
  */
@@ -715,6 +717,7 @@ svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                        svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t create_tempfiles,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 

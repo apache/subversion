@@ -35,6 +35,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_dep_compat.h"
@@ -616,6 +617,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *scratch_pool)
 {
   const char *pathname = "";
+  apr_ssize_t klen;
   svn_rangelist_t *existing_rangelist;
   svn_rangelist_t *rangelist = apr_array_make(scratch_pool, 1,
                                               sizeof(svn_merge_range_t *));
@@ -700,14 +702,14 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      leading slash, e.g. "trunk:4033\n/trunk:4039-4995".  In the event
      we encounter this we merge the rangelists together under a single
      absolute path key. */
-  existing_rangelist = apr_hash_get(hash, pathname, APR_HASH_KEY_STRING);
+  klen = strlen(pathname);
+  existing_rangelist = apr_hash_get(hash, pathname, klen);
   if (existing_rangelist)
     SVN_ERR(svn_rangelist_merge2(rangelist, existing_rangelist,
                                  scratch_pool, scratch_pool));
 
-  apr_hash_set(hash, apr_pstrdup(apr_hash_pool_get(hash), pathname),
-               APR_HASH_KEY_STRING,
-               svn_rangelist_dup(rangelist, apr_hash_pool_get(hash)));
+  apr_hash_set(hash, apr_pstrmemdup(apr_hash_pool_get(hash), pathname, klen),
+               klen, svn_rangelist_dup(rangelist, apr_hash_pool_get(hash)));
 
   return SVN_NO_ERROR;
 }
@@ -736,7 +738,7 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
 {
   svn_error_t *err;
 
-  *mergeinfo = apr_hash_make(pool);
+  *mergeinfo = svn_hash__make(pool);
   err = parse_top(&input, input + strlen(input), *mergeinfo, pool);
 
   /* Always return SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error. */
@@ -1559,29 +1561,28 @@ mergeinfo_hash_diff_cb(const void *key, apr_ssize_t klen,
     {
       /* Record any deltas (additions or deletions). */
       svn_rangelist_t *deleted_rangelist, *added_rangelist;
-      from_rangelist = apr_hash_get(cb->from, path, APR_HASH_KEY_STRING);
-      to_rangelist = apr_hash_get(cb->to, path, APR_HASH_KEY_STRING);
+      from_rangelist = apr_hash_get(cb->from, path, klen);
+      to_rangelist = apr_hash_get(cb->to, path, klen);
       SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                                  from_rangelist, to_rangelist,
                                  cb->consider_inheritance, cb->pool));
       if (cb->deleted && deleted_rangelist->nelts > 0)
-        apr_hash_set(cb->deleted, apr_pstrdup(cb->pool, path),
-                     APR_HASH_KEY_STRING, deleted_rangelist);
+        apr_hash_set(cb->deleted, apr_pstrmemdup(cb->pool, path, klen),
+                     klen, deleted_rangelist);
       if (cb->added && added_rangelist->nelts > 0)
-        apr_hash_set(cb->added, apr_pstrdup(cb->pool, path),
-                     APR_HASH_KEY_STRING, added_rangelist);
+        apr_hash_set(cb->added, apr_pstrmemdup(cb->pool, path, klen),
+                     klen, added_rangelist);
     }
   else if ((status == svn_hash_diff_key_a) && cb->deleted)
     {
-      from_rangelist = apr_hash_get(cb->from, path, APR_HASH_KEY_STRING);
-      apr_hash_set(cb->deleted, apr_pstrdup(cb->pool, path),
-                   APR_HASH_KEY_STRING,
+      from_rangelist = apr_hash_get(cb->from, path, klen);
+      apr_hash_set(cb->deleted, apr_pstrmemdup(cb->pool, path, klen), klen,
                    svn_rangelist_dup(from_rangelist, cb->pool));
     }
   else if ((status == svn_hash_diff_key_b) && cb->added)
     {
-      to_rangelist = apr_hash_get(cb->to, path, APR_HASH_KEY_STRING);
-      apr_hash_set(cb->added, apr_pstrdup(cb->pool, path), APR_HASH_KEY_STRING,
+      to_rangelist = apr_hash_get(cb->to, path, klen);
+      apr_hash_set(cb->added, apr_pstrmemdup(cb->pool, path, klen), klen,
                    svn_rangelist_dup(to_rangelist, cb->pool));
     }
   return SVN_NO_ERROR;
@@ -1618,17 +1619,17 @@ svn_mergeinfo_diff2(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
   if (from && to == NULL)
     {
       *deleted = svn_mergeinfo_dup(from, result_pool);
-      *added = apr_hash_make(result_pool);
+      *added = svn_hash__make(result_pool);
     }
   else if (from == NULL && to)
     {
-      *deleted = apr_hash_make(result_pool);
+      *deleted = svn_hash__make(result_pool);
       *added = svn_mergeinfo_dup(to, result_pool);
     }
   else
     {
-      *deleted = apr_hash_make(result_pool);
-      *added = apr_hash_make(result_pool);
+      *deleted = svn_hash__make(result_pool);
+      *added = svn_hash__make(result_pool);
 
       if (from && to)
         {
@@ -1648,17 +1649,77 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
                       svn_boolean_t consider_inheritance,
                       apr_pool_t *pool)
 {
-  if (apr_hash_count(info1) == apr_hash_count(info2))
+  apr_hash_index_t *hi;
+
+  *is_equal = FALSE;
+
+  /* special cases: at least one side has no merge info */
+  if (info1 == NULL && info2 == NULL)
     {
-      svn_mergeinfo_t deleted, added;
-      SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, info1, info2,
-                                  consider_inheritance, pool, pool));
-      *is_equal = apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0;
+      *is_equal = TRUE;
+      return SVN_NO_ERROR;
     }
-  else
+
+  if (info1 == NULL ||  info2 == NULL)
+    return SVN_NO_ERROR;
+
+  /* trivial case: different number of paths -> unequal */
+  if (apr_hash_count(info1) != apr_hash_count(info2))
+    return SVN_NO_ERROR;
+
+  /* compare range lists for all paths */
+  for (hi = apr_hash_first(pool, info1); hi; hi = apr_hash_next(hi))
     {
-      *is_equal = FALSE;
+      const char *key;
+      apr_ssize_t key_length;
+      svn_rangelist_t *lhs, *rhs;
+      int i;
+      svn_rangelist_t *deleted, *added;
+
+      /* get both path lists */
+      apr_hash_this(hi, (const void**)&key, &key_length, (void **)&lhs);
+      rhs = apr_hash_get(info2, key, key_length);
+
+      /* missing on one side? */
+      if (rhs == NULL)
+        return SVN_NO_ERROR;
+
+      /* quick compare: the range lists will often be a perfect match */
+      if (lhs->nelts == rhs->nelts)
+        {
+          for (i = 0; i < lhs->nelts; ++i)
+            {
+              svn_merge_range_t *lrange
+                = APR_ARRAY_IDX(lhs, i, svn_merge_range_t *);
+              svn_merge_range_t *rrange
+                = APR_ARRAY_IDX(rhs, i, svn_merge_range_t *);
+
+              /* range mismatch? -> needs detailed comparison */
+              if (   lrange->start != rrange->start
+                  || lrange->end != rrange->end)
+                break;
+
+              /* inheritance mismatch? -> merge info differs */
+              if (   consider_inheritance
+                  && lrange->inheritable != rrange->inheritable)
+                return SVN_NO_ERROR;
+            }
+
+          /* all ranges found to match -> next path */
+          if (i == lhs->nelts)
+            continue;
+        }
+
+      /* range lists differ but there are many ways to sort and aggregate
+         revisions into ranges. Do a full diff on them. */
+      SVN_ERR(svn_rangelist_diff(&deleted, &added, lhs, rhs,
+                                  consider_inheritance, pool));
+      if (deleted->nelts || added->nelts)
+        return SVN_NO_ERROR;
     }
+
+  /* no mismatch found */
+  *is_equal = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -1668,62 +1729,37 @@ svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *sorted1, *sorted2;
-  int i, j;
+  apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
   if (!apr_hash_count(changes))
     return SVN_NO_ERROR;
 
-  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths,
-                           scratch_pool);
-  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths,
-                           scratch_pool);
-
-  i = 0;
-  j = 0;
   iterpool = svn_pool_create(scratch_pool);
-  while (i < sorted1->nelts && j < sorted2->nelts)
+  for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
-      svn_sort__item_t elt1, elt2;
-      int res;
+      const char *key;
+      apr_ssize_t klen;
+      svn_rangelist_t *to_insert;
+      svn_rangelist_t *target;
 
-      svn_pool_clear(iterpool);
+      /* get ranges to insert and the target ranges list of that insertion */
+      apr_hash_this(hi, (const void**)&key, &klen, (void*)&to_insert);
+      target = apr_hash_get(mergeinfo, key, klen);
 
-      elt1 = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
-      elt2 = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
-      res = svn_sort_compare_items_as_paths(&elt1, &elt2);
-
-      if (res == 0)
+      /* if range list exists, just expand on it.
+       * Otherwise, add new hash entry. */
+      if (target)
         {
-          svn_rangelist_t *rl1, *rl2;
-
-          rl1 = elt1.value;
-          rl2 = elt2.value;
-
-          SVN_ERR(svn_rangelist_merge2(rl1, rl2, result_pool, iterpool));
-          apr_hash_set(mergeinfo, elt1.key, elt1.klen, rl1);
-          i++;
-          j++;
-        }
-      else if (res < 0)
-        {
-          i++;
+          SVN_ERR(svn_rangelist_merge2(target, to_insert, result_pool,
+                                       iterpool));
+          apr_pool_clear(iterpool);
         }
       else
-        {
-          apr_hash_set(mergeinfo, elt2.key, elt2.klen, elt2.value);
-          j++;
-        }
+        apr_hash_set(mergeinfo, key, klen, to_insert);
     }
-  svn_pool_destroy(iterpool);
 
-  /* Copy back any remaining elements from the second hash. */
-  for (; j < sorted2->nelts; j++)
-    {
-      svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
-      apr_hash_set(mergeinfo, elt.key, elt.klen, elt.value);
-    }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1970,7 +2006,7 @@ svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
 svn_mergeinfo_t
 svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool)
 {
-  svn_mergeinfo_t new_mergeinfo = apr_hash_make(pool);
+  svn_mergeinfo_t new_mergeinfo = svn_hash__make(pool);
   apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
@@ -2161,36 +2197,6 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
 }
 
 svn_error_t *
-svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
-                                svn_mergeinfo_t mergeinfo,
-                                const char *repos_root_url,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  *out_mergeinfo = NULL;
-  if (mergeinfo)
-    {
-      apr_hash_index_t *hi;
-      apr_hash_t *full_path_mergeinfo = apr_hash_make(result_pool);
-
-      for (hi = apr_hash_first(scratch_pool, mergeinfo);
-           hi; hi = apr_hash_next(hi))
-        {
-          const char *key = svn__apr_hash_index_key(hi);
-          void *val = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(full_path_mergeinfo,
-                       svn_path_url_add_component2(repos_root_url, key + 1,
-                                                   result_pool),
-                       APR_HASH_KEY_STRING, val);
-        }
-      *out_mergeinfo = full_path_mergeinfo;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
                                        const char *suffix_relpath,
@@ -2224,13 +2230,18 @@ svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
 {
   svn_rangelist_t *new_rl = apr_array_make(pool, rangelist->nelts,
                                            sizeof(svn_merge_range_t *));
+
+  /* allocate target range buffer with a single operation */
+  svn_merge_range_t *copy = apr_palloc(pool, sizeof(*copy) * rangelist->nelts);
   int i;
 
+  /* fill it iteratively and link it into the range list */
   for (i = 0; i < rangelist->nelts; i++)
     {
-      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) =
-        svn_merge_range_dup(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *),
-                            pool);
+      memcpy(copy + i,
+             APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *),
+             sizeof(*copy));
+      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) = copy + i;
     }
 
   return new_rl;
@@ -2314,38 +2325,6 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
   else
     *output = svn_string_create("\n", pool);
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_mergeinfo__to_formatted_string(svn_string_t **output,
-                                   svn_mergeinfo_t mergeinfo,
-                                   const char *prefix,
-                                   apr_pool_t *pool)
-{
-  svn_stringbuf_t *output_buf = NULL;
-
-  if (mergeinfo && apr_hash_count(mergeinfo))
-    {
-      SVN_ERR(mergeinfo_to_stringbuf(&output_buf, mergeinfo,
-                                     prefix ? prefix : "", pool));
-      svn_stringbuf_appendcstr(output_buf, "\n");
-    }
-#if SVN_DEBUG
-  else if (!mergeinfo)
-    {
-      output_buf = svn_stringbuf_create(prefix ? prefix : "", pool);
-      svn_stringbuf_appendcstr(output_buf, _("NULL mergeinfo\n"));
-    }
-  else if (apr_hash_count(mergeinfo) == 0)
-    {
-      output_buf = svn_stringbuf_create(prefix ? prefix : "", pool);
-      svn_stringbuf_appendcstr(output_buf, _("empty mergeinfo\n"));
-    }
-#endif
-
-  *output = output_buf ? svn_stringbuf__morph_into_string(output_buf)
-                       : svn_string_create_empty(pool);
   return SVN_NO_ERROR;
 }
 

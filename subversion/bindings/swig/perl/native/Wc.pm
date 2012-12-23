@@ -21,7 +21,7 @@ swig_init_asp_dot_net_hack($SVN::Core::gpool);
 
 package _p_svn_wc_t;
 
-=head2 svn_wc_status_t
+=head2 svn_wc_status2_t
 
 =over 4
 
@@ -67,7 +67,52 @@ be one of the $SVN::Wc::Status::* constants.
 An integer representing the status of the item's properties in the repository.
 Can be one of the $SVN::Wc::Status::* constants.
 
+=item $wcstat-E<gt>repos_lock()
+
+A svn_lock_t object representing the entry's lock in the repository, if any.
+
+=item $wcstat-E<gt>url()
+
+The url (actual or expected) of the item.
+
+=item $wcstat-E<gt>ood_last_cmt_rev()
+
+An integer representing the youngest committed revision or $SVN::Core::INVALID_REVNUM is not out of date.
+
+=item $wcstat-E<gt>ood_last_cmt_date()
+
+The date of the most recent commit as microseconds since 00:00:00 January 1, 1970 UTC or 0 if not out of date.
+
+=item $wcstat-E<gt>ood_kind()
+
+An integer representing the kind of the youngest commit.  Can be any of the $SVN::Node::* constants.  Will be $SVN::Node::none if not out of date.
+
+=item $wcstat-E<gt>tree_conflict()
+
+A svn_wc_conflict_description_t object if the entry is the victim of a tree conflict or undef.
+
+=item $wcstat-E<gt>file_external()
+
+A boolean telling if the item is a file that was added to the working copy as an svn:externals.  If file_external is TRUE, then switched is always FALSE.
+
+=item $wcstat-E<gt>pristine_text_status()
+
+An integer representing the status of the item's text as compared to the pristine base of the file.  Can be one of the $SVN::Wc::Status::* constants.
+
+=item $wcstat-E<gt>pristine_prop_status()
+
+An integer representing the status of the item's properties as compared to the pristine base of the node.  Can be one of the $SVN::Wc::Status::* constants.
+
 =back
+
+=cut
+
+package _p_svn_wc_status2_t;
+use SVN::Base qw(Wc svn_wc_status2_t_);
+
+=head2 svn_wc_status_t
+
+Same as svn_wc_status2_t, but without the repos_lock, url, ood_last_cmt_rev, ood_last_cmt_date, ood_kind, ood_last_cmt_author, tree_conflict, file_external, pristine_text_status, pristine_prop_status fields.
 
 =cut
 
@@ -430,6 +475,11 @@ A directory doesn't contain a complete entries list.
 
 =back
 
+=cut
+
+package SVN::Wc::Status;
+use SVN::Base qw(Wc svn_wc_status_);
+
 =head1 COPYRIGHT
 
     Licensed to the Apache Software Foundation (ASF) under one
@@ -450,8 +500,5 @@ A directory doesn't contain a complete entries list.
     under the License.
 
 =cut
-
-package SVN::Wc::Status;
-use SVN::Base qw(Wc svn_wc_status_);
 
 1;

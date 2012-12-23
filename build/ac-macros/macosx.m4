@@ -19,6 +19,32 @@ dnl ===================================================================
 dnl
 dnl  Mac OS X specific checks
 
+dnl SVN_LIB_MACHO_ITERATE
+dnl Check for _dyld_image_name and _dyld_image_header availability
+AC_DEFUN(SVN_LIB_MACHO_ITERATE,
+[
+  AC_MSG_CHECKING([for Mach-O dynamic module iteration functions])
+
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    #include <mach-o/dyld.h>
+    #include <mach-o/loader.h>
+    int check(void) {
+      const struct mach_header *header = _dyld_get_image_header(0);
+      const char *name = _dyld_get_image_name(0);
+      if (name && header) return 1;
+      return 0;
+    }
+  ]],[[]])],[have_macho_iterate=yes],[have_macho_iterate=no])
+
+  if test "$have_macho_iterate" = "yes"; then
+    AC_DEFINE([SVN_HAVE_MACHO_ITERATE], [1],
+              [Is Mach-O low-level _dyld API available?])
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+  fi
+])
+
 dnl SVN_LIB_MACOS_PLIST
 dnl Assign variables for Mac OS property list support
 AC_DEFUN(SVN_LIB_MACOS_PLIST,

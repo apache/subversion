@@ -104,6 +104,8 @@ SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
 SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
                               swig_type_info *tinfo);
 
+SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
+
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
                                              apr_hash_t *changed_paths,
@@ -124,6 +126,11 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 					       const char *date,
 					       const char *author,
 					       void *baton);
+
+/* thunked commit editor callback2. */
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
+                                                void *baton,
+                                                apr_pool_t *pool);
 
 /* thunked repos_history callback. */
 svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
@@ -229,6 +236,18 @@ svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton);
 void svn_swig_pl_status_func(void *baton,
                              const char *path,
                              svn_wc_status_t *status);
+
+/* Thunked version of svn_wc_status_func2_t callback type. */
+void svn_swig_pl_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status);
+
+/* Thunked version of svn_wc_status_func2_t callback type. */
+svn_error_t *svn_swig_pl_status_func3(void *baton,
+                                      const char *path,
+                                      svn_wc_status2_t *status,
+                                      apr_pool_t *pool);
+
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func(void *baton,
                                     apr_int64_t line_no,

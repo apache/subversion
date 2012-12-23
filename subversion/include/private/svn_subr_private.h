@@ -295,6 +295,36 @@ svn_hash__make(apr_pool_t *pool);
 
 /** @} */
 
+/**
+ * @defgroup svn_version Version number dotted triplet parsing
+ * @{
+ */
+
+/* Set @a *version to a version structure parsed from the version
+ * string representation in @a version_string.  Return 
+ * @c SVN_ERR_MALFORMED_VERSION_STRING if the string fails to parse
+ * cleanly.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_version__parse_version_string(svn_version_t **version,
+                                  const char *version_string,
+                                  apr_pool_t *result_pool);
+
+/* Return true iff @a version represents a version number of at least
+ * the level represented by @a major, @a minor, and @a patch.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_version__at_least(svn_version_t *version,
+                      int major,
+                      int minor,
+                      int patch);
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

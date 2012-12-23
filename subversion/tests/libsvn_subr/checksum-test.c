@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "private/svn_pseudo_md5.h"
 
 #include "../svn_test.h"
 
@@ -80,6 +81,38 @@ test_checksum_empty(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_pseudo_md5(apr_pool_t *pool)
+{
+  apr_uint32_t input[16] = { 0 };
+  apr_uint32_t digest_15[4] = { 0 };
+  apr_uint32_t digest_31[4] = { 0 };
+  apr_uint32_t digest_63[4] = { 0 };
+  svn_checksum_t *checksum;
+
+  /* input is all 0s but the hash shall be different
+     (due to different input sizes)*/
+  svn__pseudo_md5_15(digest_15, input);
+  svn__pseudo_md5_31(digest_31, input);
+  svn__pseudo_md5_63(digest_63, input);
+
+  SVN_TEST_ASSERT(memcmp(digest_15, digest_31, sizeof(digest_15)));
+  SVN_TEST_ASSERT(memcmp(digest_15, digest_63, sizeof(digest_15)));
+  SVN_TEST_ASSERT(memcmp(digest_31, digest_63, sizeof(digest_15)));
+
+  /* the checksums shall also be different from "proper" MD5 */
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 15, pool));
+  SVN_TEST_ASSERT(memcmp(digest_15, checksum->digest, sizeof(digest_15)));
+  
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 31, pool));
+  SVN_TEST_ASSERT(memcmp(digest_31, checksum->digest, sizeof(digest_15)));
+
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 63, pool));
+  SVN_TEST_ASSERT(memcmp(digest_63, checksum->digest, sizeof(digest_15)));
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -88,5 +121,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "checksum parse"),
     SVN_TEST_PASS2(test_checksum_empty,
                    "checksum emptiness"),
+    SVN_TEST_PASS2(test_pseudo_md5,
+                   "pseudo-md5 compatibility"),
     SVN_TEST_NULL
   };

@@ -1,5 +1,7 @@
 /*
- * deadprops.c: mod_dav_svn dead property provider functions for Subversion
+ * deadprops.c: mod_dav_svn provider functions for "dead properties"
+ *              (properties implemented by Subversion or its users,
+ *              not as part of the WebDAV specification).
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -512,10 +514,6 @@ db_store(dav_db *db,
   /* ### namespace check? */
   if (elem->first_child && !strcmp(elem->first_child->name, SVN_DAV__OLD_VALUE))
     {
-      const char *propname;
-
-      get_repos_propname(db, name, &propname);
-
       /* Parse OLD_PROPVAL. */
       old_propval = svn_string_create(dav_xml_get_cdata(elem->first_child, pool,
                                                         0 /* strip_white */),

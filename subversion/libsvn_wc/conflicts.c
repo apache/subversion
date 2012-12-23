@@ -1600,6 +1600,10 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
                                           FALSE /* record_fileinfo */,
                                           result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+    
+    SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
+                                             result_pool, scratch_pool));
+    *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
     if (remove_source)
       {
@@ -1679,7 +1683,6 @@ save_merge_result(svn_skel_t **work_item,
                                                 db, local_abspath,
                                                 source, edited_copy_abspath,
                                                 result_pool, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1907,10 +1910,164 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Read all property conflicts contained in CONFLICT_SKEL into
+ * individual conflict descriptions, and append those descriptions
+ * to the CONFLICTS array.
+ *
+ * If NOT create_tempfiles, always create a legacy property conflict
+ * descriptor.
+ *
+ * Allocate results in RESULT_POOL. SCRATCH_POOL is used for temporary
+ * allocations. */
+static svn_error_t *
+read_prop_conflicts(apr_array_header_t *conflicts,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_skel_t *conflict_skel,
+                    svn_boolean_t create_tempfiles,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  const char *prop_reject_file;
+  apr_hash_t *my_props;
+  apr_hash_t *their_old_props;
+  apr_hash_t *their_props;
+  apr_hash_t *conflicted_props;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+  
+  SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
+                                              &my_props,
+                                              &their_old_props,
+                                              &their_props,
+                                              &conflicted_props,
+                                              db, local_abspath,
+                                              conflict_skel,
+                                              scratch_pool, scratch_pool));
+
+  if ((! create_tempfiles) || apr_hash_count(conflicted_props) == 0)
+    {
+      /* Legacy prop conflict with only a .reject file. */
+      svn_wc_conflict_description2_t *desc;
+
+      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
+                                                       svn_node_unknown,
+                                                       "", result_pool);
+
+      /* ### This should be changed. The prej file should be stored
+       * ### separately from the other files. We need to rev the
+       * ### conflict description struct for this. */
+      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description2_t*) = desc;
+
+      return SVN_NO_ERROR;
+    }
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, conflicted_props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = svn__apr_hash_index_key(hi);
+      svn_string_t *old_value;
+      svn_string_t *my_value;
+      svn_string_t *their_value;
+      svn_wc_conflict_description2_t *desc;
+
+      svn_pool_clear(iterpool);
+
+      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
+                                                       svn_node_unknown,
+                                                       propname,
+                                                       result_pool);
+
+      desc->property_name = apr_pstrdup(result_pool, propname);
+
+      my_value = apr_hash_get(my_props, propname, APR_HASH_KEY_STRING);
+      their_value = apr_hash_get(their_props, propname,
+                                 APR_HASH_KEY_STRING);
+
+      /* Compute the incoming side of the conflict ('action'). */
+      if (their_value == NULL)
+        desc->action = svn_wc_conflict_action_delete;
+      else if (my_value == NULL)
+        desc->action = svn_wc_conflict_action_add;
+      else
+        desc->action = svn_wc_conflict_action_edit;
+
+      /* Compute the local side of the conflict ('reason'). */
+      if (my_value == NULL)
+        desc->reason = svn_wc_conflict_reason_deleted;
+      else if (their_value == NULL)
+        desc->reason = svn_wc_conflict_reason_added;
+      else
+        desc->reason = svn_wc_conflict_reason_edited;
+
+      /* ### This should be changed. The prej file should be stored
+       * ### separately from the other files. We need to rev the
+       * ### conflict description struct for this. */
+      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+
+      /* ### This should be changed. The conflict description for
+       * ### props should contain these values as svn_string_t,
+       * ### rather than in temporary files. We need to rev the
+       * ### conflict description struct for this. */
+      if (my_value)
+        {
+          svn_stream_t *s;
+          apr_size_t len;
+
+          SVN_ERR(svn_stream_open_unique(&s, &desc->my_abspath, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         result_pool, iterpool));
+          len = my_value->len;
+          SVN_ERR(svn_stream_write(s, my_value->data, &len));
+          SVN_ERR(svn_stream_close(s));
+        }
+
+      if (their_value)
+        {
+          svn_stream_t *s;
+          apr_size_t len;
+
+          /* ### Currently, their_abspath is used for the prop reject file.
+           * ### Put their value into merged instead...
+           * ### We need to rev the conflict description struct to fix this. */
+          SVN_ERR(svn_stream_open_unique(&s, &desc->merged_file, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         result_pool, iterpool));
+          len = their_value->len;
+          SVN_ERR(svn_stream_write(s, their_value->data, &len));
+          SVN_ERR(svn_stream_close(s));
+        }
+
+      old_value = apr_hash_get(their_old_props, propname, APR_HASH_KEY_STRING);
+      if (old_value)
+        {
+          svn_stream_t *s;
+          apr_size_t len;
+
+          SVN_ERR(svn_stream_open_unique(&s, &desc->base_abspath, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         result_pool, iterpool));
+          len = old_value->len;
+          SVN_ERR(svn_stream_write(s, old_value->data, &len));
+          SVN_ERR(svn_stream_close(s));
+        }
+
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description2_t*) = desc;
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                        svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t create_tempfiles,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -1942,21 +2099,9 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                           sizeof(svn_wc_conflict_description2_t*));
 
   if (prop_conflicted)
-    {
-      svn_wc_conflict_description2_t *desc;
-      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
-                                                       svn_node_unknown,
-                                                       "",
-                                                       result_pool);
-
-      SVN_ERR(svn_wc__conflict_read_prop_conflict(&desc->their_abspath,
-                                                  NULL, NULL,  NULL, NULL,
-                                                  db, local_abspath,
-                                                  conflict_skel,
-                                                  result_pool, scratch_pool));
-
-      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
-    }
+    SVN_ERR(read_prop_conflicts(cflcts, db, local_abspath, conflict_skel,
+                                create_tempfiles,
+                                result_pool, scratch_pool));
 
   if (text_conflicted)
     {
@@ -2207,6 +2352,11 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                     &work_item, db, local_abspath,
                     auto_resolve_src, local_abspath, pool, pool));
           work_items = svn_wc__wq_merge(work_items, work_item, pool);
+
+          SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db,
+                                                   local_abspath,
+                                                   pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
         }
 
       /* Legacy behavior: Only report text conflicts as resolved when at least
@@ -2266,10 +2416,8 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       apr_hash_t *their_old_props;
       apr_hash_t *their_props;
       apr_hash_t *conflicted_props;
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
       apr_hash_t *old_props;
       apr_hash_t *resolve_from = NULL;
-#endif
 
       SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
                                                   &mine_props, &their_old_props,
@@ -2277,7 +2425,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                                                   db, local_abspath, conflicts,
                                                   scratch_pool, scratch_pool));
 
-#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
       if (operation == svn_wc_operation_merge)
           SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
@@ -2341,7 +2488,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                                           FALSE, NULL, NULL,
                                           scratch_pool));
         }
-#endif
 
       /* Legacy behavior: Only report property conflicts as resolved when the
          property reject file exists
@@ -2437,7 +2583,7 @@ conflict_status_walker(void *baton,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath, TRUE,
                                  scratch_pool, iterpool));
 
   for (i = 0; i < conflicts->nelts; i++)

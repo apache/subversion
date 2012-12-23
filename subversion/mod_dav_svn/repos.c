@@ -1149,8 +1149,11 @@ create_private_resource(const dav_resource *base,
   comb->res.collection = TRUE;                  /* ### always true? */
   /* versioned = baselined = working = FALSE */
 
-  comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path->data, (char *)NULL);
+  if (base->info->repos->root_path[1])
+    comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                                path->data, (char *)NULL);
+  else
+    comb->res.uri = path->data;
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = base->pool;
@@ -1908,9 +1911,11 @@ parse_querystring(request_rec *r, const char *query,
          only use a temporary redirect. */
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool,
-                                      apr_psprintf(r->pool, "%s%s?p=%ld",
-                                                   comb->priv.repos->root_path,
-                                                   newpath, working_rev),
+                                  apr_psprintf(r->pool, "%s%s?p=%ld",
+                                               (comb->priv.repos->root_path[1]
+                                                ? comb->priv.repos->root_path
+                                                : ""),
+                                               newpath, working_rev),
                                       r));
       return dav_svn__new_error(r->pool,
                                 prevstr ? HTTP_MOVED_PERMANENTLY
@@ -2217,8 +2222,9 @@ get_resource(request_rec *r,
                                          HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
-      /* Configure the hooks environment, if not empty. */
-      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r));
+      /* Configure hook script environment variables. */
+      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
+                             r->connection->pool, r->pool);
     }
 
   /* cache the filesystem object */
@@ -3077,6 +3083,13 @@ set_headers(request_rec *r, const dav_resource *resource)
       if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
         {
           mimetype = SVN_SVNDIFF_MIME_TYPE;
+
+          /* Note the base that this svndiff is based on, and tell any
+             intermediate caching proxies that this header is
+             significant.  */
+          apr_table_setn(r->headers_out, "Vary", SVN_DAV_DELTA_BASE_HEADER);
+          apr_table_setn(r->headers_out, SVN_DAV_DELTA_BASE_HEADER,
+                         resource->info->delta_base);
         }
       svn_error_clear(serr);
     }
@@ -4345,8 +4358,11 @@ dav_svn__create_working_resource(dav_resource *base,
   res->baselined = base->baselined;
   /* collection = FALSE.   ### not necessarily correct */
 
-  res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                         path, (char *)NULL);
+  if (base->info->repos->root_path[1])
+    res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                           path, (char *)NULL);
+  else
+    res->uri = path;
   res->hooks = &dav_svn__hooks_repository;
   res->pool = base->pool;
 

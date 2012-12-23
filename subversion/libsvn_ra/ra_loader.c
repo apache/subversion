@@ -43,6 +43,9 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dso.h"
+#include "svn_props.h"
+#include "svn_sorts.h"
+
 #include "svn_config.h"
 #include "ra_loader.h"
 
@@ -577,22 +580,6 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
-                                    const char **fspath,
-                                    const char *url,
-                                    apr_pool_t *pool)
-{
-  const char *relpath;
-
-  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &relpath, url, pool));
-  if (*relpath)
-    *fspath = apr_pstrcat(pool, "/", relpath, (char *)NULL);
-  else
-    *fspath = "/";
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
@@ -746,19 +733,6 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_file(session, path, revision, stream,
                                    fetched_rev, props, pool);
-}
-
-svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
-                            const char *path,
-                            svn_revnum_t revision,
-                            apr_hash_t **dirents,
-                            svn_revnum_t *fetched_rev,
-                            apr_hash_t **props,
-                            apr_pool_t *pool)
-{
-  SVN_ERR_ASSERT(*path != '/');
-  return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                  path, revision, SVN_DIRENT_ALL, pool);
 }
 
 svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
@@ -1269,6 +1243,38 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   return err;
 }
 
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **iprops,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_boolean_t iprop_capable;
+
+  /* Path must be relative. */
+  SVN_ERR_ASSERT(*path != '/');
+
+  SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
+                                SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                scratch_pool));
+
+  if (iprop_capable)
+    {
+      SVN_ERR(session->vtable->get_inherited_props(session, iprops, path,
+                                                   revision, result_pool,
+                                                   scratch_pool));
+    }
+  else
+    {
+      /* Fallback for legacy servers. */
+      SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision, iprops,
+                                               result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_ra__get_commit_ev2(svn_editor_t **editor,
@@ -1329,7 +1335,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                            cancel_func, cancel_baton,
                            result_pool, scratch_pool));
 }
-
 
 
 svn_error_t *

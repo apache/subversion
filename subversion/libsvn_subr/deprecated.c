@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_cmdline.h"
+#include "svn_version.h"
 #include "svn_pools.h"
 #include "svn_dso.h"
 #include "svn_mergeinfo.h"
@@ -604,8 +605,11 @@ svn_opt_print_help(apr_getopt_t *os,
         }
     }
   else if (print_version)   /* just --version */
-    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
-                                        quiet, FALSE, pool));
+    {
+      SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                          svn_version_extended(FALSE, pool),
+                                          quiet, FALSE, pool));
+    }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help(header,
                                cmd_table,

@@ -170,6 +170,12 @@ struct edit_baton
      generated conflict files. */
   const apr_array_header_t *ext_patterns;
 
+  /* Hash mapping const char * absolute working copy paths to depth-first
+     ordered arrays of svn_prop_inherited_item_t * structures representing
+     the properties inherited by the base node at that working copy path.
+     May be NULL. */
+  apr_hash_t *wcroot_iprops;
+
   /* The revision we're targeting...or something like that.  This
      starts off as a pointer to the revision to which we are updating,
      or SVN_INVALID_REVNUM, but by the end of the edit, should be
@@ -1404,7 +1410,18 @@ check_tree_conflict(svn_skel_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-        reason = svn_wc_conflict_reason_deleted;
+        {
+          const char *moved_to_abspath;
+
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
+                                           NULL, NULL, eb->db,
+                                           local_abspath,
+                                           scratch_pool, scratch_pool));
+          if (moved_to_abspath)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
         break;
 
       case svn_wc__db_status_incomplete:
@@ -1662,7 +1679,7 @@ delete_entry(const char *path,
 
 
 
-    /* Receive the remote removal of excluded/absent/not present node.
+    /* Receive the remote removal of excluded/server-excluded/not present node.
        Do not notify, but perform the change even when the node is shadowed */
   if (base_status == svn_wc__db_status_not_present
       || base_status == svn_wc__db_status_excluded
@@ -2627,6 +2644,7 @@ close_directory(void *dir_baton,
   else
     {
       apr_hash_t *props;
+      apr_array_header_t *iprops = NULL;
 
       /* ### we know a base node already exists. it was created in
          ### open_directory or add_directory.  let's just preserve the
@@ -2686,6 +2704,22 @@ close_directory(void *dir_baton,
                                             scratch_pool);
         }
 
+      /* Any inherited props to be set set for this base node? */
+      if (eb->wcroot_iprops)
+        {
+          iprops = apr_hash_get(eb->wcroot_iprops, db->local_abspath,
+                                APR_HASH_KEY_STRING);
+
+          /* close_edit may also update iprops for switched nodes, catching
+             those for which close_directory is never called (e.g. a switch
+             with no changes).  So as a minor optimization we remove any
+             iprops from the hash so as not to set them again in
+             close_edit. */
+          if (iprops)
+            apr_hash_set(eb->wcroot_iprops, db->local_abspath,
+                         APR_HASH_KEY_STRING, NULL);
+        }
+
       /* Update the BASE data for the directory and mark the directory
          complete */
       SVN_ERR(svn_wc__db_base_add_directory(
@@ -2704,7 +2738,7 @@ close_directory(void *dir_baton,
                 conflict_skel,
                 (! db->shadowed) && new_base_props != NULL,
                 new_actual_props,
-                all_work_items,
+                iprops, all_work_items,
                 scratch_pool));
     }
 
@@ -4380,6 +4414,7 @@ close_edit(void *edit_baton,
                                                        eb->repos_uuid,
                                                        *(eb->target_revision),
                                                        eb->skipped_trees,
+                                                       eb->wcroot_iprops,
                                                        eb->pool));
 
       if (*eb->target_basename != '\0')
@@ -4453,6 +4488,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_wc__db_t *db,
             const char *anchor_abspath,
             const char *target_basename,
+            apr_hash_t *wcroot_iprops,
             svn_boolean_t use_commit_times,
             const char *switch_url,
             svn_depth_t depth,
@@ -4518,6 +4554,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->db                       = db;
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
+  eb->wcroot_iprops            = wcroot_iprops;
 
   SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath, db, anchor_abspath,
                                 edit_pool, scratch_pool));
@@ -4739,6 +4776,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,
                           const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -4762,7 +4800,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           apr_pool_t *scratch_pool)
 {
   return make_editor(target_revision, wc_ctx->db, anchor_abspath,
-                     target_basename, use_commit_times,
+                     target_basename, wcroot_iprops, use_commit_times,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
                      adds_as_modification, server_performs_filtering,
                      clean_checkout,
@@ -4783,6 +4821,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           const char *anchor_abspath,
                           const char *target_basename,
                           const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -4806,7 +4845,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
   SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
 
   return make_editor(target_revision, wc_ctx->db, anchor_abspath,
-                     target_basename, use_commit_times,
+                     target_basename, wcroot_iprops, use_commit_times,
                      switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,
                      FALSE /* adds_as_modification */,
@@ -5061,7 +5100,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
       return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
     }
 
-  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+  *wc_root = is_root || is_switched;
 
   return SVN_NO_ERROR;
 }

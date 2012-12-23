@@ -244,6 +244,7 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
                               const char *dst_parent_abspath,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
+                              svn_boolean_t allow_mixed_revisions,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
@@ -252,11 +253,12 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
   dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
                                 scratch_pool);
 
-  SVN_ERR(svn_wc_move(ctx->wc_ctx, pair->src_abspath_or_url,
-                     dst_abspath, FALSE /* metadata_only */,
-                     ctx->cancel_func, ctx->cancel_baton,
-                     ctx->notify_func2, ctx->notify_baton2,
-                     scratch_pool));
+  SVN_ERR(svn_wc__move2(ctx->wc_ctx, pair->src_abspath_or_url,
+                        dst_abspath, FALSE /* metadata_only */,
+                        allow_mixed_revisions,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        ctx->notify_func2, ctx->notify_baton2,
+                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -267,17 +269,20 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
                               const char *dst_parent_abspath,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
+                              svn_boolean_t allow_mixed_revisions,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
   if (lock_dst)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
-                                    lock_dst, ctx, scratch_pool),
+                                    lock_dst, allow_mixed_revisions, ctx,
+                                    scratch_pool),
       ctx->wc_ctx, dst_parent_abspath, FALSE, scratch_pool);
   else
     SVN_ERR(do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
-                                          lock_dst, ctx, scratch_pool));
+                                          lock_dst, allow_mixed_revisions,
+                                          ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -287,6 +292,7 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
 static svn_error_t *
 do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                   const char *dst_path,
+                  svn_boolean_t allow_mixed_revisions,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -341,13 +347,15 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (lock_src)
         SVN_WC__CALL_WITH_WRITE_LOCK(
           do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                        lock_src, lock_dst, ctx, iterpool),
+                                        lock_src, lock_dst,
+                                        allow_mixed_revisions, ctx, iterpool),
           ctx->wc_ctx, src_parent_abspath,
           FALSE, iterpool);
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                              lock_src, lock_dst, ctx,
-                                              iterpool));
+                                              lock_src, lock_dst,
+                                              allow_mixed_revisions,
+                                              ctx, iterpool));
 
     }
   svn_pool_destroy(iterpool);
@@ -389,11 +397,30 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
       /* If DST_PATH does not exist, then its basename will become a new
          file or dir added to its parent (possibly an implicit '.').
          Else, just error out. */
-      SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
-                                iterpool));
+      SVN_ERR(svn_wc_read_kind(&dst_kind, ctx->wc_ctx,
+                               pair->dst_abspath_or_url, TRUE /* show_hidden */,
+                               iterpool));
       if (dst_kind != svn_node_none)
         {
-          if (is_move
+          svn_boolean_t is_not_present;
+          svn_boolean_t is_excluded;
+          svn_boolean_t is_server_excluded;
+
+          SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+                                              &is_server_excluded, ctx->wc_ctx,
+                                              pair->dst_abspath_or_url,
+                                              iterpool));
+
+          if (is_excluded || is_server_excluded)
+            {
+              return svn_error_createf(
+                  SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                  NULL, _("Path '%s' exists, but is excluded"),
+                  svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
+            }
+
+          if ((! is_not_present)
+              && is_move
               && copy_pairs->nelts == 1
               && strcmp(svn_dirent_dirname(pair->src_abspath_or_url, iterpool),
                         svn_dirent_dirname(pair->dst_abspath_or_url,
@@ -432,10 +459,20 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                 }
             }
 
-          return svn_error_createf(
-                      SVN_ERR_ENTRY_EXISTS, NULL,
-                      _("Path '%s' already exists"),
-                      svn_dirent_local_style(pair->dst_abspath_or_url, pool));
+          if (! is_not_present)
+            {
+              svn_boolean_t is_deleted;
+
+              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                                     pair->dst_abspath_or_url, pool));
+
+              if (! is_deleted)
+                return svn_error_createf(
+                            SVN_ERR_ENTRY_EXISTS, NULL,
+                            _("Path '%s' already exists"),
+                            svn_dirent_local_style(pair->dst_abspath_or_url,
+                                                   pool));
+            }
         }
 
       svn_dirent_split(&pair->dst_parent_abspath, &pair->base_name,
@@ -1613,13 +1650,15 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_node_kind_t kind;
+      svn_boolean_t is_not_present;
       svn_boolean_t is_excluded;
       svn_boolean_t is_server_excluded;
+      svn_boolean_t is_deleted;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, pair->dst_abspath_or_url,
-                               FALSE, iterpool));
+                               TRUE /* show_hidden */, iterpool));
       if (kind == svn_node_none)
         continue;
 
@@ -1627,48 +1666,34 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
          ### simplify the conditions? */
 
       /* Hidden by client exclusion */
-      SVN_ERR(svn_wc__node_is_status_excluded(&is_excluded, ctx->wc_ctx,
-                                              pair->dst_abspath_or_url,
-                                              iterpool));
-      if (is_excluded)
-        {
-          return svn_error_createf
-            (SVN_ERR_ENTRY_EXISTS,
-             NULL, _("'%s' is already under version control"),
-             svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
-        }
+      SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+                                          &is_server_excluded, ctx->wc_ctx,
+                                          pair->dst_abspath_or_url,
+                                          iterpool));
 
-      /* Hidden by server exclusion (not authorized) */
-      SVN_ERR(svn_wc__node_is_status_server_excluded(&is_server_excluded,
-                                                     ctx->wc_ctx,
-                                                     pair->dst_abspath_or_url,
-                                                     iterpool));
-      if (is_server_excluded)
+      if (is_not_present)
+        continue;
+
+      if (is_excluded || is_server_excluded)
         {
-          return svn_error_createf
-            (SVN_ERR_ENTRY_EXISTS,
-             NULL, _("'%s' is already under version control"),
+          return svn_error_createf(
+             SVN_ERR_WC_OBSTRUCTED_UPDATE,
+             NULL, _("Path '%s' exists, but is excluded"),
              svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
         }
 
       /* Working file missing to something other than being scheduled
          for addition or in "deleted" state. */
-      if (kind != svn_node_dir)
-        {
-          svn_boolean_t is_deleted;
-          svn_boolean_t is_not_present;
 
-          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
-                                                 pair->dst_abspath_or_url,
-                                                 iterpool));
-          SVN_ERR(svn_wc__node_is_status_not_present(&is_not_present,
-                                                     ctx->wc_ctx,
-                                                     pair->dst_abspath_or_url,
-                                                     iterpool));
-          if ((! is_deleted) && (! is_not_present))
-            return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Entry for '%s' exists (though the working file is missing)"),
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                             pair->dst_abspath_or_url,
+                                             iterpool));
+
+      if (! is_deleted)
+        {
+          return svn_error_createf(
+               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Path '%s' exists, but the working file is missing"),
                svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
         }
     }
@@ -1856,6 +1881,7 @@ static svn_error_t *
 try_copy(const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
+         svn_boolean_t allow_mixed_revisions,
          svn_boolean_t make_parents,
          svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
@@ -2145,8 +2171,9 @@ try_copy(const apr_array_header_t *sources,
 
       /* Copy or move all targets. */
       if (is_move)
-        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
-                                                 pool));
+        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in,
+                                                 allow_mixed_revisions,
+                                                 ctx, pool));
       else
         return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }
@@ -2195,6 +2222,7 @@ svn_client_copy6(const apr_array_header_t *sources,
 
   err = try_copy(sources, dst_path,
                  FALSE /* is_move */,
+                 TRUE /* allow_mixed_revisions */,
                  make_parents,
                  ignore_externals,
                  revprop_table,
@@ -2226,6 +2254,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                                                        subpool)
                          : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
+                     TRUE /* allow_mixed_revisions */,
                      make_parents,
                      ignore_externals,
                      revprop_table,
@@ -2240,10 +2269,11 @@ svn_client_copy6(const apr_array_header_t *sources,
 
 
 svn_error_t *
-svn_client_move6(const apr_array_header_t *src_paths,
+svn_client_move7(const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 svn_boolean_t allow_mixed_revisions,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
@@ -2277,6 +2307,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
 
   err = try_copy(sources, dst_path,
                  TRUE /* is_move */,
+                 allow_mixed_revisions,
                  make_parents,
                  FALSE,
                  revprop_table,
@@ -2307,6 +2338,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
                                                        src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
+                     allow_mixed_revisions,
                      make_parents,
                      FALSE,
                      revprop_table,

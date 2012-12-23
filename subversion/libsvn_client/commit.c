@@ -1770,9 +1770,16 @@ svn_client_commit6(const apr_array_header_t *targets,
   cb.info = &commit_info;
   cb.pool = pool;
 
+  /* Get the RA editor from the first lock target, rather than BASE_ABSPATH.
+   * When committing from multiple WCs, BASE_ABSPATH might be an unrelated
+   * parent of nested working copies. We don't support commits to multiple
+   * repositories so using the first WC to get the RA session is safe. */
   cmt_err = svn_error_trace(
               svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
-                                                   base_abspath, commit_items,
+                                                   APR_ARRAY_IDX(lock_targets,
+                                                                 0,
+                                                                 const char *),
+                                                   commit_items,
                                                    TRUE, FALSE, ctx, pool));
 
   if (cmt_err)

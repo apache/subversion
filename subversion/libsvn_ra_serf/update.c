@@ -933,12 +933,23 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      if (val && svn_cstring_casecmp(val, "application/vnd.svn-svndiff") == 0)
+      if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
           fetch_ctx->delta_stream =
               svn_txdelta_parse_svndiff(info->textdelta,
                                         info->textdelta_baton,
                                         TRUE, info->editor_pool);
+
+          /* Validate the delta base claimed by the server matches
+             what we asked for! */
+          val = serf_bucket_headers_get(hdrs, SVN_DAV_DELTA_BASE_HEADER);
+          if (val && (strcmp(val, info->delta_base) != 0))
+            {
+              err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                      _("GET request returned unexpected "
+                                        "delta base: %s"), val);
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
       else
         {
@@ -968,7 +979,7 @@ handle_fetch(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -988,7 +999,7 @@ handle_fetch(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1064,11 +1075,11 @@ handle_fetch(serf_request_t *request,
           svn_pool_destroy(info->pool);
 
           if (status)
-            return svn_error_wrap_apr(status, NULL);
+            return svn_ra_serf__wrap_err(status, NULL);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
   /* not reached */
@@ -1110,7 +1121,7 @@ handle_stream(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -1129,7 +1140,7 @@ handle_stream(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return svn_ra_serf__wrap_err(status, NULL);
                 }
               continue;
             }
@@ -1159,7 +1170,7 @@ handle_stream(serf_request_t *request,
 
       if (status)
         {
-          return svn_error_wrap_apr(status, NULL);
+          return svn_ra_serf__wrap_err(status, NULL);
         }
     }
   /* not reached */
@@ -2327,7 +2338,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
                                        sess->conns[cur],
                                        sess->pool);
       if (status)
-        return svn_error_wrap_apr(status, NULL);
+        return svn_ra_serf__wrap_err(status, NULL);
 
       sess->num_conns++;
     }
@@ -2504,8 +2515,7 @@ finish_report(void *report_baton,
       SVN_ERR(err);
       if (status)
         {
-          return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
-                                    status);
+          return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
         }
 
       /* Open extra connections if we have enough requests to send. */
