@@ -28,38 +28,92 @@ from gdb.printing import RegexpCollectionPrettyPrinter
 
 
 class TypedefRegexCollectionPrettyPrinter(RegexpCollectionPrettyPrinter):
-    """Class for implementing a collection of regular-expression based
-       pretty-printers, matching on the type name at the point of use, such
-       as (but not necessarily) a 'typedef' name, ignoring 'const' or
-       'volatile' qualifiers.
+    """Class for implementing a collection of pretty-printers, matching the
+       type name to a regular expression.
 
-       This is modeled on RegexpCollectionPrettyPrinter, which (in GDB 7.3)
-       matches on the base type's tag name and can't match a pointer type or
-       any other type that doesn't have a tag name."""
+       A pretty-printer in this collection will be used if the type of the
+       value to be printed matches the printer's regular expression, or if
+       the value is a pointer to and/or typedef to a type name that matches
+       its regular expression.  The variations are tried in this order:
+
+         1. the type name as known to the debugger (could be a 'typedef');
+         2. the type after stripping off any number of layers of 'typedef';
+         3. if it is a pointer, the pointed-to type;
+         4. if it is a pointer, the pointed-to type minus some 'typedef's.
+
+       In all cases, ignore 'const' and 'volatile' qualifiers.  When
+       matching the pointed-to type, dereference the value or use 'None' if
+       the value was a null pointer.
+
+       This class is modeled on RegexpCollectionPrettyPrinter, which (in GDB
+       7.3) matches on the base type's tag name and can't match a pointer
+       type or any other type that doesn't have a tag name.
+    """
 
     def __init__(self, name):
         super(TypedefRegexCollectionPrettyPrinter, self).__init__(name)
 
     def __call__(self, val):
-        """Lookup the pretty-printer for the provided value."""
+        """Find and return an instantiation of a printer for VAL.
+        """
 
-        # Get the type name, without 'const' or 'volatile' qualifiers.
-        typename = str(val.type.unqualified())
-        if not typename:
-            return None
+        def lookup_type(type, val):
+            """Return the first printer whose regular expression matches the
+               name (tag name for struct/union/enum types) of TYPE, ignoring
+               any 'const' or 'volatile' qualifiers.
 
-        # Iterate over table of type regexps to find an enabled printer for
-        # that type.  Return an instantiation of the printer if found.
-        for printer in self.subprinters:
-            if printer.enabled and printer.compiled_re.search(typename):
-                return printer.gen_printer(val)
+               VAL is a gdb.Value, or may be None to indicate a dereferenced
+               null pointer.  TYPE is the associated gdb.Type.
+            """
+            if type.code in [gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION,
+                             gdb.TYPE_CODE_ENUM]:
+                typename = type.tag
+            else:
+                typename = str(type.unqualified())
+            for printer in self.subprinters:
+                if printer.enabled and printer.compiled_re.search(typename):
+                    return printer.gen_printer(val)
 
-        # Cannot find a pretty printer.  Return None.
+        def lookup_type_or_alias(type, val):
+            """Return the first printer matching TYPE, or else if TYPE is a
+               typedef then the first printer matching the aliased type.
+
+               VAL is a gdb.Value, or may be None to indicate a dereferenced
+               null pointer.  TYPE is the associated gdb.Type.
+            """
+            # First, look for a printer for the given (but unqualified) type.
+            printer = lookup_type(type, val)
+            if printer:
+                return printer
+
+            # If it's a typedef, look for a printer for the aliased type ...
+            while type.code == gdb.TYPE_CODE_TYPEDEF:
+                type = type.target()
+                printer = lookup_type(type, val)
+                if printer:
+                    return printer
+
+        # First, look for a printer for the given (but unqualified) type, or
+        # its aliased type if it's a typedef.
+        printer = lookup_type_or_alias(val.type, val)
+        if printer:
+            return printer
+
+        # If it's a pointer, look for a printer for the pointed-to type.
+        if val.type.code == gdb.TYPE_CODE_PTR:
+            type = val.type.target()
+            printer = lookup_type_or_alias(
+                          type, val and val.dereference() or None)
+            if printer:
+                return printer
+
+        # Cannot find a matching pretty printer in this collection.
         return None
 
 class InferiorFunction:
     """A class whose instances are callable functions on the inferior
-       process."""
+       process.
+    """
     def __init__(self, function_name):
         self.function_name = function_name
         self.func = None
@@ -71,7 +125,8 @@ class InferiorFunction:
 
 def children_as_map(children_iterator):
     """Convert an iteration of (key, value) pairs into the form required for
-       a pretty-printer 'children' method when the display-hint is 'map'."""
+       a pretty-printer 'children' method when the display-hint is 'map'.
+    """
     for k, v in children_iterator:
         yield 'key', k
         yield 'val', v
@@ -97,7 +152,8 @@ def children_of_apr_hash(hash_p, value_type=None):
     """Iterate over an 'apr_hash_t *' GDB value, in the way required for a
        pretty-printer 'children' method when the display-hint is 'map'.
        Cast the value pointers to VALUE_TYPE, or return values as '...' if
-       VALUE_TYPE is None."""
+       VALUE_TYPE is None.
+    """
     hi = apr_hash_first(0, hash_p)
     while (hi):
         k = svn__apr_hash_index_key(hi).reinterpret_cast(cstringType)
@@ -115,14 +171,15 @@ def children_of_apr_hash(hash_p, value_type=None):
 class AprHashPrinter:
     """for 'apr_hash_t' of 'char *' keys and unknown values"""
     def __init__(self, val):
-        if val.type.code == gdb.TYPE_CODE_PTR:
-            self.hash_p = val
-        else:
+        if val:
             self.hash_p = val.address
+        else:
+            self.hash_p = val
 
     def to_string(self):
         """Return a string to be displayed before children are displayed, or
-           return None if we don't want any such."""
+           return None if we don't want any such.
+        """
         if not self.hash_p:
             return 'NULL'
         return 'hash of ' + str(apr_hash_count(self.hash_p)) + ' items'
@@ -135,13 +192,20 @@ class AprHashPrinter:
     def display_hint(self):
         return 'map'
 
+def children_of_apr_array(array, value_type):
+    """Iterate over an 'apr_array_header_t' GDB value, in the way required for
+       a pretty-printer 'children' method when the display-hint is 'array'.
+       Cast the values to VALUE_TYPE.
+    """
+    nelts = int(array['nelts'])
+    elts = array['elts'].reinterpret_cast(value_type.pointer())
+    for i in range(nelts):
+        yield str(i), elts[i]
+
 class AprArrayPrinter:
     """for 'apr_array_header_t' of unknown elements"""
     def __init__(self, val):
-        if val.type.code == gdb.TYPE_CODE_PTR and val:
-            self.array = val.dereference()
-        else:
-            self.array = val
+        self.array = val
 
     def to_string(self):
         if not self.array:
@@ -156,25 +220,27 @@ class AprArrayPrinter:
     def display_hint(self):
         return 'array'
 
-def children_of_apr_array(array, value_type):
-    """Iterate over an 'apr_array_header_t' GDB value, in the way required for
-       a pretty-printer 'children' method when the display-hint is 'array'.
-       Cast the value pointers to VALUE_TYPE."""
-    nelts = int(array['nelts'])
-    elts = array['elts'].reinterpret_cast(value_type.pointer())
-    for i in range(nelts):
-        yield str(i), elts[i]
-
 ########################################################################
 
 # Pretty-printing for Subversion libsvn_subr types.
 
-class SvnStringPrinter:
+class SvnBooleanPrinter:
+    """for svn_boolean_t"""
     def __init__(self, val):
-        if val.type.code == gdb.TYPE_CODE_PTR and val:
-            self.val = val.dereference()
+        self.val = val
+
+    def to_string(self):
+        if self.val is None:
+            return '(NULL)'
+        if self.val:
+            return 'TRUE'
         else:
-            self.val = val
+            return 'FALSE'
+
+class SvnStringPrinter:
+    """for svn_string_t"""
+    def __init__(self, val):
+        self.val = val
 
     def to_string(self):
         if not self.val:
@@ -185,34 +251,45 @@ class SvnStringPrinter:
         return data.string(length=len)
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 class SvnMergeRangePrinter:
+    """for svn_merge_range_t"""
     def __init__(self, val):
-        if val.type.code == gdb.TYPE_CODE_PTR and val:
-            self.val = val.dereference()
-        else:
-            self.val = val
+        self.val = val
 
     def to_string(self):
         if not self.val:
             return 'NULL'
 
         r = self.val
-        rs = str(r['start']) + '-' + str(r['end'])
+        start = int(r['start'])
+        end = int(r['end'])
+        if start >= 0 and start < end:
+            if start + 1 == end:
+                rs = str(end)
+            else:
+                rs = str(start + 1) + '-' + str(end)
+        elif end >= 0 and end < start:
+            if start == end + 1:
+                rs = '-' + str(start)
+            else:
+                rs = str(start) + '-' + str(end + 1)
+        else:
+            rs = '(INVALID: s=%d, e=%d)' % (start, end)
         if not r['inheritable']:
-          rs += '*'
+            rs += '*'
         return rs
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 class SvnRangelistPrinter:
+    """for svn_rangelist_t"""
     def __init__(self, val):
-        if val.type.code == gdb.TYPE_CODE_PTR and val:
-            self.array = val.dereference()
-        else:
-            self.array = val
+        self.array = val
         self.svn_merge_range_t = gdb.lookup_type('svn_merge_range_t')
 
     def to_string(self):
@@ -221,21 +298,21 @@ class SvnRangelistPrinter:
 
         s = ''
         for key, val in children_of_apr_array(self.array,
-                       self.svn_merge_range_t.pointer()):
+                                              self.svn_merge_range_t.pointer()):
             if s:
-              s += ','
+                s += ','
             s += SvnMergeRangePrinter(val).to_string()
         return s
 
     def display_hint(self):
-        return 'string'
+        if self.array:
+            return 'string'
 
 class SvnMergeinfoPrinter:
     """for svn_mergeinfo_t"""
     def __init__(self, val):
         self.hash_p = val
-        # We don't actually have an svn_rangelist_t in Subversion...
-        self.svn_rangelist_t = gdb.lookup_type('apr_array_header_t')
+        self.svn_rangelist_t = gdb.lookup_type('svn_rangelist_t')
 
     def to_string(self):
         if self.hash_p == 0:
@@ -245,7 +322,7 @@ class SvnMergeinfoPrinter:
         for key, val in children_of_apr_hash(self.hash_p,
                                              self.svn_rangelist_t.pointer()):
             if s:
-              s += '; '
+                s += '; '
             s += key + ':' + SvnRangelistPrinter(val).to_string()
         return '{ ' + s + ' }'
 
@@ -263,7 +340,7 @@ class SvnMergeinfoCatalogPrinter:
         for key, val in children_of_apr_hash(self.hash_p,
                                              self.svn_mergeinfo_t):
             if s:
-              s += ',\n  '
+                s += ',\n  '
             s += "'" + key + "': " + SvnMergeinfoPrinter(val).to_string()
         return '{ ' + s + ' }'
 
@@ -272,10 +349,14 @@ class SvnMergeinfoCatalogPrinter:
 # Pretty-printing for Subversion libsvn_client types.
 
 class SvnPathrevPrinter:
+    """for svn_client__pathrev_t"""
     def __init__(self, val):
         self.val = val
 
     def to_string(self):
+        if not self.val:
+            return 'NULL'
+
         rev = int(self.val['rev'])
         url = self.val['url'].string()
         repos_root_url = self.val['repos_root_url'].string()
@@ -283,86 +364,51 @@ class SvnPathrevPrinter:
         return "%s@%d" % (relpath, rev)
 
     def display_hint(self):
-        return 'string'
+        if self.val:
+            return 'string'
 
 
 ########################################################################
 
 libapr_printer = None
-libapr_printer2 = None
 libsvn_printer = None
-libsvn_printer2 = None
 
 def build_libsvn_printers():
     """Construct the pretty-printer objects."""
 
-    global libapr_printer, libapr_printer2, libsvn_printer, libsvn_printer2
+    global libapr_printer, libsvn_printer
 
-    # These sub-printers match a struct's (or union)'s tag name,
-    # after stripping typedefs, references and const/volatile qualifiers.
-    libapr_printer = RegexpCollectionPrettyPrinter("libapr")
+    libapr_printer = TypedefRegexCollectionPrettyPrinter("libapr")
     libapr_printer.add_printer('apr_hash_t', r'^apr_hash_t$',
                                AprHashPrinter)
     libapr_printer.add_printer('apr_array_header_t', r'^apr_array_header_t$',
                                AprArrayPrinter)
 
-    # These sub-printers match a type name at the point of use,
-    # after stripping const/volatile qualifiers.
-    #
-    # TODO: The "apr_foo_t *" entries are in this collection merely because
-    #       the collection above can't match any pointer type (because the
-    #       pointer itself has no tag-name).  Ideally we'd improve that
-    #       matching so that for example the 'apr_hash_t *' entry would
-    #       match both
-    #         any typedef that resolves to pointer-to-apr_hash_t
-    #       and
-    #         pointer to any typedef that resolves to apr_hash_t
-    #       for any typedef that doesn't have its own specific pretty-printer
-    #       registered.
-    libapr_printer2 = TypedefRegexCollectionPrettyPrinter("libapr2")
-    libapr_printer2.add_printer('apr_hash_t *', r'^apr_hash_t \*$',
-                                AprHashPrinter)
-    libapr_printer2.add_printer('apr_array_header_t *', r'^apr_array_header_t \*$',
-                                AprArrayPrinter)
-
-    # These sub-printers match a struct's (or union)'s tag name,
-    # after stripping typedefs, references and const/volatile qualifiers.
-    libsvn_printer = RegexpCollectionPrettyPrinter("libsvn")
+    libsvn_printer = TypedefRegexCollectionPrettyPrinter("libsvn")
+    libsvn_printer.add_printer('svn_boolean_t', r'^svn_boolean_t$',
+                               SvnBooleanPrinter)
     libsvn_printer.add_printer('svn_string_t', r'^svn_string_t$',
                                SvnStringPrinter)
-
-    # These sub-printers match a type name at the point of use,
-    # after stripping const/volatile qualifiers.
-    libsvn_printer2 = TypedefRegexCollectionPrettyPrinter("libsvn2")
-    libsvn_printer2.add_printer('svn_string_t *', r'^svn_string_t \*$',
-                               SvnStringPrinter)
-    libsvn_printer2.add_printer('svn_client__pathrev_t', r'^svn_client__pathrev_t$',
-                                SvnPathrevPrinter)
-    libsvn_printer2.add_printer('svn_merge_range_t', r'^svn_merge_range_t$',
-                                SvnMergeRangePrinter)
-    libsvn_printer2.add_printer('svn_merge_range_t *', r'^svn_merge_range_t \*$',
-                                SvnMergeRangePrinter)
-    # If we define an 'svn_rangelist_t' type in Subversion, we'll want these:
-    #libsvn_printer2.add_printer('svn_rangelist_t', r'^svn_rangelist_t$',
-    #                            SvnRangelistPrinter)
-    #libsvn_printer2.add_printer('svn_rangelist_t *', r'^svn_rangelist_t \*$',
-    #                            SvnRangelistPrinter)
-    libsvn_printer2.add_printer('svn_mergeinfo_t', r'^svn_mergeinfo_t$',
-                                SvnMergeinfoPrinter)
-    libsvn_printer2.add_printer('svn_mergeinfo_catalog_t', r'^svn_mergeinfo_catalog_t$',
-                                SvnMergeinfoCatalogPrinter)
+    libsvn_printer.add_printer('svn_client__pathrev_t', r'^svn_client__pathrev_t$',
+                               SvnPathrevPrinter)
+    libsvn_printer.add_printer('svn_merge_range_t', r'^svn_merge_range_t$',
+                               SvnMergeRangePrinter)
+    libsvn_printer.add_printer('svn_rangelist_t', r'^svn_rangelist_t$',
+                               SvnRangelistPrinter)
+    libsvn_printer.add_printer('svn_mergeinfo_t', r'^svn_mergeinfo_t$',
+                               SvnMergeinfoPrinter)
+    libsvn_printer.add_printer('svn_mergeinfo_catalog_t', r'^svn_mergeinfo_catalog_t$',
+                               SvnMergeinfoCatalogPrinter)
 
 
 def register_libsvn_printers(obj):
     """Register the pretty-printers for the object file OBJ."""
 
-    global libapr_printer, libapr_printer2, libsvn_printer, libsvn_printer2
+    global libapr_printer, libsvn_printer
 
     # Printers registered later take precedence.
     gdb.printing.register_pretty_printer(obj, libapr_printer)
-    gdb.printing.register_pretty_printer(obj, libapr_printer2)
     gdb.printing.register_pretty_printer(obj, libsvn_printer)
-    gdb.printing.register_pretty_printer(obj, libsvn_printer2)
 
 
 # Construct the pretty-printer objects, once, at GDB start-up time when this

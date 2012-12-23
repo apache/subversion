@@ -505,8 +505,8 @@ version(const char *progname,
                          pool);
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
-  return svn_opt_print_help3(NULL, ensure_appname(progname, pool),
-                             TRUE, quiet, version_footer->data,
+  return svn_opt_print_help4(NULL, ensure_appname(progname, pool),
+                             TRUE, quiet, FALSE, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -579,9 +579,9 @@ help_cmd(apr_getopt_t *os,
       "\n"
       "Available subcommands:\n");
 
-  return svn_opt_print_help3(os, "svnrdump", FALSE, FALSE, NULL, header,
-                             svnrdump__cmd_table, svnrdump__options, NULL,
-                             NULL, pool);
+  return svn_opt_print_help4(os, "svnrdump", FALSE, FALSE, FALSE, NULL,
+                             header, svnrdump__cmd_table, svnrdump__options,
+                             NULL, NULL, pool);
 }
 
 /* Examine the OPT_BATON's 'start_revision' and 'end_revision'

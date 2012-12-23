@@ -311,16 +311,17 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 ""                                                                           NL
 "# START-COMMIT HOOK"                                                        NL
 "#"                                                                          NL
-"# The start-commit hook is invoked before a Subversion txn is created"      NL
-"# in the process of doing a commit.  Subversion runs this hook"             NL
-"# by invoking a program (script, executable, binary, etc.) named"           NL
-"# '"SCRIPT_NAME"' (for which this file is a template)"                      NL
-"# with the following ordered arguments:"                                    NL
+"# The start-commit hook is invoked immediately after a Subversion txn is"   NL
+"# created and populated with initial revprops in the process of doing a"    NL
+"# commit. Subversion runs this hook by invoking a program (script, "        NL
+"# executable, binary, etc.) named '"SCRIPT_NAME"' (for which this file"     NL
+"# is a template) with the following ordered arguments:"                     NL
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the authenticated user attempting to commit)"         NL
 "#   [3] CAPABILITIES (a colon-separated list of capabilities reported"      NL
 "#                     by the client; see note below)"                       NL
+"#   [4] TXN-NAME     (the name of the commit txn just created)"             NL
 "#"                                                                          NL
 "# Note: The CAPABILITIES parameter is new in Subversion 1.5, and 1.5"       NL
 "# clients will typically report at least the \""                            \
@@ -329,6 +330,11 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
   "(the order is undefined)."                                                NL
 "#"                                                                          NL
+"# Note: The TXN-NAME parameter is new in Subversion 1.8.  Prior to version" NL
+"# 1.8, the start-commit hook was invoked before the commit txn was even"    NL
+"# created, so the ability to inspect the commit txn and its metadata from"  NL
+"# within the start-commit hook was not possible."                           NL
+"# "                                                                         NL
 "# The list is self-reported by the client.  Therefore, you should not"      NL
 "# make security assumptions based on the capabilities list, nor should"     NL
 "# you assume that clients reliably report every capability they have."      NL
@@ -1018,7 +1024,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# password-db = passwd"                                                     NL
 "### The authz-db option controls the location of the authorization"         NL
 "### rules for path-based access control.  Unless you specify a path"        NL
-"### starting with a /, the file's location is relative to the the"          NL
+"### starting with a /, the file's location is relative to the"              NL
 "### directory containing this file.  If you don't specify an"               NL
 "### authz-db, no path-based access control is done."                        NL
 "### Uncomment the line below to use the default authorization file."        NL
@@ -1680,6 +1686,47 @@ svn_repos_recover4(const char *path,
   SVN_ERR(svn_fs_recover(repos->db_path, cancel_func, cancel_baton, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* For BDB we fall back on BDB's repos layer lock which means that the
+   repository is unreadable while frozen.
+
+   For FSFS we delegate to the FS layer which uses the FSFS write-lock
+   and an SQLite reserved lock which means the repository is readable
+   while frozen. */
+svn_error_t *
+svn_repos_freeze(const char *path,
+                 svn_error_t *(*freeze_body)(void *, apr_pool_t *),
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+
+  /* Using a subpool as the only way to unlock the repos lock used by
+     BDB is to clear the pool used to take the lock. */
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(get_repos(&repos, path,
+                    TRUE  /* exclusive */,
+                    FALSE /* non-blocking */,
+                    FALSE /* open-fs */,
+                    NULL, subpool));
+
+  if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    {
+      svn_error_t *err = freeze_body(baton, subpool);
+      svn_pool_destroy(subpool);
+      return err;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+      SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), freeze_body, baton, subpool));
+    }
+
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
