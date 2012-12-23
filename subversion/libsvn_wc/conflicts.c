@@ -2290,7 +2290,14 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       /* We currently handle *_conflict as *_full as this argument is currently
          always applied for all conflicts on a node at the same time. Giving
          an error would break some tests that assumed that this would just
-         resolve property conflicts to working */
+         resolve property conflicts to working.
+
+         An alternative way to handle these conflicts would be to just copy all
+         property state from mine/theirs on the _full option instead of just the
+         conflicted properties. In some ways this feels like a sensible option as
+         that would take both properties and text from mine/theirs, but when not
+         both properties and text are conflicted we would fail in doing so.
+       */
       switch (conflict_choice)
         {
         case svn_wc_conflict_choose_base:
