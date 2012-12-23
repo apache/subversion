@@ -631,6 +631,8 @@ $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	# fix build with OpenSSL lacking SSLv2 support:
 	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
 		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
+	cd $(NEON_SRCDIR)/src && svn diff -c 1872 \
+		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
 	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
 		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
 	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
