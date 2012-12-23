@@ -886,13 +886,14 @@ static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
+  SVN_CMD_ERR(svn_repos_begin_report3(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
                                       text_deltas, depth, ignore_ancestry,
                                       send_copyfrom_args,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
-                                      b, pool));
+                                      b, svn_ra_svn_zero_copy_limit(conn),
+                                      pool));
 
   rb.sb = b;
   rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
@@ -962,33 +963,52 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
 }
 
 /* ### This really belongs in libsvn_repos. */
-/* Get the properties for a path, with hardcoded committed-info values. */
-static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
-                              const char *path, apr_pool_t *pool)
+/* Get the explicit properties and/or inherited properties for a PATH in
+   ROOT, with hardcoded committed-info values. */
+static svn_error_t *
+get_props(apr_hash_t **props,
+          apr_array_header_t **iprops,
+          server_baton_t *b,
+          svn_fs_root_t *root,
+          const char *path,
+          apr_pool_t *pool)
 {
-  svn_string_t *str;
-  svn_revnum_t crev;
-  const char *cdate, *cauthor, *uuid;
+  /* Get the explicit properties. */
+  if (props)
+    {
+      svn_string_t *str;
+      svn_revnum_t crev;
+      const char *cdate, *cauthor, *uuid;
 
-  /* Get the properties. */
-  SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
+      SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
 
-  /* Hardcode the values for the committed revision, date, and author. */
-  SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
-                                       path, pool));
-  str = svn_string_create(apr_psprintf(pool, "%ld", crev),
-                          pool);
-  apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING, str);
-  str = (cdate) ? svn_string_create(cdate, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
-               str);
-  str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING, str);
+      /* Hardcode the values for the committed revision, date, and author. */
+      SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
+                                           path, pool));
+      str = svn_string_create(apr_psprintf(pool, "%ld", crev),
+                              pool);
+      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING,
+                   str);
+      str = (cdate) ? svn_string_create(cdate, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
+                   str);
+      str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING,
+                   str);
 
-  /* Hardcode the values for the UUID. */
-  SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
-  str = (uuid) ? svn_string_create(uuid, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+      /* Hardcode the values for the UUID. */
+      SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
+      str = (uuid) ? svn_string_create(uuid, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+    }
+
+  /* Get any inherited properties the user is authorized to. */
+  if (iprops)
+    {
+      SVN_ERR(svn_repos_fs_get_inherited_props(iprops, root, path,
+                                               authz_check_access_cb_func(b),
+                                               b, pool, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1390,16 +1410,20 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   svn_stream_t *contents;
   apr_hash_t *props = NULL;
+  apr_array_header_t *inherited_props;
   svn_string_t write_str;
   char buf[4096];
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
   svn_checksum_t *checksum;
   svn_error_t *err, *write_err;
+  int i;
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
-                                 &want_props, &want_contents));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?B", &path, &rev,
+                                 &want_props, &want_contents,
+                                 &wants_inherited_props));
 
   full_path = svn_fspath__join(b->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
@@ -1420,8 +1444,9 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
                                    full_path, TRUE, pool));
   hex_digest = svn_checksum_to_cstring_display(checksum, pool);
-  if (want_props)
-    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
+  if (want_props || wants_inherited_props)
+    SVN_CMD_ERR(get_props(&props, &inherited_props, b, root, full_path,
+                          pool));
   if (want_contents)
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
@@ -1429,6 +1454,27 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", "success",
                                  hex_digest, rev));
   SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
+
+  if (wants_inherited_props)
+    {
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?!"));
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(c(!",
+                                         iprop->path_or_url));
+          SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, iprop->prop_hash));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))!",
+                                         iprop->path_or_url));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   /* Now send the file's contents. */
@@ -1473,17 +1519,21 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *full_path;
   svn_revnum_t rev;
   apr_hash_t *entries, *props = NULL;
+  apr_array_header_t *inherited_props;
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
   apr_array_header_t *dirent_fields_list = NULL;
   svn_ra_svn_item_t *elt;
+  int i;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l", &path, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l?B", &path, &rev,
                                  &want_props, &want_contents,
-                                 &dirent_fields_list));
+                                 &dirent_fields_list,
+                                 &wants_inherited_props));
 
   if (! dirent_fields_list)
     {
@@ -1491,8 +1541,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
-      int i;
-
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
@@ -1536,9 +1584,11 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the root of the appropriate revision. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
-  /* Fetch the directory properties if requested. */
-  if (want_props)
-    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
+  /* Fetch the directory's explicit and/or inherited properties
+     if requested. */
+  if (want_props || wants_inherited_props)
+    SVN_CMD_ERR(get_props(&props, &inherited_props, b, root, full_path,
+                          pool));
 
   /* Begin response ... */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
@@ -1628,6 +1678,26 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          cdate, last_author));
         }
       svn_pool_destroy(subpool);
+    }
+
+  if (wants_inherited_props)
+    {
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?!"));
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(c(!",
+                                         iprop->path_or_url));
+          SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, iprop->prop_hash));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))!",
+                                         iprop->path_or_url));
+        }
+      svn_pool_destroy(iterpool);
     }
 
   /* Finish response. */
@@ -2858,6 +2928,65 @@ get_deleted_rev(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_inherited_props(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool,
+                    apr_array_header_t *params,
+                    void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  svn_fs_root_t *root;
+  apr_array_header_t *inherited_props;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Parse arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, iterpool, "c(?r)", &path, &rev));
+
+  full_path = svn_fspath__join(b->fs_path->data,
+                               svn_relpath_canonicalize(path, iterpool),
+                               pool);
+
+  /* Check authorizations */
+  SVN_ERR(must_have_access(conn, iterpool, b, svn_authz_read,
+                           full_path, FALSE));
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+
+  SVN_ERR(log_command(b, conn, pool, "%s",
+                      svn_log__get_inherited_props(full_path, rev,
+                                                   iterpool)));
+
+  /* Fetch the properties and a stream for the contents. */
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, iterpool));
+  SVN_CMD_ERR(get_props(NULL, &inherited_props, b, root, full_path, pool));
+
+  /* Send successful command response with revision and props. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "w(!", "success"));
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(?!"));
+
+  for (i = 0; i < inherited_props->nelts; i++)
+    {
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(c(!",
+                                     iprop->path_or_url));
+      SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, iprop->prop_hash));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))!",
+                                     iprop->path_or_url));
+    }  
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))"));
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
@@ -2889,6 +3018,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "replay",          replay },
   { "replay-range",    replay_range },
   { "get-deleted-rev", get_deleted_rev },
+  { "get-iprops",      get_inherited_props },
   { NULL }
 };
 
@@ -2944,24 +3074,6 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
-/* Callback which receives hook environment variables from the hook
- * environment configuration section,
- * An implementation of svn_config_enumerator2_t. */
-static svn_boolean_t
-hooks_env_conf_cb(const char *name,
-                  const char *value,
-                  void *baton,
-                  apr_pool_t *pool)
-{
-  apr_hash_t *hooks_env = baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get(hooks_env);
-
-  apr_hash_set(hooks_env, apr_pstrdup(hash_pool, name),
-               APR_HASH_KEY_STRING, apr_pstrdup(hash_pool, value));
-
-  return TRUE;
-}
-
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B.  Set B->repos's client
@@ -2974,7 +3086,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                const apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root, *fs_path;
+  const char *path, *full_path, *repos_root, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -3052,16 +3164,12 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                  "No access allowed to this repository",
                                  b, conn, pool);
 
-  /* If a hook environment has been configured, set it up. */
-  if (svn_config_has_section(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV))
-    {
-      apr_hash_t *hooks_env = apr_hash_make(pool);
-
-      svn_config_enumerate2(b->cfg, SVN_CONFIG_SECTION_HOOKS_ENV,
-                            hooks_env_conf_cb, hooks_env, pool);
-
-      svn_repos_hooks_setenv(b->repos, hooks_env);
-    }
+  /* Configure hook script environment variables. */
+  svn_config_get(b->cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
+  if (hooks_env)
+    hooks_env = svn_dirent_internal_style(hooks_env, pool);
+  svn_repos_hooks_setenv(b->repos, hooks_env, pool, pool);
 
   return SVN_NO_ERROR;
 }
@@ -3089,6 +3197,53 @@ fs_warning_func(void *baton, svn_error_t *err)
   svn_pool_clear(b->pool);
 }
 
+/* Return the normalized repository-relative path for the given PATH
+ * (may be a URL, full path or relative path) and fs contained in the
+ * server baton BATON. Allocate the result in POOL.
+ */
+static const char *
+get_normalized_repo_rel_path(void *baton,
+                             const char *path,
+                             apr_pool_t *pool)
+{
+  server_baton_t *sb = baton;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(sb->repos_url, path, pool);
+      path = svn_fspath__canonicalize(path, pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if ((path)[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(sb->fs_path->data, path, pool);
+    }
+
+  return path;
+}
+
+/* Get the revision root for REVISION in fs given by server baton BATON
+ * and return it in *FS_ROOT. Use HEAD if REVISION is SVN_INVALID_REVNUM.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+get_revision_root(svn_fs_root_t **fs_root,
+                  void *baton,
+                  svn_revnum_t revision,
+                  apr_pool_t *pool)
+{
+  server_baton_t *sb = baton;
+
+  if (!SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_fs_youngest_rev(&revision, sb->fs, pool));
+
+  SVN_ERR(svn_fs_revision_root(fs_root, sb->fs, revision, pool));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 fetch_props_func(apr_hash_t **props,
@@ -3098,28 +3253,11 @@ fetch_props_func(apr_hash_t **props,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   err = svn_fs_node_proplist(props, fs_root, path, result_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -3141,28 +3279,11 @@ fetch_kind_func(svn_kind_t *kind,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
@@ -3178,31 +3299,14 @@ fetch_base_func(const char **filename,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  server_baton_t *sb = baton;
   svn_stream_t *contents;
   svn_stream_t *file_stream;
   const char *tmp_filename;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(svn_fs_youngest_rev(&base_revision, sb->fs, scratch_pool));
-
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(sb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(sb->fs_path->data, path, scratch_pool);
-    }
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, sb->fs, base_revision, scratch_pool));
+  path = get_normalized_repo_rel_path(baton, path, scratch_pool);
+  SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
   err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -3260,7 +3364,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)
-    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwwwww)",
                                           (apr_uint64_t) 2, (apr_uint64_t) 2,
                                           SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                           SVN_RA_SVN_CAP_SVNDIFF1,
@@ -3269,9 +3373,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                           SVN_RA_SVN_CAP_DEPTH,
                                           SVN_RA_SVN_CAP_LOG_REVPROPS,
                                           SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
-                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY,
+                                          SVN_RA_SVN_CAP_INHERITED_PROPS,
+                                          SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS));
   else
-    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwwww)",
                                           (apr_uint64_t) 2, (apr_uint64_t) 2,
                                           SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                           SVN_RA_SVN_CAP_ABSENT_ENTRIES,
@@ -3279,7 +3385,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                           SVN_RA_SVN_CAP_DEPTH,
                                           SVN_RA_SVN_CAP_LOG_REVPROPS,
                                           SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
-                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY,
+                                          SVN_RA_SVN_CAP_INHERITED_PROPS,
+                                          SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

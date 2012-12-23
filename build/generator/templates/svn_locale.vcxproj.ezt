@@ -32,7 +32,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
-    <ConfigurationType>Utility</ConfigurationType>
+    <ConfigurationType>Makefile</ConfigurationType>
     <CLRSupport>false</CLRSupport>
     <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>
@@ -44,8 +44,8 @@
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\[configs]\mo\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\[configs]\mo\</IntDir>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\..\[configs]\mo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\..\[configs]\mo\</IntDir>
     <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_locale.bat [configs]</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_locale.bat [configs]</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c del $(OutDir)*.mo</NMakeCleanCommandLine>

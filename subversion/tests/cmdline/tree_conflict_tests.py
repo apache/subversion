@@ -652,7 +652,7 @@ def merge_file_mod_onto_not_file(sbox):
   "merge file: modify onto not-file"
   sbox2 = sbox.clone_dependent()
   test_tc_merge(sbox, f_mods, br_scen = f_dels + f_moves + f_rpl_d)
-  test_tc_merge(sbox2, f_mods, wc_scen = f_dels)
+  test_tc_merge(sbox2, f_mods, wc_scen = f_dels + f_moves)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_same(sbox):

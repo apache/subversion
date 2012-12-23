@@ -14,8 +14,8 @@ SVNWCSUB_CMD="/usr/local/svnpubsub/svnwcsub.py \
               --daemon \
               --logfile=${svnwcsub_logfile} \
               --pidfile=${pidfile} \
-              --umask=002 \
               --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              --umask=002 \
               ${svnwcsub_config}"
 
 RETVAL=0

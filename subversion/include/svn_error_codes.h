@@ -540,6 +540,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 39,
              "Couldn't open a working copy file because access was denied")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_WC_MIXED_REVISIONS,
+             SVN_ERR_WC_CATEGORY_START + 40,
+             "Mixed-revision working copy was found but not expected")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -1408,6 +1413,11 @@ SVN_ERROR_START
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS,
              SVN_ERR_MISC_CATEGORY_START + 36,
+             "too many memcached servers configured")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
+             SVN_ERR_MISC_CATEGORY_START + 37,
              "too many memcached servers configured")
 
   /* command-line client errors */

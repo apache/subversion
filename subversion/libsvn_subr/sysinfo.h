@@ -25,6 +25,7 @@
 #define SVN_LIBSVN_SUBR_SYSINFO_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,13 +45,22 @@ const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
  */
 const char *svn_sysinfo__release_name(apr_pool_t *pool);
 
-/* Return a string containing a list of shared libraries loaded by the
- * running process, including their versions where applicable, or NULL
- * if the information is not available.
+/* Return an array of svn_version_linked_lib_t of descriptions of the
+ * link-time and run-time versions of dependent libraries, or NULL of
+ * the info is not available.
  *
  * All allocations are done in POOL.
  */
-const char *svn_sysinfo__loaded_libs(apr_pool_t *pool);
+const apr_array_header_t *svn_sysinfo__linked_libs(apr_pool_t *pool);
+
+/* Return an array of svn_version_loaded_lib_t of descriptions of
+ * shared libraries loaded by the running process, including their
+ * versions where applicable, or NULL if the information is not
+ * available.
+ *
+ * All allocations are done in POOL.
+ */
+const apr_array_header_t *svn_sysinfo__loaded_libs(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

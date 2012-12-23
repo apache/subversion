@@ -85,6 +85,11 @@ extern "C" {
 /* The extension added to the names of example hook scripts. */
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
 
+/* The file which contains a custom set of environment variables
+ * passed inherited to hook scripts, in the repository conf directory. */
+#define SVN_REPOS__CONF_HOOKS_ENV "hooks-env"
+/* The name of the default section in the hooks-env config file. */
+#define SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION "default"
 
 /* The configuration file for svnserve, in the repository conf directory. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
@@ -142,7 +147,15 @@ struct svn_repos_t
   apr_hash_t *repository_capabilities;
 
   /* The environment inherited to hook scripts. If NULL, hooks run
-   * in an empty environment. */
+   * in an empty environment.
+   *
+   * This is a nested hash table.
+   * The entry with name SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION contains the
+   * default environment for all hooks in form of an apr_hash_t with keys
+   * and values describing the names and values of environment variables.
+   * Defaults can be overridden by an entry matching the name of a hook.
+   * E.g. an entry with the name SVN_REPOS__HOOK_PRE_COMMIT provides the
+   * environment specific to the pre-commit hook. */
   apr_hash_t *hooks_env;
 };
 

@@ -126,9 +126,9 @@ EOF
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
   # Sleep to avoid out-of-order commit notifications
-  if [ -n "$YES" ]; then sleep 15; fi
+  if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
-  if [ -n "$YES" ]; then sleep 1; fi
+  if [ -n "\$YES" ]; then sleep 1; fi
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
@@ -228,6 +228,10 @@ sub handle_entry {
 sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
+
+  # Because we use the ':normal' command in Vim...
+  die "A vim with the +ex_extra feature is required"
+      if `${VIM} --version` !~ /[+]ex_extra/;
 
   @ARGV = $STATUS;
 

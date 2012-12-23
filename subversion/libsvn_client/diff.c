@@ -1044,6 +1044,9 @@ diff_content_changed(const char *path,
                                        subpool, subpool));
       SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(errstream, subpool),
                                NULL, NULL, subpool));
+
+      /* We have a printed a diff for this path, mark it as visited. */
+      mark_path_as_visited(diff_cmd_baton, path);
     }
   else   /* use libsvn_diff to generate the diff  */
     {

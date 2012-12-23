@@ -1219,7 +1219,7 @@ dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos_begin_report2(&rbaton, revnum,
+  if ((serr = svn_repos_begin_report3(&rbaton, revnum,
                                       repos->repos,
                                       src_path, target,
                                       dst_path,
@@ -1230,6 +1230,7 @@ dav_svn__update_report(const dav_resource *resource,
                                       editor, &uc,
                                       dav_svn__authz_read_func(&arb),
                                       &arb,
+                                      0,  /* disable zero-copy for now */
                                       resource->pool)))
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

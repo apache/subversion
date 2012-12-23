@@ -2058,8 +2058,12 @@ svn_io_file_lock2(const char *lock_file,
   if (locktype == APR_FLOCK_EXCLUSIVE)
     flags |= APR_WRITE;
 
+  /* locktype is never read after this block, so we don't need to bother
+     setting it.  If that were to ever change, uncomment the following
+     block. 
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
+  */
 
   SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
                            APR_OS_DEFAULT,
@@ -3427,30 +3431,60 @@ svn_error_t *
 svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
                         apr_pool_t *pool)
 {
+  /* variables */
+  apr_size_t total_read = 0;
+  svn_boolean_t eof = FALSE;
   const char *name;
   svn_error_t *err;
-  apr_size_t i;
-  char c;
+  apr_size_t buf_size = *limit;
 
-  for (i = 0; i < *limit; i++)
+  while (buf_size > 0)
     {
-      SVN_ERR(svn_io_file_getc(&c, file, pool));
-      /* Note: this error could be APR_EOF, which
-         is totally fine.  The caller should be aware of
-         this. */
+      /* read a fair chunk of data at once. But don't get too ambitious
+       * as that would result in too much waste. Also make sure we can
+       * put a NUL after the last byte read.
+       */
+      apr_size_t to_read = buf_size < 129 ? buf_size - 1 : 128;
+      apr_size_t bytes_read = 0;
+      char *eol;
 
-      if (c == '\n')
+      /* read data block (or just a part of it) */
+      SVN_ERR(svn_io_file_read_full2(file, buf, to_read,
+                                     &bytes_read, &eof, pool));
+
+      /* look or a newline char */
+      buf[bytes_read] = 0;
+      eol = strchr(buf, '\n');
+      if (eol)
         {
-          buf[i] = '\0';
-          *limit = i;
+          apr_off_t offset = (eol + 1 - buf) - (apr_off_t)bytes_read;
+          
+          *eol = 0;
+          *limit = total_read + (eol - buf);
+
+          /* correct the file pointer:
+           * appear as though we just had read the newline char
+           */
+          SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, pool));
+
           return SVN_NO_ERROR;
         }
-      else
+      else if (eof)
         {
-          buf[i] = c;
+          /* no EOL found but we hit the end of the file.
+           * Generate a nice EOF error object and return it.
+           */
+          char dummy;
+          SVN_ERR(svn_io_file_getc(&dummy, file, pool));
         }
+
+      /* next data chunk */
+      buf_size -= bytes_read;
+      buf += bytes_read;
+      total_read += bytes_read;
     }
 
+  /* buffer limit has been exceeded without finding the EOL */
   err = svn_io_file_name_get(&name, file, pool);
   if (err)
     name = NULL;

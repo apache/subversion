@@ -107,10 +107,10 @@ static svn_boolean_t
 receive_from_gpg_agent(int sd, char *buf, size_t n)
 {
   int i = 0;
-  int recvd;
+  size_t recvd;
   char c;
 
-  /* Clear existing buffer concent before reading response. */
+  /* Clear existing buffer content before reading response. */
   if (n > 0)
     *buf = '\0';
 
@@ -326,7 +326,6 @@ password_get_gpg_agent(svn_boolean_t *done,
   display = getenv("DISPLAY");
   if (display != NULL)
     {
-      request = apr_psprintf(pool, "OPTION display=%s\n", display);
       if (!send_option(sd, buffer, BUFFER_SIZE, "display", display, pool))
         {
           close(sd);

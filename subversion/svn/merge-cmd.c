@@ -120,19 +120,16 @@ symmetric_merge(const char *source_path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  svn_client__symmetric_merge_t *merge;
-  svn_boolean_t reintegrate_like;
+  svn_client_symmetric_merge_t *merge;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
-  SVN_ERR(svn_client__find_symmetric_merge(&merge,
-                                           source_path_or_url, source_revision,
-                                           target_wcpath, allow_mixed_rev,
-                                           allow_local_mods, allow_switched_subtrees,
-                                           ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_find_symmetric_merge(&merge,
+                                          source_path_or_url, source_revision,
+                                          target_wcpath, allow_mixed_rev,
+                                          allow_local_mods, allow_switched_subtrees,
+                                          ctx, scratch_pool, scratch_pool));
 
-  reintegrate_like = (merge->mid != NULL);
-
-  if (reintegrate_like)
+  if (svn_client_symmetric_merge_is_reintegrate_like(merge))
     {
       if (record_only)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
@@ -160,10 +157,10 @@ symmetric_merge(const char *source_path_or_url,
     }
 
   /* Perform the 3-way merges */
-  SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
-                                         force, record_only,
-                                         dry_run, merge_options,
-                                         ctx, scratch_pool));
+  SVN_ERR(svn_client_do_symmetric_merge(merge, target_wcpath, depth,
+                                        force, record_only,
+                                        dry_run, merge_options,
+                                        ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -524,15 +521,12 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (!err
-      && opt_state->conflict_func
-      && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
-    {
-      err = svn_cl__resolve_conflicts(
-              svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
-              opt_state->depth, opt_state, ctx, pool);
-    }
-
+  if (!err)
+    err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                              opt_state->depth,
+                                              opt_state->accept_which,
+                                              opt_state->editor_cmd,
+                                              ctx, pool);
   if (merge_err)
     {
       if (merge_err->apr_err ==

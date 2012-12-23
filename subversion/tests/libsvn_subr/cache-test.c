@@ -183,8 +183,8 @@ test_membuffer_cache_basic(apr_pool_t *pool)
   svn_cache__t *cache;
   svn_membuffer_t *membuffer;
 
-  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
-                                            TRUE, pool));
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_membuffer_cache(&cache,

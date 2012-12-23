@@ -217,6 +217,17 @@ typedef struct fs_fs_shared_data_t
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
+/* Data structure for the 1st level DAG node cache. */
+typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
+
+/* Key type for all caches that use revision + offset / counter as key. */
+typedef struct pair_cache_key_t
+{
+  svn_revnum_t revision;
+
+  apr_int64_t second;
+} pair_cache_key_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
@@ -241,8 +252,11 @@ typedef struct fs_fs_data_t
      (svn_fs_id_t *).  (Not threadsafe.) */
   svn_cache__t *rev_root_id_cache;
 
+  /* Caches native dag_node_t* instances and acts as a 1st level cache */
+  fs_fs_dag_cache_t *dag_node_cache;
+
   /* DAG node cache for immutable nodes.  Maps (revision, fspath)
-     to (dag_node_t *). */
+     to (dag_node_t *). This is the 2nd level cache for DAG nodes. */
   svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
@@ -269,6 +283,9 @@ typedef struct fs_fs_data_t
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
 
+  /* Node properties cache.  Maps from rep key to apr_hash_t. */
+  svn_cache__t *properties_cache;
+
   /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
      a manifest; and a manifest is a mapping from (svn_revnum_t) revision
      number offset within a shard to (apr_off_t) byte-offset in the
@@ -288,6 +305,15 @@ typedef struct fs_fs_data_t
   /* Cache for change lists as APR arrays of change_t * objects; the key
      is the revision */
   svn_cache__t *changes_cache;
+
+  /* Cache for svn_mergeinfo_t objects; the key is a combination of
+     revision, inheritance flags and path. */
+  svn_cache__t *mergeinfo_cache;
+
+  /* Cache for presence of svn_mergeinfo_t on a noderev; the key is a
+     combination of revision, inheritance flags and path; value is "1"
+     if the node has mergeinfo, "0" if it doesn't. */
+  svn_cache__t *mergeinfo_existence_cache;
 
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;

@@ -37,6 +37,20 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Constants used by various chunky string processing functions.
+ */
+#if APR_SIZEOF_VOIDP == 8
+#  define SVN__LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
+#  define SVN__BIT_7_SET       0x8080808080808080
+#  define SVN__R_MASK          0x0a0a0a0a0a0a0a0a
+#  define SVN__N_MASK          0x0d0d0d0d0d0d0d0d
+#else
+#  define SVN__LOWER_7BITS_SET 0x7f7f7f7f
+#  define SVN__BIT_7_SET       0x80808080
+#  define SVN__R_MASK          0x0a0a0a0a
+#  define SVN__N_MASK          0x0d0d0d0d
+#endif
+
 /* Generic EOL character helper routines */
 
 /* Look for the start of an end-of-line sequence (i.e. CR or LF)

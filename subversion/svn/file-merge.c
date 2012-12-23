@@ -365,7 +365,7 @@ static const char *
 prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
-  int width;
+  size_t width;
   int line_width = LINE_DISPLAY_WIDTH;
   apr_pool_t *iterpool;
 
@@ -596,7 +596,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
 
   prompt = svn_stringbuf_create(
              apr_psprintf(scratch_pool, "%s\n%s|%s\n%s",
-                          _("Conflicting section found during merge."),
+                          _("Conflicting section found during merge:"),
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
@@ -851,6 +851,7 @@ svn_cl__merge_file(const char *base_path,
   apr_file_t *merged_file;
   const char *merged_file_name;
   struct file_merge_baton fmb;
+  svn_boolean_t executable;
 
 
   SVN_ERR(svn_cmdline_printf(
@@ -912,7 +913,9 @@ svn_cl__merge_file(const char *base_path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
+  SVN_ERR(svn_io_is_file_executable(&executable, merged_path, scratch_pool));
+  SVN_ERR_W(svn_io_copy_file(merged_file_name, merged_path, FALSE,
+                             scratch_pool),
             apr_psprintf(scratch_pool,
                          _("Could not write merged result to '%s', saved "
                            "instead at '%s'.\n'%s' remains in conflict.\n"),
@@ -924,6 +927,9 @@ svn_cl__merge_file(const char *base_path,
                          svn_dirent_local_style(
                            svn_dirent_skip_ancestor(path_prefix, wc_path),
                            scratch_pool)));
+  SVN_ERR(svn_io_set_file_executable(merged_path, executable, FALSE,
+                                     scratch_pool));
+  SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
 
   /* The merge was not aborted and we could install the merged result. The
    * file remains in conflict unless all conflicting sections were resolved. */

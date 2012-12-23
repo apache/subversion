@@ -44,12 +44,14 @@ extern "C" {
  * @a propname is the property name. @a propval is the property value, which
  * will be encoded if it contains unsafe bytes.
  *
- * @since New in 1.6.
+ * If @a inherited_prop is TRUE then @a propname is an inherited property,
+ * otherwise @a propname is an explicit property.
  */
 void
 svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
                             const char *propname,
                             svn_string_t *propval,
+                            svn_boolean_t inherited_prop,
                             apr_pool_t *pool);
 
 

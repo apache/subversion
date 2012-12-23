@@ -1572,6 +1572,44 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   return SVN_NO_ERROR;
 }
+
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
+   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
+   is declared as 'apr_hash_t *' because its key do not obey the rules of
+   'svn_mergeinfo_t'.
+
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
+static svn_error_t *
+mergeinfo_relpaths_to_urls(apr_hash_t **out_mergeinfo,
+                           svn_mergeinfo_t mergeinfo,
+                           const char *repos_root_url,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  *out_mergeinfo = NULL;
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *full_path_mergeinfo = apr_hash_make(result_pool);
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi; hi = apr_hash_next(hi))
+        {
+          const char *key = svn__apr_hash_index_key(hi);
+          void *val = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(full_path_mergeinfo,
+                       svn_path_url_add_component2(repos_root_url, key + 1,
+                                                   result_pool),
+                       APR_HASH_KEY_STRING, val);
+        }
+      *out_mergeinfo = full_path_mergeinfo;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Public APIs ***/
 
@@ -1614,8 +1652,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
       mergeinfo = NULL;
     }
 
-  SVN_ERR(svn_mergeinfo__relpaths_to_urls(mergeinfo_p, mergeinfo,
-                                          repos_root, pool, pool));
+  SVN_ERR(mergeinfo_relpaths_to_urls(mergeinfo_p, mergeinfo,
+                                     repos_root, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1729,7 +1767,10 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         }
     }
 
-  /* Open RA sessions to the repository for the source and target.
+  /* Fetch the location history as mergeinfo, for the source branch
+   * (between the given start and end revisions), and, if we're finding
+   * merged revisions, then also for the entire target branch.
+   *
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
   {

@@ -88,6 +88,7 @@ typedef struct dir_conf_t {
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
+  enum conf_flag ephemeral_txnprops; /* advertise ephemeral txnprop support? */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
@@ -96,7 +97,7 @@ typedef struct dir_conf_t {
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
-  apr_hash_t *hooks_env;             /* environment for hook scripts */
+  const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
 
 
@@ -196,6 +197,7 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
+  conf->ephemeral_txnprops = CONF_FLAG_ON;
   conf->hooks_env = NULL;
 
   return conf;
@@ -221,6 +223,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
+  newconf->ephemeral_txnprops = INHERIT_VALUE(parent, child,
+                                              ephemeral_txnprops);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
@@ -340,6 +344,20 @@ SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
     conf->v2_protocol = CONF_FLAG_ON;
   else
     conf->v2_protocol = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+
+static const char *
+SVNAdvertiseEphemeralTXNProps_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->ephemeral_txnprops = CONF_FLAG_ON;
+  else
+    conf->ephemeral_txnprops = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -550,43 +568,9 @@ SVNUseUTF8_cmd(cmd_parms *cmd, void *config, int arg)
 static const char *
 SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  apr_array_header_t *var;
+  dir_conf_t *conf = config;
 
-  var = svn_cstring_split(arg1, "=", TRUE, cmd->pool);
-  if (var && var->nelts >= 2)
-    {
-      dir_conf_t *conf = config;
-      const char *name;
-      const char *val;
-
-      if (! conf->hooks_env)
-        conf->hooks_env = apr_hash_make(cmd->pool);
-
-      name = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                         APR_ARRAY_IDX(var, 0, const char *));
-
-      /* Special case for values which contain '='. */
-      if (var->nelts > 2)
-        {
-          svn_stringbuf_t *buf;
-          int i;
-
-          buf = svn_stringbuf_create(APR_ARRAY_IDX(var, 1, const char *),
-                                     cmd->pool);
-          for (i = 2; i < var->nelts; i++)
-            {
-              svn_stringbuf_appendbyte(buf, '=');
-              svn_stringbuf_appendcstr(buf, APR_ARRAY_IDX(var, i, const char *));
-            }
-
-          val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env), buf->data);
-        }
-      else
-        val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
-                          APR_ARRAY_IDX(var, 1, const char *));
-
-      apr_hash_set(conf->hooks_env, name, APR_HASH_KEY_STRING, val);
-    }
+  conf->hooks_env = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -795,6 +779,16 @@ dav_svn__get_v2_protocol_flag(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_ephemeral_txnprops_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->ephemeral_txnprops == CONF_FLAG_ON;
+}
+
+
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
@@ -878,7 +872,7 @@ dav_svn__get_compression_level(void)
   return svn__compression_level;
 }
 
-apr_hash_t *
+const char *
 dav_svn__get_hooks_env(request_rec *r)
 {
   dir_conf_t *conf;
@@ -1095,6 +1089,12 @@ static const command_rec cmds[] =
                "Subversion's HTTP protocol (default values is On)."),
 
   /* per directory/location */
+  AP_INIT_FLAG("SVNAdvertiseEphemeralTXNProps",
+               SVNAdvertiseEphemeralTXNProps_cmd, NULL, ACCESS_CONF|RSRC_CONF,
+               "enables server advertising of support for ephemeral "
+               "commit transaction properties (default value is On)."),
+
+  /* per directory/location */
   AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
                ACCESS_CONF|RSRC_CONF,
                "speeds up data access to older revisions by caching "
@@ -1136,10 +1136,12 @@ static const command_rec cmds[] =
                "use UTF-8 as native character encoding (default is ASCII)."),
 
   /* per directory/location */
-  AP_INIT_ITERATE("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
-                  ACCESS_CONF|RSRC_CONF,
-                  "Set the environment of hook scripts via any number of "
-                  "VAR=VAL arguments (the default hook environment is empty)."),
+  AP_INIT_TAKE1("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
+                ACCESS_CONF|RSRC_CONF,
+                "Sets the path to the configuration file for the environment "
+                "of hook scripts. If not absolute, the path is relative to "
+                "the repository's conf directory (by default the hooks-env "
+                "file in the repository is used)."),
   { NULL }
 };
 

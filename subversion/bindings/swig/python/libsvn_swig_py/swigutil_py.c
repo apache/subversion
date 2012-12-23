@@ -2159,6 +2159,24 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
   return stream;
 }
 
+PyObject *
+svn_swig_py_convert_txdelta_op_c_array(int num_ops,
+                                       svn_txdelta_op_t *ops,
+                                       swig_type_info *op_type_info,
+                                       PyObject *parent_pool)
+{
+  PyObject *result = PyList_New(num_ops);
+  int i;
+
+  if (!result) return NULL;
+
+  for (i = 0; i < num_ops; ++i)
+      PyList_SET_ITEM(result, i,
+                      svn_swig_NewPointerObj(ops + i, op_type_info,
+                                             parent_pool, NULL));
+
+  return result;
+}
 
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
@@ -4174,18 +4192,98 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   return callbacks;
 }
 
-PyObject *
-svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
-                                     swig_type_info * op_type_info,
-                                     PyObject *window_pool)
+svn_boolean_t
+svn_swig_py_config_enumerator2(const char *name,
+                               const char *value,
+                               void *baton,
+                               apr_pool_t *pool)
 {
-  PyObject *result = PyList_New(window->num_ops);
-  int i;
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
 
-  for (i = 0; i < window->num_ops; ++i)
-      PyList_SET_ITEM(result, i,
-                      svn_swig_NewPointerObj(window->ops + i, op_type_info,
-                                             window_pool, NULL));
+  svn_swig_py_acquire_py_lock();
 
-  return result;
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"ssO&",
+                                      name,
+                                      value,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
+}
+
+svn_boolean_t
+svn_swig_py_config_section_enumerator2(const char *name,
+                                       void *baton,
+                                       apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t c_result;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (!PyBool_Check(result))
+    {
+      err = callback_bad_return_error("Not bool");
+      Py_DECREF(result);
+    }
+
+  /* Any Python exception we might have pending must be cleared,
+     because the SWIG wrapper will not check for it, and return a value with
+     the exception still set. */
+  PyErr_Clear();
+
+  if (err)
+    {
+      /* We can't return the error, but let's at least stop enumeration. */
+      svn_error_clear(err);
+      c_result = FALSE;
+    }
+  else
+    {
+      c_result = result == Py_True;
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return c_result;
 }

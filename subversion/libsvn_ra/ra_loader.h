@@ -299,7 +299,13 @@ typedef struct svn_ra__vtable_t {
   /* See svn_ra__register_editor_shim_callbacks() */
   svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
-
+  /* See svn_ra_get_inherited_props(). */
+  svn_error_t *(*get_inherited_props)(svn_ra_session_t *session,
+                                      apr_array_header_t **iprops,
+                                      const char *path,
+                                      svn_revnum_t revision,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
   /* See svn_ra__get_commit_ev2()  */
   svn_error_t *(*get_commit_ev2)(
     svn_editor_t **editor,
@@ -472,6 +478,21 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  svn_revnum_t *revision_deleted,
                                  apr_pool_t *pool);
 
+
+/**
+ * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * need to find PATH's inherited properties on a legacy server that
+ * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
+ *
+ * All arguments are as per the two aforementioned APIs.
+ */
+svn_error_t *
+svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_array_header_t **inherited_props,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Utility function to provide a shim between a returned Ev2 and an RA
    provider's Ev1-based commit editor.

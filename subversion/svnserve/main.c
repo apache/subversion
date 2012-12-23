@@ -149,6 +149,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
+#define SVNSERVE_OPT_CLIENT_SPEED    269
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -235,6 +236,16 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is no.\n"
         "                             "
         "[used for FSFS repositories only]")},
+    {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
+     N_("Optimize throughput based on the assumption that\n"
+        "                             "
+        "clients can receive data with a bitrate of at\n"
+        "                             "
+        "least ARG Gbit/s.  For clients receiving data at\n"
+        "                             "
+        "less than 1 Gbit/s, zero should be used.\n"
+        "                             "
+        "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -497,6 +508,8 @@ int main(int argc, const char *argv[])
   params.cache_fulltexts = TRUE;
   params.cache_txdeltas = FALSE;
   params.cache_revprops = FALSE;
+  params.zero_copy_limit = 0;
+  params.error_check_interval = 4096;
 
   while (1)
     {
@@ -645,6 +658,18 @@ int main(int argc, const char *argv[])
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
+        case SVNSERVE_OPT_CLIENT_SPEED:
+          {
+            apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+
+            /* block other clients for at most 1 ms (at full bandwidth) */
+            params.zero_copy_limit = bandwidth * 120000;
+
+            /* check for aborted connections at the same rate */
+            params.error_check_interval = bandwidth * 120000;
+          }
+          break;
+
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
           if (run_mode != run_mode_service)
@@ -755,8 +780,10 @@ int main(int argc, const char *argv[])
        * the pool cleanup handlers that call sasl_dispose() (connection_pool)
        * and sasl_done() (pool) are run in the right order. See issue #3664. */
       connection_pool = svn_pool_create(pool);
-      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
+      conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
                                      params.compression_level,
+                                     params.zero_copy_limit,
+                                     params.error_check_interval,
                                      connection_pool);
       svn_error_clear(serve(conn, &params, connection_pool));
       exit(0);
@@ -925,7 +952,7 @@ int main(int argc, const char *argv[])
     settings.single_threaded = TRUE;
     if (handling_mode == connection_mode_thread)
       {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
         settings.single_threaded = FALSE;
 #else
         /* No requests will be processed at all
@@ -988,8 +1015,10 @@ int main(int argc, const char *argv[])
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
 
-      conn = svn_ra_svn_create_conn2(usock, NULL, NULL,
+      conn = svn_ra_svn_create_conn3(usock, NULL, NULL,
                                      params.compression_level,
+                                     params.zero_copy_limit,
+                                     params.error_check_interval,
                                      connection_pool);
 
       if (run_mode == run_mode_listen_once)

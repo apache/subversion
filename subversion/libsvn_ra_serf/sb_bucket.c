@@ -62,7 +62,7 @@ svn_ra_serf__copy_into_spillbuf(svn_spillbuf_t **spillbuf,
       status = serf_bucket_read(bkt, SERF_READ_ALL_AVAIL, &data, &len);
 
       if (status != APR_SUCCESS && status != APR_EOF)
-        return svn_error_wrap_apr(status, _("Failed to read the request"));
+        return svn_ra_serf__wrap_err(status, _("Failed to read the request"));
 
       SVN_ERR(svn_spillbuf__write(*spillbuf, data, len, scratch_pool));
 

@@ -37,6 +37,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Because the SQLite code can be inlined into libsvn_subre/sqlite.c,
+   we define accessors to its compile-time and run-time version
+   numbers here. */
+
+/* Return the value that SQLITE_VERSION had at compile time. */
+const char *svn_sqlite__compiled_version(void);
+
+/* Return the value of sqlite3_libversion() at run time. */
+const char *svn_sqlite__runtime_version(void);
+
+
 typedef struct svn_sqlite__db_t svn_sqlite__db_t;
 typedef struct svn_sqlite__stmt_t svn_sqlite__stmt_t;
 typedef struct svn_sqlite__context_t svn_sqlite__context_t;
@@ -210,6 +221,15 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             const apr_hash_t *props,
                             apr_pool_t *scratch_pool);
 
+/* Bind a set of inherited properties to the given slot. If INHERITED_PROPS
+   is NULL, then no binding will occur. INHERITED_PROPS will be stored as a
+   serialized skel. */
+svn_error_t *
+svn_sqlite__bind_iprops(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        const apr_array_header_t *inherited_props,
+                        apr_pool_t *scratch_pool);
+
 /* Bind a checksum's value to the given slot. If CHECKSUM is NULL, then no
    binding will occur. */
 svn_error_t *
@@ -278,6 +298,17 @@ svn_sqlite__column_properties(apr_hash_t **props,
                               int column,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+/* Return the column as an array of depth-first ordered array of
+   svn_prop_inherited_item_t * structures.  If the column is null, then
+   *props is set to NULL. The results will be allocated in RESULT_POOL,
+   and any temporary allocations will be made in SCRATCH_POOL. */
+svn_error_t *
+svn_sqlite__column_iprops(apr_array_header_t **iprops,
+                          svn_sqlite__stmt_t *stmt,
+                          int column,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* Return the column as a checksum. If the column is null, then NULL will
    be stored into *CHECKSUM. The result will be allocated in RESULT_POOL. */

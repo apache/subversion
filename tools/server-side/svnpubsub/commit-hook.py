@@ -46,7 +46,7 @@ def svncmd_info(repo, revision):
     #print data
     return {'author': data[0],
             'date': data[1],
-            'log': "".join(data[3:])}
+            'log': "\n".join(data[3:])}
 
 def svncmd_dirs(repo, revision):
     cmd = "%s dirs-changed  -r %s %s" % (SVNLOOK, revision, repo)
@@ -68,6 +68,7 @@ def do_put(body):
 
 
 def main(repo, revision):
+    revision = revision.lstrip('r')
     i = svncmd_info(repo, revision)
     data = {'revision': int(revision),
             'dirs_changed': [],
