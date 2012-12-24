@@ -248,7 +248,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
 }
 
 void SVNRepos::hotcopy(File &path, File &targetPath,
-                       bool cleanLogs)
+                       bool cleanLogs, bool incremental)
 {
   SVN::Pool requestPool;
 
@@ -264,9 +264,12 @@ void SVNRepos::hotcopy(File &path, File &targetPath,
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_hotcopy(path.getInternalStyle(requestPool),
-                                targetPath.getInternalStyle(requestPool),
-                                cleanLogs, requestPool.getPool()), );
+  SVN_JNI_ERR(svn_repos_hotcopy2(path.getInternalStyle(requestPool),
+                                 targetPath.getInternalStyle(requestPool),
+                                 cleanLogs, incremental,
+                                 checkCancel, this /* cancel callback/baton */,
+                                 requestPool.getPool()),
+             );
 }
 
 static void
