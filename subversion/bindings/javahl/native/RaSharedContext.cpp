@@ -268,7 +268,7 @@ RaSharedContext::isCancelledOperation()
 svn_error_t *
 RaSharedContext::checkCancel(void *cancelBaton)
 {
-  RaSharedContext *that = (RaSharedContext *) cancelBaton;
+  RaSharedContext *that = static_cast<RaSharedContext *>(cancelBaton);
   if (that->isCancelledOperation())
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Operation cancelled"));
   else

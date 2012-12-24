@@ -54,10 +54,9 @@ PatchCallback::callback(void *baton,
                         apr_pool_t *pool)
 {
   if (baton)
-    return ((PatchCallback *)baton)->singlePatch(filtered,
-                                                 canon_path_from_patchfile,
-                                                 patch_abspath, reject_abspath,
-                                                 pool);
+    return static_cast<PatchCallback *>(baton)->singlePatch(
+            filtered, canon_path_from_patchfile, patch_abspath, reject_abspath,
+            pool);
 
   return SVN_NO_ERROR;
 }

@@ -56,8 +56,8 @@ ImportFilterCallback::callback(void *baton,
                                apr_pool_t *pool)
 {
   if (baton)
-    return ((ImportFilterCallback *)baton)->doImportFilter(filtered,
-                        local_abspath, dirent, pool);
+    return static_cast<ImportFilterCallback *>(baton)->doImportFilter(
+            filtered, local_abspath, dirent, pool);
 
   return SVN_NO_ERROR;
 }

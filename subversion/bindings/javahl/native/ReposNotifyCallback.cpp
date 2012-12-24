@@ -49,7 +49,7 @@ ReposNotifyCallback::notify(void *baton, const svn_repos_notify_t *notify,
                             apr_pool_t *pool)
 {
   if (baton)
-    ((ReposNotifyCallback *)baton)->onNotify(notify, pool);
+    static_cast<ReposNotifyCallback *>(baton)->onNotify(notify, pool);
 }
 
 /**
