@@ -256,8 +256,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_2_path, {
-    'B/E'     : Item(),
-    'D/H/psi'   : Item(),
+    'B/E'              : Item(),
+    'D/G/rho'          : Item(),
+    'D/H/psi'          : Item(),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
                                        sbox.repo_url + '/A', None,

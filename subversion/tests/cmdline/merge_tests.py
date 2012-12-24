@@ -7812,10 +7812,14 @@ def merge_to_sparse_directories(sbox):
   # Merge r4:9 into the immediates WC.
   # The root of the immediates WC should get inheritable r4:9 as should
   # the one file present 'mu'.  The three directory children present, 'B',
-  # 'C', and 'D' are checked out at depth empty; the one of these affected
-  # by the merge, 'D', gets non-inheritable mergeinfo for r4:9.
+  # 'C', and 'D' are checked out at depth empty; the two of these affected
+  # by the merge, 'B' and 'D', get non-inheritable mergeinfo for r4:9.
   # The root and 'D' do should also get the changes
   # that affect them directly (the prop adds from r8 and r9).
+  #
+  # Currently this fails due to r1424469.  For a full explanation see
+  # http://svn.haxx.se/dev/archive-2012-12/0472.shtml
+  # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_output = wc.State(immediates_dir, {
     'D'   : Item(status=' U'),
     'mu'  : Item(status='U '),
@@ -7823,14 +7827,14 @@ def merge_to_sparse_directories(sbox):
     })
   expected_mergeinfo_output = wc.State(immediates_dir, {
     ''  : Item(status=' U'),
+    'B' : Item(status=' U'),
     'D' : Item(status=' U'),
     })
   expected_elision_output = wc.State(immediates_dir, {
-    'D' : Item(status=' U'),
     })
   expected_status = wc.State(immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
-    'B'         : Item(status='  ', wc_rev=9),
+    'B'         : Item(status=' M', wc_rev=9),
     'mu'        : Item(status='M ', wc_rev=9),
     'C'         : Item(status='  ', wc_rev=9),
     'D'         : Item(status=' M', wc_rev=9),
@@ -7838,12 +7842,15 @@ def merge_to_sparse_directories(sbox):
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9',
                               "prop:name" : "propval"}),
-    'B'         : Item(),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:5-9*'}),
     'mu'        : Item("New content"),
     'C'         : Item(),
-    'D'         : Item(props={"prop:name" : "propval"}),
+    'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5-9*',
+                              "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
+    'D/H/omega'         : Item(),
+    'B/E/beta'          : Item(),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7896,7 +7903,8 @@ def merge_to_sparse_directories(sbox):
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
   expected_skip = svntest.wc.State(files_dir, {
-    'D'               : Item(),
+    'D/H/omega'       : Item(),
+    'B/E/beta'        : Item(),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7939,7 +7947,8 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(empty_dir, {
     'mu'               : Item(),
-    'D'               : Item(),
+    'D/H/omega'        : Item(),
+    'B/E/beta'         : Item(),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,

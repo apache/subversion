@@ -236,10 +236,10 @@ log_svn_error(LOG_ARGS_SIGNATURE,
   /* Build the error chain into a space separated stringbuf. */
   while (err_pos)
     {
+      svn_stringbuf_appendbyte(buff, ' ');
       if (err_pos->message)
         {
           svn_stringbuf_appendcstr(buff, err_pos->message);
-          svn_stringbuf_appendbyte(buff, ' ');
         }
       else
         {
@@ -316,7 +316,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
-                        "Failed to load the AuthzSVNAccessFile: ",
+                        "Failed to load the AuthzSVNAccessFile:",
                         svn_err, scratch_pool);
           access_conf = NULL;
         }
@@ -559,7 +559,7 @@ req_check_access(request_rec *r,
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
-                        "Failed to perform access control: ",
+                        "Failed to perform access control:",
                         svn_err, r->pool);
 
           return DECLINED;
@@ -596,7 +596,7 @@ req_check_access(request_rec *r,
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
-                        "Failed to perform access control: ",
+                        "Failed to perform access control:",
                         svn_err, r->pool);
 
           return DECLINED;
@@ -658,7 +658,7 @@ subreq_bypass2(request_rec *r,
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
-                        "Failed to perform access control: ",
+                        "Failed to perform access control:",
                         svn_err, scratch_pool);
           return HTTP_FORBIDDEN;
         }

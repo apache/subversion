@@ -115,7 +115,7 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target; do
-        if [ "$target" -ne "deps" ]; then
+        if [ "$target" != "deps" ]; then
           get_$target || usage
         else
           usage
