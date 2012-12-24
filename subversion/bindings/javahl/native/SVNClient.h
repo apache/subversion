@@ -171,7 +171,8 @@ class SVNClient :public SVNBase
                          bool lastChanged);
   void upgrade(const char *path);
   jbyteArray propertyGet(const char *path, const char *name,
-                         Revision &revision, Revision &pegRevision);
+                         Revision &revision, Revision &pegRevision,
+                         StringArray &changelists);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, OutputStream &outputStream,

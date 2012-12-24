@@ -1080,7 +1080,7 @@ Java_org_apache_subversion_javahl_SVNClient_setRevProperty
 JNIEXPORT jbyteArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertyGet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
- jobject jpegRevision)
+ jobject jpegRevision, jobject jchangelists)
 {
   JNIEntry(SVNClient, propertyGet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1105,7 +1105,11 @@ Java_org_apache_subversion_javahl_SVNClient_propertyGet
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->propertyGet(path, name, revision, pegRevision);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->propertyGet(path, name, revision, pegRevision, changelists);
 }
 
 JNIEXPORT jobject JNICALL
