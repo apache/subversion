@@ -73,7 +73,7 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
 
   apr_pool_t *apr_pool = pool.getPool();
   apr_array_header_t *apr_targets = apr_array_make (apr_pool,
-                                                    m_targets.size(),
+                                                    (int)m_targets.size(),
                                                     sizeof(const char *));
 
   for (it = m_targets.begin(); it != m_targets.end(); ++it)
