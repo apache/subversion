@@ -46,6 +46,7 @@ class LogMessageCallback;
 class InfoCallback;
 class CommitCallback;
 class ListCallback;
+class ImportFilterCallback;
 class StatusCallback;
 class OutputStream;
 class PatchCallback;
@@ -107,7 +108,8 @@ class SVNClient :public SVNBase
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, CommitMessage *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
-                RevpropTable &revprops, CommitCallback *callback);
+                RevpropTable &revprops, ImportFilterCallback *ifCallback,
+                CommitCallback *commitCallback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
