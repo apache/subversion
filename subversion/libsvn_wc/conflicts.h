@@ -394,7 +394,6 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

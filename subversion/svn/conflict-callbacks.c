@@ -804,7 +804,7 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                                      desc->local_abspath,
                                                      subpool)));
       prompt = _("Select: (p) postpone, (mf) mine-full, "
-                 "(tf) theirs-full, (h) help:");
+                 "(tf) theirs-full, (h) help: ");
 
       while (1)
         {
@@ -856,7 +856,9 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                                      scratch_pool),
                    readable_desc));
 
-      prompt = _("Select: (p) postpone, (r) mark-resolved, (h) help: ");
+      prompt = _("Select: (p) postpone, (r) mark-resolved, "
+                 "(mc) mine-conflict,\n"
+                 "        (tc) theirs-conflict, (h) help: ");
 
       while (1)
         {
@@ -867,8 +869,10 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p) postpone      - resolve the conflict later\n"
-                "  (r) resolved      - accept current working tree\n")));
+              _("  (p) postpone         - resolve the conflict later\n"
+                "  (r) resolved         - accept current working copy state\n"
+                "  (mc) mine-conflict   - prefer local change\n"
+                "  (tc) theirs-conflict - prefer incoming change\n")));
             }
           if (strcmp(answer, "p") == 0 || strcmp(answer, ":-p") == 0)
             {
@@ -878,6 +882,16 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
           else if (strcmp(answer, "r") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_merged;
+              break;
+            }
+          else if (strcmp(answer, "mc") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_mine_conflict;
+              break;
+            }
+          else if (strcmp(answer, "tc") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
               break;
             }
         }

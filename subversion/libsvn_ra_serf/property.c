@@ -832,64 +832,6 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
 }
 
 
-void
-svn_ra_serf__wirename_from_svnname(const char **ns,
-                                   const char **name,
-                                   const char *svnname,
-                                   svn_boolean_t use_ext_prop_ns,
-                                   apr_pool_t *result_pool)
-{
-  /* If we're allowed to use the extensible property namespace... */
-  if (use_ext_prop_ns)
-    {
-      const char *colon;
-
-      /* If there's no colon in this property name, it's a custom
-         property (C:name). */
-      colon = strrchr(svnname, ':');
-      if (! colon)
-        {
-          *ns = SVN_DAV_PROP_NS_CUSTOM;
-          *name = apr_pstrdup(result_pool, svnname);
-        }
-      /* Otherwise... */
-      else
-        {
-          /* If the property name prefix is merely "svn:", it's a
-             Subversion property (S:name-without-the-prefix). */
-          if (strncmp(svnname, "svn:", colon - svnname) == 0)
-            {
-              *ns = SVN_DAV_PROP_NS_SVN;
-            }
-          /* ...but anything else requires the extensible namespace. */
-          else
-            {
-              const char *barename = apr_pstrndup(result_pool, svnname,
-                                                  colon - svnname);
-              *ns = apr_pstrcat(result_pool, SVN_DAV_PROP_NS_EXTENSIBLE,
-                                svn_path_uri_encode(barename, result_pool),
-                                (char *)NULL);
-            }
-
-          /* Either way, the base name begins after the colon. */
-          *name = apr_pstrdup(result_pool, colon + 1);
-        }
-    }
-  else
-    {
-      if (strncmp(svnname, "svn:", 4) == 0)
-        {
-          *ns = SVN_DAV_PROP_NS_SVN;
-          *name = apr_pstrdup(result_pool, svnname + 4);
-        }
-      else
-        {
-          *ns = SVN_DAV_PROP_NS_CUSTOM;
-          *name = apr_pstrdup(result_pool, svnname);
-        }
-    }
-}
-
 const char *
 svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
@@ -900,16 +842,6 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
 
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
-
-  /* Check for something within our extensible namespace. */
-  if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
-              sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
-    {
-      const char *relpath =
-        svn_path_uri_decode(ns + (sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1),
-                            result_pool);
-      return apr_pstrcat(result_pool, relpath, ":", name, (char *)NULL);
-    }
 
   if (strcmp(ns, SVN_PROP_PREFIX) == 0)
     return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
@@ -1000,13 +932,6 @@ select_revprops(void *baton,
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
-  else if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
-                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
-    {
-      const char *relpath = svn_uri_skip_ancestor(SVN_DAV_PROP_NS_EXTENSIBLE,
-                                                  ns, scratch_pool);
-      prop_name = apr_pstrcat(result_pool, relpath, ":", name, (char *)NULL);
-    }
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
     prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, "") == 0)

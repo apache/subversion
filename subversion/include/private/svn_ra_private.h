@@ -208,8 +208,8 @@ typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
 
    CB_BATON is the baton used/shared by the above three callbacks.
 
-   CANCEL_FUNC/BATON is a standard cancellation function, and is used for
-   the returned Ev2 editor, and possibly other RA-specific operations.
+   Cancellation is handled through the callbacks provided when SESSION
+   is initially opened.
 
    *EDITOR will be allocated in RESULT_POOL, and all temporary allocations
    will be performed in SCRATCH_POOL.
@@ -226,8 +226,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra__provide_props_cb_t provide_props_cb,
                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
                        void *cb_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -259,6 +257,10 @@ svn_ra__replay_range_ev2(svn_ra_session_t *session,
                          svn_ra__replay_revstart_ev2_callback_t revstart_func,
                          svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
                          void *replay_baton,
+                         svn_ra__provide_base_cb_t provide_base_cb,
+                         svn_ra__provide_props_cb_t provide_props_cb,
+                         svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                         void *cb_baton,
                          apr_pool_t *scratch_pool);
 
 /* Similar to svn_ra_replay(), but with an Ev2 editor. */

@@ -270,7 +270,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
   SVN_ERR(svn_ra_initialize(pool));
 
   SVN_ERR(svn_config_ensure(config_dir, pool));
-  SVN_ERR(svn_client_create_context(&ctx, pool));
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
 
   SVN_ERR(svn_config_get_config(&(ctx->config), config_dir, pool));
 

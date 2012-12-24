@@ -1147,8 +1147,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   cb_baton.is_move = is_move;
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM, paths,
-                              path_driver_cb_func, &cb_baton, pool);
+  err = svn_delta_path_driver2(editor, edit_baton, paths, TRUE,
+                               path_driver_cb_func, &cb_baton, pool);
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */

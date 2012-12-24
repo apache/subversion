@@ -182,11 +182,12 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
                           skel->children->next->next->next->next));
   kind = (svn_node_kind_t)n;
 
-  *version_info = svn_wc_conflict_version_create(repos_root,
-                                                 repos_relpath,
-                                                 peg_rev,
-                                                 kind,
-                                                 result_pool);
+  *version_info = svn_wc_conflict_version_create2(repos_root,
+                                                  NULL,
+                                                  repos_relpath,
+                                                  peg_rev,
+                                                  kind,
+                                                  result_pool);
 
   return SVN_NO_ERROR;
 }

@@ -33,6 +33,7 @@
 #include "svn_pools.h"
 
 #include "ra_loader.h"
+#include "deprecated.h"
 
 #include "svn_private_config.h"
 
@@ -429,4 +430,28 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
                                   path, revision, SVN_DIRENT_ALL, pool);
+}
+
+svn_error_t *
+svn_ra_local__deprecated_init(int abi_version,
+                              apr_pool_t *pool,
+                              apr_hash_t *hash)
+{
+  return svn_error_trace(svn_ra_local_init(abi_version, pool, hash));
+}
+
+svn_error_t *
+svn_ra_svn__deprecated_init(int abi_version,
+                            apr_pool_t *pool,
+                            apr_hash_t *hash)
+{
+  return svn_error_trace(svn_ra_svn_init(abi_version, pool, hash));
+}
+
+svn_error_t *
+svn_ra_serf__deprecated_init(int abi_version,
+                             apr_pool_t *pool,
+                             apr_hash_t *hash)
+{
+  return svn_error_trace(svn_ra_serf_init(abi_version, pool, hash));
 }

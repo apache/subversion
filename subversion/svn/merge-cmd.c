@@ -104,9 +104,9 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-/* Symmetric, merge-tracking merge, used for sync or reintegrate purposes. */
+/* Automatic, merge-tracking merge, used for sync or reintegrate purposes. */
 static svn_error_t *
-symmetric_merge(const char *source_path_or_url,
+automatic_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
@@ -120,16 +120,16 @@ symmetric_merge(const char *source_path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  svn_client_symmetric_merge_t *merge;
+  svn_client_automatic_merge_t *merge;
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
-  SVN_ERR(svn_client_find_symmetric_merge(&merge,
+  SVN_ERR(svn_client_find_automatic_merge(&merge,
                                           source_path_or_url, source_revision,
                                           target_wcpath, allow_mixed_rev,
                                           allow_local_mods, allow_switched_subtrees,
                                           ctx, scratch_pool, scratch_pool));
 
-  if (svn_client_symmetric_merge_is_reintegrate_like(merge))
+  if (svn_client_automatic_merge_is_reintegrate_like(merge))
     {
       if (record_only)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
@@ -157,7 +157,7 @@ symmetric_merge(const char *source_path_or_url,
     }
 
   /* Perform the 3-way merges */
-  SVN_ERR(svn_client_do_symmetric_merge(merge, target_wcpath, depth,
+  SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
                                         force, record_only,
                                         dry_run, merge_options,
                                         ctx, scratch_pool));
@@ -428,7 +428,7 @@ svn_cl__merge(apr_getopt_t *os,
   /* Postpone conflict resolution during the merge operation.
    * If any conflicts occur we'll run the conflict resolver later. */
 
-  /* Do a symmetric merge if just one source and no revisions. */
+  /* Do an automatic merge if just one source and no revisions. */
   if ((! two_sources_specified)
       && (! opt_state->reintegrate)
       && (! opt_state->ignore_ancestry)
@@ -440,7 +440,7 @@ svn_cl__merge(apr_getopt_t *os,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      merge_err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
+      merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
                                   opt_state->force,
                                   opt_state->record_only,

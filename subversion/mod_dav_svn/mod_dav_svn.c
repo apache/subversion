@@ -60,6 +60,12 @@
 typedef struct server_conf_t {
   const char *special_uri;
   svn_boolean_t use_utf8;
+
+  /* The compression level we will pass to svn_txdelta_to_svndiff3()
+   * for wire-compression. Negative value used to specify default
+     compression level. */
+  int compression_level;
+
 } server_conf_t;
 
 
@@ -111,10 +117,6 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 /* The authz_svn provider for bypassing path authz. */
 static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
-/* The compression level we will pass to svn_txdelta_to_svndiff3()
- * for wire-compression */
-static int svn__compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
-
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
@@ -165,7 +167,11 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
-  return apr_pcalloc(p, sizeof(server_conf_t));
+  server_conf_t *conf = apr_pcalloc(p, sizeof(server_conf_t));
+
+  conf->compression_level = -1;
+
+  return conf;
 }
 
 
@@ -180,6 +186,17 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
   newconf = apr_pcalloc(p, sizeof(*newconf));
 
   newconf->special_uri = INHERIT_VALUE(parent, child, special_uri);
+
+  if (child->compression_level < 0)
+    {
+      /* Inherit compression level from parent if not configured for this
+         VirtualHost. */
+      newconf->compression_level = parent->compression_level;
+    }
+  else
+    {
+      newconf->compression_level = child->compression_level;
+    }
 
   return newconf;
 }
@@ -535,6 +552,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 static const char *
 SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
+  server_conf_t *conf;
   int value = 0;
   svn_error_t *err = svn_cstring_atoi(&value, arg1);
   if (err)
@@ -552,7 +570,9 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
                         (int)SVN_DELTA_COMPRESSION_LEVEL_NONE,
                         (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
 
-  svn__compression_level = value;
+  conf = ap_get_module_config(cmd->server->module_config,
+                              &dav_svn_module);
+  conf->compression_level = value;
 
   return NULL;
 }
@@ -820,21 +840,6 @@ dav_svn__check_ephemeral_txnprops_support(request_rec *r)
 }
 
 
-svn_boolean_t
-dav_svn__check_prop_ext_ns_support(request_rec *r)
-{
-  svn_version_t *version = dav_svn__get_master_version(r);
-
-  /* We know this server supports extensible property namespaces.  But
-     if we're proxying requests to a master server, we need to see if
-     it supports them, too.  */
-  if (version && (! svn_version__at_least(version, 1, 8, 0)))
-    return FALSE;
-
-  return TRUE;
-}
-
-
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
@@ -913,9 +918,21 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
 
 
 int
-dav_svn__get_compression_level(void)
+dav_svn__get_compression_level(request_rec *r)
 {
-  return svn__compression_level;
+  server_conf_t *conf;
+
+  conf = ap_get_module_config(r->server->module_config,
+                              &dav_svn_module);
+
+  if (conf->compression_level < 0)
+    {
+      return SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+    }
+  else
+    {
+      return conf->compression_level;
+    }
 }
 
 const char *

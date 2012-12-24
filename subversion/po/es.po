@@ -13565,7 +13565,7 @@ msgstr ""
 #~ "                               'HEAD'        lo último del repositorio\n"
 #~ "                               'BASE'        rev base del ítem de la c. de trab.\n"
 #~ "                               'COMMITTED'   último commit en o antes de BASE\n"
-#~ "                               'PREV'        revisión justo antes de COMMITED"
+#~ "                               'PREV'        revisión justo antes de COMMITTED"
 
 #~ msgid "Can't open file '%s' for reading"
 #~ msgstr "No se pudo abrir el archivo '%s' para leer"

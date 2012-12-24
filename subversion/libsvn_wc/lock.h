@@ -77,6 +77,13 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
 const char *
 svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
 
+/* Return the pool used by access baton ADM_ACCESS.
+ * Note: This is a non-deprecated variant of svn_wc_adm_access_pool for
+ * libsvn_wc internal usage only.
+ */
+apr_pool_t *
+svn_wc__adm_access_pool_internal(const svn_wc_adm_access_t *adm_access);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

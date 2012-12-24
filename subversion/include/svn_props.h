@@ -384,6 +384,14 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_MERGEINFO SVN_PROP_PREFIX "mergeinfo"
 
+/** Prefix for all Subersion inhertiable properties. */
+#define SVN_PROP_INHERITABLE_PREFIX SVN_PROP_PREFIX "inheritable-"
+
+/** Property used to record inheritable configuration auto-props. */
+#define SVN_PROP_INHERITABLE_AUTO_PROPS SVN_PROP_INHERITABLE_PREFIX "auto-props"
+
+/** Property used to record inheritable configuration ignores. */
+#define SVN_PROP_INHERITABLE_IGNORES SVN_PROP_INHERITABLE_PREFIX "ignores"
 
 /** Meta-data properties.
  *
@@ -581,6 +589,17 @@ svn_prop_name_is_valid(const char *prop_name);
 /** Identifies the client's user agent string, if any. */
 #define SVN_PROP_TXN_USER_AGENT \
             SVN_PROP_TXN_PREFIX "user-agent"
+
+/** The prefix reserved for copies of (ephemeral) transaction
+ * properties designed to outlive the transaction.  Administrators may
+ * choose to, in their pre-commit hook scripts, copy the values of one
+ * or more properties named @c SVN_PROP_TXN_PREFIX + "something"
+ * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
+ * allowing that information to survive the commit-time removal of
+ * ephemeral transaction properties.
+ */
+#define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
+
 
 /** @} */
 

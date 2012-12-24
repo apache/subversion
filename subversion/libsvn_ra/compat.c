@@ -903,7 +903,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
-      parent_url = svn_uri_dirname(parent_url, iterpool);
+      parent_url = svn_uri_dirname(parent_url, scratch_pool);
       SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
       err = session->vtable->get_dir(session, NULL, NULL,
                                      &parent_props, "",
@@ -934,7 +934,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
           apr_ssize_t klen = svn__apr_hash_index_klen(hi);
           svn_string_t *value = svn__apr_hash_index_val(hi);
 
-          if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
+          if (svn_property_kind2(name) == svn_prop_regular_kind)
             {
               name = apr_pstrdup(result_pool, name);
               value = svn_string_dup(value, result_pool);

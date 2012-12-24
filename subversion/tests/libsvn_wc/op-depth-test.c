@@ -262,6 +262,17 @@ wc_resolved(svn_test__sandbox_t *b, const char *path)
 }
 
 static svn_error_t *
+wc_resolve(svn_test__sandbox_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  return svn_client_resolve(wc_path(b, path), svn_depth_infinity,
+                            svn_wc_conflict_choose_mine_conflict,
+                            ctx, b->pool);
+}
+
+static svn_error_t *
 wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
 {
   svn_client_ctx_t *ctx;
@@ -4528,8 +4539,13 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(wc_mkdir(&b, "A"));
   SVN_ERR(wc_mkdir(&b, "A/B"));
+  file_write(&b, "A/B/f", "r1 content\n");
+  SVN_ERR(wc_add(&b, "A/B/f"));
   SVN_ERR(wc_commit(&b, ""));
-  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  file_write(&b, "A/B/f", "r1 content\nr2 content\n");
+  SVN_ERR(wc_commit(&b, ""));
+  file_write(&b, "A/B/g", "r3 content\n");
+  SVN_ERR(wc_add(&b, "A/B/g"));
   SVN_ERR(wc_commit(&b, ""));
   SVN_ERR(wc_update(&b, "", 1));
 
@@ -4540,49 +4556,94 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "",         "normal",       1, ""},
       {0, "A",        "normal",       1, "A"},
       {0, "A/B",      "normal",       1, "A/B"},
+      {0, "A/B/f",    "normal",       1, "A/B/f"},
       {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       1, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  /* Update A/B makes A2 a mixed-revision copy */
-  SVN_ERR(wc_update(&b, "A/B", 2));
+  /* Update causes a tree-conflict on A due to incoming text-change. */
+  SVN_ERR(wc_update(&b, "", 2));
   {
     nodes_row_t nodes[] = {
-      {0, "",         "normal",       1, ""},
-      {0, "A",        "normal",       1, "A"},
-      {0, "A/B",      "normal",       2, "A/B"},
-      {0, "A/B/C",    "normal",       2, "A/B/C"},
-      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
-      {1, "A/B",      "base-deleted", NO_COPY_FROM},
-      {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
-      {1, "A2",       "normal",       1, "A", MOVED_HERE},
-      {1, "A2/B",     "not-present",  2, "A/B"},                 /* XFAIL */
-      {2, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
-      {2, "A2/B/C",   "normal",       2, "A/B/C", MOVED_HERE},
-      {0}
-    };
-    SVN_ERR(check_db_rows(&b, "", nodes));
-  }
-
-  /* Update A makes A2 back into a single-revision copy */
-  SVN_ERR(wc_update(&b, "A", 2));
-  {
-    nodes_row_t nodes[] = {
-      {0, "",         "normal",       1, ""},
+      {0, "",         "normal",       2, ""},
       {0, "A",        "normal",       2, "A"},
       {0, "A/B",      "normal",       2, "A/B"},
-      {0, "A/B/C",    "normal",       2, "A/B/C"},
+      {0, "A/B/f",    "normal",       2, "A/B/f"},
       {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
-      {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       1, "A/B/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Resolve should update the move. */
+  SVN_ERR(wc_resolve(&b, "A"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/f",    "normal",       2, "A/B/f"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       2, "A", MOVED_HERE},
       {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
-      {1, "A2/B/C",   "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Update causes a tree-conflict on due to incoming add. */
+  SVN_ERR(wc_update(&b, "", 3));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       3, ""},
+      {0, "A",        "normal",       3, "A"},
+      {0, "A/B",      "normal",       3, "A/B"},
+      {0, "A/B/f",    "normal",       3, "A/B/f"},
+      {0, "A/B/g",    "normal",       3, "A/B/g"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/g",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       2, "A/B/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Are we going to handle this case? */
+  SVN_ERR(wc_resolve(&b, "A"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       3, ""},
+      {0, "A",        "normal",       3, "A"},
+      {0, "A/B",      "normal",       3, "A/B"},
+      {0, "A/B/f",    "normal",       3, "A/B/f"},
+      {0, "A/B/g",    "normal",       3, "A/B/g"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/f",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/g",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       3, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       3, "A/B", MOVED_HERE},
+      {1, "A2/B/f",   "normal",       3, "A/B/f", MOVED_HERE},
+      {1, "A2/B/g",   "normal",       3, "A/B/g", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));

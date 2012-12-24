@@ -2143,14 +2143,6 @@ get_resource(request_rec *r,
                              SVN_RA_CAPABILITY_MERGEINFO,
                              APR_HASH_KEY_STRING, capability_yes);
               }
-
-            /* We don't need to report the DAV-specific extensible
-               property XML namespace capability to hook scripts, so
-               we'll just stash it in our repos structure. */
-            if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PROP_EXT_NS, vals))
-              {
-                repos->use_ext_prop_ns = TRUE;
-              }
           }
       }
   }
@@ -3654,7 +3646,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           /* get a handler/baton for writing into the output stream */
           svn_txdelta_to_svndiff3(&handler, &h_baton,
                                   o_stream, resource->info->svndiff_version,
-                                  dav_svn__get_compression_level(),
+                                  dav_svn__get_compression_level(resource->info->r),
                                   resource->pool);
 
           /* got everything set up. read in delta windows and shove them into

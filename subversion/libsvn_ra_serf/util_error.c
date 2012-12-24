@@ -25,6 +25,8 @@
 #include "svn_utf.h"
 #include "private/svn_error_private.h"
 
+#include "ra_serf.h"
+
 /*
  * Undefine the helpers for creating errors.
  *
@@ -74,9 +76,16 @@ svn_ra_serf__wrap_err(apr_status_t status,
         }
 
       /* Append it to the formatted message. */
-      va_start(ap, fmt);
-      msg = apr_pvsprintf(err->pool, fmt, ap);
-      va_end(ap);
+      if (fmt)
+        {
+          va_start(ap, fmt);
+          msg = apr_pvsprintf(err->pool, fmt, ap);
+          va_end(ap);
+        }
+      else
+        {
+          msg = "ra_serf";
+        }
       if (err_msg)
         {
           err->message = apr_pstrcat(err->pool, msg, ": ", err_msg, NULL);
