@@ -208,7 +208,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
 
   jbyteArray jdigest = JNIUtil::makeJByteArray(
                             (const signed char *)checksum->digest,
-                            svn_checksum_size(checksum));
+                            (int)svn_checksum_size(checksum));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1099,7 +1099,8 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
         POP_AND_RETURN_NULL;
 
       jbyteArray jpropVal = JNIUtil::makeJByteArray(
-                                    (const signed char *)val->data, val->len);
+                                    (const signed char *)val->data,
+                                    (int)val->len);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
