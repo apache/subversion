@@ -27,14 +27,20 @@ dnl   the recommended version of sqlite.
 dnl
 dnl   If a --with-sqlite=PREFIX option is passed, look for a suitable sqlite
 dnl   either installed under the directory PREFIX or as an amalgamation file
-dnl   at the path PREFIX.  In this case ignore any sqlite-amalgamation/ subdir
-dnl   within the source tree.
+dnl   at the path PREFIX.  In this case ignore any
+dnl
+dnl       subversion/include/private/sqlite-amalgamation/
+dnl
+dnl   subdir within the source tree.
 dnl
 dnl   If no --with-sqlite option is passed, look first for
-dnl   sqlite-amalgamation/sqlite3.c which should be the amalgamated version of
-dnl   the source distribution.  If the amalgamation exists and is the wrong
-dnl   version, exit with a failure.  If no sqlite-amalgamation/ subdir is
-dnl   present, search for a sqlite installed on the system.
+dnl
+dnl       subversion/include/private/sqlite-amalgamation/sqlite3.c
+dnl
+dnl   which should be the amalgamated version of the source distribution.
+dnl   If the amalgamation exists and is the wrong version, exit with a
+dnl   failure.  If no sqlite-amalgamation/ subdir is present, search
+dnl   for a sqlite installed on the system.
 dnl
 dnl   If the search for sqlite fails, set svn_lib_sqlite to no, otherwise set
 dnl   it to yes.
@@ -75,7 +81,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
   ],
   [
     dnl see if the sqlite amalgamation exists in the source tree
-    SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
+    SVN_SQLITE_FILE_CONFIG([$abs_srcdir/subversion/include/private/sqlite-amalgamation/sqlite3.c])
 
     if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
@@ -189,10 +195,12 @@ AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
 SQLITE_VERSION_OKAY
 #endif],
                  [AC_MSG_RESULT([amalgamation found and is okay])
+                  dnl No additional include dirs since sources use a
+                  dnl relative path to include the amalgamated files.
+                  SVN_SQLITE_INCLUDES=""
                   _SVN_SQLITE_DSO_LIBS
                   AC_DEFINE(SVN_SQLITE_INLINE, 1,
                   [Defined if svn should use the amalgamated version of sqlite])
-                  SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
                   if test -n "$svn_sqlite_dso_ldflags"; then
                     SVN_SQLITE_LIBS="$svn_sqlite_dso_ldflags -lpthread"
                   else

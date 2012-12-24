@@ -45,7 +45,7 @@
 #ifdef SVN_SQLITE_INLINE
 /* Import the sqlite3 API vtable from sqlite3wrapper.c */
 #  define SQLITE_OMIT_DEPRECATED
-#  include <sqlite3ext.h>
+#  include <private/sqlite-amalgamation/sqlite3ext.h>
 extern const sqlite3_api_routines *const svn_sqlite3__api_funcs;
 extern int (*const svn_sqlite3__api_initialize)(void);
 extern int (*const svn_sqlite3__api_config)(int, ...);
