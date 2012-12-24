@@ -1331,12 +1331,19 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
-    # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notification. Please review!
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'DF/D1/beta'        : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    'DDF/D1/D2/gamma'   : Item(),
+    'D/D1/delta'        : Item(),
     'D/D1'              : Item(),
+    'DD/D1/D2/epsilon'  : Item(),
+    'DD/D1/D2'          : Item(),
     })
 
-
+  # Currently this test fails because some parts of the merge
+  # start succeeding. 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",
@@ -1410,6 +1417,12 @@ def tree_conflicts_merge_del_onto_missing(sbox):
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     'D/D1'              : Item(),
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'D/D1'              : Item(),
+    'DD/D1/D2'          : Item(),
+    'DF/D1/beta'        : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    'DDF/D1/D2/gamma'   : Item(),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,

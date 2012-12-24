@@ -674,7 +674,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
