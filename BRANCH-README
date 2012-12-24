@@ -77,6 +77,8 @@ TODO:
           
    * Commit RA editor implementation                         [IN PROGRESS]
 
+   * Review branch code for migrating from C-style casts to
+     use the C++ static cast like was done in trunk@1399494  [TODO]
 
    * Use of the java runtime exceptions                      [TODO]
 
