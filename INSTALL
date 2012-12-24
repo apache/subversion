@@ -172,9 +172,9 @@ I.    INTRODUCTION
       libraries (Apache Portable Runtime, Sqlite, and Zlib).  The script,
       'get-deps.sh', is available in the same directory as this file.
       When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
-      'subversion/include/private/sqlite-amalgamation' directories directly
-      into your unpacked Subversion distribution, where they will be
-      automatically configured and built by Subversion's build process.
+      'sqlite-amalgamation' directories directly into your unpacked Subversion
+      distribution, where they will be automatically configured and built by
+      Subversion's build process.
 
       Note: there are optional dependencies (such as openssl, swig, and httpd)
       which get-deps.sh does not download and Subversion does not attempt to

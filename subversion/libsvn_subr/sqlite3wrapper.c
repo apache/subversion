@@ -39,7 +39,7 @@
 #      pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #    endif
 #  endif
-#  include <private/sqlite-amalgamation/sqlite3.c>
+#  include <sqlite3.c>
 #  if __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 6))
 #    pragma GCC diagnostic pop
 #  endif
