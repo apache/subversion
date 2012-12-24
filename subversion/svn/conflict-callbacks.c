@@ -477,7 +477,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (performed_edit)
             knows_something = TRUE;
         }
-      else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-g") ||
+      else if (strcmp(answer, "m") == 0 || strcmp(answer, ":-g") == 0 ||
                strcmp(answer, "=>-") == 0 || strcmp(answer, ":>.") == 0)
         {
           if (desc->kind != svn_wc_conflict_kind_text)

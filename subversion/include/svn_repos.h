@@ -1340,14 +1340,14 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * Calling @a (*editor)->close_edit completes the commit.
  *
- * If @a callback is non-NULL, then before @c close_edit returns (but
+ * If @a commit_callback is non-NULL, then before @c close_edit returns (but
  * after the commit has succeeded) @c close_edit will invoke
- * @a callback with a filled-in #svn_commit_info_t *, @a callback_baton,
- * and @a pool or some subpool thereof as arguments.  If @a callback
+ * @a commit_callback with a filled-in #svn_commit_info_t *, @a commit_baton,
+ * and @a pool or some subpool thereof as arguments.  If @a commit_callback
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
- * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * (Note that prior to Subversion 1.6, @a commit_callback cannot be NULL; if
  * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
@@ -1368,8 +1368,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              const char *repos_url,
                              const char *base_path,
                              apr_hash_t *revprop_table,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool);
@@ -1394,8 +1394,8 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_commit_callback2_t callback,
-                             void *callback_baton,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
                              svn_repos_authz_callback_t authz_callback,
                              void *authz_baton,
                              apr_pool_t *pool);

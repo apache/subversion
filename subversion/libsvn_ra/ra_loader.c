@@ -706,19 +706,19 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        apr_hash_t *revprop_table,
-                                       svn_commit_callback2_t callback,
-                                       void *callback_baton,
+                                       svn_commit_callback2_t commit_callback,
+                                       void *commit_baton,
                                        apr_hash_t *lock_tokens,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  remap_commit_callback(&callback, &callback_baton,
-                        session, callback, callback_baton,
+  remap_commit_callback(&commit_callback, &commit_baton,
+                        session, commit_callback, commit_baton,
                         pool);
 
   return session->vtable->get_commit_editor(session, editor, edit_baton,
                                             revprop_table,
-                                            callback, callback_baton,
+                                            commit_callback, commit_baton,
                                             lock_tokens, keep_locks, pool);
 }
 
@@ -1280,8 +1280,8 @@ svn_error_t *
 svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra_session_t *session,
                        apr_hash_t *revprop_table,
-                       svn_commit_callback2_t callback,
-                       void *callback_baton,
+                       svn_commit_callback2_t commit_callback,
+                       void *commit_baton,
                        apr_hash_t *lock_tokens,
                        svn_boolean_t keep_locks,
                        svn_ra__provide_base_cb_t provide_base_cb,
@@ -1299,15 +1299,15 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
          default shim over the normal commit editor.  */
 
       /* Remap for RA layers exposing Ev1.  */
-      remap_commit_callback(&callback, &callback_baton,
-                            session, callback, callback_baton,
+      remap_commit_callback(&commit_callback, &commit_baton,
+                            session, commit_callback, commit_baton,
                             result_pool);
 
       return svn_error_trace(svn_ra__use_commit_shim(
                                editor,
                                session,
                                revprop_table,
-                               callback, callback_baton,
+                               commit_callback, commit_baton,
                                lock_tokens,
                                keep_locks,
                                provide_base_cb,
@@ -1325,7 +1325,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                            editor,
                            session,
                            revprop_table,
-                           callback, callback_baton,
+                           commit_callback, commit_baton,
                            lock_tokens,
                            keep_locks,
                            provide_base_cb,

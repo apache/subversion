@@ -98,7 +98,7 @@
 /* Give writing processes 10 seconds to replace an existing revprop
    file with a new one. After that time, we assume that the writing
    process got aborted and that we have re-read revprops. */
-#define REVPROP_CHANGE_TIMEOUT 10 * 1000000
+#define REVPROP_CHANGE_TIMEOUT (10 * 1000000)
 
 /* The following are names of atomics that will be used to communicate
  * revprop updates across all processes on this machine. */
