@@ -77,8 +77,8 @@ svn_error_t *
 svn_ra__use_commit_shim(svn_editor_t **editor,
                         svn_ra_session_t *session,
                         apr_hash_t *revprop_table,
-                        svn_commit_callback2_t callback,
-                        void *callback_baton,
+                        svn_commit_callback2_t commit_callback,
+                        void *commit_baton,
                         apr_hash_t *lock_tokens,
                         svn_boolean_t keep_locks,
                         svn_ra__provide_base_cb_t provide_base_cb,
@@ -108,7 +108,7 @@ svn_ra__use_commit_shim(svn_editor_t **editor,
   /* Fetch the RA provider's Ev1 commit editor.  */
   SVN_ERR(session->vtable->get_commit_editor(session, &deditor, &dedit_baton,
                                              revprop_table,
-                                             callback, callback_baton,
+                                             commit_callback, commit_baton,
                                              lock_tokens, keep_locks,
                                              result_pool));
 

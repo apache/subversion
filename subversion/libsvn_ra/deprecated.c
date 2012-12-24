@@ -209,8 +209,8 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        const char *log_msg,
-                                       svn_commit_callback2_t callback,
-                                       void *callback_baton,
+                                       svn_commit_callback2_t commit_callback,
+                                       void *commit_baton,
                                        apr_hash_t *lock_tokens,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
@@ -221,7 +221,7 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                  APR_HASH_KEY_STRING,
                  svn_string_create(log_msg, pool));
   return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
-                                   callback, callback_baton,
+                                   commit_callback, commit_baton,
                                    lock_tokens, keep_locks, pool);
 }
 

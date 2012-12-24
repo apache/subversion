@@ -1929,7 +1929,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t incomplete; /* TRUE if a working node is incomplete */
 
   const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
-  svn_boolean_t moved_here;     /* On both op-roots and children. */
+  svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
 };

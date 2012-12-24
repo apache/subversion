@@ -595,7 +595,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                     original_end = hunk_text_end;
                   if (modified_end == 0)
                     modified_end = hunk_text_end;
-                  break;
                 }
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));

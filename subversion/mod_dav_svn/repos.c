@@ -2231,8 +2231,12 @@ get_resource(request_rec *r,
         }
 
       /* Configure hook script environment variables. */
-      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
-                             r->connection->pool, r->pool);
+      serr = svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
+                                    r->connection->pool, r->pool);
+      if (serr)
+        return dav_svn__sanitize_error(serr,
+                                       "Error settings hooks environment",
+                                       HTTP_INTERNAL_SERVER_ERROR, r);
     }
 
   /* cache the filesystem object */
@@ -3179,7 +3183,7 @@ typedef struct diff_ctx_t {
 } diff_ctx_t;
 
 
-static svn_error_t *
+static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
@@ -3200,7 +3204,7 @@ write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 }
 
 
-static svn_error_t *
+static svn_error_t *  __attribute__((warn_unused_result))
 close_filter(void *baton)
 {
   diff_ctx_t *dc = baton;
