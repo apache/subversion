@@ -273,12 +273,13 @@ in revprops/0/0.
 
 Pack file format
 
-  Top level: <length><packed container>
+  Top level: <packed container>
 
   We always apply data compression to the pack file - using the
   SVN_DELTA_COMPRESSION_LEVEL_NONE level if compression is disabled.
-  <length> is being encoded using the variable-length svndiff integer
-  format.
+  (Note that compression at SVN_DELTA_COMPRESSION_LEVEL_NONE is not
+  a no-op stream transformation although most of the data will remain
+  human readable.)
 
   container := header '\n' (revprops)+
   header    := start_rev '\n' rev_count '\n' (size '\n')+
@@ -462,7 +463,8 @@ defined:
   props     "<rev> <offset> <length> <size> <digest>" for props rep
             <rev> and <offset> give location of rep
             <length> gives length of rep, sans header and trailer
-            <size> gives size of expanded rep
+            <size> gives size of expanded rep; may be 0 if equal
+             to the length
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep

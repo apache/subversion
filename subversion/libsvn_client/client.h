@@ -326,21 +326,88 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from CTX->config.
+/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
+   is is a hash as per svn_client__get_all_auto_props.
+
    Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values), or if
-   auto-props are disabled, set *PROPERTIES to NULL.
+   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
+   may be an empty hash, but will not be NULL.
+
    Set *MIMETYPE to the mimetype, if any, or to NULL.
+
    If MAGIC_COOKIE is not NULL and no mime-type can be determined
    via CTX->config try to detect the mime-type with libmagic.
-   Allocate the hash table, keys, values, and mimetype in POOL. */
-svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
-                                        const char **mimetype,
-                                        const char *path,
-                                        svn_magic__cookie_t *magic_cookie,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool);
 
+   Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
+   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *svn_client__get_paths_auto_props(
+  apr_hash_t **properties,
+  const char **mimetype,
+  const char *path,
+  svn_magic__cookie_t *magic_cookie,
+  apr_hash_t *autoprops,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Gather all auto-props from CTX->config (or none if auto-props are
+   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
+   by PATH_OR_URL.
+
+   If PATH_OR_URL is an unversioned WC path then gather the
+   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
+   parent.
+
+   If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
+   path as sfor the working properties.
+
+   Store both types of auto-props in *AUTOPROPS, a hash mapping const
+   char * file patterns to another hash which maps const char * property
+   names to const char *property values.
+
+   If a given property name exists for the same pattern in both the config
+   file and in an a svn:inheritable-auto-props property, the latter overrides the
+   former.  If a given property name exists for the same pattern in two
+   different inherited svn:inheritable-auto-props, then the closer path-wise
+   property overrides the more distant. svn:inheritable-auto-props explicitly set
+   on PATH_OR_URL have the highest precedence and override inherited props
+   and config file settings.
+
+   Allocate *AUTOPROPS in RESULT_POOL.  Use SCRATCH_POOL for temporary
+   allocations. */
+svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
+                                            const char *path_or_url,
+                                            svn_client_ctx_t *ctx,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool);
+
+/* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
+   patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
+   svn:inheritable-ignores properties set on, or inherited by, LOCAL_ABSPATH.
+   If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
+   then find its nearest versioned parent path, if any, and return the ignore
+   patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
+   LOCAL_ABSPATH is neither a versioned working copy path nor an unversioned
+   path within a working copy.  Store the collected patterns as const char *
+   elements in the array *IGNORES.  Allocate *IGNORES and its contents in
+   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
+                                         const char *local_abspath,
+                                         svn_boolean_t no_ignore,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/* Get a list of ignore patterns defined by the svn:inheritable-ignores
+   properties set on, or inherited by, PATH_OR_URL.  Store the collected
+   patterns as const char * elements in the array *IGNORES.  Allocate
+   *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
+   temporary allocations. */
+svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
+                                               const char *path_or_url,
+                                               svn_client_ctx_t *ctx,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from CTX->WC_CTX.  If PATH (or any item below a directory PATH) is

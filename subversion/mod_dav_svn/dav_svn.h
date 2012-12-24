@@ -137,11 +137,6 @@ typedef struct dav_svn_repos {
      'is_svn_client' is false, then 'capabilities' should be empty. */
   apr_hash_t *client_capabilities;
 
-  /* Whether its okay to use the extensible property XML namespace
-     SVN_DAV_PROP_NS_SVN in PROPFIND/PROPPATCH requests and
-     responses. */
-  svn_boolean_t use_ext_prop_ns;
-
   /* The path to the activities db */
   const char *activities_db;
 
@@ -340,10 +335,6 @@ svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
    txnprop support be advertised?  */
 svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
 
-/* For the repository referred to by this request, should support for
-   property on-the-wire XML namespaces under the extensible namespace
-   URI be advertised?  */
-svn_boolean_t dav_svn__check_prop_ext_ns_support(request_rec *r);
 
 
 /* SPECIAL URI
@@ -408,7 +399,7 @@ const char *dav_svn__get_activities_db(request_rec *r);
 const char *dav_svn__get_root_dir(request_rec *r);
 
 /* Return the data compression level to be used over the wire. */
-int dav_svn__get_compression_level(void);
+int dav_svn__get_compression_level(request_rec *r);
 
 /* Return the hook script environment parsed from the configuration. */
 const char *dav_svn__get_hooks_env(request_rec *r);
@@ -768,7 +759,11 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
    processing.  See dav_new_error_tag for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error_tag()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
@@ -783,7 +778,11 @@ dav_svn__new_error_tag(apr_pool_t *pool,
    processing.  See dav_new_error for parameter documentation.
    Note that DESC may be null (it's hard to track this down from
    dav_new_error()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
+   which says that its desc field may be NULL).
+
+   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
+   default value for the error code.
+*/
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,

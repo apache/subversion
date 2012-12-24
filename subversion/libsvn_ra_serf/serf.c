@@ -417,7 +417,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",
                                        client_string, (char *)NULL);
   else
     serf_sess->useragent = USER_AGENT;
@@ -673,11 +673,6 @@ dirent_walker(void *baton,
       dwb->entry->has_props = TRUE;
     }
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    {
-      dwb->entry->has_props = TRUE;
-    }
-  else if (strncmp(ns, SVN_DAV_PROP_NS_EXTENSIBLE,
-                   sizeof(SVN_DAV_PROP_NS_EXTENSIBLE) - 1) == 0)
     {
       dwb->entry->has_props = TRUE;
     }

@@ -48,6 +48,7 @@
 
 #include "svn_config.h"
 #include "ra_loader.h"
+#include "deprecated.h"
 
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
@@ -78,7 +79,7 @@ static const struct ra_lib_defn {
     svn_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
     svn_ra_svn__init,
-    svn_ra_svn_init
+    svn_ra_svn__deprecated_init
 #endif
   },
 
@@ -87,7 +88,7 @@ static const struct ra_lib_defn {
     local_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
     svn_ra_local__init,
-    svn_ra_local_init
+    svn_ra_local__deprecated_init
 #endif
   },
 
@@ -96,7 +97,7 @@ static const struct ra_lib_defn {
     dav_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SERF
     svn_ra_serf__init,
-    svn_ra_serf_init
+    svn_ra_serf__deprecated_init
 #endif
   },
 
@@ -469,6 +470,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
   /* Create the session object. */
   session = apr_pcalloc(sesspool, sizeof(*session));
+  session->cancel_func = callbacks->cancel_func;
+  session->cancel_baton = callback_baton;
   session->vtable = vtable;
   session->pool = sesspool;
 
@@ -1129,6 +1132,47 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
   SVN__NOT_IMPLEMENTED();
 }
 
+static svn_error_t *
+replay_range_from_replays(svn_ra_session_t *session,
+                          svn_revnum_t start_revision,
+                          svn_revnum_t end_revision,
+                          svn_revnum_t low_water_mark,
+                          svn_boolean_t text_deltas,
+                          svn_ra_replay_revstart_callback_t revstart_func,
+                          svn_ra_replay_revfinish_callback_t revfinish_func,
+                          void *replay_baton,
+                          apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_revnum_t rev;
+
+  for (rev = start_revision ; rev <= end_revision ; rev++)
+    {
+      const svn_delta_editor_t *editor;
+      void *edit_baton;
+      apr_hash_t *rev_props;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, iterpool));
+
+      SVN_ERR(revstart_func(rev, replay_baton,
+                            &editor, &edit_baton,
+                            rev_props,
+                            iterpool));
+      SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
+                            text_deltas, editor, edit_baton,
+                            iterpool));
+      SVN_ERR(revfinish_func(rev, replay_baton,
+                             editor, edit_baton,
+                             rev_props,
+                             iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_replay_range(svn_ra_session_t *session,
                     svn_revnum_t start_revision,
@@ -1146,40 +1190,17 @@ svn_ra_replay_range(svn_ra_session_t *session,
                                   revstart_func, revfinish_func,
                                   replay_baton, pool);
 
-  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
-    {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      svn_revnum_t rev;
+  if (!err || (err && (err->apr_err != SVN_ERR_RA_NOT_IMPLEMENTED)))
+    return svn_error_trace(err);
 
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-
-      for (rev = start_revision ; rev <= end_revision ; rev++)
-        {
-          const svn_delta_editor_t *editor;
-          void *edit_baton;
-          apr_hash_t *rev_props;
-
-          svn_pool_clear(subpool);
-
-          SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, subpool));
-
-          SVN_ERR(revstart_func(rev, replay_baton,
-                                &editor, &edit_baton,
-                                rev_props,
-                                subpool));
-          SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
-                                text_deltas, editor, edit_baton,
-                                subpool));
-          SVN_ERR(revfinish_func(rev, replay_baton,
-                                 editor, edit_baton,
-                                 rev_props,
-                                 subpool));
-        }
-      svn_pool_destroy(subpool);
-    }
-
-  return err;
+  svn_error_clear(err);
+  return svn_error_trace(replay_range_from_replays(session, start_revision,
+                                                   end_revision,
+                                                   low_water_mark,
+                                                   text_deltas,
+                                                   revstart_func,
+                                                   revfinish_func,
+                                                   replay_baton, pool));
 }
 
 svn_error_t *
@@ -1191,9 +1212,38 @@ svn_ra__replay_range_ev2(svn_ra_session_t *session,
                          svn_ra__replay_revstart_ev2_callback_t revstart_func,
                          svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
                          void *replay_baton,
+                         svn_ra__provide_base_cb_t provide_base_cb,
+                         svn_ra__provide_props_cb_t provide_props_cb,
+                         svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                         void *cb_baton,
                          apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  if (session->vtable->replay_range_ev2 == NULL)
+    {
+      /* The specific RA layer does not have an implementation. Use our
+         default shim over the normal replay editor.  */
+
+      /* This will call the Ev1 replay range handler with modified
+         callbacks. */
+      return svn_error_trace(svn_ra__use_replay_range_shim(
+                                session,
+                                start_revision,
+                                end_revision,
+                                low_water_mark,
+                                send_deltas,
+                                revstart_func,
+                                revfinish_func,
+                                replay_baton,
+                                provide_base_cb,
+                                provide_props_cb,
+                                cb_baton,
+                                scratch_pool));
+    }
+
+  return svn_error_trace(session->vtable->replay_range_ev2(
+                            session, start_revision, end_revision,
+                            low_water_mark, send_deltas, revstart_func,
+                            revfinish_func, replay_baton, scratch_pool));
 }
 
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
@@ -1288,8 +1338,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra__provide_props_cb_t provide_props_cb,
                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
                        void *cb_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -1314,7 +1362,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                                provide_props_cb,
                                get_copysrc_kind_cb,
                                cb_baton,
-                               cancel_func, cancel_baton,
+                               session->cancel_func, session->cancel_baton,
                                result_pool, scratch_pool));
     }
 
@@ -1332,7 +1380,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                            provide_props_cb,
                            get_copysrc_kind_cb,
                            cb_baton,
-                           cancel_func, cancel_baton,
+                           session->cancel_func, session->cancel_baton,
                            result_pool, scratch_pool));
 }
 

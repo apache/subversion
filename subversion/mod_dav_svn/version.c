@@ -203,12 +203,6 @@ get_option(const dav_resource *resource,
                      SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS);
     }
 
-  if (dav_svn__check_prop_ext_ns_support(r))
-    {
-      apr_table_addn(r->headers_out, "DAV",
-                     SVN_DAV_NS_DAV_SVN_PROP_EXT_NS);
-    }
-
   if (resource->info->repos->fs)
     {
       svn_error_t *serr;
@@ -251,11 +245,17 @@ get_option(const dav_resource *resource,
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
     {
-      /* The list of Subversion's custom POSTs.  You'll want to keep
-         this in sync with the handling of these suckers in
-         handle_post_request().  */
       int i;
       svn_version_t *master_version = dav_svn__get_master_version(r);
+
+      /* The list of Subversion's custom POSTs and which versions of
+         Subversion support them.  We need this latter information
+         when acting as a WebDAV slave -- we don't want to claim
+         support for a POST type if the master server which will
+         actually have to handle it won't recognize it.
+
+         Keep this in sync with what's handled in handle_post_request().
+      */
       struct posts_versions_t {
         const char *post_name;
         svn_version_t min_version;

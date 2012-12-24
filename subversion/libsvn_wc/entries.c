@@ -1389,10 +1389,10 @@ entries_read_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 }
 
 svn_error_t *
-svn_wc_entries_read(apr_hash_t **entries,
-                    svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t show_hidden,
-                    apr_pool_t *pool)
+svn_wc__entries_read_internal(apr_hash_t **entries,
+                              svn_wc_adm_access_t *adm_access,
+                              svn_boolean_t show_hidden,
+                              apr_pool_t *pool)
 {
   apr_hash_t *new_entries;
 
@@ -1401,7 +1401,7 @@ svn_wc_entries_read(apr_hash_t **entries,
     {
       svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
       const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
-      apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
+      apr_pool_t *result_pool = svn_wc__adm_access_pool_internal(adm_access);
       svn_sqlite__db_t *sdb;
       struct entries_read_baton_t erb;
 
@@ -1425,12 +1425,21 @@ svn_wc_entries_read(apr_hash_t **entries,
     *entries = new_entries;
   else
     SVN_ERR(prune_deleted(entries, new_entries,
-                          svn_wc_adm_access_pool(adm_access),
+                          svn_wc__adm_access_pool_internal(adm_access),
                           pool));
 
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_entries_read(apr_hash_t **entries,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t show_hidden,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_wc__entries_read_internal(entries, adm_access,
+                                                       show_hidden, pool));
+}
 
 /* No transaction required: called from write_entry which is itself
    transaction-wrapped. */
@@ -2445,7 +2454,8 @@ walker_helper(const char *dirpath,
   svn_error_t *err;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  err = svn_wc_entries_read(&entries, adm_access, show_hidden, pool);
+  err = svn_wc__entries_read_internal(&entries, adm_access, show_hidden,
+                                      pool);
 
   if (err)
     SVN_ERR(walk_callbacks->handle_error(dirpath, err, walk_baton, pool));

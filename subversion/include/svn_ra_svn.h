@@ -215,6 +215,8 @@ typedef enum svn_ra_svn_cmd_t
   svn_ra_svn_cmd_replay,
   svn_ra_svn_cmd_replay_range,
   svn_ra_svn_cmd_get_deleted_rev,
+  svn_ra_svn_cmd_get_iprops,
+  svn_ra_svn_cmd_finish_replay,
 
   svn_ra_svn_cmd__last
 } svn_ra_svn_cmd_t;

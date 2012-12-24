@@ -393,9 +393,9 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
     {
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   strlen(SVN_PROP_REVISION_AUTHOR)) != 0)
+                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
           && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      strlen(SVN_PROP_REVISION_DATE)) != 0))
+                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
         *value_p = NULL;
 
       else
@@ -760,7 +760,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
       apr_hash_t *parent_properties;
 
       svn_pool_clear(iterpool);
-      parent_path = svn_fspath__dirname(parent_path, iterpool);
+      parent_path = svn_fspath__dirname(parent_path, scratch_pool);
 
       if (authz_read_func)
         SVN_ERR(authz_read_func(&allowed, root, parent_path,

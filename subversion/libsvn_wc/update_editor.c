@@ -874,7 +874,7 @@ complete_conflict(svn_skel_t *conflict,
   SVN_ERR(svn_wc__conflict_skel_is_complete(&is_complete, conflict));
 
   if (is_complete)
-    return SVN_NO_ERROR; /* Already competed */
+    return SVN_NO_ERROR; /* Already completed */
 
   if (old_repos_relpath)
     src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
@@ -5077,10 +5077,10 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 }
 
 svn_error_t *
-svn_wc_is_wc_root2(svn_boolean_t *wc_root,
-                   svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   apr_pool_t *scratch_pool)
+svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_root;
   svn_boolean_t is_switched;
@@ -5089,7 +5089,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
-                              wc_ctx->db, local_abspath, scratch_pool);
+                              db, local_abspath, scratch_pool);
 
   if (err)
     {
@@ -5105,6 +5105,16 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__internal_is_wc_root(wc_root, wc_ctx->db,
+                                                     local_abspath,
+                                                     scratch_pool));
+}
 
 svn_error_t*
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,

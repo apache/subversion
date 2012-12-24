@@ -233,12 +233,12 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
  * Any of the output pointers may be NULL if not wanted.
  */
 svn_error_t *
-svn_client__symmetric_merge_get_locations(
+svn_client__automatic_merge_get_locations(
                                 svn_client__pathrev_t **yca,
                                 svn_client__pathrev_t **base,
                                 svn_client__pathrev_t **right,
                                 svn_client__pathrev_t **target,
-                                const svn_client_symmetric_merge_t *merge,
+                                const svn_client_automatic_merge_t *merge,
                                 apr_pool_t *result_pool);
 
 
