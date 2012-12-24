@@ -406,6 +406,13 @@ public interface ISVNClient
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,
+                  ImportFilterCallback importFilterCallback,
+                  CommitMessageCallback handler, CommitCallback commitCallback)
+            throws ClientException;
+
+    void doImport(String path, String url, Depth depth,
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                  Map<String, String> revpropTable,
                   CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 

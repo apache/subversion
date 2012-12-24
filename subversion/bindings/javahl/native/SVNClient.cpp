@@ -44,6 +44,7 @@
 #include "StatusCallback.h"
 #include "ChangelistCallback.h"
 #include "ListCallback.h"
+#include "ImportFilterCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
@@ -553,7 +554,9 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops, CommitCallback *callback)
+                         RevpropTable &revprops,
+                         ImportFilterCallback *ifCallback,
+                         CommitCallback *commitCallback)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -567,10 +570,11 @@ void SVNClient::doImport(const char *path, const char *url,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
+    SVN_JNI_ERR(svn_client_import5(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(subPool),
-                                   CommitCallback::callback, callback,
+                                   ImportFilterCallback::callback, ifCallback,
+                                   CommitCallback::callback, commitCallback,
                                    ctx, subPool.getPool()), );
 }
 
