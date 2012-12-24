@@ -141,37 +141,6 @@ done
 $1="${svn_cur}"
 ])
 
-dnl SVN_MAYBE_ADD_TO_CFLAGS(option)
-dnl
-dnl Attempt to compile a trivial C program to test if the option passed
-dnl is valid. If it is, then add it to CFLAGS. with the passed in option
-dnl and see if it was successfully compiled.
-dnl
-dnl This macro is usually used for stricter syntax checking flags.
-dnl Therefore we include certain headers which may in turn include system
-dnl headers, as system headers on some platforms may fail strictness checks
-dnl we wish to use on other platforms.
-
-AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
-[
-  option="$1"
-  svn_maybe_add_to_cflags_saved_flags="$CFLAGS"
-  CFLAGS="$CFLAGS $option"
-  AC_MSG_CHECKING([if $CC accepts $option])
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-    [[#include <apr_portable.h>]],
-    [[]])],
-    [svn_maybe_add_to_cflags_ok="yes"],
-    [svn_maybe_add_to_cflags_ok="no"]
-  )
-  if test "$svn_maybe_add_to_cflags_ok" = "yes"; then
-    AC_MSG_RESULT([yes, will use it])
-  else
-    AC_MSG_RESULT([no])
-    CFLAGS="$svn_maybe_add_to_cflags_saved_flags"
-  fi
-])
-
 dnl SVN_STRIP_FLAG(FLAG_VAR_NAME, FLAG)
 dnl
 dnl Remove FLAG from the variable FLAG_VAR_NAME, if it exists.  This macro
