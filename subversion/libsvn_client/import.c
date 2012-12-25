@@ -540,20 +540,27 @@ import(const char *local_abspath,
     {
       int i;
       apr_hash_t *dirents;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       if (dirent->kind == svn_node_dir)
         {
+          /* If we are creating a new repository directory path to import to,
+             then we disregard any svn:ignore property. */
+          if (!no_ignore && new_entries->nelts)
+            local_ignores = NULL;
+
           SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes,
                                         local_ignores, global_ignores,
                                         filter_callback, filter_baton,
                                         ctx, pool, pool));
         }
 
-
       for (i = 0; i < new_entries->nelts; i++)
         {
           apr_array_header_t *children;
           const char *component = APR_ARRAY_IDX(new_entries, i, const char *);
+
+          svn_pool_clear(iterpool);
           relpath = svn_relpath_join(relpath, component, pool);
 
           /* If this is the last path component, and we're importing a
@@ -564,12 +571,12 @@ import(const char *local_abspath,
 
           if (i < new_entries->nelts - 1)
             {
-              children = apr_array_make(pool, 1, sizeof(const char *));
+              children = apr_array_make(iterpool, 1, sizeof(const char *));
               APR_ARRAY_PUSH(children, const char *) =
                                APR_ARRAY_IDX(new_entries, i + 1, const char *);
             }
           else
-            SVN_ERR(svn_hash_keys(&children, dirents, pool));
+            SVN_ERR(svn_hash_keys(&children, dirents, iterpool));
 
           SVN_ERR(svn_editor_add_directory(editor, relpath, children, props,
                                            SVN_INVALID_REVNUM));
