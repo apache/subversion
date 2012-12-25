@@ -191,6 +191,40 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   return SVN_NO_ERROR;
 }
 
+/* Mark a unversioned-add tree-conflict on RELPATH. */
+static svn_error_t *
+mark_unversioned_add_conflict(struct tc_editor_baton *b,
+                              const char *relpath,
+                              svn_node_kind_t kind,
+                              apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict = svn_wc__conflict_skel_create(scratch_pool);
+  svn_wc_conflict_version_t *version;
+
+  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                     conflict, NULL,
+                     svn_dirent_join(b->wcroot->abspath, relpath,
+                                     scratch_pool),
+                     svn_wc_conflict_reason_unversioned,
+                     svn_wc_conflict_action_add,
+                     scratch_pool,
+                     scratch_pool));
+
+  version = svn_wc_conflict_version_create2(b->old_version->repos_url,
+                                            b->old_version->repos_uuid,
+                                            relpath,
+                                            b->old_version->peg_rev,
+                                            kind,
+                                            scratch_pool);
+
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version,
+                                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, relpath,
+                                            conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 tc_editor_add_directory(void *baton,
                         const char *relpath,
@@ -202,26 +236,43 @@ tc_editor_add_directory(void *baton,
   struct tc_editor_baton *b = baton;
   int op_depth = relpath_depth(b->move_root_dst_relpath);
   svn_boolean_t is_conflicted;
+  const char *abspath;
+  svn_node_kind_t kind;
   svn_skel_t *work_item;
 
+  /* Update NODES, only the bits not covered by the later call to
+     replace_moved_layer. */
   SVN_ERR(svn_wc__db_extend_parent_delete(b->wcroot, relpath, svn_kind_dir,
                                           op_depth, scratch_pool));
 
+  /* Check for NODES tree-conflict. */
   SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath, svn_node_dir,
                               scratch_pool));
   if (is_conflicted)
     return SVN_NO_ERROR;
 
-  /* TODO: check for obstructions and raise a conflict. */
+  /* Check for unversioned tree-conflict */
+  abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
+  SVN_ERR(svn_io_check_path(abspath, &kind, scratch_pool));
 
-  SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db,
-                                       svn_dirent_join(b->wcroot->abspath,
-                                                       relpath,
-                                                       scratch_pool),
-                                       scratch_pool, b->result_pool));
+  switch (kind)
+    {
+    case svn_node_file:
+    default:
+      SVN_ERR(mark_unversioned_add_conflict(b, relpath, svn_node_dir,
+                                            scratch_pool));
+      break;
 
-  SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
-                            scratch_pool));
+    case svn_node_none:
+      SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db, abspath,
+                                           scratch_pool, b->result_pool));
+
+      SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
+                                scratch_pool));
+      /* Fall through */
+    case svn_node_dir:
+      break;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -238,18 +289,33 @@ tc_editor_add_file(void *baton,
   struct tc_editor_baton *b = baton;
   int op_depth = relpath_depth(b->move_root_dst_relpath);
   svn_boolean_t is_conflicted;
+  const char *abspath;
+  svn_node_kind_t kind;
   svn_skel_t *work_item;
 
+  /* Update NODES, only the bits not covered by the later call to
+     replace_moved_layer. */
   SVN_ERR(svn_wc__db_extend_parent_delete(b->wcroot, relpath, svn_kind_file,
                                           op_depth, scratch_pool));
 
+  /* Check for NODES tree-conflict. */
   SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath, svn_node_file,
                               scratch_pool));
   if (is_conflicted)
     return SVN_NO_ERROR;
 
-  /* TODO: check for obstructions and raise a conflict. */
+  /* Check for unversioned tree-conflict */
+  abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
+  SVN_ERR(svn_io_check_path(abspath, &kind, scratch_pool));
 
+  if (kind != svn_node_none)
+    {
+      SVN_ERR(mark_unversioned_add_conflict(b, relpath, svn_node_file,
+                                            scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  /* Update working file. */
   SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
                                         svn_dirent_join(b->wcroot->abspath,
                                                         relpath,

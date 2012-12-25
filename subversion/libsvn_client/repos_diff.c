@@ -1221,12 +1221,16 @@ change_file_prop(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (fb->skip)
     return SVN_NO_ERROR;
 
-  if (!fb->has_propchange && svn_property_kind2(name) == svn_prop_regular_kind)
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
     fb->has_propchange = TRUE;
 
   propchange = apr_array_push(fb->propchanges);
@@ -1247,12 +1251,16 @@ change_dir_prop(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (db->skip)
     return SVN_NO_ERROR;
 
-  if (!db->has_propchange && svn_property_kind2(name) == svn_prop_regular_kind)
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
     db->has_propchange = TRUE;
 
   propchange = apr_array_push(db->propchanges);
