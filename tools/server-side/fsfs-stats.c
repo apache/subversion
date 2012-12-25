@@ -36,10 +36,12 @@
 #include "svn_sorts.h"
 #include "svn_delta.h"
 #include "svn_hash.h"
+#include "svn_cache_config.h"
 
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_cache.h"
 
 #ifndef _
 #define _(x) x
@@ -146,43 +148,17 @@ typedef struct revision_info_t
   apr_array_header_t *representations;
 } revision_info_t;
 
-/* A cached, undeltified txdelta window.
+/* Data type to identify a representation. It will be used to address
+ * cached combined (un-deltified) windows.
  */
-typedef struct window_cache_entry_t
+typedef struct window_cache_key_t
 {
-  /* revision containing the window */
+  /* revision of the representation */
   svn_revnum_t revision;
 
-  /* offset of the deltified window within that revision */
+  /* its offset */
   apr_size_t offset;
-
-  /* window content */
-  svn_stringbuf_t *window;
-} window_cache_entry_t;
-
-/* Cache for undeltified txdelta windows. (revision, offset) will be mapped
- * directly into the ENTRIES array of INSERT_COUNT buckets (most entries
- * will be NULL).
- *
- * The cache will be cleared when USED exceeds CAPACITY.
- */
-typedef struct window_cache_t
-{
-  /* fixed-size array of ENTRY_COUNT elements */
-  window_cache_entry_t *entries;
-
-  /* used to allocate windows */
-  apr_pool_t *pool;
-
-  /* size of ENTRIES in elements */
-  apr_size_t entry_count;
-
-  /* maximum combined size of all cached windows */
-  apr_size_t capacity;
-
-  /* current combined size of all cached windows */
-  apr_size_t used;
-} window_cache_t;
+} window_cache_key_t;
 
 /* Root data structure containing all information about a given repository.
  */
@@ -214,7 +190,7 @@ typedef struct fs_fs_t
   representation_t *null_base;
 
   /* undeltified txdelta window cache */
-  window_cache_t *window_cache;
+  svn_cache__t *window_cache;
 } fs_fs_t;
 
 /* Return the rev pack folder for revision REV in FS.
@@ -256,45 +232,53 @@ open_rev_or_pack_file(apr_file_t **file,
                           pool);
 }
 
-/* Read the whole content of the file containing REV in FS and return that
- * in *CONTENT.
- */
+/* Return the length of FILE in *FILE_SIZE.  Use POOL for allocations.
+*/
 static svn_error_t *
-rev_or_pack_file_size(apr_off_t *file_size,
-                      fs_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
+get_file_size(apr_off_t *file_size,
+              apr_file_t *file,
+              apr_pool_t *pool)
 {
-  apr_file_t *file;
   apr_finfo_t finfo;
 
-  SVN_ERR(open_rev_or_pack_file(&file, fs, rev, pool));
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
 
   *file_size = finfo.size;
   return SVN_NO_ERROR;
 }
 
-/* Get the file content of revision REVISION in FS and return it in *DATA.
- * Use SCRATCH_POOL for temporary allocations.
+/* Get the file content of revision REVISION in FS and return it in *CONTENT.
+ * Read the LEN bytes starting at file OFFSET.  When provided, use FILE as
+ * packed or plain rev file.
+ * Use POOL for temporary allocations.
  */
 static svn_error_t *
 get_content(svn_stringbuf_t **content,
+            apr_file_t *file,
             fs_fs_t *fs,
             svn_revnum_t revision,
             apr_off_t offset,
             apr_size_t len,
             apr_pool_t *pool)
 {
-  apr_file_t *file;
   apr_pool_t * file_pool = svn_pool_create(pool);
+  apr_size_t large_buffer_size = 0x10000;
 
-  SVN_ERR(open_rev_or_pack_file(&file, fs, revision, file_pool));
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  if (file == NULL)
+    SVN_ERR(open_rev_or_pack_file(&file, fs, revision, file_pool));
 
   *content = svn_stringbuf_create_ensure(len, pool);
   (*content)->len = len;
+
+  /* for better efficiency use larger buffers on large reads */
+  if (   (len >= large_buffer_size)
+      && (apr_file_buffer_size_get(file) < large_buffer_size))
+    apr_file_buffer_set(file,
+                        apr_palloc(apr_file_pool_get(file),
+                                   large_buffer_size),
+                        large_buffer_size);
+
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   SVN_ERR(svn_io_file_read_full2(file, (*content)->data, len,
                                  NULL, NULL, pool));
   svn_pool_destroy(file_pool);
@@ -302,85 +286,43 @@ get_content(svn_stringbuf_t **content,
   return SVN_NO_ERROR;
 }
 
-/* Return a new txdelta window cache with ENTRY_COUNT buckets in its index
- * and a the total CAPACITY given in bytes.
- * Use POOL for all cache-related allocations.
+/* In *RESULT, return the cached txdelta window stored in REPRESENTATION
+ * within FS.  If that has not been found in cache, return NULL.
+ * Allocate the result in POOL.
  */
-static window_cache_t *
-create_window_cache(apr_pool_t *pool,
-                    apr_size_t entry_count,
-                    apr_size_t capacity)
-{
-  window_cache_t *result = apr_pcalloc(pool, sizeof(*result));
-
-  result->pool = svn_pool_create(pool);
-  result->entry_count = entry_count;
-  result->capacity = capacity;
-  result->used = 0;
-  result->entries = apr_pcalloc(pool, sizeof(*result->entries) * entry_count);
-
-  return result;
-}
-
-/* Return the position within FS' window cache ENTRIES index for the given
- * (REVISION, OFFSET) pair. This is a cache-internal function.
- */
-static apr_size_t
-get_window_cache_index(fs_fs_t *fs,
-                       svn_revnum_t revision,
-                       apr_size_t offset)
-{
-  return (revision + offset * 0xd1f3da69) % fs->window_cache->entry_count;
-}
-
-/* Return the cached txdelta window stored in REPRESENTATION within FS.
- * If that has not been found in cache, return NULL.
- */
-static svn_stringbuf_t *
-get_cached_window(fs_fs_t *fs,
+static svn_error_t *
+get_cached_window(svn_stringbuf_t **result,
+                  fs_fs_t *fs,
                   representation_t *representation,
                   apr_pool_t *pool)
 {
-  svn_revnum_t revision = representation->revision;
-  apr_size_t offset = representation->offset;
+  svn_boolean_t found = FALSE;
+  window_cache_key_t key;
+  key.revision = representation->revision;
+  key.offset = representation->offset;
 
-  apr_size_t i = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[i];
-
-  return entry->offset == offset && entry->revision == revision
-    ? svn_stringbuf_dup(entry->window, pool)
-    : NULL;
+  *result = NULL;
+  return svn_error_trace(svn_cache__get((void**)result, &found,
+                                        fs->window_cache,
+                                        &key, pool));
 }
 
 /* Cache the undeltified txdelta WINDOW for REPRESENTATION within FS.
+ * Use POOL for temporaries.
  */
-static void
+static svn_error_t *
 set_cached_window(fs_fs_t *fs,
                   representation_t *representation,
-                  svn_stringbuf_t *window)
+                  svn_stringbuf_t *window,
+                  apr_pool_t *pool)
 {
   /* select entry */
-  svn_revnum_t revision = representation->revision;
-  apr_size_t offset = representation->offset;
+  window_cache_key_t key;
+  key.revision = representation->revision;
+  key.offset = representation->offset;
 
-  apr_size_t i = get_window_cache_index(fs, revision, offset);
-  window_cache_entry_t *entry = &fs->window_cache->entries[i];
-
-  /* if the capacity is exceeded, clear the cache */
-  fs->window_cache->used += window->len;
-  if (fs->window_cache->used >= fs->window_cache->capacity)
-    {
-      svn_pool_clear(fs->window_cache->pool);
-      memset(fs->window_cache->entries,
-             0,
-             sizeof(*fs->window_cache->entries) * fs->window_cache->entry_count);
-      fs->window_cache->used = window->len;
-    }
-
-  /* set the entry to a copy of the window data */
-  entry->window = svn_stringbuf_dup(window, fs->window_cache->pool);
-  entry->offset = offset;
-  entry->revision = revision;
+  return svn_error_trace(svn_cache__set(fs->window_cache, &key, window,
+                                        pool));
 }
 
 /* Given rev pack PATH in FS, read the manifest file and return the offsets
@@ -849,7 +791,7 @@ get_rep_content(svn_stringbuf_t **content,
       offset = revision_info->offset
              + representation->offset
              + representation->header_size;
-      SVN_ERR(get_content(content, fs, revision, offset,
+      SVN_ERR(get_content(content, NULL, fs, revision, offset,
                           representation->size, pool));
     }
 
@@ -924,15 +866,20 @@ get_combined_window(svn_stringbuf_t **content,
   apr_array_header_t *windows;
   svn_stringbuf_t *base_content, *result;
   const char *source;
-  apr_pool_t *sub_pool = svn_pool_create(pool);
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *sub_pool;
+  apr_pool_t *iter_pool;
 
   /* special case: no un-deltification necessary */
   if (representation->is_plain)
-    return get_rep_content(content, fs, representation, file_content, pool);
+    {
+      SVN_ERR(get_rep_content(content, fs, representation, file_content,
+                              pool));
+      SVN_ERR(set_cached_window(fs, representation, *content, pool));
+      return SVN_NO_ERROR;
+    }
 
   /* special case: data already in cache */
-  *content = get_cached_window(fs, representation, pool);
+  SVN_ERR(get_cached_window(content, fs, representation, pool));
   if (*content)
     return SVN_NO_ERROR;
   
@@ -969,13 +916,13 @@ get_combined_window(svn_stringbuf_t **content,
       svn_pool_clear(iter_pool);
     }
 
+  /* cache result and return it */
+  SVN_ERR(set_cached_window(fs, representation, result, sub_pool));
+  *content = result;
+  
   svn_pool_destroy(iter_pool);
   svn_pool_destroy(sub_pool);
 
-  /* cache result and return it */
-  set_cached_window(fs, representation, result);
-  *content = result;
-  
   return SVN_NO_ERROR;
 }
 
@@ -1209,6 +1156,7 @@ read_pack_file(fs_fs_t *fs,
   apr_pool_t *iter_pool = svn_pool_create(local_pool);
   int i;
   apr_off_t file_size = 0;
+  apr_file_t *file;
   const char *pack_folder = get_pack_folder(fs, base, local_pool);
 
   /* parse the manifest file */
@@ -1216,7 +1164,8 @@ read_pack_file(fs_fs_t *fs,
   if (manifest->nelts != fs->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
 
-  SVN_ERR(rev_or_pack_file_size(&file_size, fs, base, pool));
+  SVN_ERR(open_rev_or_pack_file(&file, fs, base, local_pool));
+  SVN_ERR(get_file_size(&file_size, file, local_pool));
 
   /* process each revision in the pack file */
   for (i = 0; i < manifest->nelts; ++i)
@@ -1234,7 +1183,7 @@ read_pack_file(fs_fs_t *fs,
                          ? APR_ARRAY_IDX(manifest, i+1 , apr_size_t)
                          : file_size;
 
-      SVN_ERR(get_content(&rev_content, fs, info->revision,
+      SVN_ERR(get_content(&rev_content, file, fs, info->revision,
                           info->offset,
                           info->end - info->offset,
                           iter_pool));
@@ -1278,9 +1227,11 @@ read_revision_file(fs_fs_t *fs,
   svn_stringbuf_t *rev_content;
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
   apr_off_t file_size = 0;
+  apr_file_t *file;
 
   /* read the whole pack file into memory */
-  SVN_ERR(rev_or_pack_file_size(&file_size, fs, revision, pool));
+  SVN_ERR(open_rev_or_pack_file(&file, fs, revision, local_pool));
+  SVN_ERR(get_file_size(&file_size, file, local_pool));
 
   /* create the revision info for the current rev */
   info->representations = apr_array_make(pool, 4, sizeof(representation_t*));
@@ -1289,7 +1240,8 @@ read_revision_file(fs_fs_t *fs,
   info->offset = 0;
   info->end = file_size;
 
-  SVN_ERR(get_content(&rev_content, fs, revision, 0, file_size, local_pool));
+  SVN_ERR(get_content(&rev_content, file, fs, revision, 0, file_size,
+                      local_pool));
 
   SVN_ERR(read_revision_header(&info->changes,
                                &info->changes_len,
@@ -1330,14 +1282,15 @@ read_revisions(fs_fs_t **fs,
                apr_pool_t *pool)
 {
   svn_revnum_t revision;
-  apr_size_t window_cache_size;
+  svn_cache_config_t cache_config = *svn_cache_config_get();
 
   /* determine cache sizes */
 
   if (memsize < 100)
     memsize = 100;
-  
-  window_cache_size = memsize * 1024 * 1024;
+
+  cache_config.cache_size = memsize * 1024 * 1024;
+  svn_cache_config_set(&cache_config);
   
   SVN_ERR(fs_open(fs, path, pool));
 
@@ -1348,10 +1301,12 @@ read_revisions(fs_fs_t **fs,
                                     (*fs)->max_revision + 1 - (*fs)->start_revision,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
-  (*fs)->window_cache = create_window_cache
-                    (apr_allocator_owner_get
-                         (svn_pool_create_allocator(FALSE)),
-                          10000, window_cache_size);
+
+  SVN_ERR(svn_cache__create_membuffer_cache(&(*fs)->window_cache,
+                                            svn_cache__get_global_membuffer_cache(),
+                                            NULL, NULL,
+                                            sizeof(window_cache_key_t),
+                                            "", FALSE, pool));
 
   /* read all packed revs */
   for ( revision = start_revision
