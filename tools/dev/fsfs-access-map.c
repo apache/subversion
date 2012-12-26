@@ -581,7 +581,7 @@ int main(int argc, const char *argv[])
   files = apr_hash_make(pool);
   handles = apr_hash_make(pool);
 
-  if (argc == 1)
+  if (argc == 2)
     apr_file_open(&file, argv[1], APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                   pool);
   if (file == NULL)
