@@ -462,10 +462,12 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   if (!err && new_ns->data)
     {
-      /* Sanitize (in case of data corruption)
+      /* Detect severe cases of corruption (i.e. when some outsider messed
+       * with our data file)
        */
       if (new_ns->data->count > MAX_ATOMIC_COUNT)
-        new_ns->data->count = MAX_ATOMIC_COUNT;
+        return svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
+                       _("Number of atomics in namespace is too large."));
 
       /* Cache the number of existing, complete entries.  There can't be
        * incomplete ones from other processes because we hold the mutex.
