@@ -8,7 +8,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.8
   - Client-side bugfixes:
     * fix crash with --username option on Windows (r1396285)
     * add missing attributes to "svn log -v --xml" output (r1398100)
-    * fix svn patch ignoring hunks after no trailing newline (r139917)
+    * fix svn patch ignoring hunks after no trailing newline (r1399174)
     * fix hang with ra_serf during error processing (r1403583)
     * ignore file externals with mergeinfo when merging (r1401915)
     * fix SEGV with "svnmucc cp rev arg" during argv processing (issue #4079)
