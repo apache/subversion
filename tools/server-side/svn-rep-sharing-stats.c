@@ -31,6 +31,7 @@
 
 #include "../../subversion/libsvn_fs_fs/fs.h"
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
+#include "../../subversion/libsvn_fs_fs/cached_data.h"
 /* for svn_fs_fs__id_* (used in assertions only) */
 #include "../../subversion/libsvn_fs_fs/id.h"
 
