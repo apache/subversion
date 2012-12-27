@@ -1169,7 +1169,8 @@ bump_to_23(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_HAS_WORKING_NODES));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPGRADE_23_HAS_WORKING_NODES));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
@@ -1753,16 +1754,8 @@ upgrade_to_wcng(void **dir_baton,
   return SVN_NO_ERROR;
 }
 
-
-/* Return a string indicating the released version (or versions) of
- * Subversion that used WC format number WC_FORMAT, or some other
- * suitable string if no released version used WC_FORMAT.
- *
- * ### It's not ideal to encode this sort of knowledge in this low-level
- * library.  On the other hand, it doesn't need to be updated often and
- * should be easily found when it does need to be updated.  */
-static const char *
-version_string_from_format(int wc_format)
+const char *
+svn_wc__version_string_from_format(int wc_format)
 {
   switch (wc_format)
     {
@@ -1770,6 +1763,7 @@ version_string_from_format(int wc_format)
       case 8: return "1.4";
       case 9: return "1.5";
       case 10: return "1.6";
+      case SVN_WC__WC_NG_VERSION: return "1.7";
     }
   return _("(unreleased development version)");
 }
@@ -1792,7 +1786,7 @@ svn_wc__upgrade_sdb(int *result_format,
                              svn_dirent_local_style(wcroot_abspath,
                                                     scratch_pool),
                              start_format,
-                             version_string_from_format(start_format));
+                             svn_wc__version_string_from_format(start_format));
 
   /* Early WCNG formats no longer supported. */
   if (start_format < 19)

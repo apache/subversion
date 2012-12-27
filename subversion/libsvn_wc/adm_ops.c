@@ -903,8 +903,6 @@ static svn_error_t *
 add_from_disk(svn_wc__db_t *db,
               const char *local_abspath,
               svn_node_kind_t kind,
-              svn_wc_notify_func2_t notify_func,
-              void *notify_baton,
               apr_pool_t *scratch_pool)
 {
   if (kind == svn_node_file)
@@ -1275,7 +1273,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      SVN_ERR(add_from_disk(db, local_abspath, kind, notify_func, notify_baton,
+      SVN_ERR(add_from_disk(db, local_abspath, kind,
                             scratch_pool));
       if (kind == svn_node_dir && !db_row_exists)
         {
@@ -1361,7 +1359,6 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
   SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx->db, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(add_from_disk(wc_ctx->db, local_abspath, kind,
-                        notify_func, notify_baton,
                         scratch_pool));
 
   /* Report the addition to the caller. */
@@ -1600,7 +1597,7 @@ revert_restore(svn_wc__db_t *db,
   svn_boolean_t notify_required;
   const apr_array_header_t *conflict_files;
   svn_filesize_t recorded_size;
-  apr_time_t recorded_mod_time;
+  apr_time_t recorded_time;
   apr_finfo_t finfo;
 #ifdef HAVE_SYMLINK
   svn_boolean_t special;
@@ -1620,7 +1617,7 @@ revert_restore(svn_wc__db_t *db,
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &recorded_size, &recorded_mod_time, NULL,
+                             &recorded_size, &recorded_time, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
@@ -1651,7 +1648,7 @@ revert_restore(svn_wc__db_t *db,
           status = svn_wc__db_status_normal;
           kind = svn_kind_unknown;
           recorded_size = SVN_INVALID_FILESIZE;
-          recorded_mod_time = 0;
+          recorded_time = 0;
         }
     }
   else if (err)
@@ -1774,9 +1771,9 @@ revert_restore(svn_wc__db_t *db,
                  ourselves. And we already have everything we need, because
                  we called stat ourselves. */
               if (recorded_size != SVN_INVALID_FILESIZE
-                  && recorded_mod_time != 0
+                  && recorded_time != 0
                   && recorded_size == finfo.size
-                  && recorded_mod_time == finfo.mtime)
+                  && recorded_time == finfo.mtime)
                 {
                   modified = FALSE;
                 }
@@ -2330,6 +2327,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
 
+  SVN_ERR(svn_wc__write_check(db, is_root ? local_abspath
+                                          : svn_dirent_dirname(local_abspath,
+                                                               scratch_pool),
+                              scratch_pool));
+
   SVN_ERR(svn_wc__db_op_remove_node(&left_something,
                                     db, local_abspath,
                                     destroy_wf /* destroy_wc */,
@@ -2441,9 +2443,19 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
-                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
-                                   scratch_pool));
+  err = svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
+                                 SVN_PROP_NEEDS_LOCK, scratch_pool,
+                                 scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      /* The node has non wc representation (e.g. deleted), so
+         we don't want to touch the in-wc file */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
   if (needs_lock)
     SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
 

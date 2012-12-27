@@ -25,13 +25,22 @@
 #include <apr.h>
 #include <apr_general.h>
 
+#include "svn_pools.h"
+#include "svn_dirent_uri.h"
+#include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
+#include "svn_utf.h"
 #include "svn_version.h"
 
+#include "private/svn_diff_private.h"
 #include "diff.h"
+
+#include "svn_private_config.h"
+
 
 svn_boolean_t
 svn_diff_contains_conflicts(svn_diff_t *diff)
@@ -330,6 +339,247 @@ svn_diff__normalize_buffer(char **tgt,
 #undef INCLUDE_AS
 #undef INSERT
 #undef COPY_INCLUDED_SECTION
+}
+
+svn_error_t *
+svn_diff__unified_append_no_newline_msg(svn_stringbuf_t *stringbuf,
+                                        const char *header_encoding,
+                                        apr_pool_t *scratch_pool)
+{
+  const char *out_str;
+
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(
+            &out_str,
+            APR_EOL_STR
+            SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR,
+            header_encoding, scratch_pool));
+  svn_stringbuf_appendcstr(stringbuf, out_str);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__unified_write_hunk_header(svn_stream_t *output_stream,
+                                    const char *header_encoding,
+                                    const char *hunk_delimiter,
+                                    apr_off_t old_start,
+                                    apr_off_t old_length,
+                                    apr_off_t new_start,
+                                    apr_off_t new_length,
+                                    const char *hunk_extra_context,
+                                    apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      "%s -%" APR_OFF_T_FMT,
+                                      hunk_delimiter, old_start));
+  /* If the hunk length is 1, suppress the number of lines in the hunk
+   * (it is 1 implicitly) */
+  if (old_length != 1)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                          scratch_pool,
+                                          ",%" APR_OFF_T_FMT, old_length));
+    }
+
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      " +%" APR_OFF_T_FMT, new_start));
+  if (new_length != 1)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                          scratch_pool,
+                                          ",%" APR_OFF_T_FMT, new_length));
+    }
+
+  if (hunk_extra_context == NULL)
+      hunk_extra_context = "";
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      " %s%s%s" APR_EOL_STR,
+                                      hunk_delimiter,
+                                      hunk_extra_context[0] ? " " : "",
+                                      hunk_extra_context));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__unidiff_write_header(svn_stream_t *output_stream,
+                               const char *header_encoding,
+                               const char *old_header,
+                               const char *new_header,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding,
+                                      scratch_pool,
+                                      "--- %s" APR_EOL_STR
+                                      "+++ %s" APR_EOL_STR,
+                                      old_header,
+                                      new_header));
+  return SVN_NO_ERROR;
+}
+
+/* A helper function for display_prop_diffs.  Output the differences between
+   the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
+   human-readable form to OUTSTREAM, using ENCODING.  Use POOL for temporary
+   allocations. */
+static svn_error_t *
+display_mergeinfo_diff(const char *old_mergeinfo_val,
+                       const char *new_mergeinfo_val,
+                       const char *encoding,
+                       svn_stream_t *outstream,
+                       apr_pool_t *pool)
+{
+  apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  if (old_mergeinfo_val)
+    SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
+  else
+    old_mergeinfo_hash = NULL;
+
+  if (new_mergeinfo_val)
+    SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo_hash, new_mergeinfo_val, pool));
+  else
+    new_mergeinfo_hash = NULL;
+
+  SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, old_mergeinfo_hash,
+                              new_mergeinfo_hash,
+                              TRUE, pool, pool));
+
+  for (hi = apr_hash_first(pool, deleted);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *from_path = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
+      svn_string_t *merge_revstr;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
+                                      iterpool));
+
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
+                                          _("   Reverse-merged %s:r%s%s"),
+                                          from_path, merge_revstr->data,
+                                          APR_EOL_STR));
+    }
+
+  for (hi = apr_hash_first(pool, added);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *from_path = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
+      svn_string_t *merge_revstr;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
+                                      iterpool));
+
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
+                                          _("   Merged %s:r%s%s"),
+                                          from_path, merge_revstr->data,
+                                          APR_EOL_STR));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__display_prop_diffs(svn_stream_t *outstream,
+                             const char *encoding,
+                             const apr_array_header_t *propchanges,
+                             apr_hash_t *original_props,
+                             svn_boolean_t pretty_print_mergeinfo,
+                             apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      const char *action;
+      const svn_string_t *original_value;
+      const svn_prop_t *propchange
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+      if (original_props)
+        original_value = apr_hash_get(original_props,
+                                      propchange->name, APR_HASH_KEY_STRING);
+      else
+        original_value = NULL;
+
+      /* If the property doesn't exist on either side, or if it exists
+         with the same value, skip it.  This can happen if the client is
+         hitting an old mod_dav_svn server that doesn't understand the
+         "send-all" REPORT style. */
+      if ((! (original_value || propchange->value))
+          || (original_value && propchange->value
+              && svn_string_compare(original_value, propchange->value)))
+        continue;
+
+      svn_pool_clear(iterpool);
+
+      if (! original_value)
+        action = "Added";
+      else if (! propchange->value)
+        action = "Deleted";
+      else
+        action = "Modified";
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
+                                          "%s: %s%s", action,
+                                          propchange->name, APR_EOL_STR));
+
+      if (pretty_print_mergeinfo
+          && strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
+        {
+          const char *orig = original_value ? original_value->data : NULL;
+          const char *val = propchange->value ? propchange->value->data : NULL;
+          svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
+                                                    outstream, iterpool);
+
+          /* Issue #3896: If we can't pretty-print mergeinfo differences
+             because invalid mergeinfo is present, then don't let the diff
+             fail, just print the diff as any other property. */
+          if (err && err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+            }
+          else
+            {
+              SVN_ERR(err);
+              continue;
+            }
+        }
+
+      {
+        svn_diff_t *diff;
+        svn_diff_file_options_t options = { 0 };
+        const svn_string_t *orig
+          = original_value ? original_value
+                           : svn_string_create_empty(iterpool);
+        const svn_string_t *val
+          = propchange->value ? propchange->value
+                              : svn_string_create_empty(iterpool);
+
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
+                                         iterpool));
+
+        /* UNIX patch will try to apply a diff even if the diff header
+         * is missing. It tries to be helpful by asking the user for a
+         * target filename when it can't determine the target filename
+         * from the diff header. But there usually are no files which
+         * UNIX patch could apply the property diff to, so we use "##"
+         * instead of "@@" as the default hunk delimiter for property diffs.
+         * We also supress the diff header. */
+        SVN_ERR(svn_diff_mem_string_output_unified2(
+                  outstream, diff, FALSE /* no header */, "##", NULL, NULL,
+                  encoding, orig, val, iterpool));
+      }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
 }
 
 

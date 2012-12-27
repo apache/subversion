@@ -156,6 +156,8 @@ CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
+CXXHL_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxxhl/include
+
 SVN_APR_CONFIG = @SVN_APR_CONFIG@
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APRUTIL_CONFIG = @SVN_APRUTIL_CONFIG@
@@ -195,6 +197,9 @@ COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPF
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(JAVAHL_INCLUDES) -o $@ -c
 COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
+
+# special compilation for files destined for cxxhl
+COMPILE_CXXHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(CXXHL_INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_LIB = $(LINK) $(LT_SO_VERSION)
@@ -399,7 +404,7 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	echo $(CLEAN_FILES) | xargs rm -f
+	echo $(CLEAN_FILES) | xargs rm -f --
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
@@ -517,6 +522,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(SSL_CERT)" != ""; then                                  \
 	    flags="--ssl-cert $(SSL_CERT) $$flags";                          \
 	  fi;                                                                \
+	  if test "$(HTTP_PROXY)" != ""; then                                \
+	    flags="--http-proxy $(HTTP_PROXY) $$flags";                      \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
@@ -564,9 +572,26 @@ svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
-check-clean:
-	rm -rf subversion/tests/cmdline/svn-test-work          \
-	       subversion/tests/libsvn_fs/test-repo-*          \
+# Create an execution coverage report from the data collected during
+# all execution since the last reset.
+gcov:
+	lcov --capture -d . -b . -o gcov-lcov.dat > gcov-lcov.log
+	genhtml gcov-lcov.dat -o gcov-report > gcov-genhtml.log
+
+# Reset all execution coverage counters to zero.
+gcov-reset:
+	lcov --zerocounters -d .
+
+# Remove the execution coverage data and the report.
+gcov-clean:
+	rm -f gcov-lcov.dat gcov-lcov.log gcov-genhtml.log
+	rm -rf gcov-report
+	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
+
+check-clean: gcov-clean
+	find subversion/tests/cmdline/svn-test-work -print0    \
+	       -mindepth 1 -maxdepth 1 | xargs -0 rm -rf --;   \
+	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
 	       subversion/tests/libsvn_ra_local/test-repo-*    \

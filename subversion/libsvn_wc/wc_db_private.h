@@ -96,7 +96,7 @@ typedef struct svn_wc__db_wcroot_t {
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
-  /* Map a working copy diretory to a cached adm_access baton.
+  /* Map a working copy directory to a cached adm_access baton.
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 
@@ -254,6 +254,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
                                   const char **target,
                                   svn_wc__db_lock_t **lock,
                                   svn_boolean_t *had_props,
+                                  apr_hash_t **props,
                                   svn_boolean_t *update_root,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
@@ -262,7 +263,18 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
 
 /* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
  * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
- * information about, and outputting REPOS_ID instead of URL+UUID. */
+ * information about, and outputting REPOS_ID instead of URL+UUID, and
+ * without the LOCK or UPDATE_ROOT outputs.
+ *
+ * OR
+ *
+ * Similar to svn_wc__db_base_get_info_internal(), but taking an explicit
+ * op-depth OP_DEPTH of the node to get information about, and without the
+ * LOCK or UPDATE_ROOT outputs.
+ *
+ * ### [JAF] TODO: Harmonize svn_wc__db_base_get_info[_internal] with
+ * svn_wc__db_depth_get_info -- common API, common implementation.
+ */
 svn_error_t *
 svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           svn_kind_t *kind,
@@ -276,6 +288,7 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           const svn_checksum_t **checksum,
                           const char **target,
                           svn_boolean_t *had_props,
+                          apr_hash_t **props,
                           svn_wc__db_wcroot_t *wcroot,
                           const char *local_relpath,
                           int op_depth,
@@ -289,6 +302,14 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
                                   apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_op_mark_conflict(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  const svn_skel_t *conflict_skel,
                                   apr_pool_t *scratch_pool);
 
 
@@ -311,5 +332,29 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     void *cb_baton,
                     apr_pool_t *scratch_pool);
 
+
+/* Return CHILDREN mapping const char * names to svn_kind_t * for the
+   children of LOCAL_RELPATH at OP_DEPTH. */
+svn_error_t *
+svn_wc__db_get_children_op_depth(apr_hash_t **children,
+                                 svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                svn_kind_t kind,
+                                int op_depth,
+                                apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 int op_depth,
+                                 apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

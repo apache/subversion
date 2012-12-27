@@ -784,7 +784,7 @@ svn_skel__parse_prop(svn_string_t **propval,
 
 svn_error_t *
 svn_skel__unparse_proplist(svn_skel_t **skel_p,
-                           apr_hash_t *proplist,
+                           const apr_hash_t *proplist,
                            apr_pool_t *pool)
 {
   svn_skel_t *skel = svn_skel__make_empty_list(pool);
@@ -794,7 +794,8 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
   if (proplist)
     {
       /* Loop over hash entries */
-      for (hi = apr_hash_first(pool, proplist); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, (apr_hash_t *)proplist); hi;
+           hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;

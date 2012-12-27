@@ -27,6 +27,8 @@
 
 /*** Includes. ***/
 
+#include <stdlib.h>
+
 #include <apr_hash.h>
 #include "svn_cmdline.h"
 #include "svn_string.h"
@@ -40,10 +42,10 @@
 #include "svn_base64.h"
 #include "cl.h"
 
+#include "private/svn_string_private.h"
 #include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
-
 
 
 svn_error_t *
@@ -81,121 +83,6 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_cl__print_prop_hash(svn_stream_t *out,
-                        apr_hash_t *prop_hash,
-                        svn_boolean_t names_only,
-                        apr_pool_t *pool)
-{
-  apr_array_header_t *sorted_props;
-  int i;
-
-  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
-                                pool);
-  for (i = 0; i < sorted_props->nelts; i++)
-    {
-      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
-      const char *pname = item.key;
-      svn_string_t *propval = item.value;
-      const char *pname_stdout;
-
-      if (svn_prop_needs_translation(pname))
-        SVN_ERR(svn_subst_detranslate_string(&propval, propval,
-                                             TRUE, pool));
-
-      SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
-
-      if (out)
-        {
-          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout);
-          SVN_ERR(svn_subst_translate_cstring2(pname_stdout, &pname_stdout,
-                                              APR_EOL_STR,  /* 'native' eol */
-                                              FALSE, /* no repair */
-                                              NULL,  /* no keywords */
-                                              FALSE, /* no expansion */
-                                              pool));
-
-          SVN_ERR(svn_stream_puts(out, pname_stdout));
-        }
-      else
-        {
-          /* ### We leave these printfs for now, since if propval wasn't
-             translated above, we don't know anything about its encoding.
-             In fact, it might be binary data... */
-          printf("  %s\n", pname_stdout);
-        }
-
-      if (!names_only)
-        {
-          /* Add an extra newline to the value before indenting, so that
-           * every line of output has the indentation whether the value
-           * already ended in a newline or not. */
-          const char *newval = apr_psprintf(pool, "%s\n", propval->data);
-          const char *indented_newval = svn_cl__indent_string(newval,
-                                                              "    ",
-                                                              pool);
-          if (out)
-            {
-              SVN_ERR(svn_stream_puts(out, indented_newval));
-            }
-          else
-            {
-              printf("%s", indented_newval);
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
-                            apr_hash_t *prop_hash,
-                            svn_boolean_t names_only,
-                            svn_boolean_t inherited_props,
-                            apr_pool_t *pool)
-{
-  apr_array_header_t *sorted_props;
-  int i;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create_empty(pool);
-
-  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
-                                pool);
-  for (i = 0; i < sorted_props->nelts; i++)
-    {
-      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
-      const char *pname = item.key;
-      svn_string_t *propval = item.value;
-
-      if (names_only)
-        {
-          svn_xml_make_open_tag(
-            outstr, pool, svn_xml_self_closing,
-            inherited_props ? "inherited_property" : "property",
-            "name", pname, NULL);
-        }
-      else
-        {
-          const char *pname_out;
-
-          if (svn_prop_needs_translation(pname))
-            SVN_ERR(svn_subst_detranslate_string(&propval, propval,
-                                                 TRUE, pool));
-
-          SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_out, pname, pool));
-
-          svn_cmdline__print_xml_prop(outstr, pname_out, propval,
-                                      inherited_props, pool);
-        }
-    }
-
-    return SVN_NO_ERROR;
-}
-
-
 void
 svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
                                apr_pool_t *pool)
@@ -209,9 +96,10 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
   svn_stringbuf_strip_whitespace(propbuf);
 
   if (propbuf->data[0] == '\0'
-      || strcmp(propbuf->data, "no") == 0
-      || strcmp(propbuf->data, "off") == 0
-      || strcmp(propbuf->data, "false") == 0)
+      || svn_cstring_casecmp(propbuf->data, "0") == 0
+      || svn_cstring_casecmp(propbuf->data, "no") == 0
+      || svn_cstring_casecmp(propbuf->data, "off") == 0
+      || svn_cstring_casecmp(propbuf->data, "false") == 0)
     {
       svn_error_t *err = svn_error_createf
         (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
@@ -223,3 +111,191 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
     }
 }
 
+
+/* Context for sorting property names */
+struct simprop_context_t
+{
+  svn_string_t name;    /* The name of the property we're comparing with */
+  svn_membuf_t buffer;  /* Buffer for similarity testing */
+};
+
+struct simprop_t
+{
+  const char *propname; /* The original svn: property name */
+  svn_string_t name;    /* The property name without the svn: prefix */
+  unsigned int score;   /* The similarity score */
+  apr_size_t diff;      /* Number of chars different from context.name */
+  struct simprop_context_t *context; /* Sorting context for qsort() */
+};
+
+/* Similarity test between two property names */
+static APR_INLINE unsigned int
+simprop_key_diff(const svn_string_t *key, const svn_string_t *ctx,
+                 svn_membuf_t *buffer, apr_size_t *diff)
+{
+  apr_size_t lcs;
+  const unsigned int score = svn_string__similarity(key, ctx, buffer, &lcs);
+  if (key->len > ctx->len)
+    *diff = key->len - lcs;
+  else
+    *diff = ctx->len - lcs;
+  return score;
+}
+
+/* Key comparator for qsort for simprop_t */
+static int
+simprop_compare(const void *pkeya, const void *pkeyb)
+{
+  struct simprop_t *const keya = *(struct simprop_t *const *)pkeya;
+  struct simprop_t *const keyb = *(struct simprop_t *const *)pkeyb;
+  struct simprop_context_t *const context = keya->context;
+
+  if (keya->score == -1)
+    keya->score = simprop_key_diff(&keya->name, &context->name,
+                                   &context->buffer, &keya->diff);
+  if (keyb->score == -1)
+    keyb->score = simprop_key_diff(&keyb->name, &context->name,
+                                   &context->buffer, &keyb->diff);
+
+  return (keya->score < keyb->score ? 1
+          : (keya->score > keyb->score ? -1
+             : (keya->diff > keyb->diff ? 1
+                : (keya->diff < keyb->diff ? -1 : 0))));
+}
+
+svn_error_t *
+svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+                            apr_pool_t *scratch_pool)
+{
+  static const char *const nodeprops[] =
+    {
+      SVN_PROP_NODE_ALL_PROPS
+    };
+  static const apr_size_t nodeprops_len = sizeof(nodeprops)/sizeof(*nodeprops);
+
+  static const char *const revprops[] =
+    {
+      SVN_PROP_REVISION_ALL_PROPS
+    };
+  static const apr_size_t revprops_len = sizeof(revprops)/sizeof(*revprops);
+
+  const char *const *const proplist = (revprop ? revprops : nodeprops);
+  const apr_size_t numprops = (revprop ? revprops_len : nodeprops_len);
+
+  struct simprop_t **propkeys;
+  struct simprop_t *propbuf;
+  apr_size_t i;
+
+  struct simprop_context_t context;
+  svn_string_t prefix;
+
+  context.name.data = propname;
+  context.name.len = strlen(propname);
+  prefix.data = SVN_PROP_PREFIX;
+  prefix.len = strlen(SVN_PROP_PREFIX);
+
+  svn_membuf__create(&context.buffer, 0, scratch_pool);
+
+  /* First, check if the name is even close to being in the svn: namespace.
+     It must contain a colon in the right place, and we only allow
+     one-char typos or a single transposition. */
+  if (context.name.len < prefix.len
+      || context.name.data[prefix.len - 1] != prefix.data[prefix.len - 1])
+    return SVN_NO_ERROR;        /* Wrong prefix, ignore */
+  else
+    {
+      apr_size_t lcs;
+      const apr_size_t name_len = context.name.len;
+      context.name.len = prefix.len; /* Only check up to the prefix length */
+      svn_string__similarity(&context.name, &prefix, &context.buffer, &lcs);
+      context.name.len = name_len; /* Restore the original propname length */
+      if (lcs < prefix.len - 1)
+        return SVN_NO_ERROR;    /* Wrong prefix, ignore */
+
+      /* If the prefix is slightly different, the rest must be
+         identical in order to trigger the error. */
+      if (lcs == prefix.len - 1)
+        {
+          for (i = 0; i < numprops; ++i)
+            {
+              if (0 == strcmp(proplist[i] + prefix.len, propname + prefix.len))
+                return svn_error_createf(
+                  SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                  _("'%s' is not a valid %s property name; did you mean '%s'?"
+                    "\n(To set the '%s' property, re-run with '--force'.)"),
+                  propname, SVN_PROP_PREFIX, proplist[i], propname);
+            }
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Now find the closest match from amongst the set of reserved
+     node or revision property names. Skip the prefix while matching,
+     we already know that it's the same and looking at it would only
+     skew the results. */
+  propkeys = apr_palloc(scratch_pool,
+                        numprops * sizeof(struct simprop_t*));
+  propbuf = apr_palloc(scratch_pool,
+                       numprops * sizeof(struct simprop_t));
+  context.name.data += prefix.len;
+  context.name.len -= prefix.len;
+  for (i = 0; i < numprops; ++i)
+    {
+      propkeys[i] = &propbuf[i];
+      propbuf[i].propname = proplist[i];
+      propbuf[i].name.data = proplist[i] + prefix.len;
+      propbuf[i].name.len = strlen(propbuf[i].name.data);
+      propbuf[i].score = (unsigned int)-1;
+      propbuf[i].context = &context;
+    }
+
+  qsort(propkeys, numprops, sizeof(*propkeys), simprop_compare);
+
+  if (0 == propkeys[0]->diff)
+    return SVN_NO_ERROR;        /* We found an exact match. */
+
+  /* See if we can suggest a sane alternative spelling */
+  for (i = 0; i < numprops; ++i)
+    if (propkeys[i]->score < 666) /* 2/3 similarity required */
+      break;
+
+  switch (i)
+    {
+    case 0:
+      /* The best alternative isn't good enough */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name;"
+          " re-run with '--force' to set it"),
+        propname, SVN_PROP_PREFIX);
+
+    case 1:
+      /* There is only one good candidate */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name; did you mean '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX, propkeys[0]->propname, propname);
+
+    case 2:
+      /* Suggest a list of the most likely candidates */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name\n"
+          "Did you mean '%s' or '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX,
+        propkeys[0]->propname, propkeys[1]->propname, propname);
+
+    default:
+      /* Never suggest more than three candidates */
+      return svn_error_createf(
+        SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+        _("'%s' is not a valid %s property name\n"
+          "Did you mean '%s', '%s' or '%s'?\n"
+          "(To set the '%s' property, re-run with '--force'.)"),
+        propname, SVN_PROP_PREFIX,
+        propkeys[0]->propname, propkeys[1]->propname, propkeys[2]->propname,
+        propname);
+    }
+}

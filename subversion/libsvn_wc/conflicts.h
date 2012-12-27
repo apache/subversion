@@ -182,10 +182,10 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
                                         const char *marker_abspath,
-                                        apr_hash_t *mine_props,
-                                        apr_hash_t *their_old_props,
-                                        apr_hash_t *their_props,
-                                        apr_hash_t *conflicted_prop_names,
+                                        const apr_hash_t *mine_props,
+                                        const apr_hash_t *their_old_props,
+                                        const apr_hash_t *their_props,
+                                        const apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
@@ -261,6 +261,8 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
  * Output arguments can be NULL if the value is not necessary.
  *
  * ### stsp asks: what is LOCATIONS?
+ * ### Set *LOCATIONS to an array of (svn_wc_conflict_version_t *)
+ *     representing ...
  *
  * TEXT_, PROP_ and TREE_CONFLICTED (when not NULL) will be set to TRUE
  * when the conflict contains the specified kind of conflict, otherwise

@@ -320,6 +320,10 @@ svn_fs_path(svn_fs_t *fs,
 /**
  * Delete the filesystem at @a path.
  *
+ * @note: Deleting a filesystem that has an open svn_fs_t is not
+ * supported.  Clear/destroy all pools used to create/open @a path.
+ * See issue 4264.
+ *
  * @since New in 1.1.
  */
 svn_error_t *

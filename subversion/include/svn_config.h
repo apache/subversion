@@ -86,6 +86,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
                                           "store-ssl-client-cert-pp-plaintext"
 #define SVN_CONFIG_OPTION_USERNAME                  "username"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_HTTP_BULK_UPDATES         "http-bulk-updates"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
@@ -177,6 +181,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP   TRUE
 #define SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
                                                              SVN_CONFIG_ASK
+#define SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS       4
 
 /** Read configuration information from the standard sources and merge it
  * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a

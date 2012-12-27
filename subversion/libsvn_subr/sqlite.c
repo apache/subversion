@@ -43,14 +43,17 @@
 #endif
 
 #ifdef SVN_SQLITE_INLINE
-/* Include sqlite3 inline, making all symbols private. */
-  #define SQLITE_API static
-  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-    #pragma GCC diagnostic ignored "-Wunused-function"
-  #endif
-  #include <sqlite3.c>
+/* Import the sqlite3 API vtable from sqlite3wrapper.c */
+#  define SQLITE_OMIT_DEPRECATED
+#  include <sqlite3ext.h>
+extern const sqlite3_api_routines *const svn_sqlite3__api_funcs;
+extern int (*const svn_sqlite3__api_initialize)(void);
+extern int (*const svn_sqlite3__api_config)(int, ...);
+#  define sqlite3_api svn_sqlite3__api_funcs
+#  define sqlite3_initialize svn_sqlite3__api_initialize
+#  define sqlite3_config svn_sqlite3__api_config
 #else
-  #include <sqlite3.h>
+#  include <sqlite3.h>
 #endif
 
 #if !SQLITE_VERSION_AT_LEAST(3,7,12)
@@ -168,7 +171,7 @@ exec_sql2(svn_sqlite__db_t *db, const char *sql, int ignored_err)
   if (sqlite_err != SQLITE_OK && sqlite_err != ignored_err)
     {
       svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
-                                           _("%s, executing statement '%s'"),
+                                           _("sqlite: %s, executing statement '%s'"),
                                            err_msg, sql);
       sqlite3_free(err_msg);
       return err;
@@ -256,8 +259,8 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
     return svn_error_create(SVN_ERR_SQLITE_ERROR,
                             svn_sqlite__reset(stmt),
                             expecting_row
-                              ? _("Expected database row missing")
-                              : _("Extra database row found"));
+                              ? _("sqlite: Expected database row missing")
+                              : _("sqlite: Extra database row found"));
 
   return SVN_NO_ERROR;
 }
@@ -469,8 +472,7 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   if (props == NULL)
     return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
-  SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
-                                     scratch_pool));
+  SVN_ERR(svn_skel__unparse_proplist(&skel, props, scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                slot,
@@ -575,6 +577,21 @@ svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
 {
   /* cast from 'unsigned char' to regular 'char'  */
   const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  return svn_token__from_word_strict(map, word);
+}
+
+int
+svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
+                              int column,
+                              const svn_token_map_t *map,
+                              int null_val)
+{
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  if (!word)
+    return null_val;
 
   return svn_token__from_word_strict(map, word);
 }

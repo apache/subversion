@@ -626,6 +626,16 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
 
   # Revert additions and try with --no-auto-props
   svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
+
+  # When the add above sets svn:executable on D/rip.bat, subversion
+  # also sets the execute bits on the file (on systems that support
+  # that).  The revert above does not return the file to its original
+  # permissions, so we do so manually now.  Otherwise the follwing
+  # addition will notice the executable bits and set svn:executable
+  # again, which is not what we are here to test.
+  if os.name == 'posix':
+    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'), 0664)
+    
   os.chdir(sbox.wc_dir)
   svntest.main.run_svn(None, 'add', '.', '--force', '--no-auto-props',
                        '--config-dir', config_dir)

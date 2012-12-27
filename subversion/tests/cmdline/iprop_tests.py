@@ -1635,6 +1635,40 @@ def iprops_with_file_externals(sbox):
     sbox.ospath('A/B/E/file-external'), expected_iprops,
     expected_explicit_props)
 
+def iprops_survive_commit(sbox):
+  "verify that iprops survive a commit"
+
+  sbox.build()
+  sbox.simple_propset('key', 'D', 'A/B',)
+  sbox.simple_commit()
+
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/B/E',
+                       sbox.ospath('A/D'), '--ignore-ancestry')
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/B/F',
+                       sbox.ospath('iota'), '--ignore-ancestry')
+  expected_iprops = {
+    sbox.repo_url + '/A/B' : {'key'   : 'D'},
+  }
+
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(sbox.ospath('A/D'),
+                                                    expected_iprops,
+                                                    expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(sbox.ospath('iota'),
+                                                    expected_iprops,
+                                                    expected_explicit_props)
+
+  sbox.simple_propset('new', 'V', 'A/D', 'iota')
+  sbox.simple_commit()
+
+  expected_explicit_props = {'new': 'V'}
+  svntest.actions.run_and_verify_inherited_prop_xml(sbox.ospath('A/D'),
+                                                    expected_iprops,
+                                                    expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(sbox.ospath('iota'),
+                                                    expected_iprops,
+                                                    expected_explicit_props)
+
 ########################################################################
 # Run the tests
 
@@ -1648,6 +1682,7 @@ test_list = [ None,
               iprops_shallow_operative_depths,
               iprops_with_directory_externals,
               iprops_with_file_externals,
+              iprops_survive_commit,
             ]
 
 if __name__ == '__main__':

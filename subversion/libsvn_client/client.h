@@ -394,7 +394,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
@@ -593,6 +592,58 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
+
+/* ---------------------------------------------------------------- */
+
+/*** List ***/
+
+/* List the file/directory entries for PATH_OR_URL at REVISION.
+   The actual node revision selected is determined by the path as 
+   it exists in PEG_REVISION.  
+   
+   If DEPTH is svn_depth_infinity, then list all file and directory entries 
+   recursively.  Else if DEPTH is svn_depth_files, list all files under 
+   PATH_OR_URL (if any), but not subdirectories.  Else if DEPTH is
+   svn_depth_immediates, list all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just list PATH_OR_URL with none of its entries.
+ 
+   DIRENT_FIELDS controls which fields in the svn_dirent_t's are
+   filled in.  To have them totally filled in use SVN_DIRENT_ALL,
+   otherwise simply bitwise OR together the combination of SVN_DIRENT_*
+   fields you care about.
+ 
+   If FETCH_LOCKS is TRUE, include locks when reporting directory entries.
+ 
+   If INCLUDE_EXTERNALS is TRUE, also list all external items 
+   reached by recursion.  DEPTH value passed to the original list target
+   applies for the externals also.  EXTERNAL_PARENT_URL is url of the 
+   directory which has the externals definitions.  EXTERNAL_TARGET is the
+   target subdirectory of externals definitions.
+
+   Report directory entries by invoking LIST_FUNC/BATON. 
+   Pass EXTERNAL_PARENT_URL and EXTERNAL_TARGET to LIST_FUNC when external
+   items are listed, otherwise both are set to NULL.
+ 
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+ 
+   Use POOL for all allocations.
+*/
+svn_error_t *
+svn_client__list_internal(const char *path_or_url,
+                          const svn_opt_revision_t *peg_revision,
+                          const svn_opt_revision_t *revision,
+                          svn_depth_t depth,
+                          apr_uint32_t dirent_fields,
+                          svn_boolean_t fetch_locks,
+                          svn_boolean_t include_externals,
+                          const char *external_parent_url,
+                          const char *external_target,
+                          svn_client_list_func2_t list_func,
+                          void *baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -901,6 +952,17 @@ svn_client__condense_commit_items(const char **base_url,
                                   apr_pool_t *pool);
 
 
+/* Like svn_ra_stat() on the ra session root, but with a compatibility
+   hack for pre-1.2 svnserve that don't support this api. */
+svn_error_t *
+svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
+                               svn_revnum_t rev,
+                               svn_dirent_t **dirent_p,
+                               apr_uint32_t dirent_fields,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
+
+
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
@@ -1023,6 +1085,22 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_client_status_func_t status_func,
                                void *status_baton,
                                apr_pool_t *pool);
+
+
+/* List external items defined on each external in EXTERNALS, a const char *
+   externals_parent_url(url of the directory which has the externals
+   definitions) of all externals mapping to the svn_string_t * externals_desc
+   (externals description text). All other options are the same as those 
+   passed to svn_client_list(). */
+svn_error_t * 
+svn_client__list_externals(apr_hash_t *externals, 
+                           svn_depth_t depth,
+                           apr_uint32_t dirent_fields,
+                           svn_boolean_t fetch_locks,
+                           svn_client_list_func2_t list_func,
+                           void *baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *scratch_pool);
 
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t

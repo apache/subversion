@@ -310,6 +310,7 @@ class TestFactory:
 
     # Wether we ever used the variables 'wc_dir' and 'url' (tiny tweak)
     self.used_wc_dir = False
+    self.used_abs_wc_dir = False
     self.used_url = False
 
     # The alternate working copy directories created that need to be
@@ -350,6 +351,8 @@ class TestFactory:
       # main wc_dir and url
       if self.used_wc_dir:
         init += 'wc_dir = sbox.wc_dir\n'
+      if self.used_abs_wc_dir:
+        init += 'abs_wc_dir = os.path.abspath(sbox.wc_dir)\n'
       if self.used_url:
         init += 'url = sbox.repo_url\n'
 
@@ -447,8 +450,13 @@ class TestFactory:
         return self.cmd_svn_checkout(args[2:])
 
       if second in ['propset','pset','ps']:
-        return self.cmd_svn(args[1:], False,
+        multiline_args = [arg.replace(r'\n', '\n') for arg in args[1:]]
+        return self.cmd_svn(multiline_args, False,
           self.keep_args_of, 3)
+
+      if second in ['propget','pget','pg']:
+        return self.cmd_svn(args[1:], False,
+          self.keep_args_of, 2)
 
       if second in ['delete','del','remove', 'rm']:
         return self.cmd_svn(args[1:], False,
@@ -1115,7 +1123,7 @@ class TestFactory:
         if not runpath:
           continue
         strlen = len(runpath)
-        item = [strlen, name, runpath]
+        item = (strlen, name, runpath)
         bisect.insort(lst, item)
 
     return lst
@@ -1128,14 +1136,14 @@ class TestFactory:
     urls = []
     for name in self.vars:
       if name.startswith('url_'):
-        bisect.insort(urls, [name.lower(), name])
+        bisect.insort(urls, (name.lower(), name))
       else:
-        bisect.insort(paths, [name.lower(), name])
+        bisect.insort(paths, (name.lower(), name))
     list = []
     for path in paths:
-      list += [path[1]]
+      list.append(path[1])
     for url in urls:
-      list += [url[1]]
+      list.append(url[1])
     return list
 
 
@@ -1168,8 +1176,20 @@ class TestFactory:
       path = var[2]
       str = replace(str, path, name, quote)
 
-    str = replace(str, self.sbox.wc_dir, 'wc_dir', quote)
-    str = replace(str, self.sbox.repo_url, 'url', quote)
+    str2 = replace(str, os.path.abspath(self.sbox.wc_dir), 'abs_wc_dir', quote)
+    if str != str2:
+      self.used_abs_wc_dir = True
+    str = str2
+
+    str2 = replace(str, self.sbox.wc_dir, 'wc_dir', quote)
+    if str != str2:
+      self.used_wc_dir = True
+    str = str2
+
+    str2 = replace(str, self.sbox.repo_url, 'url', quote)
+    if str != str2:
+      self.used_url = True
+    str = str2
 
     # now remove trailing null-str adds:
     #   '' + url_A_C + ''
@@ -1615,6 +1635,7 @@ class TestFactory:
 
     # special case: if a path is '.', simply use wc_dir.
     if pathelements == ['.']:
+      self.used_wc_dir = True
       return wc.py, wc.realpath
 
     name = "_".join(pathelements)

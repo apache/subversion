@@ -3243,7 +3243,7 @@ prev_location(const char **prev_path,
   */
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
-  remainder_path = svn_relpath_skip_ancestor(copy_path, path);
+  remainder_path = svn_fspath__skip_ancestor(copy_path, path);
   *prev_path = svn_fspath__join(copy_src_path, remainder_path, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;

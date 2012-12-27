@@ -24,13 +24,13 @@
 #
 
 APR=apr-1.4.6
-APR_UTIL=apr-util-1.4.1
-SERF=serf-1.0.1
+APR_UTIL=apr-util-1.5.1
+SERF=serf-1.1.1
 ZLIB=zlib-1.2.7
-SQLITE_VERSION=3.7.12
-SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
+SQLITE_VERSION=3.7.15
+SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
 
-HTTPD=httpd-2.2.22
+HTTPD=httpd-2.4.3
 APR_ICONV=apr-iconv-1.2.1
 
 BASEDIR=`pwd`
@@ -107,7 +107,7 @@ get_sqlite() {
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in neon zlib serf sqlite-amalgamation apr apr-util; do
+    for i in zlib serf sqlite-amalgamation apr apr-util; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
@@ -115,7 +115,11 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target; do
-        get_$target || usage
+        if [ "$target" -ne "deps" ]; then
+          get_$target || usage
+        else
+          usage
+        fi
       done
     else
       get_apr

@@ -172,7 +172,7 @@ build_info_for_node(svn_wc__info2_t **info,
             SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL,
+                                             NULL, NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
         }
@@ -226,7 +226,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                             &tmpinfo->last_changed_author,
                                             &wc_info->depth,
                                             &wc_info->checksum,
-                                            NULL, NULL,
+                                            NULL, NULL, NULL,
                                             db, local_abspath,
                                             result_pool, scratch_pool));
 
@@ -265,7 +265,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID, NULL, NULL,
                                            NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 

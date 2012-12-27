@@ -32,7 +32,7 @@
  *    But not:
  *       "http://server"
  *
- * - a uri, for our purposes, is a percent-encoded, absolute path
+ *  - a uri, for our purposes, is a percent-encoded, absolute path
  *    (URI) that starts with a schema definition.  In practice, these
  *    tend to look like URLs, but never carry query strings.
  *    Examples:

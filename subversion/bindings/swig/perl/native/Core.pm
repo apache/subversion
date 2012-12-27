@@ -1012,8 +1012,7 @@ Certificate authority is unknown (i.e. not trusted).
 
 =item $SVN::Auth::SSL::OTHER
 
-Other failure. This can happen if neon has introduced a new failure bit that we
-do not handle yet.
+Other failure. This can happen if some unknown error condition occurs.
 
 =back
 

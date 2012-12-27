@@ -1180,3 +1180,105 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
+/* Walk through all the external items and list them. */
+static svn_error_t *
+list_external_items(apr_array_header_t *external_items,
+                    const char *externals_parent_url,
+                    svn_depth_t depth,
+                    apr_uint32_t dirent_fields,
+                    svn_boolean_t fetch_locks,
+                    svn_client_list_func2_t list_func,
+                    void *baton,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
+{
+  const char *externals_parent_repos_root_url;
+  apr_pool_t *iterpool;
+  int i;
+
+  SVN_ERR(svn_client_get_repos_root(&externals_parent_repos_root_url, 
+                                    NULL /* uuid */,
+                                    externals_parent_url, ctx, 
+                                    scratch_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < external_items->nelts; i++)
+    {
+      const char *resolved_url;
+
+      svn_wc_external_item2_t *item = 
+          APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__resolve_relative_external_url(
+                  &resolved_url, 
+                  item,
+                  externals_parent_repos_root_url,
+                  externals_parent_url,
+                  iterpool, iterpool));
+
+      /* List the external */
+      SVN_ERR(wrap_external_error(ctx, item->target_dir,
+                                  svn_client__list_internal(
+                                                resolved_url,
+                                                &item->peg_revision,
+                                                &item->revision,
+                                                depth, dirent_fields, 
+                                                fetch_locks,
+                                                TRUE,
+                                                externals_parent_url,
+                                                item->target_dir,
+                                                list_func, baton, ctx,
+                                                iterpool),
+                                  iterpool));
+    
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+      
+    
+svn_error_t * 
+svn_client__list_externals(apr_hash_t *externals, 
+                           svn_depth_t depth,
+                           apr_uint32_t dirent_fields,
+                           svn_boolean_t fetch_locks,
+                           svn_client_list_func2_t list_func,
+                           void *baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *externals_parent_url = svn__apr_hash_index_key(hi);
+      svn_string_t *externals_desc = svn__apr_hash_index_val(hi);
+      apr_array_header_t *external_items;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc_parse_externals_description3(&external_items, 
+                                                  externals_parent_url,
+                                                  externals_desc->data, 
+                                                  FALSE, iterpool));
+
+      if (! external_items->nelts)
+        continue;
+
+      SVN_ERR(list_external_items(external_items, externals_parent_url, depth,
+                                  dirent_fields, fetch_locks, list_func,
+                                  baton, ctx, iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+

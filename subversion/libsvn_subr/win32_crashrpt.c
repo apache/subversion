@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+/* prevent "empty compilation unit" warning on e.g. UNIX */
+typedef int win32_crashrpt__dummy;
+
 #ifdef WIN32
 #ifdef SVN_USE_WIN32_CRASHHANDLER
 

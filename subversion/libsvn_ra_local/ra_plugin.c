@@ -1064,7 +1064,7 @@ get_node_props(apr_hash_t **props,
       int i;
 
       SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
-                                               NULL, NULL,
+                                               NULL, NULL, NULL,
                                                result_pool, scratch_pool));
 
       for (i = 0; i < (*inherited_props)->nelts; i++)
