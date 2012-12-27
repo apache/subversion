@@ -176,30 +176,18 @@ SVNClient::status(const char *path, svn_depth_t depth,
                                    subPool.getPool()), );
 }
 
-void SVNClient::logMessages(const char *path, Revision &pegRevision,
-                            std::vector<RevisionRange> &logRanges,
-                            bool stopOnCopy, bool discoverPaths,
-                            bool includeMergedRevisions, StringArray &revProps,
-                            long limit, LogMessageCallback *callback)
+/* Convert a vector of revision ranges to an APR array of same. */
+static apr_array_header_t *
+rev_range_vector_to_apr_array(std::vector<RevisionRange> &revRanges,
+                              SVN::Pool &subPool)
 {
-    SVN::Pool subPool(pool);
-
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-
-    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
-    if (ctx == NULL)
-        return;
-
-    Targets target(path, subPool);
-    const apr_array_header_t *targets = target.array(subPool);
-    SVN_JNI_ERR(target.error_occured(), );
-
     apr_array_header_t *ranges =
-        apr_array_make(subPool.getPool(), static_cast<int>(logRanges.size()),
-                       sizeof(svn_opt_revision_range_t *));
+      apr_array_make(subPool.getPool(),
+                     static_cast<int>(revRanges.size()),
+                     sizeof(svn_opt_revision_range_t *));
 
     std::vector<RevisionRange>::const_iterator it;
-    for (it = logRanges.begin(); it != logRanges.end(); ++it)
+    for (it = revRanges.begin(); it != revRanges.end(); ++it)
     {
         if (it->toRange(subPool)->start.kind
             == svn_opt_revision_unspecified
@@ -220,8 +208,33 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                 it->toRange(subPool);
         }
         if (JNIUtil::isExceptionThrown())
-            return;
+            return NULL;
     }
+    return ranges;
+}
+
+void SVNClient::logMessages(const char *path, Revision &pegRevision,
+                            std::vector<RevisionRange> &logRanges,
+                            bool stopOnCopy, bool discoverPaths,
+                            bool includeMergedRevisions, StringArray &revProps,
+                            long limit, LogMessageCallback *callback)
+{
+    SVN::Pool subPool(pool);
+
+    SVN_JNI_NULL_PTR_EX(path, "path", );
+
+    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    if (ctx == NULL)
+        return;
+
+    Targets target(path, subPool);
+    const apr_array_header_t *targets = target.array(subPool);
+    SVN_JNI_ERR(target.error_occured(), );
+
+    apr_array_header_t *ranges =
+      rev_range_vector_to_apr_array(logRanges, subPool);
+    if (JNIUtil::isExceptionThrown())
+        return;
 
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
                                 limit, discoverPaths, stopOnCopy,
@@ -644,34 +657,9 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
 
     apr_array_header_t *ranges =
-      apr_array_make(subPool.getPool(),
-                     static_cast<int>(rangesToMerge.size()),
-                     sizeof(const svn_opt_revision_range_t *));
-
-    std::vector<RevisionRange>::const_iterator it;
-    for (it = rangesToMerge.begin(); it != rangesToMerge.end(); ++it)
-    {
-        if (it->toRange(subPool)->start.kind
-            == svn_opt_revision_unspecified
-            && it->toRange(subPool)->end.kind
-            == svn_opt_revision_unspecified)
-        {
-            svn_opt_revision_range_t *range =
-                reinterpret_cast<svn_opt_revision_range_t *>
-                    (apr_pcalloc(subPool.getPool(), sizeof(*range)));
-            range->start.kind = svn_opt_revision_number;
-            range->start.value.number = 1;
-            range->end.kind = svn_opt_revision_head;
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
-        }
-        else
-        {
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
-                it->toRange(subPool);
-        }
-        if (JNIUtil::isExceptionThrown())
-            return;
-    }
+      rev_range_vector_to_apr_array(rangesToMerge, subPool);
+    if (JNIUtil::isExceptionThrown())
+        return;
 
     SVN_JNI_ERR(svn_client_merge_peg4(srcPath.c_str(),
                                       ranges,
