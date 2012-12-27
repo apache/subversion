@@ -72,9 +72,9 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
   std::vector<const char*>::const_iterator it;
 
   apr_pool_t *apr_pool = pool.getPool();
-  apr_array_header_t *apr_targets = apr_array_make(apr_pool,
-                                                   (int)m_targets.size(),
-                                                   sizeof(const char *));
+  apr_array_header_t *apr_targets
+    = apr_array_make(apr_pool, static_cast<int>(m_targets.size()),
+                               sizeof(const char *));
 
   for (it = m_targets.begin(); it != m_targets.end(); ++it)
     {
