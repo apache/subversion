@@ -326,17 +326,18 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
-   is is a hash as per svn_client__get_all_auto_props.
+/* If AUTOPROPS is not null: Then read automatic properties matching PATH
+   from AUTOPROPS.  AUTOPROPS is is a hash as per
+   svn_client__get_all_auto_props.  Set *PROPERTIES to a hash containing
+   propname/value pairs (const char * keys mapping to svn_string_t * values).
 
-   Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
-   may be an empty hash, but will not be NULL.
+   If AUTOPROPS is null then set *PROPERTIES to an empty hash.
 
-   Set *MIMETYPE to the mimetype, if any, or to NULL.
-
-   If MAGIC_COOKIE is not NULL and no mime-type can be determined
-   via CTX->config try to detect the mime-type with libmagic.
+   If *MIMETYPE is null or "application/octet-stream" then check AUTOPROPS
+   for a matching svn:mime-type.  If AUTOPROPS is null or no match is found
+   and MAGIC_COOKIE is not NULL, then then try to detect the mime-type with
+   libmagic.  If a mimetype is found then add it to *PROPERTIES and set
+   *MIMETYPE to the mimetype value or NULL otherwise.
 
    Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
@@ -628,17 +629,16 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
-   implement the file comparison function
+   DIFF_CALLBACKS/DIFF_CMD_BATON represent the callback that implements
+   the comparison.
 
    DEPTH is the depth to recurse.
 
    RA_SESSION is an RA session through which this editor may fetch
    properties, file contents and directory listings of the 'old' side of the
    diff. It is a separate RA session from the one through which this editor
-   is being driven.
-
-   REVISION is the start revision in the comparison.
+   is being driven. REVISION is the revision number of the 'old' side of
+   the diff.
 
    For each deleted directory, if WALK_DELETED_DIRS is true then just call
    the 'dir_deleted' callback once, otherwise call the 'file_deleted' or

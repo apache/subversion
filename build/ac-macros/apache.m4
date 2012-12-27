@@ -97,7 +97,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       apache_minor_version_wanted_regex="0"
       ;;
     1)
-      apache_minor_version_wanted_regex=["[1-4]"]
+      apache_minor_version_wanted_regex=["[1-5]"]
       ;;
     2)
       apache_minor_version_wanted_regex=["[3-5]"]

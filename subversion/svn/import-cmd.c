@@ -118,6 +118,7 @@ svn_cl__import(apr_getopt_t *os,
                               url,
                               opt_state->depth,
                               opt_state->no_ignore,
+                              opt_state->no_autoprops,
                               opt_state->force,
                               opt_state->revprop_table,
                               NULL, NULL,  /* filter callback / baton */

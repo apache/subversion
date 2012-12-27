@@ -203,15 +203,14 @@ change_props(const svn_delta_editor_t *editor,
       for (hi = apr_hash_first(pool, child->prop_mods);
            hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *propname = svn__apr_hash_index_key(hi);
+          const svn_string_t *val = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
           if (child->kind == svn_node_dir)
-            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_dir_prop(baton, propname, val, iterpool));
           else
-            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_file_prop(baton, propname, val, iterpool));
         }
     }
 
@@ -234,14 +233,11 @@ drive(struct operation *operation,
   for (hi = apr_hash_first(pool, operation->children);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      struct operation *child;
+      const char *key = svn__apr_hash_index_key(hi);
+      struct operation *child = svn__apr_hash_index_val(hi);
       void *file_baton = NULL;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      child = val;
 
       /* Deletes and replacements are simple -- delete something. */
       if (child->operation == OP_DELETE || child->operation == OP_REPLACE)
@@ -284,22 +280,18 @@ drive(struct operation *operation,
           svn_txdelta_window_handler_t handler;
           void *handler_baton;
           svn_stream_t *contents;
-          apr_file_t *f = NULL;
 
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, subpool,
                                           &handler, &handler_baton));
-          if (strcmp(child->src_file, "-"))
+          if (strcmp(child->src_file, "-") != 0)
             {
-              SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ,
-                                       APR_OS_DEFAULT, pool));
+              SVN_ERR(svn_stream_open_readonly(&contents, child->src_file,
+                                               pool, pool));
             }
           else
             {
-              apr_status_t apr_err = apr_file_open_stdin(&f, pool);
-              if (apr_err)
-                return svn_error_wrap_apr(apr_err, "Can't open stdin");
+              SVN_ERR(svn_stream_for_stdin(&contents, pool));
             }
-          contents = svn_stream_from_aprfile2(f, FALSE, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
         }
@@ -316,15 +308,12 @@ drive(struct operation *operation,
       /* If we opened, added, or replaced a directory, we need to
          recurse, apply outstanding propmods, and then close it. */
       if ((child->kind == svn_node_dir)
-          && (child->operation == OP_OPEN
-              || child->operation == OP_ADD
-              || child->operation == OP_REPLACE))
+          && child->operation != OP_DELETE)
         {
+          SVN_ERR(change_props(editor, child->baton, child, subpool));
+
           SVN_ERR(drive(child, head, editor, subpool));
-          if (child->kind == svn_node_dir)
-            {
-              SVN_ERR(change_props(editor, child->baton, child, subpool));
-            }
+
           SVN_ERR(editor->close_directory(child->baton, subpool));
         }
     }
@@ -766,12 +755,27 @@ execute(const apr_array_header_t *actions,
                               pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
+  /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
   SVN_ERR(svn_ra_open4(&aux_session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
   SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
-
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
+
+  /* Reparent to ANCHOR's dir, if ANCHOR is not a directory. */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_ra_check_path(aux_session,
+                              svn_uri_skip_ancestor(repos_root, anchor, pool),
+                              head, &kind, pool));
+    if (kind != svn_node_dir)
+      {
+        anchor = svn_uri_dirname(anchor, pool);
+        SVN_ERR(svn_ra_reparent(session, anchor, pool));
+      }
+  }
+
   if (SVN_IS_VALID_REVNUM(base_revision))
     {
       if (base_revision > head)
@@ -781,8 +785,13 @@ execute(const apr_array_header_t *actions,
       head = base_revision;
     }
 
+  memset(&root, 0, sizeof(root));
   root.children = apr_hash_make(pool);
   root.operation = OP_OPEN;
+  root.kind = svn_node_dir; /* For setting properties */
+  root.prop_mods = apr_hash_make(pool);
+  root.prop_dels = apr_array_make(pool, 1, sizeof(const char *));
+
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
@@ -845,11 +854,17 @@ execute(const apr_array_header_t *actions,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
   SVN_ERR(editor->open_root(editor_baton, head, pool, &root.baton));
-  err = drive(&root, head, editor, pool);
+  err = change_props(editor, root.baton, &root, pool);
+  if (!err)
+    err = drive(&root, head, editor, pool);
+  if (!err)
+    err = editor->close_directory(root.baton, pool);
   if (!err)
     err = editor->close_edit(editor_baton, pool);
+
   if (err)
-    svn_error_clear(editor->abort_edit(editor_baton, pool));
+    err = svn_error_compose_create(err,
+                                   editor->abort_edit(editor_baton, pool));
 
   return err;
 }
@@ -861,11 +876,8 @@ read_propvalue_file(const svn_string_t **value_p,
 {
   svn_stringbuf_t *value;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
-  apr_file_t *f;
 
-  SVN_ERR(svn_io_file_open(&f, filename, APR_READ | APR_BINARY | APR_BUFFERED,
-                           APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_stringbuf_from_aprfile(&value, f, scratch_pool));
+  SVN_ERR(svn_stringbuf_from_file2(&value, filename, scratch_pool));
   *value_p = svn_string_create_from_buf(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
@@ -1133,7 +1145,7 @@ main(int argc, const char **argv)
     {
       int j, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
-      struct action *action = apr_palloc(pool, sizeof(*action));
+      struct action *action = apr_pcalloc(pool, sizeof(*action));
 
       /* First, parse the action. */
       if (! strcmp(action_string, "mv"))
@@ -1195,8 +1207,8 @@ main(int argc, const char **argv)
       if (action->action == ACTION_PUT)
         {
           action->path[1] =
-            svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                  const char *), pool);
+            svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                    const char *), pool);
           if (++i == action_args->nelts)
             insufficient(pool);
         }
@@ -1226,8 +1238,8 @@ main(int argc, const char **argv)
           else
             {
               const char *propval_file =
-                svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                      const char *), pool);
+                svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                        const char *), pool);
 
               if (++i == action_args->nelts)
                 insufficient(pool);
@@ -1291,16 +1303,19 @@ main(int argc, const char **argv)
           url = sanitize_url(url, pool);
           action->path[j] = url;
 
-          /* The cp source could be the anchor, but the other URLs should be
-             children of the anchor. */
-          if (! (action->action == ACTION_CP && j == 0))
+          /* The first URL arguments to 'cp', 'pd', 'ps' could be the anchor,
+             but the other URLs should be children of the anchor. */
+          if (! (action->action == ACTION_CP && j == 0)
+              && action->action != ACTION_PROPDEL
+              && action->action != ACTION_PROPSET
+              && action->action != ACTION_PROPSETF)
             url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
           else
             anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
 
-          if ((++i == action_args->nelts) && (j >= num_url_args))
+          if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             insufficient(pool);
         }
       APR_ARRAY_PUSH(actions, struct action *) = action;

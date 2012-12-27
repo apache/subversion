@@ -1524,17 +1524,42 @@ svn_client_switch(svn_revnum_t *result_rev,
  * behaviour only when recursing into an already versioned directory with @a
  * force.)
  *
+ * If @a no_autoprops is TRUE, don't set any autoprops on added files. If
+ * @a no_autoprops is FALSE then all added files have autprops set as per
+ * the auto-props list in @a ctx->config and the value of any
+ * @c SVN_PROP_INHERITABLE_AUTO_PROPS properties inherited by the nearest
+ * parents of @a path which are already under version control.
+ *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
  * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENT.
+ *
+ * @a scratch_pool is used for temporary allocations only.
  *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert2().
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_add5(const char *path,
+                svn_depth_t depth,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t no_autoprops,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_add3(), but with @a no_autoprops always set to
+ * FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add4(const char *path,
                 svn_depth_t depth,
@@ -1852,7 +1877,7 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * actions: #svn_wc_notify_commit_added,
  * #svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a pool for any temporary allocation.
+ * Use @a scratch_pool for any temporary allocation.
  *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
@@ -1879,6 +1904,13 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * if the target is part of a WC the import ignores any existing
  * properties.)
  *
+ * If @a no_autoprops is TRUE, don't set any autoprops on imported files. If
+ * @a no_autoprops is FALSE then all imported files have autprops set as per
+ * the auto-props list in @a ctx->config and the value of any
+ * @c SVN_PROP_INHERITABLE_AUTO_PROPS properties inherited by and explicitly set
+ * on @a url if @a url is already under versioned control, or the nearest parents
+ * of @a path which are already under version control if not.
+ *
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
@@ -1897,6 +1929,7 @@ svn_client_import5(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t no_autoprops,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
                    svn_client_import_filter_func_t filter_callback,
@@ -1908,7 +1941,7 @@ svn_client_import5(const char *path,
 
 /**
  * Similar to svn_client_import5(), but without support for an optional
- * @a filter_callback.
+ * @a filter_callback and @a no_autoprops always set to FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
