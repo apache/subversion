@@ -348,14 +348,15 @@ add_file(const char *local_abspath,
             {
               /* Don't leave the job half-done. If we fail to set a property,
                * (try to) un-add the file. */
-              svn_error_clear(svn_wc_revert4(ctx->wc_ctx,
+              return svn_error_compose_create(
+                              err,
+                              svn_wc_revert4(ctx->wc_ctx,
                                              local_abspath,
                                              svn_depth_empty,
                                              FALSE /* use_commit_times */,
                                              NULL /* changelists */,
                                              NULL, NULL, NULL, NULL,
                                              pool));
-              return svn_error_trace(err);
             }
         }
     }
@@ -701,6 +702,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   svn_boolean_t use_autoprops;
   collect_auto_props_baton_t autoprops_baton;
   svn_error_t *err = NULL;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -708,6 +710,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   *autoprops = apr_hash_make(result_pool);
   autoprops_baton.result_pool = result_pool;
   autoprops_baton.autoprops = *autoprops;
+  
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
     config.  This is our starting set auto-props, which may be overriden
@@ -729,7 +732,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
   /* If PATH_OR_URL is a WC path, then it might be unversioned, in which case
      we find it's nearest versioned parent. */
-  while (err == NULL)
+  do
     {
       err = svn_client_propget5(&props, &inherited_config_auto_props,
                                 SVN_PROP_INHERITABLE_AUTO_PROPS, path_or_url,
@@ -750,6 +753,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
           break;
         }
     }
+  while (err == NULL);
 
   /* Stash any explicit PROPS for PARENT_PATH into the inherited props array,
      since these are actually inherited props for LOCAL_ABSPATH. */
@@ -774,7 +778,6 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
       apr_hash_index_t *hi;
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_config_auto_props, i, svn_prop_inherited_item_t *);
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, elt->prop_hash);
            hi;
@@ -828,9 +831,11 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
               if (*ch == '\n')
                 ch++;
             }
-          svn_pool_destroy(iterpool);
         }
     }
+
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
