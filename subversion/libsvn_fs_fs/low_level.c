@@ -46,10 +46,10 @@
  * Note that REV is only used to construct nicer error objects.
  */
 svn_error_t *
-parse_revision_trailer(apr_off_t *root_offset,
-                       apr_off_t *changes_offset,
-                       svn_stringbuf_t *trailer,
-                       svn_revnum_t rev)
+svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
+                                  apr_off_t *changes_offset,
+                                  svn_stringbuf_t *trailer,
+                                  svn_revnum_t rev)
 {
   int i, num_bytes;
   const char *str;
@@ -128,9 +128,9 @@ parse_revision_trailer(apr_off_t *root_offset,
  * trailer.  Allocate it in POOL.
  */
 svn_stringbuf_t *
-unparse_revision_trailer(apr_off_t root_offset,
-                         apr_off_t changes_offset,
-                         apr_pool_t *pool)
+svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
+                                    apr_off_t changes_offset,
+                                    apr_pool_t *pool)
 {
   return svn_stringbuf_createf(pool,
                                "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
@@ -142,7 +142,7 @@ unparse_revision_trailer(apr_off_t root_offset,
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
    POOL. */
-svn_error_t *
+static svn_error_t *
 read_header_block(apr_hash_t **headers,
                   svn_stream_t *stream,
                   apr_pool_t *pool)
@@ -207,15 +207,14 @@ read_header_block(apr_hash_t **headers,
    expected except the "-1" revision number for a mutable
    representation.  Allocate *REP_P in POOL. */
 svn_error_t *
-read_rep_offsets_body(representation_t **rep_p,
-                      char *string,
-                      const char *txn_id,
-                      svn_boolean_t mutable_rep_truncated,
-                      apr_pool_t *pool)
+svn_fs_fs__parse_representation(representation_t **rep_p,
+                                svn_stringbuf_t *text,
+                                apr_pool_t *pool)
 {
   representation_t *rep;
   char *str;
   apr_int64_t val;
+  char *string = text->data;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -227,17 +226,17 @@ read_rep_offsets_body(representation_t **rep_p,
 
 
   rep->revision = SVN_STR_TO_REV(str);
-  if (rep->revision == SVN_INVALID_REVNUM)
-    {
-      rep->txn_id = txn_id;
-      if (mutable_rep_truncated)
-        return SVN_NO_ERROR;
-    }
 
+  /* while in transactions, it is legal to simply write "-1" */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
+    {
+      if (rep->revision == SVN_INVALID_REVNUM)
+        return SVN_NO_ERROR;
+    
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Malformed text representation offset line in node-rev"));
+    }
 
   SVN_ERR(svn_cstring_atoi64(&val, str));
   rep->offset = (apr_off_t)val;
@@ -293,23 +292,16 @@ read_rep_offsets_body(representation_t **rep_p,
 
 /* Wrap read_rep_offsets_body(), extracting its TXN_ID from our NODEREV_ID,
    and adding an error message. */
-svn_error_t *
+static svn_error_t *
 read_rep_offsets(representation_t **rep_p,
                  char *string,
                  const svn_fs_id_t *noderev_id,
-                 svn_boolean_t mutable_rep_truncated,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
-  const char *txn_id;
-
-  if (noderev_id)
-    txn_id = svn_fs_fs__id_txn_id(noderev_id);
-  else
-    txn_id = NULL;
-
-  err = read_rep_offsets_body(rep_p, string, txn_id, mutable_rep_truncated,
-                              pool);
+  svn_error_t *err
+    = svn_fs_fs__parse_representation(rep_p,
+                                      svn_stringbuf_create_wrap(string, pool),
+                                      pool);
   if (err)
     {
       const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(noderev_id, pool);
@@ -321,8 +313,12 @@ read_rep_offsets(representation_t **rep_p,
 
       return svn_error_quick_wrap(err, where);
     }
-  else
-    return SVN_NO_ERROR;
+
+  if ((*rep_p)->revision == SVN_INVALID_REVNUM)
+    if (noderev_id)
+      (*rep_p)->txn_id = svn_fs_fs__id_txn_id(noderev_id);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -376,7 +372,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               noderev->id, TRUE, pool));
+                               noderev->id, pool));
     }
 
   /* Get the data location. */
@@ -384,8 +380,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               noderev->id,
-                               (noderev->kind == svn_node_dir), pool));
+                               noderev->id, pool));
     }
 
   /* Get the created path. */
@@ -484,15 +479,15 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
    and only a "-1" revision number will be given for a mutable rep.
    If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
    Perform the allocation from POOL.  */
-const char *
-representation_string(representation_t *rep,
-                      int format,
-                      svn_boolean_t mutable_rep_truncated,
-                      svn_boolean_t may_be_corrupt,
-                      apr_pool_t *pool)
+svn_stringbuf_t *
+svn_fs_fs__unparse_representation(representation_t *rep,
+                                  int format,
+                                  svn_boolean_t mutable_rep_truncated,
+                                  svn_boolean_t may_be_corrupt,
+                                  apr_pool_t *pool)
 {
   if (rep->txn_id && mutable_rep_truncated)
-    return "-1";
+    return svn_stringbuf_ncreate("-1", 2, pool);
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
   ((may_be_corrupt == FALSE || (checksum) != NULL)     \
@@ -500,19 +495,21 @@ representation_string(representation_t *rep,
    : "(null)")
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
-    return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s",
-                        rep->revision, rep->offset, rep->size,
-                        rep->expanded_size,
-                        DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
+    return svn_stringbuf_createf
+            (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+             " %" SVN_FILESIZE_T_FMT " %s",
+             rep->revision, rep->offset, rep->size,
+             rep->expanded_size,
+             DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
 
-  return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                      " %" SVN_FILESIZE_T_FMT " %s %s %s",
-                      rep->revision, rep->offset, rep->size,
-                      rep->expanded_size,
-                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
-                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
-                      rep->uniquifier);
+  return svn_stringbuf_createf
+          (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+           " %" SVN_FILESIZE_T_FMT " %s %s %s",
+           rep->revision, rep->offset, rep->size,
+           rep->expanded_size,
+           DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
+           DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
+           rep->uniquifier);
 
 #undef DISPLAY_MAYBE_NULL_CHECKSUM
 
@@ -544,17 +541,18 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 
   if (noderev->data_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TEXT ": %s\n",
-                              representation_string(noderev->data_rep,
-                                                    format,
-                                                    (noderev->kind
-                                                     == svn_node_dir),
-                                                    FALSE,
-                                                    pool)));
+                              svn_fs_fs__unparse_representation
+                                (noderev->data_rep,
+                                 format,
+                                 noderev->kind == svn_node_dir,
+                                 FALSE,
+                                 pool)->data));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
-                              representation_string(noderev->prop_rep, format,
-                                                    TRUE, FALSE, pool)));
+                              svn_fs_fs__unparse_representation
+                                (noderev->prop_rep, format,
+                                 TRUE, FALSE, pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
@@ -1033,11 +1031,8 @@ get_root_changes_offset(apr_off_t *root_offset,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t offset;
   apr_off_t rev_offset;
-  char buf[64];
-  int i, num_bytes;
-  const char *str;
-  apr_size_t len;
   apr_seek_where_t seek_relative;
+  svn_stringbuf_t *trailer = svn_stringbuf_create_ensure(64, pool);
 
   /* Determine where to seek to in the file.
 
@@ -1069,78 +1064,25 @@ get_root_changes_offset(apr_off_t *root_offset,
      will never be longer than 64 characters. */
   SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
 
-  offset -= sizeof(buf);
+  trailer->len = trailer->blocksize-1;
+  offset -= trailer->len;
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   /* Read in this last block, from which we will identify the last line. */
-  len = sizeof(buf);
-  SVN_ERR(svn_io_file_read(rev_file, buf, &len, pool));
+  SVN_ERR(svn_io_file_read(rev_file, trailer->data, &trailer->len, pool));
+  trailer->data[trailer->len] = 0;
 
-  /* This cast should be safe since the maximum amount read, 64, will
-     never be bigger than the size of an int. */
-  num_bytes = (int) len;
+  /* Parse the last line. */
+  SVN_ERR(svn_fs_fs__parse_revision_trailer(root_offset,
+                                            changes_offset,
+                                            trailer,
+                                            rev));
 
-  /* The last byte should be a newline. */
-  if (buf[num_bytes - 1] != '\n')
-    {
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Revision file (r%ld) lacks trailing newline"),
-                               rev);
-    }
-
-  /* Look for the next previous newline. */
-  for (i = num_bytes - 2; i >= 0; i--)
-    {
-      if (buf[i] == '\n')
-        break;
-    }
-
-  if (i < 0)
-    {
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Final line in revision file (r%ld) longer "
-                                 "than 64 characters"),
-                               rev);
-    }
-
-  i++;
-  str = &buf[i];
-
-  /* find the next space */
-  for ( ; i < (num_bytes - 2) ; i++)
-    if (buf[i] == ' ')
-      break;
-
-  if (i == (num_bytes - 2))
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Final line in revision file r%ld missing space"),
-                             rev);
-
+  /* return absolute offsets */
   if (root_offset)
-    {
-      apr_int64_t val;
-
-      buf[i] = '\0';
-      SVN_ERR(svn_cstring_atoi64(&val, str));
-      *root_offset = rev_offset + (apr_off_t)val;
-    }
-
-  i++;
-  str = &buf[i];
-
-  /* find the next newline */
-  for ( ; i < num_bytes; i++)
-    if (buf[i] == '\n')
-      break;
-
+    *root_offset += rev_offset;
   if (changes_offset)
-    {
-      apr_int64_t val;
-
-      buf[i] = '\0';
-      SVN_ERR(svn_cstring_atoi64(&val, str));
-      *changes_offset = rev_offset + (apr_off_t)val;
-    }
+    *changes_offset += rev_offset;
 
   return SVN_NO_ERROR;
 }

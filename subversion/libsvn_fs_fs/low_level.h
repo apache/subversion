@@ -65,56 +65,45 @@
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev
  * in *ROOT_OFFSET and the offset of the changes list in *CHANGES_OFFSET.
- * All offsets are relative to the revision's start offset.
+ * All offsets are relative to the revision's start offset.  ROOT_OFFSET
+ * and / or CHANGES_OFFSET may be NULL.
  * 
  * Note that REV is only used to construct nicer error objects.
  */
 svn_error_t *
-parse_revision_trailer(apr_off_t *root_offset,
-                       apr_off_t *changes_offset,
-                       svn_stringbuf_t *trailer,
-                       svn_revnum_t rev);
+svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
+                                  apr_off_t *changes_offset,
+                                  svn_stringbuf_t *trailer,
+                                  svn_revnum_t rev);
 
 /* Given the offset of the root noderev in ROOT_OFFSET and the offset of
  * the changes list in CHANGES_OFFSET,  return the corresponding revision's
  * trailer.  Allocate it in POOL.
  */
 svn_stringbuf_t *
-unparse_revision_trailer(apr_off_t root_offset,
-                         apr_off_t changes_offset,
-                         apr_pool_t *pool);
+svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
+                                    apr_off_t changes_offset,
+                                    apr_pool_t *pool);
 
-/* Given a revision file FILE that has been pre-positioned at the
-   beginning of a Node-Rev header block, read in that header block and
-   store it in the apr_hash_t HEADERS.  All allocations will be from
-   POOL. */
+/* Parse the description of a representation from TEXT and store it
+   into *REP_P.  Allocate *REP_P in POOL. */
 svn_error_t *
-read_header_block(apr_hash_t **headers,
-                  svn_stream_t *stream,
-                  apr_pool_t *pool);
+svn_fs_fs__parse_representation(representation_t **rep_p,
+                                svn_stringbuf_t *text,
+                                apr_pool_t *pool);
 
-/* Parse the description of a representation from STRING and store it
-   into *REP_P.  If the representation is mutable (the revision is
-   given as -1), then use TXN_ID for the representation's txn_id
-   field.  If MUTABLE_REP_TRUNCATED is true, then this representation
-   is for property or directory contents, and no information will be
-   expected except the "-1" revision number for a mutable
-   representation.  Allocate *REP_P in POOL. */
-svn_error_t *
-read_rep_offsets_body(representation_t **rep_p,
-                      char *string,
-                      const char *txn_id,
-                      svn_boolean_t mutable_rep_truncated,
-                      apr_pool_t *pool);
-
-/* Wrap read_rep_offsets_body(), extracting its TXN_ID from our NODEREV_ID,
-   and adding an error message. */
-svn_error_t *
-read_rep_offsets(representation_t **rep_p,
-                 char *string,
-                 const svn_fs_id_t *noderev_id,
-                 svn_boolean_t mutable_rep_truncated,
-                 apr_pool_t *pool);
+/* Return a formatted string, compatible with filesystem format FORMAT,
+   that represents the location of representation REP.  If
+   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
+   and only a "-1" revision number will be given for a mutable rep.
+   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
+   Perform the allocation from POOL.  */
+svn_stringbuf_t *
+svn_fs_fs__unparse_representation(representation_t *rep,
+                                  int format,
+                                  svn_boolean_t mutable_rep_truncated,
+                                  svn_boolean_t may_be_corrupt,
+                                  apr_pool_t *pool);
 
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if
@@ -132,19 +121,6 @@ svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
                         apr_pool_t *pool);
-
-/* Return a formatted string, compatible with filesystem format FORMAT,
-   that represents the location of representation REP.  If
-   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
-   and only a "-1" revision number will be given for a mutable rep.
-   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
-   Perform the allocation from POOL.  */
-const char *
-representation_string(representation_t *rep,
-                      int format,
-                      svn_boolean_t mutable_rep_truncated,
-                      svn_boolean_t may_be_corrupt,
-                      apr_pool_t *pool);
 
 /* This structure is used to hold the information associated with a
    REP line. */

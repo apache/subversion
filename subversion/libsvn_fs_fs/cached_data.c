@@ -22,6 +22,8 @@
 
 #include "cached_data.h"
 
+#include <assert.h>
+
 #include "svn_hash.h"
 #include "svn_ctype.h"
 
@@ -270,40 +272,21 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
                     apr_off_t offset,
                     apr_pool_t *pool)
 {
-  svn_fs_id_t *id;
-  apr_hash_t *headers;
-  const char *node_id_str;
+  node_revision_t *noderev;
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev,
+                                  svn_stream_from_aprfile2(rev_file, TRUE,
+                                                           pool),
+                                  pool));
 
-  SVN_ERR(read_header_block(&headers,
-                            svn_stream_from_aprfile2(rev_file, TRUE, pool),
-                            pool));
+  /* noderev->id is const, get rid of that */
+  *id_p = svn_fs_fs__id_copy(noderev->id, pool);
 
-  /* In error messages, the offset is relative to the pack file,
-     not to the rev file. */
-
-  node_id_str = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
-
-  if (node_id_str == NULL)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Missing node-id in node-rev at r%ld "
-                             "(offset %s)"),
-                             rev,
-                             apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
-
-  id = svn_fs_fs__id_parse(node_id_str, strlen(node_id_str), pool);
-
-  if (id == NULL)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Corrupt node-id '%s' in node-rev at r%ld "
-                               "(offset %s)"),
-                             node_id_str, rev,
-                             apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
-
-  *id_p = id;
-
-  /* ### assert that the txn_id is REV/OFFSET ? */
+  /* assert that the txn_id is REV
+   * (asserting on offset would be harder because we the rev_offset is not
+   * known here) */
+  assert(svn_fs_fs__id_rev(*id_p) == rev);
 
   return SVN_NO_ERROR;
 }
@@ -478,8 +461,8 @@ create_rep_state(rep_state_t **rep_state,
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
                                rep
-                               ? representation_string(rep, ffd->format, TRUE,
-                                                       TRUE, pool)
+                               ? svn_fs_fs__unparse_representation
+                                   (rep, ffd->format, TRUE, TRUE, pool)->data
                                : "(null)");
     }
   /* ### Call representation_string() ? */

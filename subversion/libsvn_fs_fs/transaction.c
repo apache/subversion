@@ -560,12 +560,12 @@ store_sha1_rep_mapping(svn_fs_t *fs,
                                             svn_fs_fs__id_txn_id(noderev->id),
                                             noderev->data_rep->sha1_checksum,
                                             pool);
-      const char *rep_string = representation_string(noderev->data_rep,
-                                                     ffd->format,
-                                                     (noderev->kind
-                                                      == svn_node_dir),
-                                                     FALSE,
-                                                     pool);
+      svn_string_t *rep_string
+        = svn_fs_fs__unparse_representation(noderev->data_rep,
+                                            ffd->format,
+                                            (noderev->kind == svn_node_dir),
+                                            FALSE,
+                                            pool);
       SVN_ERR(svn_io_file_open(&rep_file, file_name,
                                APR_WRITE | APR_CREATE | APR_TRUNCATE
                                | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -1905,8 +1905,7 @@ get_shared_rep(representation_t **old_rep,
         {
           svn_stringbuf_t *rep_string;
           SVN_ERR(svn_stringbuf_from_file2(&rep_string, file_name, pool));
-          SVN_ERR(read_rep_offsets_body(old_rep, rep_string->data,
-                                        rep->txn_id, FALSE, pool));
+          SVN_ERR(svn_fs_fs__parse_representation(old_rep, rep_string, pool));
         }
     }
 
@@ -2790,7 +2789,7 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
   apr_off_t initial_offset, changed_path_offset;
-  char *buf;
+  svn_stringbuf_t *trailer;
   apr_hash_t *txnprops;
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
@@ -2836,11 +2835,12 @@ commit_body(void *baton, apr_pool_t *pool)
                                         cb->fs, cb->txn->id, pool));
 
   /* Write the final line. */
-  buf = apr_psprintf(pool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
-                     svn_fs_fs__id_offset(new_root_id),
-                     changed_path_offset);
-  SVN_ERR(svn_io_file_write_full(proto_file, buf, strlen(buf), NULL,
-                                 pool));
+  trailer = svn_fs_fs__unparse_revision_trailer
+              (svn_fs_fs__id_offset(new_root_id),
+               changed_path_offset,
+               pool);
+  SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
+                                 NULL, pool));
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
 

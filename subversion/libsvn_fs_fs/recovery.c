@@ -149,43 +149,39 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                      char *max_node_id, char *max_copy_id,
                      apr_pool_t *pool)
 {
-  apr_hash_t *headers;
-  char *value;
-  representation_t *data_rep;
   rep_args_t *ra;
   struct recover_read_from_file_baton baton;
   svn_stream_t *stream;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  node_revision_t *noderev;
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(read_header_block(&headers, svn_stream_from_aprfile2(rev_file, TRUE,
-                                                               pool),
-                            pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev,
+                                  svn_stream_from_aprfile2(rev_file, TRUE,
+                                                           pool),
+                                  pool));
 
   /* Check that this is a directory.  It should be. */
-  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
-  if (value == NULL || strcmp(value, KIND_DIR) != 0)
+  if (noderev->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a non-directory node"));
 
   /* Get the data location.  No data location indicates an empty directory. */
-  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
-  if (!value)
+  if (!noderev->data_rep)
     return SVN_NO_ERROR;
-  SVN_ERR(read_rep_offsets(&data_rep, value, NULL, FALSE, pool));
 
   /* If the directory's data representation wasn't changed in this revision,
      we've already scanned the directory's contents for noderevs, so we don't
      need to again.  This will occur if a property is changed on a directory
      without changing the directory's contents. */
-  if (data_rep->revision != rev)
+  if (noderev->data_rep->revision != rev)
     return SVN_NO_ERROR;
 
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
-  offset = data_rep->offset;
+  offset = noderev->data_rep->offset;
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
@@ -198,7 +194,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   /* Now create a stream that's allowed to read only as much data as is
      stored in the representation. */
   baton.pool = pool;
-  baton.remaining = (apr_size_t) data_rep->expanded_size;
+  baton.remaining = (apr_size_t) noderev->data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
