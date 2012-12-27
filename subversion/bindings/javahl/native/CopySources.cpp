@@ -143,10 +143,7 @@ CopySources::array(SVN::Pool &pool)
       // TODO: Default this to svn_opt_revision_undefined (or HEAD)
       Revision rev(jrev);
       src->revision = reinterpret_cast<const svn_opt_revision_t *>
-        (apr_palloc(p, sizeof(*src->revision)));
-      memcpy(const_cast<svn_opt_revision_t *>(src->revision),
-             rev.revision(),
-             sizeof(*src->revision));
+        (apr_pmemdup(p, rev.revision(), sizeof(*src->revision)));
       env->DeleteLocalRef(jrev);
 
       // Extract pegRevision from the copy source.
@@ -164,10 +161,7 @@ CopySources::array(SVN::Pool &pool)
 
       Revision pegRev(jPegRev, true);
       src->peg_revision = reinterpret_cast<const svn_opt_revision_t *>
-        (apr_palloc(p, sizeof(*src->peg_revision)));
-      memcpy(const_cast<svn_opt_revision_t *>(src->peg_revision),
-             pegRev.revision(),
-             sizeof(*src->peg_revision));
+        (apr_pmemdup(p, pegRev.revision(), sizeof(*src->peg_revision)));
       env->DeleteLocalRef(jPegRev);
 
       APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;

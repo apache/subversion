@@ -89,9 +89,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
     }
 
   // Allocate a Java byte array to read the data.
-  jbyteArray data = JNIUtil::makeJByteArray
-                       (reinterpret_cast<const signed char*>(buffer),
-                        static_cast<int>(*len));
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
