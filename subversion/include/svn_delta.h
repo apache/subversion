@@ -1290,7 +1290,8 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
 /** Callback function type for svn_delta_path_driver().
  *
  * The handler of this callback is given the callback baton @a
- * callback_baton, @a path, and the @a parent_baton which represents
+ * callback_baton, @a path which is a relpath relative to the
+ * root of the edit, and the @a parent_baton which represents
  * path's parent directory as created by the editor passed to
  * svn_delta_path_driver().
  *
@@ -1321,7 +1322,8 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  * @a callback_func and @a callback_baton to allow the caller to handle
  * the portion of the editor drive related to that path.
  *
- * Each path in @a paths is a const char *. The editor drive will be
+ * Each path in @a paths is a (const char *) relpath, relative
+ * to the root path of the @a edit. The editor drive will be
  * performed in the same order as @a paths. The paths should be sorted
  * using something like svn_sort_compare_paths to ensure that a depth-first
  * pattern is observed for directory/file baton creation. If @a sort_paths

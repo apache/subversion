@@ -140,8 +140,8 @@ load_ra_module(svn_ra__init_func_t *func,
     const char *compat_funcname;
     apr_status_t status;
 
-    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.0",
-                           ra_name, SVN_VER_MAJOR);
+    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.%d",
+                           ra_name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_ra_%s__init", ra_name);
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
 

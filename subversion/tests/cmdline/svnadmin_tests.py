@@ -79,9 +79,9 @@ def check_hotcopy_fsfs(src, dst):
       # Compare all files in this directory
       for src_file in src_files:
         # Exclude temporary files
-        if src_file == 'rev-prop-atomicsShm':
+        if src_file == 'rev-prop-atomics.shm':
           continue
-        if src_file == 'rev-prop-atomicsMutex':
+        if src_file == 'rev-prop-atomics.mutex':
           continue
 
         src_path = os.path.join(src_dirpath, src_file)

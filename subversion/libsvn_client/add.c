@@ -274,7 +274,7 @@ add_file(const char *local_abspath,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_hash_t* properties = NULL;
+  apr_hash_t *properties;
   apr_hash_index_t *hi;
   const char *mimetype;
   svn_node_kind_t kind;
@@ -290,6 +290,9 @@ add_file(const char *local_abspath,
   if (is_special)
     {
       mimetype = NULL;
+      properties = apr_hash_make(pool);
+      apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
+                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
     }
   else
     {
@@ -310,54 +313,42 @@ add_file(const char *local_abspath,
         }
 
       /* This may fail on write-only files:
-         we open them to estimate file type.
-         That's why we postpone the add until after this step. */
+         we open them to estimate file type. */
       SVN_ERR(svn_client__get_paths_auto_props(&properties, &mimetype,
                                                local_abspath, magic_cookie,
                                                file_autoprops, ctx, pool,
                                                pool));
     }
 
-  if (is_special)
-    /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_SPECIAL,
-                             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
+  /* loop through the hashtable and add the properties */
+  for (hi = apr_hash_first(pool, properties);
+       hi != NULL; hi = apr_hash_next(hi))
+    {
+      const char *pname = svn__apr_hash_index_key(hi);
+      const svn_string_t *pval = svn__apr_hash_index_val(hi);
+      svn_error_t *err;
+
+      /* It's probably best to pass 0 for force, so that if
+         the autoprops say to set some weird combination,
+         we just error and let the user sort it out. */
+      err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
                              svn_depth_empty, FALSE, NULL,
                              NULL, NULL /* cancellation */,
                              NULL, NULL /* notification */,
-                             pool));
-  else if (properties)
-    {
-      /* loop through the hashtable and add the properties */
-      for (hi = apr_hash_first(pool, properties);
-           hi != NULL; hi = apr_hash_next(hi))
+                             pool);
+      if (err)
         {
-          const char *pname = svn__apr_hash_index_key(hi);
-          const svn_string_t *pval = svn__apr_hash_index_val(hi);
-          svn_error_t *err;
-
-          /* It's probably best to pass 0 for force, so that if
-             the autoprops say to set some weird combination,
-             we just error and let the user sort it out. */
-          err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
-                                 svn_depth_empty, FALSE, NULL,
-                                 NULL, NULL /* cancellation */,
-                                 NULL, NULL /* notification */,
-                                 pool);
-          if (err)
-            {
-              /* Don't leave the job half-done. If we fail to set a property,
-               * (try to) un-add the file. */
-              return svn_error_compose_create(
-                              err,
-                              svn_wc_revert4(ctx->wc_ctx,
-                                             local_abspath,
-                                             svn_depth_empty,
-                                             FALSE /* use_commit_times */,
-                                             NULL /* changelists */,
-                                             NULL, NULL, NULL, NULL,
-                                             pool));
-            }
+          /* Don't leave the job half-done. If we fail to set a property,
+           * (try to) un-add the file. */
+          return svn_error_compose_create(
+                   err,
+                   svn_wc_revert4(ctx->wc_ctx,
+                                  local_abspath,
+                                  svn_depth_empty,
+                                  FALSE /* use_commit_times */,
+                                  NULL /* changelists */,
+                                  NULL, NULL, NULL, NULL,
+                                  pool));
         }
     }
 
@@ -381,20 +372,15 @@ add_file(const char *local_abspath,
  * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
  * addition, add will fail and return an error unless FORCE is TRUE.
  *
- * Files and directories that match ignore patterns will not be added unless
- * NO_IGNORE is TRUE.
- *
  * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
  * if necessary.
  *
- * If not NULL, *CONFIG_AUTOPROPS is a hash representing the config file and
+ * If not NULL, CONFIG_AUTOPROPS is a hash representing the config file and
  * svn:auto-props autoprops which apply to DIR_ABSPATH.  It maps
  * const char * file patterns to another hash which maps const char *
- * property names to const char *property values.  If *CONFIG_AUTOPROPS is
- * NULL and DIR_ABSPATH is unversioned, then this function will populate
- * *CONFIG_AUTOPROPS (allocated in RESULT_POOL) using DIR_ABSPATH's nearest
- * versioned parent to determine the svn:auto-props which DIR_ABSPATH
- * will inherit once added.
+ * property names to const char *property values.  If CONFIG_AUTOPROPS is
+ * NULL and the config file and svn:auto-props autoprops are required by this
+ * function, then such will be obtained.
  *
  * If IGNORES is not NULL, then it is an array of const char * ignore patterns
  * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
@@ -413,14 +399,12 @@ static svn_error_t *
 add_dir_recursive(const char *dir_abspath,
                   svn_depth_t depth,
                   svn_boolean_t force,
-                  svn_boolean_t no_ignore,
                   svn_boolean_t no_autoprops,
                   svn_magic__cookie_t *magic_cookie,
-                  apr_hash_t **config_autoprops,
+                  apr_hash_t *config_autoprops,
                   svn_boolean_t refresh_ignores,
                   apr_array_header_t *ignores,
                   svn_client_ctx_t *ctx,
-                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -428,7 +412,6 @@ add_dir_recursive(const char *dir_abspath,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   svn_boolean_t entry_exists = FALSE;
-  svn_boolean_t found_unversioned_root = FALSE;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (ctx->cancel_func)
@@ -438,8 +421,8 @@ add_dir_recursive(const char *dir_abspath,
 
   if (refresh_ignores)
     SVN_ERR(svn_client__get_all_ignores(&ignores, dir_abspath,
-                                        no_ignore, ctx, scratch_pool,
-                                        scratch_pool));
+                                        ctx, scratch_pool,
+                                        iterpool));
 
   /* Add this directory to revision control. */
   err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
@@ -458,20 +441,21 @@ add_dir_recursive(const char *dir_abspath,
         }
     }
 
-  /* For the root of any unversioned subtree, get some or all of the
-     following:
+  /* If DIR_ABSPATH is the root of an unversioned subtree then get the
+     following "autoprops":
 
        1) Explicit and inherited svn:auto-props properties on
           DIR_ABSPATH
-       2) Explicit and inherited svn:global-ignores properties on
-          DIR_ABSPATH
-       3) auto-props from the CTX->CONFIG hash */
-  if (!entry_exists && *config_autoprops == NULL)
+       2) auto-props from the CTX->CONFIG hash
+
+     Since this set of autoprops applies to all unversioned children of
+     DIR_ABSPATH, we will pass these along to any recursive calls to
+     add_dir_recursive() and calls to add_file() below.  Thus sparing
+     these callees from looking up the same information. */
+  if (!entry_exists && config_autoprops == NULL)
     {
-      SVN_ERR(svn_client__get_all_auto_props(config_autoprops, dir_abspath,
-                                             ctx, result_pool,
-                                             scratch_pool));
-      found_unversioned_root = TRUE;
+      SVN_ERR(svn_client__get_all_auto_props(&config_autoprops, dir_abspath,
+                                             ctx, scratch_pool, iterpool));
     }
 
   SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE, scratch_pool,
@@ -518,15 +502,15 @@ add_dir_recursive(const char *dir_abspath,
             refresh_ignores = FALSE;
 
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
-                                    force, no_ignore, no_autoprops,
+                                    force, no_autoprops,
                                     magic_cookie, config_autoprops,
                                     refresh_ignores, ignores, ctx,
-                                    iterpool, iterpool));
+                                    iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, magic_cookie, *config_autoprops,
+          err = add_file(abspath, magic_cookie, config_autoprops,
                          no_autoprops, ctx, iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
@@ -537,11 +521,6 @@ add_dir_recursive(const char *dir_abspath,
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(iterpool);
-
-  /* Reset CONFIG_AUTOPROPS if we just finished processing the root
-     of an unversioned subtree. */
-  if (found_unversioned_root)
-    *config_autoprops = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -737,7 +716,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
       err = svn_client_propget5(&props, &inherited_config_auto_props,
                                 SVN_PROP_INHERITABLE_AUTO_PROPS, path_or_url,
                                 &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                                scratch_pool, scratch_pool);
+                                scratch_pool, iterpool);
       if (err)
         {
           if (target_is_url || err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
@@ -746,7 +725,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
           svn_error_clear(err);
           err = NULL;
           SVN_ERR(find_existing_parent(&path_or_url, ctx, path_or_url,
-                                       scratch_pool, scratch_pool));
+                                       scratch_pool, iterpool));
         }
       else
         {
@@ -898,7 +877,6 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
 
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool)
@@ -922,7 +900,9 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                 scratch_pool, scratch_pool);
       if (err)
         {
-          if (err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+          /* Unversioned and deleted nodes don't have properties */
+          if (err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE
+              && err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
             return svn_error_trace(err);
 
           svn_error_clear(err);
@@ -955,11 +935,8 @@ svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
 
   /* Now that we are sure we have an existing parent, get the config ignore
      and the local ignore patterns... */
-  if (!no_ignore)
-    SVN_ERR(svn_wc_get_ignores2(ignores, ctx->wc_ctx, local_abspath,
-                                ctx->config, result_pool, scratch_pool));
-  else
-    *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
+  SVN_ERR(svn_wc_get_ignores2(ignores, ctx->wc_ctx, local_abspath,
+                              ctx->config, result_pool, scratch_pool));
 
   /* ...and add the inherited ignores to it. */
   for (i = 0; i < inherited_ignores->nelts; i++)
@@ -995,7 +972,6 @@ add(const char *local_abspath,
   svn_node_kind_t kind;
   svn_error_t *err;
   svn_magic__cookie_t *magic_cookie;
-  apr_hash_t *config_autoprops = NULL;
   apr_array_header_t *ignores = NULL;
 
   svn_magic__init(&magic_cookie, scratch_pool);
@@ -1046,12 +1022,12 @@ add(const char *local_abspath,
       /* We use add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(local_abspath, depth, force, no_ignore,
-                              no_autoprops, magic_cookie, &config_autoprops,
-                              TRUE, ignores, ctx, scratch_pool, scratch_pool);
+      err = add_dir_recursive(local_abspath, depth, force,
+                              no_autoprops, magic_cookie, NULL,
+                              !no_ignore, ignores, ctx, scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(local_abspath, magic_cookie, config_autoprops,
+    err = add_file(local_abspath, magic_cookie, NULL,
                    no_autoprops, ctx, scratch_pool);
   else if (kind == svn_node_none)
     {
@@ -1117,11 +1093,11 @@ svn_client_add5(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* See if we're being asked to add a wc-root.  That's typically not
-     okay, unless we're in "force" mode.  svn_wc__strictly_is_wc_root()
+     okay, unless we're in "force" mode.  svn_wc__is_wcroot()
      will return TRUE even if LOCAL_ABSPATH is a *symlink* to a working
      copy root, which is a scenario we want to treat differently.  */
-  err = svn_wc__strictly_is_wc_root(&is_wc_root, ctx->wc_ctx,
-                                    local_abspath, scratch_pool);
+  err = svn_wc__is_wcroot(&is_wc_root, ctx->wc_ctx, local_abspath,
+                          scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
@@ -1384,11 +1360,13 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver2(editor, edit_baton, targets, TRUE,
                                path_driver_cb_func, (void *)editor, pool);
+
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
+      return svn_error_compose_create(
+                err,
+                editor->abort_edit(edit_baton, pool));
     }
 
   /* Close the edit. */

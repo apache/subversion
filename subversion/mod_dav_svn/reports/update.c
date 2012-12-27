@@ -618,12 +618,8 @@ send_propchange(item_baton_t *b,
 {
   const char *qname;
 
-  /* Ensure that the property name is XML-safe.
-     apr_xml_quote_string() doesn't realloc if there is nothing to
-     quote, so dup the name, but only if necessary. */
-  qname = apr_xml_quote_string(b->pool, name, 1);
-  if (qname == name)
-    qname = apr_pstrdup(b->pool, name);
+  /* Ensure that the property name is XML-safe. */
+  qname = apr_xml_quote_string(pool, name, 1);
 
   if (value)
     {
@@ -1020,11 +1016,15 @@ dav_svn__update_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  /* If server configuration permits bulk updates (a report with props
-     and textdeltas inline, rather than placeholder tags that tell the
-     client to do further fetches), look to see if client requested as
-     much.  */
-  if (repos->bulk_updates)
+  /* SVNAllowBulkUpdates On/Prefer: server configuration permits bulk updates
+     (a report with props and textdeltas inline, rather than placeholder tags
+     that tell the client to do further fetches), look to see if client
+     requested as much.
+      
+     SVNAllowBulkUpdates Off: no bulk updates allowed, force skelta mode.
+   */
+  if (repos->bulk_updates == CONF_BULKUPD_ON ||
+      repos->bulk_updates == CONF_BULKUPD_PREFER)
     {
       apr_xml_attr *this_attr;
 

@@ -317,14 +317,18 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+/** Check whether LOCAL_ABSPATH has a parent directory that knows about its
+ * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ *
+ * Like svn_wc_is_wc_root2(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 
 /** Set @a *wcroot_abspath to the local abspath of the root of the
@@ -546,6 +550,10 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
  * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
  * @a local_abspath. If @a local_abspath was not deleted,
  * set @a *deleted_ancestor_abspath to @c NULL.
+ *
+ * A node is considered 'deleted' if it is deleted or moved-away, and is
+ * not replaced.
+ *
  * @a *deleted_ancestor_abspath is allocated in @a result_pool.
  * Use @a scratch_pool for all temporary allocations.
  */
@@ -883,9 +891,11 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
 
 /**
  * Set @a *iprops_paths to a hash mapping const char * absolute working
- * copy paths to the same for each path in the working copy at or below
- * @a local_abspath, limited by @a depth, that has cached inherited
- * properties for the base node of the path.  Allocate @a *iprop_paths
+ * copy paths to the nodes repository root relative path for each path
+ * in the working copy at or below @a local_abspath, limited by @a depth,
+ * that has cached inherited properties for the base node of the path.
+ *
+ * Allocate @a *iprop_paths
  * in @a result_pool.  Use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
@@ -1198,7 +1208,12 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
 /* Internal version of svn_wc_delete4(). It has one additional parameter,
  * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
- * delete operation is the delete-half of a move. */
+ * delete operation is the delete-half of a move.
+ *
+ * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
+ *     unversioned, svn_wc__delete_many() will continue whereas
+ *     svn_wc__delete_internal() will throw an error.
+ */
 svn_error_t *
 svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
@@ -1214,7 +1229,12 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
 
 /* Alternative version of svn_wc_delete4().
  * It can delete multiple TARGETS more efficiently (within a single sqlite
- * transaction per working copy), but lacks support for moves. */
+ * transaction per working copy), but lacks support for moves.
+ *
+ * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
+ *     unversioned, svn_wc__delete_many() will continue whereas
+ *     svn_wc__delete_internal() will throw an error.
+ */
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                     const apr_array_header_t *targets,
@@ -1574,7 +1594,11 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.
+ * then diff fully recursively. If @a depth is #svn_depth_unknown, then...
+ *
+ *   ### ... then the @a server_performs_filtering option is meaningful.
+ *   ### But what does this depth mean exactly? Something about 'ambient'
+ *   ### depth? How does it compare with depth 'infinity'?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -1601,9 +1625,28 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
-  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *
  *
  * @since New in 1.8.
  */

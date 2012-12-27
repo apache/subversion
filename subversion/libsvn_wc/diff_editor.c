@@ -170,7 +170,7 @@ get_pristine_file(const char **result_abspath,
   if (!use_base)
     {
       SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                            &checksum, NULL, NULL,
+                                            &checksum, NULL, NULL, NULL,
                                             db, local_abspath,
                                             scratch_pool, scratch_pool));
     }
@@ -178,7 +178,7 @@ get_pristine_file(const char **result_abspath,
     {
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, &checksum,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
@@ -557,7 +557,7 @@ file_diff(struct edit_baton *eb,
   if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -610,8 +610,8 @@ file_diff(struct edit_baton *eb,
       apr_hash_t *baseprops;
 
       /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
-      SVN_ERR(svn_wc__get_pristine_props(&baseprops, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+                                             scratch_pool, scratch_pool));
       if (baseprops)
         base_mimetype = get_prop_mimetype(baseprops);
       else
@@ -731,8 +731,8 @@ file_diff(struct edit_baton *eb,
                          || status == svn_wc__db_status_copied
                          || status == svn_wc__db_status_moved_here);
 
-          SVN_ERR(svn_wc__get_pristine_props(&baseprops, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
           /* baseprops will be NULL for added nodes */
           if (!baseprops)
@@ -984,8 +984,8 @@ report_wc_file_as_added(struct edit_baton *eb,
   emptyprops = apr_hash_make(scratch_pool);
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__get_pristine_props(&wcprops, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_read_pristine_props(&wcprops, db, local_abspath,
+                                           scratch_pool, scratch_pool));
   else
     SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
                                      scratch_pool, scratch_pool));
@@ -996,16 +996,21 @@ report_wc_file_as_added(struct edit_baton *eb,
 
 
   if (eb->use_text_base)
-    SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
-                              FALSE, scratch_pool, scratch_pool));
+    {
+      SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
+                                FALSE, scratch_pool, scratch_pool));
+      translated_file = source_file; /* No translation needed */
+    }
   else
-    source_file = local_abspath;
+    {
+      source_file = local_abspath;
 
-  SVN_ERR(svn_wc__internal_translated_file(
+      SVN_ERR(svn_wc__internal_translated_file(
            &translated_file, source_file, db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            eb->cancel_func, eb->cancel_baton,
            scratch_pool, scratch_pool));
+    }
 
   SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL,
                                     path,
@@ -1054,8 +1059,8 @@ report_wc_directory_as_added(struct edit_baton *eb,
                                         eb->changelist_hash, scratch_pool))
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__get_pristine_props(&wcprops, db, local_abspath,
-                                           scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_read_pristine_props(&wcprops, db, local_abspath,
+                                               scratch_pool, scratch_pool));
       else
         SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
                                          scratch_pool, scratch_pool));
@@ -1227,8 +1232,9 @@ delete_entry(const char *path,
           SVN_ERR(get_pristine_file(&textbase, db, local_abspath,
                                     eb->use_text_base, pool, pool));
 
-          SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
-                                             pool, pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&baseprops,
+                                                 eb->db, local_abspath,
+                                                 pool, pool));
           base_mimetype = get_prop_mimetype(baseprops);
 
           SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, path,
@@ -1349,9 +1355,10 @@ close_directory(void *dir_baton,
         {
           if (db->eb->use_text_base)
             {
-              SVN_ERR(svn_wc__get_pristine_props(&originalprops,
-                                                 eb->db, db->local_abspath,
-                                                 scratch_pool, scratch_pool));
+              SVN_ERR(svn_wc__db_read_pristine_props(&originalprops,
+                                                     eb->db, db->local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
             }
           else
             {
@@ -1362,9 +1369,9 @@ close_directory(void *dir_baton,
                                                scratch_pool, scratch_pool));
 
               /* Load the BASE and repository directory properties. */
-              SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                                 eb->db, db->local_abspath,
-                                                 scratch_pool, scratch_pool));
+              SVN_ERR(svn_wc__db_base_get_props(&base_props,
+                                                eb->db, db->local_abspath,
+                                                scratch_pool, scratch_pool));
 
               repos_props = apply_propchanges(base_props, db->propchanges);
 
@@ -1461,7 +1468,7 @@ open_file(const char *path,
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &fb->base_checksum, NULL,
-                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
 
@@ -1640,7 +1647,7 @@ close_file(void *file_baton,
                                          NULL, NULL, NULL, NULL,
                                          &pristine_checksum,
                                          NULL, NULL,
-                                         &had_props, NULL,
+                                         &had_props, NULL, NULL,
                                          db, fb->local_abspath,
                                          scratch_pool, scratch_pool));
 

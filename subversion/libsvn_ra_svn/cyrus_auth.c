@@ -179,7 +179,7 @@ svn_ra_svn__sasl_common_init(apr_pool_t *pool)
                  sasl_mutex_unlock_cb,
                  sasl_mutex_free_cb);
   free_mutexes = apr_array_make(sasl_pool, 0, sizeof(svn_mutex__t *));
-  return svn_mutex__init(&array_mutex, TRUE, sasl_pool);
+  SVN_ERR(svn_mutex__init(&array_mutex, TRUE, sasl_pool));
 
 #endif /* APR_HAS_THREADS */
 
@@ -871,12 +871,12 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
 
   /* The username callback. */
   callbacks[0].id = SASL_CB_AUTHNAME;
-  callbacks[0].proc = (void*)get_username_cb;
+  callbacks[0].proc = (int (*)(void))get_username_cb;
   callbacks[0].context = &cred_baton;
 
   /* The password callback. */
   callbacks[1].id = SASL_CB_PASS;
-  callbacks[1].proc = (void*)get_password_cb;
+  callbacks[1].proc = (int (*)(void))get_password_cb;
   callbacks[1].context = &cred_baton;
 
   /* Mark the end of the array. */

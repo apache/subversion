@@ -496,19 +496,6 @@ cleanup_edit_baton(void *edit_baton)
   return APR_SUCCESS;
 }
 
-/* An APR pool cleanup handler.  This is a child handler, it removes
-   the mail pool handler.
-   <stsp> mail pool?
-   <hwright> that's where the missing commit mails are going!  */
-static apr_status_t
-cleanup_edit_baton_child(void *edit_baton)
-{
-  struct edit_baton *eb = edit_baton;
-  apr_pool_cleanup_kill(eb->pool, eb, cleanup_edit_baton);
-  return APR_SUCCESS;
-}
-
-
 /* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
    If PATH and PB are NULL, this is the root directory of the edit; in this
    case, make the new dir baton in a subpool of EB->pool.
@@ -1200,7 +1187,7 @@ open_root(void *edit_baton,
                                        &db->old_repos_relpath, NULL, NULL,
                                        &db->changed_rev, &db->changed_date,
                                        &db->changed_author, &db->ambient_depth,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        eb->db, db->local_abspath,
                                        db->pool, pool));
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
@@ -1660,7 +1647,7 @@ delete_entry(const char *path,
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, &old_revision,
                                      &repos_relpath,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -2236,7 +2223,7 @@ open_directory(const char *path,
                                      &db->old_repos_relpath, NULL, NULL,
                                      &db->changed_rev, &db->changed_date,
                                      &db->changed_author, &db->ambient_depth,
-                                     NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, db->local_abspath,
                                      db->pool, pool));
 
@@ -2394,9 +2381,9 @@ close_directory(void *dir_baton,
   if (db->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                         eb->db, db->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&base_props,
+                                             eb->db, db->local_abspath,
+                                             scratch_pool, scratch_pool));
     }
   else if (!db->adding_dir)
     {
@@ -2502,15 +2489,10 @@ close_directory(void *dir_baton,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
-                                    svn_kind_dir,
                                     NULL /* use baseprops */,
                                     base_props,
                                     actual_props,
                                     regular_prop_changes,
-                                    TRUE /* base_merge */,
-                                    FALSE /* dry_run */,
-                                    eb->cancel_func,
-                                    eb->cancel_baton,
                                     db->pool,
                                     scratch_pool),
                 _("Couldn't do property merge"));
@@ -2563,7 +2545,7 @@ close_directory(void *dir_baton,
             /* ### We just check if there is some node in BASE at this path */
             err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
                                            eb->db, child_abspath,
                                            iterpool, iterpool);
 
@@ -3298,7 +3280,7 @@ open_file(const char *path,
                                      &fb->changed_rev, &fb->changed_date,
                                      &fb->changed_author, NULL,
                                      &fb->original_checksum, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
 
@@ -3975,6 +3957,7 @@ close_file(void *file_baton,
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
   const svn_checksum_t *new_checksum;
+  apr_array_header_t *iprops = NULL;
 
   if (fb->skip_this)
     {
@@ -4076,9 +4059,9 @@ close_file(void *file_baton,
   if (fb->add_existed)
     {
       /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
-                                         eb->db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_props(&current_base_props,
+                                             eb->db, fb->local_abspath,
+                                             scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
   else if (!fb->adding_file)
@@ -4116,14 +4099,10 @@ close_file(void *file_baton,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
-                                  svn_kind_file,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   current_base_props,
                                   current_actual_props,
                                   regular_prop_changes, /* propchanges */
-                                  TRUE /* base_merge */,
-                                  FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge). */
@@ -4251,14 +4230,10 @@ close_file(void *file_baton,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
-                                  svn_kind_file,
                                   NULL /* server_baseprops (not merging) */,
                                   current_base_props /* pristine_props */,
                                   fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
-                                  TRUE /* base_merge */,
-                                  FALSE /* dry_run */,
-                                  eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
 
@@ -4299,6 +4274,22 @@ close_file(void *file_baton,
                                         scratch_pool);
     }
 
+  /* Any inherited props to be set set for this base node? */
+  if (eb->wcroot_iprops)
+    {
+      iprops = apr_hash_get(eb->wcroot_iprops, fb->local_abspath,
+                            APR_HASH_KEY_STRING);
+
+      /* close_edit may also update iprops for switched nodes, catching
+         those for which close_directory is never called (e.g. a switch
+         with no changes).  So as a minor optimization we remove any
+         iprops from the hash so as not to set them again in
+         close_edit. */
+      if (iprops)
+        apr_hash_set(eb->wcroot_iprops, fb->local_abspath,
+                     APR_HASH_KEY_STRING, NULL);
+    }
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_relpath,
@@ -4317,6 +4308,7 @@ close_file(void *file_baton,
                                    (fb->add_existed && fb->adding_file),
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
+                                   iprops,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
                                    conflict_skel,
@@ -4458,7 +4450,7 @@ close_edit(void *edit_baton,
              have to worry about removing it. */
           err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
                                          eb->db, eb->target_abspath,
                                          scratch_pool, scratch_pool);
           if (err)
@@ -4615,7 +4607,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->ext_patterns             = preserved_exts;
 
   apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
-                            cleanup_edit_baton_child);
+                            apr_pool_cleanup_null);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -4656,7 +4648,7 @@ make_editor(svn_revnum_t *target_revision,
       err = svn_wc__db_base_get_info(&dir_status, &dir_kind, NULL,
                                      &dir_repos_relpath, NULL, NULL, NULL,
                                      NULL, NULL, &dir_depth, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL,
                                      db, eb->target_abspath,
                                      scratch_pool, scratch_pool);
 
@@ -4712,7 +4704,7 @@ make_editor(svn_revnum_t *target_revision,
                                                    NULL, &dir_repos_relpath,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, &dir_depth, NULL,
-                                                   NULL, NULL, NULL,
+                                                   NULL, NULL, NULL, NULL,
                                                    NULL,
                                                    db, child_abspath,
                                                    iterpool, iterpool));
@@ -4991,163 +4983,27 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
 
 
 svn_error_t *
-svn_wc__check_wc_root(svn_boolean_t *wc_root,
-                      svn_kind_t *kind,
-                      svn_boolean_t *switched,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath, *name;
-  const char *repos_relpath, *repos_root, *repos_uuid;
-  svn_wc__db_status_t status;
-  svn_kind_t my_kind;
-
-  if (!kind)
-    kind = &my_kind;
-
-  /* Initialize our return values to the most common (code-wise) values. */
-  *wc_root = TRUE;
-  if (switched)
-    *switched = FALSE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, &repos_relpath,
-                               &repos_root, &repos_uuid, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (repos_relpath == NULL)
-    {
-      /* If we inherit our URL, then we can't be a root, nor switched.  */
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
-    }
-  if (*kind != svn_kind_dir)
-    {
-      /* File/symlinks cannot be a root.  */
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_deleted)
-    {
-      *wc_root = FALSE;
-    }
-  else if (status == svn_wc__db_status_server_excluded
-           || status == svn_wc__db_status_excluded
-           || status == svn_wc__db_status_not_present)
-    {
-      return svn_error_createf(
-                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                    _("The node '%s' was not found."),
-                    svn_dirent_local_style(local_abspath, scratch_pool));
-    }
-  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-    return SVN_NO_ERROR;
-
-  if (!*wc_root && switched == NULL )
-    return SVN_NO_ERROR; /* No more info needed */
-
-  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
-
-  /* Check if the node is recorded in the parent */
-  if (*wc_root)
-    {
-      svn_boolean_t is_root;
-      SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
-
-      if (is_root)
-        {
-          /* We're not in the (versioned) parent directory's list of
-             children, so we must be the root of a distinct working copy.  */
-          return SVN_NO_ERROR;
-        }
-    }
-
-  {
-    const char *parent_repos_root;
-    const char *parent_repos_relpath;
-    const char *parent_repos_uuid;
-
-    SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
-                                       &parent_repos_root,
-                                       &parent_repos_uuid,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-
-    if (strcmp(repos_root, parent_repos_root) != 0
-        || strcmp(repos_uuid, parent_repos_uuid) != 0)
-      {
-        /* This should never happen (### until we get mixed-repos working
-           copies). If we're in the parent, then we should be from the
-           same repository. For this situation, just declare us the root
-           of a separate, unswitched working copy.  */
-        return SVN_NO_ERROR;
-      }
-
-    *wc_root = FALSE;
-
-    if (switched)
-      {
-        const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
-                                                        name, scratch_pool);
-
-        *switched = (strcmp(expected_relpath, repos_relpath) != 0);
-      }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__internal_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
-{
-  svn_boolean_t is_root;
-  svn_boolean_t is_switched;
-  svn_kind_t kind;
-  svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
-                              db, local_abspath, scratch_pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
-          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_trace(err);
-
-      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
-    }
-
-  *wc_root = is_root || is_switched;
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_wc__db_is_switched(is_wcroot,is_switched, kind,
+                                                wc_ctx->db, local_abspath,
+                                                scratch_pool));
 }
 
 svn_error_t *
-svn_wc_is_wc_root2(svn_boolean_t *wc_root,
-                   svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   apr_pool_t *scratch_pool)
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__internal_is_wc_root(wc_root, wc_ctx->db,
-                                                     local_abspath,
-                                                     scratch_pool));
-}
-
-svn_error_t*
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__db_is_wcroot(wc_root,
+  return svn_error_trace(svn_wc__db_is_wcroot(is_wcroot,
                                               wc_ctx->db,
                                               local_abspath,
                                               scratch_pool));
@@ -5181,9 +5037,9 @@ svn_wc_get_actual_target2(const char **anchor,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  err = svn_wc__check_wc_root(&is_wc_root, &kind, &is_switched,
-                              wc_ctx->db, local_abspath,
-                              scratch_pool);
+  err = svn_wc__db_is_switched(&is_wc_root, &is_switched, &kind,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool);
 
   if (err)
     {
@@ -5443,7 +5299,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
     /* If new contents were provided, then we do NOT want to record the
        file information. We assume the new contents do not match the
-       "proper" values for TRANSLATED_SIZE and LAST_MOD_TIME.  */
+       "proper" values for RECORDED_SIZE and RECORDED_TIME.  */
     record_fileinfo = (new_contents == NULL);
 
     /* Install the working copy file (with appropriate translation) from

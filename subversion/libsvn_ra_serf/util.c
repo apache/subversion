@@ -657,6 +657,10 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
+      /* Destroy original bucket since it content is already copied 
+         to spillbuf. */
+      serf_bucket_destroy(body_bkt);
+
       body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
                                                request_pool,
                                                scratch_pool);
@@ -718,7 +722,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
   
   assert(sess->pending_error == SVN_NO_ERROR);
 
@@ -751,14 +755,17 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
           err = SVN_NO_ERROR;
           status = 0;
 
-          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+          if (sess->timeout)
             {
-              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-            }
-          else
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                      _("Connection timed out"));
+              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+                {
+                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+                }
+              else 
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                          _("Connection timed out"));
+                }
             }
         }
       else
@@ -1903,10 +1910,12 @@ handle_response(serf_request_t *request,
   handler->conn->last_status_code = handler->sline.code;
 
   if (handler->sline.code == 405
+      || handler->sline.code == 408
       || handler->sline.code == 409
       || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
+         408 Request Timeout
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       serf_bucket_t *hdrs;

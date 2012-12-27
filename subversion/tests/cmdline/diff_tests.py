@@ -196,8 +196,14 @@ def make_diff_prop_added(pname, pval):
 
 def make_diff_prop_modified(pname, pval1, pval2):
   """Return a property diff for modification of property PNAME, old value
-     PVAL1, new value PVAL2.  PVAL is a single string with no embedded
-     newlines.  Return the result as a list of newline-terminated strings."""
+     PVAL1, new value PVAL2.
+
+     PVAL is a single string with no embedded newlines.  A newline at the
+     end is significant: without it, we add an extra line saying '\ No
+     newline at end of property'.
+
+     Return the result as a list of newline-terminated strings.
+  """
   return [
     "Modified: " + pname + "\n",
     "## -1 +1 ##\n",
@@ -4075,6 +4081,43 @@ def diff_properties_only(sbox):
                                      'diff', '--properties-only',
                                      '-r', 'PREV', 'iota')
 
+def diff_properties_no_newline(sbox):
+  "diff props; check no-newline-at-end messages"
+
+  sbox.build()
+  old_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  no_nl = "\\ No newline at end of property\n"
+  propchange_header = "Modified: p.*\n"
+
+  subtests = [
+    ('p1', 'val1',   'val2'  ),
+    ('p2', 'val1',   'val2\n'),
+    ('p3', 'val1\n', 'val2'  ),
+    ('p4', 'val1\n', 'val2\n'),
+  ]
+
+  # The "before" state.
+  for pname, old_val, new_val in subtests:
+    sbox.simple_propset(pname, old_val, 'iota')
+  sbox.simple_commit() # r2
+
+  # Test one change at a time. (Because, with multiple changes, the order
+  # may not be predictable.)
+  for pname, old_val, new_val in subtests:
+    expected_output = \
+      make_diff_header("iota", "revision 1", "working copy") + \
+      make_diff_prop_header("iota") + \
+      make_diff_prop_modified(pname, old_val, new_val)
+
+    sbox.simple_propset(pname, new_val, 'iota')
+    svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff')
+    svntest.actions.run_and_verify_svn(None, None, [], 'revert', 'iota')
+
+  os.chdir(old_cwd)
+
 ########################################################################
 #Run the tests
 
@@ -4146,6 +4189,7 @@ test_list = [ None,
               diff_deleted_url,
               diff_arbitrary_files_and_dirs,
               diff_properties_only,
+              diff_properties_no_newline,
               ]
 
 if __name__ == '__main__':

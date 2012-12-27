@@ -2617,8 +2617,8 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
   int i;
 
   /* Working copy root cannot be deleted, so never consider it empty. */
-  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wc_root, wc_ctx, local_abspath,
-                                      scratch_pool));
+  SVN_ERR(svn_wc__is_wcroot(&is_wc_root, wc_ctx, local_abspath,
+                            scratch_pool));
   if (is_wc_root)
     {
       *empty = FALSE;

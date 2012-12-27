@@ -2596,121 +2596,6 @@ is_parent_resource(const dav_resource *res1, const dav_resource *res2)
 }
 
 
-#if 0
-/* Given an apache request R and a ROOT_PATH to the svn location
-   block, set *KIND to the node-kind of the URI's associated
-   (revision, path) pair, if possible.
-
-   Public uris, baseline collections, version resources, and working
-   (non-baseline) resources all have associated (revision, path)
-   pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
-   will be returned.
-
-   If URI is something more abstract, then set *KIND to
-   svn_node_unknown.  This is true for baselines, working baselines,
-   version controled configurations, activities, histories, and other
-   private resources.
-*/
-static dav_error *
-resource_kind(request_rec *r,
-              const char *uri,
-              const char *root_path,
-              svn_node_kind_t *kind)
-{
-  dav_error *derr;
-  svn_error_t *serr;
-  dav_resource *resource;
-  svn_revnum_t base_rev;
-  svn_fs_root_t *base_rev_root;
-  char *saved_uri;
-
-  /* Temporarily insert the uri that the user actually wants us to
-     convert into a resource.  Typically, this is already r->uri, so
-     this is usually a no-op.  But sometimes the caller may pass in
-     the Destination: header uri.
-
-     ### WHAT WE REALLY WANT here is to refactor get_resource,
-     so that some alternate interface actually allows us to specify
-     the URI to process, i.e. not always process r->uri.
-  */
-  saved_uri = r->uri;
-  r->uri = apr_pstrdup(r->pool, uri);
-
-  /* parse the uri and prep the associated resource. */
-  derr = get_resource(r, root_path,
-                      /* ### I can't believe that every single
-                         parser ignores the LABEL and USE_CHECKED_IN
-                         args below!! */
-                      "ignored_label", 1,
-                      &resource);
-  /* Restore r back to normal. */
-  r->uri = saved_uri;
-
-  if (derr)
-    return derr;
-
-  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
-    {
-      /* Either a public URI or a bc.  In both cases, prep_regular()
-         has already set the 'exists' and 'collection' flags by
-         querying the appropriate revision root and path.  */
-      if (! resource->exists)
-        *kind = svn_node_none;
-      else
-        *kind = resource->collection ? svn_node_dir : svn_node_file;
-    }
-
-  else if (resource->type == DAV_RESOURCE_TYPE_VERSION)
-    {
-      if (resource->baselined)  /* bln */
-        *kind = svn_node_unknown;
-
-      else /* ver */
-        {
-          derr = fs_check_path(kind, resource->info->root.root,
-                               resource->info->repos_path, r->pool);
-          if (derr != NULL)
-            return derr;
-        }
-    }
-
-  else if (resource->type == DAV_RESOURCE_TYPE_WORKING)
-    {
-      if (resource->baselined) /* wbl */
-        *kind = svn_node_unknown;
-
-      else /* wrk */
-        {
-          /* don't call fs_check_path on the txn, but on the original
-             revision that the txn is based on. */
-          base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
-          serr = svn_fs_revision_root(&base_rev_root,
-                                      resource->info->repos->fs,
-                                      base_rev, r->pool);
-          if (serr)
-            return dav_svn__convert_err
-              (serr, HTTP_INTERNAL_SERVER_ERROR,
-               apr_psprintf(r->pool,
-                            "Could not open root of revision %ld",
-                            base_rev),
-               r->pool);
-
-          derr = fs_check_path(kind, base_rev_root,
-                               resource->info->repos_path, r->pool);
-          if (derr != NULL)
-            return derr;
-        }
-    }
-
-  else
-    /* act, his, vcc, or some other private resource */
-    *kind = svn_node_unknown;
-
-  return NULL;
-}
-#endif
-
-
 static dav_error *
 open_stream(const dav_resource *resource,
             dav_stream_mode mode,
@@ -2730,14 +2615,13 @@ open_stream(const dav_resource *resource,
         }
     }
 
-#if 1
+  /* ### TODO:  Can we support range writes someday? */
   if (mode == DAV_MODE_WRITE_SEEKABLE)
     {
       return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
                                 "Resource body writes cannot use ranges "
                                 "(at this time).");
     }
-#endif
 
   /* start building the stream structure */
   *stream = apr_pcalloc(resource->pool, sizeof(**stream));

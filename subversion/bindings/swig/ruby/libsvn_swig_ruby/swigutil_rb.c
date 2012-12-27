@@ -1219,7 +1219,7 @@ r2c_svn_string(VALUE value, void *ctx, apr_pool_t *pool)
 }
 
 void *
-svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
+svn_swig_rb_to_swig_type(VALUE value, const void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));

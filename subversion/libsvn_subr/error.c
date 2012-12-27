@@ -221,6 +221,8 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
                           new_msg);
 }
 
+/* Messages in tracing errors all point to this static string. */
+static const char error_tracing_link[] = "traced call";
 
 svn_error_t *
 svn_error__trace(const char *file, long line, svn_error_t *err)
@@ -235,8 +237,11 @@ svn_error__trace(const char *file, long line, svn_error_t *err)
   /* Only do the work when an error occurs.  */
   if (err)
     {
+      svn_error_t *trace;
       svn_error__locate(file, line);
-      return svn_error_quick_wrap(err, SVN_ERR__TRACED);
+      trace = make_error_internal(err->apr_err, err);
+      trace->message = error_tracing_link;
+      return trace;
     }
   return SVN_NO_ERROR;
 
@@ -250,7 +255,9 @@ svn_error_compose_create(svn_error_t *err1,
 {
   if (err1 && err2)
     {
-      svn_error_compose(err1, err2);
+      svn_error_compose(err1,
+                        svn_error_quick_wrap(err2,
+                                             _("Additional errors:")));
       return err1;
     }
   return err1 ? err1 : err2;
@@ -381,7 +388,7 @@ svn_error__is_tracing_link(svn_error_t *err)
      ### we add a boolean field to svn_error_t that's set only for
      ### these "placeholder error chain" items.  Not such a bad idea,
      ### really...  */
-  return (err && err->message && !strcmp(err->message, SVN_ERR__TRACED));
+  return (err && err->message && !strcmp(err->message, error_tracing_link));
 #else
   return FALSE;
 #endif

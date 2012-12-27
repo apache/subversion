@@ -1011,7 +1011,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
 
-/** Similar to svn_client_create_context but passes a NULL @a cfg_hash.
+/** Similar to svn_client_create_context2 but passes a NULL @a cfg_hash.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
@@ -2900,8 +2900,8 @@ svn_client_blame(const char *path_or_url,
  * errstream.  @a path_or_url1 and @a path_or_url2 can be either
  * working-copy paths or URLs.
  *
- * If @a relative_to_dir is not @c NULL, the @a original_path and
- * @a modified_path will have the @a relative_to_dir stripped from the
+ * If @a relative_to_dir is not @c NULL, the original path and
+ * modified path will have the @a relative_to_dir stripped from the
  * front of the respective paths.  If @a relative_to_dir is @c NULL,
  * paths will not be modified.  If @a relative_to_dir is not
  * @c NULL but @a relative_to_dir is not a parent path of the target,
@@ -4208,21 +4208,26 @@ svn_client_resolved(const char *path,
 
 /** Perform automatic conflict resolution on a working copy @a path.
  *
- * If @a depth is #svn_depth_empty, act only on @a path; if
- * #svn_depth_files, resolve @a path and its conflicted file
- * children (if any); if #svn_depth_immediates, resolve @a path and
- * all its immediate conflicted children (both files and directories,
- * if any); if #svn_depth_infinity, resolve @a path and every
- * conflicted file or directory anywhere beneath it.
- * Note that this operation will try to lock the parent directory of
- * @a path in order to be able to resolve tree-conflicts on @a path.
+ * If @a conflict_choice is
  *
- * If @a conflict_choice is #svn_wc_conflict_choose_base, resolve the
- * conflict with the old file contents; if
- * #svn_wc_conflict_choose_mine_full, use the original working contents;
- * if #svn_wc_conflict_choose_theirs_full, the new contents; and if
- * #svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status, which is the pre-1.5 behavior.
+ *   - #svn_wc_conflict_choose_base:
+ *     resolve the conflict with the old file contents
+ *
+ *   - #svn_wc_conflict_choose_mine_full:
+ *     use the original working contents
+ *
+ *   - #svn_wc_conflict_choose_theirs_full:
+ *     use the new contents
+ *
+ *   - #svn_wc_conflict_choose_merged:
+ *     don't change the contents at all, just remove the conflict
+ *     status, which is the pre-1.5 behavior.
+ *
+ *   - #svn_wc_conflict_choose_theirs_conflict
+ *     ###...
+ *
+ *   - #svn_wc_conflict_choose_mine_conflict
+ *     ###...
  *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
@@ -4231,6 +4236,16 @@ svn_client_resolved(const char *path,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * If @a depth is #svn_depth_empty, act only on @a path; if
+ * #svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if #svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if #svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
+ *
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * @since New in 1.5.
  */
@@ -5368,7 +5383,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** The type of function invoked by svn_client_list2() to report the details
+/** The type of function invoked by svn_client_list3() to report the details
  * of each directory entry being listed.
  *
  * @a baton is the baton that was passed to the caller.  @a path is the
@@ -5378,11 +5393,45 @@ svn_client_export(svn_revnum_t *result_rev,
  * the entry's lock, if it is locked and if lock information is being
  * reported by the caller; otherwise @a lock is NULL.  @a abs_path is the
  * repository path of the top node of the list operation; it is relative to
- * the repository root and begins with "/".  @a pool may be used for
- * temporary allocations.
+ * the repository root and begins with "/".
  *
- * @since New in 1.4.
+ * If svn_client_list3() was called with @a include_externals set to TRUE,
+ * @a external_parent_url and @a external_target will be set.
+ * @a external_parent_url is url of the directory which has the
+ * externals definitions. @a external_target is the target subdirectory of 
+ * externals definitions which is relative to the parent directory that holds 
+ * the external item.
+ *
+ * If external_parent_url and external_target are defined, the item being
+ * listed is part of the external described by external_parent_url and
+ * external_target. Else, the item is not part of any external.
+ * Moreover, we will never mix items which are part of separate
+ * externals, and will always finish listing an external before listing
+ * the next one.
+
+ * @a scratch_pool may be used for temporary allocations.
+ *
+ * @since New in 1.8.
  */
+typedef svn_error_t *(*svn_client_list_func2_t)(
+  void *baton,
+  const char *path,
+  const svn_dirent_t *dirent,
+  const svn_lock_t *lock,
+  const char *abs_path,
+  const char *external_parent_url,
+  const char *external_target,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to #svn_client_list_func2_t, but without any information about
+ * externals definitions.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *
+ * @since New in 1.4
+ *
+ * */
 typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
                                                const char *path,
                                                const svn_dirent_t *dirent,
@@ -5406,6 +5455,10 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
+ * If @a include_externals is TRUE, also list all external items 
+ * reached by recursion. @a depth value passed to the original list target
+ * applies for the externals also. 
+ *
  * Use @a pool for temporary allocations.
  *
  * Use authentication baton cached in @a ctx to authenticate against the
@@ -5422,8 +5475,30 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_list3(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_boolean_t include_externals,
+                 svn_client_list_func2_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/** Similar to svn_client_list3(), but with @a include_externals set to FALSE, 
+ * and using a #svn_client_list_func2_t as callback.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list2(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,

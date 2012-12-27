@@ -20,7 +20,7 @@ sub-tests it can run.  It has a standard interface:
 
 1.  If run with a numeric argument N, the program runs sub-test N.
 
-2.  If run with the argument `list', it will list the names of all sub-tests.
+2.  If run with the argument `--list', it will list the names of all sub-tests.
 
 3.  If run with no arguments, the program runs *all* sub-tests.
 
