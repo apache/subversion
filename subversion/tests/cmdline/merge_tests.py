@@ -7611,7 +7611,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Merge r8 from A/D/H to A_COPY_D/H at depth empty.  Since r8 affects only
-  # A_COPY/D/H itself, the resulting mergeinfo is inheritabled.  Commit this
+  # A_COPY/D/H itself, the resulting mergeinfo is inheritable.  Commit this
   # merge as r13.
   expected_output = wc.State(H_COPY_2_path, {
     ''    : Item(status=' U'),
