@@ -418,6 +418,17 @@ svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool)
   return svn_stringbuf_ncreate(str->data, str->len, pool);
 }
 
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool)
+{
+  svn_stringbuf_t *result = apr_palloc(pool, sizeof(*result));
+  result->pool = pool;
+  result->data = str;
+  result->len = strlen(str);
+  result->blocksize = result->len + 1;
+
+  return result;
+}
 
 svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
