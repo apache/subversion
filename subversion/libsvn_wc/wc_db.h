@@ -3027,9 +3027,11 @@ svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
    leaving any subtree additions and copies as-is.  This allows the
    base node tree to be removed. */
 svn_error_t *
-svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
+svn_wc__db_op_make_copy(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const svn_skel_t *conflicts,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool);
 
 /* Close the wc root LOCAL_ABSPATH and remove any per-directory
    handles associated with it. */
