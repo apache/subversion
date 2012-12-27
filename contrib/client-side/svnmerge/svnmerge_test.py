@@ -1139,7 +1139,7 @@ D    test3"""
 
     def testMergeAndRollbackEmptyRevisionRange(self):
         """Init svnmerge, modify source head, merge, rollback where no merge
-           occured."""
+           occurred."""
 
         # Initialize svnmerge
         self.svnmerge2(["init", self.test_repo_url + "/trunk"])
