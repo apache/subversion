@@ -94,7 +94,7 @@ struct clearctx_baton_t
 
 static apr_status_t clear_ctx_ptrs(void *ptr)
 {
-    clearctx_baton_t *bt = (clearctx_baton_t*)ptr;
+    clearctx_baton_t *bt = reinterpret_cast<clearctx_baton_t*>(ptr);
 
     /* Reset all values to those before overwriting by getContext. */
     *bt->ctx = *bt->backup;
@@ -116,9 +116,11 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
        Note that this allows creating a stack of context changes if
        the function is invoked multiple times with different pools.
      */
-    clearctx_baton_t *bt = (clearctx_baton_t *)apr_pcalloc(pool, sizeof(*bt));
+    clearctx_baton_t *bt =
+      reinterpret_cast<clearctx_baton_t *>(apr_pcalloc(pool, sizeof(*bt)));
     bt->ctx = ctx;
-    bt->backup = (svn_client_ctx_t*)apr_pmemdup(pool, ctx, sizeof(*ctx));
+    bt->backup =
+      reinterpret_cast<svn_client_ctx_t*>(apr_pmemdup(pool, ctx, sizeof(*ctx)));
     apr_pool_cleanup_register(in_pool.getPool(), bt, clear_ctx_ptrs,
                               clear_ctx_ptrs);
 

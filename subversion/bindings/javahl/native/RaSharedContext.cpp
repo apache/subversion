@@ -115,8 +115,8 @@ RaSharedContext::getAuthBaton(SVN::Pool &in_pool)
       return NULL;
     }
 
-  svn_config_t *config = (svn_config_t *) apr_hash_get(configData,
-      SVN_CONFIG_CATEGORY_CONFIG, APR_HASH_KEY_STRING);
+  svn_config_t *config = reinterpret_cast<svn_config_t *>(apr_hash_get(configData,
+      SVN_CONFIG_CATEGORY_CONFIG, APR_HASH_KEY_STRING));
 
   /* The whole list of registered providers */
   apr_array_header_t *providers;
