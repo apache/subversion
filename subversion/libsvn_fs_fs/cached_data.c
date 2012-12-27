@@ -346,7 +346,7 @@ typedef struct rep_state_t
 /* See create_rep_state, which wraps this and adds another error. */
 static svn_error_t *
 create_rep_state_body(rep_state_t **rep_state,
-                      rep_args_t **rep_args,
+                      svn_fs_fs__rep_header_t **rep_header,
                       apr_file_t **file_hint,
                       svn_revnum_t *rev_hint,
                       representation_t *rep,
@@ -355,7 +355,7 @@ create_rep_state_body(rep_state_t **rep_state,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
-  rep_args_t *ra;
+  svn_fs_fs__rep_header_t *rh;
   unsigned char buf[4];
 
   /* If the hint is
@@ -398,15 +398,17 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
 
-  SVN_ERR(read_rep_line(&ra, svn_stream_from_aprfile2(rs->file, TRUE, pool),
-                        pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&rh,
+                                     svn_stream_from_aprfile2(rs->file,
+                                                              TRUE, pool),
+                                     pool));
   SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
   rs->off = rs->start;
   rs->end = rs->start + rep->size;
   *rep_state = rs;
-  *rep_args = ra;
+  *rep_header = rh;
 
-  if (ra->is_delta == FALSE)
+  if (rh->is_delta == FALSE)
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
@@ -437,14 +439,14 @@ create_rep_state_body(rep_state_t **rep_state,
  */
 static svn_error_t *
 create_rep_state(rep_state_t **rep_state,
-                 rep_args_t **rep_args,
+                 svn_fs_fs__rep_header_t **rep_header,
                  apr_file_t **file_hint,
                  svn_revnum_t *rev_hint,
                  representation_t *rep,
                  svn_fs_t *fs,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = create_rep_state_body(rep_state, rep_args,
+  svn_error_t *err = create_rep_state_body(rep_state, rep_header,
                                            file_hint, rev_hint,
                                            rep, fs, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
@@ -475,10 +477,10 @@ svn_fs_fs__check_rep(representation_t *rep,
                      apr_pool_t *pool)
 {
   rep_state_t *rs;
-  rep_args_t *rep_args;
+  svn_fs_fs__rep_header_t *rep_header;
 
   /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs, pool));
+  SVN_ERR(create_rep_state(&rs, &rep_header, NULL, NULL, rep, fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -730,7 +732,7 @@ build_rep_list(apr_array_header_t **list,
 {
   representation_t rep;
   rep_state_t *rs = NULL;
-  rep_args_t *rep_args;
+  svn_fs_fs__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
   apr_file_t *last_file = NULL;
   svn_revnum_t last_revision;
@@ -743,7 +745,7 @@ build_rep_list(apr_array_header_t **list,
   *expanded_size = first_rep->expanded_size;
 
   /* for the top-level rep, we need the rep_args */
-  SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
+  SVN_ERR(create_rep_state(&rs, &rep_header, &last_file,
                            &last_revision, &rep, fs, pool));
 
   /* Unknown size or empty representation?
@@ -753,15 +755,15 @@ build_rep_list(apr_array_header_t **list,
      Please note that for all non-empty deltas have
      a 4-byte header _plus_ some data. */
   if (*expanded_size == 0)
-    if (! rep_args->is_delta || first_rep->size != 4)
+    if (! rep_header->is_delta || first_rep->size != 4)
       *expanded_size = first_rep->size;
 
   while (1)
     {
       /* fetch state, if that has not been done already */
       if (!rs)
-        SVN_ERR(create_rep_state(&rs, &rep_args, &last_file,
-                                &last_revision, &rep, fs, pool));
+        SVN_ERR(create_rep_state(&rs, &rep_header, &last_file,
+                                 &last_revision, &rep, fs, pool));
 
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
@@ -774,7 +776,7 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (rep_args->is_delta == FALSE)
+      if (rep_header->is_delta == FALSE)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
@@ -783,15 +785,15 @@ build_rep_list(apr_array_header_t **list,
 
       /* Push this rep onto the list.  If it's self-compressed, we're done. */
       APR_ARRAY_PUSH(*list, rep_state_t *) = rs;
-      if (rep_args->is_delta_vs_empty)
+      if (rep_header->is_delta_vs_empty)
         {
           *src_state = NULL;
           return SVN_NO_ERROR;
         }
 
-      rep.revision = rep_args->base_revision;
-      rep.offset = rep_args->base_offset;
-      rep.size = rep_args->base_length;
+      rep.revision = rep_header->base_revision;
+      rep.offset = rep_header->base_offset;
+      rep.size = rep_header->base_length;
       rep.txn_id = NULL;
 
       rs = NULL;
@@ -1324,16 +1326,16 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   if (source && source->data_rep && target->data_rep)
     {
       rep_state_t *rep_state;
-      rep_args_t *rep_args;
+      svn_fs_fs__rep_header_t *rep_header;
 
       /* Read target's base rep if any. */
-      SVN_ERR(create_rep_state(&rep_state, &rep_args, NULL, NULL,
+      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL, NULL,
                                target->data_rep, fs, pool));
       /* If that matches source, then use this delta as is. */
-      if (rep_args->is_delta
-          && (rep_args->is_delta_vs_empty
-              || (rep_args->base_revision == source->data_rep->revision
-                  && rep_args->base_offset == source->data_rep->offset)))
+      if (rep_header->is_delta
+          && (rep_header->is_delta_vs_empty
+              || (rep_header->base_revision == source->data_rep->revision
+                  && rep_header->base_offset == source->data_rep->offset)))
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));

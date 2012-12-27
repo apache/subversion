@@ -591,38 +591,31 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
    representation entry.  Return the parsed entry in *REP_ARGS_P.
    Perform all allocations in POOL. */
 svn_error_t *
-read_rep_line(rep_args_t **rep_args_p,
-              svn_stream_t *stream,
-              apr_pool_t *pool)
+svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
+                           svn_stream_t *stream,
+                           apr_pool_t *pool)
 {
   svn_stringbuf_t *buffer;
-  rep_args_t *rep_args;
   char *str, *last_str;
   apr_int64_t val;
   svn_boolean_t eol = FALSE;
 
   SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, pool));
 
-  rep_args = apr_pcalloc(pool, sizeof(*rep_args));
-  rep_args->is_delta = FALSE;
-
+  *header = apr_pcalloc(pool, sizeof(*header));
   if (strcmp(buffer->data, REP_PLAIN) == 0)
-    {
-      *rep_args_p = rep_args;
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   if (strcmp(buffer->data, REP_DELTA) == 0)
     {
       /* This is a delta against the empty stream. */
-      rep_args->is_delta = TRUE;
-      rep_args->is_delta_vs_empty = TRUE;
-      *rep_args_p = rep_args;
+      (*header)->is_delta = TRUE;
+      (*header)->is_delta_vs_empty = TRUE;
       return SVN_NO_ERROR;
     }
 
-  rep_args->is_delta = TRUE;
-  rep_args->is_delta_vs_empty = FALSE;
+  (*header)->is_delta = TRUE;
+  (*header)->is_delta_vs_empty = FALSE;
 
   /* We have hopefully a DELTA vs. a non-empty base revision. */
   last_str = buffer->data;
@@ -633,21 +626,20 @@ read_rep_line(rep_args_t **rep_args_p,
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
     goto error;
-  rep_args->base_revision = SVN_STR_TO_REV(str);
+  (*header)->base_revision = SVN_STR_TO_REV(str);
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep_args->base_offset = (apr_off_t)val;
+  (*header)->base_offset = (apr_off_t)val;
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep_args->base_length = (svn_filesize_t)val;
+  (*header)->base_length = (svn_filesize_t)val;
 
-  *rep_args_p = rep_args;
   return SVN_NO_ERROR;
 
  error:
@@ -656,29 +648,29 @@ read_rep_line(rep_args_t **rep_args_p,
 }
 
 svn_error_t *
-write_rep_line(rep_args_t *rep_args,
-               svn_stream_t *stream,
-               apr_pool_t *pool)
+svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
+                            svn_stream_t *stream,
+                            apr_pool_t *pool)
 {
-  const char *header;
+  const char *text;
   
-  if (rep_args->is_delta)
+  if (header->is_delta)
     {
-      header = REP_PLAIN "\n";
+      text = REP_PLAIN "\n";
     }
-  else if (rep_args->is_delta_vs_empty)
+  else if (header->is_delta_vs_empty)
     {
-      header = REP_DELTA "\n";
+      text = REP_DELTA "\n";
     }
   else
     {
-      header = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                            SVN_FILESIZE_T_FMT "\n",
-                            rep_args->base_revision, rep_args->base_offset,
-                            rep_args->base_length);
+      text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
+                          SVN_FILESIZE_T_FMT "\n",
+                          header->base_revision, header->base_offset,
+                          header->base_length);
     }
 
-  return svn_error_trace(svn_stream_puts(stream, header));
+  return svn_error_trace(svn_stream_puts(stream, text));
 }
 
 /* Read the next entry in the changes record from file FILE and store

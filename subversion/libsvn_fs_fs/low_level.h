@@ -105,6 +105,13 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   svn_boolean_t may_be_corrupt,
                                   apr_pool_t *pool);
 
+/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
+   allocated in POOL. */
+svn_error_t *
+svn_fs_fs__read_noderev(node_revision_t **noderev,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool);
+
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if
    INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
@@ -115,38 +122,45 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
-/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
-   allocated in POOL. */
-svn_error_t *
-svn_fs_fs__read_noderev(node_revision_t **noderev,
-                        svn_stream_t *stream,
-                        apr_pool_t *pool);
-
-/* This structure is used to hold the information associated with a
-   REP line. */
-typedef struct rep_args_t
+/* This structure is used to hold the information stored in a representation
+ * header. */
+typedef struct svn_fs_fs__rep_header_t
 {
+  /* if TRUE,  this is a DELTA rep, PLAIN otherwise */
   svn_boolean_t is_delta;
+
+  /* if IS_DELTA is TRUE, this flag indicates that there is no base rep,
+   * i.e. this rep is simply self-compressed.  Ignored for PLAIN reps
+   * but should be FALSE in that case. */
   svn_boolean_t is_delta_vs_empty;
 
+  /* if this rep is a delta against some other rep, that base rep can
+   * be found in this revision.  Should be 0 if there is no base rep. */
   svn_revnum_t base_revision;
+
+  /* if this rep is a delta against some other rep, that base rep can
+   * be found at this offset within the base rep's revision.  Should be 0
+   * if there is no base rep. */
   apr_off_t base_offset;
+
+  /* if this rep is a delta against some other rep, this is the (deltified)
+   * size of that base rep.  Should be 0 if there is no base rep. */
   svn_filesize_t base_length;
-} rep_args_t;
+} svn_fs_fs__rep_header_t;
 
 /* Read the next line from file FILE and parse it as a text
    representation entry.  Return the parsed entry in *REP_ARGS_P.
    Perform all allocations in POOL. */
 svn_error_t *
-read_rep_line(rep_args_t **rep_args_p,
-              svn_stream_t *stream,
-              apr_pool_t *pool);
+svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
+                           svn_stream_t *stream,
+                           apr_pool_t *pool);
 
+/* Write the representation HEADER to STREAM.  Use POOL for allocations. */
 svn_error_t *
-write_rep_line(rep_args_t *rep_args,
-               svn_stream_t *stream,
-               apr_pool_t *pool);
-
+svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
+                            svn_stream_t *stream,
+                            apr_pool_t *pool);
 
 /* Fetch all the changes from FILE and store them in *CHANGES.  Do all
    allocations in POOL. */

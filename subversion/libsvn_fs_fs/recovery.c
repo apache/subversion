@@ -149,7 +149,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                      char *max_node_id, char *max_copy_id,
                      apr_pool_t *pool)
 {
-  rep_args_t *ra;
+  svn_fs_fs__rep_header_t *header;
   struct recover_read_from_file_baton baton;
   svn_stream_t *stream;
   apr_hash_t *entries;
@@ -185,8 +185,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(read_rep_line(&ra, baton.stream, pool));
-  if (ra->is_delta)
+  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
+  if (header->is_delta)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
                               "representation"));
