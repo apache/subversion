@@ -560,7 +560,7 @@ store_sha1_rep_mapping(svn_fs_t *fs,
                                             svn_fs_fs__id_txn_id(noderev->id),
                                             noderev->data_rep->sha1_checksum,
                                             pool);
-      svn_string_t *rep_string
+      svn_stringbuf_t *rep_string
         = svn_fs_fs__unparse_representation(noderev->data_rep,
                                             ffd->format,
                                             (noderev->kind == svn_node_dir),
@@ -570,8 +570,8 @@ store_sha1_rep_mapping(svn_fs_t *fs,
                                APR_WRITE | APR_CREATE | APR_TRUNCATE
                                | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-      SVN_ERR(svn_io_file_write_full(rep_file, rep_string,
-                                     strlen(rep_string), NULL, pool));
+      SVN_ERR(svn_io_file_write_full(rep_file, rep_string->data,
+                                     rep_string->len, NULL, pool));
 
       SVN_ERR(svn_io_file_close(rep_file, pool));
     }
