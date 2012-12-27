@@ -3667,7 +3667,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
       /* read & check the serialized size */
       SVN_ERR(read_number_from_stream(&size, NULL, stream, iterpool));
-      if (size + offset > revprops->packed_revprops->len)
+      if (size + offset > (apr_int64_t)revprops->packed_revprops->len)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                         _("Packed revprop size exceeds pack file size"));
 
@@ -4970,7 +4970,6 @@ get_contents(struct rep_read_baton *rb,
              apr_size_t *len)
 {
   apr_size_t copy_len, remaining = *len;
-  apr_off_t offset;
   char *cur = buf;
   struct rep_state *rs;
 
@@ -4986,10 +4985,10 @@ get_contents(struct rep_read_baton *rb,
           /* We got the desired rep directly from the cache.
              This is where we need the pseudo rep_state created
              by build_rep_list(). */
-          offset = rs->off - rs->start;
+          apr_size_t offset = (apr_size_t)(rs->off - rs->start);
           if (copy_len + offset > rb->base_window->len)
             copy_len = offset < rb->base_window->len
-                     ? (apr_size_t)(rb->base_window->len - offset)
+                     ? rb->base_window->len - offset
                      : 0ul;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
