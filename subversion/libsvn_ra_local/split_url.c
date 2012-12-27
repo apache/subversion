@@ -23,14 +23,13 @@
 
 #include "ra_local.h"
 #include <string.h>
-#include "svn_path.h"
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
 
 
 svn_error_t *
 svn_ra_local__split_URL(svn_repos_t **repos,
-                        const char **repos_url,
+                        const char **repos_root_url,
                         const char **fs_path,
                         const char *URL,
                         apr_pool_t *pool)
@@ -38,7 +37,6 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   svn_error_t *err = SVN_NO_ERROR;
   const char *repos_dirent;
   const char *repos_root_dirent;
-  svn_stringbuf_t *urlbuf;
 
   SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dirent, URL, pool));
 
@@ -61,18 +59,18 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     SVN_ERR(svn_repos_remember_client_capabilities(*repos, caps));
   }
 
+  /* = apr_pstrcat(pool,
+                   "/",
+                   svn_dirent_skip_ancestor(repos_root_dirent, repos_dirent),
+                   (const char *)NULL */
   *fs_path = &repos_dirent[strlen(repos_root_dirent)];
 
   if (**fs_path == '\0')
     *fs_path = "/";
 
-  /* Remove the path components in *fs_path from the original URL, to get
-     the URL to the repository root. */
-  urlbuf = svn_stringbuf_create(URL, pool);
-  svn_path_remove_components(urlbuf,
-                             svn_path_component_count(repos_dirent)
-                             - svn_path_component_count(repos_root_dirent));
-  *repos_url = urlbuf->data;
+  /* Create a url to the repository root. */
+  SVN_ERR(svn_uri_get_file_url_from_dirent(repos_root_url, repos_root_dirent,
+                                           pool));
 
   /* Configure hook script environment variables. */
   SVN_ERR(svn_repos_hooks_setenv(*repos, NULL, pool, pool));

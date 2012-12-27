@@ -93,7 +93,9 @@ enum
     svnlook__revprop_opt,
     svnlook__full_paths,
     svnlook__copy_info,
-    svnlook__xml_opt
+    svnlook__xml_opt,
+    svnlook__ignore_properties,
+    svnlook__properties_only
   };
 
 /*
@@ -124,6 +126,12 @@ static const apr_getopt_option_t options_table[] =
 
   {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
    N_("do not print differences for deleted files")},
+
+  {"ignore-properties",   svnlook__ignore_properties, 0,
+   N_("ignore properties during the operation")},
+
+  {"properties-only",   svnlook__properties_only, 0,
+   N_("show only properties during the operation")},
 
   {"non-recursive",     'N', 0,
    N_("operate on single directory only")},
@@ -218,7 +226,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook diff REPOS_PATH\n\n"
       "Print GNU-style diffs of changed files and properties.\n"),
    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
-    svnlook__diff_copy_from, 'x'} },
+    svnlook__diff_copy_from, 'x', svnlook__ignore_properties,
+    svnlook__properties_only} },
 
   {"dirs-changed", subcommand_dirschanged, {0},
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -320,6 +329,8 @@ struct svnlook_opt_state
   svn_boolean_t xml;              /* --xml */
   const char *extensions;         /* diff extension args (UTF-8!) */
   svn_boolean_t quiet;            /* --quiet */
+  svn_boolean_t ignore_properties;  /* --ignore_properties */
+  svn_boolean_t properties_only;    /* --properties-only */
 };
 
 
@@ -339,6 +350,8 @@ typedef struct svnlook_ctxt_t
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
   const apr_array_header_t *diff_options;
+  svn_boolean_t ignore_properties;
+  svn_boolean_t properties_only;
 
 } svnlook_ctxt_t;
 
@@ -1031,7 +1044,7 @@ print_diff_tree(svn_fs_root_t *root,
         }
     }
 
-  if (do_diff)
+  if (do_diff && (! c->properties_only))
     {
       svn_stringbuf_appendcstr(header, equal_string);
       svn_stringbuf_appendcstr(header, "\n");
@@ -1122,7 +1135,7 @@ print_diff_tree(svn_fs_root_t *root,
     SVN_ERR(svn_io_remove_file2(new_path, FALSE, pool));
 
   /*** Now handle property diffs ***/
-  if ((node->prop_mod) && (node->action != 'D'))
+  if ((node->prop_mod) && (node->action != 'D') && (! c->ignore_properties))
     {
       apr_hash_t *local_proptable;
       apr_hash_t *base_proptable;
@@ -1913,6 +1926,8 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
   baton->diff_options = svn_cstring_split(opt_state->extensions
                                           ? opt_state->extensions : "",
                                           " \t\n\r", TRUE, pool);
+  baton->ignore_properties = opt_state->ignore_properties;
+  baton->properties_only = opt_state->properties_only;
 
   if (baton->txn_name)
     SVN_ERR(svn_fs_open_txn(&(baton->txn), baton->fs,
@@ -2412,6 +2427,14 @@ main(int argc, const char *argv[])
 
         case 'x':
           opt_state.extensions = opt_arg;
+          break;
+
+        case svnlook__ignore_properties:
+          opt_state.ignore_properties = TRUE;
+          break;
+
+        case svnlook__properties_only:
+          opt_state.properties_only = TRUE;
           break;
 
         default:
