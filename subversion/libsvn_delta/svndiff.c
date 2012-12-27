@@ -852,7 +852,7 @@ write_handler(void *baton,
       /* Check for integer overflow.  */
       if (sview_offset < 0 || inslen + newlen < inslen
           || sview_len + tview_len < sview_len
-          || sview_offset + sview_len < sview_offset)
+          || (apr_size_t)sview_offset + sview_len < (apr_size_t)sview_offset)
         return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
                                 _("Svndiff contains corrupt window header"));
 
@@ -1016,7 +1016,7 @@ read_window_header(svn_stream_t *stream, svn_filesize_t *sview_offset,
   /* Check for integer overflow.  */
   if (*sview_offset < 0 || *inslen + *newlen < *inslen
       || *sview_len + *tview_len < *sview_len
-      || *sview_offset + *sview_len < *sview_offset)
+      || (apr_size_t)*sview_offset + *sview_len < (apr_size_t)*sview_offset)
     return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
                             _("Svndiff contains corrupt window header"));
 
