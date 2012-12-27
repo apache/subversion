@@ -1145,7 +1145,7 @@ AC_PATH_PROG(PERL, perl, none)
 if test -n "$RUBY"; then
   AC_PATH_PROG(RUBY, "$RUBY", none)
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193, none)
 fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
@@ -1154,7 +1154,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1166,14 +1166,23 @@ if test "$RUBY" != "none"; then
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 
+    AC_CACHE_CHECK([for Ruby teeny version], [svn_cv_ruby_teeny],[
+    svn_cv_ruby_teeny="`$RUBY -rrbconfig -e 'major, minor, teeny = RUBY_VERSION.split("."); print teeny;'`"
+    ])
+    RUBY_TEENY="$svn_cv_ruby_teeny"
+    
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
-    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
-      # Disallow Ruby 1.9 or later until the binding tests get fixed
-      # to run with those versions.
+    AC_SUBST(RUBY_TEENY)
+    if test \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -gt "8" -a "$RUBY_TEENY" -lt "3" \); then
+      # Disallow Ruby between 1.8.7 and 1.9.3
       RUBY="none"
-      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
-      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+      AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
+      AC_MSG_WARN([Only 1.8.x and 1.9.3 releases are supported at this time])
+    elif test \(  "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "9" -a "$RUBY_TEENY" -eq "3" \); then
+      #Warn about 1.9.3 support
+      AC_MSG_WARN([WARNING: The detected Ruby is 1.9.3])
+      AC_MSG_WARN([WARNING: Only 1.8.x releases are fully supported, 1.9.3 support is new])
     fi
   else
     AC_MSG_RESULT([no])

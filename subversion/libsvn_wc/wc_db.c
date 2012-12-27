@@ -2074,16 +2074,15 @@ db_base_remove(void *baton,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
 
-  /* ### This function should be turned into a helper of this function,
-         as this is the only valid caller */
   if (status == svn_wc__db_status_normal
       && rb->keep_as_working)
     {
-      SVN_ERR(svn_wc__db_temp_op_make_copy(rb->db,
-                                           svn_dirent_join(wcroot->abspath,
-                                                           local_relpath,
-                                                           scratch_pool),
-                                           scratch_pool));
+      SVN_ERR(svn_wc__db_op_make_copy(rb->db,
+                                      svn_dirent_join(wcroot->abspath,
+                                                      local_relpath,
+                                                      scratch_pool),
+                                      NULL, NULL,
+                                      scratch_pool));
       keep_working = TRUE;
     }
   else
@@ -2668,27 +2667,24 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
 }
 
 
-
-/* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
-static svn_error_t *
-depth_get_info(svn_wc__db_status_t *status,
-                svn_kind_t *kind,
-                svn_revnum_t *revision,
-                const char **repos_relpath,
-                apr_int64_t *repos_id,
-                svn_revnum_t *changed_rev,
-                apr_time_t *changed_date,
-                const char **changed_author,
-                svn_depth_t *depth,
-                const svn_checksum_t **checksum,
-                const char **target,
-                svn_boolean_t *had_props,
-                svn_wc__db_wcroot_t *wcroot,
-                const char *local_relpath,
-                int op_depth,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
+                          svn_kind_t *kind,
+                          svn_revnum_t *revision,
+                          const char **repos_relpath,
+                          apr_int64_t *repos_id,
+                          svn_revnum_t *changed_rev,
+                          apr_time_t *changed_date,
+                          const char **changed_author,
+                          svn_depth_t *depth,
+                          const svn_checksum_t **checksum,
+                          const char **target,
+                          svn_boolean_t *had_props,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          int op_depth,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -4176,11 +4172,11 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
 
   {
     svn_error_t *err;
-    err = depth_get_info(&status, &kind, &node_revision, &node_repos_relpath,
-                         &node_repos_id, NULL, NULL, NULL, NULL, NULL,
-                         NULL, NULL,
-                         src_wcroot, src_relpath, src_op_depth,
-                         scratch_pool, scratch_pool);
+    err = svn_wc__db_depth_get_info(&status, &kind, &node_revision,
+                                    &node_repos_relpath, &node_repos_id,
+                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                    src_wcroot, src_relpath, src_op_depth,
+                                    scratch_pool, scratch_pool);
 
     if (err)
       {
@@ -4393,10 +4389,11 @@ op_copy_shadowed_layer_txn(void * baton, svn_sqlite__db_t *sdb,
   del_op_depth = relpath_depth(ocb->dst_relpath);
 
   /* Get some information from the parent */
-  SVN_ERR(depth_get_info(NULL, NULL, &revision, &repos_relpath, &repos_id,
-                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                         ocb->src_wcroot, src_parent_relpath, src_op_depth,
-                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, &revision, &repos_relpath,
+                                    &repos_id, NULL, NULL, NULL, NULL, NULL,
+                                    NULL, NULL, ocb->src_wcroot,
+                                    src_parent_relpath, src_op_depth,
+                                    scratch_pool, scratch_pool));
 
   if (repos_relpath == NULL)
     {
@@ -13087,6 +13084,8 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 struct make_copy_baton_t
 {
   int op_depth;
+  const svn_skel_t *conflicts;
+  const svn_skel_t *work_items;
 };
 
 
@@ -13135,6 +13134,7 @@ make_copy_txn(void *baton,
   svn_boolean_t add_working_base_deleted = FALSE;
   svn_boolean_t remove_working = FALSE;
   const apr_array_header_t *children;
+  struct make_copy_baton_t cbt;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
@@ -13199,17 +13199,19 @@ make_copy_txn(void *baton,
   SVN_ERR(gather_repo_children(&children, wcroot, local_relpath,
                                0, scratch_pool, iterpool));
 
+  cbt.op_depth = mcb->op_depth;
+  cbt.conflicts = NULL;
+  cbt.work_items = NULL;
+
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
-      struct make_copy_baton_t cbt;
+      
       const char *copy_relpath;
 
       svn_pool_clear(iterpool);
 
       copy_relpath = svn_relpath_join(local_relpath, name, iterpool);
-
-      cbt.op_depth = mcb->op_depth;
 
       SVN_ERR(make_copy_txn(&cbt, wcroot, copy_relpath, iterpool));
     }
@@ -13218,6 +13220,11 @@ make_copy_txn(void *baton,
                                                 iterpool),
                                                 svn_depth_empty, iterpool));
 
+  if (mcb->conflicts)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, mcb->conflicts, iterpool));
+
+  SVN_ERR(add_work_items(wcroot->sdb, mcb->work_items, iterpool));
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -13225,9 +13232,11 @@ make_copy_txn(void *baton,
 
 
 svn_error_t *
-svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool)
+svn_wc__db_op_make_copy(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const svn_skel_t *conflicts,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
@@ -13260,6 +13269,8 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   SVN_ERR(catch_copy_of_server_excluded(wcroot, local_relpath, scratch_pool));
 
   mcb.op_depth = relpath_depth(local_relpath);
+  mcb.conflicts = conflicts;
+  mcb.work_items = work_items;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, make_copy_txn, &mcb,
                               scratch_pool));

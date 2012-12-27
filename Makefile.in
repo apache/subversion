@@ -283,7 +283,7 @@ INSTALL_EXTRA_SWIG_PY=\
 
 # export an env variable so that the tests can run without being installed
 TEST_SHLIB_VAR_SWIG_PY=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
@@ -326,7 +326,7 @@ INSTALL_EXTRA_SWIG_RB=\
 
 # export an env variable so that the tests can run without being installed
 TEST_SHLIB_VAR_SWIG_RB=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" == "DYLD_LIBRARY_PATH" ]; then \
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(SWIG_PY_DIR)/libsvn_swig_rb $(SWIG_PY_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
@@ -842,9 +842,14 @@ swig-rb: autogen-swig-rb
 check-swig-rb: swig-rb svnserve
 	$(TEST_SHLIB_VAR_SWIG_RB) \
 	cd $(SWIG_RB_DIR); \
-	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
-	    --verbose=$(SWIG_RB_TEST_VERBOSE)
+          if [ "$(RUBY_MAJOR)" -eq 1 -a "$(RUBY_MINOR)" -lt 9 ] ; then \
+            $(RUBY) -I $(SWIG_RB_SRC_DIR) \
+              $(SWIG_RB_SRC_DIR)/test/run-test.rb \
+	      --verbose=$(SWIG_RB_TEST_VERBOSE); \
+          else \
+	    $(RUBY) -I $(SWIG_RB_SRC_DIR) \
+	      $(SWIG_RB_SRC_DIR)/test/run-test.rb; \
+          fi
 
 EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_SRC_DIR)/svn_*.c $(SWIG_RB_SRC_DIR)/core.c
 

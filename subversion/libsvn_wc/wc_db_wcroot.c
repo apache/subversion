@@ -419,7 +419,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
   const char *scan_abspath;
-  svn_sqlite__db_t *sdb;
+  svn_sqlite__db_t *sdb = NULL;
   svn_boolean_t moved_upwards = FALSE;
   svn_boolean_t always_check = FALSE;
   int wc_format = 0;
@@ -763,7 +763,8 @@ try_symlink_as_dir:
                                        scratch_pool));
               /* This handle was opened in this function but is not going
                  to be used further so close it. */
-              SVN_ERR(svn_sqlite__close(sdb));
+              if (sdb)
+                SVN_ERR(svn_sqlite__close(sdb));
               goto try_symlink_as_dir;
             }
         }
