@@ -45,7 +45,7 @@ enum {
 static int
 usage(const char *argv0)
 {
-  printf("Usage:  %s [--username USER] [--path FSPATH] [--repository REPOS_NAME] FILE\n\n", argv0);
+  printf("Usage:  %s [--username USER] [[--path FSPATH] [--repository REPOS_NAME]] FILE\n\n", argv0);
   printf("Loads the authz file at FILE and validates its syntax.\n"
          "Optionally prints the access available to USER for FSPATH in\n"
          "repository with authz name REPOS_NAME.  If FSPATH is omitted, reports\n"
