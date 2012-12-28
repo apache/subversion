@@ -253,18 +253,9 @@ PRAGMA user_version =
    op_depth values are not normally visible to the user but may become
    visible after reverting local changes.
 
-   ### The following text needs revision
-
-   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
-   row in WORKING_NODE has one or more associated rows in NODE_DATA.
-
    This table contains full node descriptions for nodes in either the BASE
    or WORKING trees as described in notes/wc-ng/design. Fields relate
    both to BASE and WORKING trees, unless documented otherwise.
-
-   ### This table is to be integrated into the SCHEMA statement as soon
-       the experimental status of NODES is lifted.
-   ### This table superseeds NODE_DATA
 
    For illustration, with a scenario like this:
 
@@ -275,12 +266,11 @@ PRAGMA user_version =
      touch foo/bar
      svn add foo/bar    # (2)
 
-   , these are the NODES for the path foo/bar (before single-db, the
-   numbering of op_depth is still a bit different):
+   , these are the NODES table rows for the path foo/bar:
 
-   (0)  BASE_NODE ----->  NODES (op_depth == 0)
-   (1)                    NODES (op_depth == 1) ( <----_ )
-   (2)                    NODES (op_depth == 2)   <----- WORKING_NODE
+   (0)  "BASE" --->  NODES (op_depth == 0)
+   (1)               NODES (op_depth == 1)
+   (2)               NODES (op_depth == 2)
 
    0 is the original data for foo/bar before 'svn rm foo' (if it existed).
    1 is the data for foo/bar copied in from ^/moo/bar.

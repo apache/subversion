@@ -38,6 +38,8 @@
 #include "cl.h"
 #include "tree-conflicts.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -203,8 +205,8 @@ open_editor(svn_boolean_t *performed_edit,
 
   if (desc->merged_file)
     {
-      err = svn_cl__edit_file_externally(desc->merged_file, b->editor_cmd,
-                                         b->config, pool);
+      err = svn_cmdline__edit_file_externally(desc->merged_file, b->editor_cmd,
+                                              b->config, pool);
       if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
         {
           svn_error_t *root_err = svn_error_root_cause(err);
@@ -804,9 +806,9 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
               return SVN_NO_ERROR;
             }
 
-          err = svn_cl__edit_file_externally(desc->merged_file,
-                                             b->editor_cmd, b->config,
-                                             scratch_pool);
+          err = svn_cmdline__edit_file_externally(desc->merged_file,
+                                                  b->editor_cmd, b->config,
+                                                  scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",

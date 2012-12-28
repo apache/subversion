@@ -903,6 +903,18 @@ svn_wc_delete(const char *path,
 }
 
 svn_error_t *
+svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_add_from_disk2(wc_ctx, local_abspath, NULL,
+                                 notify_func, notify_baton, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
             svn_depth_t depth,

@@ -143,6 +143,9 @@ struct dir_baton {
   /* A cache of any property changes (svn_prop_t) received for this dir. */
   apr_array_header_t *propchanges;
 
+  /* Boolean indicating whether a node property was changed */
+  svn_boolean_t has_propchange;
+
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
   apr_pool_t *pool;
@@ -199,6 +202,9 @@ struct file_baton {
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
 
+  /* Boolean indicating whether a node property was changed */
+  svn_boolean_t has_propchange;
+
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
   apr_pool_t *pool;
@@ -230,7 +236,7 @@ make_dir_baton(const char *path,
   dir_baton->skip_children = FALSE;
   dir_baton->pool = dir_pool;
   dir_baton->path = apr_pstrdup(dir_pool, path);
-  dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  dir_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
   dir_baton->base_revision = base_revision;
 
   return dir_baton;
@@ -256,7 +262,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = file_pool;
   file_baton->path = apr_pstrdup(file_pool, path);
-  file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  file_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
   file_baton->base_revision = edit_baton->revision;
 
   return file_baton;
@@ -271,29 +277,29 @@ make_file_baton(const char *path,
 static void
 get_file_mime_types(const char **mimetype1,
                     const char **mimetype2,
-                    struct file_baton *b)
+                    struct file_baton *fb)
 {
   /* Defaults */
   *mimetype1 = NULL;
   *mimetype2 = NULL;
 
-  if (b->pristine_props)
+  if (fb->pristine_props)
     {
       svn_string_t *pristine_val;
-      pristine_val = apr_hash_get(b->pristine_props, SVN_PROP_MIME_TYPE,
+      pristine_val = apr_hash_get(fb->pristine_props, SVN_PROP_MIME_TYPE,
                                   strlen(SVN_PROP_MIME_TYPE));
       if (pristine_val)
         *mimetype2 = *mimetype1 = pristine_val->data;
     }
 
-  if (b->propchanges)
+  if (fb->propchanges)
     {
       int i;
       svn_prop_t *propchange;
 
-      for (i = 0; i < b->propchanges->nelts; i++)
+      for (i = 0; i < fb->propchanges->nelts; i++)
         {
-          propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
+          propchange = &APR_ARRAY_IDX(fb->propchanges, i, svn_prop_t);
           if (strcmp(propchange->name, SVN_PROP_MIME_TYPE) == 0)
             {
               if (propchange->value)
@@ -305,22 +311,22 @@ get_file_mime_types(const char **mimetype1,
 }
 
 
-/* Get revision B->base_revision of the file described by B from the
- * repository, through B->edit_baton->ra_session.
+/* Get revision FB->base_revision of the file described by FB from the
+ * repository, through FB->edit_baton->ra_session.
  *
  * Unless PROPS_ONLY is true:
- *   Set B->path_start_revision to the path of a new temporary file containing
+ *   Set FB->path_start_revision to the path of a new temporary file containing
  *   the file's text.
- *   Set B->start_md5_checksum to that file's MD-5 checksum.
- *   Install a pool cleanup handler on B->pool to delete the file.
+ *   Set FB->start_md5_checksum to that file's MD-5 checksum.
+ *   Install a pool cleanup handler on FB->pool to delete the file.
  *
  * Always:
- *   Set B->pristine_props to a new hash containing the file's properties.
+ *   Set FB->pristine_props to a new hash containing the file's properties.
  *
- * Allocate all results in B->pool.
+ * Allocate all results in FB->pool.
  */
 static svn_error_t *
-get_file_from_ra(struct file_baton *b,
+get_file_from_ra(struct file_baton *fb,
                  svn_boolean_t props_only,
                  apr_pool_t *scratch_pool)
 {
@@ -328,30 +334,30 @@ get_file_from_ra(struct file_baton *b,
     {
       svn_stream_t *fstream;
 
-      SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     b->pool, scratch_pool));
+      SVN_ERR(svn_stream_open_unique(&fstream, &(fb->path_start_revision),
+                                     NULL, svn_io_file_del_on_pool_cleanup,
+                                     fb->pool, scratch_pool));
 
-      fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
+      fstream = svn_stream_checksummed2(fstream, NULL, &fb->start_md5_checksum,
                                         svn_checksum_md5, TRUE, scratch_pool);
 
       /* Retrieve the file and its properties */
-      SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
-                              b->path,
-                              b->base_revision,
+      SVN_ERR(svn_ra_get_file(fb->edit_baton->ra_session,
+                              fb->path,
+                              fb->base_revision,
                               fstream, NULL,
-                              &(b->pristine_props),
-                              b->pool));
+                              &(fb->pristine_props),
+                              fb->pool));
       SVN_ERR(svn_stream_close(fstream));
     }
   else
     {
-      SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
-                              b->path,
-                              b->base_revision,
+      SVN_ERR(svn_ra_get_file(fb->edit_baton->ra_session,
+                              fb->path,
+                              fb->base_revision,
                               NULL, NULL,
-                              &(b->pristine_props),
-                              b->pool));
+                              &(fb->pristine_props),
+                              fb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -461,10 +467,10 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, base_revision,
-                                       pool);
+  struct dir_baton *db = make_dir_baton("", NULL, eb, FALSE, base_revision,
+                                        pool);
 
-  *root_baton = b;
+  *root_baton = db;
   return SVN_NO_ERROR;
 }
 
@@ -477,26 +483,26 @@ diff_deleted_file(svn_wc_notify_state_t *state_p,
                   struct edit_baton *eb,
                   apr_pool_t *scratch_pool)
 {
-  struct file_baton *b = make_file_baton(path, FALSE, eb, scratch_pool);
-/*  struct edit_baton *eb = b->edit_baton;*/
+  struct file_baton *fb = make_file_baton(path, FALSE, eb, scratch_pool);
+/*  struct edit_baton *eb = fb->edit_baton;*/
   const char *mimetype1, *mimetype2;
 
   if (eb->cancel_func)
     SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
   if (eb->text_deltas)
-    SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+    SVN_ERR(get_file_from_ra(fb, FALSE, scratch_pool));
   else
-    SVN_ERR(get_empty_file(eb, &b->path_start_revision));
-  SVN_ERR(get_empty_file(eb, &b->path_end_revision));
-  get_file_mime_types(&mimetype1, &mimetype2, b);
+    SVN_ERR(get_empty_file(eb, &fb->path_start_revision));
+  SVN_ERR(get_empty_file(eb, &fb->path_end_revision));
+  get_file_mime_types(&mimetype1, &mimetype2, fb);
 
   SVN_ERR(eb->diff_callbacks->file_deleted(state_p, tree_conflicted_p,
-                                           b->path,
-                                           b->path_start_revision,
-                                           b->path_end_revision,
+                                           fb->path,
+                                           fb->path_start_revision,
+                                           fb->path_end_revision,
                                            mimetype1, mimetype2,
-                                           b->pristine_props,
+                                           fb->pristine_props,
                                            eb->diff_cmd_baton,
                                            scratch_pool));
   return SVN_NO_ERROR;
@@ -654,26 +660,26 @@ add_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *b;
+  struct dir_baton *db;
   svn_wc_notify_state_t state;
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton(path, pb, eb, TRUE, SVN_INVALID_REVNUM, pool);
-  *child_baton = b;
+  db = make_dir_baton(path, pb, eb, TRUE, SVN_INVALID_REVNUM, pool);
+  *child_baton = db;
 
   /* Skip *everything* within a newly tree-conflicted directory,
    * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
-      b->skip = TRUE;
+      db->skip = TRUE;
       return SVN_NO_ERROR;
     }
 
 
   SVN_ERR(eb->diff_callbacks->dir_added(
-                &state, &b->tree_conflicted,
-                &b->skip, &b->skip_children, b->path,
+                &state, &db->tree_conflicted,
+                &db->skip, &db->skip_children, db->path,
                 eb->target_revision, copyfrom_path, copyfrom_revision,
                 eb->diff_cmd_baton, pool));
 
@@ -692,12 +698,12 @@ add_directory(const char *path,
 
       /* Find out if a pending delete notification for this path is
        * still around. */
-      dpn = apr_hash_get(eb->deleted_paths, b->path, APR_HASH_KEY_STRING);
+      dpn = apr_hash_get(eb->deleted_paths, db->path, APR_HASH_KEY_STRING);
       if (dpn)
         {
           /* If any was found, we will handle the pending 'deleted path
            * notification' (DPN) here. Remove it from the list. */
-          apr_hash_set(eb->deleted_paths, b->path,
+          apr_hash_set(eb->deleted_paths, db->path,
                        APR_HASH_KEY_STRING, NULL);
 
           /* the pending delete might be on a different node kind. */
@@ -707,7 +713,7 @@ add_directory(const char *path,
 
       /* Determine what the notification (ACTION) should be.
        * In case of a pending 'delete', this might become a 'replace'. */
-      if (b->tree_conflicted)
+      if (db->tree_conflicted)
         action = svn_wc_notify_tree_conflict;
       else if (dpn)
         {
@@ -723,7 +729,7 @@ add_directory(const char *path,
       else
         action = svn_wc_notify_update_add;
 
-      notify = svn_wc_create_notify(b->path, action, pool);
+      notify = svn_wc_create_notify(db->path, action, pool);
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
@@ -742,24 +748,24 @@ open_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *b;
+  struct dir_baton *db;
 
-  b = make_dir_baton(path, pb, pb->edit_baton, FALSE, base_revision, pool);
+  db = make_dir_baton(path, pb, eb, FALSE, base_revision, pool);
 
-  *child_baton = b;
+  *child_baton = db;
 
   /* Skip *everything* within a newly tree-conflicted directory
    * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
-      b->skip = TRUE;
+      db->skip = TRUE;
       return SVN_NO_ERROR;
     }
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
-                &b->tree_conflicted, &b->skip,
-                &b->skip_children, b->path, base_revision,
-                b->edit_baton->diff_cmd_baton, pool));
+                &db->tree_conflicted, &db->skip,
+                &db->skip_children, db->path, base_revision,
+                eb->diff_cmd_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -775,22 +781,22 @@ add_file(const char *path,
          void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct file_baton *b;
+  struct file_baton *fb;
 
   /* ### TODO: support copyfrom? */
 
-  b = make_file_baton(path, TRUE, pb->edit_baton, pool);
-  *file_baton = b;
+  fb = make_file_baton(path, TRUE, pb->edit_baton, pool);
+  *file_baton = fb;
 
   /* Skip *everything* within a newly tree-conflicted directory.
    * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
-      b->skip = TRUE;
+      fb->skip = TRUE;
       return SVN_NO_ERROR;
     }
 
-  b->pristine_props = pb->edit_baton->empty_hash;
+  fb->pristine_props = pb->edit_baton->empty_hash;
 
   return SVN_NO_ERROR;
 }
@@ -804,24 +810,24 @@ open_file(const char *path,
           void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct file_baton *b;
+  struct file_baton *fb;
   struct edit_baton *eb = pb->edit_baton;
-  b = make_file_baton(path, FALSE, pb->edit_baton, pool);
-  *file_baton = b;
+  fb = make_file_baton(path, FALSE, pb->edit_baton, pool);
+  *file_baton = fb;
 
   /* Skip *everything* within a newly tree-conflicted directory
    * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
-      b->skip = TRUE;
+      fb->skip = TRUE;
       return SVN_NO_ERROR;
     }
 
-  b->base_revision = base_revision;
+  fb->base_revision = base_revision;
 
   SVN_ERR(eb->diff_callbacks->file_opened(
-                   &b->tree_conflicted, &b->skip,
-                   b->path, base_revision, eb->diff_cmd_baton, pool));
+                   &fb->tree_conflicted, &fb->skip,
+                   fb->path, base_revision, eb->diff_cmd_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -831,14 +837,15 @@ static svn_error_t *
 window_handler(svn_txdelta_window_t *window,
                void *window_baton)
 {
-  struct file_baton *b = window_baton;
+  struct file_baton *fb = window_baton;
 
-  SVN_ERR(b->apply_handler(window, b->apply_baton));
+  SVN_ERR(fb->apply_handler(window, fb->apply_baton));
 
   if (!window)
     {
-      b->result_md5_checksum = svn_checksum__from_digest_md5(b->result_digest,
-                                                             b->pool);
+      fb->result_md5_checksum = svn_checksum__from_digest_md5(
+                                        fb->result_digest,
+                                        fb->pool);
     }
 
   return SVN_NO_ERROR;
@@ -852,13 +859,13 @@ apply_textdelta(void *file_baton,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  struct file_baton *b = file_baton;
+  struct file_baton *fb = file_baton;
   svn_stream_t *src_stream;
   svn_stream_t *result_stream;
-  apr_pool_t *scratch_pool = b->pool;
+  apr_pool_t *scratch_pool = fb->pool;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
-  if (b->skip)
+  if (fb->skip)
     {
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
@@ -866,11 +873,11 @@ apply_textdelta(void *file_baton,
     }
 
   /* If we're not sending file text, then ignore any that we receive. */
-  if (! b->edit_baton->text_deltas)
+  if (! fb->edit_baton->text_deltas)
     {
       /* Supply valid paths to indicate there is a text change. */
-      SVN_ERR(get_empty_file(b->edit_baton, &b->path_start_revision));
-      SVN_ERR(get_empty_file(b->edit_baton, &b->path_end_revision));
+      SVN_ERR(get_empty_file(fb->edit_baton, &fb->path_start_revision));
+      SVN_ERR(get_empty_file(fb->edit_baton, &fb->path_end_revision));
 
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
@@ -879,12 +886,12 @@ apply_textdelta(void *file_baton,
     }
 
   /* We need the expected pristine file, so go get it */
-  if (!b->added)
-    SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+  if (!fb->added)
+    SVN_ERR(get_file_from_ra(fb, FALSE, scratch_pool));
   else
-    SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
+    SVN_ERR(get_empty_file(fb->edit_baton, &(fb->path_start_revision)));
 
-  SVN_ERR_ASSERT(b->path_start_revision != NULL);
+  SVN_ERR_ASSERT(fb->path_start_revision != NULL);
 
   if (base_md5_digest != NULL)
     {
@@ -893,30 +900,30 @@ apply_textdelta(void *file_baton,
       SVN_ERR(svn_checksum_parse_hex(&base_md5_checksum, svn_checksum_md5,
                                      base_md5_digest, scratch_pool));
 
-      if (!svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
+      if (!svn_checksum_match(base_md5_checksum, fb->start_md5_checksum))
         return svn_error_trace(svn_checksum_mismatch_err(
                                       base_md5_checksum,
-                                      b->start_md5_checksum,
+                                      fb->start_md5_checksum,
                                       scratch_pool,
                                       _("Base checksum mismatch for '%s'"),
-                                      b->path));
+                                      fb->path));
     }
 
   /* Open the file to be used as the base for second revision */
-  SVN_ERR(svn_stream_open_readonly(&src_stream, b->path_start_revision,
+  SVN_ERR(svn_stream_open_readonly(&src_stream, fb->path_start_revision,
                                    scratch_pool, scratch_pool));
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR(svn_stream_open_unique(&result_stream, &b->path_end_revision, NULL,
+  SVN_ERR(svn_stream_open_unique(&result_stream, &fb->path_end_revision, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  scratch_pool, scratch_pool));
 
   svn_txdelta_apply(src_stream,
                     result_stream,
-                    b->result_digest,
-                    b->path, b->pool,
-                    &(b->apply_handler), &(b->apply_baton));
+                    fb->result_digest,
+                    fb->path, fb->pool,
+                    &(fb->apply_handler), &(fb->apply_baton));
 
   *handler = window_handler;
   *handler_baton = file_baton;
@@ -939,20 +946,20 @@ close_file(void *file_baton,
            const char *expected_md5_digest,
            apr_pool_t *pool)
 {
-  struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
+  struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_pool_t *scratch_pool;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
-  if (b->skip)
+  if (fb->skip)
     {
-      svn_pool_destroy(b->pool);
+      svn_pool_destroy(fb->pool);
       return SVN_NO_ERROR;
     }
 
-  scratch_pool = b->pool;
+  scratch_pool = fb->pool;
 
   if (expected_md5_digest && eb->text_deltas)
     {
@@ -961,57 +968,56 @@ close_file(void *file_baton,
       SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                      expected_md5_digest, scratch_pool));
 
-      if (!svn_checksum_match(expected_md5_checksum, b->result_md5_checksum))
+      if (!svn_checksum_match(expected_md5_checksum, fb->result_md5_checksum))
         return svn_error_trace(svn_checksum_mismatch_err(
                                       expected_md5_checksum,
-                                      b->result_md5_checksum,
+                                      fb->result_md5_checksum,
                                       pool,
                                       _("Checksum mismatch for '%s'"),
-                                      b->path));
+                                      fb->path));
     }
 
-  if (!b->added && b->propchanges->nelts > 0)
+  if (fb->path_end_revision || fb->has_propchange)
     {
-      if (!b->pristine_props)
+      const char *mimetype1, *mimetype2;
+
+      if (!fb->added && !fb->pristine_props)
         {
           /* We didn't receive a text change, so we have no pristine props.
              Retrieve just the props now. */
-          SVN_ERR(get_file_from_ra(b, TRUE, scratch_pool));
+          SVN_ERR(get_file_from_ra(fb, TRUE, scratch_pool));
         }
 
-      remove_non_prop_changes(b->pristine_props, b->propchanges);
-    }
+      if (fb->pristine_props)
+        remove_non_prop_changes(fb->pristine_props, fb->propchanges);
 
-  if (b->path_end_revision || b->propchanges->nelts > 0)
-    {
-      const char *mimetype1, *mimetype2;
-      get_file_mime_types(&mimetype1, &mimetype2, b);
+      get_file_mime_types(&mimetype1, &mimetype2, fb);
 
 
-      if (b->added)
+      if (fb->added)
         SVN_ERR(eb->diff_callbacks->file_added(
-                 &content_state, &prop_state, &b->tree_conflicted,
-                 b->path,
-                 b->path_end_revision ? b->path_start_revision : NULL,
-                 b->path_end_revision,
+                 &content_state, &prop_state, &fb->tree_conflicted,
+                 fb->path,
+                 fb->path_end_revision ? fb->path_start_revision : NULL,
+                 fb->path_end_revision,
                  0,
-                 b->edit_baton->target_revision,
+                 eb->target_revision,
                  mimetype1, mimetype2,
                  NULL, SVN_INVALID_REVNUM,
-                 b->propchanges, b->pristine_props,
-                 b->edit_baton->diff_cmd_baton,
+                 fb->propchanges, fb->pristine_props,
+                 eb->diff_cmd_baton,
                  scratch_pool));
       else
         SVN_ERR(eb->diff_callbacks->file_changed(
                  &content_state, &prop_state,
-                 &b->tree_conflicted, b->path,
-                 b->path_end_revision ? b->path_start_revision : NULL,
-                 b->path_end_revision,
-                 b->edit_baton->revision,
-                 b->edit_baton->target_revision,
+                 &fb->tree_conflicted, fb->path,
+                 fb->path_end_revision ? fb->path_start_revision : NULL,
+                 fb->path_end_revision,
+                 eb->revision,
+                 eb->target_revision,
                  mimetype1, mimetype2,
-                 b->propchanges, b->pristine_props,
-                 b->edit_baton->diff_cmd_baton,
+                 fb->propchanges, fb->pristine_props,
+                 eb->diff_cmd_baton,
                  scratch_pool));
     }
 
@@ -1025,12 +1031,12 @@ close_file(void *file_baton,
 
       /* Find out if a pending delete notification for this path is
        * still around. */
-      dpn = apr_hash_get(eb->deleted_paths, b->path, APR_HASH_KEY_STRING);
+      dpn = apr_hash_get(eb->deleted_paths, fb->path, APR_HASH_KEY_STRING);
       if (dpn)
         {
           /* If any was found, we will handle the pending 'deleted path
            * notification' (DPN) here. Remove it from the list. */
-          apr_hash_set(eb->deleted_paths, b->path,
+          apr_hash_set(eb->deleted_paths, fb->path,
                        APR_HASH_KEY_STRING, NULL);
 
           /* the pending delete might be on a different node kind. */
@@ -1040,12 +1046,12 @@ close_file(void *file_baton,
 
       /* Determine what the notification (ACTION) should be.
        * In case of a pending 'delete', this might become a 'replace'. */
-      if (b->tree_conflicted)
+      if (fb->tree_conflicted)
         action = svn_wc_notify_tree_conflict;
       else if (dpn)
         {
           if (dpn->action == svn_wc_notify_update_delete
-              && b->added)
+              && fb->added)
             action = svn_wc_notify_update_replace;
           else
             /* Note: dpn->action might be svn_wc_notify_tree_conflict */
@@ -1054,19 +1060,19 @@ close_file(void *file_baton,
       else if ((content_state == svn_wc_notify_state_missing)
                 || (content_state == svn_wc_notify_state_obstructed))
         action = svn_wc_notify_skip;
-      else if (b->added)
+      else if (fb->added)
         action = svn_wc_notify_update_add;
       else
         action = svn_wc_notify_update_update;
 
-      notify = svn_wc_create_notify(b->path, action, scratch_pool);
+      notify = svn_wc_create_notify(fb->path, action, scratch_pool);
       notify->kind = kind;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
       (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
     }
 
-  svn_pool_destroy(b->pool); /* Destroy file and scratch pool */
+  svn_pool_destroy(fb->pool); /* Destroy file and scratch pool */
 
   return SVN_NO_ERROR;
 }
@@ -1082,8 +1088,8 @@ static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
-  struct dir_baton *b = dir_baton;
-  struct edit_baton *eb = b->edit_baton;
+  struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_boolean_t skipped = FALSE;
@@ -1091,56 +1097,59 @@ close_directory(void *dir_baton,
   apr_hash_t *pristine_props;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
-  if (b->skip)
+  if (db->skip)
     {
-      svn_pool_destroy(b->pool);
+      svn_pool_destroy(db->pool);
       return SVN_NO_ERROR;
     }
 
-  scratch_pool = b->pool;
+  scratch_pool = db->pool;
 
-  if (b->added)
+  if (db->has_propchange)
     {
-      pristine_props = eb->empty_hash;
-    }
-  else
-    {
-      SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &pristine_props,
-                              b->path, b->base_revision, 0, scratch_pool));
-    }
-
-  if (b->propchanges->nelts > 0)
-    {
-      remove_non_prop_changes(pristine_props, b->propchanges);
-    }
-
-  if (b->propchanges->nelts > 0)
-    {
-      svn_boolean_t tree_conflicted = FALSE;
-      SVN_ERR(eb->diff_callbacks->dir_props_changed(
-               &prop_state, &tree_conflicted,
-               b->path, b->added,
-               b->propchanges, pristine_props,
-               b->edit_baton->diff_cmd_baton, scratch_pool));
-      if (tree_conflicted)
-        b->tree_conflicted = TRUE;
-
-      if (prop_state == svn_wc_notify_state_obstructed
-          || prop_state == svn_wc_notify_state_missing)
+      if (db->added)
         {
-          content_state = prop_state;
-          skipped = TRUE;
+          pristine_props = eb->empty_hash;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &pristine_props,
+                                  db->path, db->base_revision, 0, scratch_pool));
+        }
+
+      if (db->propchanges->nelts > 0)
+        {
+          remove_non_prop_changes(pristine_props, db->propchanges);
+        }
+
+      if (db->propchanges->nelts > 0)
+        {
+          svn_boolean_t tree_conflicted = FALSE;
+          SVN_ERR(eb->diff_callbacks->dir_props_changed(
+                   &prop_state, &tree_conflicted,
+                   db->path, db->added,
+                   db->propchanges, pristine_props,
+                   eb->diff_cmd_baton, scratch_pool));
+          if (tree_conflicted)
+            db->tree_conflicted = TRUE;
+
+          if (prop_state == svn_wc_notify_state_obstructed
+              || prop_state == svn_wc_notify_state_missing)
+            {
+              content_state = prop_state;
+              skipped = TRUE;
+            }
         }
     }
 
   SVN_ERR(eb->diff_callbacks->dir_closed(NULL, NULL, NULL,
-                                         b->path, b->added,
-                                         b->edit_baton->diff_cmd_baton,
+                                         db->path, db->added,
+                                         eb->diff_cmd_baton,
                                          scratch_pool));
 
   /* Notify about any deleted paths within this directory that have not
    * already been notified. */
-  if (!skipped && !b->added && eb->notify_func)
+  if (!skipped && !db->added && eb->notify_func)
     {
       apr_hash_index_t *hi;
 
@@ -1151,11 +1160,11 @@ close_directory(void *dir_baton,
           const char *deleted_path = svn__apr_hash_index_key(hi);
           deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
 
-          /* Ignore paths which are not children of b->path.  (There
+          /* Ignore paths which are not children of bb->path.  (There
              should be none due to editor ordering constraints, but
              ra_serf drops the ball here -- see issue #3802 for
              details.) */
-          if (! svn_relpath_skip_ancestor(b->path, deleted_path))
+          if (! svn_relpath_skip_ancestor(db->path, deleted_path))
             continue;
 
           notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
@@ -1170,19 +1179,19 @@ close_directory(void *dir_baton,
 
   /* Notify about this directory itself (unless it was added, in which
    * case the notification was done at that time). */
-  if (!b->added && eb->notify_func)
+  if (!db->added && eb->notify_func)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
-      if (b->tree_conflicted)
+      if (db->tree_conflicted)
         action = svn_wc_notify_tree_conflict;
       else if (skipped)
         action = svn_wc_notify_skip;
       else
         action = svn_wc_notify_update_update;
 
-      notify = svn_wc_create_notify(b->path, action, pool);
+      notify = svn_wc_create_notify(db->path, action, pool);
       notify->kind = svn_node_dir;
 
       /* In case of a tree conflict during merge, the diff callback
@@ -1195,7 +1204,7 @@ close_directory(void *dir_baton,
       (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
     }
 
-  svn_pool_destroy(b->pool); /* Destroy baton and scratch_pool */
+  svn_pool_destroy(db->pool); /* Destroy baton and scratch_pool */
 
   return SVN_NO_ERROR;
 }
@@ -1210,16 +1219,23 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  struct file_baton *b = file_baton;
+  struct file_baton *fb = file_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
-  if (b->skip)
+  if (fb->skip)
     return SVN_NO_ERROR;
 
-  propchange = apr_array_push(b->propchanges);
-  propchange->name = apr_pstrdup(b->pool, name);
-  propchange->value = value ? svn_string_dup(value, b->pool) : NULL;
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
+    fb->has_propchange = TRUE;
+
+  propchange = apr_array_push(fb->propchanges);
+  propchange->name = apr_pstrdup(fb->pool, name);
+  propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1235,10 +1251,17 @@ change_dir_prop(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (db->skip)
     return SVN_NO_ERROR;
+
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
+    db->has_propchange = TRUE;
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);

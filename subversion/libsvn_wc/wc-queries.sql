@@ -357,7 +357,7 @@ WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
 LIMIT 1
 
 -- STMT_SELECT_DELETION_INFO_SCAN
-/* ### FIXME.  modes_move.moved_to IS NOT NULL works when there is
+/* ### FIXME.  moved.moved_to IS NOT NULL works when there is
  only one move but we need something else when there are several. */
 SELECT (SELECT b.presence FROM nodes AS b
          WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),

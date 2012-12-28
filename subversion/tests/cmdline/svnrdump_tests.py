@@ -358,7 +358,6 @@ def copy_bad_line_endings_dump(sbox):
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
 
-@XFail()
 @Issue(4263)
 def copy_bad_line_endings_load(sbox):
   "load: inconsistent line endings in svn:* props"

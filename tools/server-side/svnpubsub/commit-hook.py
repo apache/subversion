@@ -42,11 +42,11 @@ def svncmd_uuid(repo):
 def svncmd_info(repo, revision):
     cmd = "%s info -r %s %s" % (SVNLOOK, revision, repo)
     p = svncmd(cmd)
-    data = p.stdout.read().strip().split("\n")
+    data = p.stdout.read().split("\n")
     #print data
-    return {'author': data[0],
-            'date': data[1],
-            'log': "\n".join(data[3:])}
+    return {'author': data[0].strip(),
+            'date': data[1].strip(),
+            'log': "\n".join(data[3:]).strip()}
 
 def svncmd_dirs(repo, revision):
     cmd = "%s dirs-changed  -r %s %s" % (SVNLOOK, revision, repo)
@@ -58,6 +58,19 @@ def svncmd_dirs(repo, revision):
             break
         dirs.append(line.strip())
     return dirs
+
+def svncmd_changed(repo, revision):
+    cmd = "%s changed -r %s %s" % (SVNLOOK, revision, repo)
+    p = svncmd(cmd)
+    changed = {} 
+    while True:
+        line = p.stdout.readline()
+        if not line:
+            break
+        line = line.strip()
+        (flags, filename) = (line[0:3], line[4:])
+        changed[filename] = {'flags': flags} 
+    return changed
 
 def do_put(body):
     opener = urllib2.build_opener(urllib2.HTTPHandler)
@@ -72,12 +85,14 @@ def main(repo, revision):
     i = svncmd_info(repo, revision)
     data = {'revision': int(revision),
             'dirs_changed': [],
+            'changed': {},
             'repos': svncmd_uuid(repo),
             'author': i['author'],
             'log': i['log'],
             'date': i['date'],
             }
     data['dirs_changed'].extend(svncmd_dirs(repo, revision))
+    data['changed'].update(svncmd_changed(repo, revision))
     body = json.dumps(data)
     #print body
     do_put(body)

@@ -267,7 +267,7 @@ switch_internal(svn_revnum_t *result_rev,
       if (needs_iprop_cache)
         {
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                             "", switch_loc->rev, pool,
+                                             "", switch_loc->rev, TRUE, pool,
                                              pool));
           apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
                        inherited_props);

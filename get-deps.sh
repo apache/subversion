@@ -27,8 +27,8 @@ APR=apr-1.4.6
 APR_UTIL=apr-util-1.5.1
 SERF=serf-1.1.1
 ZLIB=zlib-1.2.7
-SQLITE_VERSION=3.7.15
-SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
+SQLITE_VERSION=3.7.15.1
+SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
 
 HTTPD=httpd-2.4.3
 APR_ICONV=apr-iconv-1.2.1
@@ -115,7 +115,7 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target; do
-        if [ "$target" -ne "deps" ]; then
+        if [ "$target" != "deps" ]; then
           get_$target || usage
         else
           usage

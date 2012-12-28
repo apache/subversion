@@ -1143,18 +1143,21 @@ def upgrade_file_externals(sbox):
 
   expected_output = svntest.verify.RegexOutput('r2 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r2',
                                          'propset', 'svn:externals',
                                          '^/A/B/E EX\n^/A/mu muX',
                                          sbox.repo_url + '/A/B/F')
 
   expected_output = svntest.verify.RegexOutput('r3 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r3',
                                          'propset', 'svn:externals',
                                          '^/A/B/F FX\n^/A/B/lambda lambdaX',
                                          sbox.repo_url + '/A/C')
 
   expected_output = svntest.verify.RegexOutput('r4 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r4',
                                          'propset', 'pname1', 'pvalue1',
                                          sbox.repo_url + '/A/mu',
                                          'propset', 'pname2', 'pvalue2',

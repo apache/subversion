@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include "svn_string.h"
+#include "svn_config.h"
 #include "svn_error.h"
 #include "svn_version.h"
 #include "cl.h"
@@ -43,7 +44,8 @@ svn_cl__help(apr_getopt_t *os,
              void *baton,
              apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state;
+  svn_cl__opt_state_t *opt_state = NULL;
+  svn_stringbuf_t *version_footer = NULL;
 
   /* xgettext: the %s is for SVN_VER_NUMBER. */
   char help_header_template[] =
@@ -69,14 +71,72 @@ svn_cl__help(apr_getopt_t *os,
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
 
-  svn_stringbuf_t *version_footer;
-
   if (baton)
-    opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  else
-    opt_state = NULL;
+    {
+      svn_cl__cmd_baton_t *const cmd_baton = baton;
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+      /* Windows never actually stores plaintext passwords, it
+         encrypts the contents using CryptoAPI. ...
 
-  version_footer = svn_stringbuf_create(ra_desc_start, pool);
+         ... If CryptoAPI is available ... but it should be on all
+         versions of Windows that are even remotely interesting two
+         days before the scheduled end of the world, when this comment
+         is being written. */
+#  ifndef WIN32
+      svn_boolean_t store_auth_creds =
+        SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+      svn_boolean_t store_passwords =
+        SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+      svn_boolean_t store_plaintext_passwords = FALSE;
+      svn_config_t *cfg;
+
+      if (cmd_baton->ctx->config)
+        {
+          cfg = apr_hash_get(cmd_baton->ctx->config,
+                             SVN_CONFIG_CATEGORY_CONFIG,
+                             APR_HASH_KEY_STRING);
+          if (cfg)
+            {
+              SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds,
+                                          SVN_CONFIG_SECTION_AUTH,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+              SVN_ERR(svn_config_get_bool(cfg, &store_passwords,
+                                          SVN_CONFIG_SECTION_AUTH,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+            }
+          cfg = apr_hash_get(cmd_baton->ctx->config,
+                             SVN_CONFIG_CATEGORY_SERVERS,
+                             APR_HASH_KEY_STRING);
+          if (cfg)
+            {
+              const char *value;
+              SVN_ERR(svn_config_get_yes_no_ask
+                      (cfg, &value,
+                       SVN_CONFIG_SECTION_GLOBAL,
+                       SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                       SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+              if (0 == svn_cstring_casecmp(value, SVN_CONFIG_TRUE))
+                store_plaintext_passwords = TRUE;
+            }
+        }
+
+      if (store_plaintext_passwords && store_auth_creds && store_passwords)
+        {
+          version_footer = svn_stringbuf_create(
+              _("WARNING: Plaintext password storage is enabled!\n\n"),
+              pool);
+          svn_stringbuf_appendcstr(version_footer, ra_desc_start);
+        }
+#  endif /* !WIN32 */
+#endif /* !SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE */
+
+      opt_state = cmd_baton->opt_state;
+    }
+
+  if (!version_footer)
+    version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
   return svn_opt_print_help4(os,

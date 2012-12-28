@@ -221,37 +221,26 @@ static svn_error_t *log_command(server_baton_t *b,
   return log_write(b->log_file, line, nbytes, pool);
 }
 
-svn_error_t *load_configs(svn_config_t **cfg,
-                          svn_config_t **pwdb,
-                          svn_authz_t **authzdb,
-                          enum username_case_type *username_case,
-                          const char *filename,
-                          svn_boolean_t must_exist,
-                          const char *base,
-                          server_baton_t *server,
-                          svn_ra_svn_conn_t *conn,
-                          apr_pool_t *pool)
+svn_error_t *load_pwdb_config(server_baton_t *server,
+                              svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool)
 {
-  const char *pwdb_path, *authzdb_path;
+  const char *pwdb_path;
   svn_error_t *err;
 
-  SVN_ERR(svn_config_read2(cfg, filename, must_exist, FALSE, pool));
-
-  svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(server->cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
 
-  *pwdb = NULL;
+  server->pwdb = NULL;
   if (pwdb_path)
     {
       pwdb_path = svn_dirent_canonicalize(pwdb_path, pool);
-      pwdb_path = svn_dirent_join(base, pwdb_path, pool);
+      pwdb_path = svn_dirent_join(server->base, pwdb_path, pool);
 
-      err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
+      err = svn_config_read2(&server->pwdb, pwdb_path, TRUE, FALSE, pool);
       if (err)
         {
-          if (server)
-            /* Called by listening server; log error no matter what it is. */
-            log_server_error(err, server, conn, pool);
+          log_server_error(err, server, conn, pool);
 
           /* Because it may be possible to read the pwdb file with some
              access methods and not others, ignore errors reading the pwdb
@@ -265,18 +254,11 @@ svn_error_t *load_configs(svn_config_t **cfg,
           if (err->apr_err != SVN_ERR_BAD_FILENAME
               && ! APR_STATUS_IS_EACCES(err->apr_err))
             {
-              if (server)
-                {
-                  /* Called by listening server: Now that we've logged
-                   * the error, clear it and return a nice, generic
-                   * error to the user
-                   * (http://subversion.tigris.org/issues/show_bug.cgi?id=2271). */
-                  svn_error_clear(err);
-                  return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
-                }
-              /* Called during startup; return the error, whereupon it
-               * will go to standard error for the admin to see. */
-              return err;
+                /* Now that we've logged the error, clear it and return a
+                 * nice, generic error to the user:
+                 * http://subversion.tigris.org/issues/show_bug.cgi?id=2271 */
+                svn_error_clear(err);
+                return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
             }
           else
             /* Ignore SVN_ERR_BAD_FILENAME and APR_EACCES and proceed. */
@@ -284,51 +266,59 @@ svn_error_t *load_configs(svn_config_t **cfg,
         }
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *load_authz_config(server_baton_t *server,
+                               svn_ra_svn_conn_t *conn,
+                               const char *repos_root,
+                               apr_pool_t *pool)
+{
+  const char *authzdb_path;
+  svn_error_t *err;
+
   /* Read authz configuration. */
-  svn_config_get(*cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(server->cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
   if (authzdb_path)
     {
       const char *case_force_val;
 
-      authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
-      authzdb_path = svn_dirent_join(base, authzdb_path, pool);
-      err = svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool);
+      if (!svn_path_is_repos_relative_url(authzdb_path) &&
+          !svn_path_is_url(authzdb_path))
+        {
+          /* Canonicalize and add the base onto authzdb_path (if needed)
+           * when authzdb_path is not a URL (repos relative or absolute). */
+          authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
+          authzdb_path = svn_dirent_join(server->base, authzdb_path, pool);
+        }
+      err = svn_repos_authz_read2(&server->authzdb, authzdb_path, TRUE,
+                                  repos_root, pool);
       if (err)
         {
-          if (server)
-            {
-              /* Called by listening server: Log the error, clear it,
-               * and return a nice, generic error to the user
-               * (http://subversion.tigris.org/issues/show_bug.cgi?id=2271). */
-              log_server_error(err, server, conn, pool);
-              svn_error_clear(err);
-              return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL, NULL);
-            }
-          else
-            /* Called during startup; return the error, whereupon it
-             * will go to standard error for the admin to see. */
-            return err;
+          log_server_error(err, server, conn, pool);
+          svn_error_clear(err);
+          return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL, NULL);
         }
 
       /* Are we going to be case-normalizing usernames when we consult
        * this authz file? */
-      svn_config_get(*cfg, &case_force_val, SVN_CONFIG_SECTION_GENERAL,
+      svn_config_get(server->cfg, &case_force_val, SVN_CONFIG_SECTION_GENERAL,
                      SVN_CONFIG_OPTION_FORCE_USERNAME_CASE, NULL);
       if (case_force_val)
         {
           if (strcmp(case_force_val, "upper") == 0)
-            *username_case = CASE_FORCE_UPPER;
+            server->username_case = CASE_FORCE_UPPER;
           else if (strcmp(case_force_val, "lower") == 0)
-            *username_case = CASE_FORCE_LOWER;
+            server->username_case = CASE_FORCE_LOWER;
           else
-            *username_case = CASE_ASIS;
+            server->username_case = CASE_ASIS;
         }
     }
   else
     {
-      *authzdb = NULL;
-      *username_case = CASE_ASIS;
+      server->authzdb = NULL;
+      server->username_case = CASE_ASIS;
     }
 
   return SVN_NO_ERROR;
@@ -3138,14 +3128,26 @@ static svn_error_t *find_repos(const char *url, const char *root,
     b->repos_name = b->authz_repos_name;
   b->repos_name = svn_path_uri_encode(b->repos_name, pool);
 
-  /* If the svnserve configuration files have not been loaded then
-     load them from the repository. */
+  /* If the svnserve configuration has not been loaded then load it from the
+   * repository. */
   if (NULL == b->cfg)
-    SVN_ERR(load_configs(&b->cfg, &b->pwdb, &b->authzdb, &b->username_case,
-                         svn_repos_svnserve_conf(b->repos, pool), FALSE,
-                         svn_repos_conf_dir(b->repos, pool),
-                         b, conn,
-                         pool));
+    {
+      b->base = svn_repos_conf_dir(b->repos, pool);
+
+      SVN_ERR(svn_config_read2(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
+                               FALSE, /* must_exist */
+                               FALSE, /* section_names_case_sensitive */
+                               pool));
+      SVN_ERR(load_pwdb_config(b, conn, pool));
+      SVN_ERR(load_authz_config(b, conn, repos_root, pool));
+    }
+  /* svnserve.conf has been loaded via the --config-file option so need
+   * to load pwdb and authz. */
+  else
+    {
+      SVN_ERR(load_pwdb_config(b, conn, pool));
+      SVN_ERR(load_authz_config(b, conn, repos_root, pool));
+    }
 
 #ifdef SVN_HAVE_SASL
   /* Should we use Cyrus SASL? */
@@ -3349,9 +3351,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.user = NULL;
   b.username_case = params->username_case;
   b.authz_user = NULL;
+  b.base = params->base;
   b.cfg = params->cfg;
-  b.pwdb = params->pwdb;
-  b.authzdb = params->authzdb;
+  b.pwdb = NULL;
+  b.authzdb = NULL;
   b.realm = NULL;
   b.log_file = params->log_file;
   b.pool = pool;
