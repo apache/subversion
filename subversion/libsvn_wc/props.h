@@ -56,6 +56,30 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Validate and canonicalize the PROPS like svn_wc_prop_set4() does;
+ * see that function for details of the SKIP_SOME_CHECKS option.
+ *
+ * The properties are checked against the node at LOCAL_ABSPATH (which
+ * need not be under version control) of kind KIND.  This text of this
+ * node may be read (if it is a file) in order to validate the
+ * svn:eol-style property.
+ *
+ * Only regular props are accepted; WC props and entry props raise an error
+ * (unlike svn_wc_prop_set4() which accepts WC props).
+ *
+ * Set *PREPARED_PROPS to the resulting canonicalized properties,
+ * allocating any new data in RESULT_POOL but making shallow copies of
+ * keys and unchanged values from PROPS.
+ */
+svn_error_t *
+svn_wc__canonicalize_props(apr_hash_t **prepared_props,
+                           const char *local_abspath,
+                           svn_node_kind_t node_kind,
+                           const apr_hash_t *props,
+                           svn_boolean_t skip_some_checks,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, calculate what changes should be applied to the working

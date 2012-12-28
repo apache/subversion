@@ -1573,12 +1573,15 @@ validate_prop_against_node_kind(const char *name,
 
 
 struct getter_baton {
+  const svn_string_t *mime_type;
   const char *local_abspath;
-  svn_wc__db_t *db;
 };
 
 
-/* */
+/* Provide the MIME_TYPE and/or push the content to STREAM for the file
+ * referenced by (getter_baton *) BATON.
+ *
+ * Implements svn_wc_canonicalize_svn_prop_get_file_t. */
 static svn_error_t *
 get_file_for_validation(const svn_string_t **mime_type,
                         svn_stream_t *stream,
@@ -1588,18 +1591,15 @@ get_file_for_validation(const svn_string_t **mime_type,
   struct getter_baton *gb = baton;
 
   if (mime_type)
-    SVN_ERR(svn_wc__internal_propget(mime_type, gb->db, gb->local_abspath,
-                                     SVN_PROP_MIME_TYPE, pool, pool));
+    *mime_type = gb->mime_type;
 
   if (stream)
     {
       svn_stream_t *read_stream;
 
-      /* Open GB->LOCAL_ABSPATH. */
+      /* Copy the text of GB->LOCAL_ABSPATH into STREAM. */
       SVN_ERR(svn_stream_open_readonly(&read_stream, gb->local_abspath,
                                        pool, pool));
-
-      /* Copy from the file into the translating stream. */
       SVN_ERR(svn_stream_copy3(read_stream, svn_stream_disown(stream, pool),
                                NULL, NULL, pool));
     }
@@ -1608,7 +1608,16 @@ get_file_for_validation(const svn_string_t **mime_type,
 }
 
 
-/* */
+/* Validate that a file has a 'non-binary' MIME type and contains
+ * self-consistent line endings.  If not, then return an error.
+ *
+ * Call GETTER (which must not be NULL) with GETTER_BATON to get the
+ * file's MIME type and/or content.  If the MIME type is non-null and
+ * is categorized as 'binary' then return an error and do not request
+ * the file content.
+ *
+ * Use PATH (a local path or a URL) only for error messages.
+ */
 static svn_error_t *
 validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,
@@ -1670,6 +1679,10 @@ do_propset(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
+                                  scratch_pool, scratch_pool),
+            _("Failed to load current properties"));
+
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
      inappropriate property is allowed, however, since older clients
@@ -1680,8 +1693,9 @@ do_propset(svn_wc__db_t *db,
       const svn_string_t *new_value;
       struct getter_baton gb;
 
+      gb.mime_type = apr_hash_get(prophash,
+                                  SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
       gb.local_abspath = local_abspath;
-      gb.db = db;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
                                            local_abspath, kind,
@@ -1698,10 +1712,6 @@ do_propset(svn_wc__db_t *db,
       SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
                                                scratch_pool, scratch_pool));
     }
-
-  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
-                                  scratch_pool, scratch_pool),
-            _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
@@ -1953,6 +1963,83 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              depth,
                                              cancel_func, cancel_baton,
                                              scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Check that NAME names a regular prop. Return an error if it names an
+ * entry prop or a WC prop. */
+static svn_error_t *
+ensure_prop_is_regular_kind(const char *name)
+{
+  enum svn_prop_kind prop_kind = svn_property_kind2(name);
+
+  /* we don't do entry properties here */
+  if (prop_kind == svn_prop_entry_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is an entry property"), name);
+
+  /* Check to see if we're setting the dav cache. */
+  if (prop_kind == svn_prop_wc_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is a WC property, not "
+                               "a regular property"), name);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__canonicalize_props(apr_hash_t **prepared_props,
+                           const char *local_abspath,
+                           svn_node_kind_t node_kind,
+                           const apr_hash_t *props,
+                           svn_boolean_t skip_some_checks,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const svn_string_t *mime_type;
+  struct getter_baton gb;
+  apr_hash_index_t *hi;
+
+  /* While we allocate new parts of *PREPARED_PROPS in RESULT_POOL, we
+     don't promise to deep-copy the unchanged keys and values. */
+  *prepared_props = apr_hash_make(result_pool);
+
+  /* Before we can canonicalize svn:eol-style we need to know svn:mime-type,
+   * so process that first. */
+  mime_type = apr_hash_get((apr_hash_t *)props,
+                           SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+  if (mime_type)
+    {
+      SVN_ERR(svn_wc_canonicalize_svn_prop(
+                &mime_type, SVN_PROP_MIME_TYPE, mime_type,
+                local_abspath, node_kind, skip_some_checks,
+                NULL, NULL, scratch_pool));
+      apr_hash_set(*prepared_props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING,
+                   mime_type);
+    }
+
+  /* Set up the context for canonicalizing the other properties. */
+  gb.mime_type = mime_type;
+  gb.local_abspath = local_abspath;
+
+  /* Check and canonicalize the other properties. */
+  for (hi = apr_hash_first(scratch_pool, (apr_hash_t *)props); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_string_t *value = svn__apr_hash_index_val(hi);
+
+      if (strcmp(name, SVN_PROP_MIME_TYPE) == 0)
+        continue;
+
+      SVN_ERR(ensure_prop_is_regular_kind(name));
+      SVN_ERR(svn_wc_canonicalize_svn_prop(
+                &value, name, value,
+                local_abspath, node_kind, skip_some_checks,
+                get_file_for_validation, &gb, scratch_pool));
+      apr_hash_set(*prepared_props, name, APR_HASH_KEY_STRING, value);
     }
 
   return SVN_NO_ERROR;

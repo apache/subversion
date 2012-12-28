@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion dump stream filtering tool.
+ * svndumpfilter.c: Subversion dump stream filtering tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

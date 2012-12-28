@@ -53,6 +53,7 @@ static svn_opt_subcommand_t initialize_cmd,
 
 enum svnsync__opt {
   svnsync_opt_non_interactive = SVN_OPT_FIRST_LONGOPT_ID,
+  svnsync_opt_force_interactive,
   svnsync_opt_no_auth_cache,
   svnsync_opt_auth_username,
   svnsync_opt_auth_password,
@@ -71,6 +72,7 @@ enum svnsync__opt {
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
+                             svnsync_opt_force_interactive, \
                              svnsync_opt_no_auth_cache, \
                              svnsync_opt_auth_username, \
                              svnsync_opt_auth_password, \
@@ -173,7 +175,13 @@ static const apr_getopt_option_t svnsync_options[] =
     {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
                        N_("allow a non-empty destination repository") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
-                       N_("do no interactive prompting") },
+                       N_("do no interactive prompting (default is to prompt\n"
+                          "                             "
+                          "only if standard input is a terminal device)")},
+    {"force-interactive", svnsync_opt_force_interactive, 0,
+                      N_("do interactive prompting even if standard input\n"
+                         "                             "
+                         "is not a terminal device")},
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
                        N_("do not cache authentication tokens") },
     {"username",       svnsync_opt_auth_username, 1,
@@ -322,7 +330,7 @@ lock_retry_func(void *baton,
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
  * time-delay loop. This function is duplicated by svnrdump in
- * load_editor.c.
+ * svnrdump/load_editor.c
  */
 static svn_error_t *
 get_lock(const svn_string_t **lock_string_p,
@@ -1888,6 +1896,7 @@ main(int argc, const char *argv[])
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
+  svn_boolean_t force_interactive;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
@@ -1948,6 +1957,10 @@ main(int argc, const char *argv[])
         {
           case svnsync_opt_non_interactive:
             opt_baton.non_interactive = TRUE;
+            break;
+
+          case svnsync_opt_force_interactive:
+            force_interactive = TRUE;
             break;
 
           case svnsync_opt_trust_server_cert:
@@ -2078,6 +2091,20 @@ main(int argc, const char *argv[])
 
   if (opt_baton.help)
     subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table, "help");
+
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (opt_baton.non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+    }
+  else
+    opt_baton.non_interactive = !svn_cmdline__be_interactive(
+                                  opt_baton.non_interactive,
+                                  force_interactive);
 
   /* Disallow the mixing --username/password with their --source- and
      --sync- variants.  Treat "--username FOO" as "--source-username

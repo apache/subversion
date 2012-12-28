@@ -484,7 +484,8 @@ switch_file_external(const char *local_abspath,
                                               ctx, subpool));
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
-                                       switch_loc->rev, subpool, subpool));
+                                       switch_loc->rev, TRUE,
+                                       subpool, subpool));
 
     SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, subpool),
                             subpool));

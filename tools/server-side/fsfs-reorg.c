@@ -1,4 +1,5 @@
-/* diff.c -- test driver for text diffs
+/* fsfs-reorg.c -- prototypic tool to reorganize packed FSFS repositories
+ *                 to reduce seeks
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -45,7 +46,7 @@
 #define _(x) x
 #endif
 
-#define ERROR_TAG "diff: "
+#define ERROR_TAG "fsfs-reporg: "
 
 /* forward declarations */
 typedef struct noderev_t noderev_t;

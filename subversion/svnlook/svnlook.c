@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion server inspection tool.
+ * svnlook.c: Subversion server inspection tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

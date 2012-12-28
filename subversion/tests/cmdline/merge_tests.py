@@ -7816,6 +7816,10 @@ def merge_to_sparse_directories(sbox):
   # by the merge, 'B' and 'D', get non-inheritable mergeinfo for r4:9.
   # The root and 'D' do should also get the changes
   # that affect them directly (the prop adds from r8 and r9).
+  #
+  # Currently this fails due to r1424469.  For a full explanation see
+  # http://svn.haxx.se/dev/archive-2012-12/0472.shtml
+  # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_output = wc.State(immediates_dir, {
     'D'   : Item(status=' U'),
     'mu'  : Item(status='U '),
@@ -7845,8 +7849,8 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
-    'D/H'               : Item(),
-    'B/E'               : Item(),
+    'D/H/omega'         : Item(),
+    'B/E/beta'          : Item(),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7899,8 +7903,8 @@ def merge_to_sparse_directories(sbox):
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
   expected_skip = svntest.wc.State(files_dir, {
-    'D'               : Item(),
-    'B'               : Item(),
+    'D/H/omega'       : Item(),
+    'B/E/beta'        : Item(),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7943,8 +7947,8 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(empty_dir, {
     'mu'               : Item(),
-    'D'               : Item(),
-    'B'               : Item(),
+    'D/H/omega'        : Item(),
+    'B/E/beta'         : Item(),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,

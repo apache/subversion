@@ -3711,7 +3711,7 @@ def diff_git_with_props(sbox):
                     make_diff_prop_header("new") + \
                     make_diff_prop_added("svn:eol-style", "native") + \
                     make_git_diff_header(iota_path, "iota",
-                                         "revision 1", "working copy",
+                                         "revision 2", "working copy",
                                          text_changes=False) + \
                     make_diff_prop_header("iota") + \
                     make_diff_prop_added("svn:keywords", "Id")
@@ -3722,7 +3722,6 @@ def diff_git_with_props(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
-@XFail()
 @Issue(4010)
 def diff_correct_wc_base_revnum(sbox):
   "diff WC-WC shows the correct base rev num"
@@ -4108,7 +4107,7 @@ def diff_properties_no_newline(sbox):
   # may not be predictable.)
   for pname, old_val, new_val in subtests:
     expected_output = \
-      make_diff_header("iota", "revision 1", "working copy") + \
+      make_diff_header("iota", "revision 2", "working copy") + \
       make_diff_prop_header("iota") + \
       make_diff_prop_modified(pname, old_val, new_val)
 
