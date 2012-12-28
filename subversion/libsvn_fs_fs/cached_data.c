@@ -1670,8 +1670,10 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                                   rev, pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
-  SVN_ERR(read_all_changes(changes, revision_file, pool));
-  
+  SVN_ERR(svn_fs_fs__read_changes(changes,
+                                  svn_stream_from_aprfile2(revision_file,
+                                                           TRUE, pool),
+                                  pool));
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
   /* cache for future reference */

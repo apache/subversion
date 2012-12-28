@@ -162,33 +162,21 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
                             svn_stream_t *stream,
                             apr_pool_t *pool);
 
-/* Fetch all the changes from FILE and store them in *CHANGES.  Do all
+/* Read all the changes from STREAM and store them in *CHANGES.  Do all
    allocations in POOL. */
 svn_error_t *
-read_all_changes(apr_array_header_t **changes,
-                 apr_file_t *file,
-                 apr_pool_t *pool);
-
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  All temporary
-   allocations are in POOL. */
-svn_error_t *
-write_change_entry(svn_stream_t *stream,
-                   const char *path,
-                   svn_fs_path_change2_t *change,
-                   svn_boolean_t include_node_kind,
-                   apr_pool_t *pool);
-
-/* Write the changed path info from transaction TXN_ID in filesystem
-   FS to the permanent rev-file FILE.  *OFFSET_P is set the to offset
-   in the file of the beginning of this information.  Perform
-   temporary allocations in POOL. */
-svn_error_t *
-write_changed_path_info(svn_stream_t *stream,
-                        svn_fs_t *fs,
-                        apr_hash_t *changed_paths,
+svn_fs_fs__read_changes(apr_array_header_t **changes,
+                        svn_stream_t *stream,
                         apr_pool_t *pool);
+
+/* Write the changed path info from CHANGES in filesystem FS to the
+   output stream STREAM.  Perform temporary allocations in POOL.
+ */
+svn_error_t *
+svn_fs_fs__write_changes(svn_stream_t *stream,
+                         svn_fs_t *fs,
+                         apr_hash_t *changes,
+                         apr_pool_t *pool);
 
 svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,

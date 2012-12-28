@@ -906,14 +906,16 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   apr_array_header_t *changes;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
 
-  SVN_ERR(read_all_changes(&changes, file, scratch_pool));
+  SVN_ERR(svn_fs_fs__read_changes(&changes,
+                                  svn_stream_from_aprfile2(file, TRUE,
+                                                           scratch_pool),
+                                  scratch_pool));
   SVN_ERR(process_changes(changed_paths, NULL, changes, FALSE, pool));
   svn_pool_destroy(scratch_pool);
-
-  SVN_ERR(svn_io_file_close(file, pool));
 
   *changed_paths_p = changed_paths;
 
@@ -1567,6 +1569,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 {
   apr_file_t *file;
   svn_fs_path_change2_t *change;
+  apr_hash_t *changes = apr_hash_make(pool);
 
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
                            APR_APPEND | APR_WRITE | APR_CREATE
@@ -1579,8 +1582,9 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   change->copyfrom_rev = copyfrom_rev;
   change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
 
-  SVN_ERR(write_change_entry(svn_stream_from_aprfile2(file, TRUE, pool),
-                             path, change, TRUE, pool));
+  apr_hash_set(changes, path, APR_HASH_KEY_STRING, change);
+  SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
+                                   fs, changes, pool));
 
   return svn_io_file_close(file, pool);
 }
@@ -2651,8 +2655,8 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
 
-  SVN_ERR(write_changed_path_info(svn_stream_from_aprfile2(file, TRUE, pool),
-                                  fs, changed_paths, pool));
+  SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
+                                   fs, changed_paths, pool));
 
   *offset_p = offset;
 

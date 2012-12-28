@@ -678,34 +678,25 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
    store NULL there.  Perform all allocations from POOL. */
 static svn_error_t *
 read_change(change_t **change_p,
-            apr_file_t *file,
+            svn_stream_t *stream,
             apr_pool_t *pool)
 {
-  char buf[MAX_CHANGE_LINE_LEN];
-  apr_size_t len = sizeof(buf);
+  svn_stringbuf_t *line;
+  svn_boolean_t eof = TRUE;
   change_t *change;
-  char *str, *last_str = buf, *kind_str;
-  svn_error_t *err;
+  char *str, *last_str, *kind_str;
 
   /* Default return value. */
   *change_p = NULL;
 
-  err = svn_io_read_length_line(file, buf, &len, pool);
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
 
   /* Check for a blank line. */
-  if (err || (len == 0))
-    {
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      if ((len == 0) && (! err))
-        return SVN_NO_ERROR;
-      return svn_error_trace(err);
-    }
+  if (eof || (line->len == 0))
+    return SVN_NO_ERROR;
 
   change = apr_pcalloc(pool, sizeof(*change));
+  last_str = line->data;
 
   /* Get the node-id of the change. */
   str = svn_cstring_tokenize(" ", &last_str);
@@ -813,17 +804,15 @@ read_change(change_t **change_p,
 
 
   /* Read the next line, the copyfrom line. */
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
-
-  if (len == 0)
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+  if (eof || line->len == 0)
     {
       change->copyfrom_rev = SVN_INVALID_REVNUM;
       change->copyfrom_path = NULL;
     }
   else
     {
-      last_str = buf;
+      last_str = line->data;
       str = svn_cstring_tokenize(" ", &last_str);
       if (! str)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -845,9 +834,9 @@ read_change(change_t **change_p,
 /* Fetch all the changes from FILE and store them in *CHANGES.  Do all
    allocations in POOL. */
 svn_error_t *
-read_all_changes(apr_array_header_t **changes,
-                 apr_file_t *file,
-                 apr_pool_t *pool)
+svn_fs_fs__read_changes(apr_array_header_t **changes,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool)
 {
   change_t *change;
 
@@ -855,11 +844,11 @@ read_all_changes(apr_array_header_t **changes,
      (will be auto-expanded as necessary) */
   *changes = apr_array_make(pool, 30, sizeof(change_t *));
   
-  SVN_ERR(read_change(&change, file, pool));
+  SVN_ERR(read_change(&change, stream, pool));
   while (change)
     {
       APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, file, pool));
+      SVN_ERR(read_change(&change, stream, pool));
     }
 
   return SVN_NO_ERROR;
@@ -869,7 +858,7 @@ read_all_changes(apr_array_header_t **changes,
    string COPYFROM, into the file specified by FILE.  Only include the
    node kind field if INCLUDE_NODE_KIND is true.  All temporary
    allocations are in POOL. */
-svn_error_t *
+static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
                    svn_fs_path_change2_t *change,
@@ -939,10 +928,10 @@ write_change_entry(svn_stream_t *stream,
    in the file of the beginning of this information.  Perform
    temporary allocations in POOL. */
 svn_error_t *
-write_changed_path_info(svn_stream_t *stream,
-                        svn_fs_t *fs,
-                        apr_hash_t *changed_paths,
-                        apr_pool_t *pool)
+svn_fs_fs__write_changes(svn_stream_t *stream,
+                         svn_fs_t *fs,
+                         apr_hash_t *changes,
+                         apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -954,7 +943,7 @@ write_changed_path_info(svn_stream_t *stream,
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
      rest of the FSFS code doesn't require any particular order here. */
-  sorted_changed_paths = svn_sort__hash(changed_paths,
+  sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically, pool);
 
   /* Iterate through the changed paths one at a time, and convert the
