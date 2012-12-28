@@ -31,6 +31,7 @@
 #include "revprops.h"
 #include "transaction.h"
 #include "util.h"
+#include "cached_data.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -283,13 +284,15 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t root_offset;
   apr_file_t *rev_file;
+  svn_fs_id_t *root_id;
 
   /* call this function for old repo formats only */
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
+  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
+  root_offset = svn_fs_fs__id_offset(root_id);
+
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
-                                  fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
                                max_node_id, max_copy_id, pool));
   SVN_ERR(svn_io_file_close(rev_file, pool));
@@ -380,20 +383,13 @@ recover_body(void *baton, apr_pool_t *pool)
 
       for (rev = 0; rev <= max_rev; rev++)
         {
-          apr_file_t *rev_file;
-          apr_off_t root_offset;
-
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, iterpool));
-          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, fs, rev,
+          SVN_ERR(svn_fs_fs__find_max_ids(fs, rev, max_node_id, max_copy_id,
                                           iterpool));
-          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
-                                       max_node_id, max_copy_id, iterpool));
-          SVN_ERR(svn_io_file_close(rev_file, iterpool));
         }
       svn_pool_destroy(iterpool);
 

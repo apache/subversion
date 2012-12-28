@@ -178,10 +178,3 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
                          apr_hash_t *changes,
                          apr_pool_t *pool);
 
-svn_error_t *
-get_root_changes_offset(apr_off_t *root_offset,
-                        apr_off_t *changes_offset,
-                        apr_file_t *rev_file,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        apr_pool_t *pool);
