@@ -1,5 +1,5 @@
 /*
- * main.c :  Main control function for svnserve
+ * svnserve.c :  Main control function for svnserve
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

@@ -330,7 +330,7 @@ lock_retry_func(void *baton,
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
  * time-delay loop. This function is duplicated by svnrdump in
- * load_editor.c.
+ * svnrdump/load_editor.c
  */
 static svn_error_t *
 get_lock(const svn_string_t **lock_string_p,

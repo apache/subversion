@@ -1,5 +1,5 @@
 /*
- * tests-main.c:  shared main() & friends for SVN test-suite programs
+ * svn_test_main.c:  shared main() & friends for SVN test-suite programs
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
