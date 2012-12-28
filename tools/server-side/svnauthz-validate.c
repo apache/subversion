@@ -45,13 +45,13 @@ enum {
 static int
 usage(const char *argv0)
 {
-  printf("Usage:  %s [--username USER] [[--path FSPATH] [--repository REPOS_NAME]] FILE\n\n", argv0);
-  printf("Loads the authz file at FILE and validates its syntax.\n"
+  printf("Usage:  %s [--username USER] [[--path FSPATH] [--repository REPOS_NAME]] TARGET\n\n", argv0);
+  printf("Loads the authz file at TARGET and validates its syntax.\n"
          "Optionally prints the access available to USER for FSPATH in\n"
          "repository with authz name REPOS_NAME.  If FSPATH is omitted, reports\n"
          "whether USER has any access at all.\n"
-         "FILE can also be an absolute file:// URL to a authz file in a\n"
-         "repository, but cannot be a repository relative URL (^/).\n"
+         "TARGET can be a path to a file or an absolute file:// URL to an authz\n"
+         "file in a repository, but cannot be a repository relative URL (^/).\n"
          "Returns:\n"
          "    0   when syntax is OK.\n"
          "    1   when syntax is invalid.\n"
