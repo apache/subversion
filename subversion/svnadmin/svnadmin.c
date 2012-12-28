@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion server administration tool.
+ * svnadmin.c: Subversion server administration tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
