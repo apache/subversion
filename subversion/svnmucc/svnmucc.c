@@ -961,7 +961,7 @@ usage(apr_pool_t *pool, int exit_val)
       "  --no-auth-cache        : do not cache authentication tokens\n"
       "  --version              : print version information\n"),
                   stream, pool));
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   exit(exit_val);
 }
 

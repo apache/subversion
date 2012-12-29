@@ -1801,7 +1801,7 @@ read_pack_file(fs_fs_t *fs,
 
   /* one more pack file processed */
   print_progress(base);
-  apr_pool_destroy(local_pool);
+  svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1867,7 +1867,7 @@ read_revision_file(fs_fs_t *fs,
   if (revision % fs->max_files_per_dir == 0)
     print_progress(revision);
 
-  apr_pool_destroy(local_pool);
+  svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }

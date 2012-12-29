@@ -7219,7 +7219,7 @@ choose_delta_base(representation_t **rep,
       if (max_chain_length == 0)
         *rep = NULL;
 
-      apr_pool_destroy(sub_pool);
+      svn_pool_destroy(sub_pool);
     }
 
   /* verify that the reps don't form a degenerated '*/
