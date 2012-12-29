@@ -25,42 +25,9 @@
 #include "fs_fs.h"
 #include "id.h"
 
-/* Headers used to describe node-revision in the revision file. */
-#define HEADER_ID          "id"
-#define HEADER_TYPE        "type"
-#define HEADER_COUNT       "count"
-#define HEADER_PROPS       "props"
-#define HEADER_TEXT        "text"
-#define HEADER_CPATH       "cpath"
-#define HEADER_PRED        "pred"
-#define HEADER_COPYFROM    "copyfrom"
-#define HEADER_COPYROOT    "copyroot"
-#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
-#define HEADER_MINFO_HERE  "minfo-here"
-#define HEADER_MINFO_CNT   "minfo-cnt"
-
-/* Kinds that a change can be. */
-#define ACTION_MODIFY      "modify"
-#define ACTION_ADD         "add"
-#define ACTION_DELETE      "delete"
-#define ACTION_REPLACE     "replace"
-#define ACTION_RESET       "reset"
-
-/* True and False flags. */
-#define FLAG_TRUE          "true"
-#define FLAG_FALSE         "false"
-
 /* Kinds that a node-rev can be. */
-#define KIND_FILE          "file"
-#define KIND_DIR           "dir"
-
-/* Kinds of representation. */
-#define REP_PLAIN          "PLAIN"
-#define REP_DELTA          "DELTA"
-
-/* An arbitrary maximum path length, so clients can't run us out of memory
- * by giving us arbitrarily large paths. */
-#define FSFS_MAX_PATH_LEN 4096
+#define SVN_FS_FS__KIND_FILE          "file"
+#define SVN_FS_FS__KIND_DIR           "dir"
 
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev

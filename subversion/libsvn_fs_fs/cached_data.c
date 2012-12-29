@@ -1531,11 +1531,11 @@ parse_dir_entries(apr_hash_t **entries_p,
                                  _("Directory entry corrupt in '%s'"),
                                  unparsed_id);
 
-      if (strcmp(str, KIND_FILE) == 0)
+      if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
         {
           dirent->kind = svn_node_file;
         }
-      else if (strcmp(str, KIND_DIR) == 0)
+      else if (strcmp(str, SVN_FS_FS__KIND_DIR) == 0)
         {
           dirent->kind = svn_node_dir;
         }

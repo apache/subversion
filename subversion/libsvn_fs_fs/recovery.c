@@ -226,9 +226,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      if (strcmp(str, KIND_FILE) == 0)
+      if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
         kind = svn_node_file;
-      else if (strcmp(str, KIND_DIR) == 0)
+      else if (strcmp(str, SVN_FS_FS__KIND_DIR) == 0)
         kind = svn_node_dir;
       else
         {

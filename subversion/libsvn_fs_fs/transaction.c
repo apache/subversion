@@ -585,7 +585,8 @@ unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
                   apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%s %s",
-                      (kind == svn_node_file) ? KIND_FILE : KIND_DIR,
+                      (kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
+                                              : SVN_FS_FS__KIND_DIR,
                       svn_fs_fs__id_unparse(id, pool)->data);
 }
 
@@ -1761,11 +1762,11 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   apr_file_t *file;
   representation_t *base_rep;
   svn_stream_t *source;
-  const char *header;
   svn_txdelta_window_handler_t wh;
   void *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+  svn_fs_fs__rep_header_t header = { TRUE };
 
   b = apr_pcalloc(pool, sizeof(*b));
 
@@ -1795,17 +1796,15 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   /* Write out the rep header. */
   if (base_rep)
     {
-      header = apr_psprintf(b->pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                            SVN_FILESIZE_T_FMT "\n",
-                            base_rep->revision, base_rep->offset,
-                            base_rep->size);
+      header.base_revision = base_rep->revision;
+      header.base_offset = base_rep->offset;
+      header.base_length = base_rep->size;
     }
   else
     {
-      header = REP_DELTA "\n";
+      header.is_delta_vs_empty = TRUE;
     }
-  SVN_ERR(svn_io_file_write_full(file, header, strlen(header), NULL,
-                                 b->pool));
+  SVN_ERR(svn_fs_fs__write_rep_header(&header, b->rep_stream, b->pool));
 
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(get_file_offset(&b->delta_start, file, b->pool));
@@ -2258,7 +2257,7 @@ write_hash_delta_rep(representation_t *rep,
   representation_t *base_rep;
   representation_t *old_rep;
   svn_stream_t *source;
-  const char *header;
+  svn_fs_fs__rep_header_t header = { TRUE };
 
   apr_off_t rep_end = 0;
   apr_off_t delta_start = 0;
@@ -2276,20 +2275,18 @@ write_hash_delta_rep(representation_t *rep,
   /* Write out the rep header. */
   if (base_rep)
     {
-      header = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                            SVN_FILESIZE_T_FMT "\n",
-                            base_rep->revision, base_rep->offset,
-                            base_rep->size);
+      header.base_revision = base_rep->revision;
+      header.base_offset = base_rep->offset;
+      header.base_length = base_rep->size;
     }
   else
     {
-      header = REP_DELTA "\n";
+      header.is_delta_vs_empty = TRUE;
     }
-  SVN_ERR(svn_io_file_write_full(file, header, strlen(header), NULL,
-                                 pool));
 
-  SVN_ERR(get_file_offset(&delta_start, file, pool));
   file_stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, pool));
+  SVN_ERR(get_file_offset(&delta_start, file, pool));
 
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&diff_wh,

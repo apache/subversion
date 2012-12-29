@@ -34,6 +34,39 @@
 #include "pack.h"
 #include "cached_data.h"
 
+/* Headers used to describe node-revision in the revision file. */
+#define HEADER_ID          "id"
+#define HEADER_TYPE        "type"
+#define HEADER_COUNT       "count"
+#define HEADER_PROPS       "props"
+#define HEADER_TEXT        "text"
+#define HEADER_CPATH       "cpath"
+#define HEADER_PRED        "pred"
+#define HEADER_COPYFROM    "copyfrom"
+#define HEADER_COPYROOT    "copyroot"
+#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
+#define HEADER_MINFO_HERE  "minfo-here"
+#define HEADER_MINFO_CNT   "minfo-cnt"
+
+/* Kinds that a change can be. */
+#define ACTION_MODIFY      "modify"
+#define ACTION_ADD         "add"
+#define ACTION_DELETE      "delete"
+#define ACTION_REPLACE     "replace"
+#define ACTION_RESET       "reset"
+
+/* True and False flags. */
+#define FLAG_TRUE          "true"
+#define FLAG_FALSE         "false"
+
+/* Kinds of representation. */
+#define REP_PLAIN          "PLAIN"
+#define REP_DELTA          "DELTA"
+
+/* An arbitrary maximum path length, so clients can't run us out of memory
+ * by giving us arbitrarily large paths. */
+#define FSFS_MAX_PATH_LEN 4096
+
 /* The 256 is an arbitrary size large enough to hold the node id and the
  * various flags. */
 #define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
@@ -351,14 +384,16 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
 
   if ((value == NULL) ||
-      (strcmp(value, KIND_FILE) != 0 && strcmp(value, KIND_DIR)))
+      (   strcmp(value, SVN_FS_FS__KIND_FILE)
+       && strcmp(value, SVN_FS_FS__KIND_DIR)))
     /* ### s/kind/type/ */
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Missing kind field in node-rev '%s'"),
                              noderev_id);
 
-  noderev->kind = (strcmp(value, KIND_FILE) == 0) ? svn_node_file
-    : svn_node_dir;
+  noderev->kind = (strcmp(value, SVN_FS_FS__KIND_FILE) == 0)
+                ? svn_node_file
+                : svn_node_dir;
 
   /* Read the 'count' field. */
   value = apr_hash_get(headers, HEADER_COUNT, APR_HASH_KEY_STRING);
@@ -529,7 +564,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TYPE ": %s\n",
                             (noderev->kind == svn_node_file) ?
-                            KIND_FILE : KIND_DIR));
+                            SVN_FS_FS__KIND_FILE : SVN_FS_FS__KIND_DIR));
 
   if (noderev->predecessor_id)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PRED ": %s\n",
@@ -724,9 +759,9 @@ read_change(change_t **change_p,
       /* Cap off the end of "str" (the action). */
       *kind_str = '\0';
       kind_str++;
-      if (strcmp(kind_str, KIND_FILE) == 0)
+      if (strcmp(kind_str, SVN_FS_FS__KIND_FILE) == 0)
         change->node_kind = svn_node_file;
-      else if (strcmp(kind_str, KIND_DIR) == 0)
+      else if (strcmp(kind_str, SVN_FS_FS__KIND_DIR) == 0)
         change->node_kind = svn_node_dir;
       else
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -903,7 +938,8 @@ write_change_entry(svn_stream_t *stream,
                      || change->node_kind == svn_node_file);
       kind_string = apr_psprintf(pool, "-%s",
                                  change->node_kind == svn_node_dir
-                                 ? KIND_DIR : KIND_FILE);
+                                 ? SVN_FS_FS__KIND_DIR
+                                  : SVN_FS_FS__KIND_FILE);
     }
   buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
                      idstr, change_string, kind_string,
