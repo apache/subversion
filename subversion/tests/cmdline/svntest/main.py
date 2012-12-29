@@ -1300,13 +1300,6 @@ class TestSpawningThread(threading.Thread):
                                                        *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
-    if result != 1:
-      sys.stdout.write('.')
-    else:
-      sys.stdout.write('F')
-
-    sys.stdout.flush()
-
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
   runing the test and test list output."""
@@ -1545,9 +1538,6 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for t in threads:
       results += t.results
     results.sort()
-
-    # terminate the line of dots
-    print("")
 
     # all tests are finished, find out the result and print the logs.
     for (index, result, stdout_lines, stderr_lines) in results:
