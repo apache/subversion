@@ -99,6 +99,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1426752
+   Fix a seldom encountered issue in the diff-libraries whitespace
+   normalization handling that might make diff use the wrong tokens.
+   Justification:
+     The diff library should behave properly when suppressing whitespace
+     changes.
+   Notes:
+     The branch is just needed for avoiding a conflict with the testcase.
+   Branch:
+     ^/subversion/branches/1.7.x-r1426752
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
