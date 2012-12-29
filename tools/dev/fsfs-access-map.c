@@ -162,7 +162,7 @@ open_file(const char *name, int handle)
                     APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      apr_pool_destroy(sub_pool);
+      svn_pool_destroy(sub_pool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
@@ -320,7 +320,7 @@ parse_file(apr_file_t *file)
         break;
 
       parse_line(line);
-      apr_pool_clear(iter_pool);
+      svn_pool_clear(iter_pool);
     }
   while (line->len > 0);
 }

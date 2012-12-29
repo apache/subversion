@@ -319,7 +319,7 @@ auto_clear_dag_cache(fs_fs_dag_cache_t* cache)
 {
   if (cache->first_lock == NULL && cache->insertions > BUCKET_COUNT)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
 
       memset(cache->buckets, 0, sizeof(cache->buckets));
       cache->insertions = 0;

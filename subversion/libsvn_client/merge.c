@@ -7348,7 +7348,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
       svn_mergeinfo_t path_explicit_mergeinfo;
       svn_client__merge_path_t *new_child;
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
       /* Get the path's new explicit mergeinfo... */
       SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo, NULL,
@@ -8231,7 +8231,7 @@ record_mergeinfo_for_added_subtrees(
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t added_path_mergeinfo;
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
       /* Grab the added path's explicit mergeinfo. */

@@ -1763,7 +1763,7 @@ svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
         {
           SVN_ERR(svn_rangelist_merge2(target, to_insert, result_pool,
                                        iterpool));
-          apr_pool_clear(iterpool);
+          svn_pool_clear(iterpool);
         }
       else
         apr_hash_set(mergeinfo, key, klen, to_insert);
