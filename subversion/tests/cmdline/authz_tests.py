@@ -137,7 +137,7 @@ def broken_authz_file(sbox):
   exit_code, out, err = svntest.main.run_svn(1,
                                              "delete",
                                              sbox.repo_url + "/A",
-                                             "-m", "a log message");
+                                             "-m", "a log message")
   if out:
     raise svntest.verify.SVNUnexpectedStdout(out)
   if not err:

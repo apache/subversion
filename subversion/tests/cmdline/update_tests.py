@@ -1675,7 +1675,7 @@ def update_to_future_add(sbox):
                                         expected_disk,
                                         None, None,
                                         None, None, None, None, 0,
-                                        A_path);
+                                        A_path)
 
 #----------------------------------------------------------------------
 

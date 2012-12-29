@@ -860,9 +860,9 @@ def reintegrate_fail_on_stale_source(sbox):
   mu_path = os.path.join(A_path, "mu")
   svntest.main.file_append(mu_path, 'some text appended to mu\n')
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
-                                     '-m', 'a change to mu', mu_path);
+                                     '-m', 'a change to mu', mu_path)
   # Unmix the revisions in the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir);
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   # The merge --reintegrate succeeds but since there were no changes
   # on A_COPY after it was branched the only result is updated mergeinfo
   # on the reintegrate target.
