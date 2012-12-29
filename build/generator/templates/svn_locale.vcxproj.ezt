@@ -27,7 +27,7 @@
 [end][end]  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>locale</ProjectName>
-    <ProjectGuid>{18FA6D17-1EE7-43A2-BC2A-C2AF819CEEFB}</ProjectGuid>
+    <ProjectGuid>[project_guid]</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
