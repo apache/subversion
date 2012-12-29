@@ -1566,6 +1566,7 @@ merging_commit(const svn_test_opts_t *opts,
 
   /* (5) E doesn't exist in ANCESTOR, and has been added to A. */
   {
+    svn_revnum_t failed_rev;
     /* (1) E doesn't exist in ANCESTOR, and has been added to B.
        Conflict. */
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[4], pool));
@@ -1573,7 +1574,7 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_make_file(txn_root, "theta", pool));
     SVN_ERR(svn_test__set_file_contents
             (txn_root, "theta", "This is another file 'theta'.\n", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/theta", pool));
+    SVN_ERR(test_commit_txn(&failed_rev, txn, "/theta", pool));
     SVN_ERR(svn_fs_abort_txn(txn, pool));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
@@ -1581,6 +1582,8 @@ merging_commit(const svn_test_opts_t *opts,
 
     /* (3) E exists in both ANCESTOR and B.  Can't occur, by assumption
        that E doesn't exist in ANCESTOR. */
+
+    SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
   }
 
   /* (4) E exists in ANCESTOR, but has been deleted from A */
@@ -1594,15 +1597,16 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
 
-    /* ### FIXME: It is at this point that our test stops being valid,
-       ### hence its expected failure.  The following call will now
-       ### conflict on /A/D/H, causing revision 6 *not* to be created,
-       ### and the remainer of this test (which was written long ago)
-       ### to suffer from a shift in the expected state and behavior
-       ### of the filesystem as a result of this commit not happening.
-    */
+    /* We used to create the revision like this before fixing issue
+       #2751 -- Directory prop mods reverted in overlapping commits scenario.
 
-    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+       But we now expect that to fail as out of date */
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1640,18 +1644,22 @@ merging_commit(const svn_test_opts_t *opts,
     /* Try deleting a file F inside a subtree S where S does not exist
        in the most recent revision, but does exist in the ancestor
        tree.  This should conflict. */
-    SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
-    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-    SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
-    SVN_ERR(svn_fs_abort_txn(txn, pool));
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+      SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+      SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
 
     /* E exists in both ANCESTOR and B ... */
     {
       /* (1) but refers to different nodes.  Conflict. */
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-      SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
       SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
       revisions[revision_count++] = after_rev;
@@ -4969,10 +4977,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic commit"),
     SVN_TEST_OPTS_PASS(test_tree_node_validation,
                        "testing tree validation helper"),
-    SVN_TEST_OPTS_WIMP(merging_commit,
-                       "merging commit",
-                       "needs to be written to match new"
-                       " merge() algorithm expectations"),
+    SVN_TEST_OPTS_PASS(merging_commit, "merging commit"),
     SVN_TEST_OPTS_PASS(copy_test,
                        "copying and tracking copy history"),
     SVN_TEST_OPTS_PASS(commit_date,
