@@ -61,6 +61,7 @@ taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
 taskkill /im java.exe /f 2> nul:
 taskkill /im perl.exe /f 2> nul:
+taskkill /im mspdbsrv.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )
