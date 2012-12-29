@@ -2394,37 +2394,80 @@ merge_adjacent_changes(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Issue #4133, '"diff -x -w" showing wrong change'.
+/* Issue #4133, 'When sequences of whitespace characters at head of line
+   strides chunk boundary, "diff -x -w" showing wrong change'.
    The magic number used in this test, 1<<17, is
    CHUNK_SIZE from ../../libsvn_diff/diff_file.c
  */
 static svn_error_t *
-test_wrap(apr_pool_t *pool)
+test_norm_offset(apr_pool_t *pool)
 {
-  char ldata[(1<<17) + 4+4+3+1];
-  char rdata[(1<<17) + 4+3+3+1];
-  svn_string_t left, right;
+  apr_size_t chunk_size = 1 << 17;
+  const char *pattern1 = "       \n";
+  const char *pattern2 = "\n\n\n\n\n\n\n\n";
+  const char *pattern3 = "                        @@@@@@@\n";
+  const char *pattern4 = "               \n";
+  svn_stringbuf_t *original, *modified;
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
-  diff_opts->ignore_space = svn_diff_file_ignore_space_change;
 
-  /* Two long lines. */
-  memset(ldata, '@', 1<<17);
-  memset(rdata, '@', 1<<17);
-  strcpy(&ldata[1<<17], "foo\n" "ba \n" "x \n");
-  strcpy(&rdata[1<<17], "foo\n" "ba\n"  "x\t\n");
+  /* The original contents become like this
 
-  /* Cast them to svn_string_t. */
-  left.data = ldata;
-  right.data = rdata;
-  left.len = sizeof(ldata)-1;
-  right.len = sizeof(rdata)-1;
+     $ hexdump -C norm-offset-original
+     00000000  20 20 20 20 20 20 20 0a  0a 0a 0a 0a 0a 0a 0a 0a  |       .........|
+     00000010  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     0001fff0  0a 0a 0a 0a 0a 0a 0a 0a  20 20 20 20 20 20 20 20  |........        |
+     00020000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 20  |                |
+     00020010  40 40 40 40 40 40 40 0a  0a 0a 0a 0a 0a 0a 0a 0a  |@@@@@@@.........|
+     00020020  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     000203f0  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 0a  |               .|
+     00020400
+  */
+  original = svn_stringbuf_create_ensure(chunk_size + 1024, pool);
+  svn_stringbuf_appendcstr(original, pattern1);
+  while (original->len < chunk_size - 8)
+    {
+      svn_stringbuf_appendcstr(original, pattern2);
+    }
+  svn_stringbuf_appendcstr(original, pattern3);
+  while (original->len < chunk_size +1024 - 16)
+    {
+      svn_stringbuf_appendcstr(original, pattern2);
+    }
+  svn_stringbuf_appendcstr(original, pattern4);
+
+  /* The modified contents become like this.
+
+     $ hexdump -C norm-offset-modified
+     00000000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 0a  |               .|
+     00000010  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     00020000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 20  |                |
+     00020010  20 20 20 20 20 20 20 20  40 40 40 40 40 40 40 0a  |        @@@@@@@.|
+     00020020  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     000203f0  0a 0a 0a 0a 0a 0a 0a 0a  20 20 20 20 20 20 20 0a  |........       .|
+     00020400
+  */
+  modified = svn_stringbuf_create_ensure(chunk_size + 1024, pool);
+  svn_stringbuf_appendcstr(modified, pattern4);
+  while (modified->len < chunk_size)
+    {
+      svn_stringbuf_appendcstr(modified, pattern2);
+    }
+  svn_stringbuf_appendcstr(modified, pattern3);
+  while (modified->len < chunk_size +1024 - 8)
+    {
+      svn_stringbuf_appendcstr(modified, pattern2);
+    }
+  svn_stringbuf_appendcstr(modified, pattern1);
 
   /* Diff them.  Modulo whitespace, they are identical. */
-  {
-    svn_diff_t *diff;
-    SVN_ERR(svn_diff_mem_string_diff(&diff, &left, &right, diff_opts, pool));
-    SVN_TEST_ASSERT(FALSE == svn_diff_contains_diffs(diff));
-  }
+  diff_opts->ignore_space = svn_diff_file_ignore_space_all;
+  SVN_ERR(two_way_diff("norm-offset-original", "norm-offset-modified",
+                       original->data, modified->data, "",
+                       diff_opts, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2458,7 +2501,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "3-way merge with conflict styles"),
     SVN_TEST_PASS2(test_diff4,
                    "4-way merge; see variance-adjusted-patching.html"),
-    SVN_TEST_XFAIL2(test_wrap,
-                   "difference at the start of a 128KB window"),
+    SVN_TEST_PASS2(test_norm_offset,
+                   "offset of the normalized token"),
     SVN_TEST_NULL
   };
