@@ -3352,7 +3352,6 @@ def diff_url_against_local_mods(sbox):
 #----------------------------------------------------------------------
 # Diff against old revision of the parent directory of a removed and
 # locally re-added file.
-@XFail()
 @Issue(3797)
 def diff_preexisting_rev_against_local_add(sbox):
   "diff -r1 of dir with removed-then-readded file"
