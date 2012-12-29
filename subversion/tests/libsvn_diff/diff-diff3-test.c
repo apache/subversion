@@ -2472,6 +2472,97 @@ test_norm_offset(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Issue #4283, 'When identical suffix started at a chunk boundary,
+   incorrect diff was generated'.
+   The magic number used in this test, (1<<17) and 50 are CHUNK_SIZE
+   and SUFFIX_LINES_TO_KEEP from ../../libsvn_diff/diff_file.c, respectively.
+ */
+#define ORIGINAL_CONTENTS_PATTERN "0123456789abcde\n"
+#define INSERTED_LINE "0123456789ABCDE\n"
+static svn_error_t *
+test_identical_suffix(apr_pool_t *pool)
+{
+  apr_size_t lines_in_chunk = (1 << 17)
+                              / (sizeof(ORIGINAL_CONTENTS_PATTERN) - 1);
+  /* To let identical suffix start at a chunk boundary,
+     insert a line at before (SUFFIX_LINES_TO_KEEP + 1) lines
+     from tail of the previous chunk. */
+  apr_size_t insert_pos = lines_in_chunk
+#ifdef SUFFIX_LINES_TO_KEEP
+                          - SUFFIX_LINES_TO_KEEP
+#else
+                          - 50
+#endif
+                          - 1;
+  apr_size_t i;
+  svn_stringbuf_t *original, *modified;
+
+  /* The original contents become like this.
+
+     $ hexdump -C identical-suffix-original
+     00000000  30 31 32 33 34 35 36 37  38 39 61 62 63 64 65 0a  |0123456789abcde.|
+     *
+     00020400
+   */
+  original = svn_stringbuf_create_ensure((1 << 17) + 1024, pool);
+  for (i = 0; i < lines_in_chunk + 64; i++)
+    {
+      svn_stringbuf_appendbytes(original, ORIGINAL_CONTENTS_PATTERN,
+                                sizeof(ORIGINAL_CONTENTS_PATTERN) - 1);
+    }
+
+  /* The modified contents become like this.
+
+     $ hexdump -C identical-suffix-modified
+     00000000  30 31 32 33 34 35 36 37  38 39 61 62 63 64 65 0a  |0123456789abcde.|
+     *
+     00000400  30 31 32 33 34 35 36 37  38 39 41 42 43 44 45 0a  |0123456789ABCDE.|
+     00000410  30 31 32 33 34 35 36 37  38 39 61 62 63 64 65 0a  |0123456789abcde.|
+     *
+     0001fcd0  30 31 32 33 34 35 36 37  38 39 41 42 43 44 45 0a  |0123456789ABCDE.|
+     0001fce0  30 31 32 33 34 35 36 37  38 39 61 62 63 64 65 0a  |0123456789abcde.|
+     *
+     00020420
+   */
+  modified = svn_stringbuf_dup(original, pool);
+  svn_stringbuf_insert(modified,
+                       64 * (sizeof(ORIGINAL_CONTENTS_PATTERN) - 1),
+                       INSERTED_LINE, sizeof(INSERTED_LINE) - 1);
+  svn_stringbuf_insert(modified,
+                       insert_pos * (sizeof(ORIGINAL_CONTENTS_PATTERN) - 1),
+                       INSERTED_LINE, sizeof(INSERTED_LINE) - 1);
+
+  SVN_ERR(two_way_diff("identical-suffix-original",
+                       "identical-suffix-modified",
+                       original->data, modified->data,
+                       apr_psprintf(pool,
+                                    "--- identical-suffix-original" NL
+                                    "+++ identical-suffix-modified" NL
+                                    "@@ -62,6 +62,7 @@" NL
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    "+" INSERTED_LINE
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    "@@ -%u,6 +%u,7 @@" NL
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    "+" INSERTED_LINE
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN
+                                    " " ORIGINAL_CONTENTS_PATTERN,
+                                    1 + (unsigned int)insert_pos - 3 - 1,
+                                    1 + (unsigned int)insert_pos - 3),
+                       NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+#undef ORIGINAL_CONTENTS_PATTERN
+#undef INSERTED_LINE
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2503,5 +2594,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "4-way merge; see variance-adjusted-patching.html"),
     SVN_TEST_PASS2(test_norm_offset,
                    "offset of the normalized token"),
+    SVN_TEST_PASS2(test_identical_suffix,
+                   "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_NULL
   };
