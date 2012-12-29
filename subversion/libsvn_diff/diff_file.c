@@ -829,17 +829,24 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   last_chunk = offset_to_chunk(file->size);
 
-  if (curp == endp
-      && last_chunk == file->chunk)
+  /* Are we already at the end of a chunk? */
+  if (curp == endp)
     {
-      return SVN_NO_ERROR;
+      /* Are we at EOF */
+      if (last_chunk == file->chunk)
+        return SVN_NO_ERROR; /* EOF */
+
+      /* Or right before an identical suffix in the next chunk? */
+      if (file->chunk + 1 == file->suffix_start_chunk
+          && file->suffix_offset_in_chunk == 0)
+        return SVN_NO_ERROR;
     }
 
   /* Stop when we encounter the identical suffix. If suffix scanning was not
    * performed, suffix_start_chunk will be -1, so this condition will never
    * be true. */
   if (file->chunk == file->suffix_start_chunk
-      && curp - file->buffer == file->suffix_offset_in_chunk)
+      && (curp - file->buffer) == file->suffix_offset_in_chunk)
     return SVN_NO_ERROR;
 
   /* Allocate a new token, or fetch one from the "reusable tokens" list. */
@@ -908,6 +915,14 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       endp += length;
       file->endp = endp;
 
+      /* Issue #4283: Normally we should have checked for reaching the skipped
+         suffix here, but because we assume that a suffix always starts on a
+         line and token boundary we rely on catching the suffix earlier in this
+         function.
+
+         When changing things here, make sure the whitespace settings are
+         applied, or we mught not reach the exact suffix boundary as token
+         boundary. */
       SVN_ERR(read_chunk(file->file, file->path,
                          curp, length,
                          chunk_to_offset(file->chunk),
