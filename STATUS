@@ -100,8 +100,9 @@ Candidate changes:
      +1: rhuijben
 
  * r1426752
-   Fix a seldom encountered issue in the diff-libraries whitespace
-   normalization handling that might make diff use the wrong tokens.
+   Fix Issue #4133, an issue in the diff-libraries whitespace normalization
+   handling that might make diff use the wrong tokens, showing up as
+   unexpected changes.
    Justification:
      The diff library should behave properly when suppressing whitespace
      changes.
@@ -109,6 +110,15 @@ Candidate changes:
      The branch is just needed for avoiding a conflict with the testcase.
    Branch:
      ^/subversion/branches/1.7.x-r1426752
+   Votes:
+     +1: rhuijben
+
+ * r1426762
+   Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
+   diff" produces incorrect diff.
+   Justification:
+     Without this patch the identical suffix might show up as an added or
+     deleted suffix of a file.
    Votes:
      +1: rhuijben
 
