@@ -4387,7 +4387,6 @@ def copy_added_dir_with_copy(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-@SkipUnless(svntest.main.is_posix_os)
 @Issue(3303)
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
@@ -4399,12 +4398,12 @@ def copy_broken_symlink(sbox):
 
   new_symlink = sbox.ospath('new_symlink')
   copied_symlink = sbox.ospath('copied_symlink')
-  os.symlink('linktarget', new_symlink)
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
 
-  rav_svn(None, None, [], 'add', new_symlink)
+  sbox.simple_add_symlink('linktarget', 'new_symlink')
+
   rav_svn(None, None, [], 'cp', new_symlink, copied_symlink)
 
   # Check whether both new_symlink and copied_symlink are added to the
