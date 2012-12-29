@@ -625,7 +625,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'B'        : Item(),
     'B/lambda' : Item(contents="This is the file 'lambda'.\n"),
     'B/F'      : Item(),
-    'B/E'      : Item(),
     'D/gamma'  : Item("This is the file 'gamma'.\n"),
     'D/G'      : Item(),
     'D/G/pi'   : Item("This is the file 'pi'.\n"),
@@ -636,9 +635,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    # Delete removes directories in single-db
-    expected_disk.remove('B/E')
   expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url, None,
@@ -1299,35 +1295,22 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev='3', entry_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
-
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
@@ -1384,35 +1367,22 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev=3),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
-
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3)
-    expected_status.tweak('DF/D1',           wc_rev=3)
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3)
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3)
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3)
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),

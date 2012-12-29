@@ -2328,10 +2328,9 @@ def tree_conflicts_on_switch_1_1(sbox):
   })
 
   expected_disk = disk_empty_dirs.copy()
-  if  svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
-                         'DDF/D1', 'DDF/D1/D2',
-                         'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
+  expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
+                       'DDF/D1', 'DDF/D1/D2',
+                       'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -2441,10 +2440,9 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_disk.remove('DF/D1', 'DD/D1',
-                         'DDF/D1', 'DDF/D1/D2',
-                         'DDD/D1', 'DDD/D1/D2')
+  expected_disk.remove('DF/D1', 'DD/D1',
+                       'DDF/D1', 'DDF/D1/D2',
+                       'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {

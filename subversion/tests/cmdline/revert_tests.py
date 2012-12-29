@@ -788,34 +788,22 @@ def status_of_missing_dir_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      A_D_G_path)
 
-  deletes = [
-     "D       " + os.path.join(A_D_G_path, "pi") + "\n",
-     "D       " + os.path.join(A_D_G_path, "rho") + "\n",
-     "D       " + os.path.join(A_D_G_path, "tau") + "\n"
-  ]
-  expected_output = svntest.verify.UnorderedOutput(deletes)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     "status", wc_dir)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+                        status='D ')
+  svntest.actions.run_and_verify_status(wc_dir,  expected_status)
 
   svntest.main.safe_rmtree(A_D_G_path)
-
-  expected_output = ["!       " + A_D_G_path + "\n"]
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_output.extend(deletes)
-
-  expected_output = svntest.verify.UnorderedOutput(expected_output)
-
-  svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
-                                     wc_dir)
+  expected_status.tweak('A/D/G', status='! ')
+  
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # When using single-db, we can get back to the virginal state.
-  if svntest.main.wc_is_singledb(wc_dir):
-    svntest.actions.run_and_verify_svn(None, None, [], "revert",
-                                       "-R", A_D_G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], "revert",
+                                     "-R", A_D_G_path)
 
-    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 # Test for issue #2804 with replaced directory
@@ -910,14 +898,10 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
 
   svntest.main.safe_rmtree(G_path)
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_output = svntest.verify.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
       ["!       " + G_path + "\n",
        "!       " + os.path.join(G_path, "alpha") + "\n",
        "!       " + os.path.join(G_path, "beta") + "\n"])
-  else:
-    expected_output = svntest.verify.UnorderedOutput(
-      ["!       " + G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
 
