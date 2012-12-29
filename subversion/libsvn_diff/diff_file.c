@@ -122,7 +122,8 @@ datasource_to_index(svn_diff_datasource_e datasource)
  * whatsoever.  If there is a number someone comes up with that has some
  * argumentation, let's use that.
  */
-/* If you change this number, update test_wrap() in diff-diff3-test.c */
+/* If you change this number, update test_wrap() and test_identical_suffix()
+   in diff-diff3-test.c */
 #define CHUNK_SHIFT 17
 #define CHUNK_SIZE (1 << CHUNK_SHIFT)
 
@@ -497,6 +498,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
  * The number 50 is more or less arbitrary, based on some real-world tests
  * with big files (and then doubling the required number to be on the safe
  * side). This has a negligible effect on the power of the optimization. */
+/* If you change this number, update test_identical_suffix() in diff-diff3-test.c */
 #ifndef SUFFIX_LINES_TO_KEEP
 #define SUFFIX_LINES_TO_KEEP 50
 #endif
