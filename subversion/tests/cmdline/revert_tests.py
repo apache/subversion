@@ -961,17 +961,17 @@ def revert_tree_conflicts_in_updated_files(sbox):
   svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
   G = os.path.join(wc_dir, 'A', 'D', 'G')
-  G_pi  = os.path.join(G, 'pi');
-  G_rho = os.path.join(G, 'rho');
-  G_tau = os.path.join(G, 'tau');
+  G_pi  = os.path.join(G, 'pi')
+  G_rho = os.path.join(G, 'rho')
+  G_tau = os.path.join(G, 'tau')
 
   # Duplicate wc for tests
   wc_dir_2 =  sbox.add_wc_path('2')
   svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  G2_pi  = os.path.join(G2, 'pi');
-  G2_rho = os.path.join(G2, 'rho');
-  G2_tau = os.path.join(G2, 'tau');
+  G2_pi  = os.path.join(G2, 'pi')
+  G2_rho = os.path.join(G2, 'rho')
+  G2_tau = os.path.join(G2, 'tau')
 
   # Expectations
   expected_output = svntest.verify.UnorderedOutput(
@@ -1159,7 +1159,7 @@ def revert_permissions_only(sbox):
     check_executability(path, False)
 
 
-  os.chmod(sbox.ospath('A/B/E/alpha'), 0444);  # read-only
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0444)  # read-only
   is_readonly(sbox.ospath('A/B/E/alpha'))
   expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1167,7 +1167,7 @@ def revert_permissions_only(sbox):
   is_writable(sbox.ospath('A/B/E/alpha'))
 
   if svntest.main.is_posix_os():
-    os.chmod(sbox.ospath('A/B/E/beta'), 0777);   # executable
+    os.chmod(sbox.ospath('A/B/E/beta'), 0777)   # executable
     is_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1193,7 +1193,7 @@ def revert_permissions_only(sbox):
                                         expected_status,
                                         None, wc_dir)
 
-  os.chmod(sbox.ospath('A/B/E/alpha'), 0666);  # not read-only
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0666)  # not read-only
   is_writable(sbox.ospath('A/B/E/alpha'))
   expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1201,7 +1201,7 @@ def revert_permissions_only(sbox):
   is_readonly(sbox.ospath('A/B/E/alpha'))
 
   if svntest.main.is_posix_os():
-    os.chmod(sbox.ospath('A/B/E/beta'), 0666);   # not executable
+    os.chmod(sbox.ospath('A/B/E/beta'), 0666)   # not executable
     is_non_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
     svntest.actions.run_and_verify_svn(None, expected_output, [],

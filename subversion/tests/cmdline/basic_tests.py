@@ -1936,7 +1936,7 @@ def delete_keep_local(sbox):
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
   expected_output = svntest.wc.State(wc_dir, {})
-  expected_status.tweak(wc_rev = 2);
+  expected_status.tweak(wc_rev = 2)
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,

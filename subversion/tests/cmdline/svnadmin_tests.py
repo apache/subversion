@@ -741,7 +741,7 @@ def recover_fsfs(sbox):
 
   # Move aside the current file for r3.
   os.rename(os.path.join(sbox.repo_dir, 'db','current'),
-            os.path.join(sbox.repo_dir, 'db','was_current'));
+            os.path.join(sbox.repo_dir, 'db','was_current'))
 
   # Run 'svnadmin recover' and check that the current file is recreated.
   exit_code, output, errput = svntest.main.run_svnadmin("recover",
@@ -1817,9 +1817,9 @@ def mergeinfo_race(sbox):
   t2 = threading.Thread(None, makethread(wc2_dir))
 
   # t2 will trigger the issue #4129 sanity check in fs_fs.c
-  t1.start(); t2.start();
+  t1.start(); t2.start()
 
-  t1.join(); t2.join();
+  t1.join(); t2.join()
 
   # Crude attempt to make sure everything worked.
   # TODO: better way to catch exceptions in the thread

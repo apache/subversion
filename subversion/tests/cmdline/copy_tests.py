@@ -4364,9 +4364,9 @@ def copy_added_dir_with_copy(sbox):
   sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
-  new_dir = sbox.ospath('NewDir');
-  new_dir2 = sbox.ospath('NewDir2');
-  new_dir3 = sbox.ospath('NewDir3');
+  new_dir = sbox.ospath('NewDir')
+  new_dir2 = sbox.ospath('NewDir2')
+  new_dir3 = sbox.ospath('NewDir3')
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
@@ -4408,8 +4408,8 @@ def copy_broken_symlink(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  new_symlink = sbox.ospath('new_symlink');
-  copied_symlink = sbox.ospath('copied_symlink');
+  new_symlink = sbox.ospath('new_symlink')
+  copied_symlink = sbox.ospath('copied_symlink')
   os.symlink('linktarget', new_symlink)
 
   # Alias for svntest.actions.run_and_verify_svn

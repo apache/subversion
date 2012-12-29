@@ -2084,9 +2084,9 @@ def excluded_path_update_operation(sbox):
     'A/B/E'            : Item(status='D '),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2124,8 +2124,8 @@ def excluded_path_update_operation(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
     })
-  expected_status.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B');
-  expected_disk.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B');
+  expected_status.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B')
+  expected_disk.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2158,8 +2158,8 @@ def excluded_path_update_operation(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='D '),
     })
-  expected_status.remove('iota');
-  expected_disk.remove('iota');
+  expected_status.remove('iota')
+  expected_disk.remove('iota')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2202,9 +2202,9 @@ def excluded_path_misc_operation(sbox):
     'A/B/E'            : Item(status='D '),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2452,7 +2452,7 @@ def make_depth_tree_conflicts(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu',
                        'A/B', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
-                       'A/D/gamma');
+                       'A/D/gamma')
   if svntest.main.wc_is_singledb(sbox.wc_dir):
     expected_disk.remove('A/B/E', 'A/B/F')
 

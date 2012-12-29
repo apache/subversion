@@ -7652,7 +7652,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        None, None, None, None, None, 1, 1,
                                        '--depth', 'empty', H_COPY_2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
-                                     'log msg', wc_dir);
+                                     'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   # Now reverse the prior merge.  Issue #3392 manifests itself here with
   # a mergeinfo parsing error:
@@ -14846,7 +14846,7 @@ def noop_file_merge(sbox):
     [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
                                      'Merge r5 from A to A_COPY',
-                                     wc_dir);
+                                     wc_dir)
 
   # Update working copy to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [],
@@ -15738,7 +15738,7 @@ def foreign_repos_del_and_props(sbox):
   wc_dir = sbox.wc_dir
   wc2_dir = sbox.add_wc_path('wc2')
 
-  (r2_path, r2_url) = sbox.add_repo_path('fgn');
+  (r2_path, r2_url) = sbox.add_repo_path('fgn')
   svntest.main.create_repos(r2_path)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
@@ -16139,7 +16139,7 @@ def merge_into_locally_added_file(sbox):
 
   shutil.copy(pi_path, new_path)
   svntest.main.file_append(pi_path, "foo\n")
-  sbox.simple_commit(); # r2
+  sbox.simple_commit() # r2
 
   sbox.simple_add('A/D/G/new')
 
@@ -16184,7 +16184,7 @@ def merge_into_locally_added_directory(sbox):
   new_dir_path = sbox.ospath("A/D/new_dir")
 
   svntest.main.file_append_binary(pi_path, "foo\n")
-  sbox.simple_commit(); # r2
+  sbox.simple_commit() # r2
 
   os.mkdir(new_dir_path)
   svntest.main.file_append_binary(os.path.join(new_dir_path, 'pi'),

@@ -1520,7 +1520,7 @@ def verify_path_escaping(sbox):
       'file #1'           : Item(status='  ', writelocked='K', wc_rev='2'),
       'file #2'           : Item(status='  ', writelocked='O', wc_rev='2'),
       'file #3'           : Item(status='  ', writelocked='B', wc_rev='2')
-    });
+    })
 
   # Make sure the file locking is reported correctly
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

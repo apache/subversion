@@ -3336,12 +3336,12 @@ def diff_url_against_local_mods(sbox):
                                      'up')
 
   # In A, add, remove and change a file, and commit.
-  make_file_edit_del_add(A);
+  make_file_edit_del_add(A)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'committing A')
 
   # In A2, do the same changes but leave uncommitted.
-  make_file_edit_del_add(A2);
+  make_file_edit_del_add(A2)
 
   # Diff URL of A against working copy of A2. Output should be empty.
   expected_output = []

@@ -2785,7 +2785,7 @@ def copy_with_switched_subdir(sbox):
                                      '--ignore-ancestry', E_url, G)
 
   state.tweak('A/D/G', switched='S')
-  state.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau');
+  state.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   state.add({
     'A/D/G/alpha' : Item(status='  ', wc_rev=1),
     'A/D/G/beta' : Item(status='  ', wc_rev=1),
