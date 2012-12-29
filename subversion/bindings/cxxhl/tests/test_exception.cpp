@@ -39,12 +39,52 @@ void trace(const svn::error::message& msg)
               << msg.first << ':' << ' ';
   std::cout << msg.second << std::endl;
 }
+
+void traceall(const char *message, const svn::error& err)
+{
+  typedef svn::error::message_list message_list;
+  std::cout << message << std::endl;
+  std::cout << "Traced Messages:" << std::endl;
+  message_list ml = err.traced_messages();
+  std::for_each(ml.begin(), ml.end(), trace);
+  std::cout << "Just Messages:" << std::endl;
+  ml = err.messages();
+  std::for_each(ml.begin(), ml.end(), trace);
+}
 } // anonymous namespace
 
-int main()
-{
-  apr_initialize();
 
+bool test_cancel()
+{
+  try
+    {
+      svn_error_t* err;
+      err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
+      err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
+      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
+      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
+      err = svn_error_trace(err);
+      svn::error::throw_svn_error(err);
+    }
+  catch (const svn::cancelled& err)
+    {
+      traceall("Caught: CANCEL", err);
+      return true;
+    }
+  catch (const svn::error& err)
+    {
+      traceall("Caught: ERROR", err);
+      return false;
+    }
+  catch (...)
+    {
+      return false;
+    }
+  return false;
+}
+
+int test_error()
+{
   try
     {
       svn_error_t* err;
@@ -54,20 +94,36 @@ int main()
       err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
       err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
       err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
       err = svn_error_trace(err);
       svn::error::throw_svn_error(err);
     }
+  catch (const svn::cancelled& err)
+    {
+      traceall("Caught: CANCEL", err);
+      return false;
+    }
   catch (const svn::error& err)
     {
-      typedef svn::error::message_list message_list;
-      std::cout << "Traced Messages:" << std::endl;
-      message_list ml = err.traced_messages();
-      std::for_each(ml.begin(), ml.end(), trace);
-      std::cout << "Just Messages:" << std::endl;
-      ml = err.messages();
-      std::for_each(ml.begin(), ml.end(), trace);
+      traceall("Caught: ERROR", err);
+      return true;
     }
+  catch (...)
+    {
+      return false;
+    }
+  return false;
+}
 
+int main()
+{
+  apr_initialize();
+
+  const char *stat  = (test_cancel() ? "OK" : "ERROR");
+  std::cerr << "test_cancel .... " << stat << std::endl;
+
+  stat = (test_error() ? "OK" : "ERROR");
+  std::cerr << "test_error ..... " << stat << std::endl;
+
+  apr_terminate();
   return 0;
 }

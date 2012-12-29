@@ -115,8 +115,10 @@ public:
   /** Used internally by the implementation. */
   static void throw_svn_error(svn_error_t*);
 
-private:
+protected:
   error(int error_code, detail::error_description* description) throw();
+
+private:
   std::vector<message> compile_messages(bool show_traces) const;
 
   int m_errno;                /**< The (SVN or APR) error code. */
@@ -125,7 +127,15 @@ private:
   detail::error_description* m_description;
 };
 
-class canceled : public error {};
+class cancelled : public error
+{
+  friend void error::throw_svn_error(svn_error_t*);
+
+protected:
+  cancelled(int error_code, detail::error_description* description) throw()
+    : error(error_code, description)
+    {}
+};
 
 } // namespace version_1_9_dev
 } // namespace cxxhl
