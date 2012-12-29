@@ -999,11 +999,7 @@ def patch_add_new_dir(sbox):
            'X/Y/new'   : Item(contents='new\n'),
            'A/Z'       : Item()
   })
-  expected_disk.remove('A/B/E/alpha')
-  expected_disk.remove('A/B/E/beta')
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('A/B/E')
-    expected_disk.remove('A/C')
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/C')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -1103,16 +1099,15 @@ def patch_remove_empty_dirs(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/H/chi')
-  expected_disk.remove('A/D/H/psi')
-  expected_disk.remove('A/D/H/omega')
-  expected_disk.remove('A/B/lambda')
-  expected_disk.remove('A/B/E/alpha')
-  expected_disk.remove('A/B/E/beta')
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('A/B/E')
-    expected_disk.remove('A/B/F')
-    expected_disk.remove('A/B')
+  expected_disk.remove('A/D/H/chi',
+                       'A/D/H/psi',
+                       'A/D/H/omega',
+                       'A/B/lambda',
+                       'A/B',
+                       'A/B/E',
+                       'A/B/E/alpha',
+                       'A/B/E/beta',
+                       'A/B/F')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
