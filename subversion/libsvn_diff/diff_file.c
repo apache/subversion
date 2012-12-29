@@ -856,6 +856,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   file_token->datasource = datasource;
   file_token->offset = chunk_to_offset(file->chunk)
                        + (curp - file->buffer);
+  file_token->norm_offset = file_token->offset;
   file_token->raw_length = 0;
   file_token->length = 0;
 
@@ -884,11 +885,21 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       length = endp - curp;
       file_token->raw_length += length;
-      svn_diff__normalize_buffer(&curp, &length,
-                                 &file->normalize_state,
-                                 curp, file_baton->options);
-      file_token->length += length;
-      h = svn__adler32(h, curp, length);
+      {
+        char *c = curp;
+
+        svn_diff__normalize_buffer(&c, &length,
+                                   &file->normalize_state,
+                                   curp, file_baton->options);
+        if (file_token->length == 0)
+          {
+            /* When we are reading the first part of the token, move the
+               normalized offset past leading ignored characters, if any. */
+            file_token->norm_offset += (c - curp);
+          }
+        file_token->length += length;
+        h = svn__adler32(h, c, length);
+      }
 
       curp = endp = file->buffer;
       file->chunk++;
@@ -927,11 +938,12 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       svn_diff__normalize_buffer(&c, &length,
                                  &file->normalize_state,
                                  curp, file_baton->options);
-
-      file_token->norm_offset = file_token->offset;
       if (file_token->length == 0)
-        /* move past leading ignored characters */
-        file_token->norm_offset += (c - curp);
+        {
+          /* When we are reading the first part of the token, move the
+             normalized offset past leading ignored characters, if any. */
+          file_token->norm_offset += (c - curp);
+        }
 
       file_token->length += length;
 
