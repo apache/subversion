@@ -111,11 +111,11 @@ def resolved_on_wc_root(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('iota',
+                       'A/B',
                        'A/B/lambda',
-                       'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/F',
                        'A/D/gamma')
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_disk.remove('A/B/E', 'A/B/F', 'A/B')
 
   expected_status = svntest.actions.get_virginal_state(wc, 2)
   expected_status.tweak('iota', 'A/B', 'A/D/gamma',

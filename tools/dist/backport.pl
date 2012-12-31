@@ -110,10 +110,6 @@ $SVNq up
 $SVNq merge $mergeargs
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
-  if [ -n "\$PRINT_SOMETHING_BETWEEN_PROMPTS" ]; then
-    # hack for pw-driver.pl to see some output between prompts
-    head -n1 $logmsg_filename
-  fi
   $SVNq commit -F $logmsg_filename
 else
   echo "Committing:"

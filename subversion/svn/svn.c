@@ -1,5 +1,5 @@
 /*
- * main.c:  Subversion command line client.
+ * svn.c:  Subversion command line client main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

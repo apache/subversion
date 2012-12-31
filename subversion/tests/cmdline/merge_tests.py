@@ -1735,8 +1735,6 @@ def merge_into_missing(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  single_db = svntest.main.wc_is_singledb(wc_dir)
-
   F_path = sbox.ospath('A/B/F')
   F_url = sbox.repo_url + '/A/B/F'
   Q_path = os.path.join(F_path, 'Q')
@@ -1798,21 +1796,15 @@ def merge_into_missing(sbox):
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
-    'Q'     : Item(status='! ', wc_rev='?'),
-    })
+    'Q'     : Item(status='! ', wc_rev=2),
+    # Missing data still available
+    'Q/R'      : Item(status='! ', wc_rev=3),
+    'Q/R/bar'  : Item(status='! ', wc_rev=3),
+    'Q/baz'    : Item(status='! ', wc_rev=3),
+  })
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
     'foo' : Item(),
-    })
-
-  if single_db:
-    # Revision not lost
-    expected_status.tweak('Q', wc_rev=2)
-    # Missing data still available
-    expected_status.add({
-      'Q/R'      : Item(status='! ', wc_rev='3'),
-      'Q/R/bar'  : Item(status='! ', wc_rev='3'),
-      'Q/baz'    : Item(status='! ', wc_rev='3'),
     })
 
   # Use --ignore-ancestry because merge tracking aware merges raise an
@@ -1837,20 +1829,15 @@ def merge_into_missing(sbox):
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
-    'Q'     : Item(status='! ', wc_rev='?'),
-    })
+    'Q'     : Item(status='! ', entry_rev='?', wc_rev='2'),
+    # Revision is known and we can record mergeinfo
+    'Q/R'      : Item(status='! ', wc_rev='3'),
+    'Q/R/bar'  : Item(status='! ', wc_rev='3'),
+    'Q/baz'    : Item(status='! ', wc_rev='3'),
+  })
   expected_mergeinfo_output = wc.State(F_path, {
     })
-
-  if single_db:
-    # Revision is known and we can record mergeinfo
-    expected_status.tweak('Q', wc_rev='2', entry_rev='?')
-    expected_status.add({
-      'Q/R'      : Item(status='! ', wc_rev='3'),
-      'Q/R/bar'  : Item(status='! ', wc_rev='3'),
-      'Q/baz'    : Item(status='! ', wc_rev='3'),
-    })
-
+  
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -1879,18 +1866,11 @@ def merge_into_missing(sbox):
   expected_status.add({
     'A/B/F'     : Item(status='  ', wc_rev=1),
     'A/B/F/foo' : Item(status='! ', wc_rev=2),
-    'A/B/F/Q'   : Item(status='! ', wc_rev='?'),
-    })
-  if single_db:
-    # Revision known and mergeinfo recorded
-    expected_status.tweak('A/B/F/Q', wc_rev='2')
-    # Missing data still available
-    expected_status.add({
-      'A/B/F/Q'        : Item(status='! ', wc_rev='2'),
-      'A/B/F/Q/baz'    : Item(status='! ', wc_rev='3'),
-      'A/B/F/Q/R'      : Item(status='! ', wc_rev='3'),
-      'A/B/F/Q/R/bar'  : Item(status='! ', wc_rev='3'),
-    })
+    'A/B/F/Q'   : Item(status='! ', wc_rev=2),
+    'A/B/F/Q/baz'    : Item(status='! ', wc_rev='3'),
+    'A/B/F/Q/R'      : Item(status='! ', wc_rev='3'),
+    'A/B/F/Q/R/bar'  : Item(status='! ', wc_rev='3'),
+  })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -4941,56 +4921,54 @@ def mergeinfo_inheritance(sbox):
 
   # In single-db mode you can't create a disconnected working copy by just
   # copying a subdir
-  if svntest.main.wc_is_singledb(wc_dir):
-    return
 
-  # Copy the subtree A_COPY/B/E from the working copy, making the
-  # disconnected WC E_only.
-  other_wc = sbox.add_wc_path('E_only')
-  svntest.actions.duplicate_dir(E_COPY_path, other_wc)
-
-  # Update the disconnected WC it so it will get the most recent mergeinfo
-  # from the repos when merging.
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [], 'up',
-                                     other_wc)
-
-  # Merge r5:4 into the root of the disconnected WC.
-  # E_only has no explicit mergeinfo and since it's the root of the WC
-  # cannot inherit any mergeinfo from a working copy ancestor path. Nor
-  # does it have any mergeinfo explicitly set on it in the repository.
-  # An ancestor path on the repository side, A_COPY/B does have the merge
-  # info '/A/B:5' however and E_only should inherit this, resulting in
-  # empty mergeinfo after the removal of r5 (A_COPY has mergeinfo of
-  # '/A:3' so this empty mergeinfo is needed to override that.
-  expected_output = wc.State(other_wc,
-                             {'beta' : Item(status='U ')})
-  expected_mergeinfo_output = wc.State(other_wc, {
-    '' : Item(status=' G')
-    })
-  expected_elision_output = wc.State(other_wc, {
-    })
-  expected_status = wc.State(other_wc, {
-    ''      : Item(status=' M', wc_rev=7),
-    'alpha' : Item(status='  ', wc_rev=7),
-    'beta'  : Item(status='M ', wc_rev=7),
-    })
-  expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGEINFO : ''}),
-    'alpha' : Item("This is the file 'alpha'.\n"),
-    'beta'  : Item("This is the file 'beta'.\n"),
-    })
-  expected_skip = wc.State(other_wc, { })
-
-  svntest.actions.run_and_verify_merge(other_wc, '5', '4',
-                                       sbox.repo_url + '/A/B/E', None,
-                                       expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+  ## Copy the subtree A_COPY/B/E from the working copy, making the
+  ## disconnected WC E_only.
+  #other_wc = sbox.add_wc_path('E_only')
+  #svntest.actions.duplicate_dir(E_COPY_path, other_wc)
+  #
+  ## Update the disconnected WC it so it will get the most recent mergeinfo
+  ## from the repos when merging.
+  #svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [], 'up',
+  #                                   other_wc)
+  #
+  ## Merge r5:4 into the root of the disconnected WC.
+  ## E_only has no explicit mergeinfo and since it's the root of the WC
+  ## cannot inherit any mergeinfo from a working copy ancestor path. Nor
+  ## does it have any mergeinfo explicitly set on it in the repository.
+  ## An ancestor path on the repository side, A_COPY/B does have the merge
+  ## info '/A/B:5' however and E_only should inherit this, resulting in
+  ## empty mergeinfo after the removal of r5 (A_COPY has mergeinfo of
+  ## '/A:3' so this empty mergeinfo is needed to override that.
+  #expected_output = wc.State(other_wc,
+  #                           {'beta' : Item(status='U ')})
+  #expected_mergeinfo_output = wc.State(other_wc, {
+  #  '' : Item(status=' G')
+  #  })
+  #expected_elision_output = wc.State(other_wc, {
+  #  })
+  #expected_status = wc.State(other_wc, {
+  #  ''      : Item(status=' M', wc_rev=7),
+  #  'alpha' : Item(status='  ', wc_rev=7),
+  #  'beta'  : Item(status='M ', wc_rev=7),
+  #  })
+  #expected_disk = wc.State('', {
+  #  ''      : Item(props={SVN_PROP_MERGEINFO : ''}),
+  #  'alpha' : Item("This is the file 'alpha'.\n"),
+  #  'beta'  : Item("This is the file 'beta'.\n"),
+  #  })
+  #expected_skip = wc.State(other_wc, { })
+  #
+  #svntest.actions.run_and_verify_merge(other_wc, '5', '4',
+  #                                     sbox.repo_url + '/A/B/E', None,
+  #                                     expected_output,
+  #                                     expected_mergeinfo_output,
+  #                                     expected_elision_output,
+  #                                     expected_disk,
+  #                                     expected_status,
+  #                                     expected_skip,
+  #                                     None, None, None, None,
+  #                                     None, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -6964,9 +6942,7 @@ def merge_loses_mergeinfo(sbox):
   expected_elision_output = wc.State(A_C_wc_dir, {
     '' : Item(status=' U'),
     })
-  expected_disk = wc.State('', {'J': Item()})
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('J')
+  expected_disk = wc.State('', {})
   expected_status = wc.State(A_C_wc_dir,
                              { ''    : Item(wc_rev=4, status=' M'),
                                'J'   : Item(wc_rev=4, status='D ')
@@ -6985,11 +6961,8 @@ def merge_loses_mergeinfo(sbox):
   expected_output = wc.State(A_C_wc_dir, {'K' : Item(status='A ')})
   expected_disk = wc.State('', {
     'K'       : Item(),
-    'J'       : Item(),
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
     })
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('J')
   expected_status = wc.State(A_C_wc_dir,
                              { ''    : Item(wc_rev=4, status=' M'),
                                'K'   : Item(status='A ',
@@ -7652,7 +7625,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        None, None, None, None, None, 1, 1,
                                        '--depth', 'empty', H_COPY_2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
-                                     'log msg', wc_dir);
+                                     'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   # Now reverse the prior merge.  Issue #3392 manifests itself here with
   # a mergeinfo parsing error:
@@ -14018,7 +13991,6 @@ def no_self_referential_filtering_on_added_path(sbox):
                               '/A_COPY/C:8\n' +
                               '/A_COPY/C_MOVED:8',
                               'propname' : 'propval'}),
-    'C'         : Item(),
     'D'         : Item(),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
@@ -14030,8 +14002,6 @@ def no_self_referential_filtering_on_added_path(sbox):
     'D/H/psi'   : Item("New content"),
     'D/H/omega' : Item("New content"),
     })
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_A_COPY_2_disk.remove('C')
   expected_A_COPY_2_skip = wc.State(A_COPY_2_path, { })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, None, None,
                                        sbox.repo_url + '/A', None,
@@ -14846,7 +14816,7 @@ def noop_file_merge(sbox):
     [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
                                      'Merge r5 from A to A_COPY',
-                                     wc_dir);
+                                     wc_dir)
 
   # Update working copy to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [],
@@ -15595,14 +15565,13 @@ def committed_case_only_move_and_revert(sbox):
     })
   expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A:3,5'})
   expected_disk.add({'c' : Item()})
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('C')
+  expected_disk.remove('C')
   expected_status.tweak('MU', status='  ', wc_rev=4, copied=None)
   expected_status.remove('mu')
   expected_status.tweak('C', status='D ')
   expected_status.tweak('', wc_rev=4)
   expected_status.add({'c' : Item(status='A ', copied='+', wc_rev='-')})
-  # This merge succeeds, but A_COPY/c is in a strange state, added with
+  # This merge succeeds. It used to leave a strange state, added with
   # history but missing:
   #
   #   M      merge_tests-139\A_COPY
@@ -15738,7 +15707,7 @@ def foreign_repos_del_and_props(sbox):
   wc_dir = sbox.wc_dir
   wc2_dir = sbox.add_wc_path('wc2')
 
-  (r2_path, r2_url) = sbox.add_repo_path('fgn');
+  (r2_path, r2_url) = sbox.add_repo_path('fgn')
   svntest.main.create_repos(r2_path)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
@@ -16139,7 +16108,7 @@ def merge_into_locally_added_file(sbox):
 
   shutil.copy(pi_path, new_path)
   svntest.main.file_append(pi_path, "foo\n")
-  sbox.simple_commit(); # r2
+  sbox.simple_commit() # r2
 
   sbox.simple_add('A/D/G/new')
 
@@ -16184,7 +16153,7 @@ def merge_into_locally_added_directory(sbox):
   new_dir_path = sbox.ospath("A/D/new_dir")
 
   svntest.main.file_append_binary(pi_path, "foo\n")
-  sbox.simple_commit(); # r2
+  sbox.simple_commit() # r2
 
   os.mkdir(new_dir_path)
   svntest.main.file_append_binary(os.path.join(new_dir_path, 'pi'),

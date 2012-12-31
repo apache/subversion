@@ -417,10 +417,7 @@ def update_missing(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # In single-db mode all missing items will just be restored
-  if svntest.main.wc_is_singledb(wc_dir):
-    A_or_Restored = Item(verb='Restored')
-  else:
-    A_or_Restored = Item(status='A ')
+  A_or_Restored = Item(verb='Restored')
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
@@ -1172,15 +1169,14 @@ def update_deleted_missing_dir(sbox):
     })
 
   # In single-db mode the missing items are restored before the update
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_output.add({
+  expected_output.add({
       'A/D/H/psi'         : Item(verb='Restored'),
       'A/D/H/omega'       : Item(verb='Restored'),
       'A/D/H/chi'         : Item(verb='Restored'),
       'A/B/E/beta'        : Item(verb='Restored'),
       'A/B/E/alpha'       : Item(verb='Restored')
       # A/B/E and A/D/H are also restored, but are then overriden by the delete
-    })
+  })
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
@@ -1260,20 +1256,14 @@ def another_hudson_problem(sbox):
   # Update missing directory to receive the delete, this should mark G
   # as 'deleted' and should not alter gamma's entry.
 
-  if not svntest.main.wc_is_singledb(wc_dir):
-    expected_output = ["Updating '%s' ...\n" % (G_path),
-                       'D    '+G_path+'\n',
-                       'Updated to revision 3.\n',
-                       ]
-  else:
-    expected_output = ["Updating '%s':\n" % (G_path),
-                       'Restored \'' + G_path + '\'\n',
-                       'Restored \'' + G_path + os.path.sep + 'pi\'\n',
-                       'Restored \'' + G_path + os.path.sep + 'rho\'\n',
-                       'Restored \'' + G_path + os.path.sep + 'tau\'\n',
-                       'D    '+G_path+'\n',
-                       'Updated to revision 3.\n',
-                       ]
+  expected_output = ["Updating '%s':\n" % (G_path),
+                     'Restored \'' + G_path + '\'\n',
+                     'Restored \'' + G_path + os.path.sep + 'pi\'\n',
+                     'Restored \'' + G_path + os.path.sep + 'rho\'\n',
+                     'Restored \'' + G_path + os.path.sep + 'tau\'\n',
+                     'D    '+G_path+'\n',
+                     'Updated to revision 3.\n',
+                    ]
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
@@ -1675,105 +1665,7 @@ def update_to_future_add(sbox):
                                         expected_disk,
                                         None, None,
                                         None, None, None, None, 0,
-                                        A_path);
-
-#----------------------------------------------------------------------
-
-def nested_in_read_only(sbox):
-  "update a nested wc in a read-only wc"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    raise svntest.Skip('Unsupported in single-db')
-
-  # Delete/commit a file
-  alpha_path = sbox.ospath('A/B/E/alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(verb='Deleting'),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/B/E/alpha')
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-
-  expected_status.tweak(wc_rev=2)
-
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # Delete/commit a directory that used to contain the deleted file
-  B_path = sbox.ospath('A/B')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', B_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B' : Item(verb='Deleting'),
-    })
-
-  expected_status.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/beta', 'A/B/F')
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-
-  expected_status.tweak(wc_rev=3)
-
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # Replace the deleted directory with a new checkout of an old
-  # version of the directory, this gives it a "plausible" URL that
-  # could be part of the containing wc
-  B_url = sbox.repo_url + '/A/B'
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'checkout', '-r', '1', B_url + "@1",
-                                     B_path)
-
-  expected_status = svntest.wc.State(B_path, {
-    ''           : Item(),
-    'lambda'     : Item(),
-    'E'          : Item(),
-    'E/alpha'    : Item(),
-    'E/beta'     : Item(),
-    'F'          : Item(),
-    })
-  expected_status.tweak(wc_rev=1, status='  ')
-
-  svntest.actions.run_and_verify_status(B_path, expected_status)
-
-  # Make enclosing wc read only
-  os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
-
-  try:
-    # Update of nested wc should still work
-    expected_output = svntest.wc.State(B_path, {
-      'E/alpha' : Item(status='D '),
-      })
-
-    expected_disk = wc.State('', {
-      'lambda'  : wc.StateItem("This is the file 'lambda'.\n"),
-      'E'       : wc.StateItem(),
-      'E/beta'  : wc.StateItem("This is the file 'beta'.\n"),
-      'F'       : wc.StateItem(),
-      })
-
-    expected_status.remove('E/alpha')
-    expected_status.tweak(wc_rev=2)
-
-    svntest.actions.run_and_verify_update(B_path,
-                                          expected_output,
-                                          expected_disk,
-                                          expected_status,
-                                          None, None, None, None, None, 0,
-                                          '-r', '2', B_path)
-  finally:
-    os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0777)
+                                        A_path)
 
 #----------------------------------------------------------------------
 
@@ -4331,10 +4223,9 @@ def tree_conflicts_on_update_1_1(sbox):
   })
 
   expected_disk = disk_empty_dirs.copy()
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
-                         'DDF/D1', 'DDF/D1/D2',
-                         'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
+  expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
+                       'DDF/D1', 'DDF/D1/D2',
+                       'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -4441,11 +4332,10 @@ def tree_conflicts_on_update_1_2(sbox):
   ### Why does the deep trees state not include files?
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
-                       'DDD/D1/D2/D3')
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_disk.remove('DF/D1', 'DD/D1',
-                         'DDF/D1', 'DDF/D1/D2',
-                         'DDD/D1', 'DDD/D1/D2')
+                       'DDD/D1/D2/D3',
+                       'DF/D1', 'DD/D1',
+                       'DDF/D1', 'DDF/D1/D2',
+                       'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {
@@ -5936,7 +5826,6 @@ test_list = [ None,
               update_deletion_inside_out,
               update_schedule_add_dir,
               update_to_future_add,
-              nested_in_read_only,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
               conflict_markers_matching_eol,

@@ -162,6 +162,7 @@ error::error(int error_code, detail::error_description* description) throw()
 
 void error::throw_svn_error(svn_error_t* err)
 {
+  const bool throw_cancelled = (err->apr_err == SVN_ERR_CANCELLED);
   detail::error_description* description = NULL;
   try
     {
@@ -169,28 +170,41 @@ void error::throw_svn_error(svn_error_t* err)
       // the exception unwinder can free them if an allocation fails.
       // The private constructor does not increment the refcount
       // precisely for this reason.
+
+      shared_ptr nested;
+      shared_ptr* current = &nested;
+
+      for (svn_error_t* next = err->child; next; next = next->child)
+        {
+          description = detail::error_description::create(
+              next->message, next->file, next->line,
+              svn_error__is_tracing_link(next));
+          description->reference();
+          current->reset(new error(next->apr_err, description));
+          description = NULL;
+          current = &(*current)->m_nested;
+        }
+
+      const int apr_err = err->apr_err;
       description = detail::error_description::create(
           err->message, err->file, err->line,
           svn_error__is_tracing_link(err));
       description->reference();
-      error converted = error(err->apr_err, description);
-      description = NULL;
-
-      svn_error_t *prev = err;
-      error* current = &converted;
-      for (err = err->child; err; prev = err, err = err->child)
+      svn_error_clear(err);
+      if (throw_cancelled)
         {
-          svn_error_clear(prev);
-          description = detail::error_description::create(
-              err->message, err->file, err->line,
-              svn_error__is_tracing_link(err));
-          description->reference();
-          current->m_nested.reset(new error(err->apr_err, description));
+          cancelled converted = cancelled(apr_err, description);
           description = NULL;
-          current = current->m_nested.get();
+          converted.m_nested = nested;
+          throw converted;
         }
-      svn_error_clear(prev);
-      throw converted;
+      else
+        {
+          error converted = error(apr_err, description);
+          description = NULL;
+          converted.m_nested = nested;
+          throw converted;
+        }
     }
   catch (...)
     {
@@ -295,11 +309,11 @@ error::message_list error::compile_messages(bool show_traces) const
     }
   catch (...)
     {
-      apr_pool_destroy(pool);
+      svn_pool_destroy(pool);
       throw;
     }
 
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   return ml;
 }
 

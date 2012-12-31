@@ -834,7 +834,7 @@ svn_io_copy_file(const char *src,
     return SVN_NO_ERROR;
 #endif
 
-  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
+  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ,
                            APR_OS_DEFAULT, pool));
 
   /* For atomicity, we copy to a tmp file and then rename the tmp
@@ -1536,7 +1536,7 @@ io_set_file_perms(const char *path,
 
           /* Get the perms for the original file so we'll have any other bits
            * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ | APR_BINARY,
+          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
                                    APR_OS_DEFAULT, pool));
           SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
           SVN_ERR(svn_io_file_close(fd, pool));

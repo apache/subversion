@@ -2458,22 +2458,11 @@ def move_dir_back_and_forth(sbox):
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    # In single-db target is gone on-disk after it was moved away, so this
-    # move works ok
-    expected_err = []
-  else:
-    # In !SINGLE_DB the target of the copy exists on-dir, so svn tries
-    # to move the file below the deleted directory
-    expected_err = '.*Cannot copy to .*as it is scheduled for deletion'
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_move_path, D_path)
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'mv', D_move_path, D_path)
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    # Verify that the status indicates a replace with history
-    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-    expected_status.add({
+  # Verify that the status indicates a replace with history
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
       'A/D'               : Item(status='R ', copied='+', wc_rev='-'),
       'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
       'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
@@ -2484,8 +2473,8 @@ def move_dir_back_and_forth(sbox):
       'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
       'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
       'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
-      })
-    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
@@ -4364,9 +4353,9 @@ def copy_added_dir_with_copy(sbox):
   sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
-  new_dir = sbox.ospath('NewDir');
-  new_dir2 = sbox.ospath('NewDir2');
-  new_dir3 = sbox.ospath('NewDir3');
+  new_dir = sbox.ospath('NewDir')
+  new_dir2 = sbox.ospath('NewDir2')
+  new_dir3 = sbox.ospath('NewDir3')
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
@@ -4398,7 +4387,6 @@ def copy_added_dir_with_copy(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-@SkipUnless(svntest.main.is_posix_os)
 @Issue(3303)
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
@@ -4408,14 +4396,14 @@ def copy_broken_symlink(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  new_symlink = sbox.ospath('new_symlink');
-  copied_symlink = sbox.ospath('copied_symlink');
-  os.symlink('linktarget', new_symlink)
+  new_symlink = sbox.ospath('new_symlink')
+  copied_symlink = sbox.ospath('copied_symlink')
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
 
-  rav_svn(None, None, [], 'add', new_symlink)
+  sbox.simple_add_symlink('linktarget', 'new_symlink')
+
   rav_svn(None, None, [], 'cp', new_symlink, copied_symlink)
 
   # Check whether both new_symlink and copied_symlink are added to the

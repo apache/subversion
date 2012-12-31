@@ -66,7 +66,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.8
   - Client-side bugfixes:
     * fix crash with --username option on Windows (r1396285)
     * add missing attributes to "svn log -v --xml" output (r1398100)
-    * fix svn patch ignoring hunks after no trailing newline (r139917)
+    * fix svn patch ignoring hunks after no trailing newline (r1399174)
     * fix hang with ra_serf during error processing (r1403583)
     * ignore file externals with mergeinfo when merging (r1401915)
     * fix "svnmucc cp" segfault with a missing last argument (issue #4079)
@@ -564,6 +564,21 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
+
+Version 1.6.20
+(04 Jan 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.20
+
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * Fix typos in pt_BR, es and zh_TW translations (r1402417)
+
+  - Server-side bugfixes:
+    * add Vary: header to GET responses to improve cacheability (r1390653)
+    * fix fs_fs to cleanup after failed rep transmission (r1403964, et al)
+    * fix an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+
+
 Version 1.6.19
 (10 Sep 2012, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.19
@@ -578,6 +593,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.19
 
   - Developer-visible changes:
     * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
+
 
 Version 1.6.18
 (29 Mar 2012, from /branches/1.6.x)

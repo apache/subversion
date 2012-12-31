@@ -1973,7 +1973,7 @@ svn_membuffer_cache_get(void **value_p,
    */
   if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
@@ -2004,7 +2004,7 @@ svn_membuffer_cache_set(void *cache_void,
   cache->alloc_counter += 3;
   if (cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
@@ -2062,7 +2062,7 @@ svn_membuffer_cache_get_partial(void **value_p,
 
   if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
