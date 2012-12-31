@@ -45,6 +45,15 @@ Candidate changes:
      +0: gstein (haven't reviewed these specific revisions yet)
      -0: stsp (not a critical fix, serf is an optional dependency in 1.6.x)
 
+ * r879359, r879360, r953308, r1140208, r1140588
+   Allow using serf-1.lib on Windows
+   Justification:
+     Serf moved to 1.0+. This patch makes Subversion 1.6 handle this change
+   Branch:
+     ^/subversion/branches/subversion/branches/1.6.x-serf-1-win32
+   Votes:
+     +0: rhuijben (Still running some tests)
+
 Veto-blocked changes:
 =====================
 
