@@ -862,13 +862,13 @@ svn_cl__merge_file(const char *base_path,
                                    scratch_pool)));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&modified_file, their_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&latest_file, my_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&merged_file, &merged_file_name,
                                    NULL, svn_io_file_del_none,

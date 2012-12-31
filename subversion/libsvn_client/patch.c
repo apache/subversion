@@ -915,7 +915,7 @@ init_patch_target(patch_target_t **patch_target,
       if (target->kind_on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
-                                   APR_READ | APR_BINARY | APR_BUFFERED,
+                                   APR_READ | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
           SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
                                           target->local_abspath, FALSE,

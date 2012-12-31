@@ -1935,7 +1935,8 @@ svn_boolean_t
 svn_io_is_binary_data(const void *buf, apr_size_t len);
 
 
-/** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open().  @a fname is utf8-encoded.
+    Always passed flag | APR_BINARY to apr. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,
                  const char *fname,
