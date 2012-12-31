@@ -22,7 +22,7 @@
                 BuildCommandLine="nmake /s /nologo /f serf.mak ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
                 ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
                 CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                Output="$(OutDir)\serf.lib"/>
+                Output="$(OutDir)\[serf_lib]"/>
         </Configuration>
         <Configuration
             Name="Release|[platforms]"
@@ -36,7 +36,7 @@
                 BuildCommandLine="nmake /s /nologo /f serf.mak ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
                 ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
                 CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                Output="$(OutDir)\serf.lib"/>
+                Output="$(OutDir)\[serf_lib]"/>
         </Configuration>
 [end]    </Configurations>
     <Files>

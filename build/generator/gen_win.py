@@ -1085,6 +1085,11 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
+    if self.serf_ver_maj == 1:
+      serflib = 'serf-1.lib'
+    else:
+      serflib = 'serf.lib'
+
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources',
                           glob.glob(os.path.join(serf_path, '*.c'))
@@ -1103,6 +1108,7 @@ class WinGeneratorBase(GeneratorBase):
                             and os.path.abspath(self.openssl_path)),
                          ('apr_path', os.path.abspath(self.apr_path)),
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
+                         ('serf_lib', serflib),
                         ))
 
   def move_proj_file(self, path, name, params=()):

@@ -32,7 +32,7 @@ CFG=serf - Win32 Debug
 # PROP BASE Use_Debug_Libraries 0
 # PROP BASE Output_Dir "Release"
 # PROP BASE Intermediate_Dir "Release"
-# PROP BASE Target_File "Release/serf.lib"
+# PROP BASE Target_File "Release/[serf_lib]"
 # PROP BASE Bsc_Name ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
@@ -40,7 +40,7 @@ CFG=serf - Win32 Debug
 # PROP Intermediate_Dir "Release"
 # PROP Cmd_Line "nmake /s /nologo /f serf.mak CLEAN ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
 # PROP Rebuild_Opt "/a"
-# PROP Target_File "Release/serf.lib"
+# PROP Target_File "Release/[serf_lib]"
 # PROP Bsc_Name ""
 
 !ELSEIF  "$(CFG)" == "serf - Win32 Debug"
@@ -50,7 +50,7 @@ CFG=serf - Win32 Debug
 # PROP BASE Output_Dir "Debug"
 # PROP BASE Intermediate_Dir "Debug"
 # PROP BASE Rebuild_Opt "/a"
-# PROP BASE Target_File "Debug/serf.lib"
+# PROP BASE Target_File "Debug/[serf_lib]"
 # PROP BASE Bsc_Name ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
@@ -58,7 +58,7 @@ CFG=serf - Win32 Debug
 # PROP Intermediate_Dir "Debug"
 # PROP Cmd_Line "nmake /s /nologo /f serf.mak CLEAN ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
 # PROP Rebuild_Opt "/a"
-# PROP Target_File "Debug/serf.lib"
+# PROP Target_File "Debug/[serf_lib]"
 # PROP Bsc_Name ""
 
 !ENDIF 
