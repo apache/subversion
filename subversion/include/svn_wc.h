@@ -6747,15 +6747,15 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * If @a merge_props_state is non-NULL @a propchanges is merged before
- * merging the text. (If @a merge_props_outcome is NULL, no property changes
-*  are merged and @a prop_changes is only used to determine the merge result)
+ * If @a merge_props_state is non-NULL @a prop_diff is merged before
+ * merging the text. (If @a merge_props_state is NULL, no property changes
+ * are merged and @a prop_diff is only used to determine the merge result)
  * The result of the property merge is stored in @a *merge_props_state. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
  * callback cannot resolve the conflict, then a property conflict is installed.
  *
- * The outcome of the text merge is returned in @a *merge_text_outcome. If
+ * The outcome of the text merge is returned in @a *merge_content_outcome. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the
  * conflict callback cannot resolve the conflict, then:
@@ -6787,7 +6787,8 @@ typedef enum svn_wc_merge_outcome_t
  *  begins tracking the two backup files and the version information.
  *
  * If @a dry_run is @c TRUE no files are changed.  The outcome of the merge
- * is returned in @a *merge_outcome.
+ * is returned in @a *merge_content_outcome.
+ * ### (and what about @a *merge_props_state?)
  *
  * Use @a scratch_pool for any temporary allocation.
  *
@@ -6816,7 +6817,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_merge4() but doesn't allow property changes. Instead of
+/** Similar to svn_wc_merge5() but doesn't merge property changes. Instead of
  * handling this in a single operation, a separate call to svn_wc_merge_props3()
  * before calling svn_wc_merge4() is needed
  *
