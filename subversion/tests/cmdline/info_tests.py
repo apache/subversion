@@ -529,7 +529,9 @@ def relpath_escaping(sbox):
   wc_dir = sbox.wc_dir
 
   name = 'path with space, +, % and #'
+  name2 = 'path with %20'
   sbox.simple_copy('iota', name)
+  sbox.simple_copy('iota', name2)
   sbox.simple_commit()
 
   testpath = sbox.ospath(name)
@@ -541,7 +543,7 @@ def relpath_escaping(sbox):
              
   svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
 
-  info = svntest.actions.run_and_parse_info(sbox.ospath(name))
+  info = svntest.actions.run_and_parse_info(sbox.ospath(name), sbox.ospath(name2))
 
   # And now verify that the returned URL and relative url are usable
 
@@ -551,13 +553,19 @@ def relpath_escaping(sbox):
                                      info[0]['Relative URL'],
                                      info[0]['URL'],
                                      testpath,
-                                     '^/' + name)
+                                     '^/' + name,
+
+                                     info[1]['Relative URL'],
+                                     info[1]['URL'])
 
   # And now do the same thing with a the file external handling
   sbox.simple_propset('svn:externals',
                         info[0]['Relative URL'] + " f1\n" +
                         info[0]['URL'] + " f2\n" +
-                        '"^/' + name + "\" f3\n",
+                        '"^/' + name + "\" f3\n" +
+
+                        info[1]['Relative URL'] + " g1\n" +
+                        info[1]['URL'] + " g2\n",
                       ''
                      )
 
@@ -566,6 +574,9 @@ def relpath_escaping(sbox):
     'f1'                : Item(status='A '),
     'f2'                : Item(status='A '),
     'f3'                : Item(status='A '),
+
+    'g1'                : Item(status='A '),
+    'g2'                : Item(status='A '),
   })
 
   svntest.actions.run_and_verify_update(wc_dir,
