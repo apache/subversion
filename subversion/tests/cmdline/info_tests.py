@@ -522,8 +522,54 @@ def binary_tree_conflict(sbox):
   }]
   svntest.actions.run_and_verify_info(expected_info, iota)
 
+def relpath_escaping(sbox):
+  "relpath escaping should be usable as-is"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
 
+  name = 'path with space, +, % and #'
+  sbox.simple_copy('iota', name)
+  sbox.simple_commit()
+
+  testpath = sbox.ospath(name)
+
+  expected = {'Path' : re.escape(testpath),
+              'URL' : '.*/path.*with.*space.*',
+              'Relative URL' : '.*/path.*with.*space.*',
+             }
+             
+  svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
+
+  info = svntest.actions.run_and_parse_info(sbox.ospath(name))
+
+  # And now verify that the returned URL and relative url are usable
+
+  # Also test the local path (to help resolving the relative path) and an
+  # unescaped path which the client should automatically encode
+  svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                     info[0]['Relative URL'],
+                                     info[0]['URL'],
+                                     testpath,
+                                     '^/' + name)
+
+  # And now do the same thing with a the file external handling
+  sbox.simple_propset('svn:externals',
+                        info[0]['Relative URL'] + " f1\n" +
+                        info[0]['URL'] + " f2\n" +
+                        '"^/' + name + "\" f3\n",
+                      ''
+                     )
+
+  # And now we expect to see 3 file externals
+  expected_output = svntest.wc.State(wc_dir, {
+    'f1'                : Item(status='A '),
+    'f2'                : Item(status='A '),
+    'f3'                : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
 ########################################################################
 # Run the tests
@@ -539,6 +585,7 @@ test_list = [ None,
               info_repos_root_url,
               info_show_exclude,
               binary_tree_conflict,
+              relpath_escaping,
              ]
 
 if __name__ == '__main__':
