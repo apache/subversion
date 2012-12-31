@@ -528,7 +528,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match;
-  svn_boolean_t reached_prefix;
   apr_off_t lines = 0;
   svn_boolean_t had_cr;
   svn_boolean_t had_nl;
@@ -590,6 +589,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   had_nl = FALSE;
   while (is_match)
     {
+      svn_boolean_t reached_prefix;
 #if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
@@ -616,24 +616,28 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
+      for (i = 0; i < file_len; i++)
+        min_curp[i] = file_for_suffix[i].buffer;
 
-      min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
-                  ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
-                  : file_for_suffix[0].buffer + 1;
-      for (i = 1; i < file_len; i++)
-        min_curp[i] = file_for_suffix[i].buffer + 1;
+      /* If we are in the same chunk that contains the last part of the common
+         prefix, use the min_curp[0] pointer to make sure we don't get a
+         suffix that overlaps the already determined common prefix. */
+      if (file_for_suffix[0].chunk == suffix_min_chunk0)
+        min_curp[0] += suffix_min_offset0;
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
         can_read_word = can_read_word
-                        && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
-                            >= min_curp[i]);
+                        && (  (file_for_suffix[i].curp + 1
+                                 - sizeof(apr_uintptr_t))
+                            > min_curp[i]);
       while (can_read_word)
         {
           apr_uintptr_t chunk;
 
-          /* For each file curp is positioned at the next byte to read, but we
-             want to examine the bytes before the current location. */
+          /* For each file curp is positioned at the current byte, but we
+             want to examine the current byte and the ones before the current
+             location as one machine word. */
 
           chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1
                                              - sizeof(apr_uintptr_t));
@@ -654,15 +658,18 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
             {
               file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
               can_read_word = can_read_word
-                              && (   (file_for_suffix[i].curp
-                                        - sizeof(apr_uintptr_t))
-                                  >= min_curp[i]);
+                              && (  (file_for_suffix[i].curp + 1
+                                       - sizeof(apr_uintptr_t))
+                                  > min_curp[i]);
             }
 
-          /* We skipped 4 bytes, so there are no closing EOLs */
+          /* We skipped some bytes, so there are no closing EOLs */
           had_nl = FALSE;
           had_cr = FALSE;
         }
+
+      /* The > min_curp[i] check leaves at least one final byte for checking
+         in the non block optimized case below. */
 #endif
 
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
@@ -671,7 +678,8 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       if (reached_prefix || is_one_at_bof(file_for_suffix, file_len))
         break;
 
-      for (i = 1, is_match = TRUE; i < file_len; i++)
+      is_match = TRUE;
+      for (i = 1; i < file_len; i++)
         is_match = is_match
                    && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
     }
