@@ -45,18 +45,64 @@ enum {
 static int
 usage(const char *argv0)
 {
-  printf("Usage:  %s [--username USER] [[--path FSPATH] [--repository REPOS_NAME]] TARGET\n\n", argv0);
-  printf("Loads the authz file at TARGET and validates its syntax.\n"
-         "Optionally prints the access available to USER for FSPATH in\n"
-         "repository with authz name REPOS_NAME.  If FSPATH is omitted, reports\n"
-         "whether USER has any access at all.\n"
-         "TARGET can be a path to a file or an absolute file:// URL to an authz\n"
-         "file in a repository, but cannot be a repository relative URL (^/).\n"
+  printf("Usage: 1. %s [OPTION]... TARGET\n", argv0);
+  printf("       2. %s [OPTION]... --transaction TXN REPOS_PATH FILE_PATH\n\n", argv0); 
+  printf(" 1. Loads and validates the syntax of the authz file at TARGET.\n"
+         "    TARGET can be a path to a file or an absolute file:// URL to an authz\n"
+         "    file in a repository, but cannot be a repository relative URL (^/).\n\n"
+         " 2. Loads and validates the syntax of the authz file at FILE_PATH in the\n"
+         "    transaction TXN in the repository at REPOS_PATH.\n\n"
+         " Options:\n\n"
+         "   --username USER         : prints access available for a user\n"
+         "   --path FSPATH           : makes --username print access available for FSPATH\n"
+         "   --repository REPOS_NAME : use REPOS_NAME as repository authz name when\n"
+         "                               determining access available with --username\n"
+         "   -t, --transaction TXN   : enables mode 2 which looks for the file in an\n"
+         "                               uncommitted transaction TXN\n\n"
          "Returns:\n"
          "    0   when syntax is OK.\n"
          "    1   when syntax is invalid.\n"
          "    2   operational error\n");
   return 2;
+}
+
+/* Loads the authz config into *AUTHZ from the file at AUTHZ_FILE
+   in repository at REPOS_PATH from the transaction TXN_NAME.  Using
+   POOL for allocations. */
+static svn_error_t *
+get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
+                   const char *authz_file, const char *txn_name,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_node_kind_t node_kind;
+  svn_stream_t *contents;
+  svn_error_t *err;
+
+  /* Open up the repository and find the transaction root */
+  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+
+  /* Make sure the path is a file */
+  SVN_ERR(svn_fs_check_path(&node_kind, root, authz_file, pool));
+  if (node_kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                             "Path '%s' is not a file", authz_file);
+
+  SVN_ERR(svn_fs_file_contents(&contents, root, authz_file, pool));
+  err = svn_repos_authz_parse(authz, contents, pool);
+
+  /* Add the filename to the error stack since the parser doesn't have it. */
+  if (err != SVN_NO_ERROR)
+    return svn_error_createf(err->apr_err, err,
+                             "Error parsing authz file: '%s':", authz_file);
+
+  return SVN_NO_ERROR;
 }
 
 int
@@ -72,6 +118,7 @@ main(int argc, const char **argv)
       {"username", OPT_USERNAME, 1, ("the authenticated username")},
       {"path", OPT_PATH, 1, ("path within the repository")},
       {"repository", OPT_REPOS, 1, ("repository authz name")},
+      {"transaction", 't', 1, ("transaction id")},
       {0,             0,  0,  0}
     };
   struct {
@@ -79,8 +126,11 @@ main(int argc, const char **argv)
     const char *username;
     const char *fspath;
     const char *repos_name;
+    const char *txn;
+    const char *repos_path;
   } opts;
-  opts.username = opts.fspath = opts.repos_name = NULL;
+  opts.username = opts.fspath = opts.repos_name = opts.txn = NULL;
+  opts.repos_path = NULL;
 
   /* Initialize the app.  Send all error messages to 'stderr'.  */
   if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
@@ -123,9 +173,36 @@ main(int argc, const char **argv)
         case OPT_REPOS:
           opts.repos_name = arg;
           break;
+        case 't':
+          err = svn_utf_cstring_to_utf8(&opts.txn, arg, pool);
+          if (err)
+            {
+              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+              svn_error_clear(err);
+              return 2;
+            }
+          break;
         default:
           return usage(argv[0]);
         }
+    }
+
+  /* Consume a non-option argument (repos_path) if --transaction */
+  if (opts.txn)
+    {
+      if (os->ind +2 != argc)
+        return usage(argv[0]);
+
+      err = svn_utf_cstring_to_utf8(&opts.repos_path, os->argv[os->ind], pool);
+      if (err)
+        {
+          svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+          svn_error_clear(err);
+          return 2;
+        }
+      os->ind++;
+
+      opts.repos_path = svn_dirent_internal_style(opts.repos_path, pool);
     }
 
   /* Exactly 1 non-option argument, and no --repository/--path
@@ -150,9 +227,19 @@ main(int argc, const char **argv)
     return usage(argv[0]);
   else if (!svn_path_is_url(opts.authz_file))
     opts.authz_file = svn_dirent_internal_style(opts.authz_file, pool);
+  else if (opts.txn) /* don't allow urls with transaction argument */
+    return usage(argv[0]);
 
   /* Read the access file and validate it. */
-  err = svn_repos_authz_read2(&authz, opts.authz_file, TRUE, NULL, pool);
+  if (opts.txn)
+    {
+      err = get_authz_from_txn(&authz, opts.repos_path,
+                               opts.authz_file, opts.txn, pool);
+    }
+  else
+    {
+      err = svn_repos_authz_read2(&authz, opts.authz_file, TRUE, NULL, pool);
+    }
 
   /* Optionally, print the access a USER has to a given PATH in REPOS.
      PATH and REPOS may be NULL. */
