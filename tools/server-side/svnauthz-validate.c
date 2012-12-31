@@ -105,6 +105,43 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   return SVN_NO_ERROR;
 }
 
+/* Similar to svn_cmdline_handle_exit_error but returns 2 rather than
+   EXIT_FAILURE since our contract demands that we exit with 2 for
+   internal failures.  Also is missing the pool argument since we
+   don't need it given main/sub_main. */
+static int
+handle_exit_error(svn_error_t *err,
+                      const char *prefix)
+{
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, prefix);
+  svn_error_clear(err);
+  return 2;
+}
+
+/* Report and clear the error ERR, and return EXIT_FAILURE. */
+#define EXIT_ERROR(err)                                                 \
+  handle_exit_error(err, "svnauthz-validate: ")
+
+/* A redefinition of the public SVN_INT_ERR macro, that suppresses the
+ * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR, amd with the
+ * program name 'svnauthz-validate' instead of 'svn'. */
+#undef SVN_INT_ERR
+#define SVN_INT_ERR(expr)                                        \
+  do {                                                           \
+    svn_error_t *svn_err__temp = (expr);                         \
+    if (svn_err__temp)                                           \
+      return EXIT_ERROR(svn_err__temp);                          \
+  } while (0)
+
+
 static int
 sub_main(int argc, const char *argv[], apr_pool_t *pool)
 {
@@ -131,6 +168,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   opts.username = opts.fspath = opts.repos_name = opts.txn = NULL;
   opts.repos_path = NULL;
 
+  /* Initialize the FS library. */
+  SVN_INT_ERR(svn_fs_initialize(pool));
+
   /* Repeat svn_cmdline__getopt_init() inline. */
   apr_err = apr_getopt_init(&os, pool, argc, argv);
   if (apr_err)
@@ -156,40 +196,16 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       switch (opt)
         {
         case OPT_USERNAME:
-          err = svn_utf_cstring_to_utf8(&opts.username, arg, pool);
-          if (err)
-            {
-              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-              svn_error_clear(err);
-              return 2;
-            }
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.username, arg, pool));
           break;
         case OPT_PATH:
-          err = svn_utf_cstring_to_utf8(&opts.fspath, arg, pool);
-          if (err)
-            {
-              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-              svn_error_clear(err);
-              return 2;
-            }
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.fspath, arg, pool));
           break;
         case OPT_REPOS:
-          err = svn_utf_cstring_to_utf8(&opts.repos_name, arg, pool);
-          if (err)
-            {
-              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-              svn_error_clear(err);
-              return 2;
-            }
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_name, arg, pool));
           break;
         case 't':
-          err = svn_utf_cstring_to_utf8(&opts.txn, arg, pool);
-          if (err)
-            {
-              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-              svn_error_clear(err);
-              return 2;
-            }
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.txn, arg, pool));
           break;
         default:
           return usage(argv[0]);
@@ -202,13 +218,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       if (os->ind +2 != argc)
         return usage(argv[0]);
 
-      err = svn_utf_cstring_to_utf8(&opts.repos_path, os->argv[os->ind], pool);
-      if (err)
-        {
-          svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-          svn_error_clear(err);
-          return 2;
-        }
+      SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_path, os->argv[os->ind],
+                                          pool));
       os->ind++;
 
       opts.repos_path = svn_dirent_internal_style(opts.repos_path, pool);
@@ -222,13 +233,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* Grab AUTHZ_FILE from argv. */
-  err = svn_utf_cstring_to_utf8(&opts.authz_file, os->argv[os->ind], pool);
-  if (err)
-    {
-      svn_handle_warning2(stderr, err, "svnauthz-validate: ");
-      svn_error_clear(err);
-      return 2;
-    }
+  SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.authz_file, os->argv[os->ind],
+                                      pool));
 
   /* Can't accept repos relative urls since we don't have the path to the
    * repository and URLs don't need to be converted to internal style. */
