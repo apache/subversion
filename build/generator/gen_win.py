@@ -929,7 +929,10 @@ class WinGeneratorBase(GeneratorBase):
       neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if self.serf_lib:
-      serflib = 'serf.lib'
+      if self.serf_ver_maj == 1:
+        serflib = 'serf-1.lib'
+      else:
+        serflib = 'serf.lib'
 
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
@@ -1085,10 +1088,12 @@ class WinGeneratorBase(GeneratorBase):
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources',
                           glob.glob(os.path.join(serf_path, '*.c'))
+                          + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
                           + glob.glob(os.path.join(serf_path, 'buckets',
                                                    '*.c'))),
                          ('serf_headers',
                           glob.glob(os.path.join(serf_path, '*.h'))
+                          + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
                           + glob.glob(os.path.join(serf_path, 'buckets',
                                                    '*.h'))),
                          ('zlib_path', self.zlib_path
@@ -1310,13 +1315,55 @@ class WinGeneratorBase(GeneratorBase):
 
     sys.stderr.write(msg)
 
+  def _get_serf_version(self):
+    "Retrieves the serf version from serf.h"
+
+    # shouldn't be called unless serf is there
+    assert self.serf_path and os.path.exists(self.serf_path)
+
+    self.serf_ver_maj = None
+    self.serf_ver_min = None
+    self.serf_ver_patch = None
+
+    # serf.h should be present
+    if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
+      return None, None, None
+
+    txt = open(os.path.join(self.serf_path, 'serf.h')).read()
+
+    maj_match = re.search(r'SERF_MAJOR_VERSION\s+(\d+)', txt)
+    min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
+    patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
+    if maj_match:
+      self.serf_ver_maj = int(maj_match.group(1))
+    if min_match:
+      self.serf_ver_min = int(min_match.group(1))
+    if patch_match:
+      self.serf_ver_patch = int(patch_match.group(1))
+
+    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
+
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
+    minimal_serf_version = (0, 3, 0)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
         self.serf_lib = 'serf'
+        version = self._get_serf_version()
+        if None in version:
+          msg = 'Unknown serf version found; but, will try to build ' \
+                'ra_serf.\n'
+        else:
+          self.serf_ver = '.'.join(str(v) for v in version)
+          if version < minimal_serf_version:
+            self.serf_lib = None
+            msg = ('Found serf %s, but >= 0.3.0 is required. '
+                   'ra_serf will not be built.\n' % self.serf_ver)
+          else:
+            msg = 'Found serf version %s\n' % self.serf_ver
+        sys.stderr.write(msg)
       else:
         sys.stderr.write('openssl not found, ra_serf will not be built\n')
     else:
