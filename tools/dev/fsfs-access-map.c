@@ -555,7 +555,7 @@ print_stats(apr_pool_t *pool)
 
 /* Some help output. */
 static void
-print_usage()
+print_usage(void)
 {
   printf("fsfs-access-map <file>\n\n");
   printf("Reads strace of some FSFS-based tool from <file>, prints some stats\n");
