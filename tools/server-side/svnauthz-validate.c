@@ -163,15 +163,31 @@ main(int argc, const char **argv)
       switch (opt)
         {
         case OPT_USERNAME:
-          /* ### TODO: UTF-8? */
-          opts.username = arg;
+          err = svn_utf_cstring_to_utf8(&opts.username, arg, pool);
+          if (err)
+            {
+              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+              svn_error_clear(err);
+              return 2;
+            }
           break;
         case OPT_PATH:
-          /* ### TODO: UTF-8? */
-          opts.fspath = arg;
+          err = svn_utf_cstring_to_utf8(&opts.fspath, arg, pool);
+          if (err)
+            {
+              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+              svn_error_clear(err);
+              return 2;
+            }
           break;
         case OPT_REPOS:
-          opts.repos_name = arg;
+          err = svn_utf_cstring_to_utf8(&opts.repos_name, arg, pool);
+          if (err)
+            {
+              svn_handle_warning2(stderr, err, "svnauthz-validate: ");
+              svn_error_clear(err);
+              return 2;
+            }
           break;
         case 't':
           err = svn_utf_cstring_to_utf8(&opts.txn, arg, pool);
