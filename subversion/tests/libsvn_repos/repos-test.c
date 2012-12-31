@@ -1123,26 +1123,46 @@ rmlocks(const svn_test_opts_t *opts,
 
 
 /* Helper for the authz test.  Set *AUTHZ_P to a representation of
-   AUTHZ_CONTENTS, using POOL for temporary allocation. */
+   AUTHZ_CONTENTS, using POOL for temporary allocation. If DISK
+   is TRUE then write the contents to a temp file and use
+   svn_repos_authz_read() to get the data if FALSE write the
+   data to a buffered stream and use svn_repos_authz_parse(). */
 static svn_error_t *
 authz_get_handle(svn_authz_t **authz_p, const char *authz_contents,
-                 apr_pool_t *pool)
+                 svn_boolean_t disk, apr_pool_t *pool)
 {
-  const char *authz_file_path;
+  if (disk)
+    {
+      const char *authz_file_path;
 
-  /* Create a temporary file. */
-  SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
-                                authz_contents, strlen(authz_contents),
-                                svn_io_file_del_on_pool_cleanup, pool),
-            "Writing temporary authz file");
+      /* Create a temporary file. */
+      SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                    authz_contents, strlen(authz_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary authz file");
 
-  /* Read the authz configuration back and start testing. */
-  SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
-            "Opening test authz file");
+      /* Read the authz configuration back and start testing. */
+      SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
+                "Opening test authz file");
 
-  /* Done with the file. */
-  SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
-            "Removing test authz file");
+      /* Done with the file. */
+      SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+                "Removing test authz file");
+    }
+  else
+    {
+      svn_stream_t *stream;
+
+      stream = svn_stream_buffered(pool);
+      SVN_ERR_W(svn_stream_puts(stream, authz_contents),
+                "Writing authz contents to stream");
+
+      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, pool),
+                "Parsing the authz contents");
+
+      SVN_ERR_W(svn_stream_close(stream),
+                "Closing the stream");
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1287,9 +1307,13 @@ authz(apr_pool_t *pool)
     ""                                                                       NL;
 
   /* Load the test authz rules. */
-  SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, subpool));
 
   /* Loop over the test array and test each case. */
+  SVN_ERR(authz_check_access(authz_cfg, test_set, subpool));
+
+  /* Repeat the previous test on disk */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, TRUE, subpool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, subpool));
 
   /* The authz rules for the phase 2 tests, first case (cyclic
@@ -1304,7 +1328,7 @@ authz(apr_pool_t *pool)
 
   /* Load the test authz rules and check that group cycles are
      reported. */
-  err = authz_get_handle(&authz_cfg, contents, subpool);
+  err = authz_get_handle(&authz_cfg, contents, FALSE, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1319,7 +1343,7 @@ authz(apr_pool_t *pool)
     "@senate = r"                                                            NL;
 
   /* Check that references to undefined groups are reported. */
-  err = authz_get_handle(&authz_cfg, contents, subpool);
+  err = authz_get_handle(&authz_cfg, contents, FALSE, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1336,7 +1360,7 @@ authz(apr_pool_t *pool)
     "* ="                                                                    NL;
 
   /* Load the test authz rules. */
-  SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, subpool));
 
   /* Verify that the rule on /dir2/secret doesn't affect this
      request */
@@ -1354,7 +1378,7 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/dir2//secret]"                                                  NL
     "* ="                                                                    NL;
-  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, subpool),
+  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, FALSE, subpool),
                         SVN_ERR_AUTHZ_INVALID_CONFIG);
 
   /* That's a wrap! */
@@ -1719,7 +1743,7 @@ commit_editor_authz(const svn_test_opts_t *opts,
     "[/A/D/G]"                                                               NL
     "plato = r"; /* No newline at end of file. */
 
-  SVN_ERR(authz_get_handle(&authz_file, authz_contents, pool));
+  SVN_ERR(authz_get_handle(&authz_file, authz_contents, FALSE, pool));
 
   iterpool = svn_pool_create(pool);
   for (i = 0; i < (sizeof(path_actions) / sizeof(struct authz_path_action_t));
@@ -2674,7 +2698,7 @@ issue_4060(const svn_test_opts_t *opts,
     "ozymandias = r"                                                       NL
     ""                                                                     NL;
 
-  SVN_ERR(authz_get_handle(&authz_cfg, authz_contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, authz_contents, FALSE, subpool));
 
   SVN_ERR(svn_repos_authz_check_access(authz_cfg, "babylon",
                                        "/A/B/C", "ozymandias",

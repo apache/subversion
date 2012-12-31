@@ -3187,6 +3187,17 @@ svn_repos_authz_read2(svn_authz_t **authz_p,
 
 
 /**
+ * Read authz configuration data from @a stream into @a *authz_p,
+ * allocated in @a pool.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_repos_authz_parse(svn_authz_t **authz_p,
+                      svn_stream_t *stream, 
+                      apr_pool_t *pool);
+
+/**
  * Check whether @a user can access @a path in the repository @a
  * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested

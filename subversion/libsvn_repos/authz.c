@@ -751,6 +751,25 @@ static svn_boolean_t authz_validate_section(const char *name,
   return TRUE;
 }
 
+
+/* Walk the configuration in AUTHZ looking for any errors. */
+static svn_error_t *
+authz_validate(svn_authz_t *authz, apr_pool_t *pool)
+{
+  struct authz_validate_baton baton = { 0 };
+
+  baton.err = SVN_NO_ERROR;
+  baton.config = authz->cfg;
+
+  /* Step through the entire rule file stopping on error. */
+  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
+                                 &baton, pool);
+  SVN_ERR(baton.err);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Retrieve the file at DIRENT (contained in a repo) then parse it as a config
  * file placing the result into CFG_P allocated in POOL.
  *
@@ -908,9 +927,6 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
                       const char *repos_root, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
-  struct authz_validate_baton baton = { 0 };
-
-  baton.err = SVN_NO_ERROR;
 
   /* Load the rule file */
   if (accept_urls)
@@ -918,12 +934,9 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
                                   pool));
   else
     SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
-  baton.config = authz->cfg;
 
-  /* Step through the entire rule file, stopping on error. */
-  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
+  /* Make sure there are no errors in the configuration. */
+  SVN_ERR(authz_validate(authz, pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;
@@ -942,6 +955,22 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
                                pool);
 }
 
+
+svn_error_t *
+svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream, 
+                      apr_pool_t *pool)
+{
+  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
+
+  /* Parse the stream */
+  SVN_ERR(svn_config_parse(&authz->cfg, stream, TRUE, pool));
+
+  /* Make sure there are no errors in the configuration. */
+  SVN_ERR(authz_validate(authz, pool));
+
+  *authz_p = authz;
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
