@@ -105,10 +105,9 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   return SVN_NO_ERROR;
 }
 
-int
-main(int argc, const char **argv)
+static int
+sub_main(int argc, const char *argv[], apr_pool_t *pool)
 {
-  apr_pool_t *pool;
   svn_error_t *err;
   apr_status_t apr_err;
   svn_authz_t *authz;
@@ -131,12 +130,6 @@ main(int argc, const char **argv)
   } opts;
   opts.username = opts.fspath = opts.repos_name = opts.txn = NULL;
   opts.repos_path = NULL;
-
-  /* Initialize the app.  Send all error messages to 'stderr'.  */
-  if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
-    return 2;
-
-  pool = svn_pool_create(NULL);
 
   /* Repeat svn_cmdline__getopt_init() inline. */
   apr_err = apr_getopt_init(&os, pool, argc, argv);
@@ -282,8 +275,6 @@ main(int argc, const char **argv)
                );
     }
 
-  svn_pool_destroy(pool);
-
   if (err)
     {
       svn_handle_error2(err, stderr, FALSE, "svnauthz-validate: ");
@@ -294,4 +285,22 @@ main(int argc, const char **argv)
     {
       return 0;
     }
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code;
+
+  /* Initialize the app.  Send all error messages to 'stderr'.  */
+  if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
+    return 2;
+
+  pool = svn_pool_create(NULL);
+
+  exit_code = sub_main(argc, argv, pool);
+
+  svn_pool_destroy(pool);
+  return exit_code;
 }
