@@ -1124,7 +1124,7 @@ copy_db_file_safely(const char *src_dir,
   /* Open source file.  If it's missing and that's allowed, there's
      nothing more to do here. */
   err = svn_io_file_open(&s, file_src_path,
-                         (APR_READ | APR_LARGEFILE | APR_BINARY),
+                         (APR_READ | APR_LARGEFILE),
                          APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err) && allow_missing)
     {
@@ -1135,7 +1135,7 @@ copy_db_file_safely(const char *src_dir,
 
   /* Open destination file. */
   SVN_ERR(svn_io_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE |
-                                               APR_LARGEFILE | APR_BINARY),
+                                               APR_LARGEFILE),
                            APR_OS_DEFAULT, pool));
 
   /* Allocate our read/write buffer. */
