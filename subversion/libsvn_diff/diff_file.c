@@ -122,8 +122,9 @@ datasource_to_index(svn_diff_datasource_e datasource)
  * whatsoever.  If there is a number someone comes up with that has some
  * argumentation, let's use that.
  */
-/* If you change this number, update test_norm_offset()
-   and test_identical_suffix() in diff-diff3-test.c */
+/* If you change this number, update test_norm_offset(),
+ * test_identical_suffix() and and test_token_compare()  in diff-diff3-test.c.
+ */
 #define CHUNK_SHIFT 17
 #define CHUNK_SIZE (1 << CHUNK_SHIFT)
 
@@ -1056,8 +1057,15 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
         }
       else
         {
+          apr_off_t skipped;
+
           length[i] = 0;
-          raw_length[i] = file_token[i]->raw_length;
+
+          /* When we skipped the first part of the token via the whitespace
+             normalization we must reduce the raw length of the token */
+          skipped = (file_token[i]->norm_offset - file_token[i]->offset);
+
+          raw_length[i] = file_token[i]->raw_length - skipped;
         }
     }
 
@@ -1093,6 +1101,8 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                  so, overwriting it isn't a problem */
               svn_diff__normalize_buffer(&bufp[i], &length[i], &state[i],
                                          bufp[i], file_baton->options);
+
+              /* assert(length[i] == file_token[i]->length); */
             }
         }
 
