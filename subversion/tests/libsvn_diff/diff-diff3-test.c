@@ -2563,6 +2563,60 @@ test_identical_suffix(apr_pool_t *pool)
 #undef ORIGINAL_CONTENTS_PATTERN
 #undef INSERTED_LINE
 
+/* The magic number used in this test, 1<<17, is
+   CHUNK_SIZE from ../../libsvn_diff/diff_file.c
+ */
+static svn_error_t *
+test_token_compare(apr_pool_t *pool)
+{
+  apr_size_t chunk_size = 1 << 17;
+  const char *pattern = "\n\n\n\n\n\n\n\n";
+  svn_stringbuf_t *original, *modified;
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  diff_opts->ignore_space = svn_diff_file_ignore_space_all;
+
+  original = svn_stringbuf_create_ensure(chunk_size, pool);
+  while (original->len < chunk_size - 8)
+    {
+      svn_stringbuf_appendcstr(original, pattern);
+    }
+  svn_stringbuf_appendcstr(original, "    @@@\n");
+
+  modified = svn_stringbuf_create_ensure(chunk_size, pool);
+  while (modified->len < chunk_size - 8)
+    {
+      svn_stringbuf_appendcstr(modified, pattern);
+    }
+  svn_stringbuf_appendcstr(modified, "     @@@\n");
+
+  /* regression test for reading exceeding the file size */
+  SVN_ERR(two_way_diff("token-compare-original1", "token-compare-modified1",
+                       original->data, modified->data, "",
+                       diff_opts, pool));
+
+  svn_stringbuf_appendcstr(original, "aaaaaaa\n");
+  svn_stringbuf_appendcstr(modified, "bbbbbbb\n");
+
+  /* regression test for comparison beyond the end-of-line */
+  SVN_ERR(two_way_diff("token-compare-original2", "token-compare-modified2",
+                       original->data, modified->data,
+                       apr_psprintf(pool,
+                                    "--- token-compare-original2" NL
+                                    "+++ token-compare-modified2" NL
+                                    "@@ -%u,4 +%u,4 @@"  NL
+                                    " \n"
+                                    " \n"
+                                    "     @@@\n"
+                                    "-aaaaaaa\n"
+                                    "+bbbbbbb\n",
+                                    1 +(unsigned int)chunk_size - 8 + 1 - 3,
+                                    1 +(unsigned int)chunk_size - 8 + 1 - 3),
+                       diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2596,5 +2650,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "offset of the normalized token"),
     SVN_TEST_PASS2(test_identical_suffix,
                    "identical suffix starts at the boundary of a chunk"),
+    SVN_TEST_PASS2(test_token_compare,
+                   "compare tokes at the chunk boundary"),
     SVN_TEST_NULL
   };
