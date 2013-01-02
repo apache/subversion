@@ -3173,7 +3173,7 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * undefined.  If @a must_exist is TRUE, a missing authz file is also
  * an error.
  *
- * If @path is a repos relative URL then @a repos_root must be set to
+ * If @a path is a repos relative URL then @a repos_root must be set to
  * the root of the repository the authz configuration will be used with.
  *
  * @since New in 1.8
