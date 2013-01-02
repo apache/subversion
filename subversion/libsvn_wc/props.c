@@ -1004,11 +1004,8 @@ apply_single_generic_prop_change(const svn_string_t **result_val,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of ACTUAL_PROPS,
- * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
- *
- * *STATE is an input and output parameter, its value is to be
- * set using set_prop_merge_state(). (May be null.).
+/* Change the property with name PROPNAME, setting *RESULT_VAL,
+ * *CONFLICT_REMAINS and *DID_MERGE according to the merge outcome.
  *
  * BASE_VAL contains the working copy base property value. (May be null.)
  *
@@ -1016,6 +1013,8 @@ apply_single_generic_prop_change(const svn_string_t **result_val,
  * thinks it's overwriting. (Not null.)
  *
  * NEW_VAL contains the value to be set. (Not null.)
+ *
+ * WORKING_VAL contains the working copy actual value. (May be null.)
  */
 static svn_error_t *
 apply_single_prop_change(const svn_string_t **result_val,
