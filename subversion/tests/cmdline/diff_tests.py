@@ -3767,24 +3767,31 @@ def diff_git_with_props_on_dir(sbox):
   # Now commit the local mod, creating rev 2.
   expected_output = svntest.wc.State(wc_dir, {
     '.' : Item(verb='Sending'),
+    'A' : Item(verb='Sending'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     '' : Item(status='  ', wc_rev=2),
     })
+  expected_status.tweak('A', wc_rev=2)
 
-  svntest.main.run_svn(None, 'ps', 'a','b', wc_dir)
+  sbox.simple_propset('k','v', '', 'A')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  expected_output = make_git_diff_header(".", "", "revision 1",
+  expected_output = make_git_diff_header("A", "A", "revision 1",
+                                         "revision 2",
+                                         add=False, text_changes=False) + \
+                    make_diff_prop_header("A") + \
+                    make_diff_prop_added("k", "v") + \
+                    make_git_diff_header(".", "", "revision 1",
                                          "revision 2",
                                          add=False, text_changes=False) + \
                     make_diff_prop_header("") + \
-                    make_diff_prop_added("a", "b")
+                    make_diff_prop_added("k", "v")
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '-c2', '--git')
