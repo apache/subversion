@@ -383,10 +383,6 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  /* This are currently ignored, they are here for compat. */
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
