@@ -171,11 +171,11 @@ svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
 
 
 svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+svn_wc__get_wcroot(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   return svn_wc__db_get_wcroot(wcroot_abspath, wc_ctx->db,
                                local_abspath, result_pool, scratch_pool);

@@ -290,8 +290,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 {
   const char *wcroot_abspath;
 
-  SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, wc_ctx, local_abspath,
-                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
 
   local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 

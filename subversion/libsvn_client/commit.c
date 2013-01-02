@@ -351,8 +351,8 @@ determine_lock_targets(apr_array_header_t **lock_targets,
       target_abspath = svn_dirent_join(base_abspath, target_relpath,
                                        scratch_pool);
 
-      err = svn_wc__get_wc_root(&wcroot_abspath, wc_ctx, target_abspath,
-                                iterpool, iterpool);
+      err = svn_wc__get_wcroot(&wcroot_abspath, wc_ctx, target_abspath,
+                               iterpool, iterpool);
 
       if (err)
         {
