@@ -5110,7 +5110,11 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 
 
 /* Set the ACTUAL_NODE properties column for (WC_ID, LOCAL_RELPATH) to
- * PROPS. */
+ * PROPS.
+ *
+ * Note: PROPS=NULL means the actual props are the same as the pristine
+ * props; to indicate no properties when the pristine has some props,
+ * PROPS must be an empty hash. */
 static svn_error_t *
 set_actual_props(apr_int64_t wc_id,
                  const char *local_relpath,
