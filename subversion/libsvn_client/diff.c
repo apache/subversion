@@ -2783,9 +2783,9 @@ diff_repos_wc(const char *path_or_url1,
 
   if (use_git_diff_format)
     {
-      SVN_ERR(svn_wc__get_wc_root(&callback_baton->wc_root_abspath,
-                                  ctx->wc_ctx, anchor_abspath,
-                                  pool, pool));
+      SVN_ERR(svn_wc__get_wcroot(&callback_baton->wc_root_abspath,
+                                 ctx->wc_ctx, anchor_abspath,
+                                 pool, pool));
     }
 
   /* Open an RA session to URL1 to figure out its node kind. */

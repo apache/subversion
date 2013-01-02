@@ -335,11 +335,11 @@ svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
  * working copy in which @a local_abspath resides.
  */
 svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__get_wcroot(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
