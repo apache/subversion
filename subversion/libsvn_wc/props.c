@@ -1128,27 +1128,24 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < propchanges->nelts; i++)
     {
-      const char *propname;
-      svn_boolean_t conflict_remains;
-      const svn_prop_t *incoming_change;
-      const svn_string_t *base_val; /* Pristine in WC */
-      const svn_string_t *from_val; /* Merge left */
-      const svn_string_t *to_val; /* Merge right */
-      const svn_string_t *working_val; /* Mine */
+      const svn_prop_t *incoming_change
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+      const char *propname = incoming_change->name;
+      const svn_string_t *base_val  /* Pristine in WC */
+        = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
+      const svn_string_t *from_val  /* Merge left */
+        = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
+      const svn_string_t *to_val    /* Merge right */
+        = incoming_change->value;
+      const svn_string_t *working_val  /* Mine */
+        = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
       const svn_string_t *result_val;
+      svn_boolean_t conflict_remains;
       svn_boolean_t did_merge = FALSE;
 
       svn_pool_clear(iterpool);
 
-      /* For the incoming propchange, figure out the TO and FROM values. */
-      incoming_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-      propname = incoming_change->name;
-      to_val = incoming_change->value
-        ? svn_string_dup(incoming_change->value, result_pool) : NULL;
-      from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
-
-      base_val = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
-      working_val = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
+      to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
 
       if (new_pristine_props)
         apr_hash_set(*new_pristine_props, propname, APR_HASH_KEY_STRING,
