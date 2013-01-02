@@ -67,9 +67,9 @@
 
 /* Calculate the repository relative path of PATH, using RA_SESSION and
  * WC_CTX, and return the result in *REPOS_RELPATH.
- * ORIG_TARGET is one of the original targets passed to the diff command,
+ * ORIG_TARGET is the related original target passed to the diff command,
  * and may be used to derive leading path components missing from PATH.
- *  ANCHOR is the local path where the diff editor is anchored. 
+ * ANCHOR is the local path where the diff editor is anchored. 
  * Do all allocations in POOL. */
 static svn_error_t *
 make_repos_relpath(const char **repos_relpath,
@@ -82,42 +82,54 @@ make_repos_relpath(const char **repos_relpath,
                    apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
-  const char *orig_repos_relpath;
+  const char *orig_repos_relpath = NULL;
 
-  if (! ra_session)
+  if (! ra_session
+      || (anchor && !svn_path_is_url(orig_target)))
     {
+      svn_error_t *err;
       /* We're doing a WC-WC diff, so we can retrieve all information we
        * need from the working copy. */
       SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                       svn_dirent_join(anchor, path,
                                                       scratch_pool),
                                       scratch_pool));
-      SVN_ERR(svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
-                                             local_abspath,
-                                             result_pool, scratch_pool));
-      return SVN_NO_ERROR;
+
+      err = svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
+                                           local_abspath,
+                                           result_pool, scratch_pool);
+
+      if (!ra_session
+          || ! err
+          || (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+           return svn_error_trace(err);
+        }
+
+      /* The path represents a local working copy path, but does not
+         exist. Fall through to calculate an in-repository location
+         based on the ra session */
+
+      /* ### Maybe we should use the nearest existing ancestor instead? */
+      svn_error_clear(err);
     }
 
-  /* Now deal with the repos-repos and repos-wc diff cases.
-   * We need to make PATH appear as a child of ORIG_TARGET.
-   * ORIG_TARGET is either a URL or a path to a working copy. First,
-   * find out what ORIG_TARGET looks like relative to the repository root.*/
-  if (svn_path_is_url(orig_target))
-    SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
-                                             &orig_repos_relpath,
-                                             orig_target, scratch_pool));
-  else
-    {
-      const char *orig_abspath;
+  {
+    const char *url;
+    const char *repos_root_url;
 
-      SVN_ERR(svn_dirent_get_absolute(&orig_abspath, orig_target,
-                                      scratch_pool));
-      SVN_ERR(svn_wc__node_get_repos_relpath(&orig_repos_relpath, wc_ctx,
-                                             orig_abspath,
-                                             scratch_pool, scratch_pool));
-    }
+    /* Would be nice if the RA layer could just provide the parent
+       repos_relpath of the ra session */
+      SVN_ERR(svn_ra_get_session_url(ra_session, &url, scratch_pool));
 
-  *repos_relpath = svn_relpath_join(orig_repos_relpath, path, scratch_pool);
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                     scratch_pool));
+
+      orig_repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
+                                                 scratch_pool);
+
+      *repos_relpath = svn_relpath_join(orig_repos_relpath, path, result_pool);
+  }
 
   return SVN_NO_ERROR;
 }
