@@ -33,7 +33,6 @@
 #include "svn_types.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
-#include "svn_delta.h"
 #include "svn_diff.h"
 #include "svn_mergeinfo.h"
 #include "svn_client.h"
@@ -46,8 +45,6 @@
 #include "svn_pools.h"
 #include "svn_config.h"
 #include "svn_props.h"
-#include "svn_time.h"
-#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "client.h"
 
