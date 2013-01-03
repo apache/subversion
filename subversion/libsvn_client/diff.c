@@ -134,15 +134,15 @@ make_repos_relpath(const char **repos_relpath,
   return SVN_NO_ERROR;
 }
 
-/* Adjust *PATH, *ORIG_PATH_1 and *ORIG_PATH_2, representing the changed file
- * and the two original targets passed to the diff command, to handle the
+/* Adjust *INDEX_PATH, *ORIG_PATH_1 and *ORIG_PATH_2, representing the changed
+ * node and the two original targets passed to the diff command, to handle the
  * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
  * directory the diff target should be considered relative to.
  * ANCHOR is the local path where the diff editor is anchored. The resulting
  * values are allocated in RESULT_POOL and temporary allocations are performed
  * in SCRATCH_POOL. */
 static svn_error_t *
-adjust_paths_for_diff_labels(const char **diff_path,
+adjust_paths_for_diff_labels(const char **index_path,
                              const char **orig_path_1,
                              const char **orig_path_2,
                              const char *relative_to_dir,
@@ -150,49 +150,12 @@ adjust_paths_for_diff_labels(const char **diff_path,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  apr_size_t len;
-  const char *new_path = *diff_path;
+  const char *new_path = *index_path;
   const char *new_path1 = *orig_path_1;
   const char *new_path2 = *orig_path_2;
 
   if (anchor)
     new_path = svn_dirent_join(anchor, new_path, result_pool);
-
-  /* ### Holy cow.  Due to anchor/target weirdness, we can't
-     simply join diff_cmd_baton->orig_path_1 with path, ditto for
-     orig_path_2.  That will work when they're directory URLs, but
-     not for file URLs.  Nor can we just use anchor1 and anchor2
-     from do_diff(), at least not without some more logic here.
-     What a nightmare.
-
-     For now, to distinguish the two paths, we'll just put the
-     unique portions of the original targets in parentheses after
-     the received path, with ellipses for handwaving.  This makes
-     the labels a bit clumsy, but at least distinctive.  Better
-     solutions are possible, they'll just take more thought. */
-
-  len = strlen(svn_dirent_get_longest_ancestor(new_path1, new_path2,
-                                               scratch_pool));
-  new_path1 = new_path1 + len;
-  new_path2 = new_path2 + len;
-
-  /* ### Should diff labels print paths in local style?  Is there
-     already a standard for this?  In any case, this code depends on
-     a particular style, so not calling svn_dirent_local_style() on the
-     paths below.*/
-  if (new_path1[0] == '\0')
-    new_path1 = apr_psprintf(result_pool, "%s", new_path);
-  else if (new_path1[0] == '/')
-    new_path1 = apr_psprintf(result_pool, "%s\t(...%s)", new_path, new_path1);
-  else
-    new_path1 = apr_psprintf(result_pool, "%s\t(.../%s)", new_path, new_path1);
-
-  if (new_path2[0] == '\0')
-    new_path2 = apr_psprintf(result_pool, "%s", new_path);
-  else if (new_path2[0] == '/')
-    new_path2 = apr_psprintf(result_pool, "%s\t(...%s)", new_path, new_path2);
-  else
-    new_path2 = apr_psprintf(result_pool, "%s\t(.../%s)", new_path, new_path2);
 
   if (relative_to_dir)
     {
@@ -209,37 +172,71 @@ adjust_paths_for_diff_labels(const char **diff_path,
 
       child_path = svn_dirent_is_child(relative_to_dir, new_path1,
                                        result_pool);
-
-      if (child_path)
-        new_path1 = child_path;
-      else if (! strcmp(relative_to_dir, new_path1))
-        new_path1 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(new_path1, relative_to_dir);
-
-      child_path = svn_dirent_is_child(relative_to_dir, new_path2,
-                                       result_pool);
-
-      if (child_path)
-        new_path2 = child_path;
-      else if (! strcmp(relative_to_dir, new_path2))
-        new_path2 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(new_path2, relative_to_dir);
     }
+
+  {
+    apr_size_t len;
+    svn_boolean_t is_url1;
+    svn_boolean_t is_url2;
+    /* ### Holy cow.  Due to anchor/target weirdness, we can't
+       simply join diff_cmd_baton->orig_path_1 with path, ditto for
+       orig_path_2.  That will work when they're directory URLs, but
+       not for file URLs.  Nor can we just use anchor1 and anchor2
+       from do_diff(), at least not without some more logic here.
+       What a nightmare.
+       
+       For now, to distinguish the two paths, we'll just put the
+       unique portions of the original targets in parentheses after
+       the received path, with ellipses for handwaving.  This makes
+       the labels a bit clumsy, but at least distinctive.  Better
+       solutions are possible, they'll just take more thought. */
+
+    /* ### BH: We can now just construct the repos_relpath, etc. as the
+           anchor is available. See also make_repos_relpath() */
+
+    is_url1 = svn_path_is_url(new_path1);
+    is_url2 = svn_path_is_url(new_path2);
+
+    if (is_url1 && is_url2)
+      len = strlen(svn_uri_get_longest_ancestor(new_path1, new_path2,
+                                                scratch_pool));
+    else if (!is_url1 && !is_url2)
+      len = strlen(svn_dirent_get_longest_ancestor(new_path1, new_path2,
+                                                   scratch_pool));
+    else
+      len = 0; /* Path and URL */
+
+    new_path1 += len;
+    new_path2 += len;
+  }
+
+  /* ### Should diff labels print paths in local style?  Is there
+     already a standard for this?  In any case, this code depends on
+     a particular style, so not calling svn_dirent_local_style() on the
+     paths below.*/
+
+  if (new_path[0] == '\0')
+    new_path = ".";
+
+  if (new_path1[0] == '\0')
+    new_path1 = new_path;
+  else if (svn_path_is_url(new_path1))
+    new_path1 = apr_psprintf(result_pool, "%s\t(%s)", new_path, new_path1);
+  else if (new_path1[0] == '/')
+    new_path1 = apr_psprintf(result_pool, "%s\t(...%s)", new_path, new_path1);
   else
-    {
-      if (new_path[0] == '\0')
-        new_path = ".";
+    new_path1 = apr_psprintf(result_pool, "%s\t(.../%s)", new_path, new_path1);
 
-      if (new_path1[0] == '\0')
-        new_path1 = ".";
+  if (new_path2[0] == '\0')
+    new_path2 = new_path;
+  else if (svn_path_is_url(new_path2))
+    new_path1 = apr_psprintf(result_pool, "%s\t(%s)", new_path, new_path2);
+  else if (new_path2[0] == '/')
+    new_path2 = apr_psprintf(result_pool, "%s\t(...%s)", new_path, new_path2);
+  else
+    new_path2 = apr_psprintf(result_pool, "%s\t(.../%s)", new_path, new_path2);
 
-      if (new_path2[0] == '\0')
-        new_path2 = ".";
-    }
-
-  *diff_path = new_path;
+  *index_path = new_path;
   *orig_path_1 = new_path1;
   *orig_path_2 = new_path2;
 
@@ -461,7 +458,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 {
   const char *repos_relpath1 = NULL;
   const char *repos_relpath2 = NULL;
-  const char *diff_path;
+  const char *index_path = path;
   const char *adjusted_path1 = orig_path1;
   const char *adjusted_path2 = orig_path2;
 
@@ -476,8 +473,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
 
   /* If we're creating a diff on the wc root, path would be empty. */
-  diff_path = path;
-  SVN_ERR(adjust_paths_for_diff_labels(&diff_path, &adjusted_path1,
+  SVN_ERR(adjust_paths_for_diff_labels(&index_path, &adjusted_path1,
                                        &adjusted_path2,
                                        relative_to_dir, anchor,
                                        scratch_pool, scratch_pool));
@@ -496,7 +492,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
                                           "Index: %s" APR_EOL_STR
                                           SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                                          diff_path));
+                                          index_path));
 
       if (use_git_diff_format)
         SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
@@ -517,7 +513,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       APR_EOL_STR,
                                       use_git_diff_format
                                             ? repos_relpath1
-                                            : diff_path,
+                                            : index_path,
                                       APR_EOL_STR));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
@@ -721,17 +717,16 @@ diff_content_changed(svn_boolean_t *wrote_header,
   svn_stream_t *outstream = diff_cmd_baton->outstream;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
+  const char *index_path = path;
   const char *path1 = diff_cmd_baton->orig_path_1;
   const char *path2 = diff_cmd_baton->orig_path_2;
-  const char *diff_path;
 
   /* If only property differences are shown, there's nothing to do. */
   if (diff_cmd_baton->properties_only)
     return SVN_NO_ERROR;
 
   /* Generate the diff headers. */
-  diff_path = path;
-  SVN_ERR(adjust_paths_for_diff_labels(&diff_path, &path1, &path2,
+  SVN_ERR(adjust_paths_for_diff_labels(&index_path, &path1, &path2,
                                        rel_to_dir, diff_cmd_baton->anchor,
                                        scratch_pool, scratch_pool));
 
@@ -753,7 +748,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                diff_cmd_baton->header_encoding, scratch_pool,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-               diff_path));
+               index_path));
 
       /* ### Print git diff headers. */
 
@@ -802,7 +797,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                diff_cmd_baton->header_encoding, scratch_pool,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-               diff_path));
+               index_path));
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
        * ### 'Index' and '===' line is something subversion has added. The rest
@@ -861,7 +856,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                    diff_cmd_baton->header_encoding, scratch_pool,
                    "Index: %s" APR_EOL_STR
                    SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                   diff_path));
+                   index_path));
 
           if (diff_cmd_baton->use_git_diff_format)
             {
