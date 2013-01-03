@@ -2676,11 +2676,9 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
       return FALSE;
     }
 
-  /* The empty changelist name is special-cased. */
   return (changelist
-          ? apr_hash_get((apr_hash_t *)clhash, changelist, APR_HASH_KEY_STRING)
-          : apr_hash_get((apr_hash_t *)clhash, "", APR_HASH_KEY_STRING)
-         ) != NULL;
+            && apr_hash_get((apr_hash_t *)clhash, changelist,
+                            APR_HASH_KEY_STRING) != NULL);
 }
 
 
