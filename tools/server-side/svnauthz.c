@@ -37,7 +37,8 @@ enum svnauthz__cmdline_options_t
   svnauthz__version = SVN_OPT_FIRST_LONGOPT_ID,
   svnauthz__username,
   svnauthz__path,
-  svnauthz__repos
+  svnauthz__repos,
+  svnauthz__is
 };
 
 /* Option codes and descriptions.
@@ -53,6 +54,17 @@ static const apr_getopt_option_t options_table[] =
   {"path", svnauthz__path, 1, ("path within repository to check access of")},
   {"repository", svnauthz__repos, 1, ("repository authz name")},
   {"transaction", 't', 1, ("transaction id")},
+  {"is", svnauthz__is, 1,
+    ("tests if the permission is ARG\n"
+     "                             "
+     "ARG can be one of the following values:\n"
+     "                             "
+     "   rw    write access (which also implies read)\n"
+     "                             "
+     "    r    read only access\n" 
+     "                             "
+     "   no    no access\n")
+  },
   {0, 0, 0, 0}
 };
 
@@ -66,6 +78,7 @@ struct svnauthz_opt_state
   const char *repos_name;
   const char *txn;
   const char *repos_path;
+  const char *is;
 };
 
 #define SVNAUTHZ_COMPAT_NAME "svnauthz-validate"
@@ -120,11 +133,11 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "      r    read access\n"
     "     no    no access\n\n"
     "Returns:\n"
-    "    0   when syntax is OK.\n"
-    "    1   when syntax is invalid.\n"
+    "    0   when syntax is OK and --is argument matches.\n"
+    "    1   when syntax is invalid or --is argument does not match.\n"
     "    2   operational error\n"
     ),
-   {'t', svnauthz__username, svnauthz__path, svnauthz__repos} },
+   {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is} },
 };
 
 static svn_error_t *
@@ -228,13 +241,28 @@ static svn_error_t *
 subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svn_authz_t *authz;
-  svn_boolean_t read_access, write_access;
+  svn_boolean_t read_access = FALSE, write_access = FALSE;
+  svn_boolean_t check_r = FALSE, check_rw = FALSE, check_no = FALSE;
   svn_error_t *err;
   struct svnauthz_opt_state *opt_state = baton;
   const char *user = opt_state->username;
   const char *path = opt_state->fspath;
   const char *repos = opt_state->repos_name;
- 
+  const char *is = opt_state->is;
+
+  /* Handle is argument parsing/allowed values */
+  if (is) {
+      if (0 == strcmp(is, "rw"))
+        check_rw = TRUE;
+      else if (0 == strcmp(is, "r"))
+        check_r = TRUE;
+      else if (0 == strcmp(is, "no"))
+        check_no = TRUE;
+      else
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 ("'%s' is not a valid argument for --is"), is);
+  }
+
   SVN_ERR(get_authz(&authz, opt_state, pool));
 
   if (path && path[0] != '/')
@@ -248,9 +276,31 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                        svn_authz_read, &read_access,
                                        pool);
   if (!err)
-    printf("%s\n",
-           write_access ? "rw" : read_access ? "r" : "no"
-          );
+    {
+      err = svn_cmdline_printf(pool, "%s\n",
+                               write_access ? "rw" : read_access ? "r" : "no"
+                              );
+
+      if (is && !err)
+        {
+          /* Check that --is argument matches.
+           * The errors returned here are not strictly correct, but
+           * none of the other code paths will generate them and they
+           * roughly mean what we're saying here. */ 
+          if (check_rw && !write_access)
+            err = svn_error_createf(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
+                                    ("%s is not writable"),
+                                    path ? path : ("Repository"));
+          else if (check_r && !read_access)
+            err = svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                                    ("%s is not read only"),
+                                    path ? path : ("Repository"));
+          else if (check_no && (read_access || write_access))
+            err = svn_error_createf(SVN_ERR_AUTHZ_PARTIALLY_READABLE,
+                                    NULL, ("%s is readable or writeable"),
+                                    path ? path : ("Repository")); 
+        }
+    }
 
   return err;
 }
@@ -375,6 +425,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               break;
             case svnauthz__repos:
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_name, arg, pool));
+              break;
+            case svnauthz__is:
+              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.is, arg, pool));
               break;
             default:
                 {
@@ -539,7 +592,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           err = svn_error_quick_wrap(err,
                                      ("Try 'svnauthz help' for more info"));
         }
-      else if (err->apr_err == SVN_ERR_AUTHZ_INVALID_CONFIG
+      else if (SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                     SVN_ERR_AUTHZ_CATEGORY_START)
                || err->apr_err == SVN_ERR_MALFORMED_FILE)
         {
           /* Follow our contract that says we exit with 1 if the file does not
