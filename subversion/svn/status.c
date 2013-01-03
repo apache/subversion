@@ -377,7 +377,7 @@ print_status(const char *cwd_abspath, const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s%s%s\n",
+                                "%c%c%c%c%c%c%c %c %8s %8s %-12s %s%s%s%s\n",
                                 generate_status_code(combined_status(status)),
                                 generate_status_code(prop_status),
                                 status->wc_is_locked ? 'L' : ' ',
@@ -396,7 +396,7 @@ print_status(const char *cwd_abspath, const char *path,
         }
       else
         SVN_ERR(
-           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s%s%s\n",
+           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c %8s   %s%s%s%s\n",
                               generate_status_code(combined_status(status)),
                               generate_status_code(prop_status),
                               status->wc_is_locked ? 'L' : ' ',
