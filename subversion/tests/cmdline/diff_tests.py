@@ -4123,6 +4123,28 @@ def diff_properties_no_newline(sbox):
 
   os.chdir(old_cwd)
 
+def diff_arbitrary_same(sbox):
+  "diff arbitrary files and dirs but same"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('k', 'v', 'A', 'A/mu', 'A/D/G/pi')
+
+  svntest.main.file_write(sbox.ospath('A/mu'), "new mu")
+
+  sbox.simple_copy('A', 'A2')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff',
+                                     '--old', sbox.ospath('A'),
+                                     '--new', sbox.ospath('A2'))
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '--summarize',
+                                     '--old', sbox.ospath('A'),
+                                     '--new', sbox.ospath('A2'))
+
+
 ########################################################################
 #Run the tests
 
@@ -4195,6 +4217,7 @@ test_list = [ None,
               diff_arbitrary_files_and_dirs,
               diff_properties_only,
               diff_properties_no_newline,
+              diff_arbitrary_same,
               ]
 
 if __name__ == '__main__':
