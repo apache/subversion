@@ -55,7 +55,7 @@ static const apr_getopt_option_t options_table[] =
   {"repository", svnauthz__repos, 1, ("repository authz name")},
   {"transaction", 't', 1, ("transaction id")},
   {"is", svnauthz__is, 1,
-    ("tests if the permission is ARG\n"
+    ("instead of outputing, tests if the access is ARG\n"
      "                             "
      "ARG can be one of the following values:\n"
      "                             "
@@ -278,11 +278,9 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                        pool);
   if (!err)
     {
-      err = svn_cmdline_printf(pool, "%s\n",
-                               write_access ? "rw" : read_access ? "r" : "no"
-                              );
+      const char *access_str = write_access ? "rw" : read_access ? "r" : "no";
 
-      if (is && !err)
+      if (is)
         {
           /* Check that --is argument matches.
            * The errors returned here are not strictly correct, but
@@ -290,16 +288,20 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
            * roughly mean what we're saying here. */ 
           if (check_rw && !write_access)
             err = svn_error_createf(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
-                                    ("%s is not writable"),
-                                    path ? path : ("Repository"));
+                                    ("%s is '%s', not writable"),
+                                    path ? path : ("Repository"), access_str);
           else if (check_r && !read_access)
             err = svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
-                                    ("%s is not read only"),
-                                    path ? path : ("Repository"));
+                                    ("%s is '%s', not read only"),
+                                    path ? path : ("Repository"), access_str);
           else if (check_no && (read_access || write_access))
             err = svn_error_createf(SVN_ERR_AUTHZ_PARTIALLY_READABLE,
-                                    NULL, ("%s is readable or writeable"),
-                                    path ? path : ("Repository")); 
+                                    NULL, ("%s is '%s', not no access"),
+                                    path ? path : ("Repository"), access_str);
+        }
+      else
+        {
+          err = svn_cmdline_printf(pool, "%s\n", access_str);
         }
     }
 
