@@ -636,11 +636,35 @@ harvest_status_callback(void *status_baton,
                  || (! copy_mode && ! commit_relpath));
   SVN_ERR_ASSERT((copy_mode_root && copy_mode) || ! copy_mode_root);
 
-  /* Save the result for reuse. */
-  matches_changelists = ((changelists == NULL)
-                         || (status->changelist != NULL
-                             && apr_hash_get(changelists, status->changelist,
-                                             APR_HASH_KEY_STRING) != NULL));
+  /* Determine if this node match our changelist filter (if any). 
+
+     ### As in libsvn_client/status.c and libsvn_wc/diff_local.c, we
+     ### don't allow directories to match changelists, even the
+     ### special empty-string changelist name. */
+  if (changelists == NULL)
+    {
+      matches_changelists = TRUE;
+    }
+  else if (status->kind == svn_node_dir)
+    {
+      matches_changelists = FALSE;
+    }
+  else
+    {
+      matches_changelists = FALSE;
+      if (status->changelist)
+        {
+          if (apr_hash_get(changelists, status->changelist,
+                           APR_HASH_KEY_STRING) != NULL)
+            matches_changelists = TRUE;
+        }
+      else
+        {
+          if (apr_hash_get(changelists, "",
+                           APR_HASH_KEY_STRING) != NULL)
+            matches_changelists = TRUE;
+        }
+    }
 
   /* Early exit. */
   if (status->kind != svn_node_dir && ! matches_changelists)
