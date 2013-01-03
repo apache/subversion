@@ -133,9 +133,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "      r    read access\n"
     "     no    no access\n\n"
     "Returns:\n"
-    "    0   when syntax is OK and --is argument matches.\n"
-    "    1   when syntax is invalid or --is argument does not match.\n"
+    "    0   when syntax is OK and --is argument (if any) matches.\n"
+    "    1   when syntax is invalid.\n"
     "    2   operational error\n"
+    "    3   when --is argument doesn't match\n"
     ),
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is} },
 };
@@ -315,7 +316,7 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 #define EXIT_FAILURE 2
 
 /* Similar to svn_cmdline_handle_exit_error but with an exit_code argument
-   so we can comply with our contract an exit with 2 for internal failures.
+   so we can comply with our contract and exit with 2 for internal failures.
    Also is missing the pool argument since we don't need it given
    main/sub_main. */
 static int
@@ -592,14 +593,22 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           err = svn_error_quick_wrap(err,
                                      ("Try 'svnauthz help' for more info"));
         }
-      else if (SVN_ERROR_IN_CATEGORY(err->apr_err,
-                                     SVN_ERR_AUTHZ_CATEGORY_START)
+      else if (err->apr_err == SVN_ERR_AUTHZ_INVALID_CONFIG
                || err->apr_err == SVN_ERR_MALFORMED_FILE)
         {
           /* Follow our contract that says we exit with 1 if the file does not
              validate. */
           return EXIT_ERROR(err, 1);
         }
+      else if (err->apr_err == SVN_ERR_AUTHZ_UNREADABLE
+               || err->apr_err == SVN_ERR_AUTHZ_UNWRITABLE
+               || SVN_ERR_AUTHZ_PARTIALLY_READABLE)
+        {
+          /* Follow our contract that says we exit with 3 if --is does not
+           * match. */
+          return EXIT_ERROR(err, 3);
+        }
+                   
 
       return EXIT_ERROR(err, EXIT_FAILURE);
     }
