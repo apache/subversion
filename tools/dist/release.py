@@ -91,7 +91,7 @@ secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
-KEYS = 'https://people.apache.org/keys/group/subversion-pmc.asc'
+KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
