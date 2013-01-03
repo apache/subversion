@@ -38,6 +38,9 @@ struct summarize_baton_t {
   /* The summarize callback passed down from the API */
   svn_client_diff_summarize_func_t summarize_func;
 
+  /* Is the diff handling reversed? (add<->delete) */
+  svn_boolean_t reversed;
+
   /* The summarize callback baton */
   void *summarize_func_baton;
 
@@ -63,6 +66,19 @@ send_summary(struct summarize_baton_t *b,
 
   SVN_ERR_ASSERT(summarize_kind != svn_client_diff_summarize_kind_normal
                  || prop_changed);
+
+  if (b->reversed)
+    {
+      switch(summarize_kind)
+        {
+          case svn_client_diff_summarize_kind_added:
+            summarize_kind = svn_client_diff_summarize_kind_deleted;
+            break;
+          case svn_client_diff_summarize_kind_deleted:
+            summarize_kind = svn_client_diff_summarize_kind_added;
+            break;
+        }
+    }
 
   /* PATH is relative to the anchor of the diff, but SUM->path needs to be
      relative to the target of the diff. */
@@ -310,6 +326,7 @@ svn_client__get_diff_summarize_callbacks(
                         svn_wc_diff_callbacks4_t **callbacks,
                         void **callback_baton,
                         const char *target,
+                        svn_boolean_t reversed,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         apr_pool_t *pool)
@@ -321,6 +338,7 @@ svn_client__get_diff_summarize_callbacks(
   b->summarize_func = summarize_func;
   b->summarize_func_baton = summarize_baton;
   b->prop_changes = apr_hash_make(pool);
+  b->reversed = reversed;
 
   cb->file_opened = cb_file_opened;
   cb->file_changed = cb_file_changed;
