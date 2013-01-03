@@ -602,7 +602,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
       else if (err->apr_err == SVN_ERR_AUTHZ_UNREADABLE
                || err->apr_err == SVN_ERR_AUTHZ_UNWRITABLE
-               || SVN_ERR_AUTHZ_PARTIALLY_READABLE)
+               || err->apr_err == SVN_ERR_AUTHZ_PARTIALLY_READABLE)
         {
           /* Follow our contract that says we exit with 3 if --is does not
            * match. */
