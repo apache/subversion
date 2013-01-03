@@ -1268,6 +1268,8 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* We only want to merge "regular" version properties:  by
+     definition, 'svn merge' shouldn't touch any data within .svn/  */
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
                                result_pool));
 
@@ -1292,8 +1294,6 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
       props = mergeinfo_props;
     }
 
-  /* We only want to merge "regular" version properties:  by
-     definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
       /* If this is a forward merge then don't add new mergeinfo to
