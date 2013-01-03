@@ -1284,30 +1284,25 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
   return SVN_NO_ERROR;
 }
 
-struct update_moved_away_conflict_victim_baton {
-  svn_skel_t **work_items;
-  svn_wc__db_t *db;
-  svn_wc_operation_t operation;
-  svn_wc_conflict_reason_t local_change;
-  svn_wc_conflict_action_t incoming_change;
-  svn_wc_conflict_version_t *old_version;
-  svn_wc_conflict_version_t *new_version;
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-  apr_pool_t *result_pool;
-};
-
 /* The body of svn_wc__db_update_moved_away_conflict_victim(), which see.
- * An implementation of svn_wc__db_txn_callback_t. */
+ */
 static svn_error_t *
-update_moved_away_conflict_victim(void *baton,
+update_moved_away_conflict_victim(svn_skel_t **work_items,
+                                  svn_wc__db_t *db,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *victim_relpath,
+                                  svn_wc_operation_t operation,
+                                  svn_wc_conflict_reason_t local_change,
+                                  svn_wc_conflict_action_t incoming_change,
+                                  svn_wc_conflict_version_t *old_version,
+                                  svn_wc_conflict_version_t *new_version,
+                                  svn_wc_notify_func2_t notify_func,
+                                  void *notify_baton,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  struct update_moved_away_conflict_victim_baton *b = baton;
   svn_editor_t *tc_editor;
   struct tc_editor_baton *tc_editor_baton;
   svn_sqlite__stmt_t *stmt;
@@ -1328,14 +1323,14 @@ update_moved_away_conflict_victim(void *baton,
                                svn_dirent_join(wcroot->abspath, victim_relpath,
                                                scratch_pool),
                                scratch_pool));
-  tc_editor_baton->old_version= b->old_version;
-  tc_editor_baton->new_version= b->new_version;
-  tc_editor_baton->db = b->db;
+  tc_editor_baton->old_version= old_version;
+  tc_editor_baton->new_version= new_version;
+  tc_editor_baton->db = db;
   tc_editor_baton->wcroot = wcroot;
-  tc_editor_baton->work_items = b->work_items;
-  tc_editor_baton->notify_func = b->notify_func;
-  tc_editor_baton->notify_baton = b->notify_baton;
-  tc_editor_baton->result_pool = b->result_pool;
+  tc_editor_baton->work_items = work_items;
+  tc_editor_baton->notify_func = notify_func;
+  tc_editor_baton->notify_baton = notify_baton;
+  tc_editor_baton->result_pool = result_pool;
 
   /* ### TODO get from svn_wc__db_scan_deletion_internal? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -1356,7 +1351,7 @@ update_moved_away_conflict_victim(void *baton,
                                scratch_pool));
   /* Create the editor... */
   SVN_ERR(svn_editor_create(&tc_editor, tc_editor_baton,
-                            b->cancel_func, b->cancel_baton,
+                            cancel_func, cancel_baton,
                             scratch_pool, scratch_pool));
   SVN_ERR(svn_editor_setcb_many(tc_editor, &editor_ops, scratch_pool));
 
@@ -1365,12 +1360,12 @@ update_moved_away_conflict_victim(void *baton,
                                      tc_editor_baton->move_root_src_relpath,
                                      tc_editor_baton->move_root_dst_relpath,
                                      tc_editor_baton->src_op_depth,
-                                     b->operation,
-                                     b->local_change, b->incoming_change,
+                                     operation,
+                                     local_change, incoming_change,
                                      tc_editor_baton->old_version,
                                      tc_editor_baton->new_version,
-                                     b->db, wcroot,
-                                     b->cancel_func, b->cancel_baton,
+                                     db, wcroot,
+                                     cancel_func, cancel_baton,
                                      scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1388,12 +1383,16 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                                              apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool)
 {
-  struct update_moved_away_conflict_victim_baton b;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_version_t *old_version;
+  svn_wc_conflict_version_t *new_version;
 
-  SVN_ERR(get_tc_info(&b.operation, &b.local_change, &b.incoming_change,
-                      &b.old_version, &b.new_version,
+  SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
+                      &old_version, &new_version,
                       db, victim_abspath,
                       scratch_pool, scratch_pool));
 
@@ -1402,17 +1401,15 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  b.work_items = work_items;
-  b.db = db;
-  b.notify_func = notify_func;
-  b.notify_baton = notify_baton;
-  b.cancel_func = cancel_func;
-  b.cancel_baton = cancel_baton;
-  b.result_pool = result_pool;
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                              update_moved_away_conflict_victim, &b,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+    update_moved_away_conflict_victim(
+      work_items, db, wcroot, local_relpath,
+      operation, local_change, incoming_change,
+      old_version, new_version,
+      notify_func, notify_baton,
+      cancel_func, cancel_baton,
+      result_pool, scratch_pool),
+    wcroot);
 
   return SVN_NO_ERROR;
 }
