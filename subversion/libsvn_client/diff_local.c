@@ -376,8 +376,8 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
           b->adm_dir_abspath = NULL;
         }
     }
-  else if (strcmp(svn_dirent_basename(local_abspath, scratch_pool),
-                  SVN_WC_ADM_DIR_NAME) == 0)
+  else if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, NULL),
+                             scratch_pool))
     {
       b->recursing_within_adm_dir = TRUE;
       b->adm_dir_abspath = apr_pstrdup(b->pool, local_abspath);
@@ -553,6 +553,7 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
 
   SVN_ERR(svn_io_check_resolved_path(local_abspath1, &kind1, scratch_pool));
   SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
+
   if (kind1 != kind2)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is not the same node kind as '%s'"),
@@ -560,7 +561,7 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
 
   if (kind1 == svn_node_file)
     SVN_ERR(do_arbitrary_files_diff(local_abspath1, local_abspath2,
-                                    svn_dirent_basename(local_abspath2,
+                                    svn_dirent_basename(local_abspath1,
                                                         scratch_pool),
                                     FALSE, FALSE, NULL,
                                     callbacks, diff_baton,
