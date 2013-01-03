@@ -31,17 +31,13 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include "svn_types.h"
-#include "svn_hash.h"
 #include "svn_wc.h"
-#include "svn_delta.h"
 #include "svn_diff.h"
-#include "svn_mergeinfo.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
-#include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
