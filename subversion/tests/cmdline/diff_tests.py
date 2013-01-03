@@ -3343,6 +3343,12 @@ def diff_url_against_local_mods(sbox):
   # In A2, do the same changes but leave uncommitted.
   make_file_edit_del_add(A2)
 
+  # Diff Path of A against working copy of A2.
+  # Output using arbritrary diff handling should be empty.
+  expected_output = []
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', A, '--new', A2)
+
   # Diff URL of A against working copy of A2. Output should be empty.
   expected_output = []
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -3986,7 +3992,7 @@ def diff_arbitrary_files_and_dirs(sbox):
   wc_dir = sbox.wc_dir
 
   # diff iota with A/mu
-  expected_output = make_diff_header("mu", "working copy", "working copy",
+  expected_output = make_diff_header("iota", "working copy", "working copy",
                                      "iota", "A/mu") + [
                       "@@ -1 +1 @@\n",
                       "-This is the file 'iota'.\n",

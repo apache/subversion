@@ -2718,12 +2718,21 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
           const char *abspath2;
           svn_wc_diff_callbacks4_t *callbacks;
           void *callback_baton;
+          const char *target;
+          svn_node_kind_t kind;
 
           SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1, pool));
           SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
 
+          SVN_ERR(svn_io_check_resolved_path(abspath1, &kind, pool));
+
+          if (kind == svn_node_dir)
+            target = "";
+          else
+            target = svn_dirent_basename(path_or_url1, NULL);
+
           SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                  &callbacks, &callback_baton, path_or_url1,
+                  &callbacks, &callback_baton, target,
                   summarize_func, summarize_baton, pool));
 
           SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
