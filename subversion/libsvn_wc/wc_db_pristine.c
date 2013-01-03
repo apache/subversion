@@ -172,7 +172,7 @@ typedef struct pristine_read_baton_t
  * This function expects to be executed inside a SQLite txn.
  *
  * Implements 'notes/wc-ng/pristine-store' section A-3(d).
- * Implements svn_sqlite__transaction_callback_t. */
+ */
 static svn_error_t *
 pristine_read_txn(void *baton,
                   svn_wc__db_wcroot_t *wcroot,
@@ -296,7 +296,7 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
  * acquired a 'RESERVED' lock.
  *
  * Implements 'notes/wc-ng/pristine-store' section A-3(a).
- * Implements svn_sqlite__transaction_callback_t. */
+ */
 static svn_error_t *
 pristine_install_txn(svn_sqlite__db_t *sdb,
                      /* The path to the source file that is to be moved into place. */
@@ -738,8 +738,7 @@ remove_file(const char *file_abspath,
  *
  * This function expects to be executed inside a SQLite txn that has already
  * acquired a 'RESERVED' lock.
- *
- * Implements svn_sqlite__transaction_callback_t. */
+ */
 static svn_error_t *
 pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
                                     svn_wc__db_wcroot_t *wcroot,
