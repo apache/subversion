@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
+#include "private/svn_subr_private.h"
 
 
 /* All Subversion-specific versioned node properties
