@@ -61,7 +61,7 @@ static const apr_getopt_option_t options_table[] =
      "                             "
      "   rw    write access (which also implies read)\n"
      "                             "
-     "    r    read only access\n" 
+     "    r    read-only access\n" 
      "                             "
      "   no    no access\n")
   },
@@ -81,6 +81,7 @@ struct svnauthz_opt_state
   const char *is;
 };
 
+/* The name of this binary in 1.7 and earlier. */
 #define SVNAUTHZ_COMPAT_NAME "svnauthz-validate"
 
 
@@ -117,7 +118,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     ),
    {'t'} },
   {"accessof", subcommand_accessof, {0} /* no aliases */,
-   ("Output the permissions set by an authz file for a specific circumstance.\n"
+   ("Print or test the permissions set by an authz file for a specific circumstance.\n"
     "usage: 1. svnauthz accessof [--username USER] TARGET\n"
     "       2. svnauthz accessof [--username USER] -t TXN REPOS_PATH FILE_PATH\n\n" 
     "  1. Prints the access of USER based on TARGET.\n"
@@ -125,8 +126,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "     file in a repository, but cannot be a repository relative URL (^/).\n\n"
     "  2. Prints the access of USER based on authz file at FILE_PATH in the\n"
     "     transaction TXN in the repository at REPOS_PATH.\n\n"
-    "  If the --username argument is ommitted then access of an anonymous user\n"
-    "  will be printed.  If --path argument is ommitted prints if any access\n"
+    "  If the --username argument is omitted then access of an anonymous user\n"
+    "  will be printed.  If --path argument is omitted prints if any access\n"
     "  to the repo is allowed.\n\n"
     "Outputs one of the following:\n"
     "     rw    write access (which also implies read)\n"
@@ -148,8 +149,8 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *header =
     ("general usage: svnauthz SUBCOMMAND TARGET [ARGS & OPTIONS ...]\n"
      "               " SVNAUTHZ_COMPAT_NAME " TARGET\n\n"
-     "If the filename for the command starts with '" SVNAUTHZ_COMPAT_NAME "', runs in\n"
-     "pre 1.8 compatability mode; which runs the validate subcommand on TARGET.\n\n"
+     "If the command name starts with '" SVNAUTHZ_COMPAT_NAME "', runs in\n"
+     "pre-1.8 compatibility mode: run the 'validate' subcommand on TARGET.\n\n"
      "Type 'svnauthz help <subcommand>' for help on a specific subcommand.\n"
      "Type 'svnauthz --version' to see the program version.\n\n"
      "Available subcommands:\n");
@@ -353,6 +354,8 @@ handle_exit_error(svn_error_t *err, const char *prefix, int exit_code)
   } while (0)
 
 
+/* Return TRUE if the UI of 'svnauthz-validate' (svn 1.7 and earlier)
+   should be emulated, given argv[0]. */
 static svn_boolean_t
 use_compat_mode(const char *cmd, apr_pool_t *pool)
 {
@@ -362,7 +365,7 @@ use_compat_mode(const char *cmd, apr_pool_t *pool)
   /* Deliberately look only for the start of the name to deal with
      the executable extension on some platforms. */
   return 0 == strncmp(SVNAUTHZ_COMPAT_NAME, cmd,
-                      strlen(SVNAUTHZ_COMPAT_NAME));
+                      sizeof(SVNAUTHZ_COMPAT_NAME)-1);
 }
 
 static int
@@ -442,7 +445,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
   else
     {
-      /* Pre 1.8 compatability mode. */
+      /* Pre 1.8 compatibility mode. */
       if (argc == 1) /* No path argument */
         subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
       else
@@ -547,7 +550,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                   ("'%s' is a URL when it should be a "
-                                   "local path"), opt_state.authz_file);
+                                   "repository-relative path"),
+                                  opt_state.authz_file);
           return EXIT_ERROR(err, EXIT_FAILURE);
         }
     }
