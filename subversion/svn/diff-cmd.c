@@ -266,6 +266,17 @@ svn_cl__diff(apr_getopt_t *os,
       if (new_rev.kind != svn_opt_revision_unspecified)
         opt_state->end_revision = new_rev;
 
+      if (opt_state->new_target
+          && opt_state->start_revision.kind == svn_opt_revision_unspecified
+          && opt_state->end_revision.kind == svn_opt_revision_unspecified
+          && ! svn_path_is_url(old_target)
+          && ! svn_path_is_url(new_target))
+        {
+          /* We want the arbitrary_nodes_diff instead of just working nodes */
+          opt_state->start_revision.kind = svn_opt_revision_working;
+          opt_state->end_revision.kind = svn_opt_revision_working;
+        }
+
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_path_is_url(old_target)
           ? svn_opt_revision_head : svn_opt_revision_base;
