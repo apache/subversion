@@ -66,8 +66,7 @@ get_props(apr_hash_t **props,
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-          err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
-          err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+          err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
         {
           svn_error_clear(err);
           *props = apr_hash_make(result_pool);
