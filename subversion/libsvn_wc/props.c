@@ -52,6 +52,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_skel.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #include "wc.h"
 #include "props.h"
@@ -293,7 +294,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&conflict_skel, state,
-                              NULL, &new_actual_props,
+                              &new_actual_props,
                               db, local_abspath,
                               baseprops /* server_baseprops */,
                               pristine_props,
@@ -1086,7 +1087,6 @@ apply_single_prop_change(const svn_string_t **result_val,
 svn_error_t *
 svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,
-                    apr_hash_t **new_pristine_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
@@ -1105,8 +1105,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   SVN_ERR_ASSERT(pristine_props != NULL);
   SVN_ERR_ASSERT(actual_props != NULL);
 
-  if (new_pristine_props)
-    *new_pristine_props = apr_hash_copy(result_pool, pristine_props);
   *new_actual_props = apr_hash_copy(result_pool, actual_props);
 
   if (!server_baseprops)
@@ -1145,10 +1143,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       svn_pool_clear(iterpool);
 
       to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
-
-      if (new_pristine_props)
-        apr_hash_set(*new_pristine_props, propname, APR_HASH_KEY_STRING,
-                     to_val);
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
       

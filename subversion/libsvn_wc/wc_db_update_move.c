@@ -420,7 +420,7 @@ update_working_props(svn_wc_notify_state_t *prop_state,
   SVN_ERR(svn_prop_diffs(propchanges, new_version->props, old_version->props,
                          result_pool));
   SVN_ERR(svn_wc__merge_props(conflict_skel, prop_state,
-                              NULL, &new_actual_props,
+                              &new_actual_props,
                               db, local_abspath,
                               old_version->props, old_version->props,
                               *actual_props, *propchanges,
