@@ -534,36 +534,15 @@ struct pristine_transfer_baton
 };
 
 /* Transaction implementation of svn_wc__db_pristine_transfer().
-   Calls itself again to obtain locks in both working copies */
+   We have a lock on tb->dst_wcroot and tb->src_wcroot.
+ */
 static svn_error_t *
-pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
-                  const char *local_relpath, apr_pool_t *scratch_pool)
+pristine_transfer_txn2(void *baton, svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath, apr_pool_t *scratch_pool)
 {
   struct pristine_transfer_baton *tb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-
-  /* Is this the initial call or the recursive call? */
-  if (wcroot == tb->dst_wcroot)
-    {
-      /* The initial call: */
-
-      /* Get all the info within a src wcroot lock */
-      SVN_ERR(svn_wc__db_with_txn(tb->src_wcroot, local_relpath,
-                                  pristine_transfer, tb, scratch_pool));
-
-      /* And do the final install, while we still have the dst lock */
-      if (tb->tempfile_abspath)
-        SVN_ERR(pristine_install_txn(tb->dst_wcroot->sdb,
-                                     tb->tempfile_abspath,
-                                     tb->pristine_abspath,
-                                     tb->sha1_checksum,
-                                     tb->md5_checksum,
-                                     scratch_pool));
-      return SVN_NO_ERROR;
-    }
-
-  /* We have a lock on tb->dst_wcroot and tb->src_wcroot */
 
   /* Get the right checksum if it wasn't passed */
   if (!tb->sha1_checksum)
@@ -656,6 +635,29 @@ pristine_transfer(void *baton, svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Transaction implementation of svn_wc__db_pristine_transfer().
+ */
+static svn_error_t *
+pristine_transfer_txn1(void *baton, svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath, apr_pool_t *scratch_pool)
+{
+  struct pristine_transfer_baton *tb = baton;
+
+  /* Get all the info within a src wcroot lock */
+  SVN_ERR(svn_wc__db_with_txn(tb->src_wcroot, local_relpath,
+                              pristine_transfer_txn2, tb, scratch_pool));
+
+  /* And do the final install, while we still have the dst lock */
+  if (tb->tempfile_abspath)
+    SVN_ERR(pristine_install_txn(tb->dst_wcroot->sdb,
+                                 tb->tempfile_abspath,
+                                 tb->pristine_abspath,
+                                 tb->sha1_checksum,
+                                 tb->md5_checksum,
+                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_pristine_transfer(svn_wc__db_t *db,
                              const char *src_local_abspath,
@@ -689,7 +691,7 @@ svn_wc__db_pristine_transfer(svn_wc__db_t *db,
   tb.cancel_baton = cancel_baton;
 
   return svn_error_trace(svn_wc__db_with_txn(tb.dst_wcroot, src_relpath,
-                                             pristine_transfer, &tb,
+                                             pristine_transfer_txn1, &tb,
                                              scratch_pool));
 }
 
