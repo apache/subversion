@@ -117,6 +117,62 @@ def add_with_symlink_in_path(sbox):
   sbox.simple_append('A/B/kappa', 'xyz', True)
   sbox.simple_add('Z/B/kappa')
 
+@Issue(4118)
+def status_with_various_degrees_of_broken_wc(sbox):
+  """test various wc.db failure modes"""
+
+  sbox.build(read_only = True)
+  wc_db = sbox.ospath(".svn/wc.db")
+  entries = sbox.ospath(".svn/entries")
+
+  svntest.actions.run_and_verify_svn(
+    "Status on fresh working copy", None, [], "st", sbox.wc_dir)
+
+  # An inaccessible wc.db should trigger a corrupt-wc-db error.
+  # We don't have a good way to test this condition on Windows.
+  if svntest.main.is_posix_os():
+    mode = os.stat(wc_db).st_mode
+    os.chmod(wc_db, 0)
+    svntest.actions.run_and_verify_svn(
+      "Status when wc.db is readonly", None,
+      "[^ ]+ E155016: The working copy database at '.*' is corrupt",
+      "st", sbox.wc_dir)
+    os.chmod(wc_db, mode)
+
+  # A corrupt wc.db should trigger a corrupt-wc-db error.
+  fd = open(wc_db, 'wb')
+  fd.write('\0' * 17)
+  fd.close()
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is corrupt", None,
+    "[^ ]+ E155016: The working copy database at '.*' is corrupt",
+    "st", sbox.wc_dir)
+
+  # A zero-length wc.db should trigger a SQLite error.
+  # This is because, apparently, SQLite will happily open a
+  # zero-length file as a database.
+  fd = os.open(wc_db, os.O_RDWR | os.O_TRUNC)
+  os.close(fd)
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db has zero length", None,
+    "[^ ]+ E200030:",
+    "st", sbox.wc_dir)
+
+  # A missing wc.db should trigger a missing-wc-db error.
+  os.remove(wc_db)
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is missing", None,
+    "[^ ]+ E155016: The working copy database at '.*' is missing",
+    "st", sbox.wc_dir)
+
+  # Finally, if .svn/entries is not exactly 3 bytes long, an upgrade
+  # should be required.
+  open(entries, 'ab').write('\n')
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is missing and .svn/entries looks real", None,
+    "[^ ]+ E155036: The working copy at '.*'",
+    "st", sbox.wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -129,6 +185,7 @@ test_list = [ None,
               add_through_unversioned_symlink,
               add_through_versioned_symlink,
               add_with_symlink_in_path,
+              status_with_various_degrees_of_broken_wc,
              ]
 
 if __name__ == '__main__':

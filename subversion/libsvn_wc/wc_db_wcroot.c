@@ -685,7 +685,54 @@ try_symlink_as_dir:
     }
   else
     {
-      /* We found a wc-1 working copy directory.  */
+      /* We found something that looks like a wc-1 working copy directory.
+         However, if the format version is 12 and the .svn/entries file
+         is only 3 bytes long, then it's a breadcrumb in a wc-ng working
+         copy that's missing an .svn/wc.db, or its .svn/wc.db is corrupt. */
+      if (wc_format == SVN_WC__WC_NG_VERSION /* 12 */)
+        {
+          apr_finfo_t info;
+
+          /* Check attributes of .svn/entries */
+          const char *admin_abspath = svn_wc__adm_child(
+              local_abspath, SVN_WC__ADM_ENTRIES, scratch_pool);
+          svn_error_t *err = svn_io_stat(&info, admin_abspath, APR_FINFO_SIZE,
+                                         scratch_pool);
+
+          /* If the former does not succeed, something is seriously wrong. */
+          if (err)
+            return svn_error_createf(
+                SVN_ERR_WC_CORRUPT, err,
+                _("The working copy at '%s' is corrupt."),
+                svn_dirent_local_style(local_abspath, scratch_pool));
+          svn_error_clear(err);
+
+          if (3 == info.size)
+            {
+              /* Check existence of .svn/wc.db */
+              admin_abspath = svn_wc__adm_child(local_abspath, SDB_FILE,
+                                                scratch_pool);
+              err = svn_io_stat(&info, admin_abspath, APR_FINFO_SIZE,
+                                scratch_pool);
+              if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+                {
+                  svn_error_clear(err);
+                  return svn_error_createf(
+                      SVN_ERR_WC_CORRUPT, NULL,
+                      _("The working copy database at '%s' is missing."),
+                      svn_dirent_local_style(local_abspath, scratch_pool));
+                }
+              else
+                /* We should never have reached this point in the code
+                   if .svn/wc.db exists; therefore it's best to assume
+                   it's corrupt. */
+                return svn_error_createf(
+                    SVN_ERR_WC_CORRUPT, err,
+                    _("The working copy database at '%s' is corrupt."),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
+            }
+        }
+
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
