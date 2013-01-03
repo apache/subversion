@@ -2479,11 +2479,11 @@ close_directory(void *dir_baton,
             actual_props = base_props;
         }
 
-      /* Merge pending properties into temporary files (ignoring
-         conflicts). */
+      /* Merge pending properties. */
+      new_base_props = svn_prop__patch(base_props, regular_prop_changes,
+                                       db->pool);
       SVN_ERR_W(svn_wc__merge_props(&conflict_skel,
                                     &prop_state,
-                                    &new_base_props,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
@@ -4091,9 +4091,10 @@ close_file(void *file_baton,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
+      new_base_props = svn_prop__patch(current_base_props, regular_prop_changes,
+                                       scratch_pool);
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
-                                  &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
@@ -4222,9 +4223,10 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props
          and create a set of new actual props to use for notifications */
+      new_base_props = svn_prop__patch(current_base_props, regular_prop_changes,
+                                       scratch_pool);
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
-                                  &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
