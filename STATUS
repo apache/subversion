@@ -72,10 +72,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
- 
- * r1345740
-   Remove a cast that is both ugly, and apparently illegal in g++ 4.7.
-   Justification:
-     Fails to build.
-   Votes:
-     +1: philip, brane, rhuijben

@@ -51,6 +51,9 @@
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
+static int q_argc = 1;
+static char q_argv0[] = "svn"; // Build non-const char * from string constant
+static char *q_argv[] = { q_argv0 };
 
 static const char *
 get_application_name(apr_hash_t *parameters,
@@ -175,12 +178,11 @@ kwallet_password_get(const char **password,
   QCoreApplication *app;
   if (! qApp)
     {
-      int argc = 1;
-      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+      int argc = q_argc;
+      app = new QCoreApplication(argc, q_argv);
     }
 
-  KCmdLineArgs::init(1,
-                     (char *[1]) {(char *) "svn"},
+  KCmdLineArgs::init(q_argc, q_argv,
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),
@@ -245,12 +247,11 @@ kwallet_password_set(apr_hash_t *creds,
   QCoreApplication *app;
   if (! qApp)
     {
-      int argc = 1;
-      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+      int argc = q_argc;
+      app = new QCoreApplication(argc, q_argv);
     }
 
-  KCmdLineArgs::init(1,
-                     (char *[1]) {(char *) "svn"},
+  KCmdLineArgs::init(q_argc, q_argv,
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),
