@@ -197,7 +197,7 @@ copy_versioned_file(svn_wc__db_t *db,
      ensure the destination WC has a copy of the pristine text. */
 
   if (copy_pristine_file)
-    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath, NULL,
+    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath,
                                          dst_op_root_abspath,
                                          cancel_func, cancel_baton,
                                          scratch_pool));

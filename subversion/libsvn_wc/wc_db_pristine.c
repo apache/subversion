@@ -544,26 +544,19 @@ pristine_transfer_txn2(void *baton, svn_wc__db_wcroot_t *wcroot,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  /* Get the right checksum if it wasn't passed */
+  /* Get the SHA1 checksum */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, tb->src_wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            tb->src_wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    SVN_ERR(svn_sqlite__column_checksum(&(tb->sha1_checksum), stmt, 6,
+                                        scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   if (!tb->sha1_checksum)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, tb->src_wcroot->sdb,
-                                        STMT_SELECT_NODE_INFO));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                 tb->src_wcroot->wc_id, local_relpath));
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (have_row)
-        SVN_ERR(svn_sqlite__column_checksum(&(tb->sha1_checksum), stmt, 6,
-                                            scratch_pool));
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      if (!tb->sha1_checksum)
-        return SVN_NO_ERROR; /* Nothing to transfer */
-    }
+    return SVN_NO_ERROR; /* Nothing to transfer */
 
   /* Check if we have the pristine in the destination wcroot */
   SVN_ERR(svn_sqlite__get_statement(&stmt, tb->dst_wcroot->sdb,
@@ -661,7 +654,6 @@ pristine_transfer_txn1(void *baton, svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_pristine_transfer(svn_wc__db_t *db,
                              const char *src_local_abspath,
-                             const svn_checksum_t *checksum,
                              const char *dst_wri_abspath,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
