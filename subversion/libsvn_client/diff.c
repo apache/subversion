@@ -611,24 +611,7 @@ struct diff_cmd_baton {
 
   /* Whether the local diff target of a repos->wc diff is a copy. */
   svn_boolean_t repos_wc_diff_target_is_copy;
-
-  /* A hashtable using the visited paths as keys.
-   * ### This is needed for us to know if we need to print a diff header for
-   * ### a path that has property changes. */
-  apr_hash_t *visited_paths;
 };
-
-
-/* A helper function that marks a path as visited. It copies PATH
- * into the correct pool before referencing it from the hash table. */
-static void
-mark_path_as_visited(struct diff_cmd_baton *diff_cmd_baton, const char *path)
-{
-  const char *p;
-
-  p = apr_pstrdup(apr_hash_pool_get(diff_cmd_baton->visited_paths), path);
-  apr_hash_set(diff_cmd_baton->visited_paths, p, APR_HASH_KEY_STRING, p);
-}
 
 /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
  */
@@ -641,11 +624,11 @@ diff_props_changed(svn_wc_notify_state_t *state,
                    svn_boolean_t dir_was_added,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
+                   svn_boolean_t show_diff_header,
                    struct diff_cmd_baton *diff_cmd_baton,
                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
-  svn_boolean_t show_diff_header;
 
   /* If property differences are ignored, there's nothing to do. */
   if (diff_cmd_baton->ignore_properties)
@@ -653,11 +636,6 @@ diff_props_changed(svn_wc_notify_state_t *state,
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
                                scratch_pool));
-
-  if (apr_hash_get(diff_cmd_baton->visited_paths, path, APR_HASH_KEY_STRING))
-    show_diff_header = FALSE;
-  else
-    show_diff_header = TRUE;
 
   if (props->nelts > 0)
     {
@@ -678,11 +656,6 @@ diff_props_changed(svn_wc_notify_state_t *state,
                                  diff_cmd_baton->ra_session,
                                  diff_cmd_baton->wc_ctx,
                                  scratch_pool));
-
-      /* We've printed the diff header so now we can mark the path as
-       * visited. */
-      if (show_diff_header)
-        mark_path_as_visited(diff_cmd_baton, path);
     }
 
   if (state)
@@ -715,6 +688,7 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
                                             dir_was_added,
                                             propchanges,
                                             original_props,
+                                            TRUE /* show_diff_header */,
                                             diff_cmd_baton,
                                             scratch_pool));
 }
@@ -723,9 +697,12 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
 /* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
    used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instead print a warning message. */
+   but instead print a warning message. 
+
+   Set *WROTE_HEADER to TRUE if a diff header was written */
 static svn_error_t *
-diff_content_changed(const char *path,
+diff_content_changed(svn_boolean_t *wrote_header,
+                     const char *path,
                      const char *tmpfile1,
                      const char *tmpfile2,
                      svn_revnum_t rev1,
@@ -866,7 +843,7 @@ diff_content_changed(const char *path,
                                NULL, NULL, scratch_pool));
 
       /* We have a printed a diff for this path, mark it as visited. */
-      mark_path_as_visited(diff_cmd_baton, path);
+      *wrote_header = TRUE;
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -919,7 +896,7 @@ diff_content_changed(const char *path,
                      scratch_pool));
 
           /* We have a printed a diff for this path, mark it as visited. */
-          mark_path_as_visited(diff_cmd_baton, path);
+          *wrote_header = TRUE;
         }
     }
 
@@ -959,6 +936,7 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
                   apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  svn_boolean_t wrote_header = FALSE;
 
   /* During repos->wc diff of a copy revision numbers obtained
    * from the working copy are always SVN_INVALID_REVNUM. */
@@ -974,7 +952,7 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
     }
 
   if (tmpfile1)
-    SVN_ERR(diff_content_changed(path,
+    SVN_ERR(diff_content_changed(&wrote_header, path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_modified, NULL,
@@ -983,7 +961,8 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, rev1, rev2, FALSE, prop_changes,
-                               original_props, diff_cmd_baton, scratch_pool));
+                               original_props, !wrote_header,
+                               diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
@@ -1017,6 +996,7 @@ diff_file_added(svn_wc_notify_state_t *content_state,
                 apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  svn_boolean_t wrote_header = FALSE;
 
   /* During repos->wc diff of a copy revision numbers obtained
    * from the working copy are always SVN_INVALID_REVNUM. */
@@ -1039,23 +1019,25 @@ diff_file_added(svn_wc_notify_state_t *content_state,
   diff_cmd_baton->force_empty = TRUE;
 
   if (tmpfile1 && copyfrom_path)
-    SVN_ERR(diff_content_changed(path,
+    SVN_ERR(diff_content_changed(&wrote_header, path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_copied, copyfrom_path,
                                  copyfrom_revision, diff_cmd_baton,
                                  scratch_pool));
   else if (tmpfile1)
-    SVN_ERR(diff_content_changed(path,
+    SVN_ERR(diff_content_changed(&wrote_header, path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_added, NULL, SVN_INVALID_REVNUM,
                                  diff_cmd_baton, scratch_pool));
+
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, rev1, rev2,
                                FALSE, prop_changes,
-                               original_props, diff_cmd_baton, scratch_pool));
+                               original_props, ! wrote_header,
+                               diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
@@ -1099,8 +1081,9 @@ diff_file_deleted(svn_wc_notify_state_t *state,
     }
   else
     {
+      svn_boolean_t wrote_header = FALSE;
       if (tmpfile1)
-        SVN_ERR(diff_content_changed(path,
+        SVN_ERR(diff_content_changed(&wrote_header, path,
                                      tmpfile1, tmpfile2,
                                      diff_cmd_baton->revnum1,
                                      diff_cmd_baton->revnum2,
@@ -1108,6 +1091,8 @@ diff_file_deleted(svn_wc_notify_state_t *state,
                                      svn_diff_op_deleted, NULL,
                                      SVN_INVALID_REVNUM, diff_cmd_baton,
                                      scratch_pool));
+
+      /* Should we also report the properties as deleted? */
     }
 
   /* We don't list all the deleted properties. */
@@ -1897,7 +1882,7 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
                                    b->callback_baton->revnum1,
                                    b->callback_baton->revnum2,
                                    b->recursing_within_added_subtree,
-                                   prop_changes, original_props,
+                                   prop_changes, original_props, TRUE,
                                    b->callback_baton, scratch_pool));
 
       /* Read directory entries. */
@@ -3352,7 +3337,6 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
-  diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
 
@@ -3413,7 +3397,6 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
-  diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
 
