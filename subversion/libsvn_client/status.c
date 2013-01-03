@@ -82,12 +82,13 @@ tweak_status(void *baton,
                            svn_dirent_skip_ancestor(sb->anchor_abspath, path),
                            scratch_pool);
 
-  /* If the status item has an entry, but doesn't belong to one of the
-     changelists our caller is interested in, we filter out this status
-     transmission.  */
   /* ### duplicated in ../libsvn_wc/diff_local.c */
   if (sb->changelist_hash)
     {
+      /* Directories fail all changelist filtering. */
+      if (status->kind == svn_node_dir)
+        return SVN_NO_ERROR;
+
       if (status->changelist)
         {
           /* Skip unless the caller requested this changelist. */

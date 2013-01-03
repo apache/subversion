@@ -2661,11 +2661,12 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
 {
   svn_error_t *err;
   const char *changelist;
+  svn_kind_t kind;
 
   if (clhash == NULL)
     return TRUE;
 
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2676,7 +2677,14 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
       return FALSE;
     }
 
-  /* The empty changelist name is special-cased. */
+  /* The empty-string changelist name is special-cased to mean "files
+     not assigned to a changelist".  Even though WC-DB won't let us
+     assign a changelist to a directory, we don't want to claim that a
+     directory matches the empty-string changelist name, either, so we
+     filter on KIND here.  */
+  if (kind == svn_kind_dir)
+    return FALSE;
+
   return (changelist
           ? apr_hash_get((apr_hash_t *)clhash, changelist, APR_HASH_KEY_STRING)
           : apr_hash_get((apr_hash_t *)clhash, "", APR_HASH_KEY_STRING)

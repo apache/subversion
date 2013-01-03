@@ -446,10 +446,13 @@ diff_status_callback(void *baton,
         break; /* Go check other conditions */
     }
 
-  /* Filter items by changelist. */
   /* ### duplicated in ../libsvn_client/status.c */
   if (eb->changelist_hash)
     {
+      /* Directories fail all changelist filtering. */
+      if (status->kind == svn_node_dir)
+        return SVN_NO_ERROR;
+
       if (status->changelist)
         {
           /* Skip unless the caller requested this changelist. */

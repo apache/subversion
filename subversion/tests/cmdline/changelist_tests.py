@@ -1198,20 +1198,22 @@ def empty_pseudo_changelist(sbox):
 
   # Helper functions.
 
-  def found_nodes(*args):
-    # Extract the Greek-tree-relative paths.
-    return set(map(lambda info: info['Path'][len(wc_dir)+1:],
-                    svntest.actions.run_and_parse_info(*args)))
+  def found_nondir_nodes(*args):
+    # Extract the Greek-tree-relative non-directory paths.
+    all_nodes = svntest.actions.run_and_parse_info(*args)
+    all_nodes = filter(lambda x: x['Node Kind'] != 'directory', all_nodes)
+    return set(map(lambda info: info['Path'][len(wc_dir)+1:], all_nodes))
 
   def find_nodes(nodeset, *args):
     assert isinstance(nodeset, set)
-    foundset = found_nodes(*args)
+    foundset = found_nondir_nodes(*args)
     nodeset = set(map(lambda path: path.replace('/', os.path.sep), nodeset))
     if nodeset != foundset:
       raise svntest.Failure("Expected nodeset %s but found %s"
                             % (nodeset, foundset))
 
   # Convenience variables.
+  B_path = sbox.ospath('A/B')
   E_path = sbox.ospath('A/B/E')
   alpha_path = sbox.ospath('A/B/E/alpha')
   beta_path = sbox.ospath('A/B/E/beta')
@@ -1230,16 +1232,22 @@ def empty_pseudo_changelist(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'changelist', 'testlist', beta_path)
 
-  # Convenience variables.
-  changelist = {
-    'testlist' : set(['A/B/E/beta']),
-    '' : set(['A/B/E', 'A/B/E/alpha']),
-  }
-
   # Some basic validations.
-  find_nodes(changelist['testlist'] | changelist[''], '-R', E_path)
-  find_nodes(changelist['testlist'], '--cl', 'testlist', '-R', E_path)
-  find_nodes(changelist[''], '--cl', '', '-R', E_path)
+  find_nodes(set(['A/B/E/beta',
+                  'A/B/E/alpha',
+                  ]),
+             '-R', E_path)
+  find_nodes(set(['A/B/E/beta']),
+             '--cl', 'testlist', '-R', E_path)
+  find_nodes(set(['A/B/E/alpha']),
+             '--cl', '', '-R', E_path)
+  find_nodes(set(['A/B/E/beta']),
+             '--cl', 'testlist', '-R', B_path)
+  find_nodes(set(['A/B/E/alpha',
+                  'A/B/lambda',
+                  ]),
+             '--cl', '', '-R', B_path)
+
 
 ########################################################################
 # Run the tests
