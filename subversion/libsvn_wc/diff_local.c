@@ -446,25 +446,11 @@ diff_status_callback(void *baton,
         break; /* Go check other conditions */
     }
 
-  /* Filter items by changelist. */
-  /* ### duplicated in ../libsvn_client/status.c */
-  if (eb->changelist_hash)
-    {
-      if (status->changelist)
-        {
-          /* Skip unless the caller requested this changelist. */
-          if (! apr_hash_get(eb->changelist_hash, status->changelist,
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Skip unless the caller requested changelist-lacking items. */
-          if (! apr_hash_get(eb->changelist_hash, "",
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-    }
+  if (eb->changelist_hash != NULL
+      && (!status->changelist
+          || ! apr_hash_get(eb->changelist_hash, status->changelist,
+                            APR_HASH_KEY_STRING)))
+    return SVN_NO_ERROR; /* Filtered via changelist */
 
   /* ### The following checks should probably be reversed as it should decide
          when *not* to show a diff, because generally all changed nodes should
