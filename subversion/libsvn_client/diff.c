@@ -2710,11 +2710,36 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                                       peg_revision, depth, ignore_ancestry,
                                       pool);
   else if (! is_repos1 && ! is_repos2)
-    return diff_summarize_wc_wc(summarize_func, summarize_baton,
-                                path_or_url1, revision1,
-                                path_or_url2, revision2,
-                                depth, ignore_ancestry,
-                                changelists, ctx, pool);
+    {
+      if (revision1->kind == svn_opt_revision_working
+          && revision2->kind == svn_opt_revision_working)
+        {
+          const char *abspath1;
+          const char *abspath2;
+          svn_wc_diff_callbacks4_t *callbacks;
+          void *callback_baton;
+
+          SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1, pool));
+          SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
+
+          SVN_ERR(svn_client__get_diff_summarize_callbacks(
+                  &callbacks, &callback_baton, path_or_url1,
+                  summarize_func, summarize_baton, pool));
+
+          SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
+                                                   callbacks,
+                                                   callback_baton,
+                                                   ctx, pool));
+        }
+      else
+        SVN_ERR(diff_summarize_wc_wc(summarize_func, summarize_baton,
+                                     path_or_url1, revision1,
+                                     path_or_url2, revision2,
+                                     depth, ignore_ancestry,
+                                     changelists, ctx, pool));
+
+      return SVN_NO_ERROR;
+    }
   else
    return unsupported_diff_error(
             svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
