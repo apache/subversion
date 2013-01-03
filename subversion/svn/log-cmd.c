@@ -21,9 +21,6 @@
  * ====================================================================
  */
 
-#define APR_WANT_STRFUNC
-#define APR_WANT_STDIO
-#include <apr_want.h>
 #include <apr_fnmatch.h>
 
 #include "svn_client.h"
