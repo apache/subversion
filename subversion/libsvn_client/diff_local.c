@@ -41,6 +41,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "client.h"
 
 #include "private/svn_wc_private.h"
@@ -70,6 +71,8 @@ get_props(apr_hash_t **props,
         {
           svn_error_clear(err);
           *props = apr_hash_make(result_pool);
+
+          /* ### Apply autoprops, like 'svn add' would? */
         }
       else
         return svn_error_trace(err);
@@ -173,17 +176,82 @@ do_arbitrary_files_diff(const char *local_abspath1,
                                     original_props,
                                     diff_baton, scratch_pool));
   else
-    SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, path,
-                                    local_abspath1, local_abspath2,
-                                    /* ### TODO get real revision info
-                                     * for versioned files? */
-                                    SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
-                                    original_mime_type ?
-                                      original_mime_type->data : NULL,
-                                    modified_mime_type ?
-                                      modified_mime_type->data : NULL,
-                                    prop_changes, original_props,
-                                    diff_baton, scratch_pool));
+    {
+      svn_stream_t *file1;
+      svn_stream_t *file2;
+      svn_boolean_t same;
+      svn_string_t *val;
+      /* We have two files, which may or may not be the same.
+
+         ### Our caller assumes that we should ignore symlinks here and
+             handle them as normal paths. Perhaps that should change?
+      */
+      SVN_ERR(svn_stream_open_readonly(&file1, local_abspath1, scratch_pool,
+                                       scratch_pool));
+
+      SVN_ERR(svn_stream_open_readonly(&file2, local_abspath2, scratch_pool,
+                                       scratch_pool));
+
+      /* Wrap with normalization, etc. if necessary */
+      if (original_props)
+        {
+          val = apr_hash_get(original_props, SVN_PROP_EOL_STYLE,
+                             APR_HASH_KEY_STRING);
+
+          if (val)
+            {
+              svn_subst_eol_style_t style;
+              const char *eol;
+              svn_subst_eol_style_from_value(&style, &eol, val->data);
+
+              /* ### Ignoring keywords */
+              if (eol)
+                file1 = svn_subst_stream_translated(file1, eol, TRUE,
+                                                    NULL, FALSE,
+                                                    scratch_pool);
+            }
+        }
+
+      if (modified_props)
+        {
+          val = apr_hash_get(modified_props, SVN_PROP_EOL_STYLE,
+                             APR_HASH_KEY_STRING);
+
+          if (val)
+            {
+              svn_subst_eol_style_t style;
+              const char *eol;
+              svn_subst_eol_style_from_value(&style, &eol, val->data);
+
+              /* ### Ignoring keywords */
+              if (eol)
+                file2 = svn_subst_stream_translated(file2, eol, TRUE,
+                                                    NULL, FALSE,
+                                                    scratch_pool);
+            }
+        }
+
+      SVN_ERR(svn_stream_contents_same2(&same, file1, file2, scratch_pool));
+
+      if (! same || prop_changes->nelts > 0)
+        {
+          /* ### We should probably pass the normalized data we created using
+                 the subst streams as that is what diff users expect */
+          SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, path,
+                                          same ? NULL : local_abspath1,
+                                          same ? NULL : local_abspath2,
+                                          /* ### TODO get real revision info
+                                           * for versioned files? */
+                                          SVN_INVALID_REVNUM /* rev1 */,
+                                          SVN_INVALID_REVNUM /* rev2 */,
+                                          original_mime_type ?
+                                            original_mime_type->data : NULL,
+                                          modified_mime_type ?
+                                            modified_mime_type->data : NULL,
+                                          prop_changes, original_props,
+                                          diff_baton, scratch_pool));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
