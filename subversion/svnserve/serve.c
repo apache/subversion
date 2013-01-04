@@ -284,11 +284,15 @@ svn_error_t *load_authz_config(server_baton_t *server,
     {
       const char *case_force_val;
 
-      if (!svn_path_is_repos_relative_url(authzdb_path) &&
-          !svn_path_is_url(authzdb_path))
+      /* Canonicalize and add the base onto the authzdb_path (if needed).
+       * We don't canonicalize repos relative urls since they are
+       * canonicalized when they are resolved in svn_repos_authz_read2(). */
+      if (svn_path_is_url(authzdb_path))
         {
-          /* Canonicalize and add the base onto authzdb_path (if needed)
-           * when authzdb_path is not a URL (repos relative or absolute). */
+          authzdb_path = svn_uri_canonicalize(authzdb_path, pool);
+        }
+      else if (!svn_path_is_repos_relative_url(authzdb_path))
+        {
           authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
           authzdb_path = svn_dirent_join(server->base, authzdb_path, pool);
         }
