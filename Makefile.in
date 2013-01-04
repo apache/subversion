@@ -927,4 +927,4 @@ INSTALL_EXTRA_TOOLS=\
   test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
   ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
   ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
-  ln -sf $(DESTDIR)$(toolsdir)/svnauthz$(EXEEXT) $(DESTDIR)$(toolsdir)/svnauthz-validate
+  ln -sf svnauthz$(EXEEXT) $(DESTDIR)$(toolsdir)/svnauthz-validate
