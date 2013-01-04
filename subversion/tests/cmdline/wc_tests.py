@@ -25,6 +25,7 @@
 ######################################################################
 
 # General modules
+from __future__ import with_statement
 import shutil, stat, re, os, logging
 
 logger = logging.getLogger()
@@ -118,59 +119,74 @@ def add_with_symlink_in_path(sbox):
   sbox.simple_add('Z/B/kappa')
 
 @Issue(4118)
-def status_with_various_degrees_of_broken_wc(sbox):
-  """test various wc.db failure modes"""
+@SkipUnless(svntest.main.is_posix_os)
+def status_with_inaccessible_wc_db(sbox):
+  """inaccessible .svn/wc.db"""
 
   sbox.build(read_only = True)
-  wc_db = sbox.ospath(".svn/wc.db")
-  entries = sbox.ospath(".svn/entries")
-
+  os.chmod(sbox.ospath(".svn/wc.db"), 0)
   svntest.actions.run_and_verify_svn(
-    "Status on fresh working copy", None, [], "st", sbox.wc_dir)
+    "Status when wc.db is not accessible", None,
+    r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
+    "st", sbox.wc_dir)
 
-  # An inaccessible wc.db should trigger a corrupt-wc-db error.
-  # We don't have a good way to test this condition on Windows.
-  if svntest.main.is_posix_os():
-    mode = os.stat(wc_db).st_mode
-    os.chmod(wc_db, 0)
-    svntest.actions.run_and_verify_svn(
-      "Status when wc.db is readonly", None,
-      "[^ ]+ E155016: The working copy database at '.*' is corrupt",
-      "st", sbox.wc_dir)
-    os.chmod(wc_db, mode)
+@Issue(4118)
+def status_with_corrupt_wc_db(sbox):
+  """corrupt .svn/wc.db"""
 
-  # A corrupt wc.db should trigger a corrupt-wc-db error.
-  fd = open(wc_db, 'wb')
-  fd.write('\0' * 17)
-  fd.close()
+  sbox.build(read_only = True)
+  with open(sbox.ospath(".svn/wc.db"), 'wb') as fd:
+    fd.write('\0' * 17)
   svntest.actions.run_and_verify_svn(
     "Status when wc.db is corrupt", None,
-    "[^ ]+ E155016: The working copy database at '.*' is corrupt",
+    r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
     "st", sbox.wc_dir)
 
-  # A zero-length wc.db should trigger a SQLite error.
-  # This is because, apparently, SQLite will happily open a
-  # zero-length file as a database.
-  fd = os.open(wc_db, os.O_RDWR | os.O_TRUNC)
-  os.close(fd)
+@Issue(4118)
+def status_with_zero_length_wc_db(sbox):
+  """zero-length .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  os.close(os.open(sbox.ospath(".svn/wc.db"), os.O_RDWR | os.O_TRUNC))
   svntest.actions.run_and_verify_svn(
     "Status when wc.db has zero length", None,
-    "[^ ]+ E200030:",
+    r"[^ ]+ E200030:",                    # SVN_ERR_SQLITE_ERROR
     "st", sbox.wc_dir)
 
-  # A missing wc.db should trigger a missing-wc-db error.
-  os.remove(wc_db)
+@Issue(4118)
+def status_without_wc_db(sbox):
+  """missing .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  os.remove(sbox.ospath(".svn/wc.db"))
   svntest.actions.run_and_verify_svn(
     "Status when wc.db is missing", None,
-    "[^ ]+ E155016: The working copy database at '.*' is missing",
+    r"[^ ]+ E155016: The working copy database at '.*' is missing",
     "st", sbox.wc_dir)
 
-  # Finally, if .svn/entries is not exactly 3 bytes long, an upgrade
-  # should be required.
-  open(entries, 'ab').write('\n')
+@Issue(4118)
+def status_without_wc_db_and_entries(sbox):
+  """missing .svn/wc.db and .svn/entries"""
+
+  sbox.build(read_only = True)
+  os.remove(sbox.ospath(".svn/wc.db"))
+  os.remove(sbox.ospath(".svn/entries"))
+  svntest.actions.run_and_verify_svn2(
+    "Status when wc.db and entries are missing", None,
+    r"[^ ]+ warning: W155007: '.*' is not a working copy",
+    0, "st", sbox.wc_dir)
+
+@Issue(4118)
+def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
+  """missing .svn/wc.db, maybe valid .svn/entries"""
+
+  sbox.build(read_only = True)
+  with open(sbox.ospath(".svn/entries"), 'ab') as fd:
+    fd.write('something\n')
+    os.remove(sbox.ospath(".svn/wc.db"))
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db is missing and .svn/entries looks real", None,
-    "[^ ]+ E155036: The working copy at '.*'",
+    "Status when wc.db is missing and .svn/entries might be valid", None,
+    r"[^ ]+ E155036:",                    # SVN_ERR_WC_UPGRADE_REQUIRED
     "st", sbox.wc_dir)
 
 
@@ -185,7 +201,12 @@ test_list = [ None,
               add_through_unversioned_symlink,
               add_through_versioned_symlink,
               add_with_symlink_in_path,
-              status_with_various_degrees_of_broken_wc,
+              status_with_inaccessible_wc_db,
+              status_with_corrupt_wc_db,
+              status_with_zero_length_wc_db,
+              status_without_wc_db,
+              status_without_wc_db_and_entries,
+              status_with_missing_wc_db_and_maybe_valid_entries,
              ]
 
 if __name__ == '__main__':
