@@ -98,15 +98,17 @@
  * merge the edits into the working/actual state of the move destination
  * at MOVE_ROOT_DST_RELPATH (in struct tc_editor_baton), perhaps raising
  * conflicts if necessary.
+ *
+ * The receiver should not need to refer directly to the move source, as
+ * the driver should provide all relevant information about the change to
+ * be made at the move destination.
  */
 
 struct tc_editor_baton {
   svn_skel_t **work_items;
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
-  const char *move_root_src_relpath;
   const char *move_root_dst_relpath;
-  int src_op_depth;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
   svn_wc_notify_func2_t notify_func;
@@ -1035,7 +1037,6 @@ update_moved_away_dir(svn_editor_t *tc_editor,
                       apr_hash_t *children_hash,
                       const char *src_relpath,
                       const char *dst_relpath,
-                      int src_op_depth,
                       const char *move_root_dst_relpath,
                       svn_revnum_t move_root_dst_revision,
                       svn_wc__db_t *db,
@@ -1089,7 +1090,7 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
 
   SVN_ERR(update_moved_away_dir(tc_editor, add, src_children,
                                 src_relpath, dst_relpath,
-                                src_op_depth, move_root_dst_relpath,
+                                move_root_dst_relpath,
                                 move_root_dst_revision,
                                 db, wcroot, scratch_pool));
 
@@ -1303,12 +1304,12 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
   struct tc_editor_baton *tc_editor_baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  int src_op_depth;
 
   /* ### assumes wc write lock already held */
 
   /* Construct editor baton. */
   tc_editor_baton = apr_pcalloc(scratch_pool, sizeof(*tc_editor_baton));
-  tc_editor_baton->move_root_src_relpath = victim_relpath;
   SVN_ERR(svn_wc__db_scan_deletion_internal(
             NULL, &tc_editor_baton->move_root_dst_relpath, NULL, NULL,
             wcroot, victim_relpath, scratch_pool, scratch_pool));
@@ -1336,7 +1337,7 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
   if (have_row)
     SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    tc_editor_baton->src_op_depth = svn_sqlite__column_int(stmt, 0);
+    src_op_depth = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
@@ -1353,9 +1354,9 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
 
   /* ... and drive it. */
   SVN_ERR(drive_tree_conflict_editor(tc_editor,
-                                     tc_editor_baton->move_root_src_relpath,
+                                     victim_relpath,
                                      tc_editor_baton->move_root_dst_relpath,
-                                     tc_editor_baton->src_op_depth,
+                                     src_op_depth,
                                      operation,
                                      local_change, incoming_change,
                                      tc_editor_baton->old_version,
