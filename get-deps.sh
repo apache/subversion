@@ -51,7 +51,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite | gtest ] ..."
     exit $1
 }
 
@@ -141,7 +141,6 @@ get_deps() {
       get_serf
       get_zlib
       get_sqlite
-      get_gtest
 
       echo
       echo "If you require mod_dav_svn, the recommended version of httpd is:"
