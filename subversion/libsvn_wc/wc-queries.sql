@@ -1387,10 +1387,9 @@ WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
 UPDATE nodes SET moved_to = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
-/* ### FIXME: op-depth?  What about multiple moves? */
 -- STMT_CLEAR_MOVED_TO_RELPATH
 UPDATE nodes SET moved_to = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 /* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1.
  * Each row returns a moved-here path (always a child of ?2) in the first
