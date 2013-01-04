@@ -178,6 +178,12 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
+static svn_error_t *
+verify_walker(representation_t *rep,
+              void *baton,
+              svn_fs_t *fs,
+              apr_pool_t *scratch_pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -7378,10 +7384,14 @@ get_shared_rep(representation_t **old_rep,
       err = svn_fs_fs__get_rep_reference(old_rep, fs, rep->sha1_checksum,
                                          pool);
       /* ### Other error codes that we shouldn't mask out? */
-      if (err == SVN_NO_ERROR
-          || err->apr_err == SVN_ERR_FS_CORRUPT
-          || SVN_ERROR_IN_CATEGORY(err->apr_err,
-                                   SVN_ERR_MALFUNC_CATEGORY_START))
+      if (err == SVN_NO_ERROR)
+        {
+          if (*old_rep)
+            SVN_ERR(verify_walker(*old_rep, NULL, fs, pool));
+        }
+      else if (err->apr_err == SVN_ERR_FS_CORRUPT
+               || SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                        SVN_ERR_MALFUNC_CATEGORY_START))
         {
           /* Fatal error; don't mask it.
 
@@ -10289,6 +10299,11 @@ verify_walker(representation_t *rep,
 {
   struct rep_state *rs;
   struct rep_args *rep_args;
+
+#ifdef SVN_DEBUG
+  /* verify_walker() is called directly by get_shared_rep() with baton=NULL. */
+  SVN_ERR_ASSERT(!baton);
+#endif
 
   /* ### Should this be using read_rep_line() directly? */
   SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs, scratch_pool));
