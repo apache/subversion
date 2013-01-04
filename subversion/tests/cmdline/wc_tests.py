@@ -165,6 +165,7 @@ def status_without_wc_db(sbox):
     "st", sbox.wc_dir)
 
 @Issue(4118)
+@Skip()      # FIXME: Test fails in-tree because it finds the source WC root
 def status_without_wc_db_and_entries(sbox):
   """missing .svn/wc.db and .svn/entries"""
 
