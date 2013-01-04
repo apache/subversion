@@ -28,6 +28,7 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+#include "private/svn_fspath.h"
 
 
 /*** Option Processing. ***/
@@ -267,8 +268,6 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_authz(&authz, opt_state, pool));
 
-  if (path && path[0] != '/')
-    path = apr_pstrcat(pool, "/", path, NULL);
 
   err = svn_repos_authz_check_access(authz, repos, path, user,
                                      svn_authz_write, &write_access,
@@ -428,6 +427,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               break;
             case svnauthz__path:
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.fspath, arg, pool));
+              opt_state.fspath = svn_fspath__canonicalize(opt_state.fspath,
+                                                          pool);
               break;
             case svnauthz__repos:
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_name, arg, pool));
@@ -534,26 +535,47 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.authz_file, os->argv[os->ind],
                                           pool));
 
-      /* Can't accept repos relative urls since we don't have the path to the
-       * repository and URLs don't need to be converted to internal style. */
+      /* Canonicalize opt_state.authz_file appropriately */
       if (svn_path_is_repos_relative_url(opt_state.authz_file))
         {
+          /* Can't accept repos relative urls since we don't have the path to
+           * the repository. */
           err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                   ("'%s' is a repository relative URL when it "
                                    "should be a local path or file:// URL"),
                                   opt_state.authz_file);
           return EXIT_ERROR(err, EXIT_FAILURE);
         }
-      else if (!svn_path_is_url(opt_state.authz_file))
-        opt_state.authz_file = svn_dirent_internal_style(opt_state.authz_file, pool);
-      else if (opt_state.txn) /* don't allow urls with transaction argument */
+      else if (svn_path_is_url(opt_state.authz_file))
         {
-          err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  ("'%s' is a URL when it should be a "
-                                   "repository-relative path"),
-                                  opt_state.authz_file);
-          return EXIT_ERROR(err, EXIT_FAILURE);
+          if (opt_state.txn) 
+            {
+              /* don't allow urls with transaction argument */
+              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      ("'%s' is a URL when it should be a "
+                                       "repository-relative path"),
+                                      opt_state.authz_file);
+              return EXIT_ERROR(err, EXIT_FAILURE);
+            }
+
+          opt_state.authz_file = svn_uri_canonicalize(opt_state.authz_file,
+                                                      pool);
         }
+      else if (opt_state.txn)
+        {
+          /* Transaction flag means this has to be a fspath to the authz_file
+           * in the repo. */
+          opt_state.authz_file =
+              svn_fspath__canonicalize(opt_state.authz_file, pool);
+        }
+      else
+        {
+          /* If it isn't a URL and there's no transaction flag then it's a
+           * dirent to a authz_file on local disk.  */
+          opt_state.authz_file = svn_dirent_internal_style(opt_state.authz_file,
+                                                           pool);
+        }
+
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
