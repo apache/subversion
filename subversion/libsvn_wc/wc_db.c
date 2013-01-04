@@ -5262,6 +5262,7 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
 {
   svn_sqlite__stmt_t *stmt;
   int affected_rows = 0;
+
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
 
@@ -5273,30 +5274,6 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
       int i;
       int stmt_idx;
 
-      switch (depth)
-        {
-          case svn_depth_empty:
-            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST;
-            break;
-
-          case svn_depth_files:
-            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_FILES;
-            break;
-
-          case svn_depth_immediates:
-            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_IMMEDIATES;
-            break;
-
-          case svn_depth_infinity:
-            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY;
-            break;
-
-          default:
-            /* We don't know how to handle unknown or exclude. */
-            SVN_ERR_MALFUNCTION();
-            break;
-        }
-
       for (i = 0; i < changelist_filter->nelts; i++)
         {
           int sub_affected;
@@ -5304,21 +5281,85 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                                                  const char *);
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_TARGET_WITH_CHANGELIST));
+                                            STMT_INSERT_TARGET_WITH_CHANGELIST));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     local_relpath, changelist));
           SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+          affected_rows += sub_affected;
 
           /* If the root is matched by the changelist, we don't have to match
              the children. As that tells us the root is a file */
-          if (!sub_affected && depth > svn_depth_empty)
+          if (sub_affected || depth <= svn_depth_empty)
+            continue;
+
+          /* If the changelist name is not the empty string, use SQL
+             statements which find the nodes in the `actual_node'
+             table that carry this changelist. */
+          if (*changelist != '\0')
             {
+              switch (depth)
+                {
+                case svn_depth_files:
+                  stmt_idx =
+                    STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_FILES;
+                  break;
+                  
+                case svn_depth_immediates:
+                  stmt_idx =
+                    STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_IMMEDIATES;
+                  break;
+                  
+                case svn_depth_infinity:
+                  stmt_idx =
+                    STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY;
+                  break;
+                  
+                case svn_depth_empty:
+                default:
+                  /* We don't know how to handle unknown or
+                     exclude, and shouldn't hit empty. */
+                  SVN_ERR_MALFUNCTION();
+                  break;
+                }
+              
               SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
               SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                         local_relpath, changelist));
               SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
             }
+          else
+            {
+              /* Otherwise (if the changelist name *is* empty), we use a
+                 different set of SQL statements which find all file nodes
+                 that *don't* have a changelist assignment. */
 
+              switch (depth)
+                {
+                case svn_depth_files:
+                case svn_depth_immediates:
+                  stmt_idx =
+                    STMT_INSERT_TARGET_WITHOUT_CHANGELIST_DEPTH_FILES_IMMEDIATES;
+                  break;
+                  
+                case svn_depth_infinity:
+                  stmt_idx =
+                    STMT_INSERT_TARGET_WITHOUT_CHANGELIST_DEPTH_INFINITY;
+                  break;
+                  
+                case svn_depth_empty:
+                default:
+                  /* We don't know how to handle unknown or exclude,
+                     and shouldn't hit empty. */
+                  SVN_ERR_MALFUNCTION();
+                  break;
+                }
+                  
+              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+              SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                        wcroot->wc_id, local_relpath));
+              SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+            }
+          
           affected_rows += sub_affected;
         }
     }

@@ -567,7 +567,7 @@ SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
  WHERE N.wc_id = ?1
    AND N.parent_relpath = ?2
-  AND A.changelist = ?3
+   AND A.changelist = ?3
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -577,6 +577,36 @@ SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
  WHERE N.wc_id = ?1
    AND IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2)
    AND A.changelist = ?3
+
+-- STMT_INSERT_TARGET_WITHOUT_CHANGELIST
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM nodes_current AS N LEFT OUTER JOIN actual_node AS A
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1
+   AND N.local_relpath = ?2
+   AND kind = MAP_FILE
+   AND A.changelist IS NULL
+
+-- STMT_INSERT_TARGET_WITHOUT_CHANGELIST_DEPTH_FILES_IMMEDIATES
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM nodes_current AS N LEFT OUTER JOIN actual_node AS A
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1
+   AND N.parent_relpath = ?2
+   AND kind = MAP_FILE
+   AND A.changelist IS NULL
+
+-- STMT_INSERT_TARGET_WITHOUT_CHANGELIST_DEPTH_INFINITY
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM nodes_current AS N LEFT OUTER JOIN actual_node AS A
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1
+   AND IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2)
+   AND kind = MAP_FILE
+   AND A.changelist IS NULL
 
 /* Only used by commented dump_targets() in wc_db.c */
 /*-- STMT_SELECT_TARGETS
