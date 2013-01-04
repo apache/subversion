@@ -94,7 +94,7 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
-_re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
+_re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
@@ -444,7 +444,8 @@ class State:
 
       match = _re_parse_skipped.search(line)
       if match:
-        desc[to_relpath(match.group(1))] = StateItem()
+        desc[to_relpath(match.group(2))] =  StateItem(
+          verb=(match.group(1).strip(':')))
 
     return cls('', desc)
 
