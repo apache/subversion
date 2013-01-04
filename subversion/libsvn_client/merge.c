@@ -1251,8 +1251,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 }
 
 /* Prepare a set of property changes PROPCHANGES to be used for a merge
-   operation on LOCAL_ABSPATH. Store the result in *PROP_UPDATES.
+   operation on LOCAL_ABSPATH.
 
+   Remove all non-regular prop-changes (entry-props and WC-props).
+   Remove all non-mergeinfo prop-changes if it's a record-only merge.
+   Remove self-referential mergeinfo (### in some cases...)
+   Remove foreign-repository mergeinfo (### in some cases...)
+
+   Store the resulting property changes in *PROP_UPDATES.
    Store information on where mergeinfo is updated in MERGE_B.
 
    Used for both file and directory property merges. */
@@ -1447,8 +1453,6 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
                                       merge_b, scratch_pool, scratch_pool));
 
-  /* We only want to merge "regular" version properties:  by
-     definition, 'svn merge' shouldn't touch any pristine data  */
   if (props->nelts)
     {
       const svn_wc_conflict_version_t *left;
@@ -1737,14 +1741,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (prop_state)
     *prop_state = svn_wc_notify_state_unchanged;
 
-  if (prop_changes->nelts > 0)
-    {
-      /* Filter entry-props and unneeded properties in case of a record only
-         merge */
-      SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
-                                          prop_changes, merge_b,
-                                          scratch_pool, scratch_pool));
-    }
+  SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
+                                      prop_changes, merge_b,
+                                      scratch_pool, scratch_pool));
 
   SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
                                  svn_node_file, &merge_b->merge_source, merge_b->target, merge_b->pool));
