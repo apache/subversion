@@ -5750,8 +5750,9 @@ clear_moved_to(const char *local_relpath,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CLEAR_MOVED_TO_RELPATH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                            moved_from_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            moved_from_relpath,
+                            relpath_depth(moved_from_relpath)));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -7051,8 +7052,10 @@ delete_node(void *baton,
             {
               SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                                 STMT_CLEAR_MOVED_TO_RELPATH));
-              SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                        moved_from_op_root_relpath));
+              SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                        moved_from_op_root_relpath,
+                                        relpath_depth(
+                                          moved_from_op_root_relpath)));
               SVN_ERR(svn_sqlite__step_done(stmt));
             }
         }
