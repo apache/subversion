@@ -765,7 +765,7 @@ def tree_conflicts_and_obstructions(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_skip = wc.State(branch_path, {
-    'alpha-moved' : Item(),
+    'alpha-moved' : Item(verb='Skipped'),
     })
 
   svntest.actions.run_and_verify_merge(branch_path,
@@ -1313,16 +1313,16 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     })
 
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
+    'F/alpha'           : Item(verb='Skipped missing target'),
     # Obstruction handling improvements in 1.7 and 1.8 added
-    'DF/D1/beta'        : Item(),
-    'DDD/D1/D2/D3/zeta' : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    'DDF/D1/D2/gamma'   : Item(),
-    'D/D1/delta'        : Item(),
-    'D/D1'              : Item(),
-    'DD/D1/D2/epsilon'  : Item(),
-    'DD/D1/D2'          : Item(),
+    'DF/D1/beta'        : Item(verb='Skipped missing target'),
+    'DDD/D1/D2/D3/zeta' : Item(verb='Skipped'),
+    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
+    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
+    'D/D1/delta'        : Item(verb='Skipped'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1/D2/epsilon'  : Item(verb='Skipped'),
+    'DD/D1/D2'          : Item(verb='Skipped missing target'),
     })
 
   # Currently this test fails because some parts of the merge
@@ -1385,14 +1385,14 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     })
 
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    'D/D1'              : Item(),
+    'F/alpha'           : Item(verb='Skipped missing target'),
+    'D/D1'              : Item(verb='Skipped missing target'),
     # Obstruction handling improvements in 1.7 and 1.8 added
-    'D/D1'              : Item(),
-    'DD/D1/D2'          : Item(),
-    'DF/D1/beta'        : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    'DDF/D1/D2/gamma'   : Item(),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1/D2'          : Item(verb='Skipped missing target'),
+    'DF/D1/beta'        : Item(verb='Skipped missing target'),
+    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
+    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
