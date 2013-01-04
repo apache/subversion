@@ -3169,7 +3169,7 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * allocated in @a pool.
  *
  * If @a path is not a valid authz rule file, then return 
- * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
  * undefined.  If @a must_exist is TRUE, a missing authz file is also
  * an error.
  *
