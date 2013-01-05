@@ -148,7 +148,7 @@ def main(repo, txn):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print "invalid args"
+        sys.stderr.write("invalid args\n")
         sys.exit(0)
 
     try:
