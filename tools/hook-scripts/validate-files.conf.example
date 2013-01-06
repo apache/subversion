@@ -30,38 +30,40 @@ svnlook = /usr/local/bin/svnlook
 # platform.
 #
 # The command option is the command to run, this command will be run via
-# the shell of your platform.  Your command will have variable replacement
-# made on it prior to execution as follows:
-#  $REPO or ${REPO} expands to the path of the repository for the commit.
-#  $TXN or ${TXN} expands to the transaction id of the commit.
-#  $FILE or ${FILE} expands to the name of the file that matched the pattern.
-#
-# $ characters that are not followed by one of the above variable names will
-# be untouched.
+# the shell of your platform.  The following environment variables will
+# be defined for you:
+#  REPO  = the path of the repository for the commit.
+#  TXN   = the transaction id of the commit.
+#  FILE  = the name of the file that matched the pattern.
 #
 # IMPORTANT: AS A CONSEQUENCE OF THE USE OF THE SHELL IT IS IMPORTANT TO
-# QUOTE THE ARGUMENTS OF YOUR COMMANDS.  THE $FILE VARIABLE DOES CONTAIN
+# QUOTE THE ARGUMENTS OF YOUR COMMANDS.  THE FILE VARIABLE DOES CONTAIN
 # USER GENERATED DATA AND SHELL METACHARACTERS ARE NOT ESCAPED FOR YOU!
-
+#
+# The following examples assume a POSIX shell, if your platform has a
+# different shell you may need to adjust them.  For example on Windows
+# cmd.exe uses %VARIABLENAME% instead of $VARIABLENAME to expand environment
+# variables.
+#
 # The following rule runs the svnauthz command's validate subcommand
 # for file named authz in the conf subdir if it is present in the commit.
 # This is a simple way to ensure that invalid authz files are not allowed
 # to be committed.
 #[rule:svnauthz-validate]
 #pattern = conf/authz
-#command = '%(svnauthz)s' validate -t '$TXN' '$REPO' '$FILE'
+#command = '%(svnauthz)s' validate -t "$TXN" "$REPO" "$FILE"
 
 # The following rule runs the svnauthz command's accessof subcommand
-# for any file ending in .authz for config subdir and checks that the admin
+# for any file ending in .authz for the conf subdir and checks that the admin
 # user has rw rights to the same file.  This can be used to prevent an
 # authz file being committed that would remove access for the admin user.
 # Note that accessof also validates the validity of the file as well as
 # checking the permissions, so it's unecessary to run validate and accessof.
 #[rule:admin-rw-authz]
 #pattern = /conf/*.authz
-#command = '%(svnauthz)s' accessof --username admin --path '${FILE}' --is rw -t '${TXN}' '${REPO}' '${FILE}'
+#command = '%(svnauthz)s' accessof --username admin --path "$FILE" --is rw -t "$TXN" "$REPO" "$FILE"
 
 # Use the xmllint command to validate all files ending in .xml
 #[rule:xmllint]
 #pattern = *.xml
-#command = '%(svnlook)s' cat -t '${TXN}' '${REPO}' '${FILE}' | '%(xmllint)s' --noout -
+#command = '%(svnlook)s' cat -t "$TXN" "$REPO" "$FILE" | '%(xmllint)s' --noout -

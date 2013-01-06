@@ -25,7 +25,6 @@ import sys
 import os
 import subprocess
 import fnmatch
-from string import Template
 
 # Deal with the rename of ConfigParser to configparser in Python3
 try:
@@ -103,10 +102,12 @@ class Commands:
         in the defined command.
 
         Returns a tuple of the exit code and the stderr output of the command"""
-        cmd_template = self.config.get(section, 'command')
-        cmd = Template(cmd_template).safe_substitute(REPO=repo,
-                                                     TXN=txn, FILE=fn)
-        p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE)
+        cmd = self.config.get(section, 'command')
+        cmd_env = os.environ.copy()
+        cmd_env['REPO'] = repo
+        cmd_env['TXN'] = txn
+        cmd_env['FILE'] = fn
+        p = subprocess.Popen(cmd, shell=True, env=cmd_env, stderr=subprocess.PIPE)
         data = p.communicate()
         return (p.returncode, data[1])
 
@@ -154,5 +155,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv[1], sys.argv[2]))
     except configparser.Error as e:
-	sys.stderr.write("Error with the validate-files.conf: %s\n" % e)
-	sys.exit(2)
+        sys.stderr.write("Error with the validate-files.conf: %s\n" % e)
+        sys.exit(2)
