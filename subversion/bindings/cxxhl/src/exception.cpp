@@ -309,11 +309,11 @@ error::message_list error::compile_messages(bool show_traces) const
     }
   catch (...)
     {
-      svn_pool_destroy(pool);
+      apr_pool_destroy(pool);
       throw;
     }
 
-  svn_pool_destroy(pool);
+  apr_pool_destroy(pool);
   return ml;
 }
 
