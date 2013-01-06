@@ -302,8 +302,8 @@ def replace_symlink_with_file(sbox):
 
   # Now replace the symlink with a normal file and try to commit, we
   # should get an error
-  os.remove(newfile_path);
-  svntest.main.file_append(newfile_path, "text of actual file");
+  os.remove(newfile_path)
+  svntest.main.file_append(newfile_path, "text of actual file")
 
   # Does status show the obstruction?
   was_cwd = os.getcwd()
@@ -589,8 +589,8 @@ def replace_symlink_with_dir(sbox):
 
   # Now replace the symlink with a directory and try to commit, we
   # should get an error
-  os.remove(from_path);
-  os.mkdir(from_path);
+  os.remove(from_path)
+  os.mkdir(from_path)
 
   # Does status show the obstruction?
   was_cwd = os.getcwd()

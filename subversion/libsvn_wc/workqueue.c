@@ -50,6 +50,7 @@
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_DIRECTORY_REMOVE "dir-remove"
+#define OP_DIRECTORY_INSTALL "dir-install"
 
 #define OP_POSTUPGRADE "postupgrade"
 
@@ -148,7 +149,7 @@ run_base_remove(svn_wc__db_t *db,
                                            &not_present_rev, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
+                                           NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
         }
@@ -381,10 +382,6 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
 
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
-
-  /* This are currently ignored, they are here for compat. */
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
 
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
@@ -1016,6 +1013,51 @@ svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_DIRECTORY_INSTALL  */
+
+static svn_error_t *
+run_dir_install(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    const char *wri_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__ensure_directory(local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_dir_install(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool,
+                             apr_pool_t *result_pool)
+{
+  const char *local_relpath;
+
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_DIRECTORY_INSTALL, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1370,6 +1412,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_DIRECTORY_REMOVE, run_dir_remove },
+  { OP_DIRECTORY_INSTALL, run_dir_install },
 
   /* Upgrade steps */
   { OP_POSTUPGRADE, run_postupgrade },

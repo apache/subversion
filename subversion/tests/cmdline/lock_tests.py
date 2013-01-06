@@ -855,12 +855,7 @@ def lock_switched_files(sbox):
   expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked='K')
 
   # In WC-NG locks are kept per working copy, not per file
-  if svntest.main.wc_is_singledb(wc_dir):
-    # In single-db you see these files are locked locally
-    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='K')
-  else:
-    # In multi-db you see these files are not locked in the right dir
-    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
+  expected_status.tweak('A/B/E/alpha', 'iota', writelocked='K')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1437,15 +1432,10 @@ def lock_twice_in_one_wc(sbox):
   os.chmod(mu2_path, 0700)
   svntest.main.file_append(mu2_path, "Updated text")
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    # Commit will just succeed as the DB owns the lock. It's a user decision
-    # to commit the other target instead of the one originally locked
-    expected_err = []
-  else:
-    # Commit should fail because it is locked in the other location
-    expected_err = '.*(([Nn]o)|(Server)).*[lL]ock.*'
+  # Commit will just succeed as the DB owns the lock. It's a user decision
+  # to commit the other target instead of the one originally locked
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', mu2_path, '-m', '')
 
 #----------------------------------------------------------------------
@@ -1520,7 +1510,7 @@ def verify_path_escaping(sbox):
       'file #1'           : Item(status='  ', writelocked='K', wc_rev='2'),
       'file #2'           : Item(status='  ', writelocked='O', wc_rev='2'),
       'file #3'           : Item(status='  ', writelocked='B', wc_rev='2')
-    });
+    })
 
   # Make sure the file locking is reported correctly
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

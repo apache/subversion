@@ -724,7 +724,7 @@ svn_io_file_lock2(const char *lock_file,
  * is not available: throw an error instead.
  *
  * Lock will be automatically released when @a pool is cleared or destroyed.
- * You may also explicitly call @ref svn_io_unlock_open_file.
+ * You may also explicitly call svn_io_unlock_open_file().
  * Use @a pool for memory allocations. @a pool must be the pool that
  * @a lockfile_handle has been created in or one of its sub-pools.
  *
@@ -1935,7 +1935,8 @@ svn_boolean_t
 svn_io_is_binary_data(const void *buf, apr_size_t len);
 
 
-/** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open().  @a fname is utf8-encoded.
+    Always passed flag | APR_BINARY to apr. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,
                  const char *fname,

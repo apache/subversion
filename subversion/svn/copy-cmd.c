@@ -68,7 +68,42 @@ svn_cl__copy(apr_getopt_t *os,
       svn_opt_revision_t *peg_revision = apr_palloc(pool,
                                                     sizeof(*peg_revision));
 
-      SVN_ERR(svn_opt_parse_path(peg_revision, &src, target, pool));
+      err = svn_opt_parse_path(peg_revision, &src, target, pool);
+
+      if (err)
+        {
+          /* Issue #3606: 'svn cp .@HEAD target' gives
+             svn: '@HEAD' is just a peg revision. Maybe try '@HEAD@' instead? 
+
+             This is caused by a first round of canonicalization in
+             svn_cl__args_to_target_array_print_reserved(). Undo that in an
+             attempt to fix this issue without revving many apis.
+           */
+          if (*target == '@' && err->apr_err == SVN_ERR_BAD_FILENAME)
+            {
+              svn_error_t *err2;
+
+              err2 = svn_opt_parse_path(peg_revision, &src,
+                                        apr_pstrcat(pool, ".", target,
+                                                    (const char *)NULL), pool);
+
+              if (err2)
+                {
+                  /* Fix attempt failed; return original error */
+                  svn_error_clear(err2);
+                }
+              else
+                {
+                  /* Error resolved. Use path */
+                  svn_error_clear(err);
+                  err = NULL;
+                }
+            }
+
+          if (err)
+              return svn_error_trace(err);
+        }
+
       source->path = src;
       source->revision = &(opt_state->start_revision);
       source->peg_revision = peg_revision;

@@ -130,13 +130,14 @@ sbox_wc_resolved(svn_test__sandbox_t *b, const char *path);
 
 /* */
 svn_error_t *
-sbox_wc_resolve(svn_test__sandbox_t *b, const char *path);
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path,
+                svn_wc_conflict_choice_t conflict_choice);
 
 /* */
 svn_error_t *
 sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst);
 
-/* */
+/* Set property NAME to VALUE on PATH. If VALUE=NULL, delete the property. */
 svn_error_t *
 sbox_wc_propset(svn_test__sandbox_t *b,
            const char *name,

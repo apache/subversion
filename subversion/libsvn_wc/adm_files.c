@@ -175,7 +175,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &checksum, NULL, NULL,
+                                        &checksum, NULL, NULL, NULL,
                                         db, local_abspath,
                                         scratch_pool, scratch_pool));
 
@@ -231,7 +231,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     *size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &sha1_checksum, NULL, NULL,
+                                        &sha1_checksum, NULL, NULL, NULL,
                                         db, local_abspath,
                                         scratch_pool, scratch_pool));
 

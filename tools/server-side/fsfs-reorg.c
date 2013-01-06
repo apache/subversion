@@ -1,4 +1,5 @@
-/* diff.c -- test driver for text diffs
+/* fsfs-reorg.c -- prototypic tool to reorganize packed FSFS repositories
+ *                 to reduce seeks
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -45,7 +46,7 @@
 #define _(x) x
 #endif
 
-#define ERROR_TAG "diff: "
+#define ERROR_TAG "fsfs-reporg: "
 
 /* forward declarations */
 typedef struct noderev_t noderev_t;
@@ -1800,7 +1801,7 @@ read_pack_file(fs_fs_t *fs,
 
   /* one more pack file processed */
   print_progress(base);
-  apr_pool_destroy(local_pool);
+  svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1866,7 +1867,7 @@ read_revision_file(fs_fs_t *fs,
   if (revision % fs->max_files_per_dir == 0)
     print_progress(revision);
 
-  apr_pool_destroy(local_pool);
+  svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1956,6 +1957,9 @@ get_max_offset_len(const revision_pack_t *pack)
   return result;
 }
 
+/* Create the fragments container in PACK and add revision header fragments
+ * to it.  Use POOL for allocations.
+ */
 static svn_error_t *
 add_revisions_pack_heads(revision_pack_t *pack,
                          apr_pool_t *pool)
@@ -2019,6 +2023,9 @@ add_revisions_pack_heads(revision_pack_t *pack,
   return SVN_NO_ERROR;
 }
 
+/* For the revision given by INFO in FS, return the fragment container in
+ * *FRAGMENTS and the current placement offset in *CURRENT_POS.
+ */
 static svn_error_t *
 get_target_offset(apr_size_t **current_pos,
                   apr_array_header_t **fragments,
@@ -2029,6 +2036,7 @@ get_target_offset(apr_size_t **current_pos,
   revision_pack_t *pack;
   svn_revnum_t revision = info->revision;
 
+  /* identify the pack object */
   if (fs->min_unpacked_rev > revision)
     {
       i = (revision - fs->start_revision) / fs->max_files_per_dir;
@@ -2039,6 +2047,7 @@ get_target_offset(apr_size_t **current_pos,
       i += revision - fs->min_unpacked_rev;
     }
 
+  /* extract the desired info from it */
   pack = APR_ARRAY_IDX(fs->packs, i, revision_pack_t*);
   *current_pos = &pack->target_offset;
   *fragments = pack->fragments;
@@ -2046,11 +2055,19 @@ get_target_offset(apr_size_t **current_pos,
   return SVN_NO_ERROR;
 }
 
+/* forward declaration */
 static svn_error_t *
 add_noderev_recursively(fs_fs_t *fs,
                         noderev_t *node,
                         apr_pool_t *pool);
 
+/* Place fragments for the given REPRESENTATION of the given KIND, iff it
+ * has not been covered, yet.  Place the base reps along the deltification
+ * chain as far as those reps have not been covered, yet.  If REPRESENTATION
+ * is a directory, recursively place its elements.
+ * 
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 add_representation_recursively(fs_fs_t *fs,
                                representation_t *representation,
@@ -2060,13 +2077,16 @@ add_representation_recursively(fs_fs_t *fs,
   apr_size_t *current_pos;
   apr_array_header_t *fragments;
   fragment_t fragment;
-  
+
+  /* place REPRESENTATION only once and only if it exists and will not
+   * be covered later as a directory. */
   if (   representation == NULL
       || representation->covered
       || (representation->dir && kind != dir_fragment)
       || representation == fs->null_base)
     return SVN_NO_ERROR;
 
+  /* add and place a fragment for REPRESENTATION */
   SVN_ERR(get_target_offset(&current_pos, &fragments,
                             fs, representation->revision));
   representation->target.offset = *current_pos;
@@ -2077,9 +2097,12 @@ add_representation_recursively(fs_fs_t *fs,
   fragment.position = *current_pos;
   APR_ARRAY_PUSH(fragments, fragment_t) = fragment;
 
+  /* determine the size of data to be added to the target file */
   if (   kind != dir_fragment
       && representation->delta_base && representation->delta_base->dir)
     {
+      /* base rep is a dir -> would change -> need to store it as fulltext
+       * in our target file */
       apr_pool_t *text_pool = svn_pool_create(pool);
       svn_stringbuf_t *content;
 
@@ -2093,6 +2116,7 @@ add_representation_recursively(fs_fs_t *fs,
     if (   kind == dir_fragment
         || (representation->delta_base && representation->delta_base->dir))
       {
+        /* deltified directories may grow considerably */
         if (representation->original.size < 50)
           *current_pos += 300;
         else
@@ -2100,6 +2124,8 @@ add_representation_recursively(fs_fs_t *fs,
       }
     else
       {
+        /* plain / deltified content will not change but the header may
+         * grow slightly due to larger offsets. */
         representation->target.size = representation->original.size;
 
         if (representation->delta_base &&
@@ -2109,12 +2135,14 @@ add_representation_recursively(fs_fs_t *fs,
           *current_pos += representation->original.size + 13;
       }
 
+  /* follow the delta chain and place base revs immediately after this */
   if (representation->delta_base)
     SVN_ERR(add_representation_recursively(fs,
                                            representation->delta_base,
                                            kind,
                                            pool));
 
+  /* finally, recurse into directories */
   if (representation->dir)
     {
       int i;
@@ -2131,6 +2159,11 @@ add_representation_recursively(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Place fragments for the given NODE in FS, iff it has not been covered,
+ * yet.  Place the reps (text, props) immediately after the node.
+ *
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 add_noderev_recursively(fs_fs_t *fs,
                         noderev_t *node,
@@ -2140,9 +2173,11 @@ add_noderev_recursively(fs_fs_t *fs,
   apr_array_header_t *fragments;
   fragment_t fragment;
 
+  /* don't add it twice */
   if (node->covered)
     return SVN_NO_ERROR;
 
+  /* add and place a fragment for NODE */
   SVN_ERR(get_target_offset(&current_pos, &fragments, fs, node->revision));
   node->covered = TRUE;
   node->target.offset = *current_pos;
@@ -2152,8 +2187,10 @@ add_noderev_recursively(fs_fs_t *fs,
   fragment.position = *current_pos;
   APR_ARRAY_PUSH(fragments, fragment_t) = fragment;
 
+  /* size may slightly increase */
   *current_pos += node->original.size + 40;
-  
+
+  /* recurse into representations */
   if (node->text && node->text->dir)
     SVN_ERR(add_representation_recursively(fs, node->text, dir_fragment, pool));
   else
@@ -2164,6 +2201,8 @@ add_noderev_recursively(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Place a fragment for the last revision in PACK. Use POOL for allocations.
+ */
 static svn_error_t *
 add_revisions_pack_tail(revision_pack_t *pack,
                         apr_pool_t *pool)
@@ -2184,6 +2223,7 @@ add_revisions_pack_tail(revision_pack_t *pack,
 
   pack->target_offset += 2 * offset_len + 3;
 
+  /* end of target file reached.  Store that info in all revs. */
   for (i = 0; i < pack->info->nelts; ++i)
     {
       info = APR_ARRAY_IDX(pack->info, i, revision_info_t*);
@@ -2193,6 +2233,9 @@ add_revisions_pack_tail(revision_pack_t *pack,
   return SVN_NO_ERROR;
 }
 
+/* Place all fragments for all revisions / packs in FS.
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 reorder_revisions(fs_fs_t *fs,
                   apr_pool_t *pool)
@@ -2233,12 +2276,20 @@ reorder_revisions(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* forward declaration */
 static svn_error_t *
 get_fragment_content(svn_string_t **content,
                      fs_fs_t *fs,
                      fragment_t *fragment,
                      apr_pool_t *pool);
 
+/* Directory content may change and with it, the deltified representations
+ * may significantly.  This function causes all directory target reps in
+ * PACK of FS to be built and their new MD5 as well as rep sizes be updated.
+ * We must do that before attempting to write noderevs.
+ * 
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 update_noderevs(fs_fs_t *fs,
                 revision_pack_t *pack,
@@ -2254,6 +2305,8 @@ update_noderevs(fs_fs_t *fs,
         {
           svn_string_t *content;
 
+          /* request updated rep content but ignore the result.
+           * We are only interested in the MD5, content and rep size updates. */
           SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
           svn_pool_clear(itempool);
         }
@@ -2264,6 +2317,11 @@ update_noderevs(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Determine the target size of the FRAGMENT in FS and return the value
+ * in *LENGTH.  If ADD_PADDING has been set, slightly fudge the numbers
+ * to account for changes in offset lengths etc.  Use POOL for temporary
+ * allocations.
+ */
 static svn_error_t *
 get_content_length(apr_size_t *length,
                    fs_fs_t *fs,
@@ -2293,6 +2351,9 @@ get_content_length(apr_size_t *length,
   return SVN_NO_ERROR;
 }
 
+/* Move the FRAGMENT to global file offset NEW_POSITION.  Update the target
+ * location info of the underlying object as well.
+ */
 static void
 move_fragment(fragment_t *fragment,
               apr_size_t new_position)
@@ -2300,9 +2361,11 @@ move_fragment(fragment_t *fragment,
   revision_info_t *info;
   representation_t *representation;
   noderev_t *node;
-  
+
+  /* move the fragment */
   fragment->position = new_position; 
 
+  /* move the underlying object */
   switch (fragment->kind)
     {
       case header_fragment:
@@ -2329,6 +2392,10 @@ move_fragment(fragment_t *fragment,
     }
 }
 
+/* Move the fragments in PACK's target fragment list to their final offsets.
+ * This may require several iterations if the fudge factors turned out to
+ * be insufficient.  Use POOL for allocations.
+ */
 static svn_error_t *
 pack_revisions(fs_fs_t *fs,
                revision_pack_t *pack,
@@ -2342,8 +2409,13 @@ pack_revisions(fs_fs_t *fs,
 
   apr_pool_t *itempool = svn_pool_create(pool);
 
+  /* update all directory reps. Chances are that most of the target rep
+   * sizes are now close to accurate. */
   SVN_ERR(update_noderevs(fs, pack, pool));
 
+  /* compression phase: pack all fragments tightly with only a very small
+   * fudge factor.  This should cause offsets to shrink, thus all the
+   * actual fragment rate should tend to be even smaller afterwards. */
   current_pos = pack->info->nelts > 1 ? 64 : 0;
   for (i = 0; i + 1 < pack->fragments->nelts; ++i)
     {
@@ -2355,9 +2427,15 @@ pack_revisions(fs_fs_t *fs,
       svn_pool_clear(itempool);
     }
 
+  /* don't forget the final fragment (last revision's revision header) */
   fragment = &APR_ARRAY_IDX(pack->fragments, pack->fragments->nelts-1, fragment_t);
   fragment->position = current_pos;
 
+  /* expansion phase: check whether all fragments fit into their allotted
+   * slots.  Grow them geometrically if they don't fit.  Retry until they
+   * all do fit.
+   * Note: there is an upper limit to which fragments can grow.  So, this
+   * loop will terminate.  Often, no expansion will be necessary at all. */
   do
     {
       needed_to_expand = FALSE;
@@ -2394,6 +2472,8 @@ pack_revisions(fs_fs_t *fs,
       fragment = &APR_ARRAY_IDX(pack->fragments, pack->fragments->nelts-1, fragment_t);
       fragment->position = current_pos;
 
+      /* update the revision
+       * sizes (they all end at the end of the pack file now) */
       SVN_ERR(get_content_length(&len, fs, fragment, FALSE, itempool));
       current_pos += len;
 
@@ -2410,6 +2490,8 @@ pack_revisions(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Write reorg'ed target content for PACK in FS.  Use POOL for allocations.
+ */
 static svn_error_t *
 write_revisions(fs_fs_t *fs,
                 revision_pack_t *pack,
@@ -2426,6 +2508,7 @@ write_revisions(fs_fs_t *fs,
   apr_size_t current_pos = 0;
   svn_stringbuf_t *null_buffer = svn_stringbuf_create_empty(iterpool);
 
+  /* create the target file */
   const char *dir = apr_psprintf(iterpool, "%s/new/%ld%s",
                                   fs->path, pack->base / fs->max_files_per_dir,
                                   pack->info->nelts > 1 ? ".pack" : "");
@@ -2438,38 +2521,46 @@ write_revisions(fs_fs_t *fs,
                             APR_OS_DEFAULT,
                             iterpool));
 
+  /* write all fragments */
   for (i = 0; i < pack->fragments->nelts; ++i)
     {
       apr_size_t padding;
+
+      /* get fragment content to write */
       fragment = &APR_ARRAY_IDX(pack->fragments, i, fragment_t);
       SVN_ERR(get_fragment_content(&content, fs, fragment, itempool));
-
       SVN_ERR_ASSERT(fragment->position >= current_pos);
+
+      /* number of bytes between this and the previous fragment */
       if (   fragment->kind == header_fragment
           && i+1 < pack->fragments->nelts)
+        /* special case: header fragments are aligned to the slot end */
         padding = APR_ARRAY_IDX(pack->fragments, i+1, fragment_t).position -
                   content->len - current_pos;
       else
+        /* standard case: fragments are aligned to the slot start */
         padding = fragment->position - current_pos;
 
+      /* write padding between fragments */
       if (padding)
         {
           while (null_buffer->len < padding)
             svn_stringbuf_appendbyte(null_buffer, 0);
 
           SVN_ERR(svn_io_file_write_full(file,
-                                          null_buffer->data,
-                                          padding,
-                                          NULL,
-                                          itempool));
+                                         null_buffer->data,
+                                         padding,
+                                         NULL,
+                                         itempool));
           current_pos += padding;
         }
 
+      /* write fragment content */
       SVN_ERR(svn_io_file_write_full(file,
-                                      content->data,
-                                      content->len,
-                                      NULL,
-                                      itempool));
+                                     content->data,
+                                     content->len,
+                                     NULL,
+                                     itempool));
       current_pos += content->len;
 
       svn_pool_clear(itempool);
@@ -2477,6 +2568,7 @@ write_revisions(fs_fs_t *fs,
 
   apr_file_close(file);
 
+  /* write new manifest file */
   if (pack->info->nelts > 1)
     {
       svn_stream_t *stream;
@@ -2498,12 +2590,17 @@ write_revisions(fs_fs_t *fs,
         }
     }
 
+  /* cleanup */
   svn_pool_destroy(itempool);
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
+/* Write reorg'ed target content for all revisions in FS.  To maximize
+ * data locality, pack and write in one go per pack file.
+ * Use POOL for allocations.
+ */
 static svn_error_t *
 pack_and_write_revisions(fs_fs_t *fs,
                          apr_pool_t *pool)
@@ -2527,6 +2624,10 @@ pack_and_write_revisions(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* For the directory REPRESENTATION in FS, construct the new (target)
+ * serialized plaintext representation and return it in *CONTENT.
+ * Allocate the result in POOL and temporaries in SCRATCH_POOL.
+ */
 static svn_error_t *
 get_updated_dir(svn_string_t **content,
                 fs_fs_t *fs,
@@ -2540,14 +2641,19 @@ get_updated_dir(svn_string_t **content,
   int i;
   svn_stream_t *stream;
   svn_stringbuf_t *result;
-  
+
+  /* get the original content */
   SVN_ERR(read_dir(&hash, fs, representation, scratch_pool));
   hash = apr_hash_copy(hash_pool, hash);
+
+  /* update all entries */
   for (i = 0; i < dir->nelts; ++i)
     {
       char buffer[256];
       svn_string_t *new_val;
       apr_size_t pos;
+
+      /* find the original entry for for the current name */
       direntry_t *entry = APR_ARRAY_IDX(dir, i, direntry_t *);
       svn_string_t *str_val = apr_hash_get(hash, entry->name, entry->name_len);
       if (str_val == NULL)
@@ -2555,54 +2661,40 @@ get_updated_dir(svn_string_t **content,
                                  _("Dir entry '%s' not found"), entry->name);
 
       SVN_ERR_ASSERT(str_val->len < sizeof(buffer));
-      
+
+      /* create and updated node ID */
       memcpy(buffer, str_val->data, str_val->len+1);
       pos = strchr(buffer, '/') - buffer + 1;
       pos += svn__ui64toa(buffer + pos, entry->node->target.offset - entry->node->revision->target.offset);
       new_val = svn_string_ncreate(buffer, pos, hash_pool);
 
+      /* store it in the hash */
       apr_hash_set(hash, entry->name, entry->name_len, new_val);
     }
 
+  /* serialize the updated hash */
   result = svn_stringbuf_create_ensure(representation->target.size, pool);
   stream = svn_stream_from_stringbuf(result, hash_pool);
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, hash_pool));
   svn_pool_destroy(hash_pool);
 
+  /* done */
   *content = svn_stringbuf__morph_into_string(result);
   
   return SVN_NO_ERROR;
 }
 
-struct diff_write_baton_t
-{
-  svn_stream_t *stream;
-  apr_size_t size;
-};
-
-static svn_error_t *
-diff_write_handler(void *baton,
-                   const char *data,
-                   apr_size_t *len)
-{
-  struct diff_write_baton_t *whb = baton;
-
-  SVN_ERR(svn_stream_write(whb->stream, data, len));
-  whb->size += *len;
-
-  return SVN_NO_ERROR;
-}
-
+/* Calculate the delta representation for the given CONTENT and BASE.
+ * Return the rep in *DIFF.  Use POOL for allocations.
+ */
 static svn_error_t *
 diff_stringbufs(svn_stringbuf_t *diff,
-                apr_size_t *inflated_size,
                 svn_string_t *base,
                 svn_string_t *content,
                 apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
   void *diff_whb;
-  struct diff_write_baton_t whb;
 
   svn_stream_t *stream;
   svn_stream_t *source = svn_stream_from_string(base, pool);
@@ -2616,20 +2708,20 @@ diff_stringbufs(svn_stringbuf_t *diff,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                           pool);
 
-  whb.stream = svn_txdelta_target_push(diff_wh, diff_whb, source, pool);
-  whb.size = 0;
+  /* create delta stream */
+  stream = svn_txdelta_target_push(diff_wh, diff_whb, source, pool);
 
-  stream = svn_stream_create(&whb, pool);
-  svn_stream_set_write(stream, diff_write_handler);
-
+  /* run delta */
   SVN_ERR(svn_stream_write(stream, content->data, &content->len));
-  SVN_ERR(svn_stream_close(whb.stream));
   SVN_ERR(svn_stream_close(stream));
 
-  *inflated_size = whb.size;
   return SVN_NO_ERROR;
 }
 
+/* Update the noderev id value for KEY in the textual noderev representation
+ * in NODE_REV.  Take the new id from NODE.  This is a no-op if the KEY
+ * cannot be found.
+ */
 static void
 update_id(svn_stringbuf_t *node_rev,
           const char *key,
@@ -2638,6 +2730,7 @@ update_id(svn_stringbuf_t *node_rev,
   char *newline_pos = 0;
   char *pos;
 
+  /* we need to update the offset only -> find its position */
   pos = strstr(node_rev->data, key);
   if (pos)
     pos = strchr(pos, '/');
@@ -2646,6 +2739,7 @@ update_id(svn_stringbuf_t *node_rev,
 
   if (pos && newline_pos)
     {
+      /* offset data has been found -> replace it */
       char temp[SVN_INT64_BUFFER_SIZE];
       apr_size_t len = svn__i64toa(temp, node->target.offset - node->revision->target.offset);
       svn_stringbuf_replace(node_rev,
@@ -2654,6 +2748,11 @@ update_id(svn_stringbuf_t *node_rev,
     }
 }
 
+/* Update the representation id value for KEY in the textual noderev
+ * representation in NODE_REV.  Take the offset, sizes and new MD5 from
+ * REPRESENTATION.  Use SCRATCH_POOL for allocations.
+ * This is a no-op if the KEY cannot be found.
+ */
 static void
 update_text(svn_stringbuf_t *node_rev,
             const char *key,
@@ -2670,6 +2769,7 @@ update_text(svn_stringbuf_t *node_rev,
   val_pos = pos + key_len;
   if (representation->dir)
     {
+      /* for directories, we need to write all rep info anew */
       char *newline_pos = strchr(val_pos, '\n');
       svn_checksum_t checksum;
       const char* temp = apr_psprintf(scratch_pool, "%ld %" APR_SIZE_T_FMT " %" 
@@ -2689,6 +2789,8 @@ update_text(svn_stringbuf_t *node_rev,
     }
   else
     {
+      /* ordinary representation: replace offset and rep size only.
+       * Content size and checksums are unchanged. */
       const char* temp;
       char *end_pos = strchr(val_pos, ' ');
       
@@ -2704,6 +2806,13 @@ update_text(svn_stringbuf_t *node_rev,
     }
 }
 
+/* Get the target content (data block as to be written to the file) for
+ * the given FRAGMENT in FS.  Return the content in *CONTENT.  Use POOL
+ * for allocations.
+ *
+ * Note that, as a side-effect, this will update the target rep. info for
+ * directories.
+ */
 static svn_error_t *
 get_fragment_content(svn_string_t **content,
                      fs_fs_t *fs,
@@ -2720,6 +2829,7 @@ get_fragment_content(svn_string_t **content,
 
   switch (fragment->kind)
     {
+      /* revision headers can be constructed from target position info */
       case header_fragment:
         info = fragment->data;
         *content = svn_string_createf(pool,
@@ -2728,6 +2838,7 @@ get_fragment_content(svn_string_t **content,
                                       info->target.changes);
         return SVN_NO_ERROR;
 
+      /* The changes list remains untouched */
       case changes_fragment:
         info = fragment->data;
         SVN_ERR(get_content(&revision_content, fs, info->revision, pool));
@@ -2737,6 +2848,9 @@ get_fragment_content(svn_string_t **content,
         (*content)->len = info->target.changes_len;
         return SVN_NO_ERROR;
 
+      /* property and file reps get new headers any need to be rewritten,
+       * iff the base rep is a directory.  The actual (deltified) content
+       * remains unchanged, though.  MD5 etc. do not change. */
       case property_fragment:
       case file_fragment:
         representation = fragment->data;
@@ -2746,6 +2860,8 @@ get_fragment_content(svn_string_t **content,
         if (representation->delta_base)
           if (representation->delta_base->dir)
             {
+              /* if the base happens to be a directory, reconstruct the
+               * full text and represent it as PLAIN rep. */
               SVN_ERR(get_combined_window(&text, fs, representation, pool));
               representation->target.size = text->len;
 
@@ -2756,6 +2872,7 @@ get_fragment_content(svn_string_t **content,
               return SVN_NO_ERROR;
             }
           else
+            /* construct a new rep header */
             if (representation->delta_base == fs->null_base)
               header = svn_stringbuf_create("DELTA\n", pool);
             else
@@ -2768,6 +2885,8 @@ get_fragment_content(svn_string_t **content,
         else
           header = svn_stringbuf_create("PLAIN\n", pool);
 
+        /* if it exists, the actual delta base is unchanged. Hence, this
+         * rep is unchanged even if it has been deltified. */
         header_size = strchr(revision_content->data +
                              representation->original.offset, '\n') -
                       revision_content->data -
@@ -2781,7 +2900,10 @@ get_fragment_content(svn_string_t **content,
         *content = svn_stringbuf__morph_into_string(header);
         return SVN_NO_ERROR;
 
+      /* directory reps need to be rewritten (and deltified) completely.
+       * As a side-effect, update the MD5 and target content size. */
       case dir_fragment:
+        /* construct new content and update MD5 */
         representation = fragment->data;
         SVN_ERR(get_updated_dir(&revision_content, fs, representation,
                                 pool, pool));
@@ -2792,15 +2914,18 @@ get_fragment_content(svn_string_t **content,
                checksum->digest,
                sizeof(representation->dir->target_md5));
 
+        /* deltify against the base rep if necessary */
         if (representation->delta_base)
           {
             if (representation->delta_base->dir == NULL)
               {
+                /* dummy or non-dir base rep -> self-compress only */
                 header = svn_stringbuf_create("DELTA\n", pool);
                 base_content = svn_string_create_empty(pool);
               }
             else
               {
+                /* deltify against base rep (which is a directory, too)*/
                 representation_t *base_rep = representation->delta_base;
                 header = svn_stringbuf_createf(pool,
                                                "DELTA %ld %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT "\n",
@@ -2811,16 +2936,18 @@ get_fragment_content(svn_string_t **content,
                                         pool, pool));
               }
 
+            /* run deltification and update target content size */
             header_size = header->len;
-            SVN_ERR(diff_stringbufs(header, &representation->dir->size,
-                                    base_content,
+            SVN_ERR(diff_stringbufs(header, base_content,
                                     revision_content, pool));
+            representation->dir->size = revision_content->len;
             representation->target.size = header->len - header_size;
             svn_stringbuf_appendcstr(header, "ENDREP\n");
             *content = svn_stringbuf__morph_into_string(header);
           }
         else
           {
+            /* no delta base (not even a dummy) -> PLAIN rep */
             representation->target.size = revision_content->len;
             representation->dir->size = revision_content->len;
             *content = svn_string_createf(pool, "PLAIN\n%sENDREP\n",
@@ -2829,7 +2956,9 @@ get_fragment_content(svn_string_t **content,
 
         return SVN_NO_ERROR;
 
+      /* construct the new noderev content.  No side-effects.*/
       case noderev_fragment:
+        /* get the original noderev as string */
         node = fragment->data;
         SVN_ERR(get_content(&revision_content, fs,
                             node->revision->revision, pool));
@@ -2838,6 +2967,7 @@ get_fragment_content(svn_string_t **content,
                                          node->original.size,
                                          pool);
 
+        /* update the values that may have hanged for target */
         update_id(node_rev, "id: ", node);
         update_id(node_rev, "pred: ", node->predecessor);
         update_text(node_rev, "text: ", node->text, pool);
@@ -2852,6 +2982,9 @@ get_fragment_content(svn_string_t **content,
   return SVN_NO_ERROR;
 }
 
+/* In the repository at PATH, restore the original content in case we ran
+ * this reorg tool before.  Use POOL for allocations.
+ */
 static svn_error_t *
 prepare_repo(const char *path, apr_pool_t *pool)
 {
@@ -2862,16 +2995,19 @@ prepare_repo(const char *path, apr_pool_t *pool)
   const char *revs_path = svn_dirent_join(path, "db/revs", pool);
   const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
   const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
-  
+
+  /* is there a backup? */
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_dir)
     {
+      /* yes, restore the org content from it */
       SVN_ERR(svn_io_remove_dir2(new_path, TRUE, NULL, NULL, pool));
       SVN_ERR(svn_io_file_move(revs_path, new_path, pool));
       SVN_ERR(svn_io_file_move(old_path, revs_path, pool));
       SVN_ERR(svn_io_remove_dir2(new_path, TRUE, NULL, NULL, pool));
     }
 
+  /* same for the rep cache db */
   SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(svn_io_file_move(old_rep_cache_path, rep_cache_path, pool));
@@ -2879,6 +3015,9 @@ prepare_repo(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* In the repository at PATH, create a backup of the orig content and
+ * replace it with the reorg'ed. Use POOL for allocations.
+ */
 static svn_error_t *
 activate_new_revs(const char *path, apr_pool_t *pool)
 {
@@ -2890,6 +3029,8 @@ activate_new_revs(const char *path, apr_pool_t *pool)
   const char *old_rep_cache_path = svn_dirent_join(path, "db/rep-cache.db.old", pool);
   const char *rep_cache_path = svn_dirent_join(path, "db/rep-cache.db", pool);
 
+  /* if there is no backup, yet, move the current repo content to the backup
+   * and place it with the new (reorg'ed) data. */
   SVN_ERR(svn_io_check_path(old_path, &kind, pool));
   if (kind == svn_node_none)
     {
@@ -2897,6 +3038,7 @@ activate_new_revs(const char *path, apr_pool_t *pool)
       SVN_ERR(svn_io_file_move(new_path, revs_path, pool));
     }
 
+  /* same for the rep cache db */
   SVN_ERR(svn_io_check_path(old_rep_cache_path, &kind, pool));
   if (kind == svn_node_none)
     SVN_ERR(svn_io_file_move(rep_cache_path, old_rep_cache_path, pool));
@@ -2904,6 +3046,9 @@ activate_new_revs(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Write tool usage info text to OSTREAM using PROGNAME as a prefix and
+ * POOL for allocations.
+ */
 static void
 print_usage(svn_stream_t *ostream, const char *progname,
             apr_pool_t *pool)
@@ -2923,6 +3068,7 @@ print_usage(svn_stream_t *ostream, const char *progname,
      progname));
 }
 
+/* linear control flow */
 int main(int argc, const char *argv[])
 {
   apr_pool_t *pool;

@@ -1974,6 +1974,7 @@ def from_wc_top_with_bad_editor(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "Commit succeeded when should have failed.",
     None, svntest.verify.AnyOutput,
+    '--force-interactive',
     'ci', '--editor-cmd', 'no_such-editor')
 
   err = " ".join([x.strip() for x in err])
@@ -2920,8 +2921,8 @@ def commit_danglers(sbox):
 # dir/subdir should bump LastChangedRev of subdir in originating WC
 @XFail()
 @Issue(4203)
-def commit_moved_dir_with_nested_mod_in_subdir(sbox):
-  "commit of moved dir with nested mod in subdir"
+def last_changed_of_copied_subdir(sbox):
+  "last changed of copied subdir"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3012,7 +3013,7 @@ test_list = [ None,
               commit_incomplete,
               commit_add_subadd,
               commit_danglers,
-              commit_moved_dir_with_nested_mod_in_subdir,
+              last_changed_of_copied_subdir,
              ]
 
 if __name__ == '__main__':

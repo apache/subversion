@@ -915,7 +915,7 @@ init_patch_target(patch_target_t **patch_target,
       if (target->kind_on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
-                                   APR_READ | APR_BINARY | APR_BUFFERED,
+                                   APR_READ | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
           SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
                                           target->local_abspath, FALSE,
@@ -2288,9 +2288,10 @@ create_missing_parents(patch_target_t *target,
               if (ctx->cancel_func)
                 SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
-                                           ctx->notify_func2, ctx->notify_baton2,
-                                           iterpool));
+              SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, local_abspath,
+                                            NULL /*props*/,
+                                            ctx->notify_func2, ctx->notify_baton2,
+                                            iterpool));
             }
         }
     }
@@ -2402,8 +2403,9 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                * Suppress notification, we'll do that later (and also
                * during dry-run). Don't allow cancellation because
                * we'd rather notify about what we did before aborting. */
-              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
-                                           NULL, NULL, pool));
+              SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, target->local_abspath,
+                                            NULL /*props*/,
+                                            NULL, NULL, pool));
             }
 
           /* Restore the target's executable bit if necessary. */
@@ -2494,10 +2496,11 @@ install_patched_prop_targets(patch_target_t *target,
             {
               SVN_ERR(svn_io_file_create(target->local_abspath, "",
                                          scratch_pool));
-              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
-                                           /* suppress notification */
-                                           NULL, NULL,
-                                           iterpool));
+              SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, target->local_abspath,
+                                            NULL /*props*/,
+                                            /* suppress notification */
+                                            NULL, NULL,
+                                            iterpool));
             }
           target->added = TRUE;
         }
@@ -2617,8 +2620,8 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
   int i;
 
   /* Working copy root cannot be deleted, so never consider it empty. */
-  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wc_root, wc_ctx, local_abspath,
-                                      scratch_pool));
+  SVN_ERR(svn_wc__is_wcroot(&is_wc_root, wc_ctx, local_abspath,
+                            scratch_pool));
   if (is_wc_root)
     {
       *empty = FALSE;

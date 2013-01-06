@@ -610,8 +610,9 @@ svn_wc__fetch_base_func(const char **filename,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, &checksum,
-                                 NULL, NULL, NULL, NULL, sfb->db,
-                                 local_abspath, scratch_pool, scratch_pool);
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 sfb->db, local_abspath,
+                                 scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);

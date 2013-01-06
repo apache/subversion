@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion server inspection tool.
+ * svnlook.c: Subversion server inspection tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -97,7 +97,8 @@ enum
     svnlook__xml_opt,
     svnlook__ignore_properties,
     svnlook__properties_only,
-    svnlook__diff_cmd
+    svnlook__diff_cmd,
+    svnlook__show_inherited_props
   };
 
 /*
@@ -149,6 +150,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"show-ids",          svnlook__show_ids, 0,
    N_("show node revision ids for each path")},
+
+  {"show-inherited-props", svnlook__show_inherited_props, 0,
+   N_("show path's inherited properties")},
 
   {"transaction",       't', 1,
    N_("specify transaction name ARG")},
@@ -265,7 +269,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"),
-   {'r', 't', svnlook__revprop_opt} },
+   {'r', 't', 'v', svnlook__revprop_opt, svnlook__show_inherited_props} },
 
   {"proplist", subcommand_plist, {"plist", "pl"},
    N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
@@ -275,7 +279,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
       "With -v, show the property values too.\n"),
-   {'r', 't', 'v', svnlook__revprop_opt, svnlook__xml_opt} },
+   {'r', 't', 'v', svnlook__revprop_opt, svnlook__xml_opt,
+    svnlook__show_inherited_props} },
 
   {"tree", subcommand_tree, {0},
    N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
@@ -323,6 +328,7 @@ struct svnlook_opt_state
   svn_boolean_t ignore_properties;  /* --ignore_properties */
   svn_boolean_t properties_only;    /* --properties-only */
   const char *diff_cmd;           /* --diff-cmd */
+  svn_boolean_t show_inherited_props; /*  --show-inherited-props */
 };
 
 
@@ -1628,13 +1634,23 @@ do_history(svnlook_ctxt_t *c,
 
 
 /* Print the value of property PROPNAME on PATH in the repository.
-   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
-   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
+
+   If VERBOSE, print their values too.  If SHOW_INHERITED_PROPS, print
+   PATH's inherited props too.
+
+   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist. If
+   SHOW_INHERITED_PROPS is FALSE,then error with SVN_ERR_PROPERTY_NOT_FOUND
+   if there is no such property on PATH.  If SHOW_INHERITED_PROPS is TRUE,
+   then error with SVN_ERR_PROPERTY_NOT_FOUND only if there is no such
+   property on PATH nor inherited by path.
+
    If PATH is NULL, operate on a revision property. */
 static svn_error_t *
 do_pget(svnlook_ctxt_t *c,
         const char *propname,
         const char *path,
+        svn_boolean_t verbose,
+        svn_boolean_t show_inherited_props,
         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -1642,17 +1658,30 @@ do_pget(svnlook_ctxt_t *c,
   svn_node_kind_t kind;
   svn_stream_t *stdout_stream;
   apr_size_t len;
+  apr_array_header_t *inherited_props = NULL;
 
   SVN_ERR(get_root(&root, c, pool));
   if (path != NULL)
     {
+      path = svn_fspath__canonicalize(path, pool);
       SVN_ERR(verify_path(&kind, root, path, pool));
       SVN_ERR(svn_fs_node_prop(&prop, root, path, propname, pool));
-    }
-  else
-    SVN_ERR(get_property(&prop, c, propname, pool));
 
-  if (prop == NULL)
+      if (show_inherited_props)
+        {
+          SVN_ERR(svn_repos_fs_get_inherited_props(&inherited_props, root,
+                                                   path, propname, NULL,
+                                                   NULL, pool, pool));
+        }
+    }
+  else /* --revprop */
+    {
+      SVN_ERR(get_property(&prop, c, propname, pool));
+    }
+
+  /* Did we find nothing? */
+  if (prop == NULL
+      && (!show_inherited_props || inherited_props->nelts == 0))
     {
        const char *err_msg;
        if (path == NULL)
@@ -1665,61 +1694,162 @@ do_pget(svnlook_ctxt_t *c,
        else
          {
            if (SVN_IS_VALID_REVNUM(c->rev_id))
-             err_msg = apr_psprintf(pool,
-                                    _("Property '%s' not found on path '%s' "
-                                      "in revision %ld"),
-                                    propname, path, c->rev_id);
+             {
+               if (show_inherited_props)
+                 err_msg = apr_psprintf(pool,
+                                        _("Property '%s' not found on path '%s' "
+                                          "or inherited from a parent "
+                                          "in revision %ld"),
+                                        propname, path, c->rev_id);
+               else
+                 err_msg = apr_psprintf(pool,
+                                        _("Property '%s' not found on path '%s' "
+                                          "in revision %ld"),
+                                        propname, path, c->rev_id);
+             }
            else
-             err_msg = apr_psprintf(pool,
-                                    _("Property '%s' not found on path '%s' "
-                                      "in transaction %s"),
-                                    propname, path, c->txn_name);
+             {
+               if (show_inherited_props)
+                 err_msg = apr_psprintf(pool,
+                                        _("Property '%s' not found on path '%s' "
+                                          "or inherited from a parent "
+                                          "in transaction %s"),
+                                        propname, path, c->txn_name);
+               else
+                 err_msg = apr_psprintf(pool,
+                                        _("Property '%s' not found on path '%s' "
+                                          "in transaction %s"),
+                                        propname, path, c->txn_name);
+             }
          }
        return svn_error_create(SVN_ERR_PROPERTY_NOT_FOUND, NULL, err_msg);
     }
 
-  /* Else. */
-
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
-  /* Unlike the command line client, we don't translate the property
-     value or print a trailing newline here.  We just output the raw
-     bytes of whatever's in the repository, as svnlook is more likely
-     to be used for automated inspections. */
-  len = prop->len;
-  SVN_ERR(svn_stream_write(stdout_stream, prop->data, &len));
+  if (verbose || show_inherited_props)
+    {
+      if (inherited_props)
+        {
+          int i;
+
+          for (i = 0; i < inherited_props->nelts; i++)
+            {
+              svn_prop_inherited_item_t *elt =
+                APR_ARRAY_IDX(inherited_props, i,
+                              svn_prop_inherited_item_t *);
+
+              if (verbose)
+                {
+                  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                          _("Inherited properties on '%s',\nfrom '%s':\n"),
+                          path, svn_fspath__canonicalize(elt->path_or_url,
+                                                         pool)));
+                  SVN_ERR(svn_cmdline__print_prop_hash(stdout_stream,
+                                                       elt->prop_hash,
+                                                       !verbose, pool));
+                }
+              else
+                {
+                  svn_string_t *propval =
+                    svn__apr_hash_index_val(apr_hash_first(pool,
+                                                           elt->prop_hash));
+
+                  SVN_ERR(svn_stream_printf(
+                    stdout_stream, pool, "%s - ",
+                    svn_fspath__canonicalize(elt->path_or_url, pool)));
+                  len = propval->len;
+                  SVN_ERR(svn_stream_write(stdout_stream, propval->data, &len));
+                  /* If we have more than one property to write, then add a newline*/
+                  if (inherited_props->nelts > 1 || prop)
+                    {
+                      len = strlen(APR_EOL_STR);
+                      SVN_ERR(svn_stream_write(stdout_stream, APR_EOL_STR, &len));
+                    }
+                }
+            }
+        }
+
+      if (prop)
+        {
+          if (verbose)
+            {
+              apr_hash_t *hash = apr_hash_make(pool);
+
+              apr_hash_set(hash, propname, APR_HASH_KEY_STRING, prop);
+              SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                      _("Properties on '%s':\n"), path));
+              SVN_ERR(svn_cmdline__print_prop_hash(stdout_stream, hash,
+                                                   FALSE, pool));
+            }
+          else
+            {
+              SVN_ERR(svn_stream_printf(stdout_stream, pool, "%s - ", path));
+              len = prop->len;
+              SVN_ERR(svn_stream_write(stdout_stream, prop->data, &len));
+            }
+        }
+    }
+  else /* Raw single prop output, i.e. non-verbose output with no
+          inherited props. */
+    {
+      /* Unlike the command line client, we don't translate the property
+         value or print a trailing newline here.  We just output the raw
+         bytes of whatever's in the repository, as svnlook is more likely
+         to be used for automated inspections. */
+      len = prop->len;
+      SVN_ERR(svn_stream_write(stdout_stream, prop->data, &len));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
 /* Print the property names of all properties on PATH in the repository.
-   If VERBOSE, print their values too.
-   If XML, print as XML rather than as plain text.
-   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
-   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
+
+   If VERBOSE, print their values too.  If XML, print as XML rather than as
+   plain text.  If SHOW_INHERITED_PROPS, print PATH's inherited props too.
+
+   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist.
+
    If PATH is NULL, operate on a revision properties. */
 static svn_error_t *
 do_plist(svnlook_ctxt_t *c,
          const char *path,
          svn_boolean_t verbose,
          svn_boolean_t xml,
+         svn_boolean_t show_inherited_props,
          apr_pool_t *pool)
 {
-  svn_stream_t *stdout_stream;
   svn_fs_root_t *root;
   apr_hash_t *props;
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
   svn_stringbuf_t *sb = NULL;
   svn_boolean_t revprop = FALSE;
+  apr_array_header_t *inherited_props = NULL;
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
   if (path != NULL)
     {
+      /* PATH might be the root of the repsository and we accept both
+         "" and "/".  But to avoid the somewhat cryptic output like this:
+
+           >svnlook pl repos-path ""
+           Properties on '':
+             svn:auto-props
+             svn:global-ignores
+
+         We canonicalize PATH so that is has a leading slash. */
+      path = svn_fspath__canonicalize(path, pool);
+
       SVN_ERR(get_root(&root, c, pool));
       SVN_ERR(verify_path(&kind, root, path, pool));
       SVN_ERR(svn_fs_node_proplist(&props, root, path, pool));
+
+      if (show_inherited_props)
+        SVN_ERR(svn_repos_fs_get_inherited_props(&inherited_props, root,
+                                                 path, NULL, NULL, NULL,
+                                                 pool, pool));
     }
   else if (c->is_revision)
     {
@@ -1734,18 +1864,55 @@ do_plist(svnlook_ctxt_t *c,
 
   if (xml)
     {
-      char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
       /* <?xml version="1.0" encoding="UTF-8"?> */
       svn_xml_make_header2(&sb, "UTF-8", pool);
 
       /* "<properties>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties", NULL);
+    }
 
+  if (inherited_props)
+    {
+      int i;
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *elt =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          /* Canonicalize the inherited parent paths for consistency
+             with PATH. */
+          if (xml)
+            {
+              svn_xml_make_open_tag(
+                &sb, pool, svn_xml_normal, "target", "path",
+                svn_fspath__canonicalize(elt->path_or_url, pool),
+                NULL);
+              SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, elt->prop_hash,
+                                                       !verbose, TRUE,
+                                                       pool));
+              svn_xml_make_close_tag(&sb, pool, "target");
+            }
+          else
+            {
+              SVN_ERR(svn_cmdline_printf(
+                pool, _("Inherited properties on '%s',\nfrom '%s':\n"),
+                path, svn_fspath__canonicalize(elt->path_or_url, pool)));
+               SVN_ERR(svn_cmdline__print_prop_hash(NULL, elt->prop_hash,
+                                                    !verbose, pool));
+            }
+        }
+    }
+
+  if (xml)
+    {
       if (revprop)
         {
           /* "<revprops ...>" */
           if (c->is_revision)
             {
+              char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
+
               svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
                                     "rev", revstr, NULL);
             }
@@ -1762,6 +1929,9 @@ do_plist(svnlook_ctxt_t *c,
                                 "path", path, NULL);
         }
     }
+
+  if (!xml && path /* Not a --revprop */)
+    SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), path));
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -1786,10 +1956,19 @@ do_plist(svnlook_ctxt_t *c,
           else
             {
               const char *pname_stdout;
+              const char *indented_newval;
 
               SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname,
                                                     pool));
-              printf("  %s : %s\n", pname_stdout, propval->data);
+              printf("  %s\n", pname_stdout);
+              /* Add an extra newline to the value before indenting, so that
+                 every line of output has the indentation whether the value
+                 already ended in a newline or not. */
+              indented_newval =
+                svn_cmdline__indent_string(apr_psprintf(pool, "%s\n",
+                                                        propval->data),
+                                           "    ", pool);
+              printf("%s", indented_newval);
             }
         }
       else if (xml)
@@ -2171,7 +2350,9 @@ subcommand_pget(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_pget(c, opt_state->arg1,
-                  opt_state->revprop ? NULL : opt_state->arg2, pool));
+                  opt_state->revprop ? NULL : opt_state->arg2,
+                  opt_state->verbose, opt_state->show_inherited_props,
+                  pool));
   return SVN_NO_ERROR;
 }
 
@@ -2186,7 +2367,8 @@ subcommand_plist(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_plist(c, opt_state->revprop ? NULL : opt_state->arg1,
-                   opt_state->verbose, opt_state->xml, pool));
+                   opt_state->verbose, opt_state->xml,
+                   opt_state->show_inherited_props, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2419,6 +2601,10 @@ main(int argc, const char *argv[])
           opt_state.diff_cmd = opt_arg;
           break;
 
+        case svnlook__show_inherited_props:
+          opt_state.show_inherited_props = TRUE;
+          break;
+
         default:
           SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           svn_pool_destroy(pool);
@@ -2433,6 +2619,13 @@ main(int argc, const char *argv[])
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
                    "cannot co-exist")));
+
+  /* The --show-inherited-props and --revprop options may not co-exist. */
+  if (opt_state.show_inherited_props && opt_state.revprop)
+    SVN_INT_ERR(svn_error_create
+                (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                 _("Cannot use the '--show-inherited-props' option with the "
+                   "'--revprop' option")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

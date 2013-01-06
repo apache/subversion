@@ -122,6 +122,9 @@ datasource_to_index(svn_diff_datasource_e datasource)
  * whatsoever.  If there is a number someone comes up with that has some
  * argumentation, let's use that.
  */
+/* If you change this number, update test_norm_offset(),
+ * test_identical_suffix() and and test_token_compare()  in diff-diff3-test.c.
+ */
 #define CHUNK_SHIFT 17
 #define CHUNK_SIZE (1 << CHUNK_SHIFT)
 
@@ -418,7 +421,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         }
 
       is_match = TRUE;
-      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
+      for (delta = 0; delta < max_delta; delta += sizeof(apr_uintptr_t))
         {
           apr_uintptr_t chunk = *(const apr_uintptr_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
@@ -428,18 +431,25 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
             if (chunk != *(const apr_uintptr_t *)(file[i].curp + delta))
               {
                 is_match = FALSE;
-                delta -= sizeof(apr_uintptr_t);
                 break;
               }
+
+          if (! is_match)
+            break;
         }
 
-      /* We either found a mismatch or an EOL at or shortly behind curp+delta
-       * or we cannot proceed with chunky ops without exceeding endp.
-       * In any way, everything up to curp + delta is equal and not an EOL.
-       */
-      for (i = 0; i < file_len; i++)
-        file[i].curp += delta;
+      if (delta /* > 0*/)
+        {
+          /* We either found a mismatch or an EOL at or shortly behind curp+delta
+           * or we cannot proceed with chunky ops without exceeding endp.
+           * In any way, everything up to curp + delta is equal and not an EOL.
+           */
+          for (i = 0; i < file_len; i++)
+            file[i].curp += delta;
 
+          /* Skipped data without EOL markers, so last char was not a CR. */
+          had_cr = FALSE; 
+        }
 #endif
 
       *reached_one_eof = is_one_at_eof(file, file_len);
@@ -496,6 +506,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
  * The number 50 is more or less arbitrary, based on some real-world tests
  * with big files (and then doubling the required number to be on the safe
  * side). This has a negligible effect on the power of the optimization. */
+/* If you change this number, update test_identical_suffix() in diff-diff3-test.c */
 #ifndef SUFFIX_LINES_TO_KEEP
 #define SUFFIX_LINES_TO_KEEP 50
 #endif
@@ -518,7 +529,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match;
-  svn_boolean_t reached_prefix;
   apr_off_t lines = 0;
   svn_boolean_t had_cr;
   svn_boolean_t had_nl;
@@ -580,6 +590,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   had_nl = FALSE;
   while (is_match)
     {
+      svn_boolean_t reached_prefix;
 #if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
@@ -606,44 +617,60 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
+      for (i = 0; i < file_len; i++)
+        min_curp[i] = file_for_suffix[i].buffer;
 
-      min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
-                  ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
-                  : file_for_suffix[0].buffer + 1;
-      for (i = 1; i < file_len; i++)
-        min_curp[i] = file_for_suffix[i].buffer + 1;
+      /* If we are in the same chunk that contains the last part of the common
+         prefix, use the min_curp[0] pointer to make sure we don't get a
+         suffix that overlaps the already determined common prefix. */
+      if (file_for_suffix[0].chunk == suffix_min_chunk0)
+        min_curp[0] += suffix_min_offset0;
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
         can_read_word = can_read_word
-                        && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
-                            >= min_curp[i]);
-      if (can_read_word)
+                        && (  (file_for_suffix[i].curp + 1
+                                 - sizeof(apr_uintptr_t))
+                            > min_curp[i]);
+      while (can_read_word)
         {
-          do
+          apr_uintptr_t chunk;
+
+          /* For each file curp is positioned at the current byte, but we
+             want to examine the current byte and the ones before the current
+             location as one machine word. */
+
+          chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1
+                                             - sizeof(apr_uintptr_t));
+          if (contains_eol(chunk))
+            break;
+
+          for (i = 1, is_match = TRUE; i < file_len; i++)
+            is_match = is_match
+                       && (   chunk
+                           == *(const apr_uintptr_t *)
+                                    (file_for_suffix[i].curp + 1
+                                       - sizeof(apr_uintptr_t)));
+
+          if (! is_match)
+            break;
+
+          for (i = 0; i < file_len; i++)
             {
-              apr_uintptr_t chunk;
-              for (i = 0; i < file_len; i++)
-                file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              can_read_word = can_read_word
+                              && (  (file_for_suffix[i].curp + 1
+                                       - sizeof(apr_uintptr_t))
+                                  > min_curp[i]);
+            }
 
-              chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1);
-              if (contains_eol(chunk))
-                break;
-
-              for (i = 0, can_read_word = TRUE; i < file_len; i++)
-                can_read_word = can_read_word
-                                && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
-                                    >= min_curp[i]);
-              for (i = 1, is_match = TRUE; i < file_len; i++)
-                is_match = is_match
-                           && (   chunk
-                               == *(const apr_uintptr_t *)(file_for_suffix[i].curp + 1));
-            } while (can_read_word && is_match);
-
-            for (i = 0; i < file_len; i++)
-              file_for_suffix[i].curp += sizeof(apr_uintptr_t);
+          /* We skipped some bytes, so there are no closing EOLs */
+          had_nl = FALSE;
+          had_cr = FALSE;
         }
 
+      /* The > min_curp[i] check leaves at least one final byte for checking
+         in the non block optimized case below. */
 #endif
 
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
@@ -652,7 +679,8 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       if (reached_prefix || is_one_at_bof(file_for_suffix, file_len))
         break;
 
-      for (i = 1, is_match = TRUE; i < file_len; i++)
+      is_match = TRUE;
+      for (i = 1; i < file_len; i++)
         is_match = is_match
                    && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
     }
@@ -828,17 +856,24 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   last_chunk = offset_to_chunk(file->size);
 
-  if (curp == endp
-      && last_chunk == file->chunk)
+  /* Are we already at the end of a chunk? */
+  if (curp == endp)
     {
-      return SVN_NO_ERROR;
+      /* Are we at EOF */
+      if (last_chunk == file->chunk)
+        return SVN_NO_ERROR; /* EOF */
+
+      /* Or right before an identical suffix in the next chunk? */
+      if (file->chunk + 1 == file->suffix_start_chunk
+          && file->suffix_offset_in_chunk == 0)
+        return SVN_NO_ERROR;
     }
 
   /* Stop when we encounter the identical suffix. If suffix scanning was not
    * performed, suffix_start_chunk will be -1, so this condition will never
    * be true. */
   if (file->chunk == file->suffix_start_chunk
-      && curp - file->buffer == file->suffix_offset_in_chunk)
+      && (curp - file->buffer) == file->suffix_offset_in_chunk)
     return SVN_NO_ERROR;
 
   /* Allocate a new token, or fetch one from the "reusable tokens" list. */
@@ -855,6 +890,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   file_token->datasource = datasource;
   file_token->offset = chunk_to_offset(file->chunk)
                        + (curp - file->buffer);
+  file_token->norm_offset = file_token->offset;
   file_token->raw_length = 0;
   file_token->length = 0;
 
@@ -883,11 +919,21 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       length = endp - curp;
       file_token->raw_length += length;
-      svn_diff__normalize_buffer(&curp, &length,
-                                 &file->normalize_state,
-                                 curp, file_baton->options);
-      file_token->length += length;
-      h = svn__adler32(h, curp, length);
+      {
+        char *c = curp;
+
+        svn_diff__normalize_buffer(&c, &length,
+                                   &file->normalize_state,
+                                   curp, file_baton->options);
+        if (file_token->length == 0)
+          {
+            /* When we are reading the first part of the token, move the
+               normalized offset past leading ignored characters, if any. */
+            file_token->norm_offset += (c - curp);
+          }
+        file_token->length += length;
+        h = svn__adler32(h, c, length);
+      }
 
       curp = endp = file->buffer;
       file->chunk++;
@@ -896,6 +942,14 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       endp += length;
       file->endp = endp;
 
+      /* Issue #4283: Normally we should have checked for reaching the skipped
+         suffix here, but because we assume that a suffix always starts on a
+         line and token boundary we rely on catching the suffix earlier in this
+         function.
+
+         When changing things here, make sure the whitespace settings are
+         applied, or we mught not reach the exact suffix boundary as token
+         boundary. */
       SVN_ERR(read_chunk(file->file, file->path,
                          curp, length,
                          chunk_to_offset(file->chunk),
@@ -926,11 +980,12 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       svn_diff__normalize_buffer(&c, &length,
                                  &file->normalize_state,
                                  curp, file_baton->options);
-
-      file_token->norm_offset = file_token->offset;
       if (file_token->length == 0)
-        /* move past leading ignored characters */
-        file_token->norm_offset += (c - curp);
+        {
+          /* When we are reading the first part of the token, move the
+             normalized offset past leading ignored characters, if any. */
+          file_token->norm_offset += (c - curp);
+        }
 
       file_token->length += length;
 
@@ -1002,8 +1057,15 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
         }
       else
         {
+          apr_off_t skipped;
+
           length[i] = 0;
-          raw_length[i] = file_token[i]->raw_length;
+
+          /* When we skipped the first part of the token via the whitespace
+             normalization we must reduce the raw length of the token */
+          skipped = (file_token[i]->norm_offset - file_token[i]->offset);
+
+          raw_length[i] = file_token[i]->raw_length - skipped;
         }
     }
 
@@ -1039,6 +1101,8 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                  so, overwriting it isn't a problem */
               svn_diff__normalize_buffer(&bufp[i], &length[i], &state[i],
                                          bufp[i], file_baton->options);
+
+              /* assert(length[i] == file_token[i]->length); */
             }
         }
 

@@ -818,13 +818,13 @@ def reintegrate_on_shallow_wc(sbox):
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
   # to the missing (shallow) portion of the source.  The reintegrate
-  # should still succeed, albeit skipping some paths.
+  # should still succeed.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.main.file_write(psi_COPY_path, "more branch work")
   svntest.main.run_svn(None, 'commit', '-m',
                        'Some more work on the A_COPY branch', wc_dir)
-  # Reuse the same expectations as the prior merge, except that
-  # non-inheritable mergeinfo is set on the root of the missing subtree...
+  # Reuse the same expectations as the prior merge, except for the mergeinfo
+  # on the target root that now includes the latest rev on the branch.
   expected_mergeinfo_output.add({
       'D' : Item(status=' U')
       })
@@ -832,9 +832,11 @@ def reintegrate_on_shallow_wc(sbox):
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
   # ... a depth-restricted item is skipped ...
   expected_A_skip.add({
-      'D/H' : Item()
+      'D/H/psi' : Item(verb='Skipped')
   })
-  # ... and the mergeinfo on the target root includes the latest rev on the branch.
+  # Currently this fails due to r1424469.  For a full explanation see
+  # http://svn.haxx.se/dev/archive-2012-12/0472.shtml
+  # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
   svntest.actions.run_and_verify_merge(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
@@ -858,9 +860,9 @@ def reintegrate_fail_on_stale_source(sbox):
   mu_path = os.path.join(A_path, "mu")
   svntest.main.file_append(mu_path, 'some text appended to mu\n')
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
-                                     '-m', 'a change to mu', mu_path);
+                                     '-m', 'a change to mu', mu_path)
   # Unmix the revisions in the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir);
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   # The merge --reintegrate succeeds but since there were no changes
   # on A_COPY after it was branched the only result is updated mergeinfo
   # on the reintegrate target.
@@ -1265,8 +1267,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
   #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
   #
-  #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
-  #      of 'trunk' was previously merged to 'branch'
+  #   E) Reintegrate 'branch' to 'trunk'.
   #
   #                                       Step:   A   B    C   D    E
   #   A_COPY_3    ---[9]--

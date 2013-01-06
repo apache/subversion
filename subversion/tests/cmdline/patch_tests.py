@@ -278,7 +278,7 @@ def patch_absolute_paths(sbox):
   expected_status.tweak('A/B/E/alpha', status='M ')
 
   expected_skip = wc.State('', {
-    lambda_path:  Item(),
+    lambda_path:  Item(verb='Skipped missing target'),
   })
 
   svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
@@ -999,11 +999,7 @@ def patch_add_new_dir(sbox):
            'X/Y/new'   : Item(contents='new\n'),
            'A/Z'       : Item()
   })
-  expected_disk.remove('A/B/E/alpha')
-  expected_disk.remove('A/B/E/beta')
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('A/B/E')
-    expected_disk.remove('A/C')
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/C')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -1016,9 +1012,11 @@ def patch_add_new_dir(sbox):
            'A/C'       : Item(status='D ', wc_rev=1),
   })
 
-  expected_skip = wc.State('', {A_Z_new_path : Item(),
-                                A_B_E_Y_new_path : Item(),
-                                A_C_new_path : Item()})
+  expected_skip = wc.State(
+    '',
+    {A_Z_new_path     : Item(verb='Skipped missing target'),
+     A_B_E_Y_new_path : Item(verb='Skipped missing target'),
+     A_C_new_path     : Item(verb='Skipped missing target')})
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
@@ -1103,16 +1101,15 @@ def patch_remove_empty_dirs(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/H/chi')
-  expected_disk.remove('A/D/H/psi')
-  expected_disk.remove('A/D/H/omega')
-  expected_disk.remove('A/B/lambda')
-  expected_disk.remove('A/B/E/alpha')
-  expected_disk.remove('A/B/E/beta')
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.remove('A/B/E')
-    expected_disk.remove('A/B/F')
-    expected_disk.remove('A/B')
+  expected_disk.remove('A/D/H/chi',
+                       'A/D/H/psi',
+                       'A/D/H/omega',
+                       'A/B/lambda',
+                       'A/B',
+                       'A/B/E',
+                       'A/B/E/alpha',
+                       'A/B/E/beta',
+                       'A/B/F')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
@@ -2457,7 +2454,7 @@ def patch_same_twice(sbox):
     '  Skipped paths: 1\n',
   ]
 
-  expected_skip = wc.State('', {beta_path : Item()})
+  expected_skip = wc.State('', {beta_path : Item(verb='Skipped')})
 
   # See above comment about the iota patch being applied twice.
   iota_contents += "Some more bytes\n"
@@ -3978,7 +3975,9 @@ def patch_delete_and_skip(sbox):
   expected_status.tweak('A/B/E/alpha', status='D ')
   expected_status.tweak('A/B/E/beta', status='D ')
 
-  expected_skip = wc.State('', {skipped_path: Item()})
+  expected_skip = wc.State(
+    '',
+    {skipped_path: Item(verb='Skipped missing target')})
 
   svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
                                        expected_output,
@@ -4202,6 +4201,7 @@ def patch_git_with_index_line(sbox):
                                        1) # dry-run
 
 @XFail()
+@Issue(4273)
 def patch_change_symlink_target(sbox):
   "patch changes symlink target"
 

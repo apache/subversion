@@ -394,7 +394,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
@@ -654,7 +653,10 @@ svn_client__list_internal(const char *path_or_url,
    as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
    RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
    const char * absolute working copy paths to depth-first ordered arrays
-   of svn_prop_inherited_item_t * structures.
+   of svn_prop_inherited_item_t * structures.  If WANT_RELPATH_KEYS is true,
+   then any svn_prop_inherited_item_t->path_or_url members returned in
+   *WCROOT_IPROPS are repository relative paths, otherwise these members are
+   URLs.
 
    If LOCAL_ABSPATH has no base then do nothing.
 
@@ -669,6 +671,7 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   const char *local_abspath,
                                   svn_revnum_t revision,
                                   svn_depth_t depth,
+                                  svn_boolean_t use_relpath_keys,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,
@@ -741,6 +744,7 @@ svn_client__get_diff_summarize_callbacks(
                         svn_wc_diff_callbacks4_t **callbacks,
                         void **callback_baton,
                         const char *target,
+                        svn_boolean_t reversed,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         apr_pool_t *pool);

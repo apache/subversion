@@ -105,7 +105,6 @@ dav_svn__allow_list_repos(request_rec *r,
   const char *uri;
   request_rec *subreq;
   svn_boolean_t allowed = FALSE;
-  authz_svn__subreq_bypass_func_t allow_read_bypass = NULL;
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
      then this whole callback does nothing. */
@@ -114,19 +113,8 @@ dav_svn__allow_list_repos(request_rec *r,
       return TRUE;
     }
 
-  /* If bypass is specified and authz has exported the provider.
-     Otherwise, we fall through to the full version.  This should be
-     safer than allowing or disallowing all accesses if there is a
-     configuration error.
-     XXX: Is this the proper thing to do in this case? */
-  allow_read_bypass = dav_svn__get_pathauthz_bypass(r);
-  if (allow_read_bypass != NULL)
-    {
-      if (allow_read_bypass(r, "/", repos_name) == OK)
-        return TRUE;
-      else
-        return FALSE;
-    }
+  /* Do not use short_circuit mode: bypass provider expects R to be request to
+     the repository to find repository relative authorization file. */
 
   /* Build a Public Resource uri representing repository root. */
   uri =  svn_urlpath__join(dav_svn__get_root_dir(r),

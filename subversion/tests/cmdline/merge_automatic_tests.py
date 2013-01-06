@@ -762,10 +762,11 @@ def cherry3_fwd(sbox):
 def subtree_to_and_fro(sbox):
   "reintegrate considers source subtree mergeinfo"
 
-#     A (--o-o-o-o---------x
-#       ( \         \     /
-#       (  \         \   /
-#     B (   o--o------s--
+  #   A      (-----o-o-o-o------------x
+  #          ( \            \        /
+  #          (  \            \      /
+  #   A_COPY (   o---------o--s--o--
+  #              2 3 4 5 6 7  8  9
 
   # Some paths we'll care about.
   A_COPY_gamma_path = sbox.ospath('A_COPY/D/gamma')
@@ -777,7 +778,7 @@ def subtree_to_and_fro(sbox):
   wc_dir = sbox.wc_dir
 
   # Setup a simple 'trunk & branch': Copy ^/A to ^/A_COPY in r2 and then
-  # make a few edits under A in r3-6:
+  # make a few edits under A in r3-6 (edits r3, r4, r6 are under subtree 'D'):
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Edit a file on the branch.
@@ -803,21 +804,12 @@ def subtree_to_and_fro(sbox):
   # not considered a merge.  So the changes which exist on A/D and were
   # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
   #
-  #   C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
-  #     working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
-  #   DBG: merge.c:11461: base on source: file:///C:/SVN/src-trunk/Debug/
-  #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11462: base on target: file:///C:/SVN/src-trunk/Debug/
-  #     subversion/tests/cmdline/svn-test-work/repositories/
-  #     merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11567: yca   file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11568: base  file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/A@1
-  #   DBG: merge.c:11571: right file:///C:/SVN/src-trunk/Debug/subversion/
-  #     tests/cmdline/svn-test-work/repositories/merge_automatic_tests-18/
-  #     A_COPY@8
+  #   C:\...\working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
+  #   DBG: merge.c:11461: base on source: ^/A@1
+  #   DBG: merge.c:11462: base on target: ^/A@1
+  #   DBG: merge.c:11567: yca   ^/A@1
+  #   DBG: merge.c:11568: base  ^/A@1
+  #   DBG: merge.c:11571: right ^/A_COPY@8
   #   Conflict discovered in file 'A\D\H\psi'.
   #   Select: (p) postpone, (df) diff-full, (e) edit,
   #           (mc) mine-conflict, (tc) theirs-conflict,

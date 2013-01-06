@@ -21,9 +21,6 @@
  * ====================================================================
  */
 
-#define APR_WANT_STRFUNC
-#define APR_WANT_STDIO
-#include <apr_want.h>
 #include <apr_fnmatch.h>
 
 #include "svn_client.h"
@@ -38,6 +35,8 @@
 #include "svn_cmdline.h"
 #include "svn_props.h"
 #include "svn_pools.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "cl.h"
 
@@ -653,9 +652,9 @@ log_entry_receiver_xml(void *baton,
   if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
-      SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
-                                          FALSE, /* name_only */
-                                          FALSE, pool));
+      SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, log_entry->revprops,
+                                               FALSE, /* name_only */
+                                               FALSE, pool));
       svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 

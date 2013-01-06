@@ -784,7 +784,7 @@ svn_skel__parse_prop(svn_string_t **propval,
 
 svn_error_t *
 svn_skel__unparse_proplist(svn_skel_t **skel_p,
-                           apr_hash_t *proplist,
+                           const apr_hash_t *proplist,
                            apr_pool_t *pool)
 {
   svn_skel_t *skel = svn_skel__make_empty_list(pool);
@@ -794,7 +794,8 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
   if (proplist)
     {
       /* Loop over hash entries */
-      for (hi = apr_hash_first(pool, proplist); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, (apr_hash_t *)proplist); hi;
+           hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
@@ -823,7 +824,8 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
 svn_error_t *
 svn_skel__unparse_iproplist(svn_skel_t **skel_p,
                             const apr_array_header_t *inherited_props,
-                            apr_pool_t *result_pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_skel_t *skel = svn_skel__make_empty_list(result_pool);
 
@@ -832,7 +834,6 @@ svn_skel__unparse_iproplist(svn_skel_t **skel_p,
     {
       int i;
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(result_pool);
 
       for (i = 0; i < inherited_props->nelts; i++)
         {
@@ -842,10 +843,8 @@ svn_skel__unparse_iproplist(svn_skel_t **skel_p,
           svn_skel_t *skel_list = svn_skel__make_empty_list(result_pool);
           svn_skel_t *skel_atom;
 
-          svn_pool_clear(subpool);
-
           /* Loop over hash entries */
-          for (hi = apr_hash_first(subpool, iprop->prop_hash);
+          for (hi = apr_hash_first(scratch_pool, iprop->prop_hash);
                hi;
                hi = apr_hash_next(hi))
             {
@@ -871,7 +870,6 @@ svn_skel__unparse_iproplist(svn_skel_t **skel_p,
           svn_skel__append(skel, skel_atom);
           svn_skel__append(skel, skel_list);
         }
-      svn_pool_destroy(subpool);
     }
 
   /* Validate and return the skel. */

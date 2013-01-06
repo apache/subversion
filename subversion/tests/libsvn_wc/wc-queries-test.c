@@ -87,7 +87,6 @@ static const int slow_statements[] =
 
   /* Is there a record? ### Can we somehow check for LIMIT 1? */
   STMT_LOOK_FOR_WORK,
-  STMT_HAS_WORKING_NODES,
 
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,

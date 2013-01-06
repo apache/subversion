@@ -1,5 +1,5 @@
 /*
- * main.c :  Main control function for svnserve
+ * svnserve.c :  Main control function for svnserve
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -503,9 +503,8 @@ int main(int argc, const char *argv[])
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.base = NULL;
   params.cfg = NULL;
-  params.pwdb = NULL;
-  params.authzdb = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
   params.vhost = FALSE;
@@ -747,11 +746,14 @@ int main(int argc, const char *argv[])
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
-    SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
-                             &params.username_case, config_filename, TRUE,
-                             svn_dirent_dirname(config_filename, pool),
-                             NULL, NULL, /* server baton, conn */
-                             pool));
+    {
+      params.base = svn_dirent_dirname(config_filename, pool);
+
+      SVN_INT_ERR(svn_config_read2(&params.cfg, config_filename,
+                                   TRUE, /* must_exist */
+                                   FALSE, /* section_names_case_sensitive */
+                                   pool));
+    }
 
   if (log_filename)
     SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,

@@ -317,25 +317,29 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+/** Check whether LOCAL_ABSPATH has a parent directory that knows about its
+ * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ *
+ * Like svn_wc_is_wc_root2(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 
 /** Set @a *wcroot_abspath to the local abspath of the root of the
  * working copy in which @a local_abspath resides.
  */
 svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__get_wcroot(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
@@ -1590,7 +1594,11 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.
+ * then diff fully recursively. If @a depth is #svn_depth_unknown, then...
+ *
+ *   ### ... then the @a server_performs_filtering option is meaningful.
+ *   ### But what does this depth mean exactly? Something about 'ambient'
+ *   ### depth? How does it compare with depth 'infinity'?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -1617,9 +1625,28 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
-  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *
  *
  * @since New in 1.8.
  */

@@ -625,7 +625,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'B'        : Item(),
     'B/lambda' : Item(contents="This is the file 'lambda'.\n"),
     'B/F'      : Item(),
-    'B/E'      : Item(),
     'D/gamma'  : Item("This is the file 'gamma'.\n"),
     'D/G'      : Item(),
     'D/G/pi'   : Item("This is the file 'pi'.\n"),
@@ -636,9 +635,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    # Delete removes directories in single-db
-    expected_disk.remove('B/E')
   expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url, None,
@@ -769,7 +765,7 @@ def tree_conflicts_and_obstructions(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_skip = wc.State(branch_path, {
-    'alpha-moved' : Item(),
+    'alpha-moved' : Item(verb='Skipped'),
     })
 
   svntest.actions.run_and_verify_merge(branch_path,
@@ -1299,48 +1295,38 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev='3', entry_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
-
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notifications. Please review!
-    'D/D1'              : Item(),
-    'DD/D1'             : Item(),
-    'DF/D1'             : Item(),
-    'DDD/D1'            : Item(),
-    'DDF/D1'            : Item(),
+    'F/alpha'           : Item(verb='Skipped missing target'),
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'DF/D1/beta'        : Item(verb='Skipped missing target'),
+    'DDD/D1/D2/D3/zeta' : Item(verb='Skipped'),
+    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
+    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
+    'D/D1/delta'        : Item(verb='Skipped'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1/D2/epsilon'  : Item(verb='Skipped'),
+    'DD/D1/D2'          : Item(verb='Skipped missing target'),
     })
 
-
+  # Currently this test fails because some parts of the merge
+  # start succeeding. 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",
@@ -1381,46 +1367,32 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev=3),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
 
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3)
-    expected_status.tweak('DF/D1',           wc_rev=3)
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3)
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3)
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3)
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
-
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    'D/D1'              : Item(),
-    # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notifications. Please review!
-    'D/D1'              : Item(),
-    'DD/D1'             : Item(),
-    'DF/D1'             : Item(),
-    'DDD/D1'            : Item(),
-    'DDF/D1'            : Item(),
+    'F/alpha'           : Item(verb='Skipped missing target'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1/D2'          : Item(verb='Skipped missing target'),
+    'DF/D1/beta'        : Item(verb='Skipped missing target'),
+    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
+    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,

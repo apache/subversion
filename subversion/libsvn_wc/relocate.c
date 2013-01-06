@@ -94,8 +94,8 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   const char *uuid;
   svn_boolean_t is_wc_root;
 
-  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wc_root, wc_ctx, local_abspath,
-                                      scratch_pool));
+  SVN_ERR(svn_wc__is_wcroot(&is_wc_root, wc_ctx, local_abspath,
+                            scratch_pool));
   if (! is_wc_root)
     {
       const char *wcroot_abspath;

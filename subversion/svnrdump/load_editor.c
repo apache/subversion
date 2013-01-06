@@ -501,7 +501,8 @@ get_shim_callbacks(struct revision_baton *rb,
 
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
- * time-delay loop. This function is duplicated by svnsync in main.c.
+ * time-delay loop. This function is duplicated by svnsync in
+ * svnsync/svnsync.c
  *
  * ### TODO: Make this function more generic and
  * expose it through a header for use by other Subversion
@@ -855,6 +856,8 @@ set_revision_property(void *baton,
 {
   struct revision_baton *rb = baton;
 
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, rb->pool));
+  
   SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
 
   if (rb->rev > 0)
@@ -933,6 +936,8 @@ set_node_property(void *baton,
           value = mergeinfo_val;
         }
     }
+
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, pool));
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 

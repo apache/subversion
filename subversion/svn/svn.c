@@ -1,5 +1,5 @@
 /*
- * main.c:  Subversion command line client.
+ * svn.c:  Subversion command line client main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -101,6 +101,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_ignore,
   opt_no_unlock,
   opt_non_interactive,
+  opt_force_interactive,
   opt_old_cmd,
   opt_record_only,
   opt_relocate,
@@ -229,7 +230,13 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
-                    N_("do no interactive prompting")},
+                    N_("do no interactive prompting (default is to prompt\n"
+                       "                             "
+                       "only if standard input is a terminal device)")},
+  {"force-interactive", opt_force_interactive, 0,
+                    N_("do interactive prompting even if standard input\n"
+                       "                             "
+                       "is not a terminal device")},
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
@@ -401,7 +408,8 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_trust_server_cert, opt_config_dir, opt_config_options, 0
+  opt_force_interactive, opt_trust_server_cert, opt_config_dir,
+  opt_config_options, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -730,7 +738,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "          (the 'automatic' merge)\n"
 "       2. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
 "          (the 'cherry-pick' merge)\n"
-"       3. merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
+"       3. merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "          (the '2-URL' merge)\n"
 "\n"
 "  1. This form, with one source path and no revision range, is called\n"
@@ -915,26 +923,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "\n"
 "  3. This form is called a '2-URL merge':\n"
 "\n"
-"       svn merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
-"\n"
-"     Two source URLs are specified, together with two revisions N and M.\n"
-"     The two sources are compared at the specified revisions, and the\n"
-"     difference is applied to TARGET_WCPATH, which is a path to a working\n"
-"     copy of another branch. The three branches involved can be completely\n"
-"     unrelated.\n"
+"       svn merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "\n"
 "     You should use this merge variant only if the other variants do not\n"
 "     apply to your situation, as this variant can be quite complex to\n"
 "     master.\n"
 "\n"
+"     Two source URLs are specified, identifying two trees on the same\n"
+"     branch or on different branches. The trees are compared and the\n"
+"     difference from SOURCE1@REV1 to SOURCE2@REV2 is applied to the\n"
+"     working copy of the target branch at TARGET_WCPATH. The target\n"
+"     branch may be the same as one or both sources, or different again.\n"
+"     The three branches involved can be completely unrelated.\n"
+"\n"
 "     If TARGET_WCPATH is omitted, a default value of '.' is assumed.\n"
 "     However, in the special case where both sources refer to a file node\n"
-"     with the same basename and a similarly named file is also found within\n"
-"     '.', the differences will be applied to that local file.  The source\n"
-"     revisions default to HEAD if omitted.\n"
+"     with the same name and a file with the same name is also found within\n"
+"     '.', the differences will be applied to that local file. The source\n"
+"     revisions REV1 and REV2 default to HEAD if omitted.\n"
 "\n"
-"     The sources can also be specified as working copy paths, in which case\n"
-"     the URLs of the merge sources are derived from the working copies.\n"
+"     SOURCE1 and/or SOURCE2 can also be specified as a working copy path,\n"
+"     in which case the merge source URL is derived from the working copy.\n"
 "\n"
 "       - 2-URL Merge Example -\n"
 "\n"
@@ -1036,7 +1045,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions} },
+     opt_allow_mixed_revisions, 'v'} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1659,6 +1668,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
   const char *sqlite_exclusive;
@@ -1982,6 +1992,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_non_interactive:
         opt_state.non_interactive = TRUE;
         break;
+      case opt_force_interactive:
+        force_interactive = TRUE;
+        break;
       case opt_trust_server_cert:
         opt_state.trust_server_cert = TRUE;
         break;
@@ -2083,6 +2096,12 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        if (opt_state.changelist[0] == '\0')
+          {
+            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Changelist names must not be empty"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;
@@ -2190,6 +2209,20 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       }
     }
+
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (opt_state.non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+  else
+    opt_state.non_interactive = !svn_cmdline__be_interactive(
+                                  opt_state.non_interactive,
+                                  force_interactive);
 
   /* Turn our hash of changelists into an array of unique ones. */
   SVN_INT_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));

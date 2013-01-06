@@ -651,13 +651,6 @@ def _with_auth(args):
   else:
     return args + ('--username', wc_author )
 
-def _with_log_message(args):
-
-  if '-m' in args or '--message' in args or '-F' in args:
-    return args
-  else:
-    return args + ('--message', 'default log message')
-
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
@@ -705,7 +698,7 @@ def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
   return run_command(svnmucc_binary, 1, 1,
-                     *(_with_auth(_with_config_dir(_with_log_message(varargs)))))
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
@@ -1234,6 +1227,17 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
+def is_plaintext_password_storage_disabled():
+  try:
+    predicate = re.compile("^WARNING: Plaintext password storage is enabled!")
+    code, out, err = run_svn(False, "--version")
+    for line in out:
+      if predicate.match(line):
+        return False
+  except:
+    return False
+  return True
+
 ######################################################################
 
 
@@ -1295,13 +1299,6 @@ class TestSpawningThread(threading.Thread):
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
-
-    if result != 1:
-      sys.stdout.write('.')
-    else:
-      sys.stdout.write('F')
-
-    sys.stdout.flush()
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -1541,9 +1538,6 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for t in threads:
       results += t.results
     results.sort()
-
-    # terminate the line of dots
-    print("")
 
     # all tests are finished, find out the result and print the logs.
     for (index, result, stdout_lines, stderr_lines) in results:

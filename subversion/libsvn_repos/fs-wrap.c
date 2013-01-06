@@ -743,6 +743,7 @@ svn_error_t *
 svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
                                  svn_fs_root_t *root,
                                  const char *path,
+                                 const char *propname,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,
@@ -757,7 +758,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
   while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
     {
       svn_boolean_t allowed = TRUE;
-      apr_hash_t *parent_properties;
+      apr_hash_t *parent_properties = NULL;
 
       svn_pool_clear(iterpool);
       parent_path = svn_fspath__dirname(parent_path, scratch_pool);
@@ -767,8 +768,25 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
                                 authz_read_baton, iterpool));
       if (allowed)
         {
-          SVN_ERR(svn_fs_node_proplist(&parent_properties, root,
-                                       parent_path, result_pool));
+          if (propname)
+            {
+              svn_string_t *propval;
+
+              SVN_ERR(svn_fs_node_prop(&propval, root, parent_path, propname,
+                                       result_pool));
+              if (propval)
+                {
+                  parent_properties = apr_hash_make(result_pool);
+                  apr_hash_set(parent_properties, propname,
+                               APR_HASH_KEY_STRING, propval);
+                }
+            }
+          else
+            {
+              SVN_ERR(svn_fs_node_proplist(&parent_properties, root,
+                                           parent_path, result_pool));
+            }
+
           if (parent_properties && apr_hash_count(parent_properties))
             {
               svn_prop_inherited_item_t *i_props =

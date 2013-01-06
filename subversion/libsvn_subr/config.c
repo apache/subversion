@@ -129,7 +129,27 @@ svn_config_read2(svn_config_t **cfgp, const char *file,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *result_pool)
+{
+  svn_config_t *cfg;
+  svn_error_t *err;
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
+  err = svn_config_create(&cfg, section_names_case_sensitive, result_pool);
+
+  if (err == SVN_NO_ERROR)
+    err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
+
+  if (err == SVN_NO_ERROR)
+    *cfgp = cfg;
+
+  svn_pool_destroy(scratch_pool);
+
+  return err;
+}
 
 /* Read various configuration sources into *CFGP, in this order, with
  * later reads overriding the results of earlier ones:

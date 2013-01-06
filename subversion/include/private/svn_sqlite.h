@@ -288,6 +288,15 @@ svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
                          int column,
                          const svn_token_map_t *map);
 
+/* Fetch the word at COLUMN, look it up in the MAP, and return its value.
+   Returns NULL_VAL if the column is null. MALFUNCTION is thrown if the
+   column contains an unknown word.  */
+int
+svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
+                              int column,
+                              const svn_token_map_t *map,
+                              int null_val);
+
 /* Return the column as a hash of const char * => const svn_string_t *.
    If the column is null, then NULL will be stored into *PROPS. The
    results will be allocated in RESULT_POOL, and any temporary allocations
@@ -363,10 +372,57 @@ svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val);
 svn_error_t *
 svn_sqlite__finalize(svn_sqlite__stmt_t *stmt);
 
-/* Error-handling wrapper around sqlite3_reset. */
+/* Reset STMT by calling sqlite3_reset(), and also clear any bindings to it.
+
+   Note: svn_sqlite__get_statement() calls this function automatically if
+   the requested statement has been used and has not yet been reset. */
 svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 
+
+/* Begin a transaction in DB. */
+svn_error_t *
+svn_sqlite__begin_transaction(svn_sqlite__db_t *db);
+
+/* Like svn_sqlite__begin_transaction(), but takes out a 'RESERVED' lock
+   immediately, instead of using the default deferred locking scheme. */
+svn_error_t *
+svn_sqlite__begin_immediate_transaction(svn_sqlite__db_t *db);
+
+/* Begin a savepoint in DB. */
+svn_error_t *
+svn_sqlite__begin_savepoint(svn_sqlite__db_t *db);
+
+/* Commit the current transaction in DB if ERR is SVN_NO_ERROR, otherwise
+ * roll back the transaction.  Return a composition of ERR and any error
+ * that may occur during the commit or roll-back. */
+svn_error_t *
+svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
+                               svn_error_t *err);
+
+/* Release the current savepoint in DB if EXPR is SVN_NO_ERROR, otherwise
+ * roll back to the savepoint and then release it.  Return a composition of
+ * ERR and any error that may occur during the release or roll-back. */
+svn_error_t *
+svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
+                             svn_error_t *err);
+
+/* Evaluate the expression EXPR within a transaction.
+ *
+ * Begin a transaction in DB; evaluate the expression EXPR, which would
+ * typically be a function call that does some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_SQLITE__WITH_TXN(expr, db)                                        \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_transaction(svn_sqlite__db));                   \
+    svn_sqlite__err = (expr);                                                 \
+    SVN_ERR(svn_sqlite__finish_transaction(svn_sqlite__db, svn_sqlite__err)); \
+  } while (0)
 
 /* Callback function to for use with svn_sqlite__with_transaction(). */
 typedef svn_error_t *(*svn_sqlite__transaction_callback_t)(
@@ -382,6 +438,18 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton, apr_pool_t *scratch_pool);
 
+/* Like SVN_SQLITE__WITH_TXN(), but takes out a 'RESERVED' lock
+   immediately, instead of using the default deferred locking scheme. */
+#define SVN_SQLITE__WITH_IMMEDIATE_TXN(expr, db)                              \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_immediate_transaction(svn_sqlite__db));         \
+    svn_sqlite__err = (expr);                                                 \
+    SVN_ERR(svn_sqlite__finish_transaction(svn_sqlite__db, svn_sqlite__err)); \
+  } while (0)
+
 /* Like svn_sqlite__with_transaction(), but takes out a 'RESERVED' lock
    immediately, instead of using the default deferred locking scheme. */
 svn_error_t *
@@ -390,6 +458,23 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
                                        void *cb_baton,
                                        apr_pool_t *scratch_pool);
 
+/* Evaluate the expression EXPR within a 'savepoint'.  Savepoints can be
+ * nested.
+ *
+ * Begin a savepoint in DB; evaluate the expression EXPR, which would
+ * typically be a function call that does some work in DB; finally release
+ * the savepoint if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * to the savepoint and then release it.
+ */
+#define SVN_SQLITE__WITH_LOCK(expr, db)                                       \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_savepoint(svn_sqlite__db));                     \
+    svn_sqlite__err = (expr);                                                 \
+    SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
+  } while (0)
 
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be

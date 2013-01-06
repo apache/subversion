@@ -184,7 +184,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_path, {
-    'B/E'       : Item(),
+    'B/E'       : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
                                        sbox.repo_url + '/A', None,
@@ -256,9 +256,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_2_path, {
-    'B/E'     : Item(),
-    'D/G'       : Item(),
-    'D/H/psi'   : Item(),
+    'B/E'     : Item(verb='Skipped missing target'),
+    'D/G/rho' : Item(verb='Skipped'),
+    'D/H/psi' : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
                                        sbox.repo_url + '/A', None,
@@ -323,7 +323,8 @@ def mergeinfo_and_skipped_paths(sbox):
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
     })
-  expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
+  expected_skip = wc.State(A_COPY_3_path,
+                           {'B/E' : Item(verb='Skipped missing target')})
   svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -361,7 +362,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'chi'   : Item("This is the file 'chi'.\n"),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {
-    'psi'   : Item(),
+    'psi'   : Item(verb='Skipped missing target'),
     })
   # Note we don't bother checking expected mergeinfo output because the
   # multiple merges being performed here, -c5 and -c8, will result in
@@ -470,7 +471,7 @@ def mergeinfo_and_skipped_paths(sbox):
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:9'}),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {
-    'psi' : Item(),
+    'psi' : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '9',
                                        sbox.repo_url + '/A/D/H', None,

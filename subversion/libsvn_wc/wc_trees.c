@@ -168,7 +168,7 @@ wc_treen_read_file(svn_tree_node_t *node,
 
           SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, &checksum,
-                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
                                            tb->wc_ctx->db, abspath,
                                            scratch_pool, scratch_pool));
           if (checksum)

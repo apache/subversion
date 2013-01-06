@@ -37,6 +37,10 @@
 
 #include "svn_private_config.h"
 
+/* A handy constant */
+static const svn_opt_revision_t unspecified_revision
+  = { svn_opt_revision_unspecified, { 0 } };
+
 
 /*** Code. ***/
 
@@ -47,6 +51,7 @@ merge_reintegrate(const char *source_path_or_url,
                   const svn_opt_revision_t *source_peg_revision,
                   const char *target_wcpath,
                   svn_boolean_t dry_run,
+                  svn_boolean_t verbose,
                   const apr_array_header_t *merge_options,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *scratch_pool)
@@ -54,6 +59,15 @@ merge_reintegrate(const char *source_path_or_url,
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
 
+  if (verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("checking branch relationship...\n")));
+  SVN_ERR_W(svn_cl__check_related_source_and_target(
+              source_path_or_url, source_peg_revision,
+              target_wcpath, &unspecified_revision, ctx, scratch_pool),
+            _("Source and target must be different but related branches"));
+
+  if (verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("calculating reintegrate merge...\n")));
   SVN_ERR(svn_client_find_reintegrate_merge(
             &url1, &rev1, &url2, &rev2,
             source_path_or_url, source_peg_revision, target_wcpath,
@@ -69,6 +83,9 @@ merge_reintegrate(const char *source_path_or_url,
 
       revision2.kind = svn_opt_revision_number;
       revision2.value.number = rev2;
+
+      if (verbose)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, _("merging...\n")));
 
       /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
        * to allow a mixed-rev WC but simply to bypass the check, as it was
@@ -116,11 +133,22 @@ automatic_merge(const char *source_path_or_url,
                 svn_boolean_t allow_mixed_rev,
                 svn_boolean_t allow_local_mods,
                 svn_boolean_t allow_switched_subtrees,
+                svn_boolean_t verbose,
                 const apr_array_header_t *merge_options,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
   svn_client_automatic_merge_t *merge;
+
+  if (verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("checking branch relationship...\n")));
+  SVN_ERR_W(svn_cl__check_related_source_and_target(
+              source_path_or_url, source_revision,
+              target_wcpath, &unspecified_revision, ctx, scratch_pool),
+            _("Source and target must be different but related branches"));
+
+  if (verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("calculating automatic merge...\n")));
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
   SVN_ERR(svn_client_find_automatic_merge(&merge,
@@ -156,6 +184,9 @@ automatic_merge(const char *source_path_or_url,
                                   "cannot be used with this kind of merge"));
     }
 
+  if (verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("merging...\n")));
+
   /* Perform the 3-way merges */
   SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
                                         force, record_only,
@@ -181,7 +212,6 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
-  svn_opt_revision_t unspecified = { svn_opt_revision_unspecified, { 0 } };
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -435,11 +465,6 @@ svn_cl__merge(apr_getopt_t *os,
       && first_range_start.kind == svn_opt_revision_unspecified
       && first_range_end.kind == svn_opt_revision_unspecified)
     {
-      SVN_ERR_W(svn_cl__check_related_source_and_target(
-                  sourcepath1, &peg_revision1, targetpath, &unspecified,
-                  ctx, pool),
-                _("Source and target must be different but related branches"));
-
       merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
                                   opt_state->force,
@@ -448,17 +473,14 @@ svn_cl__merge(apr_getopt_t *os,
                                   opt_state->allow_mixed_rev,
                                   TRUE /*allow_local_mods*/,
                                   TRUE /*allow_switched_subtrees*/,
+                                  opt_state->verbose,
                                   options, ctx, pool);
     }
   else if (opt_state->reintegrate)
     {
-      SVN_ERR_W(svn_cl__check_related_source_and_target(
-                  sourcepath1, &peg_revision1, targetpath, &unspecified,
-                  ctx, pool),
-                _("Source and target must be different but related branches"));
-
       merge_err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
-                                    opt_state->dry_run, options, ctx, pool);
+                                    opt_state->dry_run, opt_state->verbose,
+                                    options, ctx, pool);
     }
   else if (! two_sources_specified)
     {
@@ -476,12 +498,16 @@ svn_cl__merge(apr_getopt_t *os,
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
 
           /* This must be a 'sync' merge so check branch relationship. */
+          if (opt_state->verbose)
+            SVN_ERR(svn_cmdline_printf(pool, _("checking branch relationship...\n")));
           SVN_ERR_W(svn_cl__check_related_source_and_target(
-                      sourcepath1, &peg_revision1, targetpath, &unspecified,
-                      ctx, pool),
+                      sourcepath1, &peg_revision1,
+                      targetpath, &unspecified_revision, ctx, pool),
                 _("Source and target must be different but related branches"));
         }
 
+      if (opt_state->verbose)
+        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
       merge_err = svn_client_merge_peg4(sourcepath1,
                                         ranges_to_merge,
                                         &peg_revision1,
@@ -502,6 +528,9 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
+
+      if (opt_state->verbose)
+        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
       merge_err = svn_client_merge4(sourcepath1,
                                     &first_range_start,
                                     sourcepath2,

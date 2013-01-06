@@ -192,6 +192,11 @@ extern "C" {
  * @since New in 1.8.   */
 #define SVN_DAV_SUPPORTED_POSTS_HEADER "SVN-Supported-Posts"
 
+/** This header is used in the OPTIONS response to indicate if the server
+ * wants bulk update requests (Prefer) or only accepts skelta requests (Off).
+ * If this value is On both options are allowed.
+ * @since New in 1.8.   */
+#define SVN_DAV_ALLOW_BULK_UPDATES "SVN-Allow-Bulk-Updates"
 
 /**
  * @name Fulltext MD5 headers

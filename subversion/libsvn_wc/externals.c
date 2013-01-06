@@ -45,6 +45,7 @@
 #include "svn_wc.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_subr_private.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -515,7 +516,7 @@ open_file(const char *path,
                                    NULL, NULL, NULL, &eb->changed_rev,
                                    &eb->changed_date, &eb->changed_author,
                                    NULL, &eb->original_checksum, NULL, NULL,
-                                   &eb->had_props, NULL,
+                                   &eb->had_props, NULL, NULL,
                                    eb->db, eb->local_abspath,
                                    eb->pool, file_pool));
 
@@ -733,19 +734,16 @@ close_file(void *file_baton,
 
       if (regular_prop_changes->nelts > 0)
         {
+          new_pristine_props = svn_prop__patch(base_props, regular_prop_changes,
+                                               pool);
           SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                       &prop_state,
-                                      &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
-                                      svn_kind_file,
                                       NULL /* server_baseprops*/,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
-                                      TRUE /* base_merge */,
-                                      FALSE /* dry_run */,
-                                      eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
         }
       else
@@ -1071,7 +1069,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   err = svn_wc__db_base_get_info(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &lock,
-                                 NULL, &update_root,
+                                 NULL, NULL, &update_root,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -1238,7 +1236,7 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
                                  &repos_root_url, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, xinfo->local_abspath,
                                  scratch_pool, scratch_pool);
 

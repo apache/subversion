@@ -1936,7 +1936,7 @@ def delete_keep_local(sbox):
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
   expected_output = svntest.wc.State(wc_dir, {})
-  expected_status.tweak(wc_rev = 2);
+  expected_status.tweak(wc_rev = 2)
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2249,12 +2249,14 @@ def automatic_conflict_resolution(sbox):
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=edit')
+                                     'resolve', '--accept=edit',
+                                     '--force-interactive')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=launch')
+                                     'resolve', '--accept=launch',
+                                     '--force-interactive')
   # Run 'svn resolved --accept=NOPE.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolve command", None,
                                      ".*NOPE' is not a valid --accept value",
@@ -2493,8 +2495,17 @@ def basic_relative_url_with_peg_revisions(sbox):
                                 '^//A/@3', iota_url)
 
 
+def basic_auth_test_xfail_predicate():
+  """Predicate for XFail for basic_auth_test:
+  The test will fail if plaintext password storage is disabled,
+  and the RA method requires authentication."""
+  return (not svntest.main.is_os_windows()
+          and svntest.main.is_ra_type_dav()
+          and svntest.main.is_plaintext_password_storage_disabled())
+
 # Issue 2242, auth cache picking up password from wrong username entry
 @Issue(2242)
+@XFail(basic_auth_test_xfail_predicate)
 def basic_auth_test(sbox):
   "basic auth test"
 

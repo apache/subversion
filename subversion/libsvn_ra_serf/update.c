@@ -74,7 +74,8 @@ typedef enum report_state_e {
     ABSENT_FILE,
     PROP,
     IGNORE_PROP_NAME,
-    NEED_PROP_NAME
+    NEED_PROP_NAME,
+    TXDELTA
 } report_state_e;
 
 
@@ -228,6 +229,8 @@ typedef struct report_info_t
   const char *final_sha1_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
+  svn_stream_t *svndiff_decoder;
+  svn_stream_t *base64_decoder;
 
   /* Checksum for close_file */
   const char *final_checksum;
@@ -317,6 +320,9 @@ struct report_context_t {
 
   /* Do we want the server to send copyfrom args or not? */
   svn_boolean_t send_copyfrom_args;
+
+  /* Is the server sending everything in one response? */
+  svn_boolean_t send_all_mode;
 
   /* Is the server including properties inline for newly added
      files/dirs? */
@@ -497,26 +503,42 @@ update_cdata(svn_ra_serf__xml_estate_t *xes,
 static svn_ra_serf__connection_t *
 get_best_connection(report_context_t *ctx)
 {
-  svn_ra_serf__connection_t * conn;
-  int first_conn;
+  svn_ra_serf__connection_t *conn;
+  int first_conn = 1;
 
   /* Skip the first connection if the REPORT response hasn't been completely
-     received yet. */
-  first_conn = ctx->report_received ? 0: 1;
+     received yet or if we're being told to limit our connections to
+     2 (because this could be an attempt to ensure that we do all our
+     auxiliary GETs/PROPFINDs on a single connection).
 
+     ### FIXME: This latter requirement (max_connections > 2) is
+     ### really just a hack to work around the fact that some update
+     ### editor implementations (such as svnrdump's dump editor)
+     ### simply can't handle the way ra_serf violates the editor v1
+     ### drive ordering requirements.
+     ### 
+     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+  */
+  if (ctx->report_received && (ctx->sess->max_connections > 2))
+    first_conn = 0;
+
+  /* Currently, we just cycle connections.  In the future we could
+     store the number of pending requests on each connection, or
+     perform other heuristics, to achieve better connection usage.
+     (As an optimization, if there's only one available auxiliary
+     connection to use, don't bother doing all the cur_conn math --
+     just return that one connection.)  */
   if (ctx->sess->num_conns - first_conn == 1)
-    return ctx->sess->conns[first_conn];
-
-  /* Currently just cycle connections. In future we could store number of
-   * pending requests on each connection for better connection usage. */
-  conn = ctx->sess->conns[ctx->sess->cur_conn];
-
-  /* Switch our connection. */
-  ctx->sess->cur_conn++;
-
-  if (ctx->sess->cur_conn >= ctx->sess->num_conns)
-      ctx->sess->cur_conn = first_conn;
-
+    {
+      conn = ctx->sess->conns[first_conn];
+    }
+  else
+    {
+      conn = ctx->sess->conns[ctx->sess->cur_conn];
+      ctx->sess->cur_conn++;
+      if (ctx->sess->cur_conn >= ctx->sess->num_conns)
+        ctx->sess->cur_conn = first_conn;
+    }
   return conn;
 }
 
@@ -1448,17 +1470,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   /* What connection should we go on? */
   conn = get_best_connection(ctx);
 
-  /* go fetch info->name from DAV:checked-in */
-  info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
-                                        info->base_rev, "DAV:", "checked-in");
-
-  if (!info->url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                              _("The REPORT or PROPFIND response did not "
-                                "include the requested checked-in value"));
-    }
-
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   info->propfind_handler = NULL;
   if (info->fetch_props)
@@ -1625,9 +1636,15 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   if (state == NONE && strcmp(name.name, "update-report") == 0)
     {
-      const char *val = svn_xml_get_attr_value("inline-props", attrs);
+      const char *val;
+
+      val = svn_xml_get_attr_value("inline-props", attrs);
       if (val && (strcmp(val, "true") == 0))
         ctx->add_props_included = TRUE;
+
+      val = svn_xml_get_attr_value("send-all", attrs);
+      if (val && (strcmp(val, "true") == 0))
+        ctx->send_all_mode = TRUE;
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
@@ -1830,7 +1847,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, ADD_FILE);
 
       info->base_rev = SVN_INVALID_REVNUM;
-      info->fetch_file = TRUE;
+
+      /* If the server isn't in "send-all" mode, we should expect to
+         fetch contents for added files. */
+      if (! ctx->send_all_mode)
+        info->fetch_file = TRUE;
 
       /* If the server isn't included properties for added items,
          we'll need to fetch them ourselves. */
@@ -2070,7 +2091,31 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              addition to <fetch-file>s and such) when *not* in
              "send-all" mode.  As a client, we're smart enough to know
              that's wrong, so we'll just ignore these tags. */
-          ;
+          if (ctx->send_all_mode)
+            {
+              const svn_delta_editor_t *update_editor = ctx->update_editor;
+
+              info = push_state(parser, ctx, TXDELTA);
+
+              if (! info->file_baton)
+                {
+                  SVN_ERR(open_updated_file(info, FALSE, info->pool));
+                }
+
+              info->base_checksum = svn_xml_get_attr_value("base-checksum",
+                                                           attrs);
+              SVN_ERR(update_editor->apply_textdelta(info->file_baton,
+                                                     info->base_checksum,
+                                                     info->editor_pool,
+                                                     &info->textdelta,
+                                                     &info->textdelta_baton));
+              info->svndiff_decoder = svn_txdelta_parse_svndiff(
+                                          info->textdelta,
+                                          info->textdelta_baton,
+                                          TRUE, info->pool);
+              info->base64_decoder = svn_base64_decode(info->svndiff_decoder,
+                                                       info->pool);
+            }
         }
       else
         {
@@ -2264,13 +2309,89 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->delta_base = value ? value->data : NULL;
         }
 
-      SVN_ERR(fetch_file(ctx, info));
+      /* go fetch info->name from DAV:checked-in */
+      info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
+                                            info->base_rev, "DAV:", "checked-in");
+      if (!info->url)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
+        }
+
+      /* If the server is in "send-all" mode, we might have opened the
+         file when we started seeing content for it.  If we didn't get
+         any content for it, we still need to open the file.  But in
+         any case, we can then immediately close it.  */
+      if (ctx->send_all_mode)
+        {
+          if (! info->file_baton)
+            {
+              SVN_ERR(open_updated_file(info, FALSE, info->pool));
+            }
+          SVN_ERR(close_updated_file(info, info->pool));
+          info->dir->ref_count--;
+        }
+      /* Otherwise, if the server is *not* in "send-all" mode, we
+         should be at a point where we can queue up any auxiliary
+         content-fetching requests.  */
+      else
+        {
+          SVN_ERR(fetch_file(ctx, info));
+        }
+
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == ADD_FILE && strcmp(name.name, "add-file") == 0)
     {
-      /* We should have everything we need to fetch the file. */
-      SVN_ERR(fetch_file(ctx, parser->state->private));
+      report_info_t *info = parser->state->private;
+
+      /* go fetch info->name from DAV:checked-in */
+      info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
+                                            info->base_rev, "DAV:", "checked-in");
+      if (!info->url)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("The REPORT or PROPFIND response did not "
+                                    "include the requested checked-in value"));
+        }
+
+      /* If the server is in "send-all" mode, we might have opened the
+         file when we started seeing content for it.  If we didn't get
+         any content for it, we still need to open the file.  But in
+         any case, we can then immediately close it.  */
+      if (ctx->send_all_mode)
+        {
+          if (! info->file_baton)
+            {
+              SVN_ERR(open_updated_file(info, FALSE, info->pool));
+            }
+          SVN_ERR(close_updated_file(info, info->pool));
+          info->dir->ref_count--;
+        }
+      /* Otherwise, if the server is *not* in "send-all" mode, we
+         should be at a point where we can queue up any auxiliary
+         content-fetching requests.  */
+      else
+        {
+          SVN_ERR(fetch_file(ctx, info));
+        }
+
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == TXDELTA && strcmp(name.name, "txdelta") == 0)
+    {
+      report_info_t *info = parser->state->private;
+
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore these tags. */
+      if (ctx->send_all_mode)
+        {
+          SVN_ERR(svn_stream_close(info->base64_decoder));
+        }
+
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == PROP)
@@ -2396,6 +2517,27 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info = parser->state->private;
 
       svn_stringbuf_appendbytes(info->prop_value, data, len);
+    }
+  else if (parser->state->current_state == TXDELTA)
+    {
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore these tags. */
+      if (ctx->send_all_mode)
+        {
+          apr_size_t nlen = len;
+          report_info_t *info = parser->state->private;
+
+          SVN_ERR(svn_stream_write(info->base64_decoder, data, &nlen));
+          if (nlen != len)
+            {
+              /* Short write without associated error?  "Can't happen." */
+              return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                       _("Error writing to '%s': unexpected EOF"),
+                                       info->name);
+            }
+        }
     }
 
   return SVN_NO_ERROR;
@@ -2732,7 +2874,7 @@ finish_report(void *report_baton,
         }
 
       /* Open extra connections if we have enough requests to send. */
-      if (sess->num_conns < MAX_NR_OF_CONNS)
+      if (sess->num_conns < sess->max_connections)
         SVN_ERR(open_connection_if_needed(sess, report->num_active_fetches +
                                           report->num_active_propfinds));
 
@@ -3035,9 +3177,47 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    svn_io_file_del_on_pool_cleanup,
                                    report->pool, scratch_pool));
 
-  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
-                        "xmlns:S", SVN_XML_NAMESPACE,
-                        NULL);
+  if (sess->server_allows_bulk)
+    {
+      if (apr_strnatcasecmp(sess->server_allows_bulk, "off") == 0)
+        {
+          /* Server doesn't want bulk updates */
+          sess->bulk_updates = FALSE;
+        }
+      else if (apr_strnatcasecmp(sess->server_allows_bulk, "prefer") == 0)
+        {
+          /* Server prefers bulk updates, and we respect that */
+          sess->bulk_updates = TRUE;
+        }
+      else
+        {
+          /* Server allows bulk updates, but doesn't dictate its use. Do
+             whatever is the default or what the user defined in the config. */
+        }
+    }
+  else
+    {
+      /* Pre-1.8 server didn't send the bulk_updates header. Do
+         whatever is the default or what the user defined in the config. */
+    }
+
+  if (sess->bulk_updates)
+    {
+      svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
+                            "S:update-report",
+                            "xmlns:S", SVN_XML_NAMESPACE, "send-all", "true",
+                            NULL);
+    }
+  else
+    {
+      svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
+                            "S:update-report",
+                            "xmlns:S", SVN_XML_NAMESPACE,
+                            NULL);
+      /* Subversion 1.8+ servers can be told to send properties for newly
+         added items inline even when doing a skelta response. */
+      make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
+    }
 
   make_simple_xml_tag(&buf, "S:src-path", report->source, scratch_pool);
 
@@ -3076,9 +3256,20 @@ make_update_reporter(svn_ra_session_t *ra_session,
       make_simple_xml_tag(&buf, "S:recursive", "no", scratch_pool);
     }
 
-  /* Subversion 1.8+ servers can be told to send properties for newly
-     added items inline even when doing a skelta response. */
-  make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
+  /* When in 'send-all' mode, mod_dav_svn will assume that it should
+     calculate and transmit real text-deltas (instead of empty windows
+     that merely indicate "text is changed") unless it finds this
+     element.
+
+     NOTE: Do NOT count on servers actually obeying this, as some exist
+     which obey send-all, but do not check for this directive at all!
+
+     NOTE 2: When not in 'send-all' mode, mod_dav_svn can still be configured to
+     override our request and send text-deltas. */
+  if (! text_deltas)
+    {
+      make_simple_xml_tag(&buf, "S:text-deltas", "no", scratch_pool);
+    }
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 

@@ -25,9 +25,40 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVN_CXXHL_TYPES_H
-#define SVN_CXXHL_TYPES_H
+#ifndef SVN_CXXHL_TRISTATE_HPP
+#define SVN_CXXHL_TRISTATE_HPP
 
-#include "types/svn_cxxhl_tristate.h"
+namespace subversion {
+namespace cxxhl {
+namespace version_1_9_dev {
 
-#endif  // SVN_CXXHL_TYPES_H
+class tristate
+{
+public:
+  static const tristate TRUE;
+  static const tristate FALSE;
+  static const tristate UNKNOWN;
+
+  tristate(const tristate& that) throw()
+    : m_value(that.m_value)
+    {}
+
+  bool operator==(const tristate& that) const throw()
+    { return m_value == that.m_value; }
+
+  bool operator!=(const tristate& that) const throw()
+    { return !(*this == that); }
+
+  bool known() const throw()
+    { return *this != UNKNOWN; }
+
+private:
+  explicit tristate(short int value) throw();
+  short int m_value;
+};
+
+} // namespace version_1_9_dev
+} // namespace cxxhl
+} // namespace subversion
+
+#endif  // SVN_CXXHL_TRISTATE_HPP
