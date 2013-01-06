@@ -80,7 +80,7 @@ class Commands:
             line = p.stdout.readline()
             if not line:
                 break
-            line = line.strip()
+            line = line.decode().strip()
             text_mod = line[0:1]
             # Only if the contents of the file changed (by addition or update)
             # directories always end in / in the svnlook changed output
@@ -91,7 +91,7 @@ class Commands:
         # returncode/stderr output
         data = p.communicate()
         if p.returncode != 0:
-            sys.stderr.write(data[1])
+            sys.stderr.write(data[1].decode())
             sys.exit(2)
 
         return changed
@@ -109,7 +109,7 @@ class Commands:
         cmd_env['FILE'] = fn
         p = subprocess.Popen(cmd, shell=True, env=cmd_env, stderr=subprocess.PIPE)
         data = p.communicate()
-        return (p.returncode, data[1])
+        return (p.returncode, data[1].decode())
 
 def main(repo, txn):
     exitcode = 0
