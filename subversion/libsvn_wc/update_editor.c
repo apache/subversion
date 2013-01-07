@@ -841,6 +841,9 @@ make_file_baton(struct file_baton **f_p,
 
 /* Complete a conflict skel by describing the update.
  *
+ * LOCAL_KIND is the node kind of the tree conflict victim in the
+ * working copy.
+ *
  * All temporary allocations are be made in SCRATCH_POOL, while allocations
  * needed for the returned conflict struct are made in RESULT_POOL.
  */
@@ -850,7 +853,7 @@ complete_conflict(svn_skel_t *conflict,
                   const char *local_abspath,
                   const char *old_repos_relpath,
                   svn_revnum_t old_revision,
-                  svn_node_kind_t kind,
+                  svn_node_kind_t local_kind,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const struct edit_baton *eb = pb->edit_baton;
@@ -870,7 +873,7 @@ complete_conflict(svn_skel_t *conflict,
                                                        eb->repos_uuid,
                                                        old_repos_relpath,
                                                        old_revision,
-                                                       kind,
+                                                       local_kind,
                                                        result_pool);
   else
     src_left_version = NULL;
