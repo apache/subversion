@@ -1,0 +1,14 @@
+This branch exists to track the implementation of a solution for issue
+#3348 ("Provide syntax which means 'include all files *not* in a
+changelist'").  It has the following details:
+
+   - Items returned when filtering in this fashion are limited to
+     those which support changelists at all -- that is, non-directories.
+
+   - The command-line client UI for performing such filtering is to
+     use the --changelist (--cl) option with an empty-string value:
+
+        svn info --cl=""
+
+Both of the above details have been called into question in dev@
+discussions, so this branch is NOT ready for reintegration.
