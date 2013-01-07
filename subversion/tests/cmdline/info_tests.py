@@ -173,7 +173,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
+    expected_str1 = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -197,7 +197,7 @@ def info_with_tree_conflicts(sbox):
   expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
     path = os.path.join(G, fname)
-    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    tree_conflict_re = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_infos.append({ 'Path' : re.escape(path),
                             'Tree conflict' : tree_conflict_re })
   expected_infos.sort(key=lambda info: info['Path'])
