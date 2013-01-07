@@ -5599,7 +5599,6 @@ def update_moved_dir_dir_add(sbox):
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(4037)
 def update_moved_dir_file_move(sbox):
   "update locally moved dir with incoming file move"
@@ -5612,15 +5611,13 @@ def update_moved_dir_file_move(sbox):
   svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
   sbox.simple_move("A/B/E", "A/B/E2")
 
-  # The incoming move should auto-merge such that A/B/F/alpha appears
-  # as moved to A/B/E2/alpha -- this strategy prefers the local user's
-  # change as the solution to the conflict.
-  # ### Ideally, the user should be offered a set of alternative solutions.
-  # ### E.g. the user might prefer if A/B/E2/alpha disappeared and A/B/E/alpha
-  # ### appeared as moved to A/B/F/alpha. But the --accept option does not yet
-  # ### support tree conflicts.
+  # The incoming "move" creates a tree-conflict as an incoming change
+  # in a local move.  We don't yet track moves on the server so we
+  # don't recognise the incoming change as a move.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E2/alpha' : Item(status='A '),
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='D'),
+    'A/B/F/alpha' : Item(status='A '),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
@@ -5628,13 +5625,16 @@ def update_moved_dir_file_move(sbox):
     'A/B/E2'           : Item(),
     'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
     'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+    'A/B/F/alpha'      : Item(contents="This is the file 'alpha'.\n"),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.remove('A/B/E/alpha')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C')
+  expected_status.tweak('A/B/E/beta', status='D ')
   expected_status.add({
-    'A/B/F/alpha'       : Item(status='D '),
+    'A/B/F/alpha'       : Item(status='  ', wc_rev='2'),
     'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E2/alpha'      : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
   })
   svntest.actions.run_and_verify_update(wc_dir,
@@ -5643,6 +5643,20 @@ def update_moved_dir_file_move(sbox):
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  # The incoming change is a delete as we don't yet track server-side
+  # moves.  Resolving the tree-conflict as "mine-conflict" applies the
+  # delete to the move destination.  This is effectively accepting the
+  # move from the server.
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict', wc_dir)
+
+  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.remove('A/B/E2/alpha')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 @XFail()
 @Issue(3144,3630)
