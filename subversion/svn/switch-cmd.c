@@ -176,6 +176,12 @@ svn_cl__switch(apr_getopt_t *os,
                                    "disable this check."),
                                    svn_dirent_local_style(target,
                                                           scratch_pool));
+      if (err->apr_err == SVN_ERR_RA_UUID_MISMATCH
+          || err->apr_err == SVN_ERR_WC_INVALID_SWITCH)
+        return svn_error_quick_wrap(
+                 err,
+                 _("'svn switch' does not support switching a working copy to "
+                   "a different repository"));
       return err;
     }
 
