@@ -1800,6 +1800,9 @@ setup_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
 
       /* With an update or switch we have to fetch the second location
          for a tree conflict from WORKING. (For text or prop from BASE)
+         
+         ### stsp: The code below doesn't seem to agree with this comment.
+         ###       Do we want to get info from BASE or WORKING?
        */
       err = svn_wc__db_base_get_info(&status, &kind, &revision,
                                      &repos_relpath, &repos_root_url,
