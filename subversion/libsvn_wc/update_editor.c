@@ -1346,7 +1346,6 @@ check_tree_conflict(svn_skel_t **pconflict,
                     struct edit_baton *eb,
                     const char *local_abspath,
                     svn_wc__db_status_t working_status,
-                    svn_kind_t working_kind,
                     svn_boolean_t exists_in_repos,
                     svn_wc_conflict_action_t action,
                     apr_pool_t *result_pool,
@@ -1697,7 +1696,7 @@ delete_entry(const char *path,
   if (!pb->shadowed)
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
-                                  status, kind, TRUE,
+                                  status, TRUE,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
@@ -2068,7 +2067,7 @@ add_directory(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
-                                      status, wc_kind, FALSE,
+                                      status, FALSE,
                                       svn_wc_conflict_action_add,
                                       pool, pool));
         }
@@ -2251,7 +2250,7 @@ open_directory(const char *path,
    * a tree-conflict on a parent node. */
   if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
-                                status, wc_kind, TRUE,
+                                status, TRUE,
                                 svn_wc_conflict_action_edit,
                                 db->pool, pool));
 
@@ -3138,7 +3137,7 @@ add_file(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
-                                      status, wc_kind, FALSE,
+                                      status, FALSE,
                                       svn_wc_conflict_action_add,
                                       scratch_pool, scratch_pool));
         }
@@ -3307,7 +3306,7 @@ open_file(const char *path,
    * a tree-conflict on a parent node. */
   if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                status, wc_kind, TRUE,
+                                status, TRUE,
                                 svn_wc_conflict_action_edit,
                                 fb->pool, scratch_pool));
 
