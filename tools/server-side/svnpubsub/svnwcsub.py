@@ -124,9 +124,10 @@ class WorkingCopy(object):
 
     def _get_match(self, svnbin, env):
         ### quick little hack to auto-checkout missing working copies
-        if not os.path.isdir(self.path) or is_emptydir(self.path):
+        if not os.path.isdir(self.path + "/.svn") or is_emptydir(self.path):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
             subprocess.check_call([svnbin, 'co', '-q',
+                                   '--force',
                                    '--non-interactive',
                                    '--config-option',
                                    'config:miscellany:use-commit-times=on',
