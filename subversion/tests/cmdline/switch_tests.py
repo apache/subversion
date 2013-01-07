@@ -891,7 +891,7 @@ def obstructed_switch(sbox):
 
   # svn info A/B/E/alpha
   expected_stdout = verify.RegexOutput(
-                      ".*local unversioned, incoming add upon switch",
+                      ".*local file unversioned, incoming file add upon switch",
                       match_all=False)
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
     A_B_E_alpha)
@@ -1285,7 +1285,7 @@ def forced_switch_failures(sbox):
 
   # svn info A/B/F/pi
   expected_stdout = verify.ExpectedOutput(
-    'Tree conflict: local unversioned, incoming add upon switch\n',
+    'Tree conflict: local file unversioned, incoming file add upon switch\n',
     match_all=False)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
@@ -2349,37 +2349,37 @@ def tree_conflicts_on_switch_1_1(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local file delete, incoming file edit upon switch'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .file.*/F/alpha@3$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .dir.*/DF/D1@3$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .dir.*/DDF/D1@3$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .dir.*/D/D1@3$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .dir.*/DD/D1@3$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .dir.*/DDD/D1@3$',
     },
@@ -2447,37 +2447,37 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local file delete, incoming file delete upon switch'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .dir.*/DF/D1@3$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .dir.*/DDF/D1@3$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .dir.*/DD/D1@3$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming edit upon switch'
+        '^local dir delete, incoming dir edit upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .dir.*/DDD/D1@3$',
     },
@@ -2530,37 +2530,37 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local file edit, incoming file delete upon switch'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local dir edit, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local dir edit, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local dir edit, incoming dir delete upon switch'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local dir edit, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local edit, incoming delete upon switch'
+        '^local dir edit, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -2629,37 +2629,37 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local file delete, incoming file delete upon switch'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -2718,37 +2718,37 @@ def tree_conflicts_on_switch_3(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local file delete, incoming file delete upon switch'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local delete, incoming delete upon switch'
+        '^local dir delete, incoming dir delete upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
