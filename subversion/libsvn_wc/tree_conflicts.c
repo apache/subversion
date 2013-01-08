@@ -440,11 +440,13 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
       default:
         SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
                                                     conflict->src_left_version,
+                                                    conflict->src_right_version,
                                                     scratch_pool, scratch_pool));
         break;
       case svn_wc_operation_switch:
         SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_skel,
                                                     conflict->src_left_version,
+                                                    conflict->src_right_version,
                                                     scratch_pool, scratch_pool));
         break;
       case svn_wc_operation_merge:
