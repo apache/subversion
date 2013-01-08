@@ -122,6 +122,12 @@ sbox_wc_commit(svn_test__sandbox_t *b, const char *path);
 
 /* */
 svn_error_t *
+sbox_wc_commit_ex(svn_test__sandbox_t *b,
+                  apr_array_header_t *targets,
+                  svn_depth_t depth);
+
+/* */
+svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum);
 
 /* */
