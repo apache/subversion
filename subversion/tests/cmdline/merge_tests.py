@@ -17905,6 +17905,56 @@ def merge_binary_file_with_keywords(sbox):
                           target='foo'),
     [], 'merge', '^/bar', 'foo')
 
+#----------------------------------------------------------------------
+# Test for issue #4155 'Merge conflict text of expanded keyword incorrect
+# when svn:keyword property value removed'. Failed in 1.7.0 through 1.7.8.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4155)
+def merge_conflict_when_keywords_removed(sbox):
+  "merge conflict when keywords removed"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # make a file with keyword expansion enabled
+  svntest.main.file_write('A/keyfile', "$Date$ $Revision$\n")
+  sbox.simple_add('A/keyfile')
+  sbox.simple_propset('svn:keywords', 'Date Revision', 'A/keyfile')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # branch the file
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_update()
+
+  #
+  svntest.main.file_append('A/keyfile', " some changes\n")
+  sbox.simple_commit()
+
+  # sync merge
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    A2/keyfile\n',
+                           ' U   A2\n']),
+    [], 'merge', '^/A', 'A2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # modify the original version: disable those KW & enable 'Id'
+  sbox.simple_propset('svn:keywords', 'Id', 'A/keyfile')
+  svntest.main.file_append('A/keyfile', "$Id$\n")
+  sbox.simple_commit()
+
+  # sync merge again
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5,6]],
+                          ['UU   A2/keyfile\n',
+                           ' U   A2\n']),
+    [], 'merge', '--accept=postpone', '^/A', 'A2')
+
 ########################################################################
 # Run the tests
 
@@ -18042,6 +18092,7 @@ test_list = [ None,
               merge_with_added_subtrees_with_mergeinfo,
               merge_with_externals_with_mergeinfo,
               merge_binary_file_with_keywords,
+              merge_conflict_when_keywords_removed,
              ]
 
 if __name__ == '__main__':
