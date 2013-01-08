@@ -77,7 +77,7 @@ svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
 /* Set 'update' as the conflicting operation in CONFLICT_SKEL.
    Allocate data stored in the skel in RESULT_POOL.
 
-   ORIGINAL specifies the BASE node before updating.
+   ORIGINAL and TARGET specify the BASE node before and after updating.
 
    It is an error to set another operation to a conflict skel that
    already has an operation.
@@ -95,7 +95,7 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
 /* Set 'switch' as the conflicting operation in CONFLICT_SKEL.
    Allocate data stored in the skel in RESULT_POOL.
 
-   ORIGINAL specifies the BASE node before switching.
+   ORIGINAL and TARGET specify the BASE node before and after switching.
 
    It is an error to set another operation to a conflict skel that
    already has an operation.
