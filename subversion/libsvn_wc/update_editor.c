@@ -853,11 +853,15 @@ complete_conflict(svn_skel_t *conflict,
                   const char *local_abspath,
                   const char *old_repos_relpath,
                   svn_revnum_t old_revision,
+                  const char *new_repos_relpath,
                   svn_node_kind_t local_kind,
-                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+                  svn_node_kind_t target_kind,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   const struct edit_baton *eb = pb->edit_baton;
-  svn_wc_conflict_version_t *src_left_version;
+  svn_wc_conflict_version_t *original_version;
+  svn_wc_conflict_version_t *target_version;
   svn_boolean_t is_complete;
 
   if (!conflict)
@@ -869,23 +873,34 @@ complete_conflict(svn_skel_t *conflict,
     return SVN_NO_ERROR; /* Already completed */
 
   if (old_repos_relpath)
-    src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
+    original_version = svn_wc_conflict_version_create2(eb->repos_root,
                                                        eb->repos_uuid,
                                                        old_repos_relpath,
                                                        old_revision,
                                                        local_kind,
                                                        result_pool);
   else
-    src_left_version = NULL;
+    original_version = NULL;
 
+  if (new_repos_relpath)
+    target_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        new_repos_relpath,
+                                                        *eb->target_revision,
+                                                        target_kind,
+                                                        result_pool);
+  else
+    target_version = NULL;
 
   if (eb->switch_relpath)
     SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict,
-                                                src_left_version,
+                                                original_version,
+                                                target_version,
                                                 result_pool, scratch_pool));
   else
     SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict,
-                                                src_left_version,
+                                                original_version,
+                                                target_version,
                                                 result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -910,8 +925,10 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       /* We have a (delayed) tree conflict to install */
 
       SVN_ERR(complete_conflict(db->edit_conflict, db->parent_baton,
-                                db->local_abspath, db->old_repos_relpath,
-                                db->old_revision, svn_node_dir,
+                                db->local_abspath,
+                                db->old_repos_relpath, db->old_revision,
+                                db->new_relpath,
+                                svn_node_dir, svn_node_dir,
                                 db->pool, scratch_pool));
       SVN_ERR(svn_wc__db_op_mark_conflict(db->edit_baton->db,
                                           db->local_abspath,
@@ -944,7 +961,8 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
 
       SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,
                                 fb->local_abspath, fb->old_repos_relpath,
-                                fb->old_revision, svn_node_file,
+                                fb->old_revision, fb->new_relpath,
+                                svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(fb->edit_baton->db,
@@ -1750,10 +1768,11 @@ delete_entry(const char *path,
     }
 
   SVN_ERR(complete_conflict(tree_conflict, pb, local_abspath, repos_relpath,
-                            old_revision,
+                            old_revision, NULL,
                             (kind == svn_kind_dir)
                                 ? svn_node_dir
                                 : svn_node_file,
+                            svn_node_none,
                             pb->pool, scratch_pool));
 
   /* Issue a wq operation to delete the BASE_NODE data and to delete actual
@@ -2105,9 +2124,12 @@ add_directory(const char *path,
         }
     }
 
-  SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
-                            db->old_repos_relpath, db->old_revision,
-                            wc_kind, db->pool, pool));
+  if (tree_conflict)
+    SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
+                              db->old_repos_relpath, db->old_revision,
+                              db->new_relpath,
+                              wc_kind, svn_node_dir,
+                              db->pool, pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
                                      eb->db, db->local_abspath,
@@ -2678,7 +2700,8 @@ close_directory(void *dir_baton,
                                     db->local_abspath,
                                     db->old_repos_relpath,
                                     db->old_revision,
-                                    svn_node_dir,
+                                    db->new_relpath,
+                                    svn_node_dir, svn_node_dir,
                                     db->pool, scratch_pool));
 
           SVN_ERR(svn_wc__conflict_create_markers(&work_item,
@@ -3193,7 +3216,8 @@ add_file(const char *path,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                wc_kind,
+                                fb->new_relpath,
+                                wc_kind, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
@@ -3556,7 +3580,8 @@ change_file_prop(void *file_baton,
 
           SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,
                                     fb->local_abspath, fb->old_repos_relpath,
-                                    fb->old_revision, svn_node_file,
+                                    fb->old_revision, fb->new_relpath,
+                                    svn_node_file, svn_node_file,
                                     fb->pool, scratch_pool));
 
           /* Create a copy of the existing (pre update) BASE node in WORKING,
@@ -4264,7 +4289,8 @@ close_file(void *file_baton,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                svn_node_file,
+                                fb->new_relpath,
+                                svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_create_markers(&work_item,

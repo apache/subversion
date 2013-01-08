@@ -187,7 +187,8 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                                             kind,
                                             scratch_pool);
 
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version,
+  /* What about switch? */
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version, NULL /* wc_only */,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, conflict_root_relpath,
                                             conflict, scratch_pool));
@@ -221,7 +222,9 @@ mark_unversioned_add_conflict(struct tc_editor_baton *b,
                                             kind,
                                             scratch_pool);
 
+  /* ### How about switch? */
   SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version,
+                                              NULL /* wc_only */,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, relpath,
                                             conflict, scratch_pool));
@@ -384,6 +387,7 @@ create_conflict_markers(svn_skel_t **work_items,
   original_version->node_kind = svn_node_file;
   SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
                                               original_version,
+                                              NULL /* wc_only */,
                                               scratch_pool,
                                               scratch_pool));
   /* According to this func's doc string, it is "Currently only used for
@@ -876,7 +880,6 @@ get_tc_info(svn_wc_operation_t *operation,
   const apr_array_header_t *locations;
   svn_boolean_t tree_conflicted;
   svn_skel_t *conflict_skel;
-  svn_kind_t kind;
 
   /* ### Check for mixed-rev src or dst? */
 
@@ -902,75 +905,11 @@ get_tc_info(svn_wc_operation_t *operation,
                                                     scratch_pool));
   if (locations)
     {
+      SVN_ERR_ASSERT(locations->nelts >= 2);
       *old_version = APR_ARRAY_IDX(locations, 0,
                                      svn_wc_conflict_version_t *);
-      if (locations->nelts > 1)
-        *new_version = APR_ARRAY_IDX(locations, 1,
-                                     svn_wc_conflict_version_t *);
-      else
-        {
-          const char *repos_root_url;
-          const char *repos_uuid;
-          const char *repos_relpath;
-          svn_revnum_t revision;
-          svn_node_kind_t node_kind;
-          svn_wc__db_status_t status;
-
-          /* The scan dance: read_info then scan_delete then base_get
-             or scan_addition.  Use the internal/relpath functions
-             here? */
-          SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision,
-                                       &repos_relpath, &repos_root_url,
-                                       &repos_uuid, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, src_abspath, result_pool,
-                                       scratch_pool));
-          if (status == svn_wc__db_status_deleted)
-            {
-              const char *base_del_abspath, *work_del_abspath;
-              SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
-                                               &work_del_abspath,
-                                               NULL, db, src_abspath,
-                                               scratch_pool, scratch_pool));
-              SVN_ERR_ASSERT(base_del_abspath || work_del_abspath);
-              if (base_del_abspath)
-                {
-                  SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision,
-                                                   &repos_relpath,
-                                                   &repos_root_url,
-                                                   &repos_uuid,
-                                                   NULL, NULL, NULL, NULL, NULL,
-                                                   NULL, NULL, NULL, NULL, NULL,
-                                                   db, src_abspath, result_pool,
-                                                   scratch_pool));
-                }
-              else if (work_del_abspath)
-                {
-                  work_del_abspath = svn_dirent_dirname(work_del_abspath,
-                                                        scratch_pool);
-                  SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                                   &repos_root_url, &repos_uuid,
-                                                   NULL, NULL, NULL,
-                                                   &revision, NULL, NULL,
-                                                   db, work_del_abspath,
-                                                   scratch_pool, scratch_pool));
-                  repos_relpath = svn_relpath_join(repos_relpath,
-                                     svn_dirent_skip_ancestor(work_del_abspath,
-                                                              src_abspath),
-                                                   scratch_pool);
-                }
-            }
-
-          node_kind = svn__node_kind_from_kind(kind);
-          *new_version = svn_wc_conflict_version_create2(repos_root_url,
-                                                         repos_uuid,
-                                                         repos_relpath,
-                                                         revision,
-                                                         node_kind,
-                                                         scratch_pool);
-        }
+      *new_version = APR_ARRAY_IDX(locations, 1,
+                                   svn_wc_conflict_version_t *);
     }
 
   SVN_ERR(svn_wc__conflict_read_tree_conflict(local_change,

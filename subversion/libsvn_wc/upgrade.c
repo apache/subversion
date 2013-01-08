@@ -1466,12 +1466,14 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
           default:
             SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data,
                                                        tc->src_left_version,
+                                                       tc->src_right_version,
                                                        scratch_pool,
                                                        scratch_pool));
             break;
           case svn_wc_operation_switch:
             SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_data,
                                                         tc->src_left_version,
+                                                        tc->src_right_version,
                                                         scratch_pool,
                                                         scratch_pool));
             break;
@@ -1486,7 +1488,7 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
     }
   else if (conflict_data)
     {
-      SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data, NULL,
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data, NULL, NULL,
                                                   scratch_pool,
                                                   scratch_pool));
     }
