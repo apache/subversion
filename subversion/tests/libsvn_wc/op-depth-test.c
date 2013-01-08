@@ -5231,7 +5231,7 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "nested_move_update", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "nested_move_commit", opts, pool));
 
   /* r1: Create file 'f' */
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
