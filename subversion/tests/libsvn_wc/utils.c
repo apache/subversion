@@ -295,6 +295,7 @@ sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
 
   APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   return svn_client_commit6(targets, svn_depth_infinity,
                             FALSE /* keep_locks */,
                             FALSE /* keep_changelist */,
@@ -318,6 +319,7 @@ sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
                             TRUE, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
@@ -354,9 +356,16 @@ sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
                                              sizeof(const char *));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, src);
-  return svn_client_move6(paths, sbox_wc_path(b, dst),
-                          FALSE, FALSE, NULL, NULL, NULL, ctx, b->pool);
+  return svn_client_move7(paths, sbox_wc_path(b, dst),
+                          FALSE /* move_as_child */,
+                          FALSE /* make_parents */,
+                          TRUE /* allow_mixed_revisions */,
+                          FALSE /* metadata_only */,
+                          NULL /* revprop_table */,
+                          NULL, NULL, /* commit callback */
+                          ctx, b->pool);
 }
 
 svn_error_t *
@@ -371,6 +380,7 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   svn_string_t *pval = value ? svn_string_create(value, b->pool) : NULL;
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,
