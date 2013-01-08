@@ -1097,7 +1097,7 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
           /* Ok, we have a major problem. Some statement is still open, which
              makes it impossible to release this savepoint.
 
-             ### See huge comment in svn_sqlite__with_transaction for
+             ### See huge comment in svn_sqlite__finish_transaction for
                  further details */
 
           err2 = reset_all_statements(db, err2);
