@@ -211,6 +211,11 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
                        capability_yes);
         }
+
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INLINE_PROPS, vals))
+        {
+          session->supports_inline_props = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
