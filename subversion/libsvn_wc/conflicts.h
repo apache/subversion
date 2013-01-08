@@ -87,6 +87,7 @@ svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
 svn_error_t *
 svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
                                     const svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *target,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -103,6 +104,7 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
 svn_error_t *
 svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
                                     const svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *target,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
