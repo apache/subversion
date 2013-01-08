@@ -17936,7 +17936,7 @@ def merge_conflict_when_keywords_removed(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[3,4]],
-                          ['U    A2/keyfile\n',
+                          ['U    '+ sbox.ospath('A2/keyfile') + '\n',
                            ' U   A2\n']),
     [], 'merge', '^/A', 'A2')
   sbox.simple_commit()
@@ -17951,7 +17951,7 @@ def merge_conflict_when_keywords_removed(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5,6]],
-                          ['UU   A2/keyfile\n',
+                          ['UU   ' + sbox.ospath('A2/keyfile') + '\n',
                            ' U   A2\n']),
     [], 'merge', '--accept=postpone', '^/A', 'A2')
 
