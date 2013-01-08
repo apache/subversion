@@ -971,7 +971,13 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
   /* Should we be using a workqueue for this move?  It's not clear.
      What should happen if the copy above is interrupted?  The user
      may want to abort the move and a workqueue might interfere with
-     that. */
+     that.
+
+     BH: On Windows it is not unlikely to encounter an access denied on
+     this line. Installing the move in the workqueue via the copy_or_move
+     might make it hard to recover from that situation, while the DB
+     is still in a valid state. So be careful when switching this over
+     to the workqueue. */
   if (!metadata_only)
     SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
 
