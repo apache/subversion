@@ -63,6 +63,7 @@
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_editor.h"
 
 #include "wc.h"
 #include "props.h"

@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"    /* for svn_stream_t  */
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1085,6 +1086,28 @@ svn_editor_abort(svn_editor_t *editor);
 /** @} */
 
 /** @} */
+
+/** A temporary API which conditionally inserts a double editor shim
+ * into the chain of delta editors.  Used for testing Editor v2.
+ *
+ * Whether or not the shims are inserted is controlled by a compile-time
+ * option in libsvn_delta/compat.c.
+ *
+ * @note The use of these shims and this API will likely cause all kinds
+ * of performance degredation.  (Which is actually a moot point since they
+ * don't even work properly yet anyway.)
+ */
+svn_error_t *
+svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
+                         void **dedit_baton_out,
+                         const svn_delta_editor_t *deditor_in,
+                         void *dedit_baton_in,
+                         const char *repos_root,
+                         const char *base_dir,
+                         svn_delta_shim_callbacks_t *shim_callbacks,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

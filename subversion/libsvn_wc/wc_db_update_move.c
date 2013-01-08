@@ -73,7 +73,6 @@
 
 #include "svn_checksum.h"
 #include "svn_dirent_uri.h"
-#include "svn_editor.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -83,6 +82,7 @@
 #include "private/svn_skel.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_editor.h"
 
 #include "wc.h"
 #include "props.h"

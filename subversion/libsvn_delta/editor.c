@@ -26,8 +26,9 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_editor.h"
 #include "svn_dirent_uri.h"
+
+#include "private/svn_editor.h"
 
 #ifdef SVN_DEBUG
 /* This enables runtime checks of the editor API constraints.  This may
