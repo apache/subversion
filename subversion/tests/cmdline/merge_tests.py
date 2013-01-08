@@ -17865,6 +17865,43 @@ def merge_with_externals_with_mergeinfo(sbox):
     [], 'merge', '--reintegrate', sbox.repo_url + '/A_COPY',
     A_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4221 'Trivial merge of a binary file with svn:keywords
+# raises a conflict'.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4221)
+@XFail()
+def merge_binary_file_with_keywords(sbox):
+  "merge binary file with keywords"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # make a 'binary' file with keyword expansion enabled
+  svntest.main.file_write('foo', "Line 1 with $Revision: $ keyword.\n")
+  sbox.simple_add('foo')
+  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'foo')
+  sbox.simple_propset('svn:keywords', 'Revision', 'foo')
+  sbox.simple_commit()
+
+  # branch the file
+  sbox.simple_copy('foo', 'bar')
+  sbox.simple_commit()
+
+  # modify the branched version
+  svntest.main.file_append('foo', "Line 2.\n")
+  sbox.simple_commit()
+
+  # merge back
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    foo\n',
+                           ' U   foo\n'],
+                          target='foo'),
+    [], 'merge', '^/bar', 'foo')
+
 ########################################################################
 # Run the tests
 
@@ -18001,6 +18038,7 @@ test_list = [ None,
               merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
               merge_with_externals_with_mergeinfo,
+              merge_binary_file_with_keywords,
              ]
 
 if __name__ == '__main__':
