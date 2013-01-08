@@ -117,7 +117,12 @@ struct tc_editor_baton {
 };
 
 /* If LOCAL_RELPATH is shadowed then raise a tree-conflict on the root
-   of the obstruction if such a tree-conflict does not already exist. */
+   of the obstruction if such a tree-conflict does not already exist.
+
+   KIND is the node kind of ... ### what?
+
+   Set *IS_CONFLICTED ... ### if/iff what?
+ */
 static svn_error_t *
 check_tree_conflict(svn_boolean_t *is_conflicted,
                     struct tc_editor_baton *b,
@@ -182,13 +187,13 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
 
   version = svn_wc_conflict_version_create2(b->old_version->repos_url,
                                             b->old_version->repos_uuid,
-                                            local_relpath,
+                                            local_relpath /* ### need *repos* relpath */,
                                             b->old_version->peg_rev,
-                                            kind,
+                                            kind /* ### need *old* kind for this node */,
                                             scratch_pool);
 
   /* What about switch? */
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version, NULL /* wc_only */,
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version, NULL /* ### derive from b->new_version & new kind? */,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, conflict_root_relpath,
                                             conflict, scratch_pool));
@@ -217,14 +222,14 @@ mark_unversioned_add_conflict(struct tc_editor_baton *b,
 
   version = svn_wc_conflict_version_create2(b->old_version->repos_url,
                                             b->old_version->repos_uuid,
-                                            relpath,
+                                            relpath /* ### need *repos* relpath */,
                                             b->old_version->peg_rev,
-                                            kind,
+                                            kind /* ### need *old* kind for this node */,
                                             scratch_pool);
 
   /* ### How about switch? */
   SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version,
-                                              NULL /* wc_only */,
+                                              NULL /* ### derive from b->new_version & new kind? */,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, relpath,
                                             conflict, scratch_pool));
@@ -387,7 +392,7 @@ create_conflict_markers(svn_skel_t **work_items,
   original_version->node_kind = svn_node_file;
   SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
                                               original_version,
-                                              NULL /* wc_only */,
+                                              NULL /* ### derive from new_version & new kind? */,
                                               scratch_pool,
                                               scratch_pool));
   /* According to this func's doc string, it is "Currently only used for
