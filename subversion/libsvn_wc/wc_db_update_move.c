@@ -1124,7 +1124,6 @@ static svn_error_t *
 replace_moved_layer(const char *src_relpath,
                     const char *dst_relpath,
                     int src_op_depth,
-                    svn_wc__db_t *db,
                     svn_wc__db_wcroot_t *wcroot,
                     apr_pool_t *scratch_pool)
 {
@@ -1226,7 +1225,7 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
   SVN_ERR(svn_editor_complete(tc_editor));
 
   SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, src_op_depth,
-                              db, wcroot, scratch_pool));
+                              wcroot, scratch_pool));
 
   return SVN_NO_ERROR;
 }
