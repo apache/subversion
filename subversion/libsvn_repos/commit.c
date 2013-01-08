@@ -38,12 +38,13 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_private_config.h"
-#include "svn_editor.h"
 
 #include "repos.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_editor.h"
 
 
 
@@ -1226,8 +1227,8 @@ complete_cb(void *baton,
   SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
 
   /* Hook is done. Let's do the actual commit.  */
-  SVN_ERR(svn_fs_editor_commit(&revision, &post_commit_err, &conflict_path,
-                               eb->inner, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs__editor_commit(&revision, &post_commit_err, &conflict_path,
+                                eb->inner, scratch_pool, scratch_pool));
 
   /* Did a conflict occur during the commit process?  */
   if (conflict_path != NULL)
@@ -1345,10 +1346,10 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   eb->commit_cb = commit_cb;
   eb->commit_baton = commit_baton;
 
-  SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
-                               repos->fs, SVN_FS_TXN_CHECK_LOCKS,
-                               cancel_func, cancel_baton,
-                               result_pool, scratch_pool));
+  SVN_ERR(svn_fs__editor_create(&eb->inner, &eb->txn_name,
+                                repos->fs, SVN_FS_TXN_CHECK_LOCKS,
+                                cancel_func, cancel_baton,
+                                result_pool, scratch_pool));
 
   /* The TXN has been created. Go ahead and apply all revision properties.  */
   SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
