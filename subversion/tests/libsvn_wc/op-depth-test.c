@@ -5226,6 +5226,174 @@ nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "nested_move_commit", opts, pool));
+
+  /* r1: Create file 'f' */
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  sbox_file_write(&b, "A/B/C/f", "r1 content\n");
+  SVN_ERR(sbox_wc_add(&b, "A/B/C/f"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B/C", "C2"));
+
+  {
+    const char *moved_to;
+    const char *expected_to;
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &moved_to,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "A/B/C"),
+                                     pool, pool));
+
+    expected_to = sbox_wc_path(&b, "C2");
+
+    if (strcmp(moved_to, expected_to) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved to %s, but was %s",
+                                 expected_to, moved_to);
+  }
+  {
+    const char *moved_from;
+    const char *expected_from;
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, &moved_from, NULL,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                     pool, pool));
+
+    expected_from = sbox_wc_path(&b, "A/B/C");
+
+    if (strcmp(moved_from, expected_from) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved from %s, but was %s",
+                                 expected_from, moved_from);
+  }
+
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       1, ""},
+      {0, "A",         "normal",       1, "A"},
+      {0, "A/B",       "normal",       1, "A/B"},
+      {0, "A/B/C",     "normal",       1, "A/B/C"},
+      {0, "A/B/C/f",   "normal",       1, "A/B/C/f"},
+      {1, "A",         "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/f",   "base-deleted", NO_COPY_FROM},
+      {1, "A2",        "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",      "normal",       1, "A/B", MOVED_HERE},
+      {1, "A2/B/C",    "normal",       1, "A/B/C", MOVED_HERE},
+      {1, "A2/B/C/f",  "normal",       1, "A/B/C/f", MOVED_HERE},
+      {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
+      {1, "C2",        "normal",       1, "A/B/C", MOVED_HERE},
+      {1, "C2/f",      "normal",       1, "A/B/C/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  {
+    const char *moved_to;
+    const char *expected_to;
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &moved_to,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "A/B/C"),
+                                     pool, pool));
+
+    expected_to = sbox_wc_path(&b, "A2" /* ### I would have expected "C2" */);
+
+    if (strcmp(moved_to, expected_to) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved to %s, but was %s",
+                                 expected_to, moved_to);
+  }
+  {
+    const char *moved_from;
+    const char *expected_from;
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, &moved_from, NULL,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                     pool, pool));
+
+    expected_from = sbox_wc_path(&b, "A2/B/C"
+                                 /* ### I would have expected "A/B/C" */);
+
+    if (strcmp(moved_from, expected_from) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved from %s, but was %s",
+                                 expected_from, moved_from);
+  }
+
+  {
+    apr_array_header_t *targets = apr_array_make(pool, 2, sizeof(const char *));
+
+    APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(&b, "A");
+    APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(&b, "A2");
+
+    SVN_ERR(sbox_wc_commit_ex(&b, targets, svn_depth_empty));
+  }
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       1, ""},
+      {0, "A",         "not-present",  2, "A"},
+      {0, "A2",        "normal",       2, "A2"},
+      {0, "A2/B",      "normal",       2, "A2/B"},
+      {0, "A2/B/C",    "normal",       2, "A2/B/C"},
+      {0, "A2/B/C/f",  "normal",       2, "A2/B/C/f"},
+      {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
+
+      /* Currently these are recorded as a move but still
+         have the copy history from ^/A/B/C@1 */
+      {1, "C2",        "normal",       2, "A2/B/C", MOVED_HERE},
+      {1, "C2/f",      "normal",       2, "A2/B/C/f", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  {
+    const char *moved_to;
+    const char *expected_to;
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &moved_to,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "A2/B/C"),
+                                     pool, pool));
+
+    expected_to = sbox_wc_path(&b, "C2");
+
+    if (strcmp(moved_to, expected_to) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved to %s, but was %s",
+                                 expected_to, moved_to);
+  }
+
+  {
+    const char *moved_from;
+    const char *expected_from;
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, &moved_from, NULL,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                     pool, pool));
+
+    expected_from = sbox_wc_path(&b, "A2/B/C");
+
+    if (strcmp(moved_from, expected_from) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved from %s, but was %s",
+                                 expected_from, moved_from);
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -5327,5 +5495,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "update_prop_mod_into_moved"),
     SVN_TEST_OPTS_PASS(nested_move_update,
                        "nested_move_update"),
+    SVN_TEST_OPTS_XFAIL(nested_move_commit,
+                       "nested_move_commit"),
     SVN_TEST_NULL
   };

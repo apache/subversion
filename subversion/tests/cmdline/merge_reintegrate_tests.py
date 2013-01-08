@@ -832,7 +832,7 @@ def reintegrate_on_shallow_wc(sbox):
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
   # ... a depth-restricted item is skipped ...
   expected_A_skip.add({
-      'D/H/psi' : Item()
+      'D/H/psi' : Item(verb='Skipped')
   })
   # Currently this fails due to r1424469.  For a full explanation see
   # http://svn.haxx.se/dev/archive-2012-12/0472.shtml
@@ -1267,8 +1267,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
   #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
   #
-  #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
-  #      of 'trunk' was previously merged to 'branch'
+  #   E) Reintegrate 'branch' to 'trunk'.
   #
   #                                       Step:   A   B    C   D    E
   #   A_COPY_3    ---[9]--

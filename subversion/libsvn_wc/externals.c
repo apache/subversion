@@ -45,6 +45,7 @@
 #include "svn_wc.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_subr_private.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -733,9 +734,10 @@ close_file(void *file_baton,
 
       if (regular_prop_changes->nelts > 0)
         {
+          new_pristine_props = svn_prop__patch(base_props, regular_prop_changes,
+                                               pool);
           SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                       &prop_state,
-                                      &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
                                       NULL /* server_baseprops*/,
@@ -840,6 +842,13 @@ close_file(void *file_baton,
                                     eb->repos_uuid,
                                     repos_relpath,
                                     eb->original_revision,
+                                    svn_node_file,
+                                    pool),
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    *eb->target_revision,
                                     svn_node_file,
                                     pool),
                             pool, pool));

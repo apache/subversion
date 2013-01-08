@@ -52,6 +52,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_skel.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #include "wc.h"
 #include "props.h"
@@ -293,7 +294,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&conflict_skel, state,
-                              NULL, &new_actual_props,
+                              &new_actual_props,
                               db, local_abspath,
                               baseprops /* server_baseprops */,
                               pristine_props,
@@ -815,7 +816,7 @@ apply_single_prop_add(const svn_string_t **result_val,
 }
 
 
-/* Apply the deletion of a property with name PROPNAME to the existing
+/* Apply the deletion of a property to the existing
  * property with value WORKING_VAL, that originally had value PRISTINE_VAL.
  *
  * Sets *RESULT_VAL to the resulting value.
@@ -826,12 +827,9 @@ static svn_error_t *
 apply_single_prop_delete(const svn_string_t **result_val,
                          svn_boolean_t *conflict_remains,
                          svn_boolean_t *did_merge,
-                         const char *propname,
                          const svn_string_t *base_val,
                          const svn_string_t *old_val,
-                         const svn_string_t *working_val,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+                         const svn_string_t *working_val)
 {
   *conflict_remains = FALSE;
 
@@ -876,8 +874,8 @@ apply_single_prop_delete(const svn_string_t **result_val,
 }
 
 
-/* Merge a change to the mergeinfo property. The same as
-   apply_single_prop_change(), except that the PROPNAME is always
+/* Merge a change to the mergeinfo property. Similar to
+   apply_single_prop_change(), except that the property name is always
    SVN_PROP_MERGEINFO. */
 /* ### This function is extracted straight from the previous all-in-one
    version of apply_single_prop_change() by removing the code paths that
@@ -887,7 +885,6 @@ static svn_error_t *
 apply_single_mergeinfo_prop_change(const svn_string_t **result_val,
                                    svn_boolean_t *conflict_remains,
                                    svn_boolean_t *did_merge,
-                                   const char *propname,
                                    const svn_string_t *base_val,
                                    const svn_string_t *old_val,
                                    const svn_string_t *new_val,
@@ -977,13 +974,9 @@ static svn_error_t *
 apply_single_generic_prop_change(const svn_string_t **result_val,
                                  svn_boolean_t *conflict_remains,
                                  svn_boolean_t *did_merge,
-                                 const char *propname,
-                                 const svn_string_t *base_val,
                                  const svn_string_t *old_val,
                                  const svn_string_t *new_val,
-                                 const svn_string_t *working_val,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
+                                 const svn_string_t *working_val)
 {
   SVN_ERR_ASSERT(old_val != NULL);
 
@@ -1012,11 +1005,8 @@ apply_single_generic_prop_change(const svn_string_t **result_val,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of ACTUAL_PROPS,
- * setting *STATE or *CONFLICT_REMAINS according to the merge outcome.
- *
- * *STATE is an input and output parameter, its value is to be
- * set using set_prop_merge_state(). (May be null.).
+/* Change the property with name PROPNAME, setting *RESULT_VAL,
+ * *CONFLICT_REMAINS and *DID_MERGE according to the merge outcome.
  *
  * BASE_VAL contains the working copy base property value. (May be null.)
  *
@@ -1024,6 +1014,8 @@ apply_single_generic_prop_change(const svn_string_t **result_val,
  * thinks it's overwriting. (Not null.)
  *
  * NEW_VAL contains the value to be set. (Not null.)
+ *
+ * WORKING_VAL contains the working copy actual value. (May be null.)
  */
 static svn_error_t *
 apply_single_prop_change(const svn_string_t **result_val,
@@ -1059,7 +1051,6 @@ apply_single_prop_change(const svn_string_t **result_val,
       svn_error_t *err = apply_single_mergeinfo_prop_change(result_val,
                                                             conflict_remains,
                                                             did_merge,
-                                                            propname,
                                                             base_val,
                                                             old_val,
                                                             new_val,
@@ -1086,9 +1077,7 @@ apply_single_prop_change(const svn_string_t **result_val,
 
       SVN_ERR(apply_single_generic_prop_change(result_val, conflict_remains,
                                                did_merge,
-                                               propname, base_val, old_val,
-                                               new_val, working_val,
-                                               result_pool, scratch_pool));
+                                               old_val, new_val, working_val));
     }
 
   return SVN_NO_ERROR;
@@ -1098,7 +1087,6 @@ apply_single_prop_change(const svn_string_t **result_val,
 svn_error_t *
 svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,
-                    apr_hash_t **new_pristine_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
@@ -1117,8 +1105,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   SVN_ERR_ASSERT(pristine_props != NULL);
   SVN_ERR_ASSERT(actual_props != NULL);
 
-  if (new_pristine_props)
-    *new_pristine_props = apr_hash_copy(result_pool, pristine_props);
   *new_actual_props = apr_hash_copy(result_pool, actual_props);
 
   if (!server_baseprops)
@@ -1139,31 +1125,24 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < propchanges->nelts; i++)
     {
-      const char *propname;
-      svn_boolean_t conflict_remains;
-      const svn_prop_t *incoming_change;
-      const svn_string_t *base_val; /* Pristine in WC */
-      const svn_string_t *from_val; /* Merge left */
-      const svn_string_t *to_val; /* Merge right */
-      const svn_string_t *working_val; /* Mine */
+      const svn_prop_t *incoming_change
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+      const char *propname = incoming_change->name;
+      const svn_string_t *base_val  /* Pristine in WC */
+        = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
+      const svn_string_t *from_val  /* Merge left */
+        = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
+      const svn_string_t *to_val    /* Merge right */
+        = incoming_change->value;
+      const svn_string_t *working_val  /* Mine */
+        = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
       const svn_string_t *result_val;
+      svn_boolean_t conflict_remains;
       svn_boolean_t did_merge = FALSE;
 
       svn_pool_clear(iterpool);
 
-      /* For the incoming propchange, figure out the TO and FROM values. */
-      incoming_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-      propname = incoming_change->name;
-      to_val = incoming_change->value
-        ? svn_string_dup(incoming_change->value, result_pool) : NULL;
-      from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
-
-      base_val = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
-      working_val = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
-
-      if (new_pristine_props)
-        apr_hash_set(*new_pristine_props, propname, APR_HASH_KEY_STRING,
-                     to_val);
+      to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
       
@@ -1183,9 +1162,8 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(&result_val, &conflict_remains,
-                                         &did_merge, propname,
-                                         base_val, from_val, working_val,
-                                         result_pool, iterpool));
+                                         &did_merge,
+                                         base_val, from_val, working_val));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(&result_val, &conflict_remains,

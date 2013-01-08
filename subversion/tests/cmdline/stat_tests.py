@@ -1740,11 +1740,11 @@ def status_with_tree_conflicts(sbox):
   # check status of G
   expected = svntest.verify.UnorderedOutput(
          ["A  +  C %s\n" % rho,
-          "      >   local edit, incoming delete upon update\n",
+          "      >   local file edit, incoming file delete upon update\n",
           "D     C %s\n" % pi,
-          "      >   local delete, incoming edit upon update\n",
+          "      >   local file delete, incoming file edit upon update\n",
           "!     C %s\n" % tau,
-          "      >   local delete, incoming delete upon update\n",
+          "      >   local file delete, incoming file delete upon update\n",
           "Summary of conflicts:\n",
           "  Tree conflicts: 3\n",
           ])
@@ -1758,11 +1758,11 @@ def status_with_tree_conflicts(sbox):
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
           "D     C          2        2 jrandom      %s\n" % pi,
-          "      >   local delete, incoming edit upon update\n",
+          "      >   local file delete, incoming file edit upon update\n",
           "A  +  C          -        1 jrandom      %s\n" % rho,
-          "      >   local edit, incoming delete upon update\n",
+          "      >   local file edit, incoming file delete upon update\n",
           "!     C                                  %s\n" % tau,
-          "      >   local delete, incoming delete upon update\n",
+          "      >   local file delete, incoming file delete upon update\n",
           "Summary of conflicts:\n",
           "  Tree conflicts: 3\n",
           ])

@@ -278,7 +278,7 @@ def patch_absolute_paths(sbox):
   expected_status.tweak('A/B/E/alpha', status='M ')
 
   expected_skip = wc.State('', {
-    lambda_path:  Item(),
+    lambda_path:  Item(verb='Skipped missing target'),
   })
 
   svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
@@ -1012,9 +1012,11 @@ def patch_add_new_dir(sbox):
            'A/C'       : Item(status='D ', wc_rev=1),
   })
 
-  expected_skip = wc.State('', {A_Z_new_path : Item(),
-                                A_B_E_Y_new_path : Item(),
-                                A_C_new_path : Item()})
+  expected_skip = wc.State(
+    '',
+    {A_Z_new_path     : Item(verb='Skipped missing target'),
+     A_B_E_Y_new_path : Item(verb='Skipped missing target'),
+     A_C_new_path     : Item(verb='Skipped missing target')})
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
@@ -2452,7 +2454,7 @@ def patch_same_twice(sbox):
     '  Skipped paths: 1\n',
   ]
 
-  expected_skip = wc.State('', {beta_path : Item()})
+  expected_skip = wc.State('', {beta_path : Item(verb='Skipped')})
 
   # See above comment about the iota patch being applied twice.
   iota_contents += "Some more bytes\n"
@@ -3973,7 +3975,9 @@ def patch_delete_and_skip(sbox):
   expected_status.tweak('A/B/E/alpha', status='D ')
   expected_status.tweak('A/B/E/beta', status='D ')
 
-  expected_skip = wc.State('', {skipped_path: Item()})
+  expected_skip = wc.State(
+    '',
+    {skipped_path: Item(verb='Skipped missing target')})
 
   svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
                                        expected_output,

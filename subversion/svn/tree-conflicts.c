@@ -104,12 +104,39 @@ svn_cl__get_human_readable_tree_conflict_description(
   apr_pool_t *pool)
 {
   const char *action, *reason, *operation;
+  svn_node_kind_t incoming_kind;
+
   reason = reason_str(conflict);
   action = action_str(conflict);
   operation = svn_cl__operation_str_human_readable(conflict->operation, pool);
+
+  /* Determine the node kind of the incoming change. */
+  incoming_kind = svn_node_unknown;
+  if (conflict->action == svn_wc_conflict_action_edit ||
+      conflict->action == svn_wc_conflict_action_delete)
+    {
+      /* Change is acting on 'src_left' version of the node. */
+      if (conflict->src_left_version)
+        incoming_kind = conflict->src_left_version->node_kind;
+    }
+  else if (conflict->action == svn_wc_conflict_action_add ||
+           conflict->action == svn_wc_conflict_action_replace)
+    {
+      /* Change is acting on 'src_right' version of the node.
+       *
+       * ### For 'replace', the node kind is ambiguous. However, src_left
+       * ### is NULL for replace, so we must use src_right. */
+      if (conflict->src_right_version)
+        incoming_kind = conflict->src_right_version->node_kind;
+    }
+
   SVN_ERR_ASSERT(action && reason);
-  *desc = apr_psprintf(pool, _("local %s, incoming %s upon %s"),
-                       reason, action, operation);
+  *desc = apr_psprintf(pool, _("local %s %s, incoming %s %s upon %s"),
+                       svn_node_kind_to_word(conflict->node_kind),
+                       reason,
+                       svn_node_kind_to_word(incoming_kind),
+                       action,
+                       operation);
   return SVN_NO_ERROR;
 }
 

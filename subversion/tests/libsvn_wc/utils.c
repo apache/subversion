@@ -287,21 +287,30 @@ sbox_wc_exclude(svn_test__sandbox_t *b, const char *path)
 }
 
 svn_error_t *
-sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
+sbox_wc_commit_ex(svn_test__sandbox_t *b,
+                  apr_array_header_t *targets,
+                  svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
-  apr_array_header_t *targets = apr_array_make(b->pool, 1,
-                                               sizeof(const char *));
-
-  APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  return svn_client_commit6(targets, svn_depth_infinity,
+  ctx->wc_ctx = b->wc_ctx;
+  return svn_client_commit6(targets, depth,
                             FALSE /* keep_locks */,
                             FALSE /* keep_changelist */,
                             TRUE  /* commit_as_operations */,
                             TRUE  /* include_file_externals */,
                             FALSE /* include_dir_externals */,
                             NULL, NULL, NULL, NULL, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
+{
+  apr_array_header_t *targets = apr_array_make(b->pool, 1,
+                                               sizeof(const char *));
+
+  APR_ARRAY_PUSH(targets, const char *) = sbox_wc_path(b, path);
+  return sbox_wc_commit_ex(b, targets, svn_depth_infinity);
 }
 
 svn_error_t *
@@ -318,6 +327,7 @@ sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
                             TRUE, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
@@ -354,9 +364,16 @@ sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
                                              sizeof(const char *));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, src);
-  return svn_client_move6(paths, sbox_wc_path(b, dst),
-                          FALSE, FALSE, NULL, NULL, NULL, ctx, b->pool);
+  return svn_client_move7(paths, sbox_wc_path(b, dst),
+                          FALSE /* move_as_child */,
+                          FALSE /* make_parents */,
+                          TRUE /* allow_mixed_revisions */,
+                          FALSE /* metadata_only */,
+                          NULL /* revprop_table */,
+                          NULL, NULL, /* commit callback */
+                          ctx, b->pool);
 }
 
 svn_error_t *
@@ -371,6 +388,7 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   svn_string_t *pval = value ? svn_string_create(value, b->pool) : NULL;
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,

@@ -34,7 +34,6 @@
 
 #include "svn_types.h"
 #include "svn_pools.h"
-#include "svn_delta.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
@@ -47,12 +46,13 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "conflicts.h"
-#include "entries.h"
 #include "translate.h"
 #include "workqueue.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_editor.h"
+
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
 #define IS_NODE_PRESENT(status)                             \
@@ -843,6 +843,9 @@ make_file_baton(struct file_baton **f_p,
 
 /* Complete a conflict skel by describing the update.
  *
+ * LOCAL_KIND is the node kind of the tree conflict victim in the
+ * working copy.
+ *
  * All temporary allocations are be made in SCRATCH_POOL, while allocations
  * needed for the returned conflict struct are made in RESULT_POOL.
  */
@@ -852,11 +855,15 @@ complete_conflict(svn_skel_t *conflict,
                   const char *local_abspath,
                   const char *old_repos_relpath,
                   svn_revnum_t old_revision,
-                  svn_node_kind_t kind,
-                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+                  const char *new_repos_relpath,
+                  svn_node_kind_t local_kind,
+                  svn_node_kind_t target_kind,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   const struct edit_baton *eb = pb->edit_baton;
-  svn_wc_conflict_version_t *src_left_version;
+  svn_wc_conflict_version_t *original_version;
+  svn_wc_conflict_version_t *target_version;
   svn_boolean_t is_complete;
 
   if (!conflict)
@@ -868,23 +875,34 @@ complete_conflict(svn_skel_t *conflict,
     return SVN_NO_ERROR; /* Already completed */
 
   if (old_repos_relpath)
-    src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
+    original_version = svn_wc_conflict_version_create2(eb->repos_root,
                                                        eb->repos_uuid,
                                                        old_repos_relpath,
                                                        old_revision,
-                                                       kind,
+                                                       local_kind,
                                                        result_pool);
   else
-    src_left_version = NULL;
+    original_version = NULL;
 
+  if (new_repos_relpath)
+    target_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        new_repos_relpath,
+                                                        *eb->target_revision,
+                                                        target_kind,
+                                                        result_pool);
+  else
+    target_version = NULL;
 
   if (eb->switch_relpath)
     SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict,
-                                                src_left_version,
+                                                original_version,
+                                                target_version,
                                                 result_pool, scratch_pool));
   else
     SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict,
-                                                src_left_version,
+                                                original_version,
+                                                target_version,
                                                 result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -909,8 +927,10 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       /* We have a (delayed) tree conflict to install */
 
       SVN_ERR(complete_conflict(db->edit_conflict, db->parent_baton,
-                                db->local_abspath, db->old_repos_relpath,
-                                db->old_revision, svn_node_dir,
+                                db->local_abspath,
+                                db->old_repos_relpath, db->old_revision,
+                                db->new_relpath,
+                                svn_node_dir, svn_node_dir,
                                 db->pool, scratch_pool));
       SVN_ERR(svn_wc__db_op_mark_conflict(db->edit_baton->db,
                                           db->local_abspath,
@@ -943,7 +963,8 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
 
       SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,
                                 fb->local_abspath, fb->old_repos_relpath,
-                                fb->old_revision, svn_node_file,
+                                fb->old_revision, fb->new_relpath,
+                                svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(fb->edit_baton->db,
@@ -1348,7 +1369,6 @@ check_tree_conflict(svn_skel_t **pconflict,
                     struct edit_baton *eb,
                     const char *local_abspath,
                     svn_wc__db_status_t working_status,
-                    svn_kind_t working_kind,
                     svn_boolean_t exists_in_repos,
                     svn_wc_conflict_action_t action,
                     apr_pool_t *result_pool,
@@ -1699,7 +1719,7 @@ delete_entry(const char *path,
   if (!pb->shadowed)
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
-                                  status, kind, TRUE,
+                                  status, TRUE,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
@@ -1750,10 +1770,11 @@ delete_entry(const char *path,
     }
 
   SVN_ERR(complete_conflict(tree_conflict, pb, local_abspath, repos_relpath,
-                            old_revision,
+                            old_revision, NULL,
                             (kind == svn_kind_dir)
                                 ? svn_node_dir
                                 : svn_node_file,
+                            svn_node_none,
                             pb->pool, scratch_pool));
 
   /* Issue a wq operation to delete the BASE_NODE data and to delete actual
@@ -2070,7 +2091,7 @@ add_directory(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
-                                      status, wc_kind, FALSE,
+                                      status, FALSE,
                                       svn_wc_conflict_action_add,
                                       pool, pool));
         }
@@ -2105,9 +2126,12 @@ add_directory(const char *path,
         }
     }
 
-  SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
-                            db->old_repos_relpath, db->old_revision,
-                            svn_node_dir, db->pool, pool));
+  if (tree_conflict)
+    SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
+                              db->old_repos_relpath, db->old_revision,
+                              db->new_relpath,
+                              wc_kind, svn_node_dir,
+                              db->pool, pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
                                      eb->db, db->local_abspath,
@@ -2253,7 +2277,7 @@ open_directory(const char *path,
    * a tree-conflict on a parent node. */
   if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
-                                status, wc_kind, TRUE,
+                                status, TRUE,
                                 svn_wc_conflict_action_edit,
                                 db->pool, pool));
 
@@ -2481,11 +2505,11 @@ close_directory(void *dir_baton,
             actual_props = base_props;
         }
 
-      /* Merge pending properties into temporary files (ignoring
-         conflicts). */
+      /* Merge pending properties. */
+      new_base_props = svn_prop__patch(base_props, regular_prop_changes,
+                                       db->pool);
       SVN_ERR_W(svn_wc__merge_props(&conflict_skel,
                                     &prop_state,
-                                    &new_base_props,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
@@ -2678,7 +2702,8 @@ close_directory(void *dir_baton,
                                     db->local_abspath,
                                     db->old_repos_relpath,
                                     db->old_revision,
-                                    svn_node_dir,
+                                    db->new_relpath,
+                                    svn_node_dir, svn_node_dir,
                                     db->pool, scratch_pool));
 
           SVN_ERR(svn_wc__conflict_create_markers(&work_item,
@@ -3140,7 +3165,7 @@ add_file(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
-                                      status, wc_kind, FALSE,
+                                      status, FALSE,
                                       svn_wc_conflict_action_add,
                                       scratch_pool, scratch_pool));
         }
@@ -3193,7 +3218,8 @@ add_file(const char *path,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                svn_node_file,
+                                fb->new_relpath,
+                                wc_kind, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
@@ -3309,7 +3335,7 @@ open_file(const char *path,
    * a tree-conflict on a parent node. */
   if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                status, wc_kind, TRUE,
+                                status, TRUE,
                                 svn_wc_conflict_action_edit,
                                 fb->pool, scratch_pool));
 
@@ -3556,7 +3582,8 @@ change_file_prop(void *file_baton,
 
           SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,
                                     fb->local_abspath, fb->old_repos_relpath,
-                                    fb->old_revision, svn_node_file,
+                                    fb->old_revision, fb->new_relpath,
+                                    svn_node_file, svn_node_file,
                                     fb->pool, scratch_pool));
 
           /* Create a copy of the existing (pre update) BASE node in WORKING,
@@ -4093,9 +4120,10 @@ close_file(void *file_baton,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
+      new_base_props = svn_prop__patch(current_base_props, regular_prop_changes,
+                                       scratch_pool);
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
-                                  &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
@@ -4224,9 +4252,10 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props
          and create a set of new actual props to use for notifications */
+      new_base_props = svn_prop__patch(current_base_props, regular_prop_changes,
+                                       scratch_pool);
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
-                                  &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
@@ -4262,7 +4291,8 @@ close_file(void *file_baton,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                svn_node_file,
+                                fb->new_relpath,
+                                svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_create_markers(&work_item,
@@ -4878,193 +4908,6 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                      result_pool, scratch_pool);
 }
 
-/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target2()
-
-   THE GOAL
-
-   Note the following actions, where X is the thing we wish to update,
-   P is a directory whose repository URL is the parent of
-   X's repository URL, N is directory whose repository URL is *not*
-   the parent directory of X (including the case where N is not a
-   versioned resource at all):
-
-      1.  `svn up .' from inside X.
-      2.  `svn up ...P/X' from anywhere.
-      3.  `svn up ...N/X' from anywhere.
-
-   For the purposes of the discussion, in the '...N/X' situation, X is
-   said to be a "working copy (WC) root" directory.
-
-   Now consider the four cases for X's type (file/dir) in the working
-   copy vs. the repository:
-
-      A.  dir in working copy, dir in repos.
-      B.  dir in working copy, file in repos.
-      C.  file in working copy, dir in repos.
-      D.  file in working copy, file in repos.
-
-   Here are the results we expect for each combination of the above:
-
-      1A. Successfully update X.
-      1B. Error (you don't want to remove your current working
-          directory out from underneath the application).
-      1C. N/A (you can't be "inside X" if X is a file).
-      1D. N/A (you can't be "inside X" if X is a file).
-
-      2A. Successfully update X.
-      2B. Successfully update X.
-      2C. Successfully update X.
-      2D. Successfully update X.
-
-      3A. Successfully update X.
-      3B. Error (you can't create a versioned file X inside a
-          non-versioned directory).
-      3C. N/A (you can't have a versioned file X in directory that is
-          not its repository parent).
-      3D. N/A (you can't have a versioned file X in directory that is
-          not its repository parent).
-
-   To summarize, case 2 always succeeds, and cases 1 and 3 always fail
-   (or can't occur) *except* when the target is a dir that remains a
-   dir after the update.
-
-   ACCOMPLISHING THE GOAL
-
-   Updates are accomplished by driving an editor, and an editor is
-   "rooted" on a directory.  So, in order to update a file, we need to
-   break off the basename of the file, rooting the editor in that
-   file's parent directory, and then updating only that file, not the
-   other stuff in its parent directory.
-
-   Secondly, we look at the case where we wish to update a directory.
-   This is typically trivial.  However, one problematic case, exists
-   when we wish to update a directory that has been removed from the
-   repository and replaced with a file of the same name.  If we root
-   our edit at the initial directory, there is no editor mechanism for
-   deleting that directory and replacing it with a file (this would be
-   like having an editor now anchored on a file, which is disallowed).
-
-   All that remains is to have a function with the knowledge required
-   to properly decide where to root our editor, and what to act upon
-   with that now-rooted editor.  Given a path to be updated, this
-   function should conditionally split that path into an "anchor" and
-   a "target", where the "anchor" is the directory at which the update
-   editor is rooted (meaning, editor->open_root() is called with
-   this directory in mind), and the "target" is the actual intended
-   subject of the update.
-
-   svn_wc_get_actual_target2() is that function.
-
-   So, what are the conditions?
-
-   Case I: Any time X is '.' (implying it is a directory), we won't
-   lop off a basename.  So we'll root our editor at X, and update all
-   of X.
-
-   Cases II & III: Any time we are trying to update some path ...N/X,
-   we again will not lop off a basename.  We can't root an editor at
-   ...N with X as a target, either because ...N isn't a versioned
-   resource at all (Case II) or because X is X is not a child of ...N
-   in the repository (Case III).  We root at X, and update X.
-
-   Cases IV-???: We lop off a basename when we are updating a
-   path ...P/X, rooting our editor at ...P and updating X, or when X
-   is missing from disk.
-
-   These conditions apply whether X is a file or directory.
-
-   ---
-
-   As it turns out, commits need to have a similar check in place,
-   too, specifically for the case where a single directory is being
-   committed (we have to anchor at that directory's parent in case the
-   directory itself needs to be modified).
-*/
-
-
-svn_error_t *
-svn_wc_check_root(svn_boolean_t *is_wcroot,
-                  svn_boolean_t *is_switched,
-                  svn_kind_t *kind,
-                  svn_wc_context_t *wc_ctx,
-                  const char *local_abspath,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  return svn_error_trace(svn_wc__db_is_switched(is_wcroot,is_switched, kind,
-                                                wc_ctx->db, local_abspath,
-                                                scratch_pool));
-}
-
-svn_error_t *
-svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
-                  svn_wc_context_t *wc_ctx,
-                  const char *local_abspath,
-                  apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__db_is_wcroot(is_wcroot,
-                                              wc_ctx->db,
-                                              local_abspath,
-                                              scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  return svn_wc__db_get_wcroot(wcroot_abspath, wc_ctx->db,
-                               local_abspath, result_pool, scratch_pool);
-}
-
-
-svn_error_t *
-svn_wc_get_actual_target2(const char **anchor,
-                          const char **target,
-                          svn_wc_context_t *wc_ctx,
-                          const char *path,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  svn_boolean_t is_wc_root, is_switched;
-  svn_kind_t kind;
-  const char *local_abspath;
-  svn_error_t *err;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  err = svn_wc__db_is_switched(&is_wc_root, &is_switched, &kind,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
-          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
-      is_wc_root = FALSE;
-      is_switched = FALSE;
-    }
-
-  /* If PATH is not a WC root, or if it is a file, lop off a basename. */
-  if (!(is_wc_root || is_switched) || (kind != svn_kind_dir))
-    {
-      svn_dirent_split(anchor, target, path, result_pool);
-    }
-  else
-    {
-      *anchor = apr_pstrdup(result_pool, path);
-      *target = "";
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 /* ### Note that this function is completely different from the rest of the

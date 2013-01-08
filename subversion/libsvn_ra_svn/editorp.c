@@ -39,6 +39,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_editor.h"
 
 #include "ra_svn.h"
 

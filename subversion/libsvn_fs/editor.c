@@ -26,7 +26,6 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_editor.h"
 #include "svn_fs.h"
 #include "svn_props.h"
 
@@ -35,6 +34,8 @@
 #include "fs-loader.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
+#include "private/svn_editor.h"
 
 
 struct edit_baton {
@@ -732,14 +733,14 @@ make_editor(svn_editor_t **editor,
 
 
 svn_error_t *
-svn_fs_editor_create(svn_editor_t **editor,
-                     const char **txn_name,
-                     svn_fs_t *fs,
-                     apr_uint32_t flags,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_fs__editor_create(svn_editor_t **editor,
+                      const char **txn_name,
+                      svn_fs_t *fs,
+                      apr_uint32_t flags,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   svn_revnum_t revision;
   svn_fs_txn_t *txn;
@@ -754,13 +755,13 @@ svn_fs_editor_create(svn_editor_t **editor,
 
 
 svn_error_t *
-svn_fs_editor_create_for(svn_editor_t **editor,
-                         svn_fs_t *fs,
-                         const char *txn_name,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+svn_fs__editor_create_for(svn_editor_t **editor,
+                          svn_fs_t *fs,
+                          const char *txn_name,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_fs_txn_t *txn;
 
@@ -772,12 +773,12 @@ svn_fs_editor_create_for(svn_editor_t **editor,
 
 
 svn_error_t *
-svn_fs_editor_commit(svn_revnum_t *revision,
-                     svn_error_t **post_commit_err,
-                     const char **conflict_path,
-                     svn_editor_t *editor,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_fs__editor_commit(svn_revnum_t *revision,
+                      svn_error_t **post_commit_err,
+                      const char **conflict_path,
+                      svn_editor_t *editor,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = svn_editor_get_baton(editor);
   const char *inner_conflict_path;

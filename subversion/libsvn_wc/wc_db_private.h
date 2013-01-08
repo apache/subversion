@@ -332,6 +332,16 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     void *cb_baton,
                     apr_pool_t *scratch_pool);
 
+/* Evaluate the expression EXPR within a transaction.
+ *
+ * Begin a transaction in WCROOT's DB; evaluate the expression EXPR, which would
+ * typically be a function call that does some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_WC__DB_WITH_TXN(expr, wcroot) \
+  SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
+
 
 /* Return CHILDREN mapping const char * names to svn_kind_t * for the
    children of LOCAL_RELPATH at OP_DEPTH. */

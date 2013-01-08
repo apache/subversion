@@ -91,22 +91,17 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
    If SERVER_BASEPROPS is NULL then use the pristine props as PROPCHANGES
    base.
 
-   Return the new set of actual properties in *NEW_ACTUAL_PROPS.  If
-   NEW_PRISTINE_PROPS is non-null, then also apply PROPCHANGES to
-   PRISTINE_PROPS and return the new set of pristine properties in
-   *NEW_PRISTINE_PROPS.
+   Return the new set of actual properties in *NEW_ACTUAL_PROPS.
 
    Append any conflicts of the actual props to *CONFLICT_SKEL.  (First
    allocate *CONFLICT_SKEL from RESULT_POOL if it is initially NULL.
-   CONFLICT_SKEL itself must not be NULL.)  (Changes made to the pristine
-   properties, if NEW_PRISTINE_PROPS is non-null, do not generate conficts.)
+   CONFLICT_SKEL itself must not be NULL.)
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
 svn_error_t *
 svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,
-                    apr_hash_t **new_pristine_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,

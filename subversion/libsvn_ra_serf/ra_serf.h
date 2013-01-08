@@ -239,6 +239,10 @@ struct svn_ra_serf__session_t {
      accepts skelta requests (Off). If this value is On both options are 
      allowed. */
   const char *server_allows_bulk;
+
+  /* Indicates if the server supports sending inlined props in update editor
+   * in skelta mode (send-all == 'false'). */
+  svn_boolean_t supports_inline_props;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

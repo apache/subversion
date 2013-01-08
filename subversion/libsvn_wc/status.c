@@ -53,6 +53,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_editor.h"
 
 
 

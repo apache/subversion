@@ -4283,8 +4283,6 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
   /* Verify explicitly the predecessor of the root. */
   {
     const svn_fs_id_t *pred_id;
-    dag_node_t *pred;
-    svn_revnum_t pred_rev;
 
     /* Only r0 should have no predecessor. */
     SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, frd->root_dir));
@@ -4300,8 +4298,7 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
     /* Check the predecessor's revision. */
     if (pred_id)
       {
-        SVN_ERR(svn_fs_fs__dag_get_node(&pred, root->fs, pred_id, pool));
-        SVN_ERR(svn_fs_fs__dag_get_revision(&pred_rev, pred, pool));
+        svn_revnum_t pred_rev = svn_fs_fs__id_rev(pred_id);
         if (pred_rev+1 != root->rev)
           /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,

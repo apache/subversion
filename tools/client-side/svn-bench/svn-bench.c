@@ -222,7 +222,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth} },
+    {'r', 'v', 'q', 'R', opt_depth} },
 
   { "null-log", svn_cl__null_log, {0}, N_
     ("Fetch the log messages for a set of revision(s) and/or path(s).\n"

@@ -368,6 +368,8 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   svn_kind_t kind;
   svn_wc__db_lock_t *lock;
   apr_hash_t *props = NULL;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod;
 
   if (did_set)
     *did_set = FALSE;
@@ -378,17 +380,24 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &lock, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               &had_props, &props_mod, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
-                                scratch_pool));
-
   /* We actually only care about the following flags on files, so just
-     early-out for all other types. */
-  if (kind != svn_kind_file)
+     early-out for all other types.
+
+     Also bail if there is no in-wc representation of the file. */
+  if (kind != svn_kind_file
+      || (status != svn_wc__db_status_normal
+          && status != svn_wc__db_status_added))
     return SVN_NO_ERROR;
+
+  if (props_mod || had_props)
+    SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
+                                  scratch_pool));
+  else
+    props = NULL;
 
   /* If we get this far, we're going to change *something*, so just set
      the flag appropriately. */
@@ -409,8 +418,13 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
          set the file read_only just yet.  That happens upon commit. */
       apr_hash_t *pristine_props;
 
-      SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+      if (! props_mod)
+        pristine_props = props;
+      else if (had_props)
+        SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
+                                                scratch_pool, scratch_pool));
+      else
+        pristine_props = NULL;
 
       if (pristine_props
             && apr_hash_get(pristine_props,
@@ -423,9 +437,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
 /* Windows doesn't care about the execute bit. */
 #ifndef WIN32
 
-  if ( ( status != svn_wc__db_status_normal
-        && status != svn_wc__db_status_added )
-      || props == NULL
+  if (props == NULL
       || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
     {
       /* Turn off the execute bit */

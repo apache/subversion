@@ -272,15 +272,27 @@ parse_line(svn_stringbuf_t *line)
   /* determine function name, first parameter and return value */
   char *func_end = strchr(line->data, '(');
   char *return_value = strrchr(line->data, ' ');
+  char *first_param_end;
+  apr_int64_t func_return = 0;
 
-  char *first_param_end = strchr(func_end, ',');
+  if (func_end == NULL || return_value == NULL)
+    return;
+  
+  first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
     first_param_end = strchr(func_end, ')');
+
+  if (first_param_end == NULL)
+    return;
 
   *func_end++ = 0;
   *first_param_end = 0;
   ++return_value;
 
+  /* (try to) convert the return value into an integer.
+   * If that fails, continue anyway as defaulting to 0 will be safe for us. */
+  svn_error_clear(svn_cstring_atoi64(&func_return, return_value));
+  
   /* process those operations that we care about */
   if (strcmp(line->data, "open") == 0)
     {
@@ -288,12 +300,12 @@ parse_line(svn_stringbuf_t *line)
       *func_end++ = 0;
       *--first_param_end = 0;
       
-      open_file(func_end, atoi(return_value));
+      open_file(func_end, (int)func_return);
     }
   else if (strcmp(line->data, "read") == 0)
-    read_file(atoi(func_end), atoi(return_value));
+    read_file(atoi(func_end), func_return);
   else if (strcmp(line->data, "lseek") == 0)
-    seek_file(atoi(func_end), atoi(return_value));
+    seek_file(atoi(func_end), func_return);
   else if (strcmp(line->data, "close") == 0)
     close_file(atoi(func_end));
 }
@@ -470,6 +482,12 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
   for (y = 0; y < ysize; ++y)
     if (xsize < APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts)
       xsize = APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts;
+
+  /* limit picture dimensions (16k pixels in each direction) */
+  if (xsize >= 0x4000)
+    xsize = 0x3fff;
+  if (ysize >= 0x4000)
+    ysize = 0x3fff;
 
   /* rows in BMP files must be aligned to 4 bytes */
   row_size = APR_ALIGN(xsize * 3, 4);

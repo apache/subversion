@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
+#include "private/svn_subr_private.h"
 
 
 /* All Subversion-specific versioned node properties
@@ -316,6 +317,23 @@ svn_prop_diffs(apr_array_header_t **propdiffs,
   *propdiffs = ary;
 
   return SVN_NO_ERROR;
+}
+
+apr_hash_t *
+svn_prop__patch(const apr_hash_t *original_props,
+                const apr_array_header_t *prop_changes,
+                apr_pool_t *pool)
+{
+  apr_hash_t *props = apr_hash_copy(pool, original_props);
+  int i;
+
+  for (i = 0; i < prop_changes->nelts; i++)
+    {
+      const svn_prop_t *p = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
+
+      apr_hash_set(props, p->name, APR_HASH_KEY_STRING, p->value);
+    }
+  return props;
 }
 
 /**

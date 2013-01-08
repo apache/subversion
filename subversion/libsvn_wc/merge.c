@@ -1249,7 +1249,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
 
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   merge_props_outcome,
-                                  NULL, &new_actual_props,
+                                  &new_actual_props,
                                   wc_ctx->db, target_abspath,
                                   original_props, pristine_props, actual_props,
                                   prop_diff,

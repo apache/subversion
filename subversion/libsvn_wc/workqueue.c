@@ -383,10 +383,6 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  /* This are currently ignored, they are here for compat. */
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
@@ -1320,7 +1316,7 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }
@@ -1385,7 +1381,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }

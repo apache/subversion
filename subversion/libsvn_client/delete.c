@@ -426,8 +426,8 @@ svn_client_delete4(const apr_array_header_t *paths,
                                           APR_ARRAY_IDX(paths, i,
                                                         const char *),
                                           pool));
-          SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                      local_abspath, pool, iterpool));
+          SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                     local_abspath, pool, iterpool));
           targets = apr_hash_get(wcroots, wcroot_abspath,
                                  APR_HASH_KEY_STRING);
           if (targets == NULL)

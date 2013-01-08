@@ -382,8 +382,8 @@ svn_client_get_wc_root(const char **wcroot_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
-                             result_pool, scratch_pool);
+  return svn_wc__get_wcroot(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                            result_pool, scratch_pool);
 }
 
 

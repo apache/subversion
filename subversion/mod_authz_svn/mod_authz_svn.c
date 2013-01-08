@@ -87,6 +87,34 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   return conf;
 }
 
+/* canonicalize ACCESS_FILE based on the type of argument.
+ * If SERVER_RELATIVE is true, ACCESS_FILE is a relative
+ * path then ACCESS_FILE is converted to an absolute
+ * path rooted at the server root. */
+static const char *
+canonicalize_access_file(const char *access_file,
+                         svn_boolean_t server_relative,
+                         apr_pool_t *pool)
+{
+  if (svn_path_is_url(access_file))
+    {
+      access_file = svn_uri_canonicalize(access_file, pool);
+    }
+  else if (!svn_path_is_repos_relative_url(access_file))
+    {
+      if (server_relative)
+        access_file = ap_server_root_relative(pool, access_file);
+
+      access_file = svn_dirent_internal_style(access_file, pool);
+    }
+
+  /* We don't canonicalize repos relative urls since they get
+   * canonicalized inside svn_repos_authz_read2() when they
+   * are resolved. */
+
+  return access_file;
+}
+
 static const char *
 AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
@@ -96,10 +124,7 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
     return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
            "directives are mutually exclusive.";
 
-  if (svn_path_is_repos_relative_url(arg1) || svn_path_is_url(arg1))
-    conf->access_file = arg1;
-  else
-    conf->access_file = ap_server_root_relative(cmd->pool, arg1);
+  conf->access_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
 
   return NULL;
 }
@@ -116,7 +141,8 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
     return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
            "directives are mutually exclusive.";
 
-  conf->repo_relative_access_file = arg1;
+  conf->repo_relative_access_file = canonicalize_access_file(arg1, FALSE,
+                                                             cmd->pool);
 
   return NULL;
 }

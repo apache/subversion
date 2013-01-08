@@ -317,6 +317,13 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
             SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) supports serving properties
+ * inline in update editor when 'send-all' is 'false'. */
+#define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inline-props"
+
+
 /** @} */
 
 /** @} */

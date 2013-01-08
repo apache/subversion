@@ -1490,7 +1490,7 @@ def merge_skips_obstructions(sbox):
     'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
-    'foo' : Item(),
+    'foo' : Item(verb='Skipped'),
     })
   # Unversioned:
   svntest.main.file_append(os.path.join(C_path, "foo"), "foo")
@@ -1534,8 +1534,8 @@ def merge_skips_obstructions(sbox):
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
-    'Q'     : Item(),
-    'Q/bar' : Item(),
+    'Q'     : Item(verb='Skipped'),
+    'Q/bar' : Item(verb='Skipped'),
     })
 
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url, None,
@@ -1595,8 +1595,8 @@ def merge_skips_obstructions(sbox):
   # No-op merge still sets mergeinfo
   expected_status.tweak('', status=' M')
   expected_skip = wc.State(wc_dir, {
-    'iota'   : Item(),
-    'A/D/G'  : Item(),
+    'iota'  : Item(verb='Skipped'),
+    'A/D/G' : Item(verb='Skipped'),
     })
   svntest.actions.run_and_verify_merge(wc_dir, '2', '3',
                                        sbox.repo_url, None,
@@ -1657,7 +1657,7 @@ def merge_skips_obstructions(sbox):
   expected_disk.remove('A/D/G')
   expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/:4'})
   expected_skip = wc.State(wc_dir, {
-    'A/B/lambda'  : Item(),
+    'A/B/lambda' : Item(verb='Skipped'),
     })
   # No-op merge still sets mergeinfo.
   expected_status_short = expected_status.copy(wc_dir)
@@ -1705,6 +1705,9 @@ def merge_skips_obstructions(sbox):
   expected_disk.remove('A/B/lambda')
   expected_status.tweak('A/B/lambda', status='! ')
   expected_status.tweak('', status='  ')
+  expected_skip = wc.State(wc_dir, {
+    'A/B/lambda' : Item(verb='Skipped missing target'),
+    })
   # Why do we need to --ignore-ancestry?  Because the previous merge of r4,
   # despite being inoperative, set mergeinfo for r4 on the WC.  With the
   # advent of merge tracking this repeat merge attempt would not be attempted.
@@ -1803,10 +1806,9 @@ def merge_into_missing(sbox):
     'Q/baz'    : Item(status='! ', wc_rev=3),
   })
   expected_skip = wc.State(F_path, {
-    'Q'   : Item(),
-    'foo' : Item(),
+    'Q'   : Item(verb='Skipped missing target'),
+    'foo' : Item(verb='Skipped missing target'),
     })
-
   # Use --ignore-ancestry because merge tracking aware merges raise an
   # error when the merge target is missing subtrees due to OS-level
   # deletes.
@@ -7822,8 +7824,8 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
-    'D/H/omega'         : Item(),
-    'B/E/beta'          : Item(),
+    'D/H/omega' : Item(verb="Skipped"),
+    'B/E/beta'  : Item(verb="Skipped"),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7876,8 +7878,9 @@ def merge_to_sparse_directories(sbox):
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
   expected_skip = svntest.wc.State(files_dir, {
-    'D/H/omega'       : Item(),
-    'B/E/beta'        : Item(),
+    'D'         : Item(verb="Skipped"),
+    'D/H/omega' : Item(verb="Skipped"),
+    'B/E/beta'  : Item(verb="Skipped"),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7919,9 +7922,10 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(empty_dir, {
-    'mu'               : Item(),
-    'D/H/omega'        : Item(),
-    'B/E/beta'         : Item(),
+    'mu'        : Item(verb="Skipped missing target"),
+    'D'         : Item(verb="Skipped"),
+    'D/H/omega' : Item(verb="Skipped"),
+    'B/E/beta'  : Item(verb="Skipped"),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -15408,9 +15412,10 @@ def skipped_files_get_correct_mergeinfo(sbox):
     'D/gamma'   : Item("This is the file 'gamma'.\n"),
     'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2*,3,4-8*'}),
     })
-  expected_skip = wc.State(A_COPY_path,
-                           {'D/H/psi'   : Item(),
-                            'D/H/omega' : Item()})
+  expected_skip = wc.State(
+    A_COPY_path,
+    {'D/H/psi'   : Item(verb='Skipped missing target'),
+     'D/H/omega' : Item(verb='Skipped missing target')})
   expected_output = wc.State(A_COPY_path,
                              {'B/E/beta'  : Item(status='U '),
                               'D/G/rho'   : Item(status='U ')})
@@ -17860,6 +17865,96 @@ def merge_with_externals_with_mergeinfo(sbox):
     [], 'merge', '--reintegrate', sbox.repo_url + '/A_COPY',
     A_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4221 'Trivial merge of a binary file with svn:keywords
+# raises a conflict'.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4221)
+@XFail()
+def merge_binary_file_with_keywords(sbox):
+  "merge binary file with keywords"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # make a 'binary' file with keyword expansion enabled
+  svntest.main.file_write('foo', "Line 1 with $Revision: $ keyword.\n")
+  sbox.simple_add('foo')
+  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'foo')
+  sbox.simple_propset('svn:keywords', 'Revision', 'foo')
+  sbox.simple_commit()
+
+  # branch the file
+  sbox.simple_copy('foo', 'bar')
+  sbox.simple_commit()
+
+  # modify the branched version (although the bug shows even if we modify
+  # just the original version -- or neither, which is a completely
+  # degenerate 'merge' case)
+  # ### Perhaps a dir merge would behave differently from a single-file merge?
+  svntest.main.file_append('bar', "Line 2.\n")
+  sbox.simple_commit()
+
+  # merge back
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    foo\n',
+                           ' U   foo\n'],
+                          target='foo'),
+    [], 'merge', '^/bar', 'foo')
+
+#----------------------------------------------------------------------
+# Test for issue #4155 'Merge conflict text of expanded keyword incorrect
+# when svn:keyword property value removed'. Failed in 1.7.0 through 1.7.8.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4155)
+def merge_conflict_when_keywords_removed(sbox):
+  "merge conflict when keywords removed"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # make a file with keyword expansion enabled
+  svntest.main.file_write('A/keyfile', "$Date$ $Revision$\n")
+  sbox.simple_add('A/keyfile')
+  sbox.simple_propset('svn:keywords', 'Date Revision', 'A/keyfile')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # branch the file
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_update()
+
+  #
+  svntest.main.file_append('A/keyfile', " some changes\n")
+  sbox.simple_commit()
+
+  # sync merge
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    '+ sbox.ospath('A2/keyfile') + '\n',
+                           ' U   A2\n']),
+    [], 'merge', '^/A', 'A2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # modify the original version: disable those KW & enable 'Id'
+  sbox.simple_propset('svn:keywords', 'Id', 'A/keyfile')
+  svntest.main.file_append('A/keyfile', "$Id$\n")
+  sbox.simple_commit()
+
+  # sync merge again
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5,6]],
+                          ['UU   ' + sbox.ospath('A2/keyfile') + '\n',
+                           ' U   A2\n']),
+    [], 'merge', '--accept=postpone', '^/A', 'A2')
+
 ########################################################################
 # Run the tests
 
@@ -17996,6 +18091,8 @@ test_list = [ None,
               merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
               merge_with_externals_with_mergeinfo,
+              merge_binary_file_with_keywords,
+              merge_conflict_when_keywords_removed,
              ]
 
 if __name__ == '__main__':

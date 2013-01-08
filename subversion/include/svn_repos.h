@@ -3169,11 +3169,11 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * allocated in @a pool.
  *
  * If @a path is not a valid authz rule file, then return 
- * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
  * undefined.  If @a must_exist is TRUE, a missing authz file is also
  * an error.
  *
- * If @path is a repos relative URL then @a repos_root must be set to
+ * If @a path is a repos relative URL then @a repos_root must be set to
  * the root of the repository the authz configuration will be used with.
  *
  * @since New in 1.8

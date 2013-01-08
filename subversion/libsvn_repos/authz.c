@@ -792,10 +792,9 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   svn_revnum_t youngest_rev;
   svn_node_kind_t node_kind;
   svn_stream_t *contents;
-  const char *canon_dirent = svn_dirent_canonicalize(dirent, scratch_pool);
 
   /* Search for a repository in the full path. */
-  repos_root_dirent = svn_repos_find_root_path(canon_dirent, scratch_pool);
+  repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
   if (!repos_root_dirent)
     return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                              "Unable to find repository at '%s'", dirent);
@@ -803,7 +802,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   /* Attempt to open a repository at repos_root_dirent. */
   SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
 
-  fs_path = &canon_dirent[strlen(repos_root_dirent)];
+  fs_path = &dirent[strlen(repos_root_dirent)];
 
   /* Root path is always a directory so no reason to go any further */
   if (*fs_path == '\0')
@@ -885,6 +884,7 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
 
       err = svn_path_resolve_repos_relative_url(&dirent, path,
                                                 repos_root, scratch_pool);
+      dirent = svn_dirent_canonicalize(dirent, scratch_pool);
 
       if (err == SVN_NO_ERROR) 
         err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,

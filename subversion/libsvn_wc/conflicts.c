@@ -209,6 +209,7 @@ conflict__get_operation(svn_skel_t **why,
 svn_error_t *
 svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
                                     const svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *target,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
@@ -228,6 +229,8 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
 
   origins = svn_skel__make_empty_list(result_pool);
 
+  SVN_ERR(conflict__prepend_location(origins, target, TRUE,
+                                     result_pool, scratch_pool));
   SVN_ERR(conflict__prepend_location(origins, original, TRUE,
                                      result_pool, scratch_pool));
 
@@ -240,6 +243,7 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
 svn_error_t *
 svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
                                     const svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *target,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
@@ -259,6 +263,8 @@ svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
 
   origins = svn_skel__make_empty_list(result_pool);
 
+  SVN_ERR(conflict__prepend_location(origins, target, TRUE,
+                                     result_pool, scratch_pool));
   SVN_ERR(conflict__prepend_location(origins, original, TRUE,
                                      result_pool, scratch_pool));
 
@@ -1780,66 +1786,12 @@ setup_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
                 ? APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *)
                 : NULL;
 
-  if (incoming_change != svn_wc_conflict_action_delete
-      && (operation == svn_wc_operation_update
-          || operation == svn_wc_operation_switch))
-    {
-      svn_wc__db_status_t status;
-      svn_revnum_t revision;
-      const char *repos_relpath;
-      const char *repos_root_url;
-      const char *repos_uuid;
-      svn_kind_t kind;
-      svn_error_t *err;
-
-      /* ### Theoretically we should just fetch the BASE information
-             here. This code might need tweaks until all tree conflicts
-             are installed in the proper state */
-
-      SVN_ERR_ASSERT(v2 == NULL); /* Not set for update and switch */
-
-      /* With an update or switch we have to fetch the second location
-         for a tree conflict from WORKING. (For text or prop from BASE)
-       */
-      err = svn_wc__db_base_get_info(&status, &kind, &revision,
-                                     &repos_relpath, &repos_root_url,
-                                     &repos_uuid, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool);
-
-      if (err)
-        {
-          if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_trace(err);
-
-          svn_error_clear(err);
-          /* Ignore BASE */
-
-          tc_kind = svn_node_file; /* Avoid assertion */
-        }
-      else if (repos_relpath)
-        {
-          v2 = svn_wc_conflict_version_create2(repos_root_url,
-                                               repos_uuid,
-                                               repos_relpath,
-                                               revision,
-                                               svn__node_kind_from_kind(kind),
-                                               result_pool);
-          tc_kind = svn__node_kind_from_kind(kind);
-        }
-      else
-        tc_kind = svn_node_file; /* Avoid assertion */
-    }
+  if (v1)
+    tc_kind = v1->node_kind;
+  else if (v2)
+    tc_kind = v2->node_kind;
   else
-    {
-      if (v1)
-        tc_kind = v1->node_kind;
-      else if (v2)
-        tc_kind = v2->node_kind;
-      else
-        tc_kind = svn_node_file; /* Avoid assertion */
-    }
+    tc_kind = svn_node_file; /* Avoid assertion */
 
   *desc = svn_wc_conflict_description_create_tree2(local_abspath, tc_kind,
                                                    operation, v1, v2,
