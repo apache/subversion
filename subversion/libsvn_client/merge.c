@@ -1307,6 +1307,13 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 
   if (props->nelts)
     {
+      /* Issue #3383: We don't want mergeinfo from a foreign repos.
+
+         If this is a merge from a foreign repository we must strip all
+         incoming mergeinfo (including mergeinfo deletions). */
+      if (! merge_b->same_repos)
+        SVN_ERR(omit_mergeinfo_changes(&props, props, result_pool));
+
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history, see
          http://svn.haxx.se/dev/archive-2008-09/0006.shtml.  If the
@@ -1315,13 +1322,7 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
       if (merge_b->merge_source.loc1->rev < merge_b->merge_source.loc2->rev
           || !merge_b->merge_source.ancestral)
         {
-          /* Issue #3383: We don't want mergeinfo from a foreign repos.
-
-             If this is a merge from a foreign repository we must strip all
-             incoming mergeinfo (including mergeinfo deletions). */
-          if (! merge_b->same_repos)
-            SVN_ERR(omit_mergeinfo_changes(&props, props, result_pool));
-          else if (HONOR_MERGEINFO(merge_b) || merge_b->reintegrate_merge)
+          if (HONOR_MERGEINFO(merge_b) || merge_b->reintegrate_merge)
             SVN_ERR(filter_self_referential_mergeinfo(&props,
                                                       local_abspath,
                                                       merge_b->ra_session2,
