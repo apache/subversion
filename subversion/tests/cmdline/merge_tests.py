@@ -17889,8 +17889,11 @@ def merge_binary_file_with_keywords(sbox):
   sbox.simple_copy('foo', 'bar')
   sbox.simple_commit()
 
-  # modify the branched version
-  svntest.main.file_append('foo', "Line 2.\n")
+  # modify the branched version (although the bug shows even if we modify
+  # just the original version -- or neither, which is a completely
+  # degenerate 'merge' case)
+  # ### Perhaps a dir merge would behave differently from a single-file merge?
+  svntest.main.file_append('bar', "Line 2.\n")
   sbox.simple_commit()
 
   # merge back
