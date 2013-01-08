@@ -744,7 +744,8 @@ svn_client_move6(const apr_array_header_t *src_paths,
 {
   return svn_error_trace(svn_client_move7(src_paths, dst_path,
                                           move_as_child, make_parents,
-                                          TRUE, /* allow_mixed_revisions */
+                                          TRUE /* allow_mixed_revisions */,
+                                          FALSE /* metadata_only */,
                                           revprop_table,
                                           commit_callback, commit_baton,
                                           ctx, pool));
