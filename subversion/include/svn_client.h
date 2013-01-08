@@ -4510,6 +4510,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * allowed. This parameter should be set to FALSE except where backwards
  * compatibility to svn_client_move6() is required.
  *
+ * If @a metadata_only is @c TRUE and moving a file in a working copy,
+ * everything in the metadata is updated as if the node is moved, but the
+ * actual disk move operation is not performed. This feature is useful for
+ * clients that want to keep the working copy in sync while the actual working
+ * copy is updated by some other task.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4538,6 +4544,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t allow_mixed_revisions,
+                 svn_boolean_t metadata_only,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
@@ -4546,7 +4553,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
 
 /**
  * Similar to svn_client_move7(), but with allow_mixed_revisions always
- * set to @c TRUE.
+ * set to @c TRUE and record_only always to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
