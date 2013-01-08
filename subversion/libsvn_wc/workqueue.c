@@ -1316,7 +1316,7 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }
@@ -1381,7 +1381,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }

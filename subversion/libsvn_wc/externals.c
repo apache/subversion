@@ -844,6 +844,13 @@ close_file(void *file_baton,
                                     eb->original_revision,
                                     svn_node_file,
                                     pool),
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    *eb->target_revision,
+                                    svn_node_file,
+                                    pool),
                             pool, pool));
 
 
