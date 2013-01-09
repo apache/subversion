@@ -481,7 +481,7 @@ dav_svn__replay_report(const dav_resource *resource,
                   svn_error_clear(err);
                   return malformed_element_error("send-deltas", resource->pool);
                 }
-              send_deltas = parsed_val ? TRUE : FALSE;
+              send_deltas = parsed_val != 0;
             }
         }
     }

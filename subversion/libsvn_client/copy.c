@@ -2181,8 +2181,7 @@ try_copy(const apr_array_header_t *sources,
       else
         {
           /* We ignore these values, so assert the default value */
-          SVN_ERR_ASSERT(allow_mixed_revisions == TRUE
-                         && metadata_only == FALSE);
+          SVN_ERR_ASSERT(allow_mixed_revisions && !metadata_only);
           return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
         }
     }

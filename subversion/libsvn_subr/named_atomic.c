@@ -372,7 +372,7 @@ svn_named_atomic__is_supported(void)
         result = svn_tristate_false;
     }
 
-  return result == svn_tristate_true ? TRUE : FALSE;
+  return result == svn_tristate_true;
 #else
   return TRUE;
 #endif

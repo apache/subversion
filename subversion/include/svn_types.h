@@ -550,8 +550,7 @@ svn_depth_from_word(const char *word);
  * non-recursive (which in turn usually translates to #svn_depth_files).
  */
 #define SVN_DEPTH_IS_RECURSIVE(depth)                              \
-  (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
-   ? TRUE : FALSE)
+  ((depth) == svn_depth_infinity || (depth) == svn_depth_unknown)
 
 
 
