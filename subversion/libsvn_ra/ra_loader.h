@@ -496,11 +496,11 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
 
 
 /**
- * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * Fallback logic for svn_ra_get_inherited_props() when that API
  * need to find PATH's inherited properties on a legacy server that
  * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
  *
- * All arguments are as per the two aforementioned APIs.
+ * All arguments are as per svn_ra_get_inherited_props().
  */
 svn_error_t *
 svn_ra__get_inherited_props_walk(svn_ra_session_t *session,

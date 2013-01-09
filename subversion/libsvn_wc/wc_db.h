@@ -2075,14 +2075,19 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
 
 /**
- * Set @a *inherited_props to a depth-first ordered array of
+ * Set @a *iprops to a depth-first ordered array of
  * #svn_prop_inherited_item_t * structures representing the properties
  * inherited by @a local_abspath from the ACTUAL tree above
  * @a local_abspath (looking through to the WORKING or BASE tree as
  * required), up to and including the root of the working copy and
  * any cached inherited properties inherited by the root.
  *
- * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *iprops are
+ * paths relative to the repository root URL for cached inherited
+ * properties and absolute working copy paths otherwise.
+ *
+ * Allocate @a *iprops in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  */
 svn_error_t *
