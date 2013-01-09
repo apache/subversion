@@ -304,10 +304,8 @@ authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
   svn_boolean_t conclusive;
 
   /* Does the section apply to us? */
-  if (is_applicable_section(b->qualified_repos_path,
-                            section_name) == FALSE
-      && is_applicable_section(b->repos_path,
-                               section_name) == FALSE)
+  if (!is_applicable_section(b->qualified_repos_path, section_name)
+      && !is_applicable_section(b->repos_path, section_name))
     return TRUE;
 
   /* Work out what this section grants. */

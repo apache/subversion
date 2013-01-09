@@ -2527,7 +2527,7 @@ representation_string(representation_t *rep,
     return "-1";
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
-  ((may_be_corrupt == FALSE || (checksum) != NULL)     \
+  ((!may_be_corrupt || (checksum) != NULL)     \
    ? svn_checksum_to_cstring_display((checksum), pool) \
    : "(null)")
 
@@ -4431,7 +4431,7 @@ create_rep_state_body(struct rep_state **rep_state,
   *rep_state = rs;
   *rep_args = ra;
 
-  if (ra->is_delta == FALSE)
+  if (!ra->is_delta)
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
@@ -4784,7 +4784,7 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (rep_args->is_delta == FALSE)
+      if (!rep_args->is_delta)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;

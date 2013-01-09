@@ -178,7 +178,7 @@ svn_repos__validate_prop(const char *name,
        * LF line endings. */
       if (svn_prop_needs_translation(name))
         {
-          if (svn_utf__is_valid(value->data, value->len) == FALSE)
+          if (!svn_utf__is_valid(value->data, value->len))
             {
               return svn_error_createf
                 (SVN_ERR_BAD_PROPERTY_VALUE, NULL,

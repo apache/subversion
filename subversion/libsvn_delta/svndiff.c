@@ -203,7 +203,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   assert(window->ops[0].offset == 0);
 
   /* write stream header if necessary */
-  if (eb->header_done == FALSE)
+  if (!eb->header_done)
     {
       eb->header_done = TRUE;
       headers[0] = 'S';
@@ -269,7 +269,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     return svn_error_trace(send_simple_insertion_window(window, eb));
 
   /* Make sure we write the header.  */
-  if (eb->header_done == FALSE)
+  if (!eb->header_done)
     {
       char svnver[4] = {'S','V','N','\0'};
       len = 4;

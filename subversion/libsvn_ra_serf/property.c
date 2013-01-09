@@ -526,7 +526,7 @@ create_propfind_body(serf_bucket_t **bkt,
     }
 
   /* If we're not doing an allprop, add <prop> tags. */
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<prop>",
                                           sizeof("<prop>")-1,
@@ -540,7 +540,7 @@ create_propfind_body(serf_bucket_t **bkt,
 
   serf_bucket_aggregate_prepend(body_bkt, tmp);
 
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</prop>",
                                           sizeof("</prop>")-1,

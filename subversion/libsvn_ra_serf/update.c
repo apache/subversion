@@ -935,7 +935,7 @@ cancel_fetch(serf_request_t *request,
        */
       if (fetch_ctx->read_headers)
         {
-          if (fetch_ctx->aborted_read == FALSE && fetch_ctx->read_size)
+          if (!fetch_ctx->aborted_read && fetch_ctx->read_size)
             {
               fetch_ctx->aborted_read = TRUE;
               fetch_ctx->aborted_read_size = fetch_ctx->read_size;
@@ -1089,7 +1089,7 @@ handle_fetch(serf_request_t *request,
   /* ### new field. make sure we didn't miss some initialization.  */
   SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
-  if (fetch_ctx->read_headers == FALSE)
+  if (!fetch_ctx->read_headers)
     {
       serf_bucket_t *hdrs;
       const char *val;
@@ -2252,7 +2252,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
                                       APR_HASH_KEY_STRING);
 
-      if (info->lock_token && info->fetch_props == FALSE)
+      if (info->lock_token && !info->fetch_props)
         info->fetch_props = TRUE;
 
       /* If possible, we'd like to fetch only a delta against a
@@ -3066,7 +3066,7 @@ finish_report(void *report_baton,
     {
       /* Ensure that we opened and closed our root dir and that we closed
        * all of our children. */
-      if (report->closed_root == FALSE && report->root_dir != NULL)
+      if (!report->closed_root && report->root_dir != NULL)
         {
           SVN_ERR(close_all_dirs(report->root_dir));
         }

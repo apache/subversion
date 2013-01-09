@@ -485,7 +485,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
       pb->config_dir = config_dir;
     }
 
-  if (non_interactive == FALSE)
+  if (!non_interactive)
     {
       /* This provider doesn't prompt the user in order to get creds;
          it prompts the user regarding the caching of creds. */
@@ -516,7 +516,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-  if (non_interactive == FALSE)
+  if (!non_interactive)
     {
       /* This provider doesn't prompt the user in order to get creds;
          it prompts the user regarding the caching of creds. */
@@ -531,7 +531,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
     }
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-  if (non_interactive == FALSE)
+  if (!non_interactive)
     {
       svn_boolean_t ssl_client_cert_file_prompt;
 

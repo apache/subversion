@@ -1559,7 +1559,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
     }
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404 && ctx->ignore_errors == FALSE)
+  if (sl.code == 404 && !ctx->ignore_errors)
     {
       err = handle_server_error(request, response, pool);
 

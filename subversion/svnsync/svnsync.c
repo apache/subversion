@@ -531,7 +531,7 @@ filter_props(int *filtered_count, apr_hash_t *props,
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
           - matching the include pattern if provided */
-      if (!filter || filter(propname) == FALSE)
+      if (!filter || !filter(propname))
         {
           apr_hash_set(filtered, propname, APR_HASH_KEY_STRING, propval);
         }

@@ -2474,7 +2474,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
+  if (!descend)
     {
       if (subcommand->cmd_func == svn_cl__status)
         {
