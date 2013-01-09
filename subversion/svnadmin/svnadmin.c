@@ -1150,7 +1150,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
-                           opt_state->bypass_prop_validation ? FALSE : TRUE,
+                           !opt_state->bypass_prop_validation,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            stdout_stream, check_cancel, NULL, pool);
   if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)

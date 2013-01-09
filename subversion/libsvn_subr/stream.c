@@ -173,7 +173,7 @@ svn_stream_reset(svn_stream_t *stream)
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream)
 {
-  return stream->mark_fn == NULL ? FALSE : TRUE;
+  return stream->mark_fn != NULL;
 }
 
 svn_error_t *
