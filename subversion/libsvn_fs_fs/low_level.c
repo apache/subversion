@@ -689,7 +689,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
 {
   const char *text;
   
-  if (header->is_delta)
+  if (header->is_delta == FALSE)
     {
       text = REP_PLAIN "\n";
     }
