@@ -421,7 +421,7 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(checksum == NULL);
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_ASSERT(lock == NULL);
-  SVN_TEST_ASSERT(had_props == FALSE);
+  SVN_TEST_ASSERT(!had_props);
   SVN_TEST_ASSERT(apr_hash_count(props) == 0);
   /* SVN_TEST_ASSERT(update_root == ???); */
 
@@ -862,12 +862,12 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
   SVN_TEST_ASSERT(original_revnum == 2);
-  SVN_TEST_ASSERT(had_props == FALSE);
-  SVN_TEST_ASSERT(props_mod == FALSE);
-  SVN_TEST_ASSERT(have_base == TRUE);
+  SVN_TEST_ASSERT(!had_props);
+  SVN_TEST_ASSERT(!props_mod);
+  SVN_TEST_ASSERT(have_base);
   /* SVN_TEST_ASSERT(have_more_work...); */
-  SVN_TEST_ASSERT(have_work == TRUE);
-  SVN_TEST_ASSERT(conflicted == FALSE);
+  SVN_TEST_ASSERT(have_work);
+  SVN_TEST_ASSERT(!conflicted);
   SVN_TEST_ASSERT(lock == NULL);
   /* SVN_TEST_ASSERT(last_mod_time...); */
   /* SVN_TEST_ASSERT(op_root...); */

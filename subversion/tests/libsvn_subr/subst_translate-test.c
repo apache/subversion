@@ -123,8 +123,8 @@ test_svn_subst_translate_string2_null_encoding_helper(apr_pool_t *pool)
                                         source_string, NULL, FALSE,
                                         pool, pool));
     SVN_TEST_STRING_ASSERT(new_value->data, "\xc3\x86");
-    SVN_TEST_ASSERT(translated_to_utf8 == TRUE);
-    SVN_TEST_ASSERT(translated_line_endings == FALSE);
+    SVN_TEST_ASSERT(translated_to_utf8);
+    SVN_TEST_ASSERT(!translated_line_endings);
   }
 
   return SVN_NO_ERROR;

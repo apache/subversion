@@ -798,7 +798,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
+  if (!descend)
     opt_state.depth = svn_depth_files;
 
   err = svn_config_get_config(&(ctx->config),
