@@ -386,9 +386,9 @@ svn_cl__merge(apr_getopt_t *os,
   if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in
-         the current working directory.  However, if the sourcepath is
-         a local path, it can refer to a target somewhere deeper in
-         the directory structure. */
+         the current working directory or which is the current working
+         directory.  However, if the sourcepath is a local path, it can
+         refer to a target somewhere deeper in the directory structure. */
       if (svn_path_is_url(sourcepath1))
         {
           const char *sp1_basename = svn_uri_basename(sourcepath1, pool);
@@ -396,12 +396,29 @@ svn_cl__merge(apr_getopt_t *os,
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {
-              svn_node_kind_t kind;
+              const char *target_url;
+              const char *target_base;
 
-              SVN_ERR(svn_io_check_path(sp1_basename, &kind, pool));
-              if (kind == svn_node_file)
+              SVN_ERR(svn_client_url_from_path2(&target_url, targetpath, ctx,
+                                                pool, pool));
+              target_base = svn_uri_basename(target_url, pool);
+
+              /* If the basename of the source is the same as the basename of
+                 the cwd assume the cwd is the target. */
+              if (strcmp(sp1_basename, target_base) != 0)
                 {
-                  targetpath = sp1_basename;
+                  svn_node_kind_t kind;
+
+                  /* If the basename of the source differs from the basename
+                     of the target.  We still might assume the cwd is the
+                     target, but first check if there is a file in the cwd
+                     with the same name as the source basename.  If there is,
+                     then assume that file is the target. */
+                  SVN_ERR(svn_io_check_path(sp1_basename, &kind, pool));
+                  if (kind == svn_node_file)
+                    {
+                      targetpath = sp1_basename;
+                    }
                 }
             }
         }
