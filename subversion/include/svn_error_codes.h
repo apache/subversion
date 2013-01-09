@@ -792,6 +792,21 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+             SVN_ERR_FS_CATEGORY_START + 53,
+             "Corrupt index file.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
+             SVN_ERR_FS_CATEGORY_START + 54,
+             "Revision not covered by index.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
+             SVN_ERR_FS_CATEGORY_START + 55,
+             "Item index too large for this revision.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
