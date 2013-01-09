@@ -1419,6 +1419,17 @@ WHERE wc_id = ?1
   AND moved_to IS NOT NULL
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
+-- STMT_SELECT_MOVED_PAIR3
+SELECT local_relpath, moved_to, op_depth FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth > 0
+  AND moved_to IS NOT NULL
+
+-- STMT_HAS_LAYER_BETWEEN
+SELECT 1 FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4
+
 /* ------------------------------------------------------------------------- */
 
 /* Queries for verification. */
