@@ -9145,15 +9145,7 @@ db_read_inherited_props(apr_array_header_t **iprops,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            {
-              /* Convert the repository relative path in the
-                 cache to a full URL. */
-              cached_iprop->path_or_url =
-                svn_path_url_add_component2(repos_root_url,
-                                            cached_iprop->path_or_url,
-                                            result_pool);
-              svn_sort__array_insert(&cached_iprop, *iprops, 0);
-            }
+            svn_sort__array_insert(&cached_iprop, *iprops, 0);
         }
     }
 

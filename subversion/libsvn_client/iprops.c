@@ -31,6 +31,8 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
+#include "svn_props.h"
+#include "svn_path.h"
 
 #include "client.h"
 #include "svn_private_config.h"
@@ -97,11 +99,35 @@ need_to_cache_iprops(svn_boolean_t *needs_cache,
 }
 
 svn_error_t *
+svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
+                                   const char *repos_root_url,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  int i;
+
+  for (i = 0; i < inherited_props->nelts; i++)
+    {
+      svn_prop_inherited_item_t *elt =
+        APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+      /* Convert repos root relpaths to full URLs. */
+      if (! (svn_path_is_url(elt->path_or_url)
+             || svn_dirent_is_absolute(elt->path_or_url)))
+        {
+          elt->path_or_url = svn_path_url_add_component2(repos_root_url,
+                                                         elt->path_or_url,
+                                                         result_pool);      
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   const char *local_abspath,
                                   svn_revnum_t revision,
                                   svn_depth_t depth,
-                                  svn_boolean_t use_relpath_keys,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,
@@ -184,7 +210,7 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
             }
 
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                             "", revision, use_relpath_keys,
+                                             "", revision,
                                              result_pool, iterpool));
           apr_hash_set(*wcroot_iprops,
                        apr_pstrdup(result_pool, child_abspath),

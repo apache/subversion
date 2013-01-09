@@ -365,6 +365,14 @@ typedef struct svn_client_proplist_item_t
  * properties inherited by @a path.  Use @a scratch_pool for all temporary
  * allocations.
  *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a inherited_props are
+ * URLs if @a path is a URL or if @path is a working copy path but the
+ * property represented by the structure is above the working copy root (i.e.
+ * the inherited property is from the cache).  In all other cases the
+ * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
+ * paths.
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_proplist_receiver2_t)(
@@ -4921,6 +4929,14 @@ svn_client_revprop_set(const char *propname,
  * the inherited properties come from the repository.  If @a inherited_props
  * is not @c NULL and no inheritable properties are found, then set
  * @a *inherited_props to an empty array.
+ *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * URLs if @a target is a URL or if @target is a working copy path but the
+ * property represented by the structure is above the working copy root (i.e.
+ * the inherited property is from the cache).  In all other cases the
+ * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
+ * paths.
  *
  * Allocate @a *props, its keys, and its values in @a pool, use
  * @a scratch_pool for temporary allocations.

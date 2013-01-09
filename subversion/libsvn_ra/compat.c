@@ -935,7 +935,9 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
         {
           svn_prop_inherited_item_t *new_iprop =
             apr_palloc(result_pool, sizeof(*new_iprop));
-          new_iprop->path_or_url = apr_pstrdup(result_pool, parent_url);
+          new_iprop->path_or_url = svn_uri_skip_ancestor(repos_root_url,
+                                                         parent_url,
+                                                         result_pool);
           new_iprop->prop_hash = final_hash;
           svn_sort__array_insert(&new_iprop, *inherited_props, 0);
         }
