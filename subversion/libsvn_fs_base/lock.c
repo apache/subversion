@@ -463,9 +463,11 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.depth = depth;
   /* Enough for 100+ locks if the comments are small. */
-  args.stream = svn_stream__from_spillbuf(4 * 1024  /* blocksize */,
+  args.stream = svn_stream__from_spillbuf
+                    (svn_spillbuf__create(4 * 1024  /* blocksize */,
                                           64 * 1024 /* maxsize */,
-                                          pool);
+                                          pool),
+                     pool);
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool));
 
   /* Read the stream calling GET_LOCKS_FUNC(). */
