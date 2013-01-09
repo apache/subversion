@@ -1359,3 +1359,92 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+bump_moved_away(svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath,
+                svn_depth_t depth,
+                int op_depth,
+                apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MOVED_PAIR3));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while(have_row)
+    {
+      svn_sqlite__stmt_t *stmt2;
+      const char *src_relpath, *dst_relpath;
+      int src_op_depth = svn_sqlite__column_int(stmt, 2);
+      svn_error_t *err;
+      svn_skel_t *conflict;
+
+      svn_pool_clear(iterpool);
+
+      src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+      dst_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
+
+      err = svn_sqlite__get_statement(&stmt2, wcroot->sdb,
+                                      STMT_HAS_LAYER_BETWEEN);
+      if (!err)
+       err = svn_sqlite__bindf(stmt2, "isdd", wcroot->wc_id, local_relpath,
+                               op_depth, src_op_depth);
+      if (!err)
+        err = svn_sqlite__step(&have_row, stmt2);
+      if (!err)
+        err = svn_sqlite__reset(stmt2);
+      if (!err && !have_row)
+        {
+          const char *src_root_relpath = src_relpath;
+
+          while (relpath_depth(src_root_relpath) > src_op_depth)
+            src_root_relpath = svn_relpath_dirname(src_root_relpath, iterpool);
+
+          err = svn_wc__db_read_conflict_internal(&conflict, wcroot,
+                                                  src_root_relpath,
+                                                  iterpool, iterpool);
+          /* ### TODO: check this is the right sort of tree-conflict? */
+          if (!err && !conflict)
+            {
+              /* ### TODO: verify moved_here? */
+              err = replace_moved_layer(src_relpath, dst_relpath, op_depth,
+                                        wcroot, iterpool);
+
+              if (!err)
+                err = bump_moved_away(wcroot, dst_relpath, depth,
+                                      relpath_depth(dst_relpath), iterpool);
+            }
+        }
+
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
+                           const char *local_relpath,
+                           svn_depth_t depth,
+                           apr_pool_t *scratch_pool)
+{
+  /* ### TODO: raise tree-conflicts? */
+  if (depth != svn_depth_infinity)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(bump_moved_away(wcroot, local_relpath, depth, 0, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
