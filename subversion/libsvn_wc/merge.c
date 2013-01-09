@@ -467,6 +467,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
 
    If target_abspath is not versioned use detranslated_target_abspath
    as the target file.
+       ### NOT IMPLEMENTED -- 'detranslated_target_abspath' is not used.
 */
 static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
@@ -607,16 +608,23 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
+/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to
+ * TARGET_ABSPATH.
+ *
  * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
  * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
  * the content of RIGHT_ABSPATH can be copied to the target.
  * Another trivial case is if DETRANSLATED_TARGET_ABSPATH is identical to 
  * RIGHT_ABSPATH - we can just accept the existing content as merge result.
+ *
+ * ### TODO: Another trivial case is if the file at LEFT_ABSPATH equals the
+ *     file at RIGHT_ABSPATH.
+ *
  * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
  * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
- * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
+ * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE.
+ */
 static svn_error_t *
 merge_file_trivial(svn_skel_t **work_items,
                    enum svn_wc_merge_outcome_t *merge_outcome,
@@ -751,7 +759,19 @@ merge_file_trivial(svn_skel_t **work_items,
 }
 
 
-/* XXX Insane amount of parameters... */
+/* Handle a non-trivial merge of 'text' files.  (Assume that a trivial
+ * merge was not possible.)
+ *
+ * If a conflict occurs, preserve copies of the pre-merge files in the
+ * working copy, generate a conflict description in *CONFLICT_SKEL, and
+ * set *MERGE_OUTCOME to 'conflicted'.  See preserve_pre_merge_files().
+ *
+ * On entry, all of the output pointers must be non-null and *CONFLICT_SKEL
+ * must either point to an existing conflict skel or be NULL.
+ *
+ * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME according to the
+ * result -- to install the merged file, or to indicate a conflict.
+ */
 static svn_error_t*
 merge_text_file(svn_skel_t **work_items,
                 svn_skel_t **conflict_skel,
@@ -898,7 +918,32 @@ done:
   return SVN_NO_ERROR;
 }
 
-/* XXX Insane amount of parameters... */
+/* Handle a non-trivial merge of 'binary' files: don't actually merge, just
+ * flag a conflict.  (Assume that a trivial merge was not possible.)
+ *
+ * Copy* the files at LEFT_ABSPATH and RIGHT_ABSPATH into the same directory
+ * as the target file, giving them unique names that start with the target
+ * file's name and end with LEFT_LABEL and RIGHT_LABEL respectively.
+ * If the merge target has been 'detranslated' to repository normal form,
+ * move the detranslated file similarly to a unique name ending with
+ * TARGET_LABEL.
+ *
+ * ### * Why do we copy the left and right temp files when we could (maybe
+ *     not always?) move them?
+ *
+ * On entry, all of the output pointers must be non-null and *CONFLICT_SKEL
+ * must either point to an existing conflict skel or be NULL.
+ *
+ * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME to indicate the
+ * conflict.
+ *
+ * ### Why do we not use preserve_pre_merge_files() in here?  The
+ *     behaviour would be slightly different, more consistent: the
+ *     preserved 'left' and 'right' files would be translated to working
+ *     copy form, which may make a difference except when a binary file
+ *     contains keyword expansions or when some versions of the file are
+ *     not 'binary' even though we're merging in 'binary files' mode.
+ */
 static svn_error_t *
 merge_binary_file(svn_skel_t **work_items,
                   svn_skel_t **conflict_skel,
@@ -924,9 +969,6 @@ merge_binary_file(svn_skel_t **work_items,
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, mt->local_abspath, pool);
-
-  /* If we get here the binary files differ. Because we don't know how
-   * to merge binary files in a non-trivial way we always flag a conflict. */
 
   if (dry_run)
     {
@@ -1070,8 +1112,12 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                              result_pool, scratch_pool));
   if (*merge_outcome == svn_wc_merge_no_merge)
     {
+      /* We have a non-trivial merge.  If we classify it as a merge of
+       * 'binary' files we'll just raise a conflict, otherwise we'll do
+       * the actual merge of 'text' file contents. */
       if (is_binary)
         {
+          /* Raise a text conflict */
           SVN_ERR(merge_binary_file(work_items,
                                     conflict_skel,
                                     merge_outcome,
