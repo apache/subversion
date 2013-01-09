@@ -71,7 +71,7 @@
 
 
 SVNClient::SVNClient(jobject jthis_in)
-    : context(jthis_in, pool), m_lastPath("", pool)
+    : m_lastPath("", pool), context(jthis_in, pool)
 {
 }
 
