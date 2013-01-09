@@ -609,16 +609,35 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 }
 
 /* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to
- * TARGET_ABSPATH.
+ * the target file at TARGET_ABSPATH.
  *
- * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
- * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
- * the content of RIGHT_ABSPATH can be copied to the target.
- * Another trivial case is if DETRANSLATED_TARGET_ABSPATH is identical to 
- * RIGHT_ABSPATH - we can just accept the existing content as merge result.
+ * These are the inherently trivial cases:
  *
- * ### TODO: Another trivial case is if the file at LEFT_ABSPATH equals the
- *     file at RIGHT_ABSPATH.
+ *   left == right == target         =>  no-op
+ *   left != right, left == target   =>  target := right
+ *
+ * This case is also treated as trivial:
+ *
+ *   left != right, right == target  =>  no-op
+ *
+ *   ### Strictly, this case is a conflict, and the no-op outcome is only
+ *       one of the possible resolutions.
+ *
+ *       TODO: Raise a conflict at this level and implement the 'no-op'
+ *       resolution of that conflict at a higher level, in preparation for
+ *       being able to support stricter conflict detection.
+ *
+ * This case is inherently trivial but not currently handled here:
+ *
+ *   left == right != target         =>  no-op
+ *
+ * The files at LEFT_ABSPATH and RIGHT_ABSPATH are in repository normal
+ * form.  The file at DETRANSLATED_TARGET_ABSPATH is a copy of the target,
+ * 'detranslated' to repository normal form, or may be the target file
+ * itself if no translation is necessary.
+ *
+ * When this function updates the target file, it translates to working copy
+ * form.
  *
  * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
@@ -668,9 +687,8 @@ merge_file_trivial(svn_skel_t **work_items,
    * copy RIGHT directly. */
   if (same_left_target)
     {
-      /* Check whether the left side equals the right side.
-       * If it does, there is no change to merge so we leave the target
-       * unchanged. */
+      /* If the left side equals the right side, there is no change to merge
+       * so we leave the target unchanged. */
       if (same_left_right)
         {
           *merge_outcome = svn_wc_merge_unchanged;
@@ -741,9 +759,8 @@ merge_file_trivial(svn_skel_t **work_items,
     }
   else
     {
-      /* Check whether the existing version equals the right side. If it 
-       * does, the locally existing, changed file equals the incoming
-       * file, so there is no conflict. For binary files, we historically
+      /* If the locally existing, changed file equals the incoming 'right'
+       * file, there is no conflict.  For binary files, we historically
        * conflicted them needlessly, while merge_text_file figured it out 
        * eventually and returned svn_wc_merge_unchanged for them, which
        * is what we do here. */
