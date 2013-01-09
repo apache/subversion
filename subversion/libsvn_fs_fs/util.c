@@ -159,25 +159,35 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                               apr_psprintf(pool, "%ld", rev), NULL);
 }
 
-svn_error_t *
-svn_fs_fs__path_rev_absolute(const char **path,
-                             svn_fs_t *fs,
+const char *
+path_l2p_index(svn_fs_t *fs,
+               svn_revnum_t rev,
+               apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
+                      svn_fs_fs__path_rev_absolute(fs, rev, pool));
+}
+
+const char *
+path_p2l_index(svn_fs_t *fs,
+               svn_revnum_t rev,
+               apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
+                      svn_fs_fs__path_rev_absolute(fs, rev, pool));
+}
+
+const char *
+svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-      || ! is_packed_rev(fs, rev))
-    {
-      *path = path_rev(fs, rev, pool);
-    }
-  else
-    {
-      *path = path_rev_packed(fs, rev, PATH_PACKED, pool);
-    }
-
-  return SVN_NO_ERROR;
+  return (   ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
+          || ! is_packed_rev(fs, rev))
+       ? path_rev(fs, rev, pool)
+       : path_rev_packed(fs, rev, PATH_PACKED, pool);
 }
 
 const char *

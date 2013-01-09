@@ -134,9 +134,8 @@ svn_error_t *svn_fs_fs__set_uuid(svn_fs_t *fs,
    returns, because the revision might become packed before or after this
    call.  If a file exists at that path, then it is correct; if not, then
    the caller should call update_min_unpacked_rev() and re-try once. */
-svn_error_t *
-svn_fs_fs__path_rev_absolute(const char **path,
-                             svn_fs_t *fs,
+const char *
+svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
                              svn_revnum_t rev,
                              apr_pool_t *pool);
 

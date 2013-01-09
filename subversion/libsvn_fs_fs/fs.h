@@ -67,6 +67,10 @@ extern "C" {
 #define PATH_PACKED           "pack"             /* Packed revision data file */
 #define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
                                                     shards */
+#define PATH_EXT_L2P_INDEX    ".l2p"             /* extension of the log-
+                                                    to-phys index */
+#define PATH_EXT_P2L_INDEX    ".p2l"             /* extension of the phys-
+                                                    to-log index */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 

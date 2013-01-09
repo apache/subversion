@@ -2904,8 +2904,8 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Move the finished rev file into place. */
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&old_rev_filename,
-                                       cb->fs, old_rev, pool));
+  old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
+
   rev_filename = path_rev(cb->fs, new_rev, pool);
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(move_into_place(proto_filename, rev_filename, old_rev_filename,

@@ -670,18 +670,15 @@ svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
-  const char *path;
   svn_boolean_t retry = FALSE;
 
   do
     {
-      err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
+      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
 
       /* open the revision file in buffered r/o mode */
-      if (! err)
-        err = svn_io_file_open(file, path,
-                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-
+      err = svn_io_file_open(file, path,
+                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
           if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)

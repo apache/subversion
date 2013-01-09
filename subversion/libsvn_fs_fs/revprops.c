@@ -1374,7 +1374,7 @@ set_revision_proplist(svn_fs_t *fs,
    * file won't exist and therefore can't serve as its own reference.
    * (Whereas the rev file should already exist at this point.)
    */
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+  perms_reference = svn_fs_fs__path_rev_absolute(fs, rev, pool);
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
