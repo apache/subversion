@@ -459,8 +459,8 @@ delete_lock(svn_fs_t *fs,
         }
       else
         {
-          const char *rev_0_path;
-          SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, fs, 0, pool));
+          const char *rev_0_path
+            = svn_fs_fs__path_rev_absolute(fs, 0, pool);
           SVN_ERR(write_digest_file(this_children, this_lock, fs->path,
                                     digest_path, rev_0_path, subpool));
         }
@@ -868,7 +868,8 @@ lock_body(void *baton, apr_pool_t *pool)
   lock->is_dav_comment = lb->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = lb->expiration_date;
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, lb->fs, 0, pool));
+
+  rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
   SVN_ERR(set_lock(lb->fs->path, lock, rev_0_path, pool));
   *lb->lock_p = lock;
 

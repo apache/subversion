@@ -78,7 +78,7 @@ struct svn_spillbuf_t {
 
 struct svn_spillbuf_reader_t {
   /* Embed the spill-buffer within the reader.  */
-  struct svn_spillbuf_t buf;
+  struct svn_spillbuf_t *buf;
 
   /* When we read content from the underlying spillbuf, these fields store
      the ptr/len pair. The ptr will be incremented as we "read" out of this
@@ -440,11 +440,7 @@ svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_pool_t *result_pool)
 {
   svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
-
-  /* See svn_spillbuf__create()  */
-  sbr->buf.pool = result_pool;
-  sbr->buf.blocksize = blocksize;
-  sbr->buf.maxsize = maxsize;
+  sbr->buf = svn_spillbuf__create(blocksize, maxsize, result_pool);
 
   return sbr;
 }
@@ -488,7 +484,7 @@ svn_spillbuf__reader_read(apr_size_t *amt,
           if (reader->sb_len == 0)
             {
               SVN_ERR(svn_spillbuf__read(&reader->sb_ptr, &reader->sb_len,
-                                         &reader->buf,
+                                         reader->buf,
                                          scratch_pool));
 
               /* We've run out of content, so return with whatever has
@@ -547,7 +543,8 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
   if (reader->sb_len > 0)
     {
       if (reader->save_ptr == NULL)
-        reader->save_ptr = apr_palloc(reader->buf.pool, reader->buf.blocksize);
+        reader->save_ptr = apr_palloc(reader->buf->pool,
+                                      reader->buf->blocksize);
 
       memcpy(reader->save_ptr, reader->sb_ptr, reader->sb_len);
       reader->save_len = reader->sb_len;
@@ -557,7 +554,7 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
       reader->sb_len = 0;
     }
 
-  return svn_error_trace(svn_spillbuf__write(&reader->buf, data, len,
+  return svn_error_trace(svn_spillbuf__write(reader->buf, data, len,
                                              scratch_pool));
 }
 
@@ -596,14 +593,14 @@ write_handler_spillbuf(void *baton, const char *data, apr_size_t *len)
 
 
 svn_stream_t *
-svn_stream__from_spillbuf(apr_size_t blocksize,
-                          apr_size_t maxsize,
+svn_stream__from_spillbuf(svn_spillbuf_t *buf,
                           apr_pool_t *result_pool)
 {
   svn_stream_t *stream;
   struct spillbuf_baton *sb = apr_palloc(result_pool, sizeof(*sb));
 
-  sb->reader = svn_spillbuf__reader_create(blocksize, maxsize, result_pool);
+  sb->reader = apr_pcalloc(result_pool, sizeof(*sb->reader));
+  sb->reader->buf = buf;
   sb->scratch_pool = svn_pool_create(result_pool);
 
   stream = svn_stream_create(sb, result_pool);

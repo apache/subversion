@@ -274,9 +274,10 @@ test_spillbuf_reader(apr_pool_t *pool)
 static svn_error_t *
 test_spillbuf_stream(apr_pool_t *pool)
 {
-  svn_stream_t *stream = svn_stream__from_spillbuf(8 /* blocksize */,
-                                                   15 /* maxsize */,
-                                                   pool);
+  svn_spillbuf_t *buf = svn_spillbuf__create(8 /* blocksize */,
+                                             15 /* maxsize */,
+                                             pool);
+  svn_stream_t *stream = svn_stream__from_spillbuf(buf, pool);
   char readbuf[256];
   apr_size_t readlen;
   apr_size_t writelen;

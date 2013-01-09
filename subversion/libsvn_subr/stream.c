@@ -1650,7 +1650,7 @@ svn_string_from_stream(svn_string_t **result,
 }
 
 
-/* These are somewhat arbirary, if we ever get good empirical data as to
+/* These are somewhat arbitrary, if we ever get good empirical data as to
    actually valid values, feel free to update them. */
 #define BUFFER_BLOCK_SIZE 1024
 #define BUFFER_MAX_SIZE 100000
@@ -1658,7 +1658,9 @@ svn_string_from_stream(svn_string_t **result,
 svn_stream_t *
 svn_stream_buffered(apr_pool_t *result_pool)
 {
-  return svn_stream__from_spillbuf(BUFFER_BLOCK_SIZE, BUFFER_MAX_SIZE,
+  return svn_stream__from_spillbuf(svn_spillbuf__create(BUFFER_BLOCK_SIZE,
+                                                        BUFFER_MAX_SIZE,
+                                                        result_pool),
                                    result_pool);
 }
 
