@@ -35,6 +35,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * client version info now reported to commit hooks (issue #4124)
     * 'svn merge' now uses reintegrate mode automatically when needed
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
+    * 'svn propset' checks spelling of reserved property names.
 
   - Client-side bugfixes:
     *
