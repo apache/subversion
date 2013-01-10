@@ -751,6 +751,25 @@ WHERE refcount = 0
 DELETE FROM pristine
 WHERE checksum = ?1 AND refcount = 0
 
+-- STMT_SELECT_COPY_PRISTINES
+/* For the root itself */
+SELECT n.checksum, md5_checksum, size
+FROM nodes_current n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND n.local_relpath = ?2
+  AND n.checksum IS NOT NULL
+UNION ALL
+/* And all descendants */
+SELECT n.checksum, md5_checksum, size
+FROM nodes n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND op_depth >=
+      (SELECT MAX(op_depth) FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2)
+  AND n.checksum IS NOT NULL
+
 -- STMT_VACUUM
 VACUUM
 
