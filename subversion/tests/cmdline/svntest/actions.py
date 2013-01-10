@@ -333,11 +333,11 @@ def run_and_verify_load(repo_dir, dump_file_content,
   expected_stderr = []
   if bypass_prop_validation:
     exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
+      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
       'load', '--force-uuid', '--quiet', '--bypass-prop-validation', repo_dir)
   else:
     exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
+      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
       'load', '--force-uuid', '--quiet', repo_dir)
 
   verify.verify_outputs("Unexpected stderr output", None, errput,
@@ -2024,7 +2024,7 @@ def check_prop(name, path, exp_out, revprop=None):
   else:
     revprop_options = []
   # Not using run_svn because binary_mode must be set
-  exit_code, out, err = main.run_command(main.svn_binary, None, 1, 'pg',
+  exit_code, out, err = main.run_command(main.svn_binary, None, True, 'pg',
                                          '--strict', name, path,
                                          '--config-dir',
                                          main.default_config_dir,

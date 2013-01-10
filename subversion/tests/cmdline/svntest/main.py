@@ -343,7 +343,7 @@ def filter_dbg(lines):
   return included
 
 # Run any binary, logging the command line and return code
-def run_command(command, error_expected, binary_mode=0, *varargs):
+def run_command(command, error_expected, binary_mode=False, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
   as lists of lines (including line terminators).  See run_command_stdin()
   for details.  If ERROR_EXPECTED is None, any stderr output will be
@@ -451,7 +451,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=False, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
   BUFSIZE dictates the pipe buffer size used in communication with the
@@ -484,7 +484,7 @@ def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -659,45 +659,45 @@ def run_svn(error_expected, *varargs):
   non-zero exit code will raise an exception.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0,
+  return run_command(svn_binary, error_expected, False,
                      *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnadmin_binary, 1, 0, *varargs)
+  return run_command(svnadmin_binary, 1, False, *varargs)
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnlook_binary, 1, 0, *varargs)
+  return run_command(svnlook_binary, 1, False, *varargs)
 
 def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
   if stdin_input:
-    return run_command_stdin(svnrdump_binary, 1, 1, 1, stdin_input,
+    return run_command_stdin(svnrdump_binary, 1, 1, True, stdin_input,
                              *(_with_auth(_with_config_dir(varargs))))
   else:
-    return run_command(svnrdump_binary, 1, 1,
+    return run_command(svnrdump_binary, 1, True,
                        *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False, *(_with_config_dir(varargs)))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
-  return run_command(svnversion_binary, 1, 0, *varargs)
+  return run_command(svnversion_binary, 1, False, *varargs)
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
-  return run_command(svnmucc_binary, 1, 1,
+  return run_command(svnmucc_binary, 1, True,
                      *(_with_auth(_with_config_dir(varargs))))
 
 def run_entriesdump(path):
@@ -705,7 +705,7 @@ def run_entriesdump(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, path)
+                                                        0, False, None, path)
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -721,7 +721,7 @@ def run_entriesdump_subdirs(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, '--subdirs', path)
+                                                        0, False, None, '--subdirs', path)
   return map(lambda line: line.strip(), filter_dbg(stdout_lines))
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
@@ -730,7 +730,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-  #                                                      0, 0, None, path)
+  #                                                      0, False, None, path)
 
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
@@ -752,7 +752,7 @@ def run_wc_incomplete_tester(wc_dir, revision):
 
 def youngest(repos_path):
   "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
-  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0,
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, False,
                                                       'youngest', repos_path)
   if exit_code or stderr_lines:
     raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
@@ -832,7 +832,7 @@ def create_repos(path, minor_version = None):
   opts += ("--compatible-version=1.%d" % (minor_version),)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
+  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False, "create",
                                           path, *opts)
 
   # Skip tests if we can't create the repository.
@@ -1296,7 +1296,7 @@ class TestSpawningThread(threading.Thread):
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 

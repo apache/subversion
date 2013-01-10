@@ -71,7 +71,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
           expected_errput = svntest.verify.AnyOutput
   ## TODO: Should we handle exit_code?
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svndumpfilter_binary, expected_errput, bufsize, 1,
+    svntest.main.svndumpfilter_binary, expected_errput, bufsize, True,
     dump, *varargs)
 
   # Since we call svntest.main.run_command_stdin() in binary mode,
