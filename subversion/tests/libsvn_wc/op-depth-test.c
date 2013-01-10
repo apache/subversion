@@ -5596,7 +5596,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "nested_move_update"),
     SVN_TEST_OPTS_XFAIL(nested_move_commit,
                        "nested_move_commit"),
-    SVN_TEST_OPTS_XFAIL(nested_move_update2,
+    SVN_TEST_OPTS_PASS(nested_move_update2,
                        "nested_move_update2"),
     SVN_TEST_NULL
   };
