@@ -506,6 +506,8 @@ def diff_ignore_eolstyle(sbox):
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
