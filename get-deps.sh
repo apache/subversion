@@ -27,7 +27,7 @@ APR=apr-1.4.5
 APR_UTIL=apr-util-1.3.12
 NEON=neon-0.29.6
 SERF=serf-0.7.2
-ZLIB=zlib-1.2.5
+ZLIB=zlib-1.2.7
 SQLITE_VERSION=3.7.6.3
 SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
 
