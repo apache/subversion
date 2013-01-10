@@ -3626,6 +3626,8 @@ def merge_conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -3765,6 +3767,8 @@ def merge_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
