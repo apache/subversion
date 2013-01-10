@@ -191,6 +191,16 @@ def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
     "st", sbox.wc_dir)
 
 
+@Issue(4267)
+@XFail()
+def cleanup_below_wc_root(sbox):
+  """cleanup from directory below WC root"""
+
+  sbox.build(read_only = True)
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True)
+  svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
+                                     "cleanup", sbox.ospath("A"))
+
 ########################################################################
 # Run the tests
 
@@ -208,6 +218,7 @@ test_list = [ None,
               status_without_wc_db,
               status_without_wc_db_and_entries,
               status_with_missing_wc_db_and_maybe_valid_entries,
+              cleanup_below_wc_root,
              ]
 
 if __name__ == '__main__':
