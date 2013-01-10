@@ -196,12 +196,6 @@ copy_versioned_file(svn_wc__db_t *db,
   /* In case we are copying from one WC to another (e.g. an external dir),
      ensure the destination WC has a copy of the pristine text. */
 
-  if (copy_pristine_file)
-    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath,
-                                         dst_op_root_abspath,
-                                         cancel_func, cancel_baton,
-                                         scratch_pool));
-
   /* Prepare a temp copy of the filesystem node.  It is usually a file, but
      copy recursively if it's a dir. */
   if (!metadata_only)
@@ -771,6 +765,11 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
       if (*move_degraded_to_copy)
         is_move = FALSE;
     }
+
+  if (!within_one_wc)
+    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath, dst_wcroot_abspath,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
 
   if (src_db_kind == svn_kind_file
       || src_db_kind == svn_kind_symlink)
