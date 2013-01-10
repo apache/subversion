@@ -514,51 +514,22 @@ assemble_status(svn_wc_status3_t **status,
                              != 0);
     }
 
-  /* Examine whether our target is missing or obstructed. To detect
-   * obstructions, we have to look at the on-disk status in DIRENT. */
-  if (info->kind == svn_kind_dir)
+  if (info->status == svn_wc__db_status_incomplete || info->incomplete)
     {
-      if (info->status == svn_wc__db_status_incomplete || info->incomplete)
-        {
-          /* Highest precedence.  */
-          node_status = svn_wc_status_incomplete;
-        }
-      else if (info->status == svn_wc__db_status_deleted)
-        {
-          node_status = svn_wc_status_deleted;
-
-          if (!info->have_base)
-            copied = TRUE;
-          else
-            {
-              const char *work_del_abspath;
-
-              /* Find out details of our deletion.  */
-              SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                               &work_del_abspath, NULL,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-              if (work_del_abspath)
-                copied = TRUE; /* Working deletion */
-            }
-        }
-      else if (!dirent || dirent->kind != svn_node_dir)
-        {
-          /* A present or added directory should be on disk, so it is
-             reported missing or obstructed.  */
-          if (!dirent || dirent->kind == svn_node_none)
-            node_status = svn_wc_status_missing;
-          else
-            node_status = svn_wc_status_obstructed;
-        }
+      /* Highest precedence.  */
+      node_status = svn_wc_status_incomplete;
     }
-  else
+  else if (info->status == svn_wc__db_status_deleted)
     {
-      if (info->status == svn_wc__db_status_deleted)
+      node_status = svn_wc_status_deleted;
+
+      if (!info->have_base || info->have_more_work || info->copied)
+        copied = TRUE;
+      else if (!info->have_more_work && info->have_base)
+        copied = FALSE;
+      else
         {
           const char *work_del_abspath;
-
-          node_status = svn_wc_status_deleted;
 
           /* Find out details of our deletion.  */
           SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
@@ -568,9 +539,18 @@ assemble_status(svn_wc_status3_t **status,
           if (work_del_abspath)
             copied = TRUE; /* Working deletion */
         }
-      else if (!dirent || dirent->kind != svn_node_file)
+    }
+  else 
+    {
+      /* Examine whether our target is missing or obstructed. To detect
+       * obstructions, we have to look at the on-disk status in DIRENT. */
+      svn_node_kind_t expected_kind = (info->kind == svn_kind_dir) 
+                                        ? svn_node_dir
+                                        : svn_node_file;
+
+      if (!dirent || dirent->kind != expected_kind)
         {
-          /* A present or added file should be on disk, so it is
+          /* A present or added node should be on disk, so it is
              reported missing or obstructed.  */
           if (!dirent || dirent->kind == svn_node_none)
             node_status = svn_wc_status_missing;
