@@ -2519,22 +2519,22 @@ def basic_auth_test(sbox):
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
   # Checkout with jconstant
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--non-interactive',
     '--config-dir', config_dir)
 
@@ -2542,7 +2542,7 @@ def basic_auth_test(sbox):
   # a password and the above cached password belongs to jconstant
   expected_err = ["authorization failed: Could not authenticate to server:"]
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, expected_err, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
 def basic_add_svn_format_file(sbox):

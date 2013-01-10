@@ -51,7 +51,7 @@ def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns stdout as list of lines.
   Raises Failure if any stderr messages."""
   exit_code, output, dummy_errput = svntest.main.run_command(
-    svntest.main.svnlook_binary, 0, 0, *varargs)
+    svntest.main.svnlook_binary, 0, False, *varargs)
 
   return output
 
@@ -98,7 +98,7 @@ def test_misc(sbox):
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
-  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, 1,
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, True,
                            ["SVN-fs-dump-format-version: 2\n",
                             "\n",
                             "UUID: ", uuid, "\n",
