@@ -494,9 +494,9 @@ print_dirs_changed_tree(svn_repos_node_t *node,
                         apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
-  int print_me = 0;
+  svn_boolean_t print_me = FALSE;
   const char *full_path;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   SVN_ERR(check_cancel(NULL));
 
@@ -509,33 +509,19 @@ print_dirs_changed_tree(svn_repos_node_t *node,
 
   /* Got prop mods?  Excellent. */
   if (node->prop_mod)
-    print_me = 1;
+    print_me = TRUE;
 
-  if (! print_me)
+  /* Fly through the list of children, checking for modified files. */
+  tmp_node = node->child;
+  while (tmp_node && (! print_me))
     {
-      /* Fly through the list of children, checking for modified files. */
-      tmp_node = node->child;
-      if (tmp_node)
+      if ((tmp_node->kind == svn_node_file)
+           || (tmp_node->action == 'A')
+           || (tmp_node->action == 'D'))
         {
-          if ((tmp_node->kind == svn_node_file)
-              || (tmp_node->text_mod)
-              || (tmp_node->action == 'A')
-              || (tmp_node->action == 'D'))
-            {
-              print_me = 1;
-            }
-          while (tmp_node->sibling && (! print_me ))
-            {
-              tmp_node = tmp_node->sibling;
-              if ((tmp_node->kind == svn_node_file)
-                  || (tmp_node->text_mod)
-                  || (tmp_node->action == 'A')
-                  || (tmp_node->action == 'D'))
-                {
-                  print_me = 1;
-                }
-            }
+          print_me = TRUE;
         }
+      tmp_node = tmp_node->sibling;
     }
 
   /* Print the node if it qualifies. */
@@ -550,17 +536,15 @@ print_dirs_changed_tree(svn_repos_node_t *node,
     return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  subpool = svn_pool_create(pool);
-  full_path = svn_dirent_join(path, tmp_node->name, subpool);
-  SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
-  while (tmp_node->sibling)
+  iterpool = svn_pool_create(pool);
+  while (tmp_node)
     {
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
+      full_path = svn_dirent_join(path, tmp_node->name, iterpool);
+      SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, iterpool));
       tmp_node = tmp_node->sibling;
-      full_path = svn_dirent_join(path, tmp_node->name, subpool);
-      SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -576,8 +560,8 @@ print_changed_tree(svn_repos_node_t *node,
 {
   const char *full_path;
   char status[4] = "_  ";
-  int print_me = 1;
-  apr_pool_t *subpool;
+  svn_boolean_t print_me = TRUE;
+  apr_pool_t *iterpool;
 
   SVN_ERR(check_cancel(NULL));
 
@@ -596,14 +580,14 @@ print_changed_tree(svn_repos_node_t *node,
   else if (node->action == 'R')
     {
       if ((! node->text_mod) && (! node->prop_mod))
-        print_me = 0;
+        print_me = FALSE;
       if (node->text_mod)
         status[0] = 'U';
       if (node->prop_mod)
         status[1] = 'U';
     }
   else
-    print_me = 0;
+    print_me = FALSE;
 
   /* Print this node unless told to skip it. */
   if (print_me)
@@ -629,17 +613,15 @@ print_changed_tree(svn_repos_node_t *node,
     return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  subpool = svn_pool_create(pool);
-  full_path = svn_dirent_join(path, node->name, subpool);
-  SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
-  while (node->sibling)
+  iterpool = svn_pool_create(pool);
+  while (node)
     {
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
+      full_path = svn_dirent_join(path, node->name, iterpool);
+      SVN_ERR(print_changed_tree(node, full_path, copy_info, iterpool));
       node = node->sibling;
-      full_path = svn_dirent_join(path, node->name, subpool);
-      SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
