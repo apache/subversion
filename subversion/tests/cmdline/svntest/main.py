@@ -454,14 +454,17 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 def spawn_process(command, bufsize=-1, binary_mode=False, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
+
   BUFSIZE dictates the pipe buffer size used in communication with the
-  subprocess: 0 means unbuffered, 1 means line buffered, any other
-  positive value means use a buffer of (approximately) that size.
-  A negative bufsize means to use the system default, which usually
-  means fully buffered. The default value for bufsize is 0 (unbuffered).
+  subprocess: quoting from subprocess.Popen(), "0 means unbuffered,
+  1 means line buffered, any other positive value means use a buffer of
+  (approximately) that size. A negative bufsize means to use the system
+  default, which usually means fully buffered."
+
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
-  line terminators)."""
+  line terminators).
+  """
   if stdin_lines and not isinstance(stdin_lines, list):
     raise TypeError("stdin_lines should have list type")
 
