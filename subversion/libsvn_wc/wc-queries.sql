@@ -238,13 +238,17 @@ INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target, moved_here )
+    symlink_target, moved_here, moved_to )
 SELECT
     wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
     repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target, 1
+    last_mod_time, symlink_target, 1,
+    (SELECT dst.moved_to FROM nodes AS dst
+                         WHERE dst.wc_id = ?1
+                         AND dst.local_relpath = ?4
+                         AND dst.op_depth = ?5)
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
