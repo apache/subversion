@@ -1864,8 +1864,8 @@ argument."
   (interactive)
   (let ((files (svn-action-files
                 (lambda (pos)
-                  (or (= (svn-file-status pos) ?C)
-		      (= (svn-prop-status pos) ?C)
+                  (or (memq (svn-file-status pos) '(?C ?!))
+		      (memq (svn-prop-status pos) '(?C ?!))
 		      (error "%s has no conflicts"
 			     (svn-getprop pos 'file)))))))
     (make-local-variable 'svn-resolved-files)
