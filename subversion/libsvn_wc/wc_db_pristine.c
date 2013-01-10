@@ -631,6 +631,8 @@ pristine_transfer_txn(svn_wc__db_wcroot_t *src_wcroot,
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
