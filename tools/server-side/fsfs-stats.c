@@ -1566,13 +1566,13 @@ print_usage(svn_stream_t *ostream, const char *progname,
 {
   svn_error_clear(svn_stream_printf(ostream, pool,
      "\n"
-     "Usage: %s <repo> <cachesize>\n"
+     "Usage: %s <repo> [cachesize]\n"
      "\n"
      "Read the repository at local path <repo> starting at revision 0,\n"
      "count statistical information and write that data to stdout.\n"
-     "Use up to <cachesize> MB of memory for caching. This does not include\n"
+     "Use up to [cachesize] MB of memory for caching. This does not include\n"
      "temporary representation of the repository structure, i.e. the actual\n"
-     "memory may be considerably higher.\n",
+     "memory may be considerably higher.  If not given, defaults to 100 MB.\n",
      progname));
 }
 
@@ -1584,7 +1584,7 @@ int main(int argc, const char *argv[])
   svn_error_t *svn_err;
   const char *repo_path = NULL;
   svn_revnum_t start_revision = 0;
-  apr_size_t memsize = 0;
+  apr_size_t memsize = 100;
   apr_uint64_t temp = 0;
   fs_fs_t *fs;
 
@@ -1600,22 +1600,26 @@ int main(int argc, const char *argv[])
       return 2;
     }
 
-  if (argc != 3)
+  if (argc < 2 || argc > 3)
     {
       print_usage(ostream, argv[0], pool);
       return 2;
     }
 
-  svn_err = svn_cstring_strtoui64(&temp, argv[2], 0, APR_SIZE_MAX, 10);
-  if (svn_err)
+  if (argc == 3)
     {
-      print_usage(ostream, argv[0], pool);
-      svn_error_clear(svn_err);
-      return 2;
+      svn_err = svn_cstring_strtoui64(&temp, argv[2], 0, APR_SIZE_MAX, 10);
+      if (svn_err)
+        {
+          print_usage(ostream, argv[0], pool);
+          svn_error_clear(svn_err);
+          return 2;
+        }
+
+      memsize = (apr_size_t)temp;
     }
 
-  memsize = (apr_size_t)temp;
-  repo_path = argv[1];
+  repo_path = svn_dirent_canonicalize(argv[1], pool);
   start_revision = 0;
 
   printf("Reading revisions\n");
