@@ -5439,7 +5439,9 @@ nested_move_update2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A", "A2"));
   SVN_ERR(sbox_wc_move(&b, "P", "A"));
+  SVN_ERR(sbox_wc_move(&b, "A2", "P"));
   SVN_ERR(sbox_wc_move(&b, "A/Q", "A/Q2"));
+  SVN_ERR(sbox_wc_move(&b, "P/B", "P/B2"));
 
   {
     nodes_row_t nodes[] = {
@@ -5448,15 +5450,16 @@ nested_move_update2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B",       "normal",       1, "A/B"},
       {0, "P",         "normal",       1, "P"},
       {0, "P/Q",       "normal",       1, "P/Q"},
-      {1, "A2",        "normal",       1, "A", MOVED_HERE},
-      {1, "A2/B",      "normal",       1, "A/B", MOVED_HERE},
-      {1, "A",         "normal",       1, "P", FALSE, "A2", TRUE},
+      {1, "A",         "normal",       1, "P", FALSE, "P", TRUE},
       {1, "A/B",       "base-deleted", NO_COPY_FROM},
       {1, "A/Q",       "normal",       1, "P/Q", MOVED_HERE},
-      {1, "P",         "base-deleted", NO_COPY_FROM, "A"},
+      {1, "P",         "normal",       1, "A", FALSE, "A", TRUE},
       {1, "P/Q",       "base-deleted", NO_COPY_FROM},
+      {1, "P/B",       "normal",       1, "A/B", MOVED_HERE},
       {2, "A/Q",       "base-deleted", NO_COPY_FROM, "A/Q2"},
       {2, "A/Q2",      "normal",       1, "P/Q", MOVED_HERE},
+      {2, "P/B",       "base-deleted", NO_COPY_FROM, "P/B2"},
+      {2, "P/B2",      "normal",       1, "A/B", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -5472,15 +5475,16 @@ nested_move_update2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B",       "normal",       2, "A/B"},
       {0, "P",         "normal",       1, "P"},
       {0, "P/Q",       "normal",       1, "P/Q"},
-      {1, "A2",        "normal",       2, "A", MOVED_HERE},
-      {1, "A2/B",      "normal",       2, "A/B", MOVED_HERE},
-      {1, "A",         "normal",       1, "P", FALSE, "A2", TRUE},
+      {1, "A",         "normal",       1, "P", FALSE, "P", TRUE},
       {1, "A/B",       "base-deleted", NO_COPY_FROM},
       {1, "A/Q",       "normal",       1, "P/Q", MOVED_HERE},
-      {1, "P",         "base-deleted", NO_COPY_FROM, "A"},
+      {1, "P",         "normal",       2, "A", FALSE, "A", TRUE},
       {1, "P/Q",       "base-deleted", NO_COPY_FROM},
+      {1, "P/B",       "normal",       2, "A/B", MOVED_HERE},
       {2, "A/Q",       "base-deleted", NO_COPY_FROM, "A/Q2"},
       {2, "A/Q2",      "normal",       1, "P/Q", MOVED_HERE},
+      {2, "P/B",       "base-deleted", NO_COPY_FROM, "P/B2"},
+      {2, "P/B2",      "normal",       2, "A/B", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -5592,7 +5596,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "nested_move_update"),
     SVN_TEST_OPTS_XFAIL(nested_move_commit,
                        "nested_move_commit"),
-    SVN_TEST_OPTS_PASS(nested_move_update2,
+    SVN_TEST_OPTS_XFAIL(nested_move_update2,
                        "nested_move_update2"),
     SVN_TEST_NULL
   };
