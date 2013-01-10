@@ -487,7 +487,11 @@ generate_delta_tree(svn_repos_node_t **tree,
 /*** Tree Printing Routines ***/
 
 /* Recursively print only directory nodes that either a) have property
-   mods, or b) contains files that have changed. */
+   mods, or b) contains files that have changed, or c) has added or deleted
+   children.  NODE is the root node of the tree delta, so every node in it
+   is either changed or is a directory with a changed node somewhere in the
+   subtree below it.
+ */
 static svn_error_t *
 print_dirs_changed_tree(svn_repos_node_t *node,
                         const char *path /* UTF-8! */,
