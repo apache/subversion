@@ -12899,12 +12899,12 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 }
 
 
-/* The body of svn_wc__db_wclocked().
- */
+/* The body of svn_wc__db_wclock_find_root() and svn_wc__db_wclocked(). */
 static svn_error_t *
-is_wclocked(svn_boolean_t *locked,
+find_wclock(const char **lock_relpath,
             svn_wc__db_wcroot_t *wcroot,
             const char *dir_relpath,
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -12948,7 +12948,7 @@ is_wclocked(svn_boolean_t *locked,
           if (locked_levels == -1
               || locked_levels + row_depth >= dir_depth)
             {
-              *locked = TRUE;
+              *lock_relpath = apr_pstrdup(result_pool, relpath);
               SVN_ERR(svn_sqlite__reset(stmt));
               return SVN_NO_ERROR;
             }
@@ -12957,9 +12957,52 @@ is_wclocked(svn_boolean_t *locked,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
-  *locked = FALSE;
+  *lock_relpath = NULL;
 
   return svn_error_trace(svn_sqlite__reset(stmt));
+}
+
+static svn_error_t *
+is_wclocked(svn_boolean_t *locked,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *dir_relpath,
+            apr_pool_t *scratch_pool)
+{
+  const char *lock_relpath;
+
+  SVN_ERR(find_wclock(&lock_relpath, wcroot, dir_relpath,
+                      scratch_pool, scratch_pool));
+  *locked = (lock_relpath != NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t*
+svn_wc__db_wclock_find_root(const char **lock_abspath,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  const char *lock_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_WC__DB_WITH_TXN(
+    find_wclock(&lock_relpath, wcroot, local_relpath,
+                scratch_pool, scratch_pool),
+    wcroot);
+
+  if (!lock_relpath)
+    *lock_abspath = NULL;
+  else
+    SVN_ERR(svn_wc__db_from_relpath(lock_abspath, db, wcroot->abspath,
+                                    lock_relpath, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 

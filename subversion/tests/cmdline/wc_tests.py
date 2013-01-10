@@ -192,7 +192,6 @@ def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
 
 
 @Issue(4267)
-@XFail()
 def cleanup_below_wc_root(sbox):
   """cleanup from directory below WC root"""
 

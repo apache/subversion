@@ -2899,6 +2899,15 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
                          svn_boolean_t steal_lock,
                          apr_pool_t *scratch_pool);
 
+/* Set LOCK_ABSPATH to the path of the the directory that owns the
+   lock on LOCAL_ABSPATH, or NULL, if LOCAL_ABSPATH is not locked. */
+svn_error_t*
+svn_wc__db_wclock_find_root(const char **lock_abspath,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* Check if somebody has a wclock on LOCAL_ABSPATH */
 svn_error_t *
 svn_wc__db_wclocked(svn_boolean_t *locked,
