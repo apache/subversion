@@ -130,6 +130,19 @@ Candidate changes:
     Votes:
       +1: rhuijben
 
+  * r1352031
+    Change get-deps.sh to use zlib 1.2.7.
+    Justification:
+      1.2.5 is no longer available for download at the URL get-deps.sh tries.
+      This prevents get-deps.sh from failling.
+    Notes:
+      The branch is needed since get-deps.sh has removed neon on trunk which
+      causes conflicts.
+    Branch:
+      ^/subversion/branches/1.7.x-r1352031
+    Votes:
+      +1: breser
+
 Veto-blocked changes:
 =====================
 
