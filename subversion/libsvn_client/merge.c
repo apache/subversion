@@ -9602,7 +9602,7 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
       if (min_rev != max_rev)
         return svn_error_createf(SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED, NULL,
                                  _("Cannot merge into mixed-revision working "
-                                   "copy [%lu:%lu]; try updating first"),
+                                   "copy [%ld:%ld]; try updating first"),
                                    min_rev, max_rev);
     }
 
