@@ -1131,7 +1131,9 @@ replace_moved_layer(const char *src_relpath,
   svn_boolean_t have_row;
   int dst_op_depth = relpath_depth(dst_relpath);
 
-  /* Replace entire subtree at one op-depth. */
+  /* Replace entire subtree at one op-depth.
+
+     ### FIXME: the delete/replace is destroying nested moves. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOCAL_RELPATH_OP_DEPTH));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
