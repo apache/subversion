@@ -606,8 +606,8 @@ pristine_transfer_txn(svn_wc__db_wcroot_t *src_wcroot,
 
   while (got_row)
     {
-      svn_checksum_t *checksum;
-      svn_checksum_t *md5_checksum;
+      const svn_checksum_t *checksum;
+      const svn_checksum_t *md5_checksum;
       apr_int64_t size;
       svn_error_t *err;
 
