@@ -779,15 +779,22 @@ merge_file_trivial(svn_skel_t **work_items,
 /* Handle a non-trivial merge of 'text' files.  (Assume that a trivial
  * merge was not possible.)
  *
- * If a conflict occurs, preserve copies of the pre-merge files in the
- * working copy, generate a conflict description in *CONFLICT_SKEL, and
- * set *MERGE_OUTCOME to 'conflicted'.  See preserve_pre_merge_files().
+ * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME according to the
+ * result -- to install the merged file, or to indicate a conflict.
+ *
+ * On successful merge, leave the result in a temporary file and set
+ * *WORK_ITEMS to hold work items that will translate and install that
+ * file into its proper form and place (unless DRY_RUN) and delete the
+ * temporary file (in any case).  Set *MERGE_OUTCOME to 'merged' or
+ * 'unchanged'.
+ *
+ * If a conflict occurs, set *MERGE_OUTCOME to 'conflicted', and (unless
+ * DRY_RUN) set *WORK_ITEMS and *CONFLICT_SKEL to record the conflict
+ * and copies of the pre-merge files.  See preserve_pre_merge_files()
+ * for details.
  *
  * On entry, all of the output pointers must be non-null and *CONFLICT_SKEL
  * must either point to an existing conflict skel or be NULL.
- *
- * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME according to the
- * result -- to install the merged file, or to indicate a conflict.
  */
 static svn_error_t*
 merge_text_file(svn_skel_t **work_items,
@@ -854,6 +861,7 @@ merge_text_file(svn_skel_t **work_items,
 
   SVN_ERR(svn_io_file_close(result_f, pool));
 
+  /* Determine the MERGE_OUTCOME, and record any conflict. */
   if (contains_conflicts && ! dry_run)
     {
       *merge_outcome = svn_wc_merge_conflict;
@@ -957,7 +965,7 @@ done:
  * ### Why do we not use preserve_pre_merge_files() in here?  The
  *     behaviour would be slightly different, more consistent: the
  *     preserved 'left' and 'right' files would be translated to working
- *     copy form, which may make a difference except when a binary file
+ *     copy form, which may make a difference when a binary file
  *     contains keyword expansions or when some versions of the file are
  *     not 'binary' even though we're merging in 'binary files' mode.
  */
@@ -1053,7 +1061,6 @@ merge_binary_file(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* XXX Insane amount of parameters... */
 svn_error_t *
 svn_wc__internal_merge(svn_skel_t **work_items,
                        svn_skel_t **conflict_skel,
