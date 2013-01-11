@@ -1299,6 +1299,8 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
       actual_props = apr_hash_make(scratch_pool);
   }
 
+  /* Merge the properties, if requested.  We merge the properties first
+   * because the properties can affect the text (EOL style, keywords). */
   if (merge_props_outcome)
     {
       int i;
@@ -1328,7 +1330,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                   scratch_pool, scratch_pool));
     }
 
-  /* Queue all the work.  */
+  /* Merge the text. */
   SVN_ERR(svn_wc__internal_merge(&work_items,
                                  &conflict_skel,
                                  merge_content_outcome,
