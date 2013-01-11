@@ -5814,6 +5814,47 @@ def update_with_parents_and_exclude(sbox):
                                         '--parents',
                                         sbox.ospath('A/B'))
 
+@Issue(4288)
+@XFail()
+def update_replace_obstruction(sbox):
+  "delete shouldn't cause update failure"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2
+  sbox.simple_rm('A/B','iota')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_mkdir('iota')
+  sbox.simple_copy('A/D/gamma', 'A/B')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  # Create obstructions
+  svntest.main.safe_rmtree(sbox.ospath('A/B'))
+  os.remove(sbox.ospath('iota'))
+  os.mkdir(sbox.ospath('iota'))
+  svntest.main.file_append(sbox.ospath('A/B'), "Obstruction")
+
+  # ### This expected result is not OK yet, currently the update
+  # ### just fails with an error before doing any work
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  # And now update to delete B and iota
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '2', wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -5889,6 +5930,7 @@ test_list = [ None,
               update_move_text_mod,
               update_nested_move_text_mod,
               update_with_parents_and_exclude,
+              update_replace_obstruction,
              ]
 
 if __name__ == '__main__':
