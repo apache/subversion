@@ -262,9 +262,12 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
  *
  * Output arguments can be NULL if the value is not necessary.
  *
- * ### stsp asks: what is LOCATIONS?
- * ### Set *LOCATIONS to an array of (svn_wc_conflict_version_t *)
- *     representing ...
+ * Set *LOCATIONS to an array of (svn_wc_conflict_version_t *).  For
+ * conflicts written by current code, there are 2 elements: index [0] is
+ * the 'old' or 'left' side and [1] is the 'new' or 'right' side.
+ *
+ * For conflicts written by 1.6 or 1.7 there are 2 locations for a tree
+ * conflict, but none for a text or property conflict.
  *
  * TEXT_, PROP_ and TREE_CONFLICTED (when not NULL) will be set to TRUE
  * when the conflict contains the specified kind of conflict, otherwise
