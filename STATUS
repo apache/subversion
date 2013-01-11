@@ -111,7 +111,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1426752
    Votes:
-     +1: rhuijben
+     +1: rhuijben, jcorvel
 
  * r1426762
    Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
@@ -120,7 +120,7 @@ Candidate changes:
      Without this patch the identical suffix might show up as an added or
      deleted suffix of a file.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, jcorvel
 
   * r1426830
     Resolve issue #3797, by making sure that local changes at the same path
