@@ -94,6 +94,11 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
+_re_parse_status_ex = re.compile('^      ('
+               '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+              '|(\>   (?P<tc>.+))'
+  ')$')
+
 _re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
@@ -254,8 +259,11 @@ class State:
 
     base = to_relpath(os.path.normpath(self.wc_dir))
 
+    # TODO: We should probably normalize the paths in moved_from and moved_to.
+
     desc = dict([(repos_join(base, path), item)
                  for path, item in self.desc.items()])
+
     return State('', desc)
 
   def compare(self, other):
@@ -362,6 +370,8 @@ class State:
           item.writelocked = 'K'
         elif item.writelocked == 'O':
           item.writelocked = None
+      item.moved_from = None
+      item.moved_to = None
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -397,7 +407,7 @@ class State:
     return not self.__eq__(other)
 
   @classmethod
-  def from_status(cls, lines):
+  def from_status(cls, lines, wc_dir_name=None):
     """Create a State object from 'svn status' output."""
 
     def not_space(value):
@@ -406,6 +416,7 @@ class State:
       return None
 
     desc = { }
+    last = None
     for line in lines:
       if line.startswith('DBG:'):
         continue
@@ -418,6 +429,25 @@ class State:
 
       match = _re_parse_status.search(line)
       if not match or match.group(10) == '-':
+
+        ex_match = _re_parse_status_ex.search(line)
+
+        if ex_match:
+          if ex_match.group('moved_from'):
+            path = ex_match.group('moved_from')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_from = to_relpath(path))
+          elif ex_match.group('moved_to'):
+            path = ex_match.group('moved_to')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_to = to_relpath(path))
+
+          # Parse TC description?
+
         # ignore non-matching lines, or items that only exist on repos
         continue
 
@@ -430,6 +460,7 @@ class State:
                        wc_rev=not_space(match.group('wc_rev')),
                        )
       desc[to_relpath(match.group('path'))] = item
+      last = item
 
     return cls('', desc)
 
@@ -647,7 +678,7 @@ class StateItem:
                status=None, verb=None, wc_rev=None,
                entry_rev=None, entry_status=None,
                locked=None, copied=None, switched=None, writelocked=None,
-               treeconflict=None):
+               treeconflict=None, moved_from=None, moved_to=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -680,6 +711,9 @@ class StateItem:
     self.writelocked = writelocked
     # Value 'C' or ' ', or None as an expected status meaning 'do not check'.
     self.treeconflict = treeconflict
+    # Relative paths to the move locations
+    self.moved_from = moved_from
+    self.moved_to = moved_to
 
   def copy(self):
     "Make a deep copy of self."
@@ -731,6 +765,10 @@ class StateItem:
       atts['writelocked'] = self.writelocked
     if self.treeconflict is not None:
       atts['treeconflict'] = self.treeconflict
+    if self.moved_from is not None:
+      atts['moved_from'] = self.moved_from
+    if self.moved_to is not None:
+      atts['moved_to'] = self.moved_to
 
     return (os.path.normpath(path), self.contents, self.props, atts)
 

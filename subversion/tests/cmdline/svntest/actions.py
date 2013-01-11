@@ -1475,7 +1475,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
 
-  actual = tree.build_tree_from_status(output)
+  actual = tree.build_tree_from_status(output, wc_dir_name=wc_dir_name)
 
   # Verify actual output against expected output.
   try:
@@ -1514,7 +1514,7 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree):
   exit_code, output, errput = main.run_svn(None, 'status', '-v',
                                            '-u', wc_dir_name)
 
-  actual = tree.build_tree_from_status(output)
+  actual = tree.build_tree_from_status(output, wc_dir_name=wc_dir_name)
 
   # Verify actual output against expected output.
   try:

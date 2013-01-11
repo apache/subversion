@@ -5578,11 +5578,12 @@ def update_moved_dir_dir_add(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
-  expected_status.tweak('A/B/E', treeconflict='C')
+  expected_status.tweak('A/B/E', treeconflict='C', moved_to='A/B/E2')
   expected_status.add({
     'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
     'A/B/E/foo/bar'     : Item(status='D ', wc_rev='2'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
   })
@@ -5633,11 +5634,13 @@ def update_moved_dir_file_move(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A/B/E/alpha')
-  expected_status.tweak('A/B/E', status='D ', treeconflict='C')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
   expected_status.tweak('A/B/E/beta', status='D ')
   expected_status.add({
     'A/B/F/alpha'       : Item(status='  ', wc_rev='2'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
   })
