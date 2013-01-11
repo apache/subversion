@@ -5493,6 +5493,144 @@ nested_move_update2(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+check_tree_conflict_repos_path(svn_test__sandbox_t *b,
+                               const char *wc_path,
+                               const char *repos_path1,
+                               const char *repos_path2)
+{
+  svn_skel_t *conflict;
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, b->wc_ctx->db,
+                                   sbox_wc_path(b, wc_path),
+                                   b->pool, b->pool));
+  SVN_ERR_ASSERT(conflict->children);
+  conflict = conflict->children;
+  SVN_ERR_ASSERT(conflict->children);
+  conflict = conflict->children;
+  SVN_ERR_ASSERT(conflict->next);
+  conflict = conflict->next;
+  SVN_ERR_ASSERT(conflict->children);
+  conflict = conflict->children;
+  if (repos_path1)
+    {
+      svn_skel_t *conflict2 = conflict;
+
+      SVN_ERR_ASSERT(conflict2->children);
+      conflict2 = conflict2->children;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(!strncmp(conflict2->data, repos_path1, conflict2->len));
+    }
+  SVN_ERR_ASSERT(conflict->next);
+  conflict = conflict->next;
+  if (repos_path2)
+    {
+      svn_skel_t *conflict2 = conflict;
+
+      SVN_ERR_ASSERT(conflict2->children);
+      conflict2 = conflict2->children;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(conflict2->next);
+      conflict2 = conflict2->next;
+      SVN_ERR_ASSERT(!strncmp(conflict2->data, repos_path2, conflict2->len));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_update_conflicts(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_update_conflicts", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "X"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/C/D/E"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/F"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_switch(&b, "/X"));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  SVN_ERR(sbox_wc_move(&b, "A2/B/C", "A2/B/C2"));
+  sbox_file_write(&b, "A2/B/F", "obstruction\n");
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       1, "X"},
+      {0, "A",         "normal",       1, "X/A"},
+      {0, "A/B",       "normal",       1, "X/A/B"},
+      {0, "A/B/C",     "normal",       1, "X/A/B/C"},
+      {0, "A/B/C/D",   "normal",       1, "X/A/B/C/D"},
+      {1, "A",         "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {1, "A2",        "normal",       1, "X/A", MOVED_HERE},
+      {1, "A2/B",      "normal",       1, "X/A/B", MOVED_HERE},
+      {1, "A2/B/C",    "normal",       1, "X/A/B/C", MOVED_HERE},
+      {1, "A2/B/C/D",  "normal",       1, "X/A/B/C/D", MOVED_HERE},
+      {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "A2/B/C2"},
+      {3, "A2/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {3, "A2/B/C2",   "normal",       1, "X/A/B/C", MOVED_HERE},
+      {3, "A2/B/C2/D", "normal",       1, "X/A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "A", 2));
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A", "X/A", "X/A"));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",           "normal",       1, "X"},
+      {0, "A",          "normal",       2, "X/A"},
+      {0, "A/B",        "normal",       2, "X/A/B"},
+      {0, "A/B/C",      "normal",       2, "X/A/B/C"},
+      {0, "A/B/C/D",    "normal",       2, "X/A/B/C/D"},
+      {0, "A/B/C/D/E",  "normal",       2, "X/A/B/C/D/E"},
+      {0, "A/B/F",      "normal",       2, "X/A/B/F"},
+      {1, "A",          "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",        "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",      "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",  "base-deleted", NO_COPY_FROM},
+      {1, "A/B/F",      "base-deleted", NO_COPY_FROM},
+      {1, "A2",         "normal",       2, "X/A", MOVED_HERE},
+      {1, "A2/B",       "normal",       2, "X/A/B", MOVED_HERE},
+      {1, "A2/B/C",     "normal",       2, "X/A/B/C", MOVED_HERE},
+      {1, "A2/B/C/D",   "normal",       2, "X/A/B/C/D", MOVED_HERE},
+      {1, "A2/B/C/D/E", "normal",       2, "X/A/B/C/D/E", MOVED_HERE},
+      {1, "A2/B/F",     "normal",       2, "X/A/B/F", MOVED_HERE},
+      {3, "A2/B/C",     "base-deleted", NO_COPY_FROM, "A2/B/C2"},
+      {3, "A2/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {3, "A2/B/C/D/E", "base-deleted", NO_COPY_FROM},
+      {3, "A2/B/C2",    "normal",       1, "X/A/B/C", MOVED_HERE},
+      {3, "A2/B/C2/D",  "normal",       1, "X/A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A2/B/C", "X/A/B/C", "X/A/B/C"));
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A2/B/F", NULL, "X/A/B/F"));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -5598,5 +5736,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "nested_move_commit"),
     SVN_TEST_OPTS_PASS(nested_move_update2,
                        "nested_move_update2"),
+    SVN_TEST_OPTS_PASS(move_update_conflicts,
+                       "move_update_conflicts"),
     SVN_TEST_NULL
   };

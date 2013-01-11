@@ -110,6 +110,11 @@ struct tc_editor_baton {
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
   const char *move_root_dst_relpath;
+
+  /* The most recent conflict raised during this drive.  We rely on the
+     non-Ev2, depth-first, drive for this to make sense. */
+  const char *conflict_root_relpath;
+
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
   svn_wc_notify_func2_t notify_func;
@@ -119,7 +124,6 @@ struct tc_editor_baton {
 
 static svn_error_t *
 mark_tree_conflict(struct tc_editor_baton *b,
-                   const char *conflict_root_relpath,
                    const char *local_relpath,
                    svn_node_kind_t old_kind,
                    svn_node_kind_t new_kind,
@@ -131,9 +135,11 @@ mark_tree_conflict(struct tc_editor_baton *b,
   svn_skel_t *conflict = svn_wc__conflict_skel_create(scratch_pool);
   svn_wc_conflict_version_t *old_version, *new_version;
 
+  b->conflict_root_relpath = apr_pstrdup(b->result_pool, local_relpath);
+
   SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
                      conflict, NULL,
-                     svn_dirent_join(b->wcroot->abspath, conflict_root_relpath,
+                     svn_dirent_join(b->wcroot->abspath, local_relpath,
                                      scratch_pool),
                      reason,
                      action,
@@ -171,16 +177,18 @@ mark_tree_conflict(struct tc_editor_baton *b,
   SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict,
                                               old_version, new_version,
                                               scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, conflict_root_relpath,
+  SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, local_relpath,
                                             conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* If LOCAL_RELPATH is shadowed then set *IS_CONFLICTED to TRUE and
+/* If LOCAL_RELPATH is a child of the most recently raised
+   tree-conflict or is shadowed then set *IS_CONFLICTED to TRUE and
    raise a tree-conflict on the root of the obstruction if such a
    tree-conflict does not already exist.  KIND is the kind of the
-   incoming LOCAL_RELPATH. */
+   incoming LOCAL_RELPATH. This relies on the non-Ev2, depth-first,
+   drive. */
 static svn_error_t *
 check_tree_conflict(svn_boolean_t *is_conflicted,
                     struct tc_editor_baton *b,
@@ -196,6 +204,16 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   const char *conflict_root_relpath = local_relpath;
   const char *moved_to_relpath;
   svn_skel_t *conflict;
+
+  if (b->conflict_root_relpath)
+    {
+      if (svn_relpath_skip_ancestor(b->conflict_root_relpath, local_relpath))
+        {
+          *is_conflicted = TRUE;
+          return SVN_NO_ERROR;
+        }
+      b->conflict_root_relpath = NULL;
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
@@ -219,8 +237,11 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   *is_conflicted = TRUE;
 
   while (relpath_depth(conflict_root_relpath) > op_depth)
-    conflict_root_relpath = svn_relpath_dirname(conflict_root_relpath,
-                                                scratch_pool);
+    {
+      conflict_root_relpath = svn_relpath_dirname(conflict_root_relpath,
+                                                  scratch_pool);
+      old_kind = svn_node_dir;
+    }
 
   SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, b->wcroot,
                                             conflict_root_relpath,
@@ -235,14 +256,12 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                                             b->wcroot, conflict_root_relpath,
                                             scratch_pool, scratch_pool));
 
-  SVN_ERR(mark_tree_conflict(b, conflict_root_relpath, local_relpath,
-                             old_kind, kind,
+  SVN_ERR(mark_tree_conflict(b, conflict_root_relpath, old_kind, kind,
                              (moved_to_relpath
                               ? svn_wc_conflict_reason_moved_away
                               : svn_wc_conflict_reason_deleted),
                              svn_wc_conflict_action_edit,
                              scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -280,7 +299,7 @@ tc_editor_add_directory(void *baton,
     {
     case svn_node_file:
     default:
-      SVN_ERR(mark_tree_conflict(b, relpath, relpath, kind, svn_node_dir,
+      SVN_ERR(mark_tree_conflict(b, relpath, kind, svn_node_dir,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add,
                                  scratch_pool));
@@ -333,7 +352,7 @@ tc_editor_add_file(void *baton,
 
   if (kind != svn_node_none)
     {
-      SVN_ERR(mark_tree_conflict(b, relpath, relpath, kind, svn_node_file,
+      SVN_ERR(mark_tree_conflict(b, relpath, kind, svn_node_file,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add,
                                  scratch_pool));
@@ -731,8 +750,6 @@ tc_editor_alter_file(void *baton,
   new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
   new_version.props = new_props ? new_props : old_version.props;
 
-  /* ### TODO update revision etc. in NODES table */
-
   /* Update file and prop contents if the update has changed them. */
   if (!svn_checksum_match(new_checksum, old_version.checksum)
       /* ### || props have changed */)
@@ -1017,6 +1034,8 @@ update_moved_away_dir(svn_editor_t *tc_editor,
   SVN_ERR(svn_wc__db_read_pristine_props(&new_props, db, src_abspath,
                                          scratch_pool, scratch_pool));
 
+  /* This is a non-Ev2, depth-first, drive that calls add/alter on all
+     directories. */
   if (add)
     SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
                                      new_children, new_props,
@@ -1121,7 +1140,6 @@ update_moved_away_subtree(svn_editor_t *tc_editor,
       svn_pool_clear(iterpool);
       child_dst_relpath = svn_relpath_join(dst_relpath, dst_name, iterpool);
 
-      /* FIXME: editor API violation: missing svn_editor_alter_directory. */
       SVN_ERR(svn_editor_delete(tc_editor, child_dst_relpath,
                                 move_root_dst_revision));
     }

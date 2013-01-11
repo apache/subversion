@@ -130,6 +130,9 @@ sbox_wc_commit_ex(svn_test__sandbox_t *b,
 svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum);
 
+svn_error_t *
+sbox_wc_switch(svn_test__sandbox_t *b, const char *url);
+
 /* */
 svn_error_t *
 sbox_wc_resolved(svn_test__sandbox_t *b, const char *path);
