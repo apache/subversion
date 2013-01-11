@@ -104,6 +104,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   svn_wc__db_status_t status;
   svn_kind_t kind;
   svn_node_kind_t disk_kind;
+  const svn_checksum_t *checksum;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
@@ -113,27 +114,19 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-
-
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
-                                     wc_ctx->db, local_abspath,
-                                     scratch_pool, scratch_pool));
-
   if (status != svn_wc__db_status_normal
-      && status != svn_wc__db_status_copied
-      && status != svn_wc__db_status_moved_here
-      && !(kind == svn_kind_dir
-           && (status == svn_wc__db_status_added
-               || status == svn_wc__db_status_incomplete)))
+      && !((status == svn_wc__db_status_added 
+            || status == svn_wc__db_status_incomplete)
+           && (kind == svn_kind_dir
+               || (kind == svn_kind_file && checksum != NULL)
+               /* || (kind == svn_kind_symlink && target)*/)))
     {
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("The node '%s' can not be restored."),
@@ -278,7 +271,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
                   || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
           svn_error_clear(err);
-          dirents = apr_hash_make(scratch_pool);
+          /* There is no directory, and if we could create the directory
+             we would have already created it when walking the parent
+             directory */
+          restore_files = FALSE;
+          dirents = NULL;
         }
       else
         SVN_ERR(err);
