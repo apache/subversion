@@ -114,9 +114,6 @@ typedef struct replay_context_t {
   svn_revnum_t low_water_mark;
   svn_boolean_t send_deltas;
 
-  /* Cached report target url */
-  const char *report_target;
-
   /* Target and revision to fetch revision properties on */
   const char *revprop_target;
   svn_revnum_t revprop_rev;
@@ -648,7 +645,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   replay_ctx->revision = revision;
   replay_ctx->low_water_mark = low_water_mark;
   replay_ctx->send_deltas = send_deltas;
-  replay_ctx->report_target = report_target;
   replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
@@ -762,8 +758,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           replay_ctx->low_water_mark = low_water_mark;
           replay_ctx->send_deltas = send_deltas;
           replay_ctx->done_item.data = replay_ctx;
+
           /* Request all properties of a certain revision. */
-          replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
 
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
