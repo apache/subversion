@@ -5815,35 +5815,75 @@ def update_with_parents_and_exclude(sbox):
                                         sbox.ospath('A/B'))
 
 @Issue(4288)
-@XFail()
-def update_replace_obstruction(sbox):
-  "delete shouldn't cause update failure"
+def update_edit_delete_obstruction(sbox):
+  "obstructions shouldn't cause update failures"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
   # r2
   sbox.simple_rm('A/B','iota')
+  svntest.main.file_append(sbox.ospath('A/mu'), "File change")
+  sbox.simple_propset('key', 'value', 'A/D', 'A/D/G')
   sbox.simple_commit()
 
   # r3
-  sbox.simple_mkdir('iota')
-  sbox.simple_copy('A/D/gamma', 'A/B')
-  sbox.simple_commit()
+  #sbox.simple_mkdir('iota')
+  #sbox.simple_copy('A/D/gamma', 'A/B')
+  #sbox.simple_commit()
 
   sbox.simple_update('', 1)
 
   # Create obstructions
   svntest.main.safe_rmtree(sbox.ospath('A/B'))
-  os.remove(sbox.ospath('iota'))
-  os.mkdir(sbox.ospath('iota'))
   svntest.main.file_append(sbox.ospath('A/B'), "Obstruction")
 
-  # ### This expected result is not OK yet, currently the update
-  # ### just fails with an error before doing any work
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_disk = svntest.main.greek_state.copy()
+  svntest.main.safe_rmtree(sbox.ospath('A/D'))
+  svntest.main.file_append(sbox.ospath('A/D'), "Obstruction")
+
+  os.remove(sbox.ospath('iota'))
+  os.mkdir(sbox.ospath('iota'))
+
+  os.remove(sbox.ospath('A/mu'))
+  os.mkdir(sbox.ospath('A/mu'))
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='2'),
+    'A'                 : Item(status='  ', wc_rev='2'),
+    'A/mu'              : Item(status='~ ', treeconflict='C', wc_rev='2'),
+    'A/D'               : Item(status='~ ', treeconflict='C', wc_rev='2'),
+    'A/D/G'             : Item(status='! ', wc_rev='2'),
+    'A/D/G/pi'          : Item(status='! ', wc_rev='2'),
+    'A/D/G/tau'         : Item(status='! ', wc_rev='2'),
+    'A/D/G/rho'         : Item(status='! ', wc_rev='2'),
+    'A/D/H'             : Item(status='! ', wc_rev='2'),
+    'A/D/H/omega'       : Item(status='! ', wc_rev='2'),
+    'A/D/H/chi'         : Item(status='! ', wc_rev='2'),
+    'A/D/H/psi'         : Item(status='! ', wc_rev='2'),
+    'A/D/gamma'         : Item(status='! ', wc_rev='2'),
+    'A/C'               : Item(status='  ', wc_rev='2'),
+    'A/B'               : Item(status='~ ', treeconflict='C', wc_rev='-'),
+    'A/B/F'             : Item(status='! ', wc_rev='-'),
+    'A/B/E'             : Item(status='! ', wc_rev='-'),
+    'A/B/E/beta'        : Item(status='! ', wc_rev='-'),
+    'A/B/E/alpha'       : Item(status='! ', wc_rev='-'),
+    'A/B/lambda'        : Item(status='! ', wc_rev='-'),
+    'iota'              : Item(status='~ ', treeconflict='C', wc_rev='-'),
+  })
+  expected_disk = svntest.wc.State('', {
+    'A/D'               : Item(contents="Obstruction", props={'key':'value'}),
+    'A/C'               : Item(),
+    'A/B'               : Item(contents="Obstruction"),
+    'A/mu'              : Item(),
+    'iota'              : Item(),
+  })
+
   expected_output = svntest.wc.State(wc_dir, {
+    'iota'    : Item(status='  ', treeconflict='C'),
+    'A/mu'    : Item(status='  ', treeconflict='C'),
+    'A/D'     : Item(status='  ', treeconflict='C'),
+    'A/D/G'   : Item(status='  ', treeconflict='U'),
+    'A/B'     : Item(status='  ', treeconflict='C'),
   })
 
   # And now update to delete B and iota
@@ -5930,7 +5970,7 @@ test_list = [ None,
               update_move_text_mod,
               update_nested_move_text_mod,
               update_with_parents_and_exclude,
-              update_replace_obstruction,
+              update_edit_delete_obstruction,
              ]
 
 if __name__ == '__main__':
