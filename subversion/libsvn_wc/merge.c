@@ -58,18 +58,18 @@ typedef struct merge_target_t
 /* Return a pointer to the svn_prop_t structure from PROP_DIFF
    belonging to PROP_NAME, if any.  NULL otherwise.*/
 static const svn_prop_t *
-get_prop(const merge_target_t *mt,
+get_prop(const apr_array_header_t *prop_diff,
          const char *prop_name)
 {
-  if (mt && mt->prop_diff)
+  if (prop_diff)
     {
       int i;
-      for (i = 0; i < mt->prop_diff->nelts; i++)
+      for (i = 0; i < prop_diff->nelts; i++)
         {
-          const svn_prop_t *elt = &APR_ARRAY_IDX(mt->prop_diff, i,
+          const svn_prop_t *elt = &APR_ARRAY_IDX(prop_diff, i,
                                                  svn_prop_t);
 
-          if (strcmp(elt->name,prop_name) == 0)
+          if (strcmp(elt->name, prop_name) == 0)
             return elt;
         }
     }
@@ -171,7 +171,7 @@ detranslate_wc_file(const char **detranslated_abspath,
      - old and new mime-types are binary, or
      - old mime-type is binary and no new mime-type specified */
   if (is_binary
-      && (((prop = get_prop(mt, SVN_PROP_MIME_TYPE))
+      && (((prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE))
            && prop->value && svn_mime_type_is_binary(prop->value->data))
           || prop == NULL))
     {
@@ -182,7 +182,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       style = svn_subst_eol_style_none;
     }
   else if ((!is_binary)
-           && (prop = get_prop(mt, SVN_PROP_MIME_TYPE))
+           && (prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE))
            && prop->value && svn_mime_type_is_binary(prop->value->data))
     {
       /* Old props indicate texty, new props indicate binary:
@@ -215,7 +215,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       else
         {
           /* In case a new eol style was set, use that for detranslation */
-          if ((prop = get_prop(mt, SVN_PROP_EOL_STYLE)) && prop->value)
+          if ((prop = get_prop(mt->prop_diff, SVN_PROP_EOL_STYLE)) && prop->value)
             {
               /* Value added or changed */
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
@@ -288,19 +288,19 @@ detranslate_wc_file(const char **detranslated_abspath,
 }
 
 /* Updates (by copying and translating) the eol style in
-   OLD_TARGET returning the filename containing the
-   correct eol style in NEW_TARGET, if an eol style
-   change is contained in PROP_DIFF */
+   OLD_TARGET_ABSPATH returning the filename containing the
+   correct eol style in NEW_TARGET_ABSPATH, if an eol style
+   change is contained in PROP_DIFF. */
 static svn_error_t *
 maybe_update_target_eols(const char **new_target_abspath,
-                         const merge_target_t *mt,
+                         const apr_array_header_t *prop_diff,
                          const char *old_target_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  const svn_prop_t *prop = get_prop(mt, SVN_PROP_EOL_STYLE);
+  const svn_prop_t *prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE);
 
   if (prop && prop->value)
     {
@@ -366,16 +366,16 @@ init_conflict_markers(const char **target_marker,
 }
 
 /* Do a 3-way merge of the files at paths LEFT, DETRANSLATED_TARGET,
- * and RIGHT, using diff options provided in OPTIONS.  Store the merge
+ * and RIGHT, using diff options provided in MERGE_OPTIONS.  Store the merge
  * result in the file RESULT_F.
  * If there are conflicts, set *CONTAINS_CONFLICTS to true, and use
  * TARGET_LABEL, LEFT_LABEL, and RIGHT_LABEL as labels for conflict
  * markers.  Else, set *CONTAINS_CONFLICTS to false.
  * Do all allocations in POOL. */
-static svn_error_t*
+static svn_error_t *
 do_text_merge(svn_boolean_t *contains_conflicts,
               apr_file_t *result_f,
-              const merge_target_t *mt,
+              const apr_array_header_t *merge_options,
               const char *detranslated_target,
               const char *left,
               const char *right,
@@ -393,9 +393,9 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 
   diff3_options = svn_diff_file_options_create(pool);
 
-  if (mt->merge_options)
+  if (merge_options)
     SVN_ERR(svn_diff_file_options_parse(diff3_options,
-                                        mt->merge_options, pool));
+                                        merge_options, pool));
 
 
   init_conflict_markers(&target_marker, &left_marker, &right_marker,
@@ -424,10 +424,11 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 /* Same as do_text_merge() above, but use the external diff3
  * command DIFF3_CMD to perform the merge.  Pass MERGE_OPTIONS
  * to the diff3 command.  Do all allocations in POOL. */
-static svn_error_t*
+static svn_error_t *
 do_text_merge_external(svn_boolean_t *contains_conflicts,
                        apr_file_t *result_f,
-                       const merge_target_t *mt,
+                       const char *diff3_cmd,
+                       const apr_array_header_t *merge_options,
                        const char *detranslated_target,
                        const char *left_abspath,
                        const char *right_abspath,
@@ -441,8 +442,8 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
   SVN_ERR(svn_io_run_diff3_3(&exit_code, ".",
                              detranslated_target, left_abspath, right_abspath,
                              target_label, left_label, right_label,
-                             result_f, mt->diff3_cmd,
-                             mt->merge_options, scratch_pool));
+                             result_f, diff3_cmd,
+                             merge_options, scratch_pool));
 
   *contains_conflicts = exit_code == 1;
 
@@ -839,7 +840,8 @@ merge_text_file(svn_skel_t **work_items,
   if (mt->diff3_cmd)
       SVN_ERR(do_text_merge_external(&contains_conflicts,
                                      result_f,
-                                     mt,
+                                     mt->diff3_cmd,
+                                     mt->merge_options,
                                      detranslated_target_abspath,
                                      left_abspath,
                                      right_abspath,
@@ -850,7 +852,7 @@ merge_text_file(svn_skel_t **work_items,
   else /* Use internal merge. */
     SVN_ERR(do_text_merge(&contains_conflicts,
                           result_f,
-                          mt,
+                          mt->merge_options,
                           detranslated_target_abspath,
                           left_abspath,
                           right_abspath,
@@ -1105,7 +1107,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   mt.merge_options = merge_options;
 
   /* Decide if the merge target is a text or binary file. */
-  if ((mimeprop = get_prop(&mt, SVN_PROP_MIME_TYPE))
+  if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else
@@ -1125,7 +1127,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
-  SVN_ERR(maybe_update_target_eols(&left_abspath, &mt, left_abspath,
+  SVN_ERR(maybe_update_target_eols(&left_abspath, prop_diff, left_abspath,
                                    cancel_func, cancel_baton,
                                    scratch_pool, scratch_pool));
 
