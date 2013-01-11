@@ -398,9 +398,10 @@ def revert_moved_file(sbox):
   # svn st
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'iota_moved'        : Item(status='A ', copied='+', wc_rev='-'),
+    'iota_moved'        : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='iota'),
   })
-  expected_status.tweak('iota', status='D ')
+  expected_status.tweak('iota', status='D ', moved_to='iota_moved')
 
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 

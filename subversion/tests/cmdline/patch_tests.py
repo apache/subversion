@@ -3601,9 +3601,11 @@ def patch_moved_away(sbox):
   expected_disk.remove('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'A/mu2' : Item(status='A ', copied='+', wc_rev='-')})
+  expected_status.add({
+    'A/mu2' : Item(status='A ', copied='+', wc_rev='-', moved_from='A/mu'),
+  })
 
-  expected_status.tweak('A/mu', status='D ', wc_rev=2)
+  expected_status.tweak('A/mu', status='D ', wc_rev=2, moved_to='A/mu2')
 
   expected_skip = wc.State('', { })
 
