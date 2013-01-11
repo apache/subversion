@@ -3197,8 +3197,19 @@ make_update_reporter(svn_ra_session_t *ra_session,
     }
   else
     {
-      /* Pre-1.8 server didn't send the bulk_updates header. Do
-         whatever is the default or what the user defined in the config. */
+      /* Pre-1.8 server didn't send the bulk_updates header. Check if server
+         supports inlining properties in update editor report. */
+      if (sess->supports_inline_props)
+        {
+          /* Inline props supported: do not use bulk updates. */
+          sess->bulk_updates = FALSE;
+        }
+      else
+        {
+          /* Inline props are noot supported: use bulk updates to avoid
+           * PROPFINDs for every added node. */
+          sess->bulk_updates = TRUE;
+        }
     }
 
   if (sess->bulk_updates)
