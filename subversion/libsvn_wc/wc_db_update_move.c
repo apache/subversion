@@ -90,6 +90,7 @@
 #include "wc-queries.h"
 #include "conflicts.h"
 #include "workqueue.h"
+#include "token-map.h"
 
 /*
  * Receiver code.
@@ -116,13 +117,10 @@ struct tc_editor_baton {
   apr_pool_t *result_pool;
 };
 
-/* If LOCAL_RELPATH is shadowed then raise a tree-conflict on the root
-   of the obstruction if such a tree-conflict does not already exist.
-
-   KIND is the node kind of ... ### what?
-
-   Set *IS_CONFLICTED ... ### if/iff what?
- */
+/* If LOCAL_RELPATH is shadowed then set *IS_CONFLICTED to TRUE and
+   raise a tree-conflict on the root of the obstruction if such a
+   tree-conflict does not already exist.  KIND is the kind of the
+   incoming LOCAL_RELPATH. */
 static svn_error_t *
 check_tree_conflict(svn_boolean_t *is_conflicted,
                     struct tc_editor_baton *b,
@@ -134,10 +132,11 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   svn_boolean_t have_row;
   int dst_op_depth = relpath_depth(b->move_root_dst_relpath);
   int op_depth;
+  svn_node_kind_t old_kind;
   const char *conflict_root_relpath = local_relpath;
-  const char *moved_to_relpath;
+  const char *moved_to_relpath, *repos_relpath;
   svn_skel_t *conflict;
-  svn_wc_conflict_version_t *version;
+  svn_wc_conflict_version_t *old_version, *new_version;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
@@ -145,7 +144,11 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                             dst_op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    op_depth = svn_sqlite__column_int(stmt, 0);
+    {
+      op_depth = svn_sqlite__column_int(stmt, 0);
+      old_kind = svn__node_kind_from_kind(svn_sqlite__column_token(stmt, 2,
+                                                                   kind_map));
+    }
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!have_row)
@@ -185,15 +188,31 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                      scratch_pool,
                      scratch_pool));
 
-  version = svn_wc_conflict_version_create2(b->old_version->repos_url,
-                                            b->old_version->repos_uuid,
-                                            local_relpath /* ### need *repos* relpath */,
-                                            b->old_version->peg_rev,
-                                            kind /* ### need *old* kind for this node */,
-                                            scratch_pool);
+  repos_relpath = svn_relpath_join(b->old_version->path_in_repos,
+                           svn_relpath_skip_ancestor(b->move_root_dst_relpath,
+                                                     local_relpath),
+                                   scratch_pool);
+  old_version = svn_wc_conflict_version_create2(b->old_version->repos_url,
+                                                b->old_version->repos_uuid,
+                                                repos_relpath,
+                                                b->old_version->peg_rev,
+                                                old_kind,
+                                                scratch_pool);
+
+  repos_relpath = svn_relpath_join(b->new_version->path_in_repos,
+                           svn_relpath_skip_ancestor(b->move_root_dst_relpath,
+                                                     local_relpath),
+                                   scratch_pool);
+  new_version = svn_wc_conflict_version_create2(b->new_version->repos_url,
+                                                b->new_version->repos_uuid,
+                                                repos_relpath,
+                                                b->new_version->peg_rev,
+                                                kind,
+                                                scratch_pool);
 
   /* What about switch? */
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, version, NULL /* ### derive from b->new_version & new kind? */,
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict,
+                                              old_version, new_version,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, conflict_root_relpath,
                                             conflict, scratch_pool));
