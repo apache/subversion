@@ -334,6 +334,25 @@ sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 }
 
 svn_error_t *
+sbox_wc_switch(svn_test__sandbox_t *b, const char *url)
+{
+  svn_client_ctx_t *ctx;
+  svn_revnum_t result_rev;
+  svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
+
+  url = apr_pstrcat(b->pool, b->repos_url, url, (char*)NULL);
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  ctx->wc_ctx = b->wc_ctx;
+  return svn_client_switch3(&result_rev, sbox_wc_path(b, ""), url,
+                            &head_rev, &head_rev, svn_depth_infinity,
+                            FALSE /* depth_is_sticky */,
+                            TRUE /* ignore_externals */,
+                            FALSE /* allow_unver_obstructions */,
+                            TRUE /* ignore_ancestry */,
+                            ctx, b->pool);
+}
+
+svn_error_t *
 sbox_wc_resolved(svn_test__sandbox_t *b, const char *path)
 {
   return sbox_wc_resolve(b, path, svn_wc_conflict_choose_merged);
