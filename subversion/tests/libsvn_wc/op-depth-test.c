@@ -45,6 +45,7 @@
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #include "../../libsvn_wc/workqueue.h"
+#include "../../libsvn_wc/conflicts.h"
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
 
@@ -5500,46 +5501,36 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
                                const char *repos_path2)
 {
   svn_skel_t *conflict;
+  svn_wc_operation_t operation;
+  const apr_array_header_t *locations;
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+
   SVN_ERR(svn_wc__db_read_conflict(&conflict, b->wc_ctx->db,
                                    sbox_wc_path(b, wc_path),
                                    b->pool, b->pool));
-  SVN_ERR_ASSERT(conflict->children);
-  conflict = conflict->children;
-  SVN_ERR_ASSERT(conflict->children);
-  conflict = conflict->children;
-  SVN_ERR_ASSERT(conflict->next);
-  conflict = conflict->next;
-  SVN_ERR_ASSERT(conflict->children);
-  conflict = conflict->children;
+
+  SVN_ERR(svn_wc__conflict_read_info(&operation, &locations,
+                                     &text_conflicted, &prop_conflicted,
+                                     &tree_conflicted,
+                                     b->wc_ctx->db,  b->wc_abspath,
+                                     conflict, b->pool, b->pool));
+
+  SVN_ERR_ASSERT(tree_conflicted);
+
   if (repos_path1)
     {
-      svn_skel_t *conflict2 = conflict;
+      svn_wc_conflict_version_t *version
+        = APR_ARRAY_IDX(locations, 0, svn_wc_conflict_version_t *);
 
-      SVN_ERR_ASSERT(conflict2->children);
-      conflict2 = conflict2->children;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(!strncmp(conflict2->data, repos_path1, conflict2->len));
+      SVN_ERR_ASSERT(!strcmp(version->path_in_repos, repos_path1));
     }
-  SVN_ERR_ASSERT(conflict->next);
-  conflict = conflict->next;
+
   if (repos_path2)
     {
-      svn_skel_t *conflict2 = conflict;
+      svn_wc_conflict_version_t *version
+        = APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *);
 
-      SVN_ERR_ASSERT(conflict2->children);
-      conflict2 = conflict2->children;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(conflict2->next);
-      conflict2 = conflict2->next;
-      SVN_ERR_ASSERT(!strncmp(conflict2->data, repos_path2, conflict2->len));
+      SVN_ERR_ASSERT(!strcmp(version->path_in_repos, repos_path2));
     }
 
   return SVN_NO_ERROR;
