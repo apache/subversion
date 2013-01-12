@@ -2777,6 +2777,8 @@ close_directory(void *dir_baton,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
                                              eb->conflict_baton,
+                                             eb->cancel_func,
+                                             eb->conflict_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
@@ -4368,6 +4370,8 @@ close_file(void *file_baton,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
                                              eb->conflict_baton,
+                                             eb->cancel_func,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */

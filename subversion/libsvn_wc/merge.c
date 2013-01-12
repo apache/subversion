@@ -1392,6 +1392,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
         SVN_ERR(svn_wc__conflict_invoke_resolver(wc_ctx->db, target_abspath,
                                                  conflict_skel, merge_options,
                                                  conflict_func, conflict_baton,
+                                                 cancel_func, cancel_baton,
                                                  scratch_pool));
     }
   
