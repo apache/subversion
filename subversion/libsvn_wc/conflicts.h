@@ -392,6 +392,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
                                  void *resolver_baton,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *scratch_pool);
 
 
