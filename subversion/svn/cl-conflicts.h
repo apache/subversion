@@ -1,5 +1,5 @@
 /*
- * tree-conflicts.h: Tree conflicts.
+ * conflicts.h: Conflicts handling
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -23,8 +23,8 @@
 
 
 
-#ifndef SVN_TREE_CONFLICTS_H
-#define SVN_TREE_CONFLICTS_H
+#ifndef SVN_CONFLICTS_H
+#define SVN_CONFLICTS_H
 
 /*** Includes. ***/
 #include <apr_pools.h>
@@ -52,11 +52,11 @@ svn_cl__get_human_readable_tree_conflict_description(
   apr_pool_t *pool);
 
 /**
- * Append to @a str an XML representation of the tree conflict data
+ * Append to @a str an XML representation of the conflict data
  * for @a conflict, in a format suitable for 'svn info --xml'.
  */
 svn_error_t *
-svn_cl__append_tree_conflict_info_xml(
+svn_cl__append_conflict_info_xml(
   svn_stringbuf_t *str,
   const svn_wc_conflict_description2_t *conflict,
   apr_pool_t *pool);
@@ -65,4 +65,4 @@ svn_cl__append_tree_conflict_info_xml(
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_TREE_CONFLICTS_H */
+#endif /* SVN_CONFLICTS_H */

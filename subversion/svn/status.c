@@ -33,7 +33,7 @@
 #include "svn_time.h"
 #include "cl.h"
 #include "svn_private_config.h"
-#include "tree-conflicts.h"
+#include "cl-conflicts.h"
 #include "private/svn_wc_private.h"
 
 /* Return the single character representation of STATUS */
