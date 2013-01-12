@@ -129,8 +129,9 @@ typedef struct replay_context_t {
   /* Keep a reference to the XML parser ctx to report any errors. */
   svn_ra_serf__xml_parser_t *parser_ctx;
 
-  /* The propfind for the revision properties of the current revision */
+  /* Handlers for the PROPFIND and REPORT for the current revision. */
   svn_ra_serf__handler_t *propfind_handler;
+  svn_ra_serf__handler_t *report_handler;
 
 } replay_context_t;
 
@@ -688,12 +689,17 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   /* This is only needed to handle errors during XML parsing. */
   replay_ctx->parser_ctx = parser_ctx;
+  replay_ctx->report_handler = handler; /* unused */
 
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool);
 
-  SVN_ERR(err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(handler->sline.code,
+                                           handler->path,
+                                           handler->location),
+              err));
 
   return SVN_NO_ERROR;
 }
@@ -875,6 +881,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           parser_ctx->done_item = &replay_ctx->done_item;
           handler->response_handler = svn_ra_serf__handle_xml_parser;
           handler->response_baton = parser_ctx;
+          replay_ctx->report_handler = handler;
 
           /* This is only needed to handle errors during XML parsing. */
           replay_ctx->parser_ctx = parser_ctx;
@@ -895,8 +902,12 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       while (done_list)
         {
           replay_context_t *ctx = (replay_context_t *)done_list->data;
+          svn_ra_serf__handler_t *done_handler = ctx->report_handler;
 
           done_list = done_list->next;
+          SVN_ERR(svn_ra_serf__error_on_status(done_handler->sline.code,
+                                               done_handler->path,
+                                               done_handler->location));
           svn_pool_destroy(ctx->src_rev_pool);
           active_reports--;
         }
