@@ -1,5 +1,5 @@
 /*
- * tree-conflicts.c: Tree conflicts.
+ * conflicts.c: Tree conflicts.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,7 +21,7 @@
  * ====================================================================
  */
 
-#include "tree-conflicts.h"
+#include "cl-conflicts.h"
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -82,6 +82,14 @@ static const svn_token_map_t map_conflict_reason_xml[] =
   { NULL,               0 }
 };
 
+static const svn_token_map_t map_conflict_kind_xml[] =
+{
+  { "text",             svn_wc_conflict_kind_text },
+  { "property",         svn_wc_conflict_kind_property },
+  { "tree",             svn_wc_conflict_kind_tree },
+  { NULL,               0 }
+};
+
 /* Return a localized string representation of CONFLICT->action. */
 static const char *
 action_str(const svn_wc_conflict_description2_t *conflict)
@@ -95,7 +103,6 @@ reason_str(const svn_wc_conflict_description2_t *conflict)
 {
   return _(svn_token__to_word(map_conflict_reason_human, conflict->reason));
 }
-
 
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
@@ -178,11 +185,10 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
 }
 
 
-svn_error_t *
-svn_cl__append_tree_conflict_info_xml(
-  svn_stringbuf_t *str,
-  const svn_wc_conflict_description2_t *conflict,
-  apr_pool_t *pool)
+static svn_error_t *
+append_tree_conflict_info_xml(svn_stringbuf_t *str,
+                              const svn_wc_conflict_description2_t *conflict,
+                              apr_pool_t *pool)
 {
   apr_hash_t *att_hash = apr_hash_make(pool);
   const char *tmp;
@@ -225,3 +231,76 @@ svn_cl__append_tree_conflict_info_xml(
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
+                                 const svn_wc_conflict_description2_t *conflict,
+                                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *att_hash;
+  const char *kind;
+  if (conflict->kind == svn_wc_conflict_kind_tree)
+    {
+      /* Uses other element type */
+      return svn_error_trace(
+                append_tree_conflict_info_xml(str, conflict, scratch_pool));
+    }
+
+  att_hash = apr_hash_make(scratch_pool);
+
+  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
+               svn_cl__operation_str_xml(conflict->operation, scratch_pool));
+
+
+  kind = svn_token__to_word(map_conflict_kind_xml, conflict->kind);
+  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING, kind);
+
+  /* "<conflict>" */
+  svn_xml_make_open_tag_hash(&str, scratch_pool,
+                             svn_xml_normal, "conflict", att_hash);
+
+  if (conflict->src_left_version)
+    SVN_ERR(add_conflict_version_xml(&str,
+                                     "source-left",
+                                     conflict->src_left_version,
+                                     scratch_pool));
+
+  if (conflict->src_right_version)
+    SVN_ERR(add_conflict_version_xml(&str,
+                                     "source-right",
+                                     conflict->src_right_version,
+                                     scratch_pool));
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_text:
+        /* "<prev-base-file> xx </prev-base-file>" */
+        svn_cl__xml_tagged_cdata(&str, scratch_pool, "prev-base-file",
+                                 conflict->base_abspath);
+
+        /* "<prev-wc-file> xx </prev-wc-file>" */
+        svn_cl__xml_tagged_cdata(&str, scratch_pool, "prev-wc-file",
+                                 conflict->my_abspath);
+
+        /* "<cur-base-file> xx </cur-base-file>" */
+        svn_cl__xml_tagged_cdata(&str, scratch_pool, "cur-base-file",
+                                 conflict->their_abspath);
+
+        break;
+
+      case svn_wc_conflict_kind_property:
+        /* "<prop-file> xx </prop-file>" */
+        svn_cl__xml_tagged_cdata(&str, scratch_pool, "prop-file",
+                                 conflict->their_abspath);
+        break;
+
+      default:
+      case svn_wc_conflict_kind_tree:
+        SVN_ERR_MALFUNCTION(); /* Handled separately */
+        break;
+    }
+
+  /* "</conflict>" */
+  svn_xml_make_close_tag(&str, scratch_pool, "conflict");
+
+  return SVN_NO_ERROR;
+}
