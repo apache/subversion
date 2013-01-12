@@ -323,6 +323,13 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
             SVN_DAV_PROP_NS_DAV "svn/inline-props"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * a replay of a revision resource.  Transmitters must be
+ * HTTP-v2-enabled to support this feature.  */
+#define SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE\
+            SVN_DAV_PROP_NS_DAV "svn/replay-rev-resource"
+
 
 /** @} */
 

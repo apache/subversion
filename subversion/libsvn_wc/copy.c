@@ -166,9 +166,6 @@ copy_to_tmpdir(svn_skel_t **work_item,
    If IS_MOVE is true, record move information in working copy meta
    data in addition to copying the file.
 
-   If COPY_PRISTINE_FILE is true, make sure the necessary pristine files are
-   available in the destination working copy.
-
    If the versioned file has a text conflict, and the .mine file exists in
    the filesystem, copy the .mine file to DST_ABSPATH.  Otherwise, copy the
    versioned file itself.
@@ -181,7 +178,6 @@ copy_versioned_file(svn_wc__db_t *db,
                     const char *dst_abspath,
                     const char *dst_op_root_abspath,
                     const char *tmpdir_abspath,
-                    svn_boolean_t copy_pristine_file,
                     svn_boolean_t metadata_only,
                     svn_boolean_t conflicted,
                     svn_boolean_t is_move,
@@ -195,12 +191,6 @@ copy_versioned_file(svn_wc__db_t *db,
 
   /* In case we are copying from one WC to another (e.g. an external dir),
      ensure the destination WC has a copy of the pristine text. */
-
-  if (copy_pristine_file)
-    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath,
-                                         dst_op_root_abspath,
-                                         cancel_func, cancel_baton,
-                                         scratch_pool));
 
   /* Prepare a temp copy of the filesystem node.  It is usually a file, but
      copy recursively if it's a dir. */
@@ -288,9 +278,7 @@ copy_versioned_file(svn_wc__db_t *db,
    otherwise copy both the versioned metadata and the filesystem nodes (even
    if they are the wrong kind, and including unversioned children).
    If IS_MOVE is true, record move information in working copy meta
-   data in addition to copying the directory. If IS_MOVE is TRUE and
-   ALLOW_MIXED_REVISIONS is FALSE, raise an error if a move of a
-   mixed-revision subtree is attempted.
+   data in addition to copying the directory.
 
    WITHIN_ONE_WC is TRUE if the copy/move is within a single working copy (root)
  */
@@ -302,8 +290,6 @@ copy_versioned_dir(svn_wc__db_t *db,
                    const char *tmpdir_abspath,
                    svn_boolean_t metadata_only,
                    svn_boolean_t is_move,
-                   svn_boolean_t allow_mixed_revisions,
-                   svn_boolean_t within_one_wc,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    svn_wc_notify_func2_t notify_func,
@@ -318,24 +304,6 @@ copy_versioned_dir(svn_wc__db_t *db,
   apr_hash_index_t *hi;
   svn_node_kind_t disk_kind;
   apr_pool_t *iterpool;
-
-  if (is_move && !allow_mixed_revisions)
-    {
-      svn_revnum_t min_rev;
-      svn_revnum_t max_rev;
-
-      /* Verify that the move source is a single-revision subtree. */
-      SVN_ERR(svn_wc__db_min_max_revisions(&min_rev, &max_rev, db,
-                                           src_abspath, FALSE, scratch_pool));
-      if (SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev) &&
-          min_rev != max_rev)
-        return svn_error_createf(SVN_ERR_WC_MIXED_REVISIONS, NULL,
-                                 _("Cannot move mixed-revision subtree '%s' "
-                                   "[%lu:%lu]; try updating it first"),
-                                   svn_dirent_local_style(src_abspath,
-                                                          scratch_pool),
-                                   min_rev, max_rev);
-    }
 
   /* Prepare a temp copy of the single filesystem node (usually a dir). */
   if (!metadata_only)
@@ -423,7 +391,6 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             child_dst_abspath,
                                             dst_op_root_abspath,
                                             tmpdir_abspath,
-                                            !within_one_wc && info->has_checksum,
                                             metadata_only, info->conflicted,
                                             is_move,
                                             cancel_func, cancel_baton,
@@ -435,7 +402,6 @@ copy_versioned_dir(svn_wc__db_t *db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
                                        metadata_only, is_move,
-                                       allow_mixed_revisions, within_one_wc,
                                        cancel_func, cancel_baton, NULL, NULL,
                                        iterpool));
           else
@@ -561,7 +527,6 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   svn_kind_t src_db_kind;
   const char *dstdir_abspath;
   svn_boolean_t conflicted;
-  const svn_checksum_t *checksum;
   const char *tmpdir_abspath;
   const char *src_wcroot_abspath;
   const char *dst_wcroot_abspath;
@@ -582,7 +547,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
 
     err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL, NULL,
                                &src_repos_root_url, &src_repos_uuid, NULL,
-                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, src_abspath, scratch_pool, scratch_pool);
@@ -772,12 +737,16 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
         is_move = FALSE;
     }
 
+  if (!within_one_wc)
+    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath, dst_wcroot_abspath,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
+
   if (src_db_kind == svn_kind_file
       || src_db_kind == svn_kind_symlink)
     {
       err = copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
                                 tmpdir_abspath,
-                                !within_one_wc && (checksum != NULL),
                                 metadata_only, conflicted, is_move,
                                 cancel_func, cancel_baton,
                                 notify_func, notify_baton,
@@ -785,9 +754,26 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
     }
   else
     {
+      if (is_move && !allow_mixed_revisions)
+        {
+          svn_revnum_t min_rev;
+          svn_revnum_t max_rev;
+        
+          /* Verify that the move source is a single-revision subtree. */
+          SVN_ERR(svn_wc__db_min_max_revisions(&min_rev, &max_rev, db,
+                                               src_abspath, FALSE, scratch_pool));
+          if (SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev) &&
+              min_rev != max_rev)
+            return svn_error_createf(SVN_ERR_WC_MIXED_REVISIONS, NULL,
+                                     _("Cannot move mixed-revision subtree '%s' "
+                                       "[%ld:%ld]; try updating it first"),
+                                       svn_dirent_local_style(src_abspath,
+                                                              scratch_pool),
+                                       min_rev, max_rev);
+        }
+
       err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
                                tmpdir_abspath, metadata_only, is_move,
-                               allow_mixed_revisions, within_one_wc,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool);

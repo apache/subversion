@@ -96,7 +96,7 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_LOWEST_WORKING_NODE
-SELECT op_depth, presence
+SELECT op_depth, presence, kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
 ORDER BY op_depth
@@ -238,13 +238,17 @@ INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target, moved_here )
+    symlink_target, moved_here, moved_to )
 SELECT
     wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
     repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target, 1
+    last_mod_time, symlink_target, 1,
+    (SELECT dst.moved_to FROM nodes AS dst
+                         WHERE dst.wc_id = ?1
+                         AND dst.local_relpath = ?4
+                         AND dst.op_depth = ?5)
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
@@ -750,6 +754,25 @@ WHERE refcount = 0
 -- STMT_DELETE_PRISTINE_IF_UNREFERENCED
 DELETE FROM pristine
 WHERE checksum = ?1 AND refcount = 0
+
+-- STMT_SELECT_COPY_PRISTINES
+/* For the root itself */
+SELECT n.checksum, md5_checksum, size
+FROM nodes_current n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND n.local_relpath = ?2
+  AND n.checksum IS NOT NULL
+UNION ALL
+/* And all descendants */
+SELECT n.checksum, md5_checksum, size
+FROM nodes n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND op_depth >=
+      (SELECT MAX(op_depth) FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2)
+  AND n.checksum IS NOT NULL
 
 -- STMT_VACUUM
 VACUUM
@@ -1418,6 +1441,17 @@ WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND moved_to IS NOT NULL
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
+
+-- STMT_SELECT_MOVED_PAIR3
+SELECT local_relpath, moved_to, op_depth FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth > ?3
+  AND moved_to IS NOT NULL
+
+-- STMT_HAS_LAYER_BETWEEN
+SELECT 1 FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4
 
 /* ------------------------------------------------------------------------- */
 

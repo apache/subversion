@@ -1584,12 +1584,14 @@ def patch_no_svn_eol_style(sbox):
   patch_file_path = make_patch_path(sbox)
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
     crlf = '\r\n'
-  eols = [crlf, '\015', '\n', '\012']
 
+  eols = [crlf, '\015', '\n', '\012']
   for target_eol in eols:
     for patch_eol in eols:
       mu_contents = [
@@ -1687,7 +1689,8 @@ def patch_with_svn_eol_style(sbox):
   patch_file_path = make_patch_path(sbox)
   mu_path = sbox.ospath('A/mu')
 
-
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -1801,7 +1804,8 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   patch_file_path = make_patch_path(sbox)
   mu_path = sbox.ospath('A/mu')
 
-
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -3597,9 +3601,11 @@ def patch_moved_away(sbox):
   expected_disk.remove('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'A/mu2' : Item(status='A ', copied='+', wc_rev='-')})
+  expected_status.add({
+    'A/mu2' : Item(status='A ', copied='+', wc_rev='-', moved_from='A/mu'),
+  })
 
-  expected_status.tweak('A/mu', status='D ', wc_rev=2)
+  expected_status.tweak('A/mu', status='D ', wc_rev=2, moved_to='A/mu2')
 
   expected_skip = wc.State('', { })
 

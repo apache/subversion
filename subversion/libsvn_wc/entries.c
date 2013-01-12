@@ -1778,6 +1778,17 @@ write_entry(struct write_baton **entry_node,
           working_node->revision = parent_node->work->revision;
           working_node->op_depth = parent_node->work->op_depth;
         }
+      else if (parent_node->below_work
+                && parent_node->below_work->repos_relpath)
+        {
+          working_node->repos_id = repos_id;
+          working_node->repos_relpath
+            = svn_relpath_join(parent_node->below_work->repos_relpath,
+                               svn_relpath_basename(local_relpath, NULL),
+                               result_pool);
+          working_node->revision = parent_node->below_work->revision;
+          working_node->op_depth = parent_node->below_work->op_depth;
+        }
       else
         return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                  _("No copyfrom URL for '%s'"),
@@ -2082,6 +2093,10 @@ write_entry(struct write_baton **entry_node,
       below_working_node->presence = svn_wc__db_status_normal;
       below_working_node->kind = entry->kind;
       below_working_node->repos_id = work->repos_id;
+
+      /* This is just guessing. If the node below would have been switched
+         or if it was updated to a different version, the guess would 
+         fail. But we don't have better information pre wc-ng :( */
       if (work->repos_relpath)
         below_working_node->repos_relpath
           = svn_relpath_join(work->repos_relpath, entry->name,
@@ -2111,6 +2126,30 @@ write_entry(struct write_baton **entry_node,
       below_working_node->depth = svn_depth_infinity;
       below_working_node->recorded_time = 0;
       below_working_node->properties = NULL;
+
+      if (working_node
+          && entry->schedule == svn_wc_schedule_delete
+          && working_node->repos_relpath)
+        {
+          /* We are lucky, our guesses above are not necessary. The known
+             correct information is in working. But our op_depth design
+             expects more information here */
+          below_working_node->repos_relpath = working_node->repos_relpath;
+          below_working_node->repos_id = working_node->repos_id;
+          below_working_node->revision = working_node->revision;
+
+          /* Nice for 'svn status' */
+          below_working_node->changed_rev = entry->cmt_rev;
+          below_working_node->changed_date = entry->cmt_date;
+          below_working_node->changed_author = entry->cmt_author;
+
+          /* And now remove it from WORKING, because in wc-ng code
+             should read it from the lower layer */
+          working_node->repos_relpath = NULL;
+          working_node->repos_id = 0;
+          working_node->revision = SVN_INVALID_REVNUM;
+        }
+
       SVN_ERR(insert_node(sdb, below_working_node, scratch_pool));
     }
 

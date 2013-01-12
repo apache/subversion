@@ -650,14 +650,25 @@ svn_client__list_internal(const char *path_or_url,
 
 /*** Inheritable Properties ***/
 
+/* Convert any svn_prop_inherited_item_t elements in INHERITED_PROPS which
+   have repository root relative path PATH_OR_URL structure members to URLs
+   using REPOS_ROOT_URL.  Changes to the contents of INHERITED_PROPS are
+   allocated in RESULT_POOL.  SCRATCH_POOL is used for temporary
+   allocations. */
+svn_error_t *
+svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
+                                   const char *repos_root_url,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
    as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
    RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
    const char * absolute working copy paths to depth-first ordered arrays
-   of svn_prop_inherited_item_t * structures.  If WANT_RELPATH_KEYS is true,
-   then any svn_prop_inherited_item_t->path_or_url members returned in
-   *WCROOT_IPROPS are repository relative paths, otherwise these members are
-   URLs.
+   of svn_prop_inherited_item_t * structures.
+
+   Any svn_prop_inherited_item_t->path_or_url members returned in
+   *WCROOT_IPROPS are repository relative paths.
 
    If LOCAL_ABSPATH has no base then do nothing.
 
@@ -672,7 +683,6 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   const char *local_abspath,
                                   svn_revnum_t revision,
                                   svn_depth_t depth,
-                                  svn_boolean_t use_relpath_keys,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,

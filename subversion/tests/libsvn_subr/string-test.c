@@ -479,7 +479,7 @@ test21(apr_pool_t *pool)
 
   svn_stringbuf_strip_whitespace(a);
 
-  if (svn_stringbuf_compare(a, b) == TRUE)
+  if (svn_stringbuf_compare(a, b))
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");

@@ -322,6 +322,10 @@ struct dir_baton
      marked as deleted. */
   svn_boolean_t shadowed;
 
+  /* Set on a node when the existing node is obstructed, and the edit operation
+     continues as semi-shadowed update */
+  svn_boolean_t edit_obstructed;
+
   /* The (new) changed_* information, cached to avoid retrieving it later */
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -621,7 +625,7 @@ make_dir_baton(struct dir_baton **d_p,
   if (pb)
     {
       d->skip_this = pb->skip_this;
-      d->shadowed = pb->shadowed;
+      d->shadowed = pb->shadowed || pb->edit_obstructed;
     }
 
   /* The caller of this function needs to fill these in. */
@@ -734,6 +738,10 @@ struct file_baton
      in the working copy (replaced, deleted, etc.). */
   svn_boolean_t shadowed;
 
+  /* Set on a node when the existing node is obstructed, and the edit operation
+     continues as semi-shadowed update */
+  svn_boolean_t edit_obstructed;
+
   /* The (new) changed_* information, cached to avoid retrieving it later */
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -830,7 +838,7 @@ make_file_baton(struct file_baton **f_p,
   f->obstruction_found = FALSE;
   f->add_existed       = FALSE;
   f->skip_this         = pb->skip_this;
-  f->shadowed          = pb->shadowed;
+  f->shadowed          = pb->shadowed || pb->edit_obstructed;
   f->dir_baton         = pb;
   f->changed_rev       = SVN_INVALID_REVNUM;
 
@@ -1232,8 +1240,6 @@ typedef struct modcheck_baton_t {
   svn_wc__db_t *db;         /* wc_db to access nodes */
   svn_boolean_t found_mod;  /* whether a modification has been found */
   svn_boolean_t found_not_delete;  /* Found a not-delete modification */
-  svn_boolean_t is_copy; /* check for post-copy modifications only */
-  const char *modcheck_root_abspath;
 } modcheck_baton_t;
 
 /* An implementation of svn_wc_status_func4_t. */
@@ -1261,30 +1267,13 @@ modcheck_callback(void *baton,
 
       case svn_wc_status_missing:
       case svn_wc_status_obstructed:
-        if (status->prop_status != svn_wc_status_modified)
-          break;
-
         mb->found_mod = TRUE;
         mb->found_not_delete = TRUE;
         /* Exit from the status walker: We know what we want to know */
         return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
 
-      case svn_wc_status_added:
-        /* Ignore the copy status if we expect a copy, but don't ignore
-           other changes */
-        if (!mb->is_copy
-            || status->text_status == svn_wc_status_modified
-            || status->prop_status == svn_wc_status_modified
-            || strcmp(mb->modcheck_root_abspath, local_abspath) != 0)
-          {
-            mb->found_mod = TRUE;
-            mb->found_not_delete = TRUE;
-            /* Exit from the status walker: We know what we want to know */
-            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
-          }
-        break;
-
       default:
+      case svn_wc_status_added:
       case svn_wc_status_replaced:
       case svn_wc_status_modified:
         mb->found_mod = TRUE;
@@ -1301,25 +1290,20 @@ modcheck_callback(void *baton,
  * tree rooted at LOCAL_ABSPATH, using DB. If *MODIFIED
  * is set to true and all the local modifications were deletes then set
  * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
- * may be a file or a directory. If IS_COPY is TRUE, LOCAL_ABSPATH is a
- * copied (or moved) node, and nodes at or within LOCAL_ABSPATH are only
- * considered modified if they were modified post-copy. */
+ * may be a file or a directory. */
 static svn_error_t *
 node_has_local_mods(svn_boolean_t *modified,
                     svn_boolean_t *all_edits_are_deletes,
-                    svn_boolean_t is_copy,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
-  modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE, FALSE };
+  modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
   svn_error_t *err;
 
   modcheck_baton.db = db;
-  modcheck_baton.is_copy = is_copy;
-  modcheck_baton.modcheck_root_abspath = local_abspath;
 
   /* Walk the WC tree for status with depth infinity, looking for any local
    * modifications. If it's a "sparse" directory, that's OK: there can be
@@ -1353,9 +1337,9 @@ node_has_local_mods(svn_boolean_t *modified,
  * The edit baton EB gives information including whether the operation is
  * an update or a switch.
  *
- * WORKING_STATUS and WORKING_KIND are the current node status of LOCAL_ABSPATH
+ * WORKING_STATUS is the current node status of LOCAL_ABSPATH
  * and EXISTS_IN_REPOS specifies whether a BASE_NODE representation for exists
- * for this node.
+ * for this node. In that case the on disk type is compared to EXPECTED_KIND.
  *
  * If a tree conflict reason was found for the incoming action, the resulting
  * tree conflict info is returned in *PCONFLICT. PCONFLICT must be non-NULL,
@@ -1370,6 +1354,7 @@ check_tree_conflict(svn_skel_t **pconflict,
                     const char *local_abspath,
                     svn_wc__db_status_t working_status,
                     svn_boolean_t exists_in_repos,
+                    svn_node_kind_t expected_kind,
                     svn_wc_conflict_action_t action,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -1444,10 +1429,29 @@ check_tree_conflict(svn_skel_t **pconflict,
          * missing information (hopefully). */
       case svn_wc__db_status_normal:
         if (action == svn_wc_conflict_action_edit)
-          /* An edit onto a local edit or onto *no* local changes is no
-           * tree-conflict. (It's possibly a text- or prop-conflict,
-           * but we don't handle those here.) */
-          return SVN_NO_ERROR;
+          {
+            /* An edit onto a local edit or onto *no* local changes is no
+             * tree-conflict. (It's possibly a text- or prop-conflict,
+             * but we don't handle those here.) 
+             *
+             * Except when there is a local obstruction
+             */
+            if (exists_in_repos)
+              {
+                svn_node_kind_t disk_kind;
+
+                SVN_ERR(svn_io_check_path(local_abspath, &disk_kind,
+                                          scratch_pool));
+
+                if (disk_kind != expected_kind && disk_kind != svn_node_none)
+                  {
+                    reason = svn_wc_conflict_reason_obstructed;
+                    break;
+                  }
+
+              }
+            return SVN_NO_ERROR;
+          }
 
         /* Replace is handled as delete and then specifically in
            add_directory() and add_file(), so we only expect deletes here */
@@ -1461,7 +1465,7 @@ check_tree_conflict(svn_skel_t **pconflict,
          * not visit the subdirectories of a directory that it wants to delete.
          * Therefore, we need to start a separate crawl here. */
 
-        SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes, FALSE,
+        SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes,
                                     eb->db, local_abspath,
                                     eb->cancel_func, eb->cancel_baton,
                                     scratch_pool));
@@ -1500,6 +1504,7 @@ check_tree_conflict(svn_skel_t **pconflict,
   /* Sanity checks. Note that if there was no action on the node, this function
    * would not have been called in the first place.*/
   if (reason == svn_wc_conflict_reason_edited
+      || reason == svn_wc_conflict_reason_obstructed
       || reason == svn_wc_conflict_reason_deleted
       || reason == svn_wc_conflict_reason_moved_away
       || reason == svn_wc_conflict_reason_replaced)
@@ -1716,10 +1721,13 @@ delete_entry(const char *path,
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!pb->shadowed)
+  if (!pb->shadowed && !pb->edit_obstructed)
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, TRUE,
+                                  (kind == svn_kind_dir)
+                                        ? svn_node_dir
+                                        : svn_node_file,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
@@ -1742,7 +1750,8 @@ delete_entry(const char *path,
                                                   tree_conflict,
                                                   scratch_pool, scratch_pool));
 
-      if (reason == svn_wc_conflict_reason_edited)
+      if (reason == svn_wc_conflict_reason_edited
+          || reason == svn_wc_conflict_reason_obstructed)
         {
           /* The item exists locally and has some sort of local mod.
            * It no longer exists in the repository at its target URL@REV.
@@ -1816,7 +1825,7 @@ delete_entry(const char *path,
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
       svn_node_kind_t node_kind;
 
-      if (pb->shadowed)
+      if (pb->shadowed || pb->edit_obstructed)
         action = svn_wc_notify_update_shadowed_delete;
 
       if (kind == svn_kind_dir)
@@ -2091,7 +2100,7 @@ add_directory(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
-                                      status, FALSE,
+                                      status, FALSE, svn_node_none,
                                       svn_wc_conflict_action_add,
                                       pool, pool));
         }
@@ -2160,7 +2169,7 @@ add_directory(const char *path,
 
 
   /* If this add was obstructed by dir scheduled for addition without
-     history let close_file() handle the notification because there
+     history let close_directory() handle the notification because there
      might be properties to deal with.  If PATH was added inside a locally
      deleted tree, then suppress notification, a tree conflict was already
      issued. */
@@ -2170,7 +2179,7 @@ add_directory(const char *path,
 
       if (db->shadowed)
         action = svn_wc_notify_update_shadowed_add;
-      else if (db->obstruction_found)
+      else if (db->obstruction_found || db->add_existed)
         action = svn_wc_notify_exists;
       else
         action = svn_wc_notify_update_add;
@@ -2277,7 +2286,7 @@ open_directory(const char *path,
    * a tree-conflict on a parent node. */
   if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
-                                status, TRUE,
+                                status, TRUE, svn_node_dir,
                                 svn_wc_conflict_action_edit,
                                 db->pool, pool));
 
@@ -2294,10 +2303,14 @@ open_directory(const char *path,
                                                   db->pool, db->pool));
       SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
                      || reason == svn_wc_conflict_reason_moved_away
-                     || reason == svn_wc_conflict_reason_replaced);
+                     || reason == svn_wc_conflict_reason_replaced
+                     || reason == svn_wc_conflict_reason_obstructed);
 
       /* Continue updating BASE */
-      db->shadowed = TRUE;
+      if (reason == svn_wc_conflict_reason_obstructed)
+        db->edit_obstructed = TRUE;
+      else
+        db->shadowed = TRUE;
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
@@ -2764,6 +2777,8 @@ close_directory(void *dir_baton,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
                                              eb->conflict_baton,
+                                             eb->cancel_func,
+                                             eb->conflict_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
@@ -2776,7 +2791,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
-      if (db->shadowed)
+      if (db->shadowed || db->edit_obstructed)
         action = svn_wc_notify_update_shadowed_update;
       else if (db->obstruction_found || db->add_existed)
         action = svn_wc_notify_exists;
@@ -3165,7 +3180,7 @@ add_file(const char *path,
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
-                                      status, FALSE,
+                                      status, FALSE, svn_node_none,
                                       svn_wc_conflict_action_add,
                                       scratch_pool, scratch_pool));
         }
@@ -3329,13 +3344,11 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  fb->shadowed = pb->shadowed;
-
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
   if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                status, TRUE,
+                                status, TRUE, svn_node_file,
                                 svn_wc_conflict_action_edit,
                                 fb->pool, scratch_pool));
 
@@ -3349,13 +3362,17 @@ open_file(const char *path,
       SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
                                                   eb->db, fb->local_abspath,
                                                   tree_conflict,
-                                                  fb->pool, fb->pool));
+                                                  scratch_pool, scratch_pool));
       SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_deleted
                      || reason == svn_wc_conflict_reason_moved_away
-                     || reason == svn_wc_conflict_reason_replaced);
+                     || reason == svn_wc_conflict_reason_replaced
+                     || reason == svn_wc_conflict_reason_obstructed);
 
       /* Continue updating BASE */
-      fb->shadowed = TRUE;
+      if (reason == svn_wc_conflict_reason_obstructed)
+        fb->edit_obstructed = TRUE;
+      else
+        fb->shadowed = TRUE;
     }
 
   svn_pool_destroy(scratch_pool);
@@ -3766,7 +3783,9 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t is_locally_modified;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
 
-  SVN_ERR_ASSERT(! fb->shadowed && !fb->obstruction_found);
+  SVN_ERR_ASSERT(! fb->shadowed
+                 && ! fb->obstruction_found
+                 && ! fb->edit_obstructed);
 
   /*
      When this function is called on file F, we assume the following
@@ -4137,7 +4156,7 @@ close_file(void *file_baton,
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
       /* Merge the text. This will queue some additional work.  */
-      if (!fb->obstruction_found)
+      if (!fb->obstruction_found && !fb->edit_obstructed)
         {
           svn_error_t *err;
           err = merge_file(&work_item, &conflict_skel,
@@ -4351,6 +4370,8 @@ close_file(void *file_baton,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
                                              eb->conflict_baton,
+                                             eb->cancel_func,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
@@ -4368,7 +4389,7 @@ close_file(void *file_baton,
 
       if (fb->edited)
         {
-          if (fb->shadowed)
+          if (fb->shadowed || fb->edit_obstructed)
             action = fb->adding_file
                             ? svn_wc_notify_update_shadowed_add
                             : svn_wc_notify_update_shadowed_update;

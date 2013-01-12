@@ -617,6 +617,7 @@ close_file(void *file_baton,
 
   eb->file_closed = TRUE; /* We bump the revision here */
 
+  /* Check the checksum, if provided */
   if (expected_md5_digest)
     {
       svn_checksum_t *expected_md5_checksum;
@@ -659,7 +660,6 @@ close_file(void *file_baton,
     }
 
   /* Merge the changes */
-
   {
     svn_skel_t *all_work_items = NULL;
     svn_skel_t *conflict_skel = NULL;
@@ -681,12 +681,11 @@ close_file(void *file_baton,
         new_checksum = eb->original_checksum;
 
         if (eb->had_props)
-          SVN_ERR(svn_wc__db_base_get_props(&base_props, eb->db,
-                                            eb->local_abspath,
-                                            pool, pool));
+          SVN_ERR(svn_wc__db_base_get_props(
+                    &base_props, eb->db, eb->local_abspath, pool, pool));
 
-        SVN_ERR(svn_wc__db_read_props(&actual_props, eb->db,
-                                      eb->local_abspath, pool, pool));
+        SVN_ERR(svn_wc__db_read_props(
+                  &actual_props, eb->db, eb->local_abspath, pool, pool));
       }
 
     if (!base_props)
@@ -698,6 +697,7 @@ close_file(void *file_baton,
     if (eb->new_sha1_checksum)
       new_checksum = eb->new_sha1_checksum;
 
+    /* Merge the properties */
     {
       apr_array_header_t *entry_prop_changes;
       apr_array_header_t *dav_prop_changes;
@@ -708,6 +708,7 @@ close_file(void *file_baton,
                                    &dav_prop_changes, &regular_prop_changes,
                                    pool));
 
+      /* Read the entry-prop changes to update the last-changed info. */
       for (i = 0; i < entry_prop_changes->nelts; i++)
         {
           const svn_prop_t *prop = &APR_ARRAY_IDX(entry_prop_changes, i,
@@ -729,9 +730,13 @@ close_file(void *file_baton,
                                           pool));
         }
 
+      /* Store the DAV-prop (aka WC-prop) changes.  (This treats a list
+       * of changes as a list of new props, but we only use this when
+       * adding a new file and it's equivalent in that case.) */
       if (dav_prop_changes->nelts > 0)
         new_dav_props = svn_prop_array_to_hash(dav_prop_changes, pool);
 
+      /* Merge the regular prop changes. */
       if (regular_prop_changes->nelts > 0)
         {
           new_pristine_props = svn_prop__patch(base_props, regular_prop_changes,
@@ -753,6 +758,7 @@ close_file(void *file_baton,
         }
     }
 
+    /* Merge the text */
     if (eb->new_sha1_checksum)
       {
         svn_node_kind_t disk_kind;
@@ -833,6 +839,7 @@ close_file(void *file_baton,
         /* ### Retranslate on magic property changes, etc. */
       }
 
+    /* Generate a conflict description, if needed */
     if (conflict_skel)
       {
         SVN_ERR(svn_wc__conflict_skel_set_op_switch(
@@ -852,17 +859,15 @@ close_file(void *file_baton,
                                     svn_node_file,
                                     pool),
                             pool, pool));
-
-
         SVN_ERR(svn_wc__conflict_create_markers(&work_item,
                                                 eb->db, eb->local_abspath,
                                                 conflict_skel,
                                                 pool, pool));
-
         all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                           pool);
       }
 
+    /* Install the file in the DB */
     SVN_ERR(svn_wc__db_external_add_file(
                         eb->db,
                         eb->local_abspath,
@@ -894,10 +899,12 @@ close_file(void *file_baton,
        clear the iprops so as not to set them again in close_edit. */
     eb->iprops = NULL;
 
+    /* Run the work queue to complete the installation */
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
                            eb->cancel_func, eb->cancel_baton, pool));
   }
 
+  /* Notify */
   if (eb->notify_func)
     {
       svn_wc_notify_action_t action;
@@ -921,7 +928,6 @@ close_file(void *file_baton,
 
       eb->notify_func(eb->notify_baton, notify, pool);
     }
-
 
   return SVN_NO_ERROR;
 }

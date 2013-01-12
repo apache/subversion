@@ -201,7 +201,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svnadmin_binary, expected_stderr, 0, 1, dump,
+    svntest.main.svnadmin_binary, expected_stderr, 0, True, dump,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:

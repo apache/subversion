@@ -987,14 +987,14 @@ translate_chunk(svn_stream_t *dst,
               b->keyword_buf[b->keyword_off++] = *p++;
               keyword_matches = match_keyword(b->keyword_buf, b->keyword_off,
                                               keyword_name, b->keywords);
-              if (keyword_matches == FALSE)
+              if (!keyword_matches)
                 {
                   /* reuse the ending '$' */
                   p--;
                   b->keyword_off--;
                 }
 
-              if (keyword_matches == FALSE ||
+              if (!keyword_matches ||
                   translate_keyword(b->keyword_buf, &b->keyword_off,
                                     keyword_name, b->expand, b->keywords) ||
                   b->keyword_off >= SVN_KEYWORD_MAX_LEN)

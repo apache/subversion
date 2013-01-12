@@ -863,6 +863,11 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
  * required), up to and including the root of the working copy and
  * any cached inherited properties inherited by the root.
  *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * paths relative to the repository root URL for cached inherited
+ * properties and absolute working copy paths otherwise.
+ *
  * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  */

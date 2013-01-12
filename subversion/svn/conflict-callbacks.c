@@ -36,7 +36,7 @@
 #include "svn_sorts.h"
 
 #include "cl.h"
-#include "tree-conflicts.h"
+#include "cl-conflicts.h"
 
 #include "private/svn_cmdline_private.h"
 

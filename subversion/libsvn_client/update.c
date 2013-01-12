@@ -377,7 +377,7 @@ update_internal(svn_revnum_t *result_rev,
   dfb.anchor_url = anchor_loc->url;
 
   err = svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
-                                          revnum, depth, TRUE, ra_session,
+                                          revnum, depth, ra_session,
                                           ctx, pool, pool);
 
   /* We might be trying to update to a non-existant path-rev. */

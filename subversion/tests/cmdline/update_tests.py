@@ -1731,6 +1731,8 @@ def conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -1862,6 +1864,8 @@ def update_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -5574,11 +5578,12 @@ def update_moved_dir_dir_add(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
-  expected_status.tweak('A/B/E', treeconflict='C')
+  expected_status.tweak('A/B/E', treeconflict='C', moved_to='A/B/E2')
   expected_status.add({
     'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
     'A/B/E/foo/bar'     : Item(status='D ', wc_rev='2'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
   })
@@ -5629,11 +5634,13 @@ def update_moved_dir_file_move(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A/B/E/alpha')
-  expected_status.tweak('A/B/E', status='D ', treeconflict='C')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
   expected_status.tweak('A/B/E/beta', status='D ')
   expected_status.add({
     'A/B/F/alpha'       : Item(status='  ', wc_rev='2'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
   })
@@ -5810,6 +5817,87 @@ def update_with_parents_and_exclude(sbox):
                                         '--parents',
                                         sbox.ospath('A/B'))
 
+@Issue(4288)
+def update_edit_delete_obstruction(sbox):
+  "obstructions shouldn't cause update failures"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2
+  sbox.simple_rm('A/B','iota')
+  svntest.main.file_append(sbox.ospath('A/mu'), "File change")
+  sbox.simple_propset('key', 'value', 'A/D', 'A/D/G')
+  sbox.simple_commit()
+
+  # r3
+  #sbox.simple_mkdir('iota')
+  #sbox.simple_copy('A/D/gamma', 'A/B')
+  #sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  # Create obstructions
+  svntest.main.safe_rmtree(sbox.ospath('A/B'))
+  svntest.main.file_append(sbox.ospath('A/B'), "Obstruction")
+
+  svntest.main.safe_rmtree(sbox.ospath('A/D'))
+  svntest.main.file_append(sbox.ospath('A/D'), "Obstruction")
+
+  os.remove(sbox.ospath('iota'))
+  os.mkdir(sbox.ospath('iota'))
+
+  os.remove(sbox.ospath('A/mu'))
+  os.mkdir(sbox.ospath('A/mu'))
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='2'),
+    'A'                 : Item(status='  ', wc_rev='2'),
+    'A/mu'              : Item(status='~ ', treeconflict='C', wc_rev='2'),
+    'A/D'               : Item(status='~ ', treeconflict='C', wc_rev='2'),
+    'A/D/G'             : Item(status='! ', wc_rev='2'),
+    'A/D/G/pi'          : Item(status='! ', wc_rev='2'),
+    'A/D/G/tau'         : Item(status='! ', wc_rev='2'),
+    'A/D/G/rho'         : Item(status='! ', wc_rev='2'),
+    'A/D/H'             : Item(status='! ', wc_rev='2'),
+    'A/D/H/omega'       : Item(status='! ', wc_rev='2'),
+    'A/D/H/chi'         : Item(status='! ', wc_rev='2'),
+    'A/D/H/psi'         : Item(status='! ', wc_rev='2'),
+    'A/D/gamma'         : Item(status='! ', wc_rev='2'),
+    'A/C'               : Item(status='  ', wc_rev='2'),
+    'A/B'               : Item(status='~ ', treeconflict='C', wc_rev='-'),
+    'A/B/F'             : Item(status='! ', wc_rev='-'),
+    'A/B/E'             : Item(status='! ', wc_rev='-'),
+    'A/B/E/beta'        : Item(status='! ', wc_rev='-'),
+    'A/B/E/alpha'       : Item(status='! ', wc_rev='-'),
+    'A/B/lambda'        : Item(status='! ', wc_rev='-'),
+    'iota'              : Item(status='~ ', treeconflict='C', wc_rev='-'),
+  })
+  expected_disk = svntest.wc.State('', {
+    'A/D'               : Item(contents="Obstruction", props={'key':'value'}),
+    'A/C'               : Item(),
+    'A/B'               : Item(contents="Obstruction"),
+    'A/mu'              : Item(),
+    'iota'              : Item(),
+  })
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'    : Item(status='  ', treeconflict='C'),
+    'A/mu'    : Item(status='  ', treeconflict='C'),
+    'A/D'     : Item(status='  ', treeconflict='C'),
+    'A/D/G'   : Item(status='  ', treeconflict='U'),
+    'A/B'     : Item(status='  ', treeconflict='C'),
+  })
+
+  # And now update to delete B and iota
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '2', wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -5885,6 +5973,7 @@ test_list = [ None,
               update_move_text_mod,
               update_nested_move_text_mod,
               update_with_parents_and_exclude,
+              update_edit_delete_obstruction,
              ]
 
 if __name__ == '__main__':

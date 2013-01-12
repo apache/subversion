@@ -3626,6 +3626,8 @@ def merge_conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -3765,6 +3767,8 @@ def merge_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -16423,9 +16427,12 @@ def no_self_referential_or_nonexistent_inherited_mergeinfo(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
-# Test for issue #3756 'subtree merge can inherit invalid working mergeinfo'.
+# Test for issue #3756 'subtree merge can inherit invalid working mergeinfo',
+# issue #3668 'inheritance can result in self-referential mergeinfo', and
+# issue #3669 'inheritance can result in mergeinfo describing nonexistent
+# sources'.
 @XFail()
-@Issue(3756)
+@Issue(3756,3668,3669)
 def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
   "don't inherit bogus working mergeinfo"
 
@@ -16474,7 +16481,7 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
   # resulting mergeinfo on 'A_COPY/C/nu' should be only '/A/C/nu:9'.
   #
   # Currently this test is marked as XFail because the resulting mergeinfo is
-  # '/A/C/nu:3,9' and thus includes a non-existent path-rev.
+  # '/A/C/nu:3,7,9' and thus includes a non-existent path-rev.
   svntest.actions.run_and_verify_svn(
     "Merge failed unexpectedly",
     svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',

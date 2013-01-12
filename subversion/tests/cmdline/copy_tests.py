@@ -769,9 +769,11 @@ def mv_and_revert_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
                                      E_path, F_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E', status='D ', moved_to='A/B/F/E')
   expected_status.add({
-    'A/B/F/E' : Item(status='A ', wc_rev='-', copied='+'),
+    'A/B/F/E' : Item(status='A ', wc_rev='-', copied='+',
+                     moved_from='A/B/E'),
     'A/B/F/E/alpha' : Item(status='  ', wc_rev='-', copied='+'),
     'A/B/F/E/beta' : Item(status='  ', wc_rev='-', copied='+'),
     })
@@ -781,6 +783,7 @@ def mv_and_revert_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
                                      new_E_path)
   expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
+  expected_status.tweak('A/B/E', moved_to=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -2420,7 +2423,8 @@ def move_file_back_and_forth(sbox):
   # Check expected status before commit
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-'),
+    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-',
+                       moved_from='A/D/G/rho', moved_to='A/D/G/rho'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2463,7 +2467,8 @@ def move_dir_back_and_forth(sbox):
   # Verify that the status indicates a replace with history
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-      'A/D'               : Item(status='R ', copied='+', wc_rev='-'),
+      'A/D'               : Item(status='R ', copied='+', wc_rev='-',
+                                 moved_from='A/D', moved_to='A/D'),
       'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
       'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
       'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
@@ -2860,8 +2865,9 @@ def move_to_relative_paths(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+    'beta'        : Item(status='A ', copied='+', wc_rev='-',
+                         moved_from='A/B/E/beta'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1', moved_to='beta')
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2882,8 +2888,9 @@ def move_from_relative_paths(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-',
+                         moved_from='A/B/E/beta'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1', moved_to='A/B/F/beta')
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -4436,22 +4443,27 @@ def move_dir_containing_move(sbox):
                                      sbox.ospath('A/B_tmp'))
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B',
-                        'A/B/E',
+  expected_status.tweak('A/B', status='D ', moved_to='A/B_tmp')
+  expected_status.tweak('A/B/E',
                         'A/B/E/alpha',
                         'A/B/E/beta',
                         'A/B/F',
                         'A/B/lambda',
                         status='D ')
   expected_status.add({
-      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B'),
       # alpha has a revision that isn't reported by status.
       'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-',
+                                     moved_to='A/B_tmp/E/alpha_moved'),
+      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B_tmp/E/alpha'),
       'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-',
+                                     moved_to='A/B_tmp/F_moved'),
+      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B_tmp/F'),
       'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
@@ -4460,6 +4472,7 @@ def move_dir_containing_move(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      sbox.ospath('A/B_tmp'),
                                      sbox.ospath('A/B_moved'))
+  expected_status.tweak('A/B', moved_to='A/B_moved')
   expected_status.remove('A/B_tmp',
                          'A/B_tmp/E',
                          'A/B_tmp/E/alpha',
@@ -4469,13 +4482,18 @@ def move_dir_containing_move(sbox):
                          'A/B_tmp/F_moved',
                          'A/B_tmp/lambda')
   expected_status.add({
-      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B'),
       'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-',
+                                       moved_to='A/B_moved/E/alpha_moved'),
+      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B_moved/E/alpha'),
       'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-',
+                                       moved_to='A/B_moved/F_moved'),
+      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B_moved/F'),
       'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
@@ -4505,6 +4523,8 @@ def move_dir_containing_move(sbox):
                          'A/B/lambda',
                          'A/B_moved/E/alpha',
                          'A/B_moved/F')
+  expected_status.tweak('A/B_moved', 'A/B_moved/E/alpha_moved',
+                        'A/B_moved/F_moved', moved_from=None)
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
                                         expected_status,
@@ -5148,8 +5168,8 @@ def deleted_file_with_case_clash(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'iota' : Item(status='D ', wc_rev=1),
-    'IOTA' : Item(status='A ', copied='+', wc_rev='-'),
+    'iota' : Item(status='D ', wc_rev=1, moved_to='IOTA'),
+    'IOTA' : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -5211,15 +5231,16 @@ def case_only_rename(sbox):
   # Create expected status.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'iota'              : Item(status='D ', wc_rev=1),
-    'IoTa'              : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B'               : Item(status='D ', wc_rev='1'),
+  
+    'iota'              : Item(status='D ', wc_rev=1, moved_to='IoTa'),
+    'IoTa'              : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
+    'A/B'               : Item(status='D ', wc_rev='1', moved_to='A/b'),
     'A/B/lambda'        : Item(status='D ', wc_rev='1'),
     'A/B/E'             : Item(status='D ', wc_rev='1'),
     'A/B/E/alpha'       : Item(status='D ', wc_rev='1'),
     'A/B/E/beta'        : Item(status='D ', wc_rev='1'),
     'A/B/F'             : Item(status='D ', wc_rev='1'),
-    'A/b'               : Item(status='A ', copied='+', wc_rev='-'),
+    'A/b'               : Item(status='A ', copied='+', wc_rev='-', moved_from='A/B'),
     'A/b/E'             : Item(status='  ', copied='+', wc_rev='-'),
     'A/b/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
     'A/b/E/alpha'       : Item(status='  ', copied='+', wc_rev='-'),

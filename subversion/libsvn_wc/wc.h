@@ -390,8 +390,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
 /* Prepare to merge a file content change into the working copy.  This
    does not merge properties; see svn_wc__merge_props() for that.  This
-   ### [does | does not]
-   change the working file on disk as well as returning work items.
+   does not change the working file on disk; it returns work items that
+   will replace the working file on disk when they are run.
 
    Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
    TARGET_ABSPATH.

@@ -266,6 +266,14 @@ get_option(const dav_resource *resource,
         { "create-txn-with-props",  { 1, 8, 0, "" } },
       };
 
+      /* Add the header which indicates that this server can handle
+         replay REPORTs submitted against an HTTP v2 revision resource. */
+      apr_table_addn(r->headers_out, "DAV",
+                     SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE);
+
+      /* Add a bunch of HTTP v2 headers which carry resource and
+         resource stub URLs that the client can use to naively build
+         addressable resources. */
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",

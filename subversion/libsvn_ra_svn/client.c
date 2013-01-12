@@ -1304,7 +1304,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 static svn_tristate_t
 optbool_to_tristate(apr_uint64_t v)
 {
-  if (v == TRUE)
+  if (v == TRUE)  /* not just non-zero but exactly equal to 'TRUE' */
     return svn_tristate_true;
   if (v == FALSE)
     return svn_tristate_false;

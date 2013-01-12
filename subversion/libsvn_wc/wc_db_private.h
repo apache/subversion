@@ -367,4 +367,14 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                  int op_depth,
                                  apr_pool_t *scratch_pool);
 
+/* Do a post-drive revision bump for the moved-away destination for
+   any move sources under LOCAL_RELPATH.  This is called from within
+   the revision bump transaction after the tree at LOCAL_RELPATH has
+   been bumped. */
+svn_error_t *
+svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
+                           const char *local_relpath,
+                           svn_depth_t depth,
+                           apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PRIVATE_H */

@@ -1117,7 +1117,7 @@ test_rangelist_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_rangelist_to_string(&output, result, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Rangelist string not what we expected");
 
   return SVN_NO_ERROR;
@@ -1134,7 +1134,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   /* Manually construct some mergeinfo with relative path
@@ -1150,7 +1150,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
                apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
   SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   return SVN_NO_ERROR;

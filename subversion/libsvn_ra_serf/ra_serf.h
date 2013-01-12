@@ -243,6 +243,10 @@ struct svn_ra_serf__session_t {
   /* Indicates if the server supports sending inlined props in update editor
    * in skelta mode (send-all == 'false'). */
   svn_boolean_t supports_inline_props;
+
+  /* Indicates whether the server supports issuing replay REPORTs
+     against rev resources (children of `rev_stub', elsestruct). */
+  svn_boolean_t supports_rev_rsrc_replay;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

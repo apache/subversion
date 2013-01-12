@@ -224,7 +224,7 @@ read_all(svn_config_t **cfgp,
     }
 
   if (! red_config)
-    *cfgp = NULL;
+    SVN_ERR(svn_config_create(cfgp, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

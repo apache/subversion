@@ -994,8 +994,8 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
                              apr_pool_t *scratch_pool);
 
 
-/* If necessary transfers the PRISTINE file of SRC_LOCAL_ABSPATH to the
-   working copy identified by DST_WRI_ABSPATH. */
+/* If necessary transfers the PRISTINE files of the tree rooted at
+   SRC_LOCAL_ABSPATH to the working copy identified by DST_WRI_ABSPATH. */
 svn_error_t *
 svn_wc__db_pristine_transfer(svn_wc__db_t *db,
                              const char *src_local_abspath,
@@ -2075,14 +2075,19 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
 
 /**
- * Set @a *inherited_props to a depth-first ordered array of
+ * Set @a *iprops to a depth-first ordered array of
  * #svn_prop_inherited_item_t * structures representing the properties
  * inherited by @a local_abspath from the ACTUAL tree above
  * @a local_abspath (looking through to the WORKING or BASE tree as
  * required), up to and including the root of the working copy and
  * any cached inherited properties inherited by the root.
  *
- * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *iprops are
+ * paths relative to the repository root URL for cached inherited
+ * properties and absolute working copy paths otherwise.
+ *
+ * Allocate @a *iprops in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  */
 svn_error_t *
@@ -2893,6 +2898,15 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
                          int levels_to_lock,
                          svn_boolean_t steal_lock,
                          apr_pool_t *scratch_pool);
+
+/* Set LOCK_ABSPATH to the path of the the directory that owns the
+   lock on LOCAL_ABSPATH, or NULL, if LOCAL_ABSPATH is not locked. */
+svn_error_t*
+svn_wc__db_wclock_find_root(const char **lock_abspath,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Check if somebody has a wclock on LOCAL_ABSPATH */
 svn_error_t *

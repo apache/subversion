@@ -354,10 +354,13 @@ enable-auto-props = yes
 
   # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we
   # define CRLF in a platform independent way.
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
     crlf = '\r\n'
+
   expected_output = [
   "Index: test.dsp\n",
   "===================================================================\n",

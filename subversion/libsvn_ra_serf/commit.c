@@ -1294,9 +1294,9 @@ open_root(void *edit_baton,
     {
       post_response_ctx_t *prc;
       const char *rel_path;
-      svn_boolean_t post_with_revprops =
-        apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
-                     APR_HASH_KEY_STRING) ? TRUE : FALSE;
+      svn_boolean_t post_with_revprops
+        = (apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
+                        APR_HASH_KEY_STRING) != NULL);
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));

@@ -1539,6 +1539,23 @@ get_repos(svn_repos_t **repos_p,
   if (open_fs)
     SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
 
+#ifdef SVN_DEBUG_CRASH_AT_REPOS_OPEN
+  /* If $PATH/config/debug-abort exists, crash the server here.
+     This debugging feature can be used to test client recovery
+     when the server crashes.
+
+     See: Issue #4274 */
+  {
+    svn_node_kind_t kind;
+    svn_error_t *err = svn_io_check_path(
+        svn_dirent_join(repos->conf_path, "debug-abort", pool),
+        &kind, pool);
+    svn_error_clear(err);
+    if (!err && kind == svn_node_file)
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+  }
+#endif /* SVN_DEBUG_CRASH_AT_REPOS_OPEN */
+
   *repos_p = repos;
   return SVN_NO_ERROR;
 }
