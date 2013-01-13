@@ -2146,7 +2146,8 @@ add_directory(const char *path,
     SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
                               db->old_repos_relpath, db->old_revision,
                               db->new_relpath,
-                              wc_kind, svn_node_dir,
+                              svn__node_kind_from_kind(wc_kind),
+                              svn_node_dir,
                               db->pool, pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
@@ -3241,7 +3242,8 @@ add_file(const char *path,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
                                 fb->new_relpath,
-                                wc_kind, svn_node_file,
+                                svn__node_kind_from_kind(wc_kind),
+                                svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
