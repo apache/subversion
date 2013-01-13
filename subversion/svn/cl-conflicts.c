@@ -252,7 +252,11 @@ svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
 
 
   kind = svn_token__to_word(map_conflict_kind_xml, conflict->kind);
-  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING, kind);
+  apr_hash_set(att_hash, "type", APR_HASH_KEY_STRING, kind);
+
+  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
+               svn_cl__operation_str_xml(conflict->operation, scratch_pool));
+
 
   /* "<conflict>" */
   svn_xml_make_open_tag_hash(&str, scratch_pool,
