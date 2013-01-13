@@ -107,7 +107,9 @@ crop_children(svn_wc__db_t *db,
                                             ? svn_depth_immediates
                                             : svn_depth_files;
           if (new_depth < remove_below)
-            SVN_ERR(svn_wc__db_base_remove(db, local_abspath, FALSE,
+            SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
+                                           FALSE /* keep_as_working */,
+                                           FALSE /* queue_deletes */,
                                            SVN_INVALID_REVNUM,
                                            NULL, NULL, iterpool));
 

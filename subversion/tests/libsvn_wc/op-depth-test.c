@@ -1107,7 +1107,9 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
   SVN_ERR(check_db_rows(b, "", after));
 
   SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
-                                 FALSE, SVN_INVALID_REVNUM,
+                                 FALSE /* keep_as_Working */,
+                                 FALSE /* queue_deletes */,
+                                 SVN_INVALID_REVNUM,
                                  NULL, NULL, b->pool));
   SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
                          NULL, NULL, b->pool));

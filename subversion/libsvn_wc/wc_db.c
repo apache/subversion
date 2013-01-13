@@ -2087,6 +2087,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                const char *local_relpath,
                svn_wc__db_t *db, /* For checking conflicts */
                svn_boolean_t keep_as_working,
+               svn_boolean_t queue_deletes,
                svn_revnum_t not_present_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
@@ -2131,6 +2132,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   /* Step 1: Create workqueue operations to remove files and dirs in the
      local-wc */
   if (!keep_working
+      && queue_deletes
       && (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete))
     {
@@ -2290,6 +2292,7 @@ svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
+                       svn_boolean_t queue_deletes,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
@@ -2305,7 +2308,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(db_base_remove(wcroot, local_relpath,
-                                     db, keep_as_working, not_present_revision,
+                                     db, keep_as_working, queue_deletes,
+                                     not_present_revision,
                                      conflict, work_items, scratch_pool),
                       wcroot);
 
@@ -10259,7 +10263,8 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
               revision != new_rev)))
     {
       return svn_error_trace(db_base_remove(wcroot, local_relpath,
-                                            db, FALSE, SVN_INVALID_REVNUM,
+                                            db, FALSE, FALSE,
+                                            SVN_INVALID_REVNUM,
                                             NULL, NULL, scratch_pool));
     }
 

@@ -152,6 +152,7 @@ process_committed_leaf(svn_wc__db_t *db,
                 svn_wc__db_base_remove(
                                 db, local_abspath,
                                 FALSE /* keep_as_working */,
+                                FALSE /* queue_deletes */,
                                 (! via_recurse)
                                     ? new_revnum : SVN_INVALID_REVNUM,
                                 NULL, NULL,
