@@ -2262,7 +2262,9 @@ svn_io_remove_file2(const char *path,
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
   if (!apr_err
-      || (ignore_enoent && APR_STATUS_IS_ENOENT(apr_err)))
+      || (ignore_enoent
+          && (APR_STATUS_IS_ENOENT(apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
     return SVN_NO_ERROR;
 
 #ifdef WIN32
