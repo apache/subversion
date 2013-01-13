@@ -990,21 +990,16 @@ def update_replace_dir(sbox):
                                         expected_status)
 
   # Update to revision 1 replaces the directory
-  ### I can't get this to work :-(
-  #expected_output = svntest.wc.State(wc_dir, {
-  #  'A/B/F'       : Item(verb='Adding'),
-  #  'A/B/F'       : Item(verb='Deleting'),
-  #  })
-  #expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  #svntest.actions.run_and_verify_update(wc_dir,
-  #                                      expected_output,
-  #                                      expected_disk,
-  #                                      expected_status,
-  #                                      None, None, None, None, None, 0,
-  #                                      '-r', '1', wc_dir)
-
-  # Update to revision 1 replaces the directory
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='A ', prev_status='D '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -1164,18 +1159,14 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E' : Item(status='D '),
-    'A/D/H' : Item(status='D '),
-    })
-
-  # In single-db mode the missing items are restored before the update
-  expected_output.add({
-      'A/D/H/psi'         : Item(verb='Restored'),
-      'A/D/H/omega'       : Item(verb='Restored'),
-      'A/D/H/chi'         : Item(verb='Restored'),
-      'A/B/E/beta'        : Item(verb='Restored'),
-      'A/B/E/alpha'       : Item(verb='Restored')
-      # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    'A/D/H/psi'         : Item(verb='Restored'),
+    'A/D/H/omega'       : Item(verb='Restored'),
+    'A/D/H/chi'         : Item(verb='Restored'),
+    'A/B/E/beta'        : Item(verb='Restored'),
+    'A/B/E/alpha'       : Item(verb='Restored'),
+    # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    'A/B/E'             : Item(status='D ', prev_verb='Restored'),
+    'A/D/H'             : Item(status='D ', prev_verb='Restored'),
   })
 
   # Create expected disk tree for the update.
@@ -3572,7 +3563,7 @@ def update_copied_from_replaced_and_changed(sbox):
   # Go back to r1.
   expected_output = svntest.wc.State(wc_dir, {
     fn1_relpath: Item(status='D '),
-    fn2_relpath: Item(status='A '), # though actually should be D and A
+    fn2_relpath: Item(status='A ', prev_status='D '), # D then A
     fn3_relpath: Item(status='A '),
     })
 
@@ -3590,7 +3581,7 @@ def update_copied_from_replaced_and_changed(sbox):
   # And back up to 3 again.
   expected_output = svntest.wc.State(wc_dir, {
     fn1_relpath: Item(status='A '),
-    fn2_relpath: Item(status='A '), # though actually should be D and A
+    fn2_relpath: Item(status='A ', prev_status='D '), # D then A
     fn3_relpath: Item(status='D '),
     })
 
@@ -5927,8 +5918,9 @@ def update_edit_delete_obstruction(sbox):
     'A/D/G'     : Item(status='  ', treeconflict='U'),
     'A/D/H'     : Item(status='  ', treeconflict='U'),
     'A/D/H/chi' : Item(status='  ', treeconflict='D'),
-    'A/B'       : Item(status='  ', treeconflict='A'), # Replacement
-    'iota'      : Item(status='A '), # Replacement
+    'A/B'       : Item(prev_status='  ', prev_treeconflict='D', # Replacement
+                       status='  ', treeconflict='A'), 
+    'iota'      : Item(status='A ', prev_status='D '), # Replacement
   })
 
   expected_disk = svntest.wc.State('', {

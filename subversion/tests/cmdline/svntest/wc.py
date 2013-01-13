@@ -515,12 +515,38 @@ class State:
           treeconflict = match.group(3)
         else:
           treeconflict = None
-        desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
-                                                     treeconflict=treeconflict)
+        path = to_relpath(match.group(4))
+        prev_status = None
+        prev_verb = None
+        prev_treeconflict = None
+
+        if path in desc:
+          prev_status = desc[path].status
+          prev_verb = desc[path].verb
+          prev_treeconflict = desc[path].treeconflict
+
+        desc[path] = StateItem(status=match.group(1),
+                               treeconflict=treeconflict,
+                               prev_status=prev_status,
+                               prev_verb=prev_verb,
+                               prev_treeconflict=prev_treeconflict)
       else:
         match = re_extra.search(line)
         if match:
-          desc[to_relpath(match.group(2))] = StateItem(verb=match.group(1))
+          path = to_relpath(match.group(2))
+          prev_status = None
+          prev_verb = None
+          prev_treeconflict = None
+
+          if path in desc:
+            prev_status = desc[path].status
+            prev_verb = desc[path].verb
+            prev_treeconflict = desc[path].treeconflict
+
+          desc[path] = StateItem(verb=match.group(1),
+                                 prev_status=prev_status,
+                                 prev_verb=prev_verb,
+                                 prev_treeconflict=prev_treeconflict)
 
     return cls('', desc)
 
@@ -678,7 +704,8 @@ class StateItem:
                status=None, verb=None, wc_rev=None,
                entry_rev=None, entry_status=None,
                locked=None, copied=None, switched=None, writelocked=None,
-               treeconflict=None, moved_from=None, moved_to=None):
+               treeconflict=None, moved_from=None, moved_to=None,
+               prev_status=None, prev_verb=None, prev_treeconflict=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -695,8 +722,10 @@ class StateItem:
     self.props = props
     # A two-character string from the first two columns of 'svn status'.
     self.status = status
+    self.prev_status = prev_status
     # The action word such as 'Adding' printed by commands like 'svn update'.
     self.verb = verb
+    self.prev_verb = prev_verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
     # These will be set when we expect the wc_rev/status to differ from those
@@ -709,8 +738,9 @@ class StateItem:
     self.copied = copied
     self.switched = switched
     self.writelocked = writelocked
-    # Value 'C' or ' ', or None as an expected status meaning 'do not check'.
+    # Value 'C', 'A', 'D' or ' ', or None as an expected status meaning 'do not check'.
     self.treeconflict = treeconflict
+    self.prev_treeconflict = prev_treeconflict
     # Relative paths to the move locations
     self.moved_from = moved_from
     self.moved_to = moved_to
@@ -751,8 +781,12 @@ class StateItem:
     atts = { }
     if self.status is not None:
       atts['status'] = self.status
+    if self.prev_status is not None:
+      atts['prev_status'] = self.prev_status
     if self.verb is not None:
       atts['verb'] = self.verb
+    if self.prev_verb is not None:
+      atts['prev_verb'] = self.prev_verb
     if self.wc_rev is not None:
       atts['wc_rev'] = self.wc_rev
     if self.locked is not None:
@@ -765,6 +799,8 @@ class StateItem:
       atts['writelocked'] = self.writelocked
     if self.treeconflict is not None:
       atts['treeconflict'] = self.treeconflict
+    if self.prev_treeconflict is not None:
+      atts['prev_treeconflict'] = self.prev_treeconflict
     if self.moved_from is not None:
       atts['moved_from'] = self.moved_from
     if self.moved_to is not None:

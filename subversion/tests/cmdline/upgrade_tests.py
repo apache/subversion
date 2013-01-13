@@ -1220,7 +1220,7 @@ def upgrade_missing_replaced(sbox):
                                      sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E'         : Item(status='  ', treeconflict='C', prev_verb='Restored'),
       'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
       'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
       })
