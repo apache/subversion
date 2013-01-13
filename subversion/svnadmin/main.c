@@ -664,6 +664,9 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
         apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
                      APR_HASH_KEY_STRING, "1");
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 9, 0))
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
