@@ -45,9 +45,9 @@ const char *svn_fs_fs__id_txn_id(const svn_fs_id_t *id);
    transaction ID. */
 svn_revnum_t svn_fs_fs__id_rev(const svn_fs_id_t *id);
 
-/* Access the "offset" portion of the ID, or -1 if it is a transaction
+/* Access the "item" portion of the ID, or 0 if it is a transaction
    ID. */
-apr_off_t svn_fs_fs__id_offset(const svn_fs_id_t *id);
+apr_uint64_t svn_fs_fs__id_item(const svn_fs_id_t *id);
 
 /* Convert ID into string form, allocated in POOL. */
 svn_string_t *svn_fs_fs__id_unparse(const svn_fs_id_t *id,
@@ -77,7 +77,7 @@ svn_fs_id_t *svn_fs_fs__id_txn_create(const char *node_id,
 svn_fs_id_t *svn_fs_fs__id_rev_create(const char *node_id,
                                       const char *copy_id,
                                       svn_revnum_t rev,
-                                      apr_off_t offset,
+                                      apr_uint64_t item,
                                       apr_pool_t *pool);
 
 /* Return a copy of ID, allocated from POOL. */

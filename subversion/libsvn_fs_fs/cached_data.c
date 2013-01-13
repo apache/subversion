@@ -32,6 +32,7 @@
 #include "util.h"
 #include "pack.h"
 #include "temp_serializer.h"
+#include "index.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -44,23 +45,16 @@ static svn_error_t *
 open_and_seek_revision(apr_file_t **file,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_off_t offset,
+                       apr_uint64_t item,
                        apr_pool_t *pool)
 {
   apr_file_t *rev_file;
+  apr_off_t offset = -1;
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
-
-  if (is_packed_rev(fs, rev))
-    {
-      apr_off_t rev_offset;
-
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
-      offset += rev_offset;
-    }
-
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, item, pool));
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
@@ -145,7 +139,7 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
       pair_cache_key_t key;
 
       key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_offset(id);
+      key.second = svn_fs_fs__id_item(id);
       SVN_ERR(svn_cache__get((void **) noderev_p,
                             is_cached,
                             ffd->node_revision_cache,
@@ -174,7 +168,7 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
       pair_cache_key_t key;
 
       key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_offset(id);
+      key.second = svn_fs_fs__id_item(id);
       return svn_cache__set(ffd->node_revision_cache,
                             &key,
                             noderev_p,
@@ -214,7 +208,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       /* This is a revision node-rev. */
       err = open_and_seek_revision(&revision_file, fs,
                                    svn_fs_fs__id_rev(id),
-                                   svn_fs_fs__id_offset(id),
+                                   svn_fs_fs__id_item(id),
                                    pool);
     }
 

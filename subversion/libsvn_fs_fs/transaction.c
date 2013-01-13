@@ -40,6 +40,7 @@
 #include "key-gen.h"
 #include "lock.h"
 #include "rep-cache.h"
+#include "index.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_subr_private.h"
@@ -2400,6 +2401,25 @@ validate_root_noderev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+allocate_item_index(svn_fs_t *fs,
+                    apr_uint64_t *item_index,
+                    apr_off_t my_offset,
+                    apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      *item_index = (apr_uint64_t)(my_offset + 1);
+    }
+  else
+    {
+      ++*item_index;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
    pointer to the new node-id which will be allocated in POOL.
@@ -2434,6 +2454,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const svn_fs_id_t *id,
                 const char *start_node_id,
                 const char *start_copy_id,
+                apr_uint64_t *item_index,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_hash_t *reps_hash,
@@ -2481,9 +2502,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_hash, reps_pool, FALSE,
-                                  subpool));
+                                  start_node_id, start_copy_id,
+                                  item_index, initial_offset,
+                                  reps_to_cache, reps_hash, reps_pool,
+                                  FALSE, subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
@@ -2580,8 +2602,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
 
-  new_id = svn_fs_fs__id_rev_create(my_node_id, my_copy_id, rev, my_offset,
-                                    pool);
+  SVN_ERR(allocate_item_index(fs, item_index, my_offset, pool));
+  new_id = svn_fs_fs__id_rev_create(my_node_id, my_copy_id, rev,
+                                    *item_index, pool);
 
   noderev->id = new_id;
 
@@ -2790,11 +2813,11 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
   apr_off_t initial_offset, changed_path_offset;
-  svn_stringbuf_t *trailer;
   apr_hash_t *txnprops;
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
   svn_string_t date;
+  apr_uint64_t item_index = 3;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -2827,7 +2850,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id, initial_offset,
+                          start_node_id, start_copy_id, &item_index,
+                          initial_offset,
                           cb->reps_to_cache, cb->reps_hash, cb->reps_pool,
                           TRUE, pool));
 
@@ -2836,12 +2860,24 @@ commit_body(void *baton, apr_pool_t *pool)
                                         cb->fs, cb->txn->id, pool));
 
   /* Write the final line. */
-  trailer = svn_fs_fs__unparse_revision_trailer
-              (svn_fs_fs__id_offset(new_root_id),
-               changed_path_offset,
-               pool);
-  SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
-                                 NULL, pool));
+
+  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      svn_stringbuf_t *trailer;
+      apr_off_t root_offset;
+      SVN_ERR(svn_fs_fs__item_offset(&root_offset,
+                                     cb->fs,
+                                     svn_fs_fs__id_rev(new_root_id),
+                                     svn_fs_fs__id_item(new_root_id),
+                                     pool));
+      trailer = svn_fs_fs__unparse_revision_trailer
+                  (root_offset,
+                   changed_path_offset,
+                   pool);
+      SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
+                                     NULL, pool));
+    }
+
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
 

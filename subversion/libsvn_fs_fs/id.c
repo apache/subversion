@@ -34,7 +34,7 @@ typedef struct id_private_t {
   const char *copy_id;
   const char *txn_id;
   svn_revnum_t rev;
-  apr_off_t offset;
+  apr_uint64_t item;
 } id_private_t;
 
 
@@ -76,12 +76,12 @@ svn_fs_fs__id_rev(const svn_fs_id_t *id)
 }
 
 
-apr_off_t
-svn_fs_fs__id_offset(const svn_fs_id_t *id)
+apr_uint64_t
+svn_fs_fs__id_item(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
-  return pvt->offset;
+  return pvt->item;
 }
 
 
@@ -97,7 +97,7 @@ svn_fs_fs__id_unparse(const svn_fs_id_t *id,
       char offset_string[SVN_INT64_BUFFER_SIZE];
 
       svn__i64toa(rev_string, pvt->rev);
-      svn__i64toa(offset_string, pvt->offset);
+      svn__i64toa(offset_string, pvt->item);
       return svn_string_createf(pool, "%s.%s.r%s/%s",
                                 pvt->node_id, pvt->copy_id,
                                 rev_string, offset_string);
@@ -131,7 +131,7 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
     return FALSE;
   if (pvta->rev != pvtb->rev)
     return FALSE;
-  if (pvta->offset != pvtb->offset)
+  if (pvta->item != pvtb->item)
     return FALSE;
   return TRUE;
 }
@@ -190,7 +190,7 @@ svn_fs_fs__id_txn_create(const char *node_id,
   pvt->copy_id = apr_pstrdup(pool, copy_id);
   pvt->txn_id = apr_pstrdup(pool, txn_id);
   pvt->rev = SVN_INVALID_REVNUM;
-  pvt->offset = -1;
+  pvt->item = 0;
 
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
@@ -202,7 +202,7 @@ svn_fs_id_t *
 svn_fs_fs__id_rev_create(const char *node_id,
                          const char *copy_id,
                          svn_revnum_t rev,
-                         apr_off_t offset,
+                         apr_uint64_t item,
                          apr_pool_t *pool)
 {
   svn_fs_id_t *id = apr_palloc(pool, sizeof(*id));
@@ -212,7 +212,7 @@ svn_fs_fs__id_rev_create(const char *node_id,
   pvt->copy_id = apr_pstrdup(pool, copy_id);
   pvt->txn_id = NULL;
   pvt->rev = rev;
-  pvt->offset = offset;
+  pvt->item = item;
 
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
@@ -231,7 +231,7 @@ svn_fs_fs__id_copy(const svn_fs_id_t *id, apr_pool_t *pool)
   new_pvt->copy_id = apr_pstrdup(pool, pvt->copy_id);
   new_pvt->txn_id = pvt->txn_id ? apr_pstrdup(pool, pvt->txn_id) : NULL;
   new_pvt->rev = pvt->rev;
-  new_pvt->offset = pvt->offset;
+  new_pvt->item = pvt->item;
 
   new_id->vtable = &id_vtable;
   new_id->fsap_data = new_pvt;
@@ -304,14 +304,14 @@ svn_fs_fs__id_parse(const char *data,
           svn_error_clear(err);
           return NULL;
         }
-      pvt->offset = (apr_off_t)val;
+      pvt->item = (apr_uint32_t)val;
     }
   else if (str[0] == 't')
     {
       /* This is a transaction type ID */
       pvt->txn_id = str + 1;
       pvt->rev = SVN_INVALID_REVNUM;
-      pvt->offset = -1;
+      pvt->item = 0;
     }
   else
     return NULL;
