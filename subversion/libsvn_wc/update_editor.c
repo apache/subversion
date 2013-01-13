@@ -1622,6 +1622,7 @@ delete_entry(const char *path,
   apr_pool_t *scratch_pool;
   svn_boolean_t deleting_target;
   svn_boolean_t keep_as_working = FALSE;
+  svn_boolean_t queue_deletes = TRUE;
 
   if (pb->skip_this)
     return SVN_NO_ERROR;
@@ -1702,7 +1703,9 @@ delete_entry(const char *path,
       || base_status == svn_wc__db_status_server_excluded)
     {
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     FALSE, SVN_INVALID_REVNUM,
+                                     FALSE /* keep_as_working */,
+                                     FALSE /* queue_deletes */,
+                                     SVN_INVALID_REVNUM /* not_present_rev */,
                                      NULL, NULL,
                                      scratch_pool));
 
@@ -1731,6 +1734,8 @@ delete_entry(const char *path,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
+  else
+    queue_deletes = FALSE; /* There is no in-wc representation */
 
   if (tree_conflict != NULL)
     {
@@ -1798,7 +1803,8 @@ delete_entry(const char *path,
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, SVN_INVALID_REVNUM,
+                                     keep_as_working, queue_deletes,
+                                     SVN_INVALID_REVNUM /* not_present_rev */,
                                      tree_conflict, NULL,
                                      scratch_pool));
     }
@@ -1806,7 +1812,8 @@ delete_entry(const char *path,
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, *eb->target_revision,
+                                     keep_as_working, queue_deletes,
+                                     *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
       eb->target_deleted = TRUE;
@@ -4520,7 +4527,9 @@ close_edit(void *edit_baton,
                  If so, we should get rid of this excluded node now. */
 
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
-                                             FALSE, SVN_INVALID_REVNUM,
+                                             FALSE /* keep_as_working */,
+                                             FALSE /* queue_deletes */,
+                                             SVN_INVALID_REVNUM,
                                              NULL, NULL, scratch_pool));
             }
         }

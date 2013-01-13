@@ -155,7 +155,10 @@ run_base_remove(svn_wc__db_t *db,
         }
     }
 
-  SVN_ERR(svn_wc__db_base_remove(db, local_abspath, FALSE, not_present_rev,
+  SVN_ERR(svn_wc__db_base_remove(db, local_abspath,
+                                 FALSE /* keep_as_working */,
+                                 TRUE /* queue_deletes */,
+                                 not_present_rev,
                                  NULL, NULL, scratch_pool));
 
   return SVN_NO_ERROR;

@@ -686,6 +686,12 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    If KEEP_AS_WORKING is TRUE, then the base tree is copied to higher
    layers as a copy of itself before deleting the BASE nodes.
 
+   If KEEP_AS_WORKING is FALSE, and QUEUE_DELETES is TRUE, also queue
+   workqueue items to delete all in-wc representations that aren't
+   shadowed by higher layers.
+   (With KEEP_AS_WORKING TRUE, this is a no-op, as everything is
+    automatically shadowed by the created copy)
+
    If NOT_PRESENT_REVISION specifies a valid revision a not-present
    node is installed in BASE node with kind NOT_PRESENT_KIND after
    deleting.
@@ -698,6 +704,7 @@ svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
+                       svn_boolean_t queue_deletes,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
