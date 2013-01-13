@@ -1182,7 +1182,7 @@ def incoming_symlink_changes(sbox):
   # Update back to r2, to prepare some local changes
   expected_output = svntest.wc.State(wc_dir, {
     # s-replace is D + A
-    's-replace'         : Item(status='A '),
+    's-replace'         : Item(status='A ', prev_status='D '),
     's-in-place'        : Item(status='U '),
     's-reverse'         : Item(status=' U'),
     's-type'            : Item(status=' U'),
@@ -1203,7 +1203,8 @@ def incoming_symlink_changes(sbox):
   sbox.simple_propset('x', 'y', 's-replace', 's-in-place', 's-reverse', 's-type')
 
   expected_output = svntest.wc.State(wc_dir, {
-    's-replace'         : Item(status='  ', treeconflict='A'),
+    's-replace'         : Item(prev_status = '  ', prev_treeconflict='C',
+                               status='  ', treeconflict='A'),
     's-in-place'        : Item(status='U '),
     's-reverse'         : Item(status='  ', treeconflict='C'),
     's-type'            : Item(status='  ', treeconflict='C'),

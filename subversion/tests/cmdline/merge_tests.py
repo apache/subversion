@@ -8100,10 +8100,10 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   # because /A_MOVED has renames in its history between the boundaries
   # of the requested merge range.
   expected_output = wc.State(A_COPY_path, {
-    'mu' : Item(status='G '), # mu gets touched twice
+    'mu' : Item(status='G ', prev_status='U '), # mu gets touched twice
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' G', prev_status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_path, {
     })
@@ -8266,7 +8266,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   expected_skip = wc.State(A_COPY_path, {})
   expected_output = wc.State(A_COPY_path, {
     ''   : Item(status=' U'),
-    'mu' : Item(status='G '),
+    'mu' : Item(status='G ', prev_status='G '), # Updated twice
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''   : Item(status=' U'),
@@ -8399,7 +8399,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   svntest.main.file_write(A_COPY_mu_path, tweaked_17th_line_1)
   expected_output = wc.State(A_COPY_path, {
     ''   : Item(status=' G'),
-    'mu' : Item(status='G '),
+    'mu' : Item(status='G ', prev_status='G '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''   : Item(status=' G'),
@@ -12143,7 +12143,7 @@ def subtree_source_missing_in_requested_range(sbox):
   expected_output = wc.State(A_COPY_path, {
     'D/H/omega' : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
-    'D/H/omega' : Item(status='G '),
+    'D/H/omega' : Item(status='G ', prev_status='G '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''          : Item(status=' U'),
@@ -13797,11 +13797,10 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   # r9: Merge r3,7 from A/D/H to A_COPY/D/H, then reverse merge r7 from
   # A/D/H/psi to A_COPY/D/H/psi.
   expected_output = wc.State(H_COPY_path, {
-    'psi' : Item(status='U '),
-    'psi' : Item(status='G '),
+    'psi' : Item(status='G ', prev_status='U '), # Touched twice
     })
   expected_mergeinfo_output = wc.State(H_COPY_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' G', prev_status=' U'),
     })
   expected_elision_output = wc.State(H_COPY_path, {
     })
@@ -13849,7 +13848,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   expected_output = wc.State(H_COPY_path, {
     'omega' : Item(status='U '),
-    'psi'   : Item(status='D '),
+    'psi'   : Item(status='D ', prev_status='U '),
     })
   expected_mergeinfo_output = wc.State(H_COPY_path, {
     '' : Item(status=' U'),
@@ -13960,7 +13959,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' G'),
+    'C_MOVED' : Item(status=' G', prev_status=' G'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
