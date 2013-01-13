@@ -5831,9 +5831,10 @@ def update_edit_delete_obstruction(sbox):
   sbox.simple_commit()
 
   # r3
-  #sbox.simple_mkdir('iota')
-  #sbox.simple_copy('A/D/gamma', 'A/B')
-  #sbox.simple_commit()
+  sbox.simple_mkdir('iota')
+  sbox.simple_copy('A/D/gamma', 'A/B')
+  sbox.simple_rm('A/D/H/chi')
+  sbox.simple_commit()
 
   sbox.simple_update('', 1)
 
@@ -5897,6 +5898,69 @@ def update_edit_delete_obstruction(sbox):
                                         None, None, None,
                                         None, None, 1,
                                         '-r', '2', wc_dir)
+
+  # Cleanup obstructions
+  os.remove(sbox.ospath('A/B'))
+  os.remove(sbox.ospath('A/D'))
+  os.rmdir(sbox.ospath('iota'))
+  os.rmdir(sbox.ospath('A/mu'))
+
+  # Revert to remove working nodes and tree conflicts
+  svntest.actions.run_and_verify_svn('Reverting', None, [],
+                                     'revert', '-R',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('A/D'),
+                                     sbox.ospath('iota'))
+  sbox.simple_update('', 1)
+
+  # Now obstruct A (as parent of the changed node), and retry
+  svntest.main.safe_rmtree(sbox.ospath('A'))
+  svntest.main.file_append(sbox.ospath('A'), "Obstruction")
+
+  # And now update to delete B and iota
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'         : Item(status='  ', treeconflict='C'),
+    'A/mu'      : Item(status='  ', treeconflict='U'),
+    'A/D'       : Item(status='  ', treeconflict='U'),
+    'A/D/G'     : Item(status='  ', treeconflict='U'),
+    'A/D/H'     : Item(status='  ', treeconflict='U'),
+    'A/D/H/chi' : Item(status='  ', treeconflict='D'),
+    'A/B'       : Item(status='  ', treeconflict='A'), # Replacement
+    'iota'      : Item(status='A '), # Replacement
+  })
+
+  expected_disk = svntest.wc.State('', {
+    'A'                 : Item(contents="Obstruction"),
+    'iota'              : Item(),
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''            : Item(status='  ', wc_rev='3'),
+    'A'           : Item(status='~ ', treeconflict='C', wc_rev='3'),
+    'A/mu'        : Item(status='! ', wc_rev='3'),
+    'A/D'         : Item(status='! ', wc_rev='3'),
+    'A/D/G'       : Item(status='! ', wc_rev='3'),
+    'A/D/G/rho'   : Item(status='! ', wc_rev='3'),
+    'A/D/G/pi'    : Item(status='! ', wc_rev='3'),
+    'A/D/G/tau'   : Item(status='! ', wc_rev='3'),
+    'A/D/gamma'   : Item(status='! ', wc_rev='3'),
+    'A/D/H'       : Item(status='! ', wc_rev='3'),
+    'A/D/H/psi'   : Item(status='! ', wc_rev='3'),
+    'A/D/H/omega' : Item(status='! ', wc_rev='3'),
+    'A/C'         : Item(status='! ', wc_rev='3'),
+    'A/B'         : Item(status='! ', wc_rev='3'),
+    'iota'        : Item(status='  ', wc_rev='3'),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '3', wc_dir)
 
 
 #######################################################################
