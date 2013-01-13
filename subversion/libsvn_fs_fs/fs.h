@@ -105,7 +105,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   6
+#define SVN_FS_FS__FORMAT_NUMBER   7
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -147,6 +147,9 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
+
+/* The minimum format number that supports packed revprops. */
+#define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
