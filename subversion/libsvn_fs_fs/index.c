@@ -25,13 +25,15 @@
 
 #include "index.h"
 #include "util.h"
+#include "pack.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_temp_serializer.h"
 
 #include "svn_private_config.h"
 #include "temp_serializer.h"
-#include <apr_poll.h>
+
+#include "../libsvn_fs/fs-loader.h"
 
 #define ENCODED_INT_LENGTH 10
 
@@ -56,6 +58,12 @@ typedef struct l2p_index_page_t
   apr_off_t *offsets;
 } l2p_index_page_t;
 
+typedef struct l2_proto_index_entry_t
+{
+  apr_uint64_t offset;
+  apr_uint64_t item_index;
+} l2_proto_index_entry_t;
+
 typedef struct p2l_index_header_t
 {
   svn_revnum_t first_revision;
@@ -77,14 +85,14 @@ svn_fs_fs__l2p_proto_index_open(apr_file_t **proto_index,
 }
 
 static svn_error_t *
-write_number_to_proto_index(apr_file_t *proto_index,
-                            apr_uint64_t value,
-                            apr_pool_t *pool)
+write_entry_to_proto_index(apr_file_t *proto_index,
+                           l2_proto_index_entry_t entry,
+                           apr_pool_t *pool)
 {
-  apr_size_t written = sizeof(value);
+  apr_size_t written = sizeof(entry);
 
-  SVN_ERR(svn_io_file_write(proto_index, &value, &written, pool));
-  SVN_ERR_ASSERT(written == sizeof(value));
+  SVN_ERR(svn_io_file_write(proto_index, &entry, &written, pool));
+  SVN_ERR_ASSERT(written == sizeof(entry));
 
   return SVN_NO_ERROR;
 }
@@ -93,16 +101,33 @@ svn_error_t *
 svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                         apr_pool_t *pool)
 {
-  return write_number_to_proto_index(proto_index, (apr_uint64_t)(-1), pool);
+  l2_proto_index_entry_t entry;
+  entry.offset = 0;
+  entry.item_index = 0;
+
+  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
+                                                    pool));
 }
 
 svn_error_t *
-svn_fs_fs__l2p_proto_index_add_offset(apr_file_t *proto_index,
-                                      apr_off_t offset,
-                                      apr_pool_t *pool)
+svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
+                                     apr_off_t offset,
+                                     apr_uint64_t item_index,
+                                     apr_pool_t *pool)
 {
+  l2_proto_index_entry_t entry;
+
+  /* make sure the conversion to uint64 works */
   SVN_ERR_ASSERT(offset >= 0);
-  return write_number_to_proto_index(proto_index, (apr_uint64_t)offset, pool);
+  entry.offset = (apr_uint64_t)offset;
+
+  /* make sure we can use item_index as an array index when building the
+   * final index file */
+  SVN_ERR_ASSERT(item_index < UINT_MAX / 2);
+  entry.item_index = item_index;
+
+  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
+                                                    pool));
 }
 
 static apr_size_t
@@ -133,12 +158,8 @@ svn_fs_fs__l2p_index_create(apr_file_t *proto_index,
   apr_file_t *index_file;
   unsigned char encoded[ENCODED_INT_LENGTH];
 
-  apr_uint64_t page_start = 0;      /* first source entry number of the
-                                       current page */
   int last_page_count = 0;          /* total page count at the start of
                                        the current revision */
-  apr_size_t last_buffer_size = 0;  /* byte offset in the spill buffer at
-                                       the begin of the current revision */
 
   /* temporary data structures that collect the data which will be moved
      to the target file in a second step */
@@ -149,6 +170,10 @@ svn_fs_fs__l2p_index_create(apr_file_t *proto_index,
      = apr_array_make(local_pool, 16, sizeof(apr_uint64_t));
   apr_array_header_t *entry_counts
      = apr_array_make(local_pool, 16, sizeof(apr_uint64_t));
+
+  /* collects the item offsets for the current revision */
+  apr_array_header_t *offsets
+     = apr_array_make(local_pool, 256, sizeof(apr_uint64_t));
 
   /* 64k blocks, spill after 16MB */
   svn_spillbuf_t *buffer
@@ -161,52 +186,55 @@ svn_fs_fs__l2p_index_create(apr_file_t *proto_index,
   /* process all entries until we fail due to EOF */
   for (entry = 0; !eof; ++entry)
     {
-      apr_uint64_t value = 0;
+      l2_proto_index_entry_t proto_entry;
       apr_size_t read = 0;
-      svn_boolean_t revision_boundary;
-      svn_boolean_t page_full;
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(proto_index, &value, sizeof(value),
+      SVN_ERR(svn_io_file_read_full2(proto_index,
+                                     &proto_entry, sizeof(proto_entry),
                                      &read, &eof, local_pool));
-      SVN_ERR_ASSERT(read == sizeof(value));
+      SVN_ERR_ASSERT(read == sizeof(proto_entry));
 
-      /* end the page after 8k entries */
-      page_full = (entry - page_start) > 0x2000;
-      revision_boundary = value == -1 || eof;
-
-      /* end the page after 4k entries or after */
-      if (revision_boundary || page_full)
+      /* handle new revision */
+      if ((entry > 0 && proto_entry.offset == -1) || eof)
         {
-          /* store prev. page's dimensions, iff that exists */
-          if (entry > 0)
+          /* dump entries, grouped into pages */
+
+          int k = 0;
+          for (i = 0; i < offsets->nelts; i = k)
             {
-              APR_ARRAY_PUSH(entry_counts, apr_uint64_t)
-                = entry - page_start;
+              /* 1 page with up to 8k entries */
+              int entry_count = offsets->nelts - i < 0x2000
+                              ? offsets->nelts
+                              : 0x2000;
+              apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
+
+              for (k = i; k < i + entry_count; ++k)
+                {
+                  apr_uint64_t value = APR_ARRAY_IDX(offsets, k, apr_uint64_t);
+                  SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
+                                              encode_uint(encoded, value),
+                                              local_pool));
+                }
+
+              APR_ARRAY_PUSH(entry_counts, apr_uint64_t) = entry_count;
               APR_ARRAY_PUSH(page_sizes, apr_uint64_t)
                 = svn_spillbuf__get_size(buffer) - last_buffer_size;
             }
 
-          last_buffer_size = svn_spillbuf__get_size(buffer);
-          page_start = entry;
-        }
-
-      /* handle new revision */
-      if (revision_boundary)
-        {
-          /* store number of pages in previous rev, iff that exists */
-          if (entry > 0)
-            APR_ARRAY_PUSH(page_counts, apr_uint64_t)
-              = page_sizes->nelts - last_page_count;
+          /* store the number of pages in this revision */
+          APR_ARRAY_PUSH(page_counts, apr_uint64_t)
+            = page_sizes->nelts - last_page_count;
 
           last_page_count = page_sizes->nelts;
-          page_start = entry + 1;
         }
       else
         {
-          SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
-                                      encode_uint(encoded, value),
-                                      local_pool));
+          int idx = (apr_size_t)proto_entry.item_index;
+          while (idx <= offsets->nelts)
+            APR_ARRAY_PUSH(offsets, apr_uint64_t) = 0;
+
+          APR_ARRAY_IDX(offsets, idx, apr_uint64_t) = proto_entry.offset + 1;
         }
     }
 
@@ -411,7 +439,7 @@ svn_fs_fs__l2p_index_lookup(apr_off_t *offset,
                                " too large in revision %ld"),
                              item_index, revision);
 
-  *offset = page->offsets[item_index];
+  *offset = page->offsets[item_index] - 1;
 
   return SVN_NO_ERROR;
 }
@@ -711,3 +739,30 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_fs__item_offset(apr_off_t *offset,
+                       svn_fs_t *fs,
+                       svn_revnum_t revision,
+                       apr_uint64_t item_index,
+                       apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      *offset = (apr_off_t)item_index - 1;
+      if (is_packed_rev(fs, revision))
+        {
+          apr_off_t rev_offset;
+
+          SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision,
+                                               pool));
+          *offset += rev_offset;
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(svn_fs_fs__l2p_index_lookup(offset, fs, revision,
+                                                     item_index, pool));
+}

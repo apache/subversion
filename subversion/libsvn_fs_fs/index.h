@@ -35,9 +35,10 @@ svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                         apr_pool_t *pool);
 
 svn_error_t *
-svn_fs_fs__l2p_proto_index_add_offset(apr_file_t *proto_index,
-                                      apr_off_t offset,
-                                      apr_pool_t *pool);
+svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
+                                     apr_off_t offset,
+                                     apr_uint64_t item_index,
+                                     apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_fs__l2p_index_create(apr_file_t *proto_index,
@@ -83,5 +84,12 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             svn_revnum_t revision,
                             apr_off_t offset,
                             apr_pool_t *pool);
+
+svn_error_t *
+svn_fs_fs__item_offset(apr_off_t *offset,
+                       svn_fs_t *fs,
+                       svn_revnum_t revision,
+                       apr_uint64_t item_index,
+                       apr_pool_t *pool);
 
 #endif
