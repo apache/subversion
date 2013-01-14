@@ -21,7 +21,13 @@
  * ====================================================================
  */
 
-/* This editor is used during resolution of tree conflicts.
+/* This file implements an editor and an edit driver which are used
+ * to resolve an "incoming edit, local move-away" tree conflict resulting
+ * from an update (or switch).
+ *
+ * Our goal is to be able to resolve this conflict such that the end
+ * result is just the same as if the user had run the update *before*
+ * the local move.
  *
  * When an update (or switch) produces incoming changes for a locally
  * moved-away subtree, it updates the base nodes of the moved-away tree
