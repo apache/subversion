@@ -887,7 +887,7 @@ delete_node_property(void *node_baton, const char *name)
   if (!nb->has_prop_delta)
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              _("Delta property block detected, but deltas "
-                               "are not enabled for node '%s' in original"
+                               "are not enabled for node '%s' in original "
                                "revision %ld"),
                              nb->node_path, rb->rev_orig);
  
