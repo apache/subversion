@@ -178,7 +178,7 @@ class BigDoEverythingClasss(object):
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
-        self.hook = config.get_value('hook')
+        self.hook = config.get_optional_value('hook')
         self.streams = config.get_value('streams').split()
         self.worker = BackgroundWorker(self.svnbin, self.env, self.hook)
         self.watch = [ ]
@@ -353,6 +353,12 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
 
     def get_value(self, which):
         return self.get(ConfigParser.DEFAULTSECT, which)
+
+    def get_optional_value(self, which, default=None):
+        if self.has_option(ConfigParser.DEFAULTSECT, which):
+            return self.get(ConfigParser.DEFAULTSECT, which)
+        else:
+            return default
 
     def get_env(self):
         env = os.environ.copy()
