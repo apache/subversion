@@ -731,8 +731,6 @@ merge_file_trivial(svn_skel_t **work_items,
                                            cancel_func, cancel_baton,
                                            scratch_pool));
 
-                  /* no need to strdup right_abspath, as the wq_build_()
-                     call already does that for us */
                   delete_src = TRUE;
                 }
 
