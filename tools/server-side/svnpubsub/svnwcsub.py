@@ -84,8 +84,18 @@ except AttributeError:
 
 assert hasattr(subprocess, 'check_call')
 def check_call(*args, **kwds):
-    return subprocess.check_call(*args, **kwds)
-
+    """Wrapper around subprocess.check_call() that logs stderr upon failure."""
+    assert 'stderr' not in kwds
+    kwds.update(stderr=subprocess.PIPE)
+    pipe = subprocess.Popen(*args, **kwds)
+    output, errput = pipe.communicate()
+    if pipe.returncode:
+        cmd = args[0] if len(args) else kwds.get('args', '(no command)')
+        # TODO: log stdout too?
+        logging.error('Command failed: returncode=%d command=%r stderr=%r',
+                      pipe.returncode, cmd, errput)
+        raise subprocess.CalledProcessError(pipe.returncode, args)
+    return pipe.returncode # is EXIT_OK
 
 ### note: this runs synchronously. within the current Twisted environment,
 ### it is called from ._get_match() which is run on a thread so it won't
