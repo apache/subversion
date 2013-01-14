@@ -77,6 +77,7 @@
 #include "svn_wc.h"
 #include "svn_props.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_sqlite.h"
@@ -961,188 +962,263 @@ get_tc_info(svn_wc_operation_t *operation,
   return SVN_NO_ERROR;
 }
 
+/* Return *PROPS, *CHECKSUM, *CHILDREN and *KIND for LOCAL_RELPATH at
+   OP_DEPTH provided the row exists.  Return *KIND of svn_kind_none if
+   the row does not exist. *CHILDREN is a sorted array of basenames of
+   type 'const char *', rather than a hash, to allow the driver to
+   process children in a defined order. */
+static svn_error_t *
+get_info(apr_hash_t **props,
+         const svn_checksum_t **checksum,
+         apr_array_header_t **children,
+         svn_kind_t *kind,
+         const char *local_relpath,
+         int op_depth,
+         svn_wc__db_wcroot_t *wcroot,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  apr_hash_t *hash_children;
+  apr_array_header_t *sorted_children;
+  svn_boolean_t have_row;
+  int i;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_DEPTH_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            local_relpath, op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      svn_error_t *err;
+
+      *kind = svn_sqlite__column_token(stmt, 3, kind_map);
+      err = svn_sqlite__column_properties(props, stmt, 13,
+                                          result_pool, scratch_pool);
+      if (!err)
+        err = svn_sqlite__column_checksum(checksum, stmt, 5, result_pool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+    }
+  else
+    *kind = svn_kind_none;
+  SVN_ERR(svn_sqlite__reset(stmt));
+  
+  SVN_ERR(svn_wc__db_get_children_op_depth(&hash_children, wcroot,
+                                           local_relpath, op_depth,
+                                           scratch_pool, scratch_pool));
+
+  sorted_children = svn_sort__hash(hash_children,
+                                   svn_sort_compare_items_as_paths,
+                                   scratch_pool);
+
+  *children = apr_array_make(result_pool, sorted_children->nelts,
+                             sizeof(const char *));
+  for (i = 0; i < sorted_children->nelts; ++i)
+    APR_ARRAY_PUSH(*children, const char *)
+      = apr_pstrdup(result_pool, APR_ARRAY_IDX(sorted_children, i,
+                                               svn_sort__item_t).key);
+                                                           
+  return SVN_NO_ERROR;
+}
+
+/* Return TRUE if SRC_CHILDREN and DST_CHILDREN represent the same
+   children, FALSE otherwise.  SRC_CHILDREN and DST_CHILDREN are
+   sorted arrays of basenames of type 'const char *'. */
+static svn_boolean_t
+children_match(apr_array_header_t *src_children,
+               apr_array_header_t *dst_children) { int i;
+
+  if (src_children->nelts != dst_children->nelts)
+    return FALSE;
+
+  for(i = 0; i < src_children->nelts; ++i)
+    {
+      const char *src_child =
+        APR_ARRAY_IDX(src_children, i, const char *);
+      const char *dst_child =
+        APR_ARRAY_IDX(dst_children, i, const char *);
+
+      if (strcmp(src_child, dst_child))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+/* Return TRUE if SRC_PROPS and DST_PROPS contain the same properties,
+   FALSE otherwise. SRC_PROPS and DST_PROPS are standard property
+   hashes. */
+static svn_error_t *
+props_match(svn_boolean_t *match,
+            apr_hash_t *src_props,
+            apr_hash_t *dst_props,
+            apr_pool_t *scratch_pool)
+{
+  if (!src_props && !dst_props)
+    *match = TRUE;
+  else if (!src_props || ! dst_props)
+    *match = FALSE;
+  else
+    {
+      apr_array_header_t *propdiffs;
+
+      SVN_ERR(svn_prop_diffs(&propdiffs, src_props, dst_props, scratch_pool));
+      *match = propdiffs->nelts ? FALSE : TRUE;
+    }
+  return SVN_NO_ERROR;
+}
+
 /* ### Drive TC_EDITOR so as to ...
  */
 static svn_error_t *
-update_moved_away_file(svn_editor_t *tc_editor,
-                       svn_boolean_t add,
+update_moved_away_node(svn_editor_t *tc_editor,
                        const char *src_relpath,
                        const char *dst_relpath,
+                       int src_op_depth,
                        const char *move_root_dst_relpath,
                        svn_revnum_t move_root_dst_revision,
                        svn_wc__db_t *db,
                        svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
 {
-  svn_kind_t kind;
-  svn_stream_t *new_contents;
-  const svn_checksum_t *new_checksum;
-  apr_hash_t *new_props;
+  svn_kind_t src_kind, dst_kind;
+  const svn_checksum_t *src_checksum, *dst_checksum;
+  apr_hash_t *src_props, *dst_props;
+  apr_array_header_t *src_children, *dst_children;
+  int dst_op_depth = relpath_depth(move_root_dst_relpath);
 
-  /* Read post-update contents from the updated moved-away file and tell
-   * the editor to merge them into the moved-here file. */
-  SVN_ERR(svn_wc__db_read_pristine_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                        &new_checksum, NULL, NULL, &new_props,
-                                        db, svn_dirent_join(wcroot->abspath,
-                                                            src_relpath,
-                                                            scratch_pool),
-                                        scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_pristine_read(&new_contents, NULL, db,
-                                   wcroot->abspath, new_checksum,
-                                   scratch_pool, scratch_pool));
+  SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
+                   src_relpath, src_op_depth,
+                   wcroot, scratch_pool, scratch_pool));
 
-  if (add)
-    /* FIXME: editor API violation: missing svn_editor_alter_directory. */
-    SVN_ERR(svn_editor_add_file(tc_editor, dst_relpath,
-                                new_checksum, new_contents,
-                                apr_hash_make(scratch_pool), /* ### TODO props */
-                                move_root_dst_revision));
-  else
-    SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
-                                  move_root_dst_revision,
-                                  new_props, new_checksum,
-                                  new_contents));
+  SVN_ERR(get_info(&dst_props, &dst_checksum, &dst_children, &dst_kind,
+                   dst_relpath, dst_op_depth,
+                   wcroot, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_stream_close(new_contents));
-
-  return SVN_NO_ERROR;
-}
-
-/* ### Drive TC_EDITOR so as to ...
- */
-static svn_error_t *
-update_moved_away_dir(svn_editor_t *tc_editor,
-                      svn_boolean_t add,
-                      apr_hash_t *children_hash,
-                      const char *src_relpath,
-                      const char *dst_relpath,
-                      const char *move_root_dst_relpath,
-                      svn_revnum_t move_root_dst_revision,
-                      svn_wc__db_t *db,
-                      svn_wc__db_wcroot_t *wcroot,
-                      apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *new_children;
-  apr_hash_t *new_props;
-  const char *src_abspath = svn_dirent_join(wcroot->abspath,
-                                            src_relpath,
-                                            scratch_pool);
-
-  SVN_ERR(svn_hash_keys(&new_children, children_hash, scratch_pool));
-
-  SVN_ERR(svn_wc__db_read_pristine_props(&new_props, db, src_abspath,
-                                         scratch_pool, scratch_pool));
-
-  /* This is a non-Ev2, depth-first, drive that calls add/alter on all
-     directories. */
-  if (add)
-    SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
-                                     new_children, new_props,
-                                     move_root_dst_revision));
-  else
-    SVN_ERR(svn_editor_alter_directory(tc_editor, dst_relpath,
-                                       move_root_dst_revision,
-                                       new_children, new_props));
-
-  return SVN_NO_ERROR;
-}
-
-/* ### Drive TC_EDITOR so as to ...
- */
-static svn_error_t *
-update_moved_away_subtree(svn_editor_t *tc_editor,
-                          svn_boolean_t add,
-                          const char *src_relpath,
-                          const char *dst_relpath,
-                          int src_op_depth,
-                          const char *move_root_dst_relpath,
-                          svn_revnum_t move_root_dst_revision,
-                          svn_wc__db_t *db,
-                          svn_wc__db_wcroot_t *wcroot,
-                          apr_pool_t *scratch_pool)
-{
-  apr_hash_t *src_children, *dst_children;
-  apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_wc__db_get_children_op_depth(&src_children, wcroot,
-                                           src_relpath, src_op_depth,
-                                           scratch_pool, scratch_pool));
-
-  SVN_ERR(update_moved_away_dir(tc_editor, add, src_children,
-                                src_relpath, dst_relpath,
-                                move_root_dst_relpath,
-                                move_root_dst_revision,
-                                db, wcroot, scratch_pool));
-
-  SVN_ERR(svn_wc__db_get_children_op_depth(&dst_children, wcroot,
-                                           dst_relpath,
-                                           relpath_depth(move_root_dst_relpath),
-                                           scratch_pool, scratch_pool));
-  iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, src_children);
-       hi;
-       hi = apr_hash_next(hi))
+  if (src_kind == svn_kind_none
+      || (dst_kind != svn_kind_none && src_kind != dst_kind))
     {
-      const char *src_name = svn__apr_hash_index_key(hi);
-      svn_kind_t *src_kind = svn__apr_hash_index_val(hi);
-      svn_kind_t *dst_kind = apr_hash_get(dst_children, src_name,
-                                          APR_HASH_KEY_STRING);
-      svn_boolean_t is_add = FALSE;
-      const char *child_src_relpath, *child_dst_relpath;
-
-      svn_pool_clear(iterpool);
-
-      child_src_relpath = svn_relpath_join(src_relpath, src_name, iterpool);
-      child_dst_relpath = svn_relpath_join(dst_relpath, src_name, iterpool);
-
-      if (!dst_kind || (*src_kind != *dst_kind))
+      SVN_ERR(svn_editor_delete(tc_editor, dst_relpath,
+                                move_root_dst_revision));
+    }
+ 
+  if (src_kind != svn_kind_none && src_kind != dst_kind)
+    {
+      if (src_kind == svn_kind_file || src_kind == svn_kind_symlink)
         {
-          is_add = TRUE;
-          if (dst_kind)
-            /* FIXME:editor API violation:missing svn_editor_alter_directory. */
-            SVN_ERR(svn_editor_delete(tc_editor, child_dst_relpath,
+          svn_stream_t *contents;
+
+          SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db,
+                                           wcroot->abspath, src_checksum,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_editor_add_file(tc_editor, dst_relpath,
+                                      src_checksum, contents, src_props,
                                       move_root_dst_revision));
         }
-
-      if (*src_kind == svn_kind_file || *src_kind == svn_kind_symlink)
+      else if (src_kind == svn_kind_dir)
         {
-          SVN_ERR(update_moved_away_file(tc_editor, is_add,
-                                         child_src_relpath,
-                                         child_dst_relpath,
+          SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
+                                           src_children, src_props,
+                                           move_root_dst_revision));
+        }
+    }
+  else if (src_kind != svn_kind_none)
+    {
+      svn_boolean_t match;
+      apr_hash_t *props;
+
+      SVN_ERR(props_match(&match, src_props, dst_props, scratch_pool));
+      props = match ? NULL: src_props;
+
+      
+      if (src_kind == svn_kind_file || src_kind == svn_kind_symlink)
+        {
+          svn_stream_t *contents;
+
+          if (svn_checksum_match(src_checksum, dst_checksum))
+            src_checksum = NULL;
+
+          if (src_checksum)
+            SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db,
+                                             wcroot->abspath, src_checksum,
+                                             scratch_pool, scratch_pool));
+          else
+            contents = NULL;
+
+          if (props || src_checksum)
+            SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
+                                          move_root_dst_revision,
+                                          props, src_checksum, contents));
+        }
+      else if (src_kind == svn_kind_dir)
+        {
+          apr_array_header_t *children
+            = children_match(src_children, dst_children) ? NULL : src_children;
+
+          if (props || children)
+            SVN_ERR(svn_editor_alter_directory(tc_editor, dst_relpath,
+                                               move_root_dst_revision,
+                                               children, props));
+        }
+    }
+
+  if (src_kind == svn_kind_dir)
+    {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i = 0, j = 0;
+
+      while (i < src_children->nelts || j < dst_children->nelts)
+        {
+          const char *child_name;
+          const char *src_child_relpath, *dst_child_relpath;
+          svn_boolean_t src_only = FALSE, dst_only = FALSE;
+
+          svn_pool_clear(iterpool);
+          if (i >= src_children->nelts)
+            {
+              dst_only = TRUE;
+              child_name = APR_ARRAY_IDX(dst_children, j, const char *);
+            }
+          else if (j >= dst_children->nelts)
+            {
+              src_only = TRUE;
+              child_name = APR_ARRAY_IDX(src_children, i, const char *);
+            }
+          else
+            {
+              const char *src_name = APR_ARRAY_IDX(src_children, i,
+                                                   const char *);
+              const char *dst_name = APR_ARRAY_IDX(dst_children, j,
+                                                   const char *);
+              int cmp = strcmp(src_name, dst_name);
+
+              if (cmp > 0)
+                dst_only = TRUE;
+              else if (cmp < 0)
+                src_only = TRUE;
+
+              child_name = dst_only ? dst_name : src_name;
+            }
+
+          src_child_relpath = svn_relpath_join(src_relpath, child_name,
+                                               iterpool);
+          dst_child_relpath = svn_relpath_join(dst_relpath, child_name,
+                                               iterpool);
+
+          SVN_ERR(update_moved_away_node(tc_editor, src_child_relpath,
+                                         dst_child_relpath, src_op_depth,
                                          move_root_dst_relpath,
                                          move_root_dst_revision,
-                                         db, wcroot, iterpool));
+                                         db, wcroot, scratch_pool));
+
+          if (!dst_only)
+            ++i;
+          if (!src_only)
+            ++j;
         }
-      else if (*src_kind == svn_kind_dir)
-        {
-          SVN_ERR(update_moved_away_subtree(tc_editor, is_add,
-                                            child_src_relpath,
-                                            child_dst_relpath,
-                                            src_op_depth,
-                                            move_root_dst_relpath,
-                                            move_root_dst_revision,
-                                            db, wcroot, iterpool));
-        }
-      else
-        ; /* ### TODO */
-
-      apr_hash_set(dst_children, src_name, APR_HASH_KEY_STRING, NULL);
     }
-  for (hi = apr_hash_first(scratch_pool, dst_children);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *dst_name = svn__apr_hash_index_key(hi);
-      const char *child_dst_relpath;
-
-      svn_pool_clear(iterpool);
-      child_dst_relpath = svn_relpath_join(dst_relpath, dst_name, iterpool);
-
-      SVN_ERR(svn_editor_delete(tc_editor, child_dst_relpath,
-                                move_root_dst_revision));
-    }
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1241,16 +1317,10 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
   /* We walk the move source (i.e. the post-update tree), comparing each node
    * with the equivalent node at the move destination and applying the update
    * to nodes at the move destination. */
-  if (old_version->node_kind == svn_node_file)
-    SVN_ERR(update_moved_away_file(tc_editor, FALSE, src_relpath, dst_relpath,
-                                   dst_relpath, old_version->peg_rev,
-                                   db, wcroot, scratch_pool));
-  else if (old_version->node_kind == svn_node_dir)
-    SVN_ERR(update_moved_away_subtree(tc_editor, FALSE,
-                                      src_relpath, dst_relpath,
-                                      src_op_depth,
-                                      dst_relpath, old_version->peg_rev,
-                                      db, wcroot, scratch_pool));
+  SVN_ERR(update_moved_away_node(tc_editor, src_relpath, dst_relpath,
+                                 src_op_depth,
+                                 dst_relpath, old_version->peg_rev,
+                                 db, wcroot, scratch_pool));
 
   SVN_ERR(svn_editor_complete(tc_editor));
 
