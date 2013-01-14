@@ -30,19 +30,42 @@
 # See svnwcsub.conf for more information on its contents.
 #
 
+# TODO:
+# - bulk update at startup time to avoid backlog warnings
+# - fold BDEC into Daemon
+# - fold WorkingCopy._get_match() into __init__
+# - remove wc_ready(). assume all WorkingCopy instances are usable.
+#   place the instances into .watch at creation. the .update_applies()
+#   just returns if the wc is disabled (eg. could not find wc dir)
+# - figure out way to avoid the ASF-specific PRODUCTION_RE_FILTER
+#   (a base path exclusion list should work for the ASF)
+# - add support for SIGHUP to reread the config and reinitialize working copies
+# - joes will write documentation for svnpubsub as these items become fulfilled
+# - make LOGLEVEL configurable
+
 import errno
 import subprocess
 import threading
 import sys
 import os
 import re
-import ConfigParser
+import posixpath
+try:
+  import ConfigParser
+except ImportError:
+  import configparser as ConfigParser
 import time
 import logging.handlers
-import Queue
+try:
+  import Queue
+except ImportError:
+  import queue as Queue
 import optparse
 import functools
-import urlparse
+try:
+  import urlparse
+except ImportError:
+  import urllib.parse as urlparse
 
 import daemonize
 import svnpubsub.client
@@ -151,14 +174,9 @@ class BigDoEverythingClasss(object):
         self.env = config.get_env()
         self.tracking = config.get_track()
         self.hook = config.get_value('hook')
+        self.streams = config.get_value('streams').split()
         self.worker = BackgroundWorker(self.svnbin, self.env, self.hook)
         self.watch = [ ]
-
-        self.hostports = [ ]
-        ### switch from URLs in the config to just host:port pairs
-        for url in config.get_value('streams').split():
-            parsed = urlparse.urlparse(url.strip())
-            self.hostports.append((parsed.hostname, parsed.port))
 
     def start(self):
         for path, url in self.tracking.items():
@@ -175,15 +193,15 @@ class BigDoEverythingClasss(object):
     def _normalize_path(self, path):
         if path[0] != '/':
             return "/" + path
-        return os.path.abspath(path)
+        return posixpath.abspath(path)
 
-    def commit(self, host, port, rev):
-        logging.info("COMMIT r%d (%d paths) from %s:%d"
-                     % (rev.rev, len(rev.dirs_changed), host, port))
+    def commit(self, url, commit):
+        logging.info("COMMIT r%d (%d paths) from %s"
+                     % (commit.id, len(commit.changed), url))
 
-        paths = map(self._normalize_path, rev.dirs_changed)
+        paths = map(self._normalize_path, commit.changed)
         if len(paths):
-            pre = os.path.commonprefix(paths)
+            pre = posixpath.commonprefix(paths)
             if pre == "/websites/":
                 # special case for svnmucc "dynamic content" buildbot commits
                 # just take the first production path to avoid updating all cms working copies
@@ -194,8 +212,8 @@ class BigDoEverythingClasss(object):
                         break
 
             #print "Common Prefix: %s" % (pre)
-            wcs = [wc for wc in self.watch if wc.update_applies(rev.uuid, pre)]
-            logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
+            wcs = [wc for wc in self.watch if wc.update_applies(commit.repository, pre)]
+            logging.info("Updating %d WC for r%d" % (len(wcs), commit.id))
             for wc in wcs:
                 self.worker.add_work(OP_UPDATE, wc)
 
@@ -376,18 +394,18 @@ class Daemon(daemonize.Daemon):
         # Start the BDEC (on the main thread), then start the client
         self.bdec.start()
 
-        mc = svnpubsub.client.MultiClient(self.bdec.hostports,
+        mc = svnpubsub.client.MultiClient(self.bdec.streams,
                                           self.bdec.commit,
                                           self._event)
         mc.run_forever()
 
-    def _event(self, host, port, event_name):
+    def _event(self, url, event_name, event_arg):
         if event_name == 'error':
-            logging.exception('from %s:%s', host, port)
+            logging.exception('from %s', url)
         elif event_name == 'ping':
-            logging.debug('ping from %s:%s', host, port)
+            logging.debug('ping from %s', url)
         else:
-            logging.info('"%s" from %s:%s', event_name, host, port)
+            logging.info('"%s" from %s', event_name, url)
 
 
 def prepare_logging(logfile):

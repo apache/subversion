@@ -30,8 +30,6 @@
 #   Space separated list of URLs to streams.
 #   This option should only be in the DEFAULT section, is ignored in
 #   all other sections.
-#   NOTE: At current svnpubsub.client only accepts hostname and port
-#         combos so the path is ignored and /commits/xml is used.
 # irker=hostname:port 
 #   The hostname/port combination of the irker daemon.  If port is
 #   omitted it defaults to 6659.  Irker is connected to over UDP.
@@ -46,7 +44,7 @@
 # template=string
 #   A string to use to format the output.  The string is a Python 
 #   string Template.  The following variables are available:
-#   $author, $rev, $date, $uuid, $log, $log, $log_firstline,
+#   $committer, $id, $date, $repository, $log, $log_firstline,
 #   $log_firstparagraph, $dirs_changed, $dirs_count, $dirs_count_s,
 #   $subdirs_count, $subdirs_count_s, $dirs_root
 #   Most of them should be self explanatory.  $dirs_count is the number of
@@ -114,9 +112,9 @@ class Daemon(daemonize.Daemon):
   def run(self):
     print 'irkerbridge started, pid=%d' % (os.getpid())
 
-    mc = svnpubsub.client.MultiClient(self.bdec.hostports,
-        self.bdec.commit,
-        self.bdec.event)
+    mc = svnpubsub.client.MultiClient(self.bdec.urls,
+                                      self.bdec.commit,
+                                      self.bdec.event)
     mc.run_forever()
 
 
@@ -124,12 +122,9 @@ class BigDoEverythingClass(object):
   def __init__(self, config, options):
     self.config = config
     self.options = options
-    self.hostports = []
-    for url in config.get_value('streams').split():
-      parsed = urlparse.urlparse(url.strip())
-      self.hostports.append((parsed.hostname, parsed.port or 80))
+    self.urls = config.get_value('streams').split()
 
-  def locate_matching_configs(self, rev):
+  def locate_matching_configs(self, commit):
     result = [ ]
     for section in self.config.sections():
       match = self.config.get(section, "match").split('/', 1)
@@ -137,40 +132,62 @@ class BigDoEverythingClass(object):
         # No slash so assume all paths
         match.append('*')
       match_uuid, match_path = match
-      if rev.uuid == match_uuid or match_uuid == "*":
-        for path in rev.dirs_changed:
+      if commit.repository == match_uuid or match_uuid == "*":
+        for path in commit.changed:
           if fnmatch.fnmatch(path, match_path):
             result.append(section)
             break
     return result
 
-  def fill_in_extra_args(self, rev):
+  def _generate_dirs_changed(self, commit):
+    if hasattr(commit, 'dirs_changed') or not hasattr(commit, 'changed'):
+      return
+
+    dirs_changed = set() 
+    for p in commit.changed:
+      if p[-1] == '/' and commit.changed[p]['flags'][1] == 'U':
+        # directory with property changes add the directory itself.
+        dirs_changed.add(p)
+      else:
+        # everything else add the parent of the path
+        # directories have a trailing slash so if it's present remove
+        # it before finding the parent.  The result will be a directory
+        # so it needs a trailing slash
+        dirs_changed.add(posixpath.dirname(p.rstrip('/')) + '/')
+
+    commit.dirs_changed = dirs_changed
+    return
+
+  def fill_in_extra_args(self, commit):
     # Set any empty members to the string "<null>"
-    v = vars(rev)
+    v = vars(commit)
     for k in v.keys():
       if not v[k]:
         v[k] = '<null>'
-       
-    # Add entries to the rev object that are useful for
-    # formatting.
-    rev.log_firstline = rev.log.split("\n",1)[0]
-    rev.log_firstparagraph = re.split("\r?\n\r?\n",rev.log,1)[0]
-    rev.log_firstparagraph = re.sub("\r?\n"," ",rev.log_firstparagraph)
-    if rev.dirs_changed:
-      rev.dirs_root = posixpath.commonprefix(rev.dirs_changed)
-      rev.dirs_count = len(rev.dirs_changed)
-      if rev.dirs_count > 1:
-        rev.dirs_count_s = " (%d dirs)" %(rev.dirs_count)
-      else:
-        rev.dirs_count_s = ""
 
-      rev.subdirs_count = rev.dirs_count
-      if rev.dirs_root in rev.dirs_changed:
-        rev.subdirs_count -= 1
-      if rev.subdirs_count > 1:
-        rev.subdirs_count_s = " + %d subdirs" % (rev.subdirs_count)
+    self._generate_dirs_changed(commit)
+    # Add entries to the commit object that are useful for
+    # formatting.
+    commit.log_firstline = commit.log.split("\n",1)[0]
+    commit.log_firstparagraph = re.split("\r?\n\r?\n",commit.log,1)[0]
+    commit.log_firstparagraph = re.sub("\r?\n"," ",commit.log_firstparagraph)
+    if commit.dirs_changed:
+      commit.dirs_root = posixpath.commonprefix(commit.dirs_changed)
+      if commit.dirs_root == '':
+        commit.dirs_root = '/'
+      commit.dirs_count = len(commit.dirs_changed)
+      if commit.dirs_count > 1:
+        commit.dirs_count_s = " (%d dirs)" %(commit.dirs_count)
       else:
-        rev.subdirs_count_s = ""
+        commit.dirs_count_s = ""
+
+      commit.subdirs_count = commit.dirs_count
+      if commit.dirs_root in commit.dirs_changed:
+        commit.subdirs_count -= 1
+      if commit.subdirs_count >= 1:
+        commit.subdirs_count_s = " + %d subdirs" % (commit.subdirs_count)
+      else:
+        commit.subdirs_count_s = ""
 
   def _send(self, irker, msg):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -193,22 +210,22 @@ class BigDoEverythingClass(object):
         msg = {'to': to, 'privmsg': ''}
         self._send(irker, msg)
 
-  def commit(self, host, port, rev):
+  def commit(self, url, commit):
     if self.options.verbose:
-      print "RECV: from %s:%s" % (host, port)
-      print json.dumps(vars(rev), indent=2)
+      print "RECV: from %s" % url
+      print json.dumps(vars(commit), indent=2)
 
     try:
-      config_sections = self.locate_matching_configs(rev)
+      config_sections = self.locate_matching_configs(commit)
       if len(config_sections) > 0:
-        self.fill_in_extra_args(rev)
+        self.fill_in_extra_args(commit)
         for section in config_sections:
           irker = self.config.get(section, "irker")
           to_list = self.config.get(section, "to").split()
           template = self.config.get(section, "template")
           if not irker or not to_list or not template:
             continue
-          privmsg = Template(template).safe_substitute(vars(rev))
+          privmsg = Template(template).safe_substitute(vars(commit))
           if len(privmsg) > MAX_PRIVMSG:
             privmsg = privmsg[:MAX_PRIVMSG-3] + '...'
           for to in to_list:
@@ -221,9 +238,9 @@ class BigDoEverythingClass(object):
       sys.stdout.flush()
       raise
 
-  def event(self, host, port, event_name):
+  def event(self, url, event_name, event_arg):
     if self.options.verbose or event_name != "ping":
-      print 'EVENT: %s from %s:%s' % (event_name, host, port)
+      print 'EVENT: %s from %s' % (event_name, url)
       sys.stdout.flush()
 
 
