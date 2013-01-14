@@ -55,7 +55,7 @@
 # property     Eigenschaft
 # PROPNAME     PROPNAME
 # PROPVAL      PROPWERT
-# reintegrate  wiedereingliedern
+# reintegrate  reintegrieren
 # relocate     umplatzieren
 # REPOS        PA
 # REPOS_PATH   ARCHIV_PFAD
@@ -95,8 +95,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-01-13 23:32+0000\n"
-"PO-Revision-Date: 2013-01-13 23:22+0100\n"
+"POT-Creation-Date: 2013-01-14 20:49+0000\n"
+"PO-Revision-Date: 2013-01-14 20:37+0100\n"
 "Last-Translator: Andreas Stieger <andreas.stieger@gmx.de>\n"
 "Language-Team: German <dev@subversion.apache.org>\n"
 "Language: de\n"
@@ -1716,34 +1716,32 @@ msgid "Not all required revisions are specified"
 msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 
 #: ../libsvn_client/diff.c:1275
-#, fuzzy
 msgid "At least one revision must be something other than BASE or WORKING when diffing a URL"
-msgstr "Bei einem Vergleich mit Fix-Revision muss zumindest eine Revision auf dem Server sein"
+msgstr "Beim Vergleichen einer URL muss mindestens eine Revision etwas anderes sein als »BASE« oder »WORKING«"
 
 #: ../libsvn_client/diff.c:1312
-#, fuzzy, c-format
+#, c-format
 msgid "Diff target '%s' was not found in the repository at revision '%ld'"
-msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
+msgstr "Ziel für Vergleich »%s« wurde im Projektarchiv in Revision »%ld« nicht gefunden"
 
 #: ../libsvn_client/diff.c:1317
-#, fuzzy, c-format
+#, c-format
 msgid "Diff target '%s' was not found in the repository at revision '%ld' or '%ld'"
-msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
+msgstr "Ziel für Vergleich »%s« wurde im Projektarchiv in Revision »%ld« oder »%ld« nicht gefunden"
 
 #: ../libsvn_client/diff.c:1489
-#, fuzzy, c-format
+#, c-format
 msgid "Diff target '%s' was not found in the repository at revisions '%ld' and '%ld'"
-msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
+msgstr "Ziel für Vergleich »%s« wurde im Projektarchiv in Revisionen »%ld« und »%ld« nicht gefunden"
 
 #: ../libsvn_client/diff.c:1494
-#, fuzzy, c-format
+#, c-format
 msgid "Diff targets '%s' and '%s' were not found in the repository at revisions '%ld' and '%ld'"
-msgstr "»%s« wurde im Projektarchiv in Revision %ld nicht gefunden"
+msgstr "Ziele für Vergleich »%s« und »%s« wurden im Projektarchiv in Revisionen »%ld« und »%ld« nicht gefunden"
 
 #: ../libsvn_client/diff.c:1563
-#, fuzzy
 msgid "Sorry, svn_client_diff6 was called in a way that is not yet supported"
-msgstr "svn_client_diff5 wurde in einer Art aufgerufen, die noch nicht unterstützt wird"
+msgstr "Leider wurde svn_client_diff6 in einer Art aufgerufen, die noch nicht unterstützt wird"
 
 #: ../libsvn_client/diff.c:1604
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
@@ -1755,21 +1753,17 @@ msgid "Directory '%s' has no URL"
 msgstr "Verzeichnis »%s« hat keine URL"
 
 #: ../libsvn_client/diff.c:2616
-#, fuzzy
 msgid "Summarized diffs are only supported between a path's text-base and its working files at this time"
-msgstr "Derzeit werden nur Vergleiche zwischen der Textbasis und den Arbeitsdateien eines Pfades unterstützt"
+msgstr "Derzeit werden Zusammenfassungen für Vergleiche nur zwischen der Textbasis und den Arbeitsdateien eines Pfades unterstützt"
 
 #: ../libsvn_client/diff.c:2958 ../libsvn_client/diff.c:3021
 msgid "Cannot ignore properties and show only properties at the same time"
-msgstr ""
+msgstr "Kann nicht gleichzeitig Eigenschaften ignorieren und nur Eigenschaften anzeigen"
 
 #: ../libsvn_client/diff_local.c:558
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not the same node kind as '%s'"
-msgstr ""
-"»%s«\n"
-"ist nicht das selbe Projektarchiv wie\n"
-"»%s«"
+msgstr "»%s« hat nicht den gleichen Knotentyp wie »%s«"
 
 #: ../libsvn_client/diff_local.c:575 ../libsvn_wc/props.c:1546
 #, c-format
@@ -1805,15 +1799,15 @@ msgstr "Der Knoten »%s« wurde nicht gefunden."
 
 #: ../libsvn_client/export.c:282 ../libsvn_client/export.c:1183
 #: ../libsvn_client/export.c:1240
-#, fuzzy, c-format
+#, c-format
 msgid "Destination file '%s' exists, and will not be overwritten unless forced"
-msgstr "Zielverzeichnis existiert und kann nur mittels »--force« überschrieben werden"
+msgstr "Zieldatei »%s« existiert und kann nur mittels »--force« überschrieben werden"
 
 #: ../libsvn_client/export.c:288 ../libsvn_client/export.c:1188
 #: ../libsvn_client/export.c:1245
-#, fuzzy, c-format
+#, c-format
 msgid "Destination '%s' exists. Cannot overwrite directory with non-directory"
-msgstr "Ziel »%s« ist kein Verzeichnis"
+msgstr "Ziel »%s« existiert. Kann Verzeichnis nicht mit etwas überschreiben, was kein Verzeichnis ist"
 
 #: ../libsvn_client/export.c:473 ../libsvn_client/export.c:620
 #: ../libsvn_client/export.c:1077
@@ -1846,9 +1840,9 @@ msgid "The file external from '%s' cannot overwrite the existing versioned item 
 msgstr "Der externe Dateiverweis von »%s« kann nicht das existierende versionierte Objekt bei »%s« überschreiben"
 
 #: ../libsvn_client/externals.c:458
-#, fuzzy, c-format
+#, c-format
 msgid "The file external '%s' can not be created because the node exists."
-msgstr "Der externe Dateiverweis von »%s« kann nicht das existierende versionierte Objekt bei »%s« überschreiben"
+msgstr "Der externe Dateiverweis auf »%s« kann nicht erstellt werden, da schon ein Knoten existiert"
 
 #: ../libsvn_client/externals.c:684
 #, c-format
@@ -1861,9 +1855,9 @@ msgid "URL '%s' at revision %ld is not a file or a directory"
 msgstr "URL »%s« in Revision %ld ist weder eine Datei noch ein Verzeichnis"
 
 #: ../libsvn_client/externals.c:755
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported external: URL of file external '%s' is not in repository '%s'"
-msgstr "Kann externen Dateiverweis auf »%s« nicht hinzufügen, da dies keine Datei im Projektarchiv »%s« ist."
+msgstr "Nicht unterstützter externer Verweis: URL von Dateiverweis »%s« gehört nicht zum Projektarchiv »%s«"
 
 #: ../libsvn_client/externals.c:873 ../libsvn_client/externals.c:1076
 #: ../libsvn_wc/update_editor.c:1143
@@ -1879,7 +1873,7 @@ msgstr "Durchlauf von »%s« fand keine äußere Tiefe"
 #: ../libsvn_client/import.c:158
 #, c-format
 msgid "%s property on '%s' contains unrecognized EOL-style '%s'"
-msgstr ""
+msgstr "Eigenschaft »%s« von »%s« enthält nicht erkannten Zeilenendstil »%s«"
 
 #: ../libsvn_client/import.c:489
 #, c-format
@@ -1956,9 +1950,9 @@ msgid "Entry '%s' has no URL"
 msgstr "Eintrag »%s« hat keine URL"
 
 #: ../libsvn_client/merge.c:440
-#, fuzzy, c-format
+#, c-format
 msgid "Url '%s' of '%s' is not in repository '%s'"
-msgstr "»%s« ist nicht im selben Projektarchiv wie »%s«"
+msgstr "URL »%s« von »%s« ist nicht im selben Projektarchiv wie »%s«"
 
 #: ../libsvn_client/merge.c:477
 #, c-format
@@ -2004,7 +1998,7 @@ msgstr ""
 #: ../libsvn_client/merge.c:5904
 #, c-format
 msgid "Invalid mergeinfo detected on '%s', mergetracking not possible"
-msgstr ""
+msgstr "Ungültige Zusammenführungsinformationen in »%s« entdeckt, Zusammenführungsverfolgung nicht möglich"
 
 #: ../libsvn_client/merge.c:6054
 msgid "Merge tracking not allowed with missing subtrees; try restoring these items first:\n"
@@ -2013,7 +2007,7 @@ msgstr "Zusammenführungsverfolgung nicht erlaubt bei fehlenden Unterbäumen; ve
 #: ../libsvn_client/merge.c:7059
 #, c-format
 msgid "Invalid mergeinfo detected on merge target '%s', mergetracking not possible"
-msgstr ""
+msgstr "Ungültige Zusammenführungsinformationen im Zusammenführungsziel »%s« entdeckt, Zusammenführungsverfolgung nicht möglich"
 
 #: ../libsvn_client/merge.c:9236
 msgid "Use of two URLs is not compatible with mergeinfo modification"
@@ -2048,7 +2042,7 @@ msgstr "Kann nicht in eine Arbeitskopie mit lokalen Änderungen zusammenführen"
 #: ../libsvn_client/merge.c:9655 ../svn/merge-cmd.c:118
 #, c-format
 msgid "Invalid merge source '%s'; a working copy path can only be used with a repository revision (a number, a date, or head)"
-msgstr ""
+msgstr "Ungültige Quelle für Zusammenführung »%s«; ein Pfad in einer Arbeitskopie kann nur mit einer Revision im Projektarchiv verwendet werden (eine Zahl, ein Datum oder »HEAD«)"
 
 #: ../libsvn_client/merge.c:9953 ../svn/merge-cmd.c:546
 msgid "Merge sources must both be either paths or URLs"
@@ -2062,11 +2056,11 @@ msgstr "»%s@%ld« muss eine Vorgängerbeziehung zu »%s@%ld« haben"
 #: ../libsvn_client/merge.c:10829
 #, c-format
 msgid "Neither the reintegrate source nor target can be the root of the repository"
-msgstr "Weder die Quelle noch das Ziel der Wiedereingliederung darf Wurzel des Projektarchivs sein"
+msgstr "Weder die Quelle noch das Ziel der Reintegration darf Wurzel des Projektarchivs sein"
 
 #: ../libsvn_client/merge.c:10839
 msgid "Reintegrate merge not possible"
-msgstr ""
+msgstr "Zusammenführung zur Reintegration nicht möglich"
 
 #: ../libsvn_client/merge.c:10912
 #, c-format
@@ -2074,25 +2068,25 @@ msgid ""
 "Reintegrate can only be used if revisions %ld through %ld were previously merged from %s to the reintegrate source, but this is not the case:\n"
 "%s"
 msgstr ""
-"Reintegration kann nur genutzt werden, falls die Revisionen %ld bis %ld vorher von %s in die zurück integrierende Quelle zusammengeführt wurden, aber dies ist nicht der Fall:\n"
+"Reintegration kann nur genutzt werden, falls die Revisionen %ld bis %ld vorher von %s in die zu reintegrierende Quelle zusammengeführt wurden, aber dies ist nicht der Fall:\n"
 "%s"
 
 #: ../libsvn_client/merge.c:10974
 #, c-format
 msgid "Can't reintegrate into '%s' because it is locally added and therefore not related to the merge source"
-msgstr ""
+msgstr "Kann nicht nach »%s« reintegrieren, da es lokal hinzugefügt wurde und daher keine Herkunftsbeziehung zur Quelle der Zusammenführung hat"
 
 #: ../libsvn_client/merge.c:11830
 msgid "The required merge is reintegrate-like, and the record-only option cannot be used with this kind of merge"
-msgstr ""
+msgstr "Die benötigte Zusammenführung ist eine Reintegration, die Option »record-only« kann aber mit dieser Art der Zusammenführung nicht verwendet werden"
 
 #: ../libsvn_client/merge.c:11836
 msgid "The required merge is reintegrate-like, and the depth option cannot be used with this kind of merge"
-msgstr ""
+msgstr "Die benötigte Zusammenführung ist eine Reintegration, die Option zur Angabe der Tiefe kann aber  mit dieser Art der Zusammenführung nicht verwendet werden"
 
 #: ../libsvn_client/merge.c:11842
 msgid "The required merge is reintegrate-like, and the force option cannot be used with this kind of merge"
-msgstr ""
+msgstr "Die benötigte Zusammenführung ist eine Reintegration, die Option »force« kann aber mit dieser Art der Zusammenführung nicht verwendet werden"
 
 #: ../libsvn_client/mergeinfo.c:1699
 msgid "Only depths 'infinity' and 'empty' are currently supported"
@@ -3446,9 +3440,9 @@ msgid "Empty noderev in cache"
 msgstr "Leere Knotenrevision im Zwischenspeicher"
 
 #: ../libsvn_fs_fs/dag.c:1326
-#, fuzzy, c-format
+#, c-format
 msgid "Attempted to update ancestry of non-mutable node"
-msgstr "Versuchte, Unterknoten eines nicht-veränderlichen Knotens zu klonen"
+msgstr "Versuchte, die Herkunft eines unveränderlichen Knotens zu ändern"
 
 #: ../libsvn_fs_fs/fs.c:82
 #, c-format
@@ -3506,9 +3500,9 @@ msgid "Can't get exclusive lock on file '%s'"
 msgstr "Kann keinen exklusiven Zugriff auf Datei »%s« erlangen"
 
 #: ../libsvn_fs_fs/fs_fs.c:967
-#, fuzzy, c-format
+#, c-format
 msgid "%s file '%s' contains unexpected non-digit '%c' within '%s'"
-msgstr "Die Formatdatei »%s« enthält eine unerwartete Nicht-Ziffer »%c« innerhalb »%s«"
+msgstr "Die Datei %s (»%s«) enthält eine unerwartete Nicht-Ziffer »%c« innerhalb »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:1026
 #, c-format
@@ -3523,7 +3517,7 @@ msgstr "»%s« enthält eine ungültige Dateisystemformat-Option »%s«"
 #: ../libsvn_fs_fs/fs_fs.c:1129
 #, c-format
 msgid "Found format '%d', only created by unreleased dev builds; see http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
-msgstr ""
+msgstr "Format »%d« gefunden, das nur durch nicht veröffentlichte Entwicklungsversionen erstellt wurde; siehe http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
 
 #: ../libsvn_fs_fs/fs_fs.c:1140
 #, c-format
@@ -3536,14 +3530,14 @@ msgid "'%s' is not a regular file. Please move it out of the way and try again"
 msgstr "»%s« ist keine reguläre Datei. Bitte aus dem Weg bewegen und noch einmal versuchen."
 
 #: ../libsvn_fs_fs/fs_fs.c:1708
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read '%s'"
-msgstr "Kann Datei »%s« nicht lesen"
+msgstr "Kann »%s« nicht lesen"
 
 #: ../libsvn_fs_fs/fs_fs.c:1771 ../libsvn_fs_fs/fs_fs.c:1790
-#, fuzzy, c-format
+#, c-format
 msgid "Found malformed header '%s' in revision file"
-msgstr "Fehlerhafter Kopf in Revisionsdatei gefunden"
+msgstr "Fehlerhafte Kopfdaten »%s« in Revisionsdatei gefunden"
 
 #: ../libsvn_fs_fs/fs_fs.c:1826
 #, c-format
@@ -3558,14 +3552,13 @@ msgid "No such revision %ld"
 msgstr "Keine Revision %ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:1941
-#, fuzzy
 msgid "Unexpected EOF"
-msgstr "Unerwartetes EOF im Datenstrom"
+msgstr "Unerwartetes Dateiende (EOF)"
 
 #: ../libsvn_fs_fs/fs_fs.c:1948
 #, c-format
 msgid "Number '%s' invalid or too large"
-msgstr ""
+msgstr "Zahl »%s« ist ungültig oder zu groß"
 
 #: ../libsvn_fs_fs/fs_fs.c:2115 ../libsvn_fs_fs/fs_fs.c:2129
 #: ../libsvn_fs_fs/fs_fs.c:2137 ../libsvn_fs_fs/fs_fs.c:2145
@@ -3575,73 +3568,73 @@ msgid "Malformed text representation offset line in node-rev"
 msgstr "Fehlerhafte »text representation offset«-Zeile in Knotenrevision"
 
 #: ../libsvn_fs_fs/fs_fs.c:2207
-#, fuzzy, c-format
+#, c-format
 msgid "While reading representation offsets for node-revision '%s':"
-msgstr "Fehler beim Lesen der Darstellung »%s«"
+msgstr "Beim Lesen der Darstellungsoffsets für Knotenrevision »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2362
 msgid "Missing id field in node-rev"
 msgstr "Fehlendes ID-Feld in Knotenrevision"
 
 #: ../libsvn_fs_fs/fs_fs.c:2376
-#, fuzzy, c-format
+#, c-format
 msgid "Missing kind field in node-rev '%s'"
-msgstr "Fehlendes Feld »kind« in Knotenrevision"
+msgstr "Fehlendes Feld »kind« in Knotenrevision »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2411
-#, fuzzy, c-format
+#, c-format
 msgid "Missing cpath field in node-rev '%s'"
-msgstr "Fehlender »cpath« in Knotenrevision"
+msgstr "Fehlendes Feld »cpath« in Knotenrevision »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2439 ../libsvn_fs_fs/fs_fs.c:2446
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed copyroot line in node-rev '%s'"
-msgstr "Fehlerhafte »copyroot«-Zeile in Knotenrevision"
+msgstr "Fehlerhafte »copyroot«-Zeile in Knotenrevision »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2463 ../libsvn_fs_fs/fs_fs.c:2470
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed copyfrom line in node-rev '%s'"
-msgstr "Fehlerhafte »copyfrom«-Zeile in Knotenrevision"
+msgstr "Fehlerhafte »copyfrom«-Zeile in Knotenrevision »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2639 ../libsvn_fs_fs/fs_fs.c:7538
-#, fuzzy, c-format
+#, c-format
 msgid "Attempted to write to non-transaction '%s'"
-msgstr "Versuch, in eine Nicht-Transaktion zu schreiben"
+msgstr "Versuch, in eine Nicht-Transaktion zu schreiben »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2776
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed representation header at %s"
-msgstr "Fehlerhafter Darstellungskopf"
+msgstr "Fehlerhafter Darstellungskopf in »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:2808
-#, fuzzy, c-format
+#, c-format
 msgid "Missing node-id in node-rev at r%ld (offset %s)"
-msgstr "Fehlende Knoten-Id in Knotenrevision"
+msgstr "Fehlende Knoten-ID in Knotenrevision bei r%ld (Offset »%s«)"
 
 #: ../libsvn_fs_fs/fs_fs.c:2817
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt node-id '%s' in node-rev at r%ld (offset %s)"
-msgstr "Beschädigter Knoten-Id in Knotenrevision"
+msgstr "Beschädigte Knoten-ID »%s« in Knotenrevision bei r%ld (Offset »%s«)"
 
 #: ../libsvn_fs_fs/fs_fs.c:2908
-#, fuzzy, c-format
+#, c-format
 msgid "Revision file (r%ld) lacks trailing newline"
-msgstr "Revisionsdatei hat keinen abschließenden Zeilenumbruch"
+msgstr "Revisionsdatei (r%ld) hat keinen abschließenden Zeilenumbruch"
 
 #: ../libsvn_fs_fs/fs_fs.c:2922
-#, fuzzy, c-format
+#, c-format
 msgid "Final line in revision file (r%ld) longer than 64 characters"
-msgstr "Letzte Zeile in der Revisionsdatei ist länger als 64 Zeichen"
+msgstr "Letzte Zeile in der Revisionsdatei (r%ld) ist länger als 64 Zeichen"
 
 #: ../libsvn_fs_fs/fs_fs.c:2937
-#, fuzzy, c-format
+#, c-format
 msgid "Final line in revision file r%ld missing space"
-msgstr "Letzte Zeile in der Revisionsdatei enthält kein Leerzeichen"
+msgstr "Letzte Zeile in der Revisionsdatei r%ld hat nicht genug Leerzeichen"
 
 #: ../libsvn_fs_fs/fs_fs.c:3632
 #, c-format
 msgid "Packed revprop manifest for rev %ld too small"
-msgstr ""
+msgstr "Verzeichnis für gepackte Revisionseigenschaften für Revision %ld ist zu klein"
 
 #: ../libsvn_fs_fs/fs_fs.c:3678
 msgid "Header end not found"
@@ -3649,7 +3642,7 @@ msgstr "Ende der Kopfdaten nicht gefunden"
 
 #: ../libsvn_fs_fs/fs_fs.c:3706
 msgid "Packed revprop size exceeds pack file size"
-msgstr ""
+msgstr "Größe der gepackten Revisionseigenschaften überschreitet die größe der gepackten Datei"
 
 #: ../libsvn_fs_fs/fs_fs.c:3765
 #, c-format
@@ -3664,7 +3657,7 @@ msgstr "Konnte gepackte Revisionseigenschaften-Datei für Revision %ld nicht les
 #: ../libsvn_fs_fs/fs_fs.c:3812
 #, c-format
 msgid "Revprop pack file for rev %ld is corrupt"
-msgstr ""
+msgstr "Daten mit gepackten Revisionseigenschaften für Revision %ld ist beschädigt"
 
 #: ../libsvn_fs_fs/fs_fs.c:3885
 #, c-format
@@ -3674,7 +3667,7 @@ msgstr "Konnte Revisionseigenschaften für Revision %ld nicht lesen"
 #: ../libsvn_fs_fs/fs_fs.c:4110
 #, c-format
 msgid "Packed file '%s' misses a tag"
-msgstr ""
+msgstr "Der gepackten Datei »%s« fehlt ein Tag"
 
 #: ../libsvn_fs_fs/fs_fs.c:4445
 msgid "Malformed svndiff data in representation"
@@ -3688,7 +3681,6 @@ msgstr "Lesen eines svndiff-Fensters las über Ende der Darstellung hinaus"
 msgid "svndiff window length is corrupt"
 msgstr "Svndiff Fensterlänge ist beschädigt"
 
-#
 #: ../libsvn_fs_fs/fs_fs.c:5156
 msgid "Checksum mismatch while reading representation"
 msgstr "Prüfsummenfehler beim Lesen der Darstellung"
@@ -3757,11 +3749,11 @@ msgstr "Beschädigte Datei »current«"
 #: ../libsvn_fs_fs/fs_fs.c:7916
 #, c-format
 msgid "predecessor count for the root node-revision is wrong: found (%d+%ld != %d), committing r%ld"
-msgstr ""
+msgstr "Anzahl der Vorgänger für die Revision des Wurzelknotens ist falsch: Gefunden (%d+%ld != %d) bei Übertragung von r%ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:8051
 msgid "Truncated protorev file detected"
-msgstr ""
+msgstr "Abgeschnittene Datei »protorev« entdeckt"
 
 #: ../libsvn_fs_fs/fs_fs.c:8406
 msgid "Transaction out of date"
@@ -3841,7 +3833,7 @@ msgstr "Kann Verzeichnis »%s« nicht lesen"
 #: ../libsvn_subr/io.c:2487 ../libsvn_subr/io.c:3910
 #, c-format
 msgid "Error closing directory '%s'"
-msgstr "Fehler beim Schließen von Verzeichnis »%s«"
+msgstr "Fehler beim Schließen des Verzeichnisses »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:10801
 #, c-format
@@ -9856,7 +9848,7 @@ msgstr ""
 
 #: ../svn/svn.c:312
 msgid "deprecated"
-msgstr ""
+msgstr "veraltet"
 
 #: ../svn/svn.c:314
 msgid ""
@@ -9916,15 +9908,15 @@ msgstr "Zeige eine Zusammenfassung der Ergebnisse"
 
 #: ../svn/svn.c:348
 msgid "use git's extended diff format"
-msgstr ""
+msgstr "Erweitertes Format von git verwenden"
 
 #: ../svn/svn.c:350 ../svnlook/svnlook.c:137
 msgid "ignore properties during the operation"
-msgstr ""
+msgstr "Während des Vorgangs Eigenschaften ignorieren"
 
 #: ../svn/svn.c:352 ../svnlook/svnlook.c:140
 msgid "show only properties during the operation"
-msgstr ""
+msgstr "Während des Vorgangs nur Eigenschaften anzeigen"
 
 #: ../svn/svn.c:354
 msgid ""
@@ -9948,17 +9940,16 @@ msgid ""
 msgstr ""
 
 #: ../svn/svn.c:374
-#, fuzzy
 msgid "retrieve target's inherited properties"
-msgstr "alle Revisionseigenschaften abfragen"
+msgstr "Geerbte Eigenschaften des Ziels abfragen"
 
 #: ../svn/svn.c:376
 msgid "use ARG as search pattern (glob syntax)"
-msgstr ""
+msgstr "PAR als Suchmuster verwenden (mit Platzhaltern)"
 
 #: ../svn/svn.c:378
 msgid "combine ARG with the previous search pattern"
-msgstr ""
+msgstr "PAR mit dem vorherigen Suchmuster kombinieren"
 
 #: ../svn/svn.c:426
 msgid ""
@@ -10354,9 +10345,8 @@ msgstr ""
 "    Datum und Zeit der letzten Übertragung\n"
 
 #: ../svn/svn.c:637
-#, fuzzy
 msgid "include externals definitions"
-msgstr "»svn:externals«-Definitionen ignorieren"
+msgstr "»svn:externals«-Definitionen einbeziehen"
 
 #: ../svn/svn.c:640
 msgid ""
@@ -11008,12 +10998,11 @@ msgstr ""
 
 #: ../svn/svn.c:1211 ../svn/svn.c:1228
 msgid "print path, name and value on separate lines"
-msgstr ""
+msgstr "Pfad, Name und Wert in getrennten Zeilen ausgeben"
 
 #: ../svn/svn.c:1212
-#, fuzzy
 msgid "don't print an extra newline"
-msgstr "gibt den anhängenden Zeilenumbruch nicht aus"
+msgstr "Keinen zusätzlichen Zeilenumbruch ausgeben"
 
 #: ../svn/svn.c:1215
 #, fuzzy
@@ -11041,9 +11030,8 @@ msgstr ""
 "     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 
 #: ../svn/svn.c:1229
-#, fuzzy
 msgid "don't print the path"
-msgstr "Ziele nicht freigeben"
+msgstr "Pfad nicht ausgeben"
 
 # FIXME: propchange?
 #: ../svn/svn.c:1232
@@ -11176,7 +11164,7 @@ msgstr ""
 
 #: ../svn/svn.c:1292
 msgid "read property value from file ARG"
-msgstr "Lies Eigenschaftswert aus Datei PAR"
+msgstr "Eigenschaftswert aus Datei PAR lesen"
 
 #: ../svn/svn.c:1295
 msgid ""
@@ -11814,18 +11802,17 @@ msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s ist mit --non-interactive nicht kompatibel"
 
 #: ../svn/svn.c:2775
-#, fuzzy, c-format
+#, c-format
 msgid "Try 'svn help %s' for more information"
-msgstr "Versuchen Sie »svn help« für weitere Informationen"
+msgstr "Versuchen Sie »svn help %s« für weitere Informationen"
 
 #: ../svn/svn.c:2781
 msgid "Please see the 'svn upgrade' command"
-msgstr ""
+msgstr "Siehe Kommando »svn upgrade«"
 
 #: ../svn/svn.c:2789
-#, fuzzy
 msgid "Run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)"
-msgstr "svn: Starten Sie »svn cleanup«, um die Sperren zu entfernen (Aufruf: »svn help cleanup« für Details)\n"
+msgstr "Starten Sie »svn cleanup«, um die Sperren zu entfernen (Aufruf: »svn help cleanup« für Details)"
 
 #: ../svn/switch-cmd.c:63
 #, c-format
@@ -11835,24 +11822,24 @@ msgstr "Umplatzieren von »%s« nach »%s« ist nicht möglich"
 #: ../svn/switch-cmd.c:173
 #, c-format
 msgid "Path '%s' does not share common version control ancestry with the requested switch location.  Use --ignore-ancestry to disable this check."
-msgstr ""
+msgstr "Pfad »%s« hat keine gemeinsame Versionskontrollgeschichte mit dem angegebenen Ziel der Umstellung.  Verwenden Sie »--ignore-ancestry« um diese Prüfung zu umgehen."
 
 #: ../svn/switch-cmd.c:183
 msgid "'svn switch' does not support switching a working copy to a different repository"
-msgstr ""
+msgstr "Umstellen einer Arbeitskopie auf ein anderes Projektarchiv wird von »svn switch« nicht unterstützt"
 
 #: ../svn/update-cmd.c:59
-#, fuzzy, c-format
+#, c-format
 msgid "Summary of updates:\n"
-msgstr "Konfliktübersicht:\n"
+msgstr "Zusammenfassung der Aktualisierungen:\n"
 
 #. Print an update summary for this target, removing the current
 #. working directory prefix from PATH (if PATH is at or under
 #. $CWD), and converting the path to local style for display.
 #: ../svn/update-cmd.c:90
-#, fuzzy, c-format
+#, c-format
 msgid "  Updated '%s' to r%ld.\n"
-msgstr "Aktualisiert zu Revision %ld.\n"
+msgstr "  »%s« auf r%ld aktualisiert.\n"
 
 #: ../svn/util.c:77
 #, c-format
@@ -11895,9 +11882,9 @@ msgid "Log message contains a zero byte"
 msgstr "Logmeldung enthält ein Null Byte"
 
 #: ../svn/util.c:269
-#, fuzzy, c-format
+#, c-format
 msgid "   '%s'"
-msgstr "%s von »%s«"
+msgstr "   »%s«"
 
 #: ../svn/util.c:273
 msgid "Your commit message was left in a temporary file:"
@@ -11966,28 +11953,27 @@ msgstr "(ungültiges Datum)"
 #: ../svn/util.c:1049
 #, c-format
 msgid "Source and target have no common ancestor: '%s' and '%s'"
-msgstr ""
+msgstr "Quelle und Ziel haben keinen gemeinsamen Vorfahren: »%s« und »%s«"
 
 #: ../svnadmin/svnadmin.c:216 ../svnrdump/svnrdump.c:120
 msgid "specify revision number ARG (or X:Y range)"
 msgstr "spezifizieren Sie PAR für Revisionsnummer (oder X:Y Bereich)"
 
 #: ../svnadmin/svnadmin.c:219
-#, fuzzy
 msgid "dump or hotcopy incrementally"
-msgstr "Inkrementell ausgeben"
+msgstr "Datenstrom inkrementell ausgeben oder im laufenden Betrieb inkrementell kopieren"
 
 #: ../svnadmin/svnadmin.c:222
 msgid "use deltas in dump output"
-msgstr "Nutze Deltas bei der Ausgabe"
+msgstr "Nutzt Deltas bei der Ausgabe"
 
 #: ../svnadmin/svnadmin.c:225
 msgid "bypass the repository hook system"
-msgstr "Umgehe das Aktionssystem des Projektarchivs"
+msgstr "Umgeht das Aktionssystem des Projektarchivs"
 
 #: ../svnadmin/svnadmin.c:228
 msgid "bypass property validation logic"
-msgstr ""
+msgstr "Umgeht die Logik zur Überprüfung von Eigenschaften"
 
 #: ../svnadmin/svnadmin.c:231 ../svnlook/svnlook.c:189
 #: ../svnrdump/svnrdump.c:122 ../svnserve/svnserve.c:288
@@ -11997,11 +11983,11 @@ msgstr "keine Fortschrittsanzeige (nur Fehler) auf die Standardausgabe"
 
 #: ../svnadmin/svnadmin.c:234
 msgid "ignore any repos UUID found in the stream"
-msgstr "ignoriere jede Projektarchiv-UUID, die im Datenstrom gefunden wird"
+msgstr "Ignoriert jede Projektarchiv-UUID, die im Datenstrom gefunden wird"
 
 #: ../svnadmin/svnadmin.c:237
 msgid "set repos UUID to that found in stream, if any"
-msgstr "setze die UUID des Projektarchivs auf die im Datenstrom gefundene"
+msgstr "Setzt die UUID des Projektarchivs auf die im Datenstrom gefundene"
 
 #: ../svnadmin/svnadmin.c:240
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
@@ -12013,18 +11999,18 @@ msgstr "in das spezifizierte Verzeichnis im Projektarchiv laden"
 
 #: ../svnadmin/svnadmin.c:246
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr "deaktiviere »fsync« für jede Übertragungstransaktion [Berkeley DB]"
+msgstr "Deaktiviert »fsync« für jede Übertragungstransaktion [Berkeley DB]"
 
 #: ../svnadmin/svnadmin.c:249
 msgid "disable automatic log file removal [Berkeley DB]"
-msgstr "deaktiviere das automatische Entfernen von Log-Dateien [Berkeley DB]"
+msgstr "Deaktiviert das automatische Entfernen von Log-Dateien [Berkeley DB]"
 
 #: ../svnadmin/svnadmin.c:255
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
 msgstr ""
-"entferne redundante Berkeley-DB-Logdateien\n"
+"Entfernt redundante Berkeley-DB-Logdateien\n"
 "                             aus dem Projektarchiv [Berkeley DB]"
 
 #: ../svnadmin/svnadmin.c:259
@@ -12048,13 +12034,13 @@ msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
 msgstr ""
-"warte anstatt abzubrechen, wenn das Projektarchiv\n"
+"Wartet anstatt abzubrechen, wenn das Projektarchiv\n"
 "                             durch einen anderen Prozess belegt ist"
 
 #: ../svnadmin/svnadmin.c:275 ../svnadmin/svnadmin.c:278
 #: ../svnadmin/svnadmin.c:281
 msgid "deprecated; see --compatible-version"
-msgstr ""
+msgstr "Veraltet; siehe »--compatible-version«"
 
 #: ../svnadmin/svnadmin.c:284
 msgid ""
@@ -12065,11 +12051,12 @@ msgstr ""
 
 # TODO: combine with message above
 #: ../svnadmin/svnadmin.c:289
-#, fuzzy
 msgid ""
 "use repository format compatible with Subversion\n"
 "                             version ARG (\"1.5.5\", \"1.7\", etc.)"
-msgstr "Ein mit Subversion-Versionen vor 1.5 kompatibles Format verwenden"
+msgstr ""
+"verwendet ein Format das mit der Subversion-Version PAR\n"
+"                             kompatibel ist (\"1.5.5\", \"1.7\", usw.)"
 
 #: ../svnadmin/svnadmin.c:302
 msgid ""
@@ -12439,9 +12426,9 @@ msgid "Packing revprops in shard %s..."
 msgstr "Packe Revisionseigenschaften in Fragment %s ..."
 
 #: ../svnadmin/svnadmin.c:857
-#, fuzzy, c-format
+#, c-format
 msgid "<<< Skipped original revision %ld\n"
-msgstr "<<< Neue Transaktion basierend auf Originalrevision %ld gestartet\n"
+msgstr "<<< Originalrevision %ld übersprungen\n"
 
 #: ../svnadmin/svnadmin.c:874
 #, c-format
@@ -12461,9 +12448,8 @@ msgstr ""
 "Bitte warten, die Aktualisierung des Projektarchivs kann einige Zeit dauern ...\n"
 
 #: ../svnadmin/svnadmin.c:1029
-#, fuzzy
 msgid "No program provided"
-msgstr "Nicht genügend Parameter angegeben"
+msgstr "Kein Programm angegeben"
 
 #: ../svnadmin/svnadmin.c:1053
 msgid ""
@@ -12491,18 +12477,17 @@ msgstr ""
 "\n"
 
 #: ../svnadmin/svnadmin.c:1089
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number (%ld) specified"
-msgstr "Ungültige Revisionsnummer (%ld)"
+msgstr "Ungültige Revisionsnummer (%ld) angegeben"
 
 #: ../svnadmin/svnadmin.c:1099
-#, fuzzy
 msgid "Non-numeric revision specified"
-msgstr "Ungültige Revision angegeben"
+msgstr "Nicht-numerische Revisionsnummer angegeben"
 
 #: ../svnadmin/svnadmin.c:1158
 msgid "Invalid property value found in dumpstream; consider repairing the source or using --bypass-prop-validation while loading."
-msgstr ""
+msgstr "Ungültiger Eigenschaftswert in Datenstrom gefunden; Versuchen Sie die Quelle zu reparieren oder geben Sie »--bypass-prop-validation« beim Laden an."
 
 #: ../svnadmin/svnadmin.c:1224 ../svnadmin/svnadmin.c:1832
 msgid ""
@@ -12601,9 +12586,9 @@ msgid "Removed lock on '%s'.\n"
 msgstr "Sperre für »%s« entfernt.\n"
 
 #: ../svnadmin/svnadmin.c:1800
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' unlocked by user '%s'.\n"
-msgstr "»%s« gesperrt durch »%s«.\n"
+msgstr "»%s« entsperrt durch Benutzer »%s«.\n"
 
 #: ../svnadmin/svnadmin.c:1847
 msgid "Upgrade of this repository's underlying versioned filesystem is not supported; consider dumping and loading the data elsewhere"
@@ -12629,7 +12614,7 @@ msgstr "Mehrere Revisionsparameter gefunden; Bitte »-r N:M« anstelle »-r N -r
 #: ../svnadmin/svnadmin.c:2013
 #, c-format
 msgid "Cannot create pre-1.0-compatible repositories"
-msgstr ""
+msgstr "Kann keine Projektarchive erstellen, die mit Versionen älter als 1.0 kompatibel sind"
 
 #: ../svnadmin/svnadmin.c:2026
 #, c-format
@@ -12646,9 +12631,9 @@ msgid "Repository argument required"
 msgstr "Projektarchiv Parameter erforderlich"
 
 #: ../svnadmin/svnadmin.c:2159
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is a URL when it should be a local path"
-msgstr "»%s« ist eine URL obwohl es ein Pfad sein sollte\n"
+msgstr "»%s« ist eine URL obwohl es ein Pfad sein sollte"
 
 #: ../svnadmin/svnadmin.c:2190
 #, c-format
@@ -12707,14 +12692,9 @@ msgstr "Kein gültiger Revisionsbereich »start« im gefilterten Datenstrom"
 msgid "No valid revision range 'end' in filtered stream"
 msgstr "Kein gültiger Revisionsbereich »end« im gefilterten Datenstrom"
 
-#: ../svndumpfilter/svndumpfilter.c:858
+#: ../svndumpfilter/svndumpfilter.c:858 ../svndumpfilter/svndumpfilter.c:889
 #, c-format
 msgid "Delta property block detected, but deltas are not enabled for node '%s' in original revision %ld"
-msgstr ""
-
-#: ../svndumpfilter/svndumpfilter.c:889
-#, c-format
-msgid "Delta property block detected, but deltas are not enabled for node '%s' in originalrevision %ld"
 msgstr ""
 
 #: ../svndumpfilter/svndumpfilter.c:1021
@@ -12918,9 +12898,8 @@ msgid "show node revision ids for each path"
 msgstr "gibt die IDs der Knotenrevisionen jedes Pfades aus"
 
 #: ../svnlook/svnlook.c:155
-#, fuzzy
 msgid "show path's inherited properties"
-msgstr "Zeige vollständige Pfade anstatt sie einzurücken"
+msgstr "Gibt die geerbten Eigenschaften des Pfades aus"
 
 #: ../svnlook/svnlook.c:158
 msgid "specify transaction name ARG"
@@ -13200,7 +13179,7 @@ msgstr "Pfad »%s« ist keine Datei"
 
 #: ../svnlook/svnlook.c:1581
 msgid "History item limit reached"
-msgstr ""
+msgstr "Beschränkung für Anzahl der Verlaufselemente erreicht"
 
 #: ../svnlook/svnlook.c:1600
 #, c-format
@@ -13226,24 +13205,24 @@ msgid "Property '%s' not found on revision %ld"
 msgstr "Eigenschaft »%s« wurde in Revision %ld nicht gefunden"
 
 #: ../svnlook/svnlook.c:1686
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' or inherited from a parent in revision %ld"
-msgstr "Eigenschaft »%s« wurde in Pfad »%s« in Revision %ld nicht gefunden"
+msgstr "Eigenschaft »%s« wurde im Pfad »%s« in Revision %ld nicht gefunden und nicht vom übergeordneten Element geerbt"
 
 #: ../svnlook/svnlook.c:1692
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
-msgstr "Eigenschaft »%s« wurde in Pfad »%s« in Revision %ld nicht gefunden"
+msgstr "Eigenschaft »%s« wurde im Pfad »%s« in Revision %ld nicht gefunden"
 
 #: ../svnlook/svnlook.c:1700
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' or inherited from a parent in transaction %s"
-msgstr "Eigenschaft »%s« wurde in Pfad »%s« in Transaktion %s nicht gefunden"
+msgstr "Eigenschaft »%s« wurde im Pfad »%s« in Transaktion %s nicht gefunden und nicht vom übergeordneten Element geerbt"
 
 #: ../svnlook/svnlook.c:1706
 #, c-format
 msgid "Property '%s' not found on path '%s' in transaction %s"
-msgstr "Eigenschaft »%s« wurde in Pfad »%s« in Transaktion %s nicht gefunden"
+msgstr "Eigenschaft »%s« wurde im Pfad »%s« in Transaktion %s nicht gefunden"
 
 #: ../svnlook/svnlook.c:2041
 msgid "Missing repository path argument"
@@ -13312,7 +13291,7 @@ msgstr ""
 
 #: ../svnlook/svnlook.c:2613
 msgid "Cannot use the '--show-inherited-props' option with the '--revprop' option"
-msgstr ""
+msgstr "Die Option »--show-inherited-props« kann nicht zusammen mit der Option »--revprop« verwendet werden"
 
 #: ../svnlook/svnlook.c:2696
 #, c-format
@@ -13387,9 +13366,8 @@ msgstr ""
 "»%s« gehalten wird\n"
 
 #: ../svnrdump/load_editor.c:528
-#, fuzzy
 msgid "Target server does not support atomic revision property edits; consider upgrading it to 1.7."
-msgstr "Zielserver unterstützt keine atomaren Änderungen von Revisionseigenschaften; Verwenden Sie entweder 1.7 oder ein externes Programm zum Sperren."
+msgstr "Zielserver unterstützt keine atomaren Änderungen von Revisionseigenschaften; Verwenden Sie dort 1.7"
 
 #: ../svnrdump/svnrdump.c:101
 #, fuzzy
@@ -13453,12 +13431,12 @@ msgstr ""
 
 #: ../svnrdump/svnrdump.c:777 ../svnrdump/svnrdump.c:811
 msgid "Unsupported revision specifier used; use only integer values or 'HEAD'"
-msgstr ""
+msgstr "Nicht unterstützte Angabe für Revision; verwenden Sie nur ganze Zahlen oder »HEAD«"
 
 #: ../svnrdump/svnrdump.c:785 ../svnrdump/svnrdump.c:819
-#, fuzzy, c-format
+#, c-format
 msgid "Revision '%ld' does not exist"
-msgstr "Revision %ld existiert nicht.\n"
+msgstr "Revision »%ld« existiert nicht"
 
 #: ../svnrdump/svnrdump.c:829
 msgid "LOWER revision cannot be greater than UPPER revision; consider reversing your revision range"
@@ -13736,7 +13714,7 @@ msgstr "Sie müssen genau einen der Parameter -d, -i, -t oder -X angeben.\n"
 
 #: ../svnserve/svnserve.c:741
 msgid "You may only specify one of -T or --single-thread\n"
-msgstr ""
+msgstr "Sie dürfen nur einen der Parameter -T und --single-thread angeben.\n"
 
 #: ../svnserve/svnserve.c:768
 #, c-format
@@ -13924,7 +13902,7 @@ msgstr ""
 
 #: ../svnsync/svnsync.c:176
 msgid "allow a non-empty destination repository"
-msgstr ""
+msgstr "erlaubt nicht-leeres Zielprojektarchiv"
 
 #: ../svnsync/svnsync.c:188
 msgid ""
@@ -13988,7 +13966,7 @@ msgstr "Zielserver unterstützt keine atomaren Änderungen von Revisionseigensch
 #: ../svnsync/svnsync.c:369
 #, c-format
 msgid "Stole lock previously held by '%s'\n"
-msgstr ""
+msgstr "Zuvor von »%s« gehaltene Sperre gestohlen\n"
 
 #: ../svnsync/svnsync.c:458
 #, c-format
@@ -14008,13 +13986,12 @@ msgstr "Eigenschaften für Revision %ld kopiert.\n"
 #: ../svnsync/svnsync.c:621
 #, c-format
 msgid "NOTE: Normalized %s* properties to LF line endings (%d rev-props, %d node-props).\n"
-msgstr ""
+msgstr "HINWEIS: %s* Eigenschaften nach LF-Zeilenenden normalisiert (%d Revisionseigenschaften, %d Knoteneigenschaften).\n"
 
 #: ../svnsync/svnsync.c:749
 msgid "Destination repository already contains revision history; consider using --allow-non-empty if the repository's revisions are known to mirror their respective revisions in the source repository"
-msgstr ""
+msgstr "Das Zielprojektarchiv enthält schon eine Revisionsgeschichte. Sie können es mit »--allow-non-empty« versuchen, falls die Revisionen dieses Projektarchivs denen des Quellprojektarchivs genau entsprechen."
 
-# CHECKME
 #: ../svnsync/svnsync.c:758
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
@@ -14067,7 +14044,7 @@ msgstr "Ungültige Revisionsnummer (%ld)"
 
 #: ../svnsync/svnsync.c:1716
 msgid "Cannot specify revisions via both command-line arguments and the --revision (-r) option"
-msgstr ""
+msgstr "Revisionen dürfen nicht gleichzeitig durch Argumente in der Kommandozeile und die Option »--revision« (»-r«) angegeben werden"
 
 #: ../svnsync/svnsync.c:1724 ../svnsync/svnsync.c:2070
 #, c-format
