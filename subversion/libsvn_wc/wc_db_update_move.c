@@ -40,9 +40,8 @@
  * layer. The destination may have additional higher op-depths
  * representing adds, deletes, moves within the move destination. [2]
  *
- * After the intial move an update, or this editor for trees that have
- * been moved more than once, has modified the NODES in the move
- * source, and introduced a tree-conflict since the source and
+ * After the intial move an update has modified the NODES in the move
+ * source and may have introduced a tree-conflict since the source and
  * destination trees are no longer equivalent.  The source is a
  * different revision and may have text, property and tree changes
  * compared to the destination.  The driver will compare the two NODES
