@@ -82,6 +82,10 @@ except AttributeError:
             raise subprocess.CalledProcessError(pipe.returncode, args)
         return output
 
+assert hasattr(subprocess, 'check_call')
+def check_call(*args, **kwds):
+    return subprocess.check_call(*args, **kwds)
+
 
 ### note: this runs synchronously. within the current Twisted environment,
 ### it is called from ._get_match() which is run on a thread so it won't
@@ -150,13 +154,13 @@ class WorkingCopy(object):
         dotsvn = os.path.join(self.path, ".svn")
         if not os.path.isdir(dotsvn) or is_emptydir(dotsvn):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
-            subprocess.check_call([svnbin, 'co', '-q',
-                                   '--force',
-                                   '--non-interactive',
-                                   '--config-option',
-                                   'config:miscellany:use-commit-times=on',
-                                   '--', self.url, self.path],
-                                  env=env)
+            check_call([svnbin, 'co', '-q',
+                        '--force',
+                        '--non-interactive',
+                        '--config-option',
+                        'config:miscellany:use-commit-times=on',
+                        '--', self.url, self.path],
+                       env=env)
 
         # Fetch the info for matching dirs_changed against this WC
         info = svn_info(svnbin, env, self.path)
@@ -297,7 +301,7 @@ class BackgroundWorker(threading.Thread):
                 '--',
                 wc.url,
                 wc.path]
-        subprocess.check_call(args, env=self.env)
+        check_call(args, env=self.env)
 
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
@@ -310,7 +314,7 @@ class BackgroundWorker(threading.Thread):
                          wc.path, info['Revision'], hook_mode)
             args = [self.hook, hook_mode,
                     wc.path, info['Revision'], wc.url]
-            subprocess.check_call(args, env=self.env)
+            check_call(args, env=self.env)
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."
@@ -323,7 +327,7 @@ class BackgroundWorker(threading.Thread):
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
                 wc.path]
-        subprocess.check_call(args, env=self.env)
+        check_call(args, env=self.env)
 
 
 class ReloadableConfig(ConfigParser.SafeConfigParser):
