@@ -1393,6 +1393,56 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
   return SVN_NO_ERROR;
 }
 
+/* Indicate in *MOVED_AWAY whether the node at LOCAL_ABSPATH was
+ * moved away locally. Do not raise an error if the node at LOCAL_ABSPATH
+ * does not exist. */
+static svn_error_t *
+check_moved_away(svn_boolean_t *moved_away,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *scratch_pool)
+{
+  const char *moved_to_abspath;
+
+  SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                      wc_ctx, local_abspath,
+                                      scratch_pool, scratch_pool));
+  
+  *moved_away = (moved_to_abspath != NULL);
+
+  return SVN_NO_ERROR;
+}
+
+/* Indicate in *MOVED_HERE whether the node at LOCAL_ABSPATH was
+ * moved here locally. Do not raise an error if the node at LOCAL_ABSPATH
+ * does not exist. */
+static svn_error_t *
+check_moved_here(svn_boolean_t *moved_here,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *scratch_pool)
+{
+  const char *moved_from_abspath;
+  svn_error_t *err;
+
+  *moved_here = FALSE;
+
+  err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
+                                    wc_ctx, local_abspath,
+                                    scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        svn_error_clear(err);
+      else
+        return svn_error_trace(err);
+    }
+  else if (moved_from_abspath)
+    *moved_here = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_props_changed(svn_wc_notify_state_t *state,
@@ -1428,7 +1478,17 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       svn_wc_conflict_reason_t reason;
 
       if (is_deleted)
-        reason = svn_wc_conflict_reason_deleted;
+        {
+          svn_boolean_t moved_away;
+
+          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
+
+          if (moved_away)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
       else
         reason = svn_wc_conflict_reason_missing;
 
@@ -1544,57 +1604,6 @@ merge_file_opened(svn_boolean_t *tree_conflicted,
                   void *diff_baton,
                   apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
-}
-
-
-/* Indicate in *MOVED_AWAY whether the node at LOCAL_ABSPATH was
- * moved away locally. Do not raise an error if the node at LOCAL_ABSPATH
- * does not exist. */
-static svn_error_t *
-check_moved_away(svn_boolean_t *moved_away,
-                 svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  const char *moved_to_abspath;
-
-  SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
-                                      wc_ctx, local_abspath,
-                                      scratch_pool, scratch_pool));
-  
-  *moved_away = (moved_to_abspath != NULL);
-
-  return SVN_NO_ERROR;
-}
-
-/* Indicate in *MOVED_HERE whether the node at LOCAL_ABSPATH was
- * moved here locally. Do not raise an error if the node at LOCAL_ABSPATH
- * does not exist. */
-static svn_error_t *
-check_moved_here(svn_boolean_t *moved_here,
-                 svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  const char *moved_from_abspath;
-  svn_error_t *err;
-
-  *moved_here = FALSE;
-
-  err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
-                                    wc_ctx, local_abspath,
-                                    scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        return svn_error_trace(err);
-    }
-  else if (moved_from_abspath)
-    *moved_here = TRUE;
-
   return SVN_NO_ERROR;
 }
 
@@ -2164,17 +2173,11 @@ merge_file_deleted(svn_wc_notify_state_t *state,
                    apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  const char *mine_abspath = svn_dirent_join(merge_b->target->abspath,
-                                             mine_relpath, scratch_pool);
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              mine_relpath, scratch_pool);
   svn_node_kind_t kind;
   svn_boolean_t is_deleted;
-
-  if (merge_b->dry_run)
-    {
-      const char *wcpath = apr_pstrdup(merge_b->pool, mine_abspath);
-      apr_hash_set(merge_b->dry_run_deletions, wcpath,
-                   APR_HASH_KEY_STRING, wcpath);
-    }
+  svn_boolean_t same;
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2187,9 +2190,8 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_deleted,
-                                      NULL,
-                                      merge_b, mine_abspath, svn_node_unknown,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_deleted, &kind,
+                                      merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
@@ -2199,94 +2201,82 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       }
   }
 
-  SVN_ERR(svn_io_check_path(mine_abspath, &kind, scratch_pool));
-  switch (kind)
+  if (merge_b->dry_run)
     {
-    case svn_node_file:
-      {
-        svn_boolean_t same;
-
-        /* If the files are identical, attempt deletion */
-        SVN_ERR(files_same_p(&same, older_abspath, original_props,
-                             mine_abspath, merge_b->ctx->wc_ctx,
-                             scratch_pool));
-        if (same || merge_b->force || merge_b->record_only /* ### why? */)
-          {
-            /* Passing NULL for the notify_func and notify_baton because
-               repos_diff.c:delete_entry() will do it for us. */
-            SVN_ERR(svn_client__wc_delete(mine_abspath, TRUE,
-                                          merge_b->dry_run, FALSE, NULL, NULL,
-                                          merge_b->ctx, scratch_pool));
-            *state = svn_wc_notify_state_changed;
-
-            /* Record that we might have deleted mergeinfo */
-            if (!merge_b->paths_with_deleted_mergeinfo)
-              merge_b->paths_with_deleted_mergeinfo =
-                                                apr_hash_make(merge_b->pool);
-
-            apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
-                         apr_pstrdup(merge_b->pool, mine_abspath),
-                         APR_HASH_KEY_STRING, mine_abspath);
-          }
-        else
-          {
-            /* The files differ, so raise a conflict instead of deleting */
-
-            /* This might be use case 5 described in the paper attached to issue
-             * #2282.  See also notes/tree-conflicts/detection.txt
-             */
-            SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
-                                  svn_wc_conflict_action_delete,
-                                  svn_wc_conflict_reason_edited));
-            *tree_conflicted = TRUE;
-
-            *state = svn_wc_notify_state_obstructed;
-          }
-      }
-      break;
-    case svn_node_dir:
-      /* The file deletion the merge wants to carry out is obstructed by
-       * a directory, so the file the merge wants to delete is a tree
-       * conflict victim.
-       * See notes about obstructions in notes/tree-conflicts/detection.txt.
-       */
-      SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
-                            svn_wc_conflict_action_delete,
-                            svn_wc_conflict_reason_obstructed));
-      *tree_conflicted = TRUE;
-      *state = svn_wc_notify_state_obstructed;
-      break;
-    case svn_node_none:
-      {
-        svn_wc_conflict_reason_t reason;
-
-        /* The file deleted in the diff does not exist at the current URL.
-         *
-         * This is use case 6 described in the paper attached to issue
-         * #2282.  See also notes/tree-conflicts/detection.txt
-         */
-        if (is_deleted)
-          {
-            svn_boolean_t moved_away;
-            SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                                     mine_abspath, scratch_pool));
-            reason = moved_away ? svn_wc_conflict_reason_moved_away
-                                : svn_wc_conflict_reason_deleted;
-          }
-        else
-          reason = svn_wc_conflict_reason_missing;
-
-        SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
-                              svn_wc_conflict_action_delete, reason));
-        *tree_conflicted = TRUE;
-        *state = svn_wc_notify_state_missing;
-      }
-      break;
-    default:
-      *state = svn_wc_notify_state_unknown;
-      break;
+      const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
+      /* Store deletion *after* obstruction check, or the registration will be
+         noted as an obstruction */
+      apr_hash_set(merge_b->dry_run_deletions, wcpath,
+                   APR_HASH_KEY_STRING, wcpath);
     }
 
+  if (kind != svn_node_file || is_deleted)
+    {
+      svn_wc_conflict_reason_t reason;
+
+      if (is_deleted)
+        {
+          svn_boolean_t moved_away;
+
+          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
+
+          if (moved_away)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
+      else
+        reason = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_delete, reason));
+
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_missing;
+
+      return SVN_NO_ERROR;
+    }
+
+  
+
+  /* If the files are identical, attempt deletion */
+  SVN_ERR(files_same_p(&same, older_abspath, original_props,
+                       local_abspath, merge_b->ctx->wc_ctx,
+                       scratch_pool));
+  if (same || merge_b->force || merge_b->record_only /* ### why? */)
+    {
+      /* Passing NULL for the notify_func and notify_baton because
+         repos_diff.c:delete_entry() will do it for us. */
+      SVN_ERR(svn_client__wc_delete(local_abspath, TRUE,
+                                    merge_b->dry_run, FALSE, NULL, NULL,
+                                    merge_b->ctx, scratch_pool));
+      *state = svn_wc_notify_state_changed;
+
+      /* Record that we might have deleted mergeinfo */
+      if (!merge_b->paths_with_deleted_mergeinfo)
+        merge_b->paths_with_deleted_mergeinfo =
+                                          apr_hash_make(merge_b->pool);
+
+      apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+                   apr_pstrdup(merge_b->pool, local_abspath),
+                   APR_HASH_KEY_STRING, local_abspath);
+    }
+  else
+    {
+      /* The files differ, so raise a conflict instead of deleting */
+
+      /* This might be use case 5 described in the paper attached to issue
+       * #2282.  See also notes/tree-conflicts/detection.txt
+       */
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_delete,
+                            svn_wc_conflict_reason_edited));
+      *tree_conflicted = TRUE;
+
+      *state = svn_wc_notify_state_obstructed;
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -2524,8 +2514,8 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               local_relpath, scratch_pool);
   svn_node_kind_t kind;
-  svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
+  svn_error_t *err;
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2543,8 +2533,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
 
-    is_versioned = (kind == svn_node_dir) || (kind == svn_node_file);
-
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         *state = obstr_state;
@@ -2558,115 +2546,79 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   if (merge_b->dry_run)
     {
       const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
+      /* Store deletion *after* obstruction check, or the registration will be
+         noted as an obstruction */
       apr_hash_set(merge_b->dry_run_deletions, wcpath,
                    APR_HASH_KEY_STRING, wcpath);
     }
 
-
-  /* Switch on the wc state of this path */
-  switch (kind)
+  if (kind != svn_node_dir || is_deleted)
     {
-    case svn_node_dir:
-      {
-        if (is_versioned && !is_deleted)
-          {
-            svn_error_t *err;
+      svn_wc_conflict_reason_t reason;
 
-            /* ### TODO: Before deleting, we should ensure that this dir
-               tree is equal to the one we're being asked to delete.
-               If not, mark this directory as a tree conflict victim,
-               because this could be use case 5 as described in
-               notes/tree-conflicts/detection.txt.
-             */
+      if (is_deleted)
+        {
+          svn_boolean_t moved_away;
 
-            /* Passing NULL for the notify_func and notify_baton because
-               repos_diff.c:delete_entry() will do it for us. */
-            err = svn_client__wc_delete(local_abspath, merge_b->force,
-                                        merge_b->dry_run, FALSE,
-                                        NULL, NULL,
-                                        merge_b->ctx, scratch_pool);
-            if (err)
-              {
-                svn_error_clear(err);
+          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
 
-                /* If the attempt to delete an existing directory failed,
-                 * the directory has local modifications (e.g. locally added
-                 * files, or property changes). Flag a tree conflict. */
-                SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                      svn_wc_conflict_action_delete,
-                                      svn_wc_conflict_reason_edited));
-                *tree_conflicted = TRUE;
-                *state = svn_wc_notify_state_conflicted;
-              }
-            else
-              {
-                *state = svn_wc_notify_state_changed;
-              }
+          if (moved_away)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
+      else
+        reason = svn_wc_conflict_reason_missing;
 
-            /* Record that we might have deleted mergeinfo */
-            if (!merge_b->paths_with_deleted_mergeinfo)
-              merge_b->paths_with_deleted_mergeinfo =
-                                                apr_hash_make(merge_b->pool);
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                            svn_wc_conflict_action_delete, reason));
 
-            apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
-                         apr_pstrdup(merge_b->pool, local_abspath),
-                         APR_HASH_KEY_STRING, local_abspath);
-          }
-        else
-          {
-            svn_wc_conflict_reason_t reason;
-            /* Dir is already not under version control at this path. */
-            /* Raise a tree conflict. */
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_missing;
 
-            if (is_deleted)
-              {
-                svn_boolean_t moved_away;
-
-                SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                                         local_abspath, scratch_pool));
-                reason = moved_away ? svn_wc_conflict_reason_moved_away
-                                    : svn_wc_conflict_reason_deleted;
-              }
-            else
-              reason = svn_wc_conflict_reason_missing;
-            SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                  svn_wc_conflict_action_delete, reason));
-            *tree_conflicted = TRUE;
-          }
-      }
-      break;
-    case svn_node_file:
-      *state = svn_wc_notify_state_obstructed;
-      break;
-    case svn_node_none:
-      {
-        svn_wc_conflict_reason_t reason;
-
-        if (is_deleted)
-          {
-            svn_boolean_t moved_away;
-
-            /* Dir is already non-existent. This is use case 6 as described in
-             * notes/tree-conflicts/detection.txt.
-             * This case was formerly treated as no-op. */
-            SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                                     local_abspath, scratch_pool));
-            reason = moved_away ? svn_wc_conflict_reason_moved_away
-                                : svn_wc_conflict_reason_deleted;
-          }
-        else
-          reason = svn_wc_conflict_reason_missing;
-
-        SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                              svn_wc_conflict_action_delete, reason));
-        *tree_conflicted = TRUE;
-        *state = svn_wc_notify_state_missing;
-      }
-      break;
-    default:
-      *state = svn_wc_notify_state_unknown;
-      break;
+      return SVN_NO_ERROR;
     }
+
+  /* ### TODO: Before deleting, we should ensure that this dir
+     tree is equal to the one we're being asked to delete.
+     If not, mark this directory as a tree conflict victim,
+     because this could be use case 5 as described in
+     notes/tree-conflicts/detection.txt.
+   */
+
+  /* Passing NULL for the notify_func and notify_baton because
+     repos_diff.c:delete_entry() will do it for us. */
+  err = svn_client__wc_delete(local_abspath, merge_b->force,
+                              merge_b->dry_run, FALSE,
+                              NULL, NULL,
+                              merge_b->ctx, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+
+      /* If the attempt to delete an existing directory failed,
+       * the directory has local modifications (e.g. locally added
+       * files, or property changes). Flag a tree conflict. */
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                            svn_wc_conflict_action_delete,
+                            svn_wc_conflict_reason_edited));
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_conflicted;
+    }
+  else
+    {
+      *state = svn_wc_notify_state_changed;
+    }
+
+  /* Record that we might have deleted mergeinfo */
+  if (!merge_b->paths_with_deleted_mergeinfo)
+    merge_b->paths_with_deleted_mergeinfo =
+                                      apr_hash_make(merge_b->pool);
+
+  apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+               apr_pstrdup(merge_b->pool, local_abspath),
+               APR_HASH_KEY_STRING, local_abspath);
 
   return SVN_NO_ERROR;
 }
