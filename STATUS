@@ -143,6 +143,21 @@ Candidate changes:
     Votes:
       +1: breser, brane
 
+ * r1427278
+   Fix another issue in the diff-libraries whitespace normalization
+   handling that might make diff show unexpected changes, and even trying
+   to read beyond end of file.
+   Justification:
+     The diff library should behave properly when suppressing whitespace
+     changes. See also http://svn.haxx.se/dev/archive-2012-12/0556.shtml
+     for some examples of this bug.
+   Notes:
+     The branch is just needed for avoiding a conflict with adding a comment.
+   Branch:
+     ^/subversion/branches/1.7.x-r1427278
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
