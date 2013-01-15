@@ -606,9 +606,7 @@ struct diff_cmd_baton {
 /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
  */
 static svn_error_t *
-diff_props_changed(svn_wc_notify_state_t *state,
-                   svn_boolean_t *tree_conflicted,
-                   const char *diff_relpath,
+diff_props_changed(const char *diff_relpath,
                    svn_revnum_t rev1,
                    svn_revnum_t rev2,
                    svn_boolean_t dir_was_added,
@@ -649,11 +647,6 @@ diff_props_changed(svn_wc_notify_state_t *state,
                                  scratch_pool));
     }
 
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
   return SVN_NO_ERROR;
 }
 
@@ -670,9 +663,7 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  return svn_error_trace(diff_props_changed(state,
-                                            tree_conflicted,
-                                            diff_relpath,
+  return svn_error_trace(diff_props_changed(diff_relpath,
                                             /* ### These revs be filled
                                              * ### with per node info */
                                             diff_cmd_baton->revnum1,
@@ -957,16 +948,9 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
                                  SVN_INVALID_REVNUM, diff_cmd_baton,
                                  scratch_pool));
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
-                               diff_relpath, rev1, rev2, FALSE, prop_changes,
+    SVN_ERR(diff_props_changed(diff_relpath, rev1, rev2, FALSE, prop_changes,
                                original_props, !wrote_header,
                                diff_cmd_baton, scratch_pool));
-  if (content_state)
-    *content_state = svn_wc_notify_state_unknown;
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -1028,17 +1012,10 @@ diff_file_added(svn_wc_notify_state_t *content_state,
                                  diff_cmd_baton, scratch_pool));
 
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
-                               diff_relpath, rev1, rev2,
+    SVN_ERR(diff_props_changed(diff_relpath, rev1, rev2,
                                FALSE, prop_changes,
                                original_props, ! wrote_header,
                                diff_cmd_baton, scratch_pool));
-  if (content_state)
-    *content_state = svn_wc_notify_state_unknown;
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -1090,11 +1067,6 @@ diff_file_deleted(svn_wc_notify_state_t *state,
     }
 
   /* We don't list all the deleted properties. */
-
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   return SVN_NO_ERROR;
 }
