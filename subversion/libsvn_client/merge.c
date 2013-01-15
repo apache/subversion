@@ -2498,6 +2498,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
                                        svn_wc_conflict_action_add,
                                        svn_wc_conflict_reason_obstructed));
           *tree_conflicted = TRUE;
+          *skip_children = TRUE;
           *state = svn_wc_notify_state_obstructed;
         }
       break;
@@ -2774,6 +2775,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
                                 svn_wc_conflict_action_edit,
                                 svn_wc_conflict_reason_replaced));
           *tree_conflicted = TRUE;
+          *skip_children = TRUE;
         }
 
       /* If we're trying to open a directory that's locally deleted,
@@ -2804,6 +2806,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                 svn_wc_conflict_action_edit, reason));
           *tree_conflicted = TRUE;
+          *skip_children = TRUE;
         }
     }
 
