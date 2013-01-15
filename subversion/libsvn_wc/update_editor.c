@@ -3677,7 +3677,7 @@ change_file_prop(void *file_baton,
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_skel_t **conflict_skel,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           svn_boolean_t *found_conflict,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,
@@ -3702,6 +3702,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
   svn_boolean_t delete_left = FALSE;
   const char *path_ext = "";
   const char *new_text_base_tmp_abspath;
+  enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
 
   *work_items = NULL;
@@ -3756,7 +3757,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      Remember that this function wants full paths! */
   SVN_ERR(svn_wc__internal_merge(&work_item,
                                  conflict_skel,
-                                 merge_outcome,
+                                 &merge_outcome,
                                  db,
                                  merge_left,
                                  new_text_base_tmp_abspath,
@@ -3770,6 +3771,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                                  result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+  *found_conflict = (merge_outcome == svn_wc_merge_conflict);
 
   /* If we created a temporary left merge file, get rid of it. */
   if (delete_left)
@@ -3821,7 +3823,7 @@ merge_file(svn_skel_t **work_items,
   struct edit_baton *eb = fb->edit_baton;
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
-  enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
+  svn_boolean_t found_text_conflict = FALSE;
 
   SVN_ERR_ASSERT(! fb->shadowed
                  && ! fb->obstruction_found
@@ -3911,7 +3913,7 @@ merge_file(svn_skel_t **work_items,
          the textual changes into the working file. */
       SVN_ERR(svn_wc__perform_file_merge(work_items,
                                          conflict_skel,
-                                         &merge_outcome,
+                                         &found_text_conflict,
                                          eb->db,
                                          fb->local_abspath,
                                          pb->local_abspath,
@@ -3994,14 +3996,7 @@ merge_file(svn_skel_t **work_items,
 
   /* Set the returned content state. */
 
-  /* This is kind of interesting.  Even if no new text was
-     installed (i.e., NEW_TEXT_BASE_ABSPATH was null), we could still
-     report a pre-existing conflict state.  Say a file, already
-     in a state of textual conflict, receives prop mods during an
-     update.  Then we'll notify that it has text conflicts.  This
-     seems okay to me.  I guess.  I dunno.  You? */
-
-  if (merge_outcome == svn_wc_merge_conflict)
+  if (found_text_conflict)
     *content_state = svn_wc_notify_state_conflicted;
   else if (fb->new_text_base_sha1_checksum)
     {
