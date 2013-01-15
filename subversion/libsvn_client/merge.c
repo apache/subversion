@@ -2283,11 +2283,10 @@ merge_dir_added(svn_wc_notify_state_t *state,
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               local_relpath, scratch_pool);
   svn_node_kind_t kind;
-  const char *copyfrom_url = NULL, *child;
+  const char *copyfrom_url = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
-  const char *parent_abspath;
-  svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
+  svn_boolean_t add_existing = FALSE;
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2296,16 +2295,19 @@ merge_dir_added(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR;
     }
 
-  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
-  SVN_ERR_ASSERT(child != NULL);
 
   /* If this is a merge from the same repository as our working copy,
      we handle adds as add-with-history.  Otherwise, we'll use a pure
      add. */
   if (merge_b->same_repos)
     {
+      const char *parent_abspath;
+      const char *child;
+
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
+      SVN_ERR_ASSERT(child != NULL);
+
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
                                                  child, scratch_pool);
       copyfrom_rev = rev;
@@ -2323,8 +2325,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
 
-    is_versioned = (kind == svn_node_dir) || (kind == svn_node_file);
-
     /* In this case of adding a directory, we have an exception to the usual
      * "skip if it's inconsistent" rule. If the directory exists on disk
      * unexpectedly, we simply make it versioned, because we can do so without
@@ -2341,7 +2341,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
         if (disk_kind == svn_node_dir)
           {
             obstr_state = svn_wc_notify_state_inapplicable;
-            kind = svn_node_dir; /* Take over existing directory */
+            add_existing = TRUE; /* Take over existing directory */
           }
       }
 
@@ -2364,108 +2364,54 @@ merge_dir_added(svn_wc_notify_state_t *state,
       kind = svn_node_none;
   }
 
-  /* Switch on the wc state of this path */
-  switch (kind)
+  if (kind != svn_node_none && !add_existing)
     {
-    case svn_node_none:
-      /* Unversioned or schedule-delete */
-      if (merge_b->dry_run)
-        {
-          cache_last_added_dir(merge_b, local_abspath);
-        }
+      /* The directory add the merge wants to carry out is obstructed, so the
+       * directory the merge wants to add is a tree conflict victim.
+       * See notes about obstructions in notes/tree-conflicts/detection.txt.
+       */
+      SVN_ERR(tree_conflict_on_add(merge_b, local_abspath, svn_node_dir,
+                                   svn_wc_conflict_action_add,
+                                   svn_wc_conflict_reason_obstructed));
+      *tree_conflicted = TRUE;
+      *skip = TRUE;
+      *skip_children = TRUE;
+
+      /* directory already exists, is it under version control? */
+      if ((kind != svn_node_none)
+          && dry_run_deleted_p(merge_b, local_abspath))
+        *state = svn_wc_notify_state_changed;
       else
+        /* this will make the repos_editor send a 'skipped' message */
+        *state = svn_wc_notify_state_obstructed;
+
+      return SVN_NO_ERROR;
+    }
+
+
+  /* Unversioned or schedule-delete */
+  if (merge_b->dry_run)
+    {
+      cache_last_added_dir(merge_b, local_abspath);
+    }
+  else
+    {
+      if (!add_existing)
         {
           SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT,
                                   scratch_pool));
-          SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
-                              svn_depth_infinity,
-                              copyfrom_url, copyfrom_rev,
-                              merge_b->ctx->cancel_func,
-                              merge_b->ctx->cancel_baton,
-                              NULL, NULL, /* don't pass notification func! */
-                              scratch_pool));
+        }
 
-        }
-      *state = svn_wc_notify_state_changed;
-      break;
-    case svn_node_dir:
-      /* Adding an unversioned directory doesn't destroy data */
-      if (! is_versioned || is_deleted)
-        {
-          /* The dir is not known to Subversion, or is schedule-delete.
-           * We will make it schedule-add. */
-          if (!merge_b->dry_run)
-            {
-              SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
-                                  svn_depth_infinity,
-                                  copyfrom_url, copyfrom_rev,
-                                  merge_b->ctx->cancel_func,
-                                  merge_b->ctx->cancel_baton,
-                                  NULL, NULL, /* no notification func! */
-                                  scratch_pool));
-            }
-          else
-            {
-              cache_last_added_dir(merge_b, local_abspath);
-            }
-          *state = svn_wc_notify_state_changed;
-        }
-      else
-        {
-          /* The dir is known to Subversion as already existing. */
-          if (dry_run_deleted_p(merge_b, local_abspath))
-            {
-              *state = svn_wc_notify_state_changed;
-            }
-          else
-            {
-              svn_boolean_t moved_here;
-              svn_wc_conflict_reason_t reason;
+      SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                          svn_depth_infinity,
+                          copyfrom_url, copyfrom_rev,
+                          merge_b->ctx->cancel_func,
+                          merge_b->ctx->cancel_baton,
+                          NULL, NULL, /* don't pass notification func! */
+                          scratch_pool));
 
-              /* This is a tree conflict. */
-              SVN_ERR(check_moved_here(&moved_here, merge_b->ctx->wc_ctx,
-                                       local_abspath, scratch_pool));
-              reason = moved_here ? svn_wc_conflict_reason_moved_here
-                                  : svn_wc_conflict_reason_added;
-              SVN_ERR(tree_conflict_on_add(merge_b, local_abspath,
-                                           svn_node_dir,
-                                           svn_wc_conflict_action_add,
-                                           reason));
-              *tree_conflicted = TRUE;
-              *skip = TRUE;
-              *skip_children = TRUE;
-              *state = svn_wc_notify_state_obstructed;
-            }
-        }
-      break;
-    case svn_node_file:
-      if (merge_b->dry_run)
-        merge_b->dry_run_last_added_dir = NULL;
-
-      if (is_versioned && dry_run_deleted_p(merge_b, local_abspath))
-        {
-          /* ### TODO: Retain record of this dir being added to
-             ### avoid problems from subsequent edits which try to
-             ### add children. */
-          *state = svn_wc_notify_state_changed;
-        }
-      else
-        {
-          /* Obstructed: we can't add a dir because there's a file here. */
-          SVN_ERR(tree_conflict_on_add(merge_b, local_abspath, svn_node_dir,
-                                       svn_wc_conflict_action_add,
-                                       svn_wc_conflict_reason_obstructed));
-          *tree_conflicted = TRUE;
-          *skip_children = TRUE;
-          *state = svn_wc_notify_state_obstructed;
-        }
-      break;
-    default:
-      if (merge_b->dry_run)
-        merge_b->dry_run_last_added_dir = NULL;
-      *state = svn_wc_notify_state_unknown;
-      break;
     }
+  *state = svn_wc_notify_state_changed;
 
   return SVN_NO_ERROR;
 }
