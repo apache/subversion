@@ -575,10 +575,6 @@ struct diff_cmd_baton {
   /* Set this if you want diff output even for binary files. */
   svn_boolean_t force_binary;
 
-  /* Set this flag if you want diff_file_changed to output diffs
-     unconditionally, even if the diffs are empty. */
-  svn_boolean_t force_empty;
-
   /* The directory that diff target paths should be considered as
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
@@ -695,6 +691,8 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
    but instead print a warning message. 
 
+   If FORCE_DIFF is TRUE, always write a diff, even for empty diffs.
+
    Set *WROTE_HEADER to TRUE if a diff header was written */
 static svn_error_t *
 diff_content_changed(svn_boolean_t *wrote_header,
@@ -706,6 +704,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      const char *mimetype1,
                      const char *mimetype2,
                      svn_diff_operation_kind_t operation,
+                     svn_boolean_t force_diff,
                      const char *copyfrom_path,
                      svn_revnum_t copyfrom_rev,
                      struct diff_cmd_baton *diff_cmd_baton,
@@ -848,8 +847,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                    diff_cmd_baton->options.for_internal,
                                    scratch_pool));
 
-      if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty ||
-          diff_cmd_baton->use_git_diff_format)
+      if (force_diff
+          || diff_cmd_baton->use_git_diff_format
+          || svn_diff_contains_diffs(diff))
         {
           /* Print out the diff header. */
           SVN_ERR(svn_stream_printf_from_utf8(outstream,
@@ -885,7 +885,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
             }
 
           /* Output the actual diff */
-          if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)
+          if (force_diff || svn_diff_contains_diffs(diff))
             SVN_ERR(svn_diff_file_output_unified3(outstream, diff,
                      tmpfile1, tmpfile2, label1, label2,
                      diff_cmd_baton->header_encoding, rel_to_dir,
@@ -951,8 +951,9 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
   if (tmpfile1)
     SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                  tmpfile1, tmpfile2, rev1, rev2,
-                                 mimetype1, mimetype2,
-                                 svn_diff_op_modified, NULL,
+                                 mimetype1, mimetype2, 
+                                 svn_diff_op_modified, FALSE,
+                                 NULL,
                                  SVN_INVALID_REVNUM, diff_cmd_baton,
                                  scratch_pool));
   if (prop_changes->nelts > 0)
@@ -1008,25 +1009,22 @@ diff_file_added(svn_wc_notify_state_t *content_state,
         rev2 = diff_cmd_baton->revnum2;
     }
 
-  /* We want diff_file_changed to unconditionally show diffs, even if
-     the diff is empty (as would be the case if an empty file were
-     added.)  It's important, because 'patch' would still see an empty
-     diff and create an empty file.  It's also important to let the
-     user see that *something* happened. */
-  diff_cmd_baton->force_empty = TRUE;
-
   if (tmpfile1 && copyfrom_path)
     SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
-                                 svn_diff_op_copied, copyfrom_path,
+                                 svn_diff_op_copied,
+                                 TRUE /* force diff output */,
+                                 copyfrom_path,
                                  copyfrom_revision, diff_cmd_baton,
                                  scratch_pool));
   else if (tmpfile1)
     SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
-                                 svn_diff_op_added, NULL, SVN_INVALID_REVNUM,
+                                 svn_diff_op_added,
+                                 TRUE /* force diff output */,
+                                 NULL, SVN_INVALID_REVNUM,
                                  diff_cmd_baton, scratch_pool));
 
   if (prop_changes->nelts > 0)
@@ -1041,8 +1039,6 @@ diff_file_added(svn_wc_notify_state_t *content_state,
     *prop_state = svn_wc_notify_state_unknown;
   if (tree_conflicted)
     *tree_conflicted = FALSE;
-
-  diff_cmd_baton->force_empty = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -1085,8 +1081,9 @@ diff_file_deleted(svn_wc_notify_state_t *state,
                                      diff_cmd_baton->revnum1,
                                      diff_cmd_baton->revnum2,
                                      mimetype1, mimetype2,
-                                     svn_diff_op_deleted, NULL,
-                                     SVN_INVALID_REVNUM, diff_cmd_baton,
+                                     svn_diff_op_deleted, FALSE,
+                                     NULL, SVN_INVALID_REVNUM,
+                                     diff_cmd_baton,
                                      scratch_pool));
 
       /* Should we also report the properties as deleted? */
@@ -2974,7 +2971,6 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
-  diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;
   diff_cmd_baton.properties_only = properties_only;
@@ -3034,7 +3030,6 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
-  diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;
   diff_cmd_baton.properties_only = properties_only;
