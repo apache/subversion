@@ -1419,8 +1419,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 
   if (obstr_state != svn_wc_notify_state_inapplicable)
     {
-      if (state)
-        *state = obstr_state;
+      *state = obstr_state;
       return SVN_NO_ERROR;
     }
 
@@ -1436,10 +1435,8 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
                             svn_wc_conflict_action_edit, reason));
 
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-      if (state)
-        *state = svn_wc_notify_state_missing;
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_missing;
 
       return SVN_NO_ERROR;
     }
@@ -1472,7 +1469,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
     }
-  else if (state)
+  else
     *state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
@@ -1631,9 +1628,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
   SVN_ERR_ASSERT(!yours_abspath || svn_dirent_is_absolute(yours_abspath));
 
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
@@ -1648,9 +1642,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
          * but the working file is missing, maybe we can 'restore' the
          * working file from the text-base, and then allow the merge to run? */
 
-        if (content_state)
-          *content_state = obstr_state;
-        if (prop_state && obstr_state == svn_wc_notify_state_missing)
+        *content_state = obstr_state;
+        if (obstr_state == svn_wc_notify_state_missing)
           *prop_state = svn_wc_notify_state_missing;
         return SVN_NO_ERROR;
       }
@@ -1681,10 +1674,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
           if (parent_depth < svn_depth_files
               && parent_depth != svn_depth_unknown)
             {
-              if (content_state)
-                *content_state = svn_wc_notify_state_missing;
-              if (prop_state)
-                *prop_state = svn_wc_notify_state_missing;
+              *content_state = svn_wc_notify_state_missing;
+              *prop_state = svn_wc_notify_state_missing;
               return SVN_NO_ERROR;
             }
         }
@@ -1705,12 +1696,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         reason = svn_wc_conflict_reason_missing;
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
                             svn_wc_conflict_action_edit, reason));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-      if (content_state)
-        *content_state = svn_wc_notify_state_missing;
-      if (prop_state)
-        *prop_state = svn_wc_notify_state_missing;
+      *tree_conflicted = TRUE;
+      *content_state = svn_wc_notify_state_missing;
+      *prop_state = svn_wc_notify_state_missing;
       return SVN_NO_ERROR;
     }
 
@@ -1732,8 +1720,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unchanged;
+  *prop_state = svn_wc_notify_state_unchanged;
 
   SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
                                       prop_changes, merge_b,
@@ -1757,8 +1744,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      if (content_state)
-        *content_state = svn_wc_notify_state_unchanged;
+      *content_state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
@@ -1803,20 +1789,17 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                             ctx->cancel_baton,
                             scratch_pool));
 
-      if (content_state)
-        {
-          if (content_outcome == svn_wc_merge_conflict)
-            *content_state = svn_wc_notify_state_conflicted;
-          else if (has_local_mods
-                   && content_outcome != svn_wc_merge_unchanged)
-            *content_state = svn_wc_notify_state_merged;
-          else if (content_outcome == svn_wc_merge_merged)
-            *content_state = svn_wc_notify_state_changed;
-          else if (content_outcome == svn_wc_merge_no_merge)
-            *content_state = svn_wc_notify_state_missing;
-          else /* merge_outcome == svn_wc_merge_unchanged */
-            *content_state = svn_wc_notify_state_unchanged;
-        }
+      if (content_outcome == svn_wc_merge_conflict)
+        *content_state = svn_wc_notify_state_conflicted;
+      else if (has_local_mods
+               && content_outcome != svn_wc_merge_unchanged)
+        *content_state = svn_wc_notify_state_merged;
+      else if (content_outcome == svn_wc_merge_merged)
+        *content_state = svn_wc_notify_state_changed;
+      else if (content_outcome == svn_wc_merge_no_merge)
+        *content_state = svn_wc_notify_state_missing;
+      else /* merge_outcome == svn_wc_merge_unchanged */
+        *content_state = svn_wc_notify_state_unchanged;
     }
 
   return SVN_NO_ERROR;
@@ -1851,24 +1834,18 @@ merge_file_added(svn_wc_notify_state_t *content_state,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(mine_abspath));
 
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      if (content_state)
-        *content_state = svn_wc_notify_state_unchanged;
-      if (prop_state)
-        *prop_state = svn_wc_notify_state_unchanged;
+      *content_state = svn_wc_notify_state_unchanged;
+      *prop_state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
   /* In most cases, we just leave prop_state as unknown, and let the
      content_state what happened, so we set prop_state here to avoid that
      below. */
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unknown;
+  *prop_state = svn_wc_notify_state_unknown;
 
   /* Apply the prop changes to a new hash table. */
   file_props = apr_hash_copy(scratch_pool, original_props);
@@ -1913,12 +1890,10 @@ merge_file_added(svn_wc_notify_state_t *content_state,
             && dry_run_added_parent_p(merge_b, mine_relpath,
                                       mine_abspath, scratch_pool))
           {
-            if (content_state)
-              *content_state = svn_wc_notify_state_changed;
-            if (prop_state && apr_hash_count(file_props))
-              *prop_state = svn_wc_notify_state_changed;
+            *content_state = svn_wc_notify_state_changed;
+            *prop_state = svn_wc_notify_state_changed;
           }
-        else if (content_state)
+        else
           *content_state = obstr_state;
 
         return SVN_NO_ERROR;
@@ -2018,8 +1993,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                              svn_node_file,
                                              svn_wc_conflict_action_add,
                                              reason));
-                if (tree_conflicted)
-                  *tree_conflicted = TRUE;
+                *tree_conflicted = TRUE;
               }
             else
               {
@@ -2040,10 +2014,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                                scratch_pool));
               }
           }
-        if (content_state)
-          *content_state = svn_wc_notify_state_changed;
-        if (prop_state && apr_hash_count(file_props))
-          *prop_state = svn_wc_notify_state_changed;
+        *content_state = svn_wc_notify_state_changed;
+        *prop_state = svn_wc_notify_state_changed;
       }
       break;
     case svn_node_dir:
@@ -2055,25 +2027,21 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       SVN_ERR(tree_conflict_on_add(merge_b, mine_abspath, svn_node_file,
                                    svn_wc_conflict_action_add,
                                    svn_wc_conflict_reason_obstructed));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-      if (content_state)
-        {
-          /* directory already exists, is it under version control? */
-          if ((wc_kind != svn_node_none)
-              && dry_run_deleted_p(merge_b, mine_abspath))
-            *content_state = svn_wc_notify_state_changed;
-          else
-            /* this will make the repos_editor send a 'skipped' message */
-            *content_state = svn_wc_notify_state_obstructed;
-        }
+      *tree_conflicted = TRUE;
+      
+      /* directory already exists, is it under version control? */
+      if ((wc_kind != svn_node_none)
+          && dry_run_deleted_p(merge_b, mine_abspath))
+        *content_state = svn_wc_notify_state_changed;
+      else
+        /* this will make the repos_editor send a 'skipped' message */
+        *content_state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_file:
       {
             if (dry_run_deleted_p(merge_b, mine_abspath))
               {
-                if (content_state)
-                  *content_state = svn_wc_notify_state_changed;
+                *content_state = svn_wc_notify_state_changed;
               }
             else
               {
@@ -2092,14 +2060,12 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                           merge_b, mine_abspath, svn_node_file,
                           svn_wc_conflict_action_add, reason));
 
-                if (tree_conflicted)
-                  *tree_conflicted = TRUE;
+                *tree_conflicted = TRUE;
               }
         break;
       }
     default:
-      if (content_state)
-        *content_state = svn_wc_notify_state_unknown;
+      *content_state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -2203,9 +2169,6 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   svn_node_kind_t kind;
   svn_boolean_t is_deleted;
 
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
   if (merge_b->dry_run)
     {
       const char *wcpath = apr_pstrdup(merge_b->pool, mine_abspath);
@@ -2216,8 +2179,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      if (state)
-        *state = svn_wc_notify_state_unchanged;
+      *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
@@ -2232,8 +2194,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (state)
-          *state = obstr_state;
+        *state = obstr_state;
         return SVN_NO_ERROR;
       }
   }
@@ -2256,8 +2217,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
             SVN_ERR(svn_client__wc_delete(mine_abspath, TRUE,
                                           merge_b->dry_run, FALSE, NULL, NULL,
                                           merge_b->ctx, scratch_pool));
-            if (state)
-              *state = svn_wc_notify_state_changed;
+            *state = svn_wc_notify_state_changed;
 
             /* Record that we might have deleted mergeinfo */
             if (!merge_b->paths_with_deleted_mergeinfo)
@@ -2278,11 +2238,9 @@ merge_file_deleted(svn_wc_notify_state_t *state,
             SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
                                   svn_wc_conflict_action_delete,
                                   svn_wc_conflict_reason_edited));
-            if (tree_conflicted)
-              *tree_conflicted = TRUE;
+            *tree_conflicted = TRUE;
 
-            if (state)
-              *state = svn_wc_notify_state_obstructed;
+            *state = svn_wc_notify_state_obstructed;
           }
       }
       break;
@@ -2295,10 +2253,8 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
                             svn_wc_conflict_action_delete,
                             svn_wc_conflict_reason_obstructed));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-      if (state)
-        *state = svn_wc_notify_state_obstructed;
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_none:
       {
@@ -2322,15 +2278,12 @@ merge_file_deleted(svn_wc_notify_state_t *state,
 
         SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
                               svn_wc_conflict_action_delete, reason));
-        if (tree_conflicted)
-          *tree_conflicted = TRUE;
-        if (state)
-          *state = svn_wc_notify_state_missing;
+        *tree_conflicted = TRUE;
+        *state = svn_wc_notify_state_missing;
       }
       break;
     default:
-      if (state)
-        *state = svn_wc_notify_state_unknown;
+      *state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -2381,8 +2334,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      if (state)
-        *state = svn_wc_notify_state_unchanged;
+      *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
@@ -2437,13 +2389,13 @@ merge_dir_added(svn_wc_notify_state_t *state,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (state && merge_b->dry_run
+        if (merge_b->dry_run
             && dry_run_added_parent_p(merge_b, local_relpath,
                                       local_abspath, scratch_pool))
           {
             *state = svn_wc_notify_state_changed;
           }
-        else if (state)
+        else
           {
             *state = obstr_state;
           }
@@ -2476,8 +2428,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
                               scratch_pool));
 
         }
-      if (state)
-        *state = svn_wc_notify_state_changed;
+      *state = svn_wc_notify_state_changed;
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
@@ -2499,16 +2450,14 @@ merge_dir_added(svn_wc_notify_state_t *state,
             {
               cache_last_added_dir(merge_b, local_abspath);
             }
-          if (state)
-            *state = svn_wc_notify_state_changed;
+          *state = svn_wc_notify_state_changed;
         }
       else
         {
           /* The dir is known to Subversion as already existing. */
           if (dry_run_deleted_p(merge_b, local_abspath))
             {
-              if (state)
-                *state = svn_wc_notify_state_changed;
+              *state = svn_wc_notify_state_changed;
             }
           else
             {
@@ -2524,14 +2473,10 @@ merge_dir_added(svn_wc_notify_state_t *state,
                                            svn_node_dir,
                                            svn_wc_conflict_action_add,
                                            reason));
-              if (tree_conflicted)
-                *tree_conflicted = TRUE;
-              if (skip)
-                *skip = TRUE;
-              if (skip_children)
-                *skip_children = TRUE;
-              if (state)
-                *state = svn_wc_notify_state_obstructed;
+              *tree_conflicted = TRUE;
+              *skip = TRUE;
+              *skip_children = TRUE;
+              *state = svn_wc_notify_state_obstructed;
             }
         }
       break;
@@ -2544,8 +2489,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
           /* ### TODO: Retain record of this dir being added to
              ### avoid problems from subsequent edits which try to
              ### add children. */
-          if (state)
-            *state = svn_wc_notify_state_changed;
+          *state = svn_wc_notify_state_changed;
         }
       else
         {
@@ -2553,17 +2497,14 @@ merge_dir_added(svn_wc_notify_state_t *state,
           SVN_ERR(tree_conflict_on_add(merge_b, local_abspath, svn_node_dir,
                                        svn_wc_conflict_action_add,
                                        svn_wc_conflict_reason_obstructed));
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
-          if (state)
-            *state = svn_wc_notify_state_obstructed;
+          *tree_conflicted = TRUE;
+          *state = svn_wc_notify_state_obstructed;
         }
       break;
     default:
       if (merge_b->dry_run)
         merge_b->dry_run_last_added_dir = NULL;
-      if (state)
-        *state = svn_wc_notify_state_unknown;
+      *state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -2588,8 +2529,7 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      if (state)
-        *state = svn_wc_notify_state_unchanged;
+      *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
@@ -2606,8 +2546,7 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (state)
-          *state = obstr_state;
+        *state = obstr_state;
         return SVN_NO_ERROR;
       }
 
@@ -2655,15 +2594,12 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
                 SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                       svn_wc_conflict_action_delete,
                                       svn_wc_conflict_reason_edited));
-                if (tree_conflicted)
-                  *tree_conflicted = TRUE;
-                if (state)
-                  *state = svn_wc_notify_state_conflicted;
+                *tree_conflicted = TRUE;
+                *state = svn_wc_notify_state_conflicted;
               }
             else
               {
-                if (state)
-                  *state = svn_wc_notify_state_changed;
+                *state = svn_wc_notify_state_changed;
               }
 
             /* Record that we might have deleted mergeinfo */
@@ -2694,14 +2630,12 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
               reason = svn_wc_conflict_reason_missing;
             SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                   svn_wc_conflict_action_delete, reason));
-            if (tree_conflicted)
-              *tree_conflicted = TRUE;
+            *tree_conflicted = TRUE;
           }
       }
       break;
     case svn_node_file:
-      if (state)
-        *state = svn_wc_notify_state_obstructed;
+      *state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_none:
       {
@@ -2724,15 +2658,12 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
 
         SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                               svn_wc_conflict_action_delete, reason));
-        if (tree_conflicted)
-          *tree_conflicted = TRUE;
-        if (state)
-          *state = svn_wc_notify_state_missing;
+        *tree_conflicted = TRUE;
+        *state = svn_wc_notify_state_missing;
       }
       break;
     default:
-      if (state)
-        *state = svn_wc_notify_state_unknown;
+      *state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -2842,8 +2773,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                 svn_wc_conflict_action_edit,
                                 svn_wc_conflict_reason_replaced));
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
+          *tree_conflicted = TRUE;
         }
 
       /* If we're trying to open a directory that's locally deleted,
@@ -2873,8 +2803,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
 
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                 svn_wc_conflict_action_edit, reason));
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
+          *tree_conflicted = TRUE;
         }
     }
 
@@ -7147,8 +7076,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           svn_string_t *pval;
           const char *mimetype1, *mimetype2;
           apr_array_header_t *propchanges;
-          svn_wc_notify_state_t prop_state, text_state;
-          svn_boolean_t tree_conflicted = TRUE;
+          svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+          svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
+          svn_boolean_t tree_conflicted = FALSE;
 
           svn_pool_clear(iterpool);
 
