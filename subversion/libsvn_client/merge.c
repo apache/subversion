@@ -1949,100 +1949,100 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       }
   }
 
-        if (! merge_b->dry_run)
-          {
-            const char *copyfrom_url;
-            svn_revnum_t copyfrom_rev;
-            svn_stream_t *new_contents, *new_base_contents;
-            apr_hash_t *new_base_props, *new_props;
-            svn_boolean_t existing_tree_conflict;
-            svn_error_t *err;
+  if (! merge_b->dry_run)
+    {
+      const char *copyfrom_url;
+      svn_revnum_t copyfrom_rev;
+      svn_stream_t *new_contents, *new_base_contents;
+      apr_hash_t *new_base_props, *new_props;
+      svn_boolean_t existing_tree_conflict;
+      svn_error_t *err;
 
-            /* If this is a merge from the same repository as our
-               working copy, we handle adds as add-with-history.
-               Otherwise, we'll use a pure add. */
-            if (merge_b->same_repos)
-              {
-                const char *child =
-                  svn_dirent_skip_ancestor(merge_b->target->abspath,
-                                           mine_abspath);
-                SVN_ERR_ASSERT(child != NULL);
-                copyfrom_url = svn_path_url_add_component2(
-                                             merge_b->merge_source.loc2->url,
-                                             child, scratch_pool);
-                copyfrom_rev = rev2;
-                SVN_ERR(check_repos_match(merge_b->target, mine_abspath,
-                                          copyfrom_url, scratch_pool));
-                new_base_props = file_props;
-                new_props = NULL; /* inherit from new_base_props */
-                SVN_ERR(svn_stream_open_readonly(&new_base_contents,
-                                                 yours_abspath,
-                                                 scratch_pool,
-                                                 scratch_pool));
-                new_contents = NULL; /* inherit from new_base_contents */
-              }
-            else
-              {
-                copyfrom_url = NULL;
-                copyfrom_rev = SVN_INVALID_REVNUM;
-                new_base_props = apr_hash_make(scratch_pool);
-                new_props = file_props;
-                new_base_contents = svn_stream_empty(scratch_pool);
-                SVN_ERR(svn_stream_open_readonly(&new_contents, yours_abspath,
-                                                 scratch_pool, scratch_pool));
-              }
+      /* If this is a merge from the same repository as our
+         working copy, we handle adds as add-with-history.
+         Otherwise, we'll use a pure add. */
+      if (merge_b->same_repos)
+        {
+          const char *child =
+            svn_dirent_skip_ancestor(merge_b->target->abspath,
+                                     mine_abspath);
+          SVN_ERR_ASSERT(child != NULL);
+          copyfrom_url = svn_path_url_add_component2(
+                                       merge_b->merge_source.loc2->url,
+                                       child, scratch_pool);
+          copyfrom_rev = rev2;
+          SVN_ERR(check_repos_match(merge_b->target, mine_abspath,
+                                    copyfrom_url, scratch_pool));
+          new_base_props = file_props;
+          new_props = NULL; /* inherit from new_base_props */
+          SVN_ERR(svn_stream_open_readonly(&new_base_contents,
+                                           yours_abspath,
+                                           scratch_pool,
+                                           scratch_pool));
+          new_contents = NULL; /* inherit from new_base_contents */
+        }
+      else
+        {
+          copyfrom_url = NULL;
+          copyfrom_rev = SVN_INVALID_REVNUM;
+          new_base_props = apr_hash_make(scratch_pool);
+          new_props = file_props;
+          new_base_contents = svn_stream_empty(scratch_pool);
+          SVN_ERR(svn_stream_open_readonly(&new_contents, yours_abspath,
+                                           scratch_pool, scratch_pool));
+        }
 
-            err = svn_wc_conflicted_p3(NULL, NULL, &existing_tree_conflict,
-                                       merge_b->ctx->wc_ctx, mine_abspath,
-                                       merge_b->pool);
+      err = svn_wc_conflicted_p3(NULL, NULL, &existing_tree_conflict,
+                                 merge_b->ctx->wc_ctx, mine_abspath,
+                                 merge_b->pool);
 
-            if (err)
-              {
-                if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                  return svn_error_trace(err);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_trace(err);
 
-                svn_error_clear(err);
-                existing_tree_conflict = FALSE;
-              }
+          svn_error_clear(err);
+          existing_tree_conflict = FALSE;
+        }
 
-            if (existing_tree_conflict)
-              {
-                svn_boolean_t moved_here;
-                svn_wc_conflict_reason_t reason;
+      if (existing_tree_conflict)
+        {
+          svn_boolean_t moved_here;
+          svn_wc_conflict_reason_t reason;
 
-                /* Possibly collapse the existing conflict into a 'replace'
-                 * tree conflict. The conflict reason is 'added' because
-                 * the now-deleted tree conflict victim must have been
-                 * added in the history of the merge target. */
-                SVN_ERR(check_moved_here(&moved_here, merge_b->ctx->wc_ctx,
-                                         mine_abspath, scratch_pool));
-                reason = moved_here ? svn_wc_conflict_reason_moved_here
-                                    : svn_wc_conflict_reason_added;
-                SVN_ERR(tree_conflict_on_add(merge_b, mine_abspath,
-                                             svn_node_file,
-                                             svn_wc_conflict_action_add,
-                                             reason));
-                *tree_conflicted = TRUE;
-              }
-            else
-              {
-                /* Since 'mine' doesn't exist, and this is
-                   'merge_file_added', I hope it's safe to assume that
-                   'older' is empty, and 'yours' is the full file.  Merely
-                   copying 'yours' to 'mine', isn't enough; we need to get
-                   the whole text-base and props installed too, just as if
-                   we had called 'svn cp wc wc'. */
-                SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
-                                               mine_abspath,
-                                               new_base_contents,
-                                               new_contents,
-                                               new_base_props, new_props,
-                                               copyfrom_url, copyfrom_rev,
-                                               merge_b->ctx->cancel_func,
-                                               merge_b->ctx->cancel_baton,
-                                               scratch_pool));
-              }
-          }
+          /* Possibly collapse the existing conflict into a 'replace'
+           * tree conflict. The conflict reason is 'added' because
+           * the now-deleted tree conflict victim must have been
+           * added in the history of the merge target. */
+          SVN_ERR(check_moved_here(&moved_here, merge_b->ctx->wc_ctx,
+                                   mine_abspath, scratch_pool));
+          reason = moved_here ? svn_wc_conflict_reason_moved_here
+                              : svn_wc_conflict_reason_added;
+          SVN_ERR(tree_conflict_on_add(merge_b, mine_abspath,
+                                       svn_node_file,
+                                       svn_wc_conflict_action_add,
+                                       reason));
+          *tree_conflicted = TRUE;
+        }
+      else
+        {
+          /* Since 'mine' doesn't exist, and this is
+             'merge_file_added', I hope it's safe to assume that
+             'older' is empty, and 'yours' is the full file.  Merely
+             copying 'yours' to 'mine', isn't enough; we need to get
+             the whole text-base and props installed too, just as if
+             we had called 'svn cp wc wc'. */
+          SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
+                                         mine_abspath,
+                                         new_base_contents,
+                                         new_contents,
+                                         new_base_props, new_props,
+                                         copyfrom_url, copyfrom_rev,
+                                         merge_b->ctx->cancel_func,
+                                         merge_b->ctx->cancel_baton,
+                                         scratch_pool));
+        }
+    }
   *content_state = svn_wc_notify_state_changed;
   *prop_state = svn_wc_notify_state_changed;
 
