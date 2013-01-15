@@ -441,7 +441,7 @@ create_conflict_markers(svn_skel_t **work_items,
   SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
                                           local_abspath,
                                           conflict_skel,
-                                          scratch_pool,
+                                          result_pool,
                                           scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
@@ -617,22 +617,14 @@ update_working_file(svn_skel_t **work_items,
   apr_array_header_t *propchanges;
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_wc_notify_state_t prop_state, content_state;
+  svn_skel_t *work_item;
+
+  *work_items = NULL;
 
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
                                &actual_props, db, local_abspath,
                                old_version, new_version,
                                result_pool, scratch_pool));
-
-  /* If there are any conflicts to be stored, convert them into work items
-   * too. */
-  if (conflict_skel)
-    {
-      /* ### need to pass in the node kinds (before & after)? */
-      SVN_ERR(create_conflict_markers(work_items, local_abspath, db,
-                                      repos_relpath, conflict_skel,
-                                      old_version, new_version,
-                                      result_pool, scratch_pool));
-    }
 
   /*
    * Run a 3-way merge to update the file, using the pre-update
@@ -648,7 +640,7 @@ update_working_file(svn_skel_t **work_items,
                                        db, wcroot->abspath,
                                        new_version->checksum,
                                        scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__internal_merge(work_items, &conflict_skel,
+  SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
                                  &merge_outcome, db,
                                  old_pristine_abspath,
                                  new_pristine_abspath,
@@ -662,6 +654,8 @@ update_working_file(svn_skel_t **work_items,
                                  propchanges,
                                  NULL, NULL, /* cancel_func + baton */
                                  result_pool, scratch_pool));
+
+  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   /* If there are any conflicts to be stored, convert them into work items
    * too. */
@@ -757,18 +751,17 @@ tc_editor_alter_file(void *baton,
   new_version.props = new_props ? new_props : old_version.props;
 
   /* Update file and prop contents if the update has changed them. */
-  if (!svn_checksum_match(new_checksum, old_version.checksum)
-      /* ### || props have changed */)
+  if (!svn_checksum_match(new_checksum, old_version.checksum) || new_props)
     {
-      svn_skel_t *work_item;
+      svn_skel_t *work_items;
 
-      SVN_ERR(update_working_file(&work_item, dst_relpath,
+      SVN_ERR(update_working_file(&work_items, dst_relpath,
                                   move_dst_repos_relpath,
                                   &old_version, &new_version,
                                   b->wcroot, b->db,
                                   b->notify_func, b->notify_baton,
                                   b->result_pool, scratch_pool));
-      *b->work_items = svn_wc__wq_merge(*b->work_items, work_item,
+      *b->work_items = svn_wc__wq_merge(*b->work_items, work_items,
                                         b->result_pool);
     }
 
