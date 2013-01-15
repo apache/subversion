@@ -5954,6 +5954,29 @@ def update_edit_delete_obstruction(sbox):
                                         None, None, 1,
                                         '-r', '3', wc_dir)
 
+def update_deleted(sbox):
+  "update a deleted tree"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  sbox.simple_rm('A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+  })
+
+  # This runs an update anchored on A, which is deleted. The update editor
+  # shouldn't look at the ACTUAL/WORKING data in this case, but in 1.7 it did.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None, None,
+                                        None, None, 1,
+                                        sbox.ospath('A/B'))
+
 
 #######################################################################
 # Run the tests
@@ -6030,6 +6053,7 @@ test_list = [ None,
               update_nested_move_text_mod,
               update_with_parents_and_exclude,
               update_edit_delete_obstruction,
+              update_deleted,
              ]
 
 if __name__ == '__main__':
