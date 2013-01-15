@@ -5527,7 +5527,6 @@ def update_moved_dir_edited_leaf_del(sbox):
   expected_status.tweak('A/B/E2/alpha', treeconflict='C')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def update_moved_dir_file_add(sbox):
   "update locally moved dir with incoming file"
   sbox.build()
@@ -5542,9 +5541,12 @@ def update_moved_dir_file_add(sbox):
   svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
   sbox.simple_move("A/B/E", "A/B/E2")
 
-  # the incoming file should auto-merge
+  # Produce a tree conflict by updating the working copy to the
+  # revision which created A/B/E/foo. The addition collides with
+  # the local move of A/B/E to A/B/E2.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E2/foo' : Item(status='A '),
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/foo'   : Item(status='  ', treeconflict='A'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
@@ -5552,23 +5554,39 @@ def update_moved_dir_file_add(sbox):
     'A/B/E2'           : Item(),
     'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
     'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
-    'A/B/E2/foo'       : Item(contents=foo_content),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
     'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
-    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
   })
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  expected_status.tweak('A/B/E/beta', status='D ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  # Now resolve the conflict, using --accept=mine-conflict.
+  # This should apply the update to A/B/E2, adding A/B/E2/foo.
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict', wc_dir)
+  # the incoming file should auto-merge
+  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.add({
+    'A/B/E2/foo'        : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 def update_moved_dir_dir_add(sbox):
   "update locally moved dir with incoming dir"
