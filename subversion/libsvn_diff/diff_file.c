@@ -430,7 +430,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         }
 
       is_match = TRUE;
-      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
+      for (delta = 0; delta < max_delta; delta += sizeof(apr_uintptr_t))
         {
           apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
@@ -440,18 +440,25 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
             if (chunk != *(const apr_size_t *)(file[i].curp + delta))
               {
                 is_match = FALSE;
-                delta -= sizeof(apr_size_t);
                 break;
               }
+
+          if (! is_match)
+            break;
         }
 
-      /* We either found a mismatch or an EOL at or shortly behind curp+delta
-       * or we cannot proceed with chunky ops without exceeding endp.
-       * In any way, everything up to curp + delta is equal and not an EOL.
-       */
-      for (i = 0; i < file_len; i++)
-        file[i].curp += delta;
+      if (delta /* > 0*/)
+        {
+          /* We either found a mismatch or an EOL at or shortly behind curp+delta
+           * or we cannot proceed with chunky ops without exceeding endp.
+           * In any way, everything up to curp + delta is equal and not an EOL.
+           */
+          for (i = 0; i < file_len; i++)
+            file[i].curp += delta;
 
+          /* Skipped data without EOL markers, so last char was not a CR. */
+          had_cr = FALSE; 
+        }
 #endif
 
       *reached_one_eof = is_one_at_eof(file, file_len);
