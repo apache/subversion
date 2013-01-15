@@ -699,12 +699,15 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
 
+   Set *FOUND_TEXT_CONFLICT to TRUE when the merge encountered a conflict,
+   otherwise to FALSE.
+
    The rest of the arguments are passed to svn_wc__internal_merge.
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_skel_t **conflict_skel,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           svn_boolean_t *found_conflict,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,

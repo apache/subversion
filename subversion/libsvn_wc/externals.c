@@ -793,11 +793,12 @@ close_file(void *file_baton,
               }
             else
               {
-                enum svn_wc_merge_outcome_t merge_outcome;
+                svn_boolean_t found_text_conflict;
+
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
                                                    &conflict_skel,
-                                                   &merge_outcome,
+                                                   &found_text_conflict,
                                                    eb->db,
                                                    eb->local_abspath,
                                                    eb->wri_abspath,
@@ -816,7 +817,7 @@ close_file(void *file_baton,
                 all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                                   pool);
 
-                if (merge_outcome == svn_wc_merge_conflict)
+                if (found_text_conflict)
                   content_state = svn_wc_notify_state_conflicted;
                 else
                   content_state = svn_wc_notify_state_merged;
