@@ -5446,12 +5446,14 @@ def update_moved_dir_leaf_del(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-', moved_from='A/B/E'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
   })
   expected_status.remove('A/B/E/alpha')
-  expected_status.tweak('A/B/E', status='D ', treeconflict='C', moved_to='A/B/E2')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
   expected_status.tweak('A/B/E/beta', status='D ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
