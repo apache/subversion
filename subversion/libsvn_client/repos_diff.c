@@ -597,9 +597,8 @@ delete_entry(const char *path,
   svn_boolean_t tree_conflicted = FALSE;
   apr_pool_t *scratch_pool;
 
-  /* Skip *everything* within a newly tree-conflicted directory,
-   * and directories the children of which should be skipped. */
-  if (pb->skip || pb->tree_conflicted || pb->skip_children)
+  /* Process skips. */
+  if (pb->skip_children)
     return SVN_NO_ERROR;
 
   scratch_pool = svn_pool_create(eb->pool);
@@ -671,9 +670,10 @@ add_directory(const char *path,
 
   /* Skip *everything* within a newly tree-conflicted directory,
    * and directories the children of which should be skipped. */
-  if (pb->skip || pb->tree_conflicted || pb->skip_children)
+  if (pb->skip_children)
     {
       db->skip = TRUE;
+      db->skip_children = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -755,11 +755,11 @@ open_directory(const char *path,
 
   *child_baton = db;
 
-  /* Skip *everything* within a newly tree-conflicted directory
-   * and directories the children of which should be skipped. */
-  if (pb->skip || pb->tree_conflicted || pb->skip_children)
+  /* Process Skips. */
+  if (pb->skip_children)
     {
       db->skip = TRUE;
+      db->skip_children = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -789,9 +789,8 @@ add_file(const char *path,
   fb = make_file_baton(path, TRUE, pb->edit_baton, pool);
   *file_baton = fb;
 
-  /* Skip *everything* within a newly tree-conflicted directory.
-   * and directories the children of which should be skipped. */
-  if (pb->skip || pb->tree_conflicted || pb->skip_children)
+  /* Process Skips. */
+  if (pb->skip_children)
     {
       fb->skip = TRUE;
       return SVN_NO_ERROR;
@@ -816,9 +815,8 @@ open_file(const char *path,
   fb = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = fb;
 
-  /* Skip *everything* within a newly tree-conflicted directory
-   * and directories the children of which should be skipped. */
-  if (pb->skip || pb->tree_conflicted || pb->skip_children)
+  /* Process Skips. */
+  if (pb->skip_children)
     {
       fb->skip = TRUE;
       return SVN_NO_ERROR;
@@ -1097,16 +1095,9 @@ close_directory(void *dir_baton,
   apr_pool_t *scratch_pool;
   apr_hash_t *pristine_props;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (db->skip)
-    {
-      svn_pool_destroy(db->pool);
-      return SVN_NO_ERROR;
-    }
-
   scratch_pool = db->pool;
 
-  if (db->has_propchange)
+  if (db->has_propchange && !db->skip)
     {
       if (db->added)
         {
@@ -1180,7 +1171,7 @@ close_directory(void *dir_baton,
 
   /* Notify about this directory itself (unless it was added, in which
    * case the notification was done at that time). */
-  if (!db->added && eb->notify_func)
+  if (!db->added && eb->notify_func && !db->skip)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
