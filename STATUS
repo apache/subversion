@@ -15,7 +15,7 @@ Status of 1.7.9:
 Candidate changes:
 ==================
 
- * r1306275, and too many other revisions to list here
+ * r1306275, and other revisions
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
    and other problems.
