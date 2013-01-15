@@ -1836,8 +1836,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   merge_cmd_baton_t *merge_b = baton;
   const char *mine_abspath = svn_dirent_join(merge_b->target->abspath,
                                              mine_relpath, scratch_pool);
-  svn_node_kind_t wc_kind;
   svn_node_kind_t kind;
+  svn_boolean_t is_deleted;
   int i;
   apr_hash_t *file_props;
 
@@ -1888,8 +1888,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
-                                      &wc_kind,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_deleted, &kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
 
@@ -1907,27 +1906,48 @@ merge_file_added(svn_wc_notify_state_t *content_state,
 
         return SVN_NO_ERROR;
       }
+
+    if (is_deleted)
+      kind = svn_node_none;
   }
 
-  SVN_ERR(svn_io_check_path(mine_abspath, &kind, scratch_pool));
-  switch (kind)
+  if (kind != svn_node_none)
     {
-    case svn_node_none:
+      /* The file add the merge wants to carry out is obstructed, so the
+       * file the merge wants to add is a tree conflict victim.
+       * See notes about obstructions in notes/tree-conflicts/detection.txt.
+       */
+      SVN_ERR(tree_conflict_on_add(merge_b, mine_abspath, svn_node_file,
+                                   svn_wc_conflict_action_add,
+                                   svn_wc_conflict_reason_obstructed));
+      *tree_conflicted = TRUE;
+      
+      /* directory already exists, is it under version control? */
+      if ((kind != svn_node_none)
+          && dry_run_deleted_p(merge_b, mine_abspath))
+        *content_state = svn_wc_notify_state_changed;
+      else
+        /* this will make the repos_editor send a 'skipped' message */
+        *content_state = svn_wc_notify_state_obstructed;
+      return SVN_NO_ERROR;
+    }
+
+  {
+    svn_node_kind_t parent_kind;
+
+    /* Does the parent exist on disk (vs missing). If no we should
+       report an obstruction. Or svn_wc_add_repos_file4() will just
+       do its work and the workqueue will create the missing dirs */
+    SVN_ERR(svn_io_check_path(
+                    svn_dirent_dirname(mine_abspath, scratch_pool), 
+                    &parent_kind, scratch_pool));
+
+    if (parent_kind != svn_node_dir)
       {
-        svn_node_kind_t parent_kind;
-
-        /* Does the parent exist on disk (vs missing). If no we should
-           report an obstruction. Or svn_wc_add_repos_file4() will just
-           do its work and the workqueue will create the missing dirs */
-        SVN_ERR(svn_io_check_path(
-                        svn_dirent_dirname(mine_abspath, scratch_pool), 
-                        &parent_kind, scratch_pool));
-
-        if (parent_kind != svn_node_dir)
-          {
-            *content_state = svn_wc_notify_state_obstructed;
-            return SVN_NO_ERROR;
-          }
+        *content_state = svn_wc_notify_state_obstructed;
+        return SVN_NO_ERROR;
+      }
+  }
 
         if (! merge_b->dry_run)
           {
@@ -2023,60 +2043,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                                scratch_pool));
               }
           }
-        *content_state = svn_wc_notify_state_changed;
-        *prop_state = svn_wc_notify_state_changed;
-      }
-      break;
-    case svn_node_dir:
-      /* The file add the merge wants to carry out is obstructed by
-       * a directory, so the file the merge wants to add is a tree
-       * conflict victim.
-       * See notes about obstructions in notes/tree-conflicts/detection.txt.
-       */
-      SVN_ERR(tree_conflict_on_add(merge_b, mine_abspath, svn_node_file,
-                                   svn_wc_conflict_action_add,
-                                   svn_wc_conflict_reason_obstructed));
-      *tree_conflicted = TRUE;
-      
-      /* directory already exists, is it under version control? */
-      if ((wc_kind != svn_node_none)
-          && dry_run_deleted_p(merge_b, mine_abspath))
-        *content_state = svn_wc_notify_state_changed;
-      else
-        /* this will make the repos_editor send a 'skipped' message */
-        *content_state = svn_wc_notify_state_obstructed;
-      break;
-    case svn_node_file:
-      {
-            if (dry_run_deleted_p(merge_b, mine_abspath))
-              {
-                *content_state = svn_wc_notify_state_changed;
-              }
-            else
-              {
-                svn_boolean_t moved_here;
-                svn_wc_conflict_reason_t reason;
-
-                /* The file add the merge wants to carry out is obstructed by
-                 * a versioned file. This file must have been added in the
-                 * history of the merge target, hence we flag a tree conflict
-                 * with reason 'added'. */
-                SVN_ERR(check_moved_here(&moved_here, merge_b->ctx->wc_ctx,
-                                         mine_abspath, scratch_pool));
-                reason = moved_here ? svn_wc_conflict_reason_moved_here
-                                    : svn_wc_conflict_reason_added;
-                SVN_ERR(tree_conflict_on_add(
-                          merge_b, mine_abspath, svn_node_file,
-                          svn_wc_conflict_action_add, reason));
-
-                *tree_conflicted = TRUE;
-              }
-        break;
-      }
-    default:
-      *content_state = svn_wc_notify_state_unknown;
-      break;
-    }
+  *content_state = svn_wc_notify_state_changed;
+  *prop_state = svn_wc_notify_state_changed;
 
   return SVN_NO_ERROR;
 }
@@ -2396,7 +2364,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
       kind = svn_node_none;
   }
 
-  /* Switch on the on-disk state of this path */
+  /* Switch on the wc state of this path */
   switch (kind)
     {
     case svn_node_none:
