@@ -158,6 +158,18 @@ Candidate changes:
    Votes:
      +1: jcorvel
 
+ * r1427197, r1427210
+   Fix issue #4270 'diff -cN shows wrong line changed'.  In the optimized
+   code path (unaligned access) for prefix/suffix scanning, the diff would
+   be incorrect when a '\r' is not immediately followed by a '\n'.
+   Justification:
+     Diff should show the correct changes. Failure to do so can lead to
+     incorrect updates/merges (because diff3 suffers from the same bug).
+   Branch:
+     ^/subversion/branches/1.7.x-issue4270
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
