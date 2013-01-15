@@ -638,32 +638,41 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         can_read_word = can_read_word
                         && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                             >= min_curp[i]);
-      if (can_read_word)
+      while (can_read_word)
         {
-          do
+          apr_uintptr_t chunk;
+
+          /* For each file curp is positioned at the next byte to read, but we
+             want to examine the bytes before the current location. */
+
+          chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1
+                                             - sizeof(apr_uintptr_t));
+          if (contains_eol(chunk))
+            break;
+
+          for (i = 1, is_match = TRUE; i < file_len; i++)
+            is_match = is_match
+                       && (   chunk
+                           == *(const apr_uintptr_t *)
+                                    (file_for_suffix[i].curp + 1
+                                       - sizeof(apr_uintptr_t)));
+
+          if (! is_match)
+            break;
+
+          for (i = 0; i < file_len; i++)
             {
-              apr_uintptr_t chunk;
-              for (i = 0; i < file_len; i++)
-                file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              can_read_word = can_read_word
+                              && (   (file_for_suffix[i].curp
+                                        - sizeof(apr_uintptr_t))
+                                  >= min_curp[i]);
+            }
 
-              chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1);
-              if (contains_eol(chunk))
-                break;
-
-              for (i = 0, can_read_word = TRUE; i < file_len; i++)
-                can_read_word = can_read_word
-                                && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
-                                    >= min_curp[i]);
-              for (i = 1, is_match = TRUE; i < file_len; i++)
-                is_match = is_match
-                           && (   chunk
-                               == *(const apr_uintptr_t *)(file_for_suffix[i].curp + 1));
-            } while (can_read_word && is_match);
-
-            for (i = 0; i < file_len; i++)
-              file_for_suffix[i].curp += sizeof(apr_uintptr_t);
+          /* We skipped 4 bytes, so there are no closing EOLs */
+          had_nl = FALSE;
+          had_cr = FALSE;
         }
-
 #endif
 
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
