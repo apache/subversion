@@ -1175,6 +1175,8 @@ open_root(void *edit_baton,
   svn_boolean_t already_conflicted;
   svn_error_t *err;
   svn_wc__db_status_t status;
+  svn_kind_t kind;
+  svn_boolean_t have_work;
 
   /* Note that something interesting is actually happening in this
      edit run. */
@@ -1207,19 +1209,48 @@ open_root(void *edit_baton,
       return SVN_NO_ERROR;
     }
 
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &db->old_revision,
+                               &db->old_repos_relpath, NULL, NULL,
+                               &db->changed_rev, &db->changed_date,
+                               &db->changed_author, &db->ambient_depth,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &have_work,
+                               eb->db, db->local_abspath,
+                               db->pool, pool));
+
+  if (have_work)
+    db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
+                            make sure it doesn't use the ACTUAL tree */
+
   if (*eb->target_basename == '\0')
     {
+      svn_wc__db_status_t base_status;
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
-      /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &db->old_revision,
-                                       &db->old_repos_relpath, NULL, NULL,
-                                       &db->changed_rev, &db->changed_date,
-                                       &db->changed_author, &db->ambient_depth,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       eb->db, db->local_abspath,
-                                       db->pool, pool));
-      db->was_incomplete = (status == svn_wc__db_status_incomplete);
+      if (! have_work)
+        base_status = status;
+      else
+        {
+          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
+                                           &db->old_repos_relpath, NULL, NULL,
+                                           &db->changed_rev, &db->changed_date,
+                                           &db->changed_author, &db->ambient_depth,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           eb->db, db->local_abspath,
+                                           db->pool, pool));
+        }
+      db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
+
+      /* ### TODO: Add some tree conflict and obstruction detection, etc. like
+                   open_directory() does.
+                   (or find a way to reuse that code here)
+
+         ### BH 2013: I don't think we need all of the detection here, as the
+                      user explicitly asked to update this node. So we don't
+                      have to tell that it is a local replacement/delete.
+       */
 
       SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db,
                                                         db->local_abspath,
