@@ -5471,6 +5471,7 @@ def update_moved_dir_leaf_del(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
+@Issue(3144,3630)
 def update_moved_dir_edited_leaf_del(sbox):
   "update locally moved dir with edited leaf del"
   sbox.build()
@@ -5482,9 +5483,12 @@ def update_moved_dir_edited_leaf_del(sbox):
   svntest.main.file_write(sbox.ospath('A/B/E2/alpha'),
                           "This is a changed 'alpha'.\n")
 
-  # since alpha was modified post-move, the incoming delete should conflict
+  # Produce a tree conflict by updating the working copy to the
+  # revision which removed A/B/E/alpha. The deletion collides with
+  # the local move of A/B/E to A/B/E2.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha'       : Item(status='  ', treeconflict='C'),
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='D'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
@@ -5494,20 +5498,34 @@ def update_moved_dir_edited_leaf_del(sbox):
     'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
-  expected_status.remove('A/B/E/alpha')
   expected_status.add({
-    'A/B/E/alpha'       : Item(status='! ', treeconflict='C'),
-    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
     'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/B/E2/alpha'      : Item(status='M ', copied='+', wc_rev='-'),
   })
+  expected_status.remove('A/B/E/alpha')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
+  expected_status.tweak('A/B/E/beta', status='D ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  # Now resolve the conflict, using --accept=mine-conflict.
+  # This should apply the update to A/B/E2, and flag a tree
+  # conflict on A/B/E2/alpha (incoming delete vs. local edit)
+  # XFAIL: Currently the A/B/E2/alpha is deleted during this update.
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict', wc_dir)
+  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.tweak('A/B/E2/alpha', treeconflict='C')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
 def update_moved_dir_file_add(sbox):
