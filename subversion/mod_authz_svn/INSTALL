@@ -56,6 +56,12 @@ II.   Configuration
            Satisfy Any
            Require valid-user
          </Location>
+         
+         NOTE: The access control is designed to never display entries that
+         the user does not have access to.  Combining anonymous access on the
+         top levels while restricting read access lower in the directory 
+         structure makes it difficult to browse because the server will not
+         request authentication. 
 
       C. Example 3: Authenticated access only
 
