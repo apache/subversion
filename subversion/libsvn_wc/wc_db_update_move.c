@@ -977,32 +977,23 @@ get_info(apr_hash_t **props,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
   apr_hash_t *hash_children;
   apr_array_header_t *sorted_children;
-  svn_boolean_t have_row;
+  svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_DEPTH_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                            local_relpath, op_depth));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+  err = svn_wc__db_depth_get_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, checksum, NULL, NULL, props,
+                                  wcroot, local_relpath, op_depth,
+                                  result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      svn_error_t *err;
-
-      *kind = svn_sqlite__column_token(stmt, 3, kind_map);
-      err = svn_sqlite__column_properties(props, stmt, 13,
-                                          result_pool, scratch_pool);
-      if (!err)
-        err = svn_sqlite__column_checksum(checksum, stmt, 5, result_pool);
-      if (err)
-        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+      svn_error_clear(err);
+      *kind = svn_node_none;
     }
   else
-    *kind = svn_kind_none;
-  SVN_ERR(svn_sqlite__reset(stmt));
+    SVN_ERR(err);
+
   
   SVN_ERR(svn_wc__db_get_children_op_depth(&hash_children, wcroot,
                                            local_relpath, op_depth,
