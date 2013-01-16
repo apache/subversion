@@ -3,6 +3,9 @@
  Moves in Subversion 1.8
  =======================
 
+See also the high-level design notes and status (progress) information at
+<https://wiki.apache.org/subversion/LocalMoves>.
+
 This file purposefully talks about 'moves' rather than 'renames'.
 This isn't about true renames as requested in issue #898.
 Rather, we keep the add+delete concept while trying to make moves behave
