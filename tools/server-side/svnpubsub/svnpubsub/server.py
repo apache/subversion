@@ -145,7 +145,7 @@ class Client(object):
             reactor.callLater(HEARTBEAT_TIME, self.heartbeat, None)
 
     def write_data(self, data):
-        self.write(data + "\0")
+        self.write(data + "\n\0")
 
     """ "Data must not be unicode" is what the interfaces.ITransport says... grr. """
     def write(self, input):
@@ -153,10 +153,10 @@ class Client(object):
 
     def write_start(self):
         self.r.setHeader('content-type', 'application/json')
-        self.write('{"svnpubsub": {"version": 1}}\0')
+        self.write('{"svnpubsub": {"version": 1}}\n\0')
 
     def write_heartbeat(self):
-        self.write(json.dumps({"stillalive": time.time()}) + "\0")
+        self.write(json.dumps({"stillalive": time.time()}) + "\n\0")
 
 
 class SvnPubSub(resource.Resource):
