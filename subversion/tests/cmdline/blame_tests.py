@@ -859,7 +859,6 @@ def blame_multiple_targets(sbox):
   multiple_wc_targets()
   multiple_url_targets()
 
-@XFail()
 @Issue(4034)
 def blame_eol_handling(sbox):
   "blame it on the eol handling"
@@ -879,38 +878,30 @@ def blame_eol_handling(sbox):
     f1 = sbox.ospath('blame-%s' % prop)
     f2 = sbox.ospath('blame-%s-prop' % prop)
 
-    svntest.main.file_write(f1, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 3 ' + eol +
-                                'line 4 ' + eol +
-                                'line 5 ' + eol, mode='wb')
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 3 ' + eol + \
+                'line 4 ' + eol + \
+                'line 5 ' + eol
 
-    svntest.main.file_write(f2, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 3 ' + eol +
-                                'line 4 ' + eol +
-                                'line 5 ' + eol, mode='wb')
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
 
     sbox.simple_add('blame-%s' % prop,
                     'blame-%s-prop' % prop)
     sbox.simple_propset('svn:eol-style', prop, 'blame-%s-prop' % prop)
     sbox.simple_commit()
 
-    svntest.main.file_write(f1, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 2a' + eol +
-                                'line 3 ' + eol +
-                                'line 4 ' + eol +
-                                'line 4a' + eol +
-                                'line 5 ' + eol, mode='wb')
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 2a' + eol + \
+                'line 3 ' + eol + \
+                'line 4 ' + eol + \
+                'line 4a' + eol + \
+                'line 5 ' + eol
 
-    svntest.main.file_write(f2, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 2a' + eol +
-                                'line 3 ' + eol +
-                                'line 4 ' + eol +
-                                'line 4a' + eol +
-                                'line 5 ' + eol, mode='wb')
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
 
     sbox.simple_commit()
 
@@ -930,23 +921,17 @@ def blame_eol_handling(sbox):
     svntest.actions.run_and_verify_svn(f2 + '-base', expected_output, [],
                                        'blame', f2)
 
-    svntest.main.file_write(f1, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 2a' + eol +
-                                'line 3 ' + eol +
-                                'line 3b' + eol +
-                                'line 4 ' + eol +
-                                'line 4a' + eol +
-                                'line 5 ' + eol, mode='wb')
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 2a' + eol + \
+                'line 3 ' + eol + \
+                'line 3b' + eol + \
+                'line 4 ' + eol + \
+                'line 4a' + eol + \
+                'line 5 ' + eol
 
-    svntest.main.file_write(f2, 'line 1 ' + eol +
-                                'line 2 ' + eol +
-                                'line 2a' + eol +
-                                'line 3 ' + eol +
-                                'line 3b' + eol +
-                                'line 4 ' + eol +
-                                'line 4a' + eol +
-                                'line 5 ' + eol, mode='wb')
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
 
     expected_output = [
         '     %d    jrandom line 1 \n' % rev,

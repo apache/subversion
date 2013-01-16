@@ -685,13 +685,31 @@ svn_client_blame5(const char *target,
           svn_stream_t *wcfile;
           svn_stream_t *tempfile;
           svn_opt_revision_t rev;
-
+          svn_boolean_t normalize_eols = FALSE;
           const char *temppath;
+
+          if (status->prop_status != svn_wc_status_none)
+            {
+              const svn_string_t *eol_style;
+              SVN_ERR(svn_wc_prop_get2(&eol_style, ctx->wc_ctx,
+                                       target_abspath_or_url,
+                                       SVN_PROP_EOL_STYLE,
+                                       pool, pool));
+
+              if (eol_style)
+                {
+                  svn_subst_eol_style_t style;
+                  const char *eol;
+                  svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
+
+                  normalize_eols = (style == svn_subst_eol_style_native);
+                }
+            }
 
           rev.kind = svn_opt_revision_working;
           SVN_ERR(svn_client__get_normalized_stream(&wcfile, ctx->wc_ctx,
                                                     target_abspath_or_url, &rev,
-                                                    FALSE, TRUE,
+                                                    FALSE, normalize_eols,
                                                     ctx->cancel_func,
                                                     ctx->cancel_baton,
                                                     pool, pool));
