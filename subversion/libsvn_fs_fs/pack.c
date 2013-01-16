@@ -28,6 +28,7 @@
 #include "util.h"
 #include "revprops.h"
 #include "transaction.h"
+#include "index.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -97,6 +98,70 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
   return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
 }
 
+/* Copy the index information from the unpacked revision REV in FS to the
+ * PROTO_L2P_INDEX and PROTO_P2L_INDEX proto index files, respectively.
+ * Assume that the rev file will be appended to the pack file at offset
+ * PACK_OFFSET and that the unpacked rev file contains FILE_SIZE bytes.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+copy_indexes(svn_fs_t *fs,
+             apr_file_t *proto_l2p_index,
+             apr_file_t *proto_p2l_index,
+             svn_revnum_t rev,
+             apr_off_t pack_offset,
+             apr_off_t file_size,
+             apr_pool_t *pool)
+{
+  apr_off_t offset = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* mark the start of a new revision */
+  SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision(proto_l2p_index, pool));
+
+  /* read the phys-to-log index file until we covered the whole rev file.
+   * That index contains enough info to build both target indexes from it. */
+  while (offset < file_size)
+    {
+      /* read one cluster */
+      int i;
+      apr_array_header_t *entries;
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, rev, offset,
+                                          iterpool));
+
+      for (i = 0; i < entries->nelts; ++i)
+        {
+          svn_fs_fs__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+
+          /* skip first entry if that was duplicated due crossing a
+             cluster boundary */
+          if (offset == entry->offset)
+            continue;
+
+          /* process entry while inside the rev file */
+          offset = entry->offset;
+          if (offset < file_size)
+            {
+              entry->offset += pack_offset;
+              SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(proto_l2p_index,
+                                                           entry->offset,
+                                                           entry->item_index,
+                                                           iterpool));
+              SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(proto_p2l_index,
+                                                           entry,
+                                                           iterpool));
+            }
+        }
+
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Pack the revision SHARD containing exactly MAX_FILES_PER_DIR revisions
  * from SHARD_PATH into the PACK_FILE_DIR, using POOL for allocations.
  * CANCEL_FUNC and CANCEL_BATON are what you think they are.
@@ -105,7 +170,8 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
  * remove the pack file and start again.
  */
 static svn_error_t *
-pack_rev_shard(const char *pack_file_dir,
+pack_rev_shard(svn_fs_t *fs,
+               const char *pack_file_dir,
                const char *shard_path,
                apr_int64_t shard,
                int max_files_per_dir,
@@ -113,27 +179,51 @@ pack_rev_shard(const char *pack_file_dir,
                void *cancel_baton,
                apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *pack_file_path, *manifest_file_path;
+  const char *proto_l2p_index_path, *proto_p2l_index_path;
+  const char *l2p_index_path, *p2l_index_path;
   svn_stream_t *pack_stream, *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
+  apr_file_t *proto_l2p_index, *proto_p2l_index;
 
   /* Some useful paths. */
   pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
+  l2p_index_path = apr_pstrcat(pool, pack_file_path, PATH_EXT_L2P_INDEX, NULL);
+  p2l_index_path = apr_pstrcat(pool, pack_file_path, PATH_EXT_P2L_INDEX, NULL);
+  proto_l2p_index_path = svn_dirent_join(pack_file_dir,
+                                         PATH_INDEX PATH_EXT_L2P_INDEX, pool);
+  proto_p2l_index_path = svn_dirent_join(pack_file_dir,
+                                         PATH_INDEX PATH_EXT_P2L_INDEX, pool);
 
   /* Remove any existing pack file for this shard, since it is incomplete. */
   SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
                              pool));
 
-  /* Create the new directory and pack and manifest files. */
+  /* Create the new directory and pack file. */
   SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, pool));
   SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
                                     pool));
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   pool, pool));
 
+  /* Index information files */
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      /* Create proto index files*/
+      SVN_ERR(svn_fs_fs__l2p_proto_index_open(&proto_l2p_index, 
+                                              proto_l2p_index_path, pool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_open(&proto_p2l_index,
+                                              proto_p2l_index_path, pool));
+    }
+  else
+    {
+      /* Create the manifest file. */
+      SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
+                                       pool, pool));
+    }
+  
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   next_offset = 0;
@@ -153,9 +243,13 @@ pack_rev_shard(const char *pack_file_dir,
                              iterpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
-      /* Update the manifest. */
-      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT
-                                "\n", next_offset));
+      /* build indexes / manifest */
+      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        SVN_ERR(copy_indexes(fs, proto_l2p_index, proto_p2l_index,
+                             rev, next_offset, finfo.size, pool));
+      else
+        SVN_ERR(svn_stream_printf(manifest_stream, iterpool,
+                                  "%" APR_OFF_T_FMT "\n", next_offset));
       next_offset += finfo.size;
 
       /* Copy all the bits from the rev file to the end of the pack file. */
@@ -165,11 +259,35 @@ pack_rev_shard(const char *pack_file_dir,
                           cancel_func, cancel_baton, iterpool));
     }
 
-  SVN_ERR(svn_stream_close(manifest_stream));
+  /* Finalize Index information files */
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      /* finalize proto index files */
+      SVN_ERR(svn_io_file_close(proto_l2p_index, iterpool));
+      SVN_ERR(svn_io_file_close(proto_p2l_index, iterpool));
+      
+      /* Create the actual index files*/
+      SVN_ERR(svn_fs_fs__l2p_index_create(l2p_index_path,
+                                          proto_l2p_index_path,
+                                          start_rev, iterpool));
+      SVN_ERR(svn_fs_fs__p2l_index_create(p2l_index_path,
+                                          proto_p2l_index_path,
+                                          start_rev, iterpool));
+
+      /* remove proto index files */
+      SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, iterpool));
+      SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, iterpool));
+    }
+  else
+    {
+      /* disallow write access to the manifest file */
+      SVN_ERR(svn_stream_close(manifest_stream));
+      SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
+    }
+
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, iterpool));
-  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
 
   svn_pool_destroy(iterpool);
 
@@ -221,7 +339,7 @@ pack_shard(const char *revs_dir,
                            pool);
 
   /* pack the revision content */
-  SVN_ERR(pack_rev_shard(rev_pack_file_dir, rev_shard_path,
+  SVN_ERR(pack_rev_shard(fs, rev_pack_file_dir, rev_shard_path,
                          shard, max_files_per_dir,
                          cancel_func, cancel_baton, pool));
 

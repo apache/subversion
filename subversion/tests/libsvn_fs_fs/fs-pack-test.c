@@ -311,14 +311,37 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                  "manifest", NULL);
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind != svn_node_file)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "Expected manifest file '%s' not found",
-                                 path);
+      if (opts->server_minor_version && (opts->server_minor_version < 6))
+        {
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "manifest", NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected manifest file '%s' not found",
+                                     path);
+        }
+      else
+        {
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "pack.l2p", NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected log-to-phys index file '%s' not found",
+                                     path);
+
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "pack.p2l", NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected phys-to-log index file '%s' not found",
+                                     path);
+        }
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",
