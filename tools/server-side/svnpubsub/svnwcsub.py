@@ -211,6 +211,10 @@ class BigDoEverythingClasss(object):
         return posixpath.abspath(path)
 
     def commit(self, url, commit):
+        if commit.type != 'svn' or commit.format != 1:
+            logging.info("SKIP unknown commit format (%s.%d)",
+                         commit.type, commit.format)
+            return
         logging.info("COMMIT r%d (%d paths) from %s"
                      % (commit.id, len(commit.changed), url))
 
