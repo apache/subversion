@@ -39,10 +39,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn propset' checks spelling of reserved property names.
 
   - Client-side bugfixes:
-    *
+    * 
 
   - Server-side bugfixes:
-    *
+    * SVNParentPath / repository listing now authz-filtered (r1408184)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
