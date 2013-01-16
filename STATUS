@@ -108,6 +108,8 @@ Candidate changes:
      changes.
    Notes:
      The branch is just needed for avoiding a conflict with the testcase.
+     Will probably conflict again if r1426762 and/or r1427278 are merged to
+     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
    Branch:
      ^/subversion/branches/1.7.x-r1426752
    Votes:
@@ -119,6 +121,9 @@ Candidate changes:
    Justification:
      Without this patch the identical suffix might show up as an added or
      deleted suffix of a file.
+   Notes:
+     Will probably conflict if r1426752 and/or r1427278 are merged to
+     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
    Votes:
      +1: rhuijben, jcorvel
 
@@ -153,6 +158,8 @@ Candidate changes:
      for some examples of this bug.
    Notes:
      The branch is just needed for avoiding a conflict with adding a comment.
+     Will probably conflict again if r1426752 and/or r1426762 are merged to
+     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
    Branch:
      ^/subversion/branches/1.7.x-r1427278
    Votes:
