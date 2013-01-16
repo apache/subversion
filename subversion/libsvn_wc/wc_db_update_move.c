@@ -246,7 +246,7 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
     {
       conflict_root_relpath = svn_relpath_dirname(conflict_root_relpath,
                                                   scratch_pool);
-      old_kind = svn_node_dir;
+      old_kind = kind = svn_node_dir;
     }
 
   SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, b->wcroot,
