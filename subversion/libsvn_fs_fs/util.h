@@ -161,6 +161,16 @@ path_txn_changes(svn_fs_t *fs,
                  const char *txn_id,
                  apr_pool_t *pool);
 
+const char*
+path_l2p_proto_index(svn_fs_t *fs,
+                     const char *txn_id,
+                     apr_pool_t *pool);
+
+const char*
+path_p2l_proto_index(svn_fs_t *fs,
+                     const char *txn_id,
+                     apr_pool_t *pool);
+
 const char *
 path_txn_props(svn_fs_t *fs,
                const char *txn_id,
@@ -175,6 +185,11 @@ const char *
 path_min_unpacked_rev(svn_fs_t *fs,
                       apr_pool_t *pool);
 
+
+const char *
+path_txn_item_index(svn_fs_t *fs,
+                    const char *txn_id,
+                    apr_pool_t *pool);
 
 const char *
 path_txn_proto_rev(svn_fs_t *fs,

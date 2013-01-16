@@ -264,6 +264,24 @@ path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
   return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
 }
 
+const char*
+path_l2p_proto_index(svn_fs_t *fs,
+                     const char *txn_id,
+                     apr_pool_t *pool)
+{
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                         PATH_INDEX PATH_EXT_L2P_INDEX, pool);
+}
+
+const char*
+path_p2l_proto_index(svn_fs_t *fs,
+                     const char *txn_id,
+                     apr_pool_t *pool)
+{
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                         PATH_INDEX PATH_EXT_P2L_INDEX, pool);
+}
+
 const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
@@ -276,6 +294,14 @@ path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
   return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
 }
 
+const char *
+path_txn_item_index(svn_fs_t *fs,
+                    const char *txn_id,
+                    apr_pool_t *pool)
+{
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                         PATH_TXN_ITEM_INDEX, pool);
+}
 
 const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
