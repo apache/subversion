@@ -859,6 +859,113 @@ def blame_multiple_targets(sbox):
   multiple_wc_targets()
   multiple_url_targets()
 
+@XFail()
+@Issue(4034)
+def blame_eol_handling(sbox):
+  "blame it on the eol handling"
+
+  sbox.build()
+
+  if os.name == 'nt':
+    native_eol = '\r\n'
+  else:
+    native_eol = '\n'
+
+  for eol, prop, rev in [ ('\r',   'CR',         2),
+                          ('\n',   'LF',         4),
+                          ('\r\n', 'CRLF',       6),
+                          (native_eol, 'native', 8) ]:
+
+    f1 = sbox.ospath('blame-%s' % prop)
+    f2 = sbox.ospath('blame-%s-prop' % prop)
+
+    svntest.main.file_write(f1, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 3 ' + eol +
+                                'line 4 ' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    svntest.main.file_write(f2, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 3 ' + eol +
+                                'line 4 ' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    sbox.simple_add('blame-%s' % prop,
+                    'blame-%s-prop' % prop)
+    sbox.simple_propset('svn:eol-style', prop, 'blame-%s-prop' % prop)
+    sbox.simple_commit()
+
+    svntest.main.file_write(f1, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 2a' + eol +
+                                'line 3 ' + eol +
+                                'line 4 ' + eol +
+                                'line 4a' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    svntest.main.file_write(f2, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 2a' + eol +
+                                'line 3 ' + eol +
+                                'line 4 ' + eol +
+                                'line 4a' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    sbox.simple_commit()
+
+    expected_output = [
+        '     %d    jrandom line 1 \n' % rev,
+        '     %d    jrandom line 2 \n' % rev,
+        '     %d    jrandom line 2a\n' % (rev + 1),
+        '     %d    jrandom line 3 \n' % rev,
+        '     %d    jrandom line 4 \n' % rev,
+        '     %d    jrandom line 4a\n' % (rev + 1),
+        '     %d    jrandom line 5 \n' % rev,
+    ]
+
+    svntest.actions.run_and_verify_svn(f1 + '-base', expected_output, [],
+                                       'blame', f1)
+
+    svntest.actions.run_and_verify_svn(f2 + '-base', expected_output, [],
+                                       'blame', f2)
+
+    svntest.main.file_write(f1, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 2a' + eol +
+                                'line 3 ' + eol +
+                                'line 3b' + eol +
+                                'line 4 ' + eol +
+                                'line 4a' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    svntest.main.file_write(f2, 'line 1 ' + eol +
+                                'line 2 ' + eol +
+                                'line 2a' + eol +
+                                'line 3 ' + eol +
+                                'line 3b' + eol +
+                                'line 4 ' + eol +
+                                'line 4a' + eol +
+                                'line 5 ' + eol, mode='wb')
+
+    expected_output = [
+        '     %d    jrandom line 1 \n' % rev,
+        '     %d    jrandom line 2 \n' % rev,
+        '     %d    jrandom line 2a\n' % (rev + 1),
+        '     %d    jrandom line 3 \n' % rev,
+         '     -          - line 3b\n',
+        '     %d    jrandom line 4 \n' % rev,
+        '     %d    jrandom line 4a\n' % (rev + 1),
+        '     %d    jrandom line 5 \n' % rev,
+    ]
+
+    svntest.actions.run_and_verify_svn(f1 + '-modified', expected_output, [],
+                                       'blame', f1)
+
+    svntest.actions.run_and_verify_svn(f2 + '-modified', expected_output, [],
+                                       'blame', f2)
+
+
 ########################################################################
 # Run the tests
 
@@ -881,6 +988,7 @@ test_list = [ None,
               blame_output_after_merge,
               merge_sensitive_blame_and_empty_mergeinfo,
               blame_multiple_targets,
+              blame_eol_handling,
              ]
 
 if __name__ == '__main__':
