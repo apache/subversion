@@ -85,8 +85,8 @@ get_prop(const apr_array_header_t *prop_diff,
    3. Retranslate
    4. Detranslate
 
-   in 1 pass to get a file which can be compared with the left and right
-   files which were created with the 'new props' above.
+   in one pass, to get a file which can be compared with the left and right
+   files which are in repository normal form.
 
    Property changes make this a little complex though. Changes in
 
@@ -102,26 +102,26 @@ get_prop(const apr_array_header_t *prop_diff,
      The value for svn:mime-type affects the translation wrt keywords
      and eol-style settings.
 
-   I) both old and new mime-types are texty
-      -> just do the translation dance (as lined out below)
+     I) both old and new mime-types are texty
+        -> just do the translation dance (as lined out below)
 
-   II) the old one is texty, the new one is binary
-      -> detranslate with the old eol-style and keywords
-         (the new re+detranslation is a no-op)
+     II) the old one is texty, the new one is binary
+        -> detranslate with the old eol-style and keywords
+           (the new re+detranslation is a no-op)
 
-   III) the old one is binary, the new one texty
-      -> detranslate with the new eol-style
-         (the old detranslation is a no-op)
+     III) the old one is binary, the new one texty
+        -> detranslate with the new eol-style
+           (the old detranslation is a no-op)
 
-   IV) the old and new ones are binary
-      -> don't detranslate, just make a straight copy
+     IV) the old and new ones are binary
+        -> don't detranslate, just make a straight copy
 
 
    Effect for svn:eol-style
 
-   I) On add or change use the new value
+     I) On add or change use the new value
 
-   II) otherwise: use the old value (absent means 'no translation')
+     II) otherwise: use the old value (absent means 'no translation')
 
 
    Effect for svn:keywords
@@ -156,24 +156,27 @@ detranslate_wc_file(const char **detranslated_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_binary;
-  const svn_prop_t *prop;
+  svn_boolean_t old_is_binary, new_is_binary;
   svn_subst_eol_style_t style;
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
-  const char *mime_value = svn_prop_get_value(mt->old_actual_props,
-                                              SVN_PROP_MIME_TYPE);
 
-  is_binary = (mime_value && svn_mime_type_is_binary(mime_value));
+  {
+    const char *old_mime_value
+      = svn_prop_get_value(mt->old_actual_props, SVN_PROP_MIME_TYPE);
+    const svn_prop_t *prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE);
+    const char *new_mime_value
+      = prop ? (prop->value ? prop->value->data : NULL) : old_mime_value;
+
+    old_is_binary = old_mime_value && svn_mime_type_is_binary(old_mime_value);
+    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
+  }
 
   /* See if we need to do a straight copy:
      - old and new mime-types are binary, or
      - old mime-type is binary and no new mime-type specified */
-  if (is_binary
-      && (((prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE))
-           && prop->value && svn_mime_type_is_binary(prop->value->data))
-          || prop == NULL))
+  if (old_is_binary && new_is_binary)
     {
       /* this is case IV above */
       keywords = NULL;
@@ -181,9 +184,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       eol = NULL;
       style = svn_subst_eol_style_none;
     }
-  else if ((!is_binary)
-           && (prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE))
-           && prop->value && svn_mime_type_is_binary(prop->value->data))
+  else if (!old_is_binary && new_is_binary)
     {
       /* Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
@@ -214,13 +215,15 @@ detranslate_wc_file(const char **detranslated_abspath,
         }
       else
         {
+          const svn_prop_t *prop;
+
           /* In case a new eol style was set, use that for detranslation */
           if ((prop = get_prop(mt->prop_diff, SVN_PROP_EOL_STYLE)) && prop->value)
             {
               /* Value added or changed */
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
             }
-          else if (!is_binary)
+          else if (!old_is_binary)
             {
               /* Already fetched */
             }
@@ -232,7 +235,7 @@ detranslate_wc_file(const char **detranslated_abspath,
 
           /* In case there were keywords, detranslate with keywords
              (iff we were texty) */
-          if (is_binary)
+          if (old_is_binary)
             keywords = NULL;
         }
     }
