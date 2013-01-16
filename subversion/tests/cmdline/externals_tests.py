@@ -2992,7 +2992,23 @@ def list_include_externals(sbox):
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 
+@Issue(4293)  
+def move_with_file_externals(sbox):
+  "move with file externals"
 
+  sbox.build(read_only = True)
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  sbox.simple_propset('svn:externals', repo_url + '/iota@1 iota-1\n' +
+                                       repo_url + '/iota   iota-2\n' +
+                                       repo_url + '/iota   iota-3\n',
+                      '', 'A', 'A/D')
+
+  # Bring in the file externals
+  sbox.simple_update('')
+  
+  sbox.simple_move('A', 'A_moved')
 
 ########################################################################
 # Run the tests
@@ -3043,6 +3059,7 @@ test_list = [ None,
               url_to_wc_copy_of_externals,
               duplicate_targets,
               list_include_externals,
+              move_with_file_externals,
              ]
 
 if __name__ == '__main__':
