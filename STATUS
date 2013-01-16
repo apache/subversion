@@ -154,6 +154,15 @@ Candidate changes:
    Votes:
      +1: jcorvel, rhuijben
 
+ * r1434405, r1434414, r1434418
+   Fix issue #4294 'diff --git shows wrong copy from'.  Moving a dir
+   causes diff --git to output incorrect sources for the diff.
+   Justification:
+     Diff should show the correct output.  Failiure to do so can lead to
+     incorrect interoperation with other systems.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
