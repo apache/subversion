@@ -186,6 +186,7 @@ typedef struct svn_cl__opt_state_t
     {
   const char *diff_cmd;          /* the external diff command to use */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
+  svn_boolean_t no_diff_added; /* do not show diffs for deleted files */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */

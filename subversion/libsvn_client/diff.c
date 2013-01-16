@@ -588,6 +588,9 @@ struct diff_cmd_baton {
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
+  /* Whether addition of a file is summarized versus showing a full diff. */
+  svn_boolean_t no_diff_added;
+
   /* Whether deletion of a file is summarized versus showing a full diff. */
   svn_boolean_t no_diff_deleted;
 
@@ -993,7 +996,22 @@ diff_file_added(svn_wc_notify_state_t *content_state,
         rev2 = diff_cmd_baton->revnum2;
     }
 
-  if (tmpfile1 && copyfrom_path)
+  if (diff_cmd_baton->no_diff_added)
+    {
+      const char *index_path = diff_relpath;
+
+      if (diff_cmd_baton->anchor)
+        index_path = svn_dirent_join(diff_cmd_baton->anchor, diff_relpath,
+                                     scratch_pool);
+
+      SVN_ERR(svn_stream_printf_from_utf8(diff_cmd_baton->outstream,
+                diff_cmd_baton->header_encoding, scratch_pool,
+                "Index: %s (added)" APR_EOL_STR
+                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                index_path));
+      wrote_header = TRUE;
+    }
+  else if (tmpfile1 && copyfrom_path)
     SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
@@ -2906,6 +2924,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  const char *relative_to_dir,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_added,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
@@ -2948,6 +2967,7 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.properties_only = properties_only;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
+  diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
@@ -2969,6 +2989,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      const char *relative_to_dir,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_added,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
@@ -3007,6 +3028,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.properties_only = properties_only;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
+  diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
