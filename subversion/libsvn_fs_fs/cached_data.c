@@ -54,7 +54,7 @@ open_and_seek_revision(apr_file_t **file,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, item, pool));
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, NULL, item, pool));
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
@@ -80,7 +80,8 @@ open_and_seek_transaction(apr_file_t **file,
   SVN_ERR(svn_io_file_open(&rev_file, path_txn_proto_rev(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  offset = rep->offset;
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM, txn_id,
+                                 rep->item_index, pool));
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
@@ -98,7 +99,7 @@ open_and_seek_representation(apr_file_t **file_p,
                              apr_pool_t *pool)
 {
   if (! rep->txn_id)
-    return open_and_seek_revision(file_p, fs, rep->revision, rep->offset,
+    return open_and_seek_revision(file_p, fs, rep->revision, rep->item_index,
                                   pool);
   else
     return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, pool);
@@ -388,8 +389,13 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
-                                  pool));
+
+  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file,
+                                    fs, rev, pool));
+  else
+    SVN_ERR(svn_fs_fs__item_offset(&root_offset, fs, rev, NULL,
+                                   SVN_FS_FS__ITEM_INDEX_ROOT_NODE, pool));
 
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
                               root_offset, pool));
@@ -451,9 +457,8 @@ create_rep_state_body(rep_state_t **rep_state,
       /* ... we can re-use the same, already open file object
        */
       apr_off_t offset;
-      SVN_ERR(svn_fs_fs__get_packed_offset(&offset, fs, rep->revision, pool));
-
-      offset += rep->offset;
+      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rep->revision, NULL,
+                                     rep->item_index, pool));
       SVN_ERR(svn_io_file_seek(*file_hint, APR_SET, &offset, pool));
 
       rs->file = *file_hint;
@@ -869,7 +874,7 @@ build_rep_list(apr_array_header_t **list,
         }
 
       rep.revision = rep_header->base_revision;
-      rep.offset = rep_header->base_offset;
+      rep.item_index = rep_header->base_item_index;
       rep.size = rep_header->base_length;
       rep.txn_id = NULL;
 
@@ -1256,7 +1261,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       fulltext_cache_key.revision = rep->revision;
-      fulltext_cache_key.second = rep->offset;
+      fulltext_cache_key.second = rep->item_index;
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
@@ -1332,7 +1337,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
       pair_cache_key_t fulltext_cache_key;
 
       fulltext_cache_key.revision = rep->revision;
-      fulltext_cache_key.second = rep->offset;
+      fulltext_cache_key.second = rep->item_index;
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
@@ -1412,7 +1417,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       if (rep_header->is_delta
           && (rep_header->is_delta_vs_empty
               || (rep_header->base_revision == source->data_rep->revision
-                  && rep_header->base_offset == source->data_rep->offset)))
+                  && rep_header->base_item_index == source->data_rep->item_index)))
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
@@ -1682,7 +1687,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       pair_cache_key_t key;
 
       key.revision = rep->revision;
-      key.second = rep->offset;
+      key.second = rep->item_index;
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         {
           svn_boolean_t is_cached;
@@ -1743,8 +1748,12 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
-                                  rev, pool));
+  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file,
+                                    fs, rev, pool));
+  else
+    SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs, rev, NULL,
+                                   SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
   SVN_ERR(svn_fs_fs__read_changes(changes,

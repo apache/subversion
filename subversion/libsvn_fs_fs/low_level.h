@@ -106,9 +106,9 @@ typedef struct svn_fs_fs__rep_header_t
   svn_revnum_t base_revision;
 
   /* if this rep is a delta against some other rep, that base rep can
-   * be found at this offset within the base rep's revision.  Should be 0
-   * if there is no base rep. */
-  apr_off_t base_offset;
+   * be found at this item index within the base rep's revision.  Should
+   * be 0 if there is no base rep. */
+  apr_off_t base_item_index;
 
   /* if this rep is a delta against some other rep, this is the (deltified)
    * size of that base rep.  Should be 0 if there is no base rep. */
