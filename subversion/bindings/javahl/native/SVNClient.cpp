@@ -940,6 +940,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     const char *c_relToDir = relativeToDir ?
       svn_dirent_canonicalize(relativeToDir, subPool.getPool()) :
       relativeToDir;
+    bool noDiffAdded = false; /* ### Promote to argument */
 
     SVN_JNI_NULL_PTR_EX(target1, "target", );
     // target2 is ignored when pegRevision is provided.
@@ -967,6 +968,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    c_relToDir,
                                    depth,
                                    ignoreAncestry,
+                                   noDiffAdded,
                                    noDiffDelete,
                                    showCopiesAsAdds,
                                    force,
@@ -995,6 +997,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                c_relToDir,
                                depth,
                                ignoreAncestry,
+                               noDiffAdded,
                                noDiffDelete,
                                showCopiesAsAdds,
                                force,
