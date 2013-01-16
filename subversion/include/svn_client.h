@@ -2939,6 +2939,9 @@ svn_client_blame(const char *path_or_url,
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
+ * If @a no_diff_added is TRUE, then no diff output will be generated
+ * on added files.
+ *
  * If @a no_diff_deleted is TRUE, then no diff output will be
  * generated on deleted files.
  *
@@ -3000,6 +3003,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  const char *relative_to_dir,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_added,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
@@ -3015,7 +3019,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
  * instead of @a outstream and @a errstream, and always showing property
- * changes.
+ * changes and additions.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3161,6 +3165,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      const char *relative_to_dir,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_added,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,

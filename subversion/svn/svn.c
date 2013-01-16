@@ -75,6 +75,7 @@ typedef enum svn_cl__longopt_t {
   /* diff options */
   opt_diff_cmd,
   opt_internal_diff,
+  opt_no_diff_added,
   opt_no_diff_deleted,
   opt_show_copies_as_adds,
   opt_notice_ancestry,
@@ -337,6 +338,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
+  {"no-diff-added", opt_no_diff_added, 0,
+                    N_("do not print differences for added files")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
@@ -557,8 +560,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
-     opt_internal_diff, 'x', opt_no_diff_deleted, opt_ignore_properties,
-     opt_properties_only,
+     opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
+     opt_ignore_properties, opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
      opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
   { "export", svn_cl__export, {0}, N_
@@ -1997,6 +2000,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_trust_server_cert:
         opt_state.trust_server_cert = TRUE;
+        break;
+      case opt_no_diff_added:
+        opt_state.diff.no_diff_added = TRUE;
         break;
       case opt_no_diff_deleted:
         opt_state.diff.no_diff_deleted = TRUE;
