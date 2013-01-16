@@ -3437,7 +3437,6 @@ def diff_git_format_wc_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
 
-@XFail()
 @Issue(4294)
 def diff_git_format_wc_wc_dir_mv(sbox):
   "create a diff in git unidff format for wc dir mv"
@@ -3466,7 +3465,7 @@ def diff_git_format_wc_wc_dir_mv(sbox):
   + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'rho'.\n"
-  ] + make_git_diff_header(rho_path, "A/D/G/tau",
+  ] + make_git_diff_header(tau_path, "A/D/G/tau",
                            "revision 1", "working copy",
                            delete=True) \
   + [
@@ -3474,9 +3473,9 @@ def diff_git_format_wc_wc_dir_mv(sbox):
     "-This is the file 'tau'.\n"
   ] + make_git_diff_header(new_pi_path, "A/D/G2/pi", None, None, cp=True,
                            copyfrom_path="A/D/G/pi", text_changes=False) \
-  + make_git_diff_header(new_pi_path, "A/D/G2/rho", None, None, cp=True,
+  + make_git_diff_header(new_rho_path, "A/D/G2/rho", None, None, cp=True,
                          copyfrom_path="A/D/G/rho", text_changes=False) \
-  + make_git_diff_header(new_pi_path, "A/D/G2/tau", None, None, cp=True,
+  + make_git_diff_header(new_tau_path, "A/D/G2/tau", None, None, cp=True,
                          copyfrom_path="A/D/G/tau", text_changes=False)
 
   expected = svntest.verify.UnorderedOutput(expected_output)
@@ -4255,7 +4254,6 @@ test_list = [ None,
               diff_url_against_local_mods,
               diff_preexisting_rev_against_local_add,
               diff_git_format_wc_wc,
-              diff_git_format_wc_wc_dir_mv,
               diff_git_format_url_wc,
               diff_git_format_url_url,
               diff_prop_missing_context,
@@ -4272,6 +4270,7 @@ test_list = [ None,
               diff_properties_only,
               diff_properties_no_newline,
               diff_arbitrary_same,
+              diff_git_format_wc_wc_dir_mv,
               ]
 
 if __name__ == '__main__':
