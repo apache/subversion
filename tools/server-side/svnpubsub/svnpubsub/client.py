@@ -57,6 +57,9 @@ RECONNECT_DELAY = 25.0
 STALE_DELAY = 60.0
 
 
+class SvnpubsubClientException(Exception):
+  pass
+
 class Client(asynchat.async_chat):
 
   def __init__(self, url, commit_callback, event_callback):
@@ -131,6 +134,11 @@ class JSONRecordHandler:
   def feed(self, record):
     obj = json.loads(record)
     if 'svnpubsub' in obj:
+      actual_format = obj['svnpubsub'].get('version')
+      expected_format = 1
+      if actual_format != expected_format:
+        raise SvnpubsubClientException("Unknown svnpubsub format: %r != %d"
+                                       % (actual_format, expected_format))
       self.event_callback('version', obj['svnpubsub']['version'])
     elif 'commit' in obj:
       commit = Commit(obj['commit'])
