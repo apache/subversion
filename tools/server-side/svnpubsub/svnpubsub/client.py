@@ -134,9 +134,9 @@ class JSONRecordHandler:
   def feed(self, record):
     obj = json.loads(record)
     if 'svnpubsub' in obj:
-      actual_format = obj['svnpubsub'].get('version')
-      expected_format = 1
-      if actual_format != expected_format:
+      actual_version = obj['svnpubsub'].get('version')
+      EXPECTED_VERSION = 1
+      if actual_version != EXPECTED_VERSION:
         raise SvnpubsubClientException("Unknown svnpubsub format: %r != %d"
                                        % (actual_format, expected_format))
       self.event_callback('version', obj['svnpubsub']['version'])
