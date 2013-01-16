@@ -1531,18 +1531,14 @@ get_child_status(const struct walk_status_baton *wb,
   const struct svn_wc__db_info_t *dir_info;
   apr_array_header_t *collected_ignore_patterns = NULL;
   apr_array_header_t *collected_inherited_ignore_patterns = NULL;
-  const svn_io_dirent2_t *dirent_p;
   const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                   scratch_pool);
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_io_stat_dirent(&dirent_p, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
-
-  if (dirent_p->kind == svn_node_none)
-    dirent_p = NULL;
+  if (dirent->kind == svn_node_none)
+    dirent = NULL;
 
   SVN_ERR(read_info(&dir_info, parent_abspath, wb->db,
                     scratch_pool, scratch_pool));
@@ -1562,7 +1558,7 @@ get_child_status(const struct walk_status_baton *wb,
                            local_abspath,
                            parent_abspath,
                            info,
-                           dirent_p,
+                           dirent,
                            dir_repos_root_url,
                            dir_repos_relpath,
                            dir_repos_uuid,
