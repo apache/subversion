@@ -76,6 +76,8 @@
 
 #define SVN_WC__I_AM_WC_DB
 
+#include <assert.h>
+
 #include "svn_checksum.h"
 #include "svn_dirent_uri.h"
 #include "svn_error.h"
@@ -121,6 +123,7 @@ struct tc_editor_baton {
      non-Ev2, depth-first, drive for this to make sense. */
   const char *conflict_root_relpath;
 
+  svn_wc_operation_t operation;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
   svn_wc_notify_func2_t notify_func;
@@ -179,10 +182,20 @@ mark_tree_conflict(struct tc_editor_baton *b,
                                                 new_kind,
                                                 scratch_pool);
 
-  /* What about switch? */
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict,
-                                              old_version, new_version,
-                                              scratch_pool, scratch_pool));
+  if (b->operation == svn_wc_operation_update)
+    {
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                conflict, old_version, new_version,
+                scratch_pool, scratch_pool));
+    }
+  else
+    {
+      assert(b->operation == svn_wc_operation_switch);
+      SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                  conflict, old_version, new_version,
+                  scratch_pool, scratch_pool));
+    }
+
   SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, local_relpath,
                                             conflict, scratch_pool));
 
@@ -419,6 +432,7 @@ create_conflict_markers(svn_skel_t **work_items,
                         svn_wc__db_t *db,
                         const char *repos_relpath,
                         svn_skel_t *conflict_skel,
+                        svn_wc_operation_t operation,
                         const working_node_version_t *old_version,
                         const working_node_version_t *new_version,
                         apr_pool_t *result_pool,
@@ -431,11 +445,21 @@ create_conflict_markers(svn_skel_t **work_items,
                        old_version->location_and_kind, scratch_pool);
   original_version->path_in_repos = repos_relpath;
   original_version->node_kind = svn_node_file;  /* ### ? */
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
-                                              original_version,
-                                              NULL /* ### derive from new_version & new kind? */,
-                                              scratch_pool,
-                                              scratch_pool));
+  if (operation == svn_wc_operation_update)
+    {
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                conflict_skel, original_version,
+                NULL /* ### derive from new_version & new kind? */,
+                scratch_pool, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                conflict_skel, original_version,
+                NULL /* ### derive from new_version & new kind? */,
+                scratch_pool, scratch_pool));
+    }
+
   /* According to this func's doc string, it is "Currently only used for
    * property conflicts as text conflict markers are just in-wc files." */
   SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
@@ -552,7 +576,7 @@ tc_editor_alter_directory(void *baton,
           /* ### need to pass in the node kinds (before & after)? */
           SVN_ERR(create_conflict_markers(b->work_items, dst_abspath,
                                           b->db, move_dst_repos_relpath,
-                                          conflict_skel,
+                                          conflict_skel, b->operation,
                                           &old_version, &new_version,
                                           b->result_pool, scratch_pool));
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
@@ -598,6 +622,7 @@ static svn_error_t *
 update_working_file(svn_skel_t **work_items,
                     const char *local_relpath,
                     const char *repos_relpath,
+                    svn_wc_operation_t operation,
                     const working_node_version_t *old_version,
                     const working_node_version_t *new_version,
                     svn_wc__db_wcroot_t *wcroot,
@@ -664,7 +689,7 @@ update_working_file(svn_skel_t **work_items,
       /* ### need to pass in the node kinds (before & after)? */
       SVN_ERR(create_conflict_markers(work_items, local_abspath, db,
                                       repos_relpath, conflict_skel,
-                                      old_version, new_version,
+                                      operation, old_version, new_version,
                                       result_pool, scratch_pool));
       SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
                                                 conflict_skel,
@@ -757,7 +782,7 @@ tc_editor_alter_file(void *baton,
 
       SVN_ERR(update_working_file(&work_items, dst_relpath,
                                   move_dst_repos_relpath,
-                                  &old_version, &new_version,
+                                  b->operation, &old_version, &new_version,
                                   b->wcroot, b->db,
                                   b->notify_func, b->notify_baton,
                                   b->result_pool, scratch_pool));
@@ -1359,6 +1384,7 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
                                svn_dirent_join(wcroot->abspath, victim_relpath,
                                                scratch_pool),
                                scratch_pool));
+  tc_editor_baton->operation = operation;
   tc_editor_baton->old_version= old_version;
   tc_editor_baton->new_version= new_version;
   tc_editor_baton->db = db;
