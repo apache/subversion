@@ -84,6 +84,10 @@ extern "C" {
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 #define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
 #define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
+#define PATH_TXN_ITEM_INDEX "itemidx"      /* File containing the current item
+                                             index number */
+#define PATH_INDEX          "index"        /* name of index files w/o ext */
+
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
@@ -233,7 +237,7 @@ typedef struct pair_cache_key_t
 {
   svn_revnum_t revision;
 
-  apr_int64_t second;
+  apr_uint64_t second;
 } pair_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
@@ -416,8 +420,8 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Offset into the revision file where it is located. */
-  apr_off_t offset;
+  /* Item index with the the revision. */
+  apr_uint64_t item_index;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
