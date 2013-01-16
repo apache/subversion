@@ -678,28 +678,23 @@ svn_client_blame5(const char *target,
       SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath_or_url, pool,
                              pool));
 
-      if (status->text_status != svn_wc_status_normal)
+      if (status->text_status != svn_wc_status_normal
+          || (status->prop_status != svn_wc_status_normal
+              && status->prop_status != svn_wc_status_none))
         {
-          apr_hash_t *props;
           svn_stream_t *wcfile;
-          svn_string_t *keywords;
           svn_stream_t *tempfile;
+          svn_opt_revision_t rev;
+
           const char *temppath;
-          apr_hash_t *kw = NULL;
 
-          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath_or_url,
-                                    pool, pool));
-          SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
-
-          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                  APR_HASH_KEY_STRING);
-
-          if (keywords)
-            SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
-                                              0, NULL, pool));
-
-          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
-                                               pool);
+          rev.kind = svn_opt_revision_working;
+          SVN_ERR(svn_client__get_normalized_stream(&wcfile, ctx->wc_ctx,
+                                                    target_abspath_or_url, &rev,
+                                                    FALSE, TRUE,
+                                                    ctx->cancel_func,
+                                                    ctx->cancel_baton,
+                                                    pool, pool));
 
           SVN_ERR(svn_stream_open_unique(&tempfile, &temppath, NULL,
                                          svn_io_file_del_on_pool_cleanup,
