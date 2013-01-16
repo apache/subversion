@@ -73,16 +73,6 @@ Candidate changes:
      -0: rhuijben (Is this needed on this branch?)
      +1: danielsh (as much as it's needed on trunk)
 
- * ^/subversion/branches/1.7.x-issue4263
-   Fix svnrdump inability to load dump files with non-LF line endings in
-   'svn:*' properties.
-   Justification:
-     Other tools have had this issue resolved, svnrdump should as well.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4263
-   Votes:
-     +1: breser, danielsh
-
  * r1423837, r1423840, r1423848
    Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
    Justification:
@@ -135,19 +125,6 @@ Candidate changes:
     Votes:
       +1: rhuijben
 
-  * r1352031
-    Change get-deps.sh to use zlib 1.2.7.
-    Justification:
-      1.2.5 is no longer available for download at the URL get-deps.sh tries.
-      This prevents get-deps.sh from failling.
-    Notes:
-      The branch is needed since get-deps.sh has removed neon on trunk which
-      causes conflicts.
-    Branch:
-      ^/subversion/branches/1.7.x-r1352031
-    Votes:
-      +1: breser, brane
-
  * r1427278
    Fix another issue in the diff-libraries whitespace normalization
    handling that might make diff show unexpected changes, and even trying
@@ -163,7 +140,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1427278
    Votes:
-     +1: jcorvel
+     +1: jcorvel, rhuijben
 
  * r1427197, r1427210
    Fix issue #4270 'diff -cN shows wrong line changed'.  In the optimized
@@ -175,10 +152,33 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4270
    Votes:
-     +1: jcorvel
+     +1: jcorvel, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * ^/subversion/branches/1.7.x-issue4263
+   Fix svnrdump inability to load dump files with non-LF line endings in
+   'svn:*' properties.
+   Justification:
+     Other tools have had this issue resolved, svnrdump should as well.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4263
+   Votes:
+     +1: breser, danielsh, rhuijben
+
+  * r1352031
+    Change get-deps.sh to use zlib 1.2.7.
+    Justification:
+      1.2.5 is no longer available for download at the URL get-deps.sh tries.
+      This prevents get-deps.sh from failling.
+    Notes:
+      The branch is needed since get-deps.sh has removed neon on trunk which
+      causes conflicts.
+    Branch:
+      ^/subversion/branches/1.7.x-r1352031
+    Votes:
+      +1: breser, brane, rhuijben
