@@ -95,9 +95,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-01-14 20:49+0000\n"
-"PO-Revision-Date: 2013-01-14 20:37+0100\n"
-"Last-Translator: Andreas Stieger <andreas.stieger@gmx.de>\n"
+"POT-Creation-Date: 2013-01-16 20:00+0000\n"
+"PO-Revision-Date: 2013-01-16 19:59+0100\n"
+"Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: German <dev@subversion.apache.org>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -1823,8 +1823,8 @@ msgstr "»%s« existiert bereits"
 
 #: ../libsvn_client/export.c:811 ../libsvn_client/repos_diff.c:977
 #: ../libsvn_fs_fs/dag.c:1051 ../libsvn_ra_svn/client.c:1208
-#: ../libsvn_wc/diff_editor.c:1612 ../libsvn_wc/externals.c:647
-#: ../libsvn_wc/update_editor.c:4029
+#: ../libsvn_wc/diff_editor.c:1612 ../libsvn_wc/externals.c:646
+#: ../libsvn_wc/update_editor.c:4027
 #, c-format
 msgid "Checksum mismatch for '%s'"
 msgstr "Prüfsummenfehler für »%s«"
@@ -2027,9 +2027,9 @@ msgid "Cannot determine revision of working copy"
 msgstr "Die Revision der Arbeitskopie kann nicht bestimmt werden"
 
 #: ../libsvn_client/merge.c:9604
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot merge into mixed-revision working copy [%ld:%ld]; try updating first"
-msgstr "Kann nicht in eine Arbeitskopie mit verschiedenen Revisionen zusammenführen [%lu:%lu], versuchen Sie erst zu aktualisieren"
+msgstr "Kann nicht in eine Arbeitskopie mit verschiedenen Revisionen zusammenführen [%ld:%ld], versuchen Sie erst zu aktualisieren"
 
 #: ../libsvn_client/merge.c:9619
 msgid "Cannot merge into a working copy with a switched subtree"
@@ -3838,15 +3838,15 @@ msgstr "Fehler beim Schließen des Verzeichnisses »%s«"
 #: ../libsvn_fs_fs/fs_fs.c:10801
 #, c-format
 msgid "The FSFS format (%d) of the hotcopy source does not match the FSFS format (%d) of the hotcopy destination; please upgrade both repositories to the same format"
-msgstr ""
+msgstr "Das FSFS-Format (%d) der Quelle für die Kopie im laufenden Betrieb entspricht nicht dem FSFS-Format (%d) des Ziels; Verwenden Sie auf beiden Seiten das gleiche Format"
 
 #: ../libsvn_fs_fs/fs_fs.c:10810
 msgid "The UUID of the hotcopy source does not match the UUID of the hotcopy destination"
-msgstr ""
+msgstr "Die UUID der Quelle für die Kopie im laufenden Betrieb entspricht nicht der UUID des Ziels"
 
 #: ../libsvn_fs_fs/fs_fs.c:10817
 msgid "The sharding layout configuration of the hotcopy source does not match the sharding layout configuration of the hotcopy destination"
-msgstr ""
+msgstr "Die Einstellungen zur Fragmentierung der Quelle der Kopie im laufenden Betrieb entspricht nicht den Einstellungen zur Fragmentierung des Ziels"
 
 #: ../libsvn_fs_fs/fs_fs.c:10922
 #, c-format
@@ -3856,22 +3856,22 @@ msgstr "Erstellen der hotcopy auf »%s« fehlgeschlagen. Die Datei »%s« fehlt 
 #: ../libsvn_fs_fs/fs_fs.c:10948
 #, c-format
 msgid "The hotcopy destination already contains more revisions (%lu) than the hotcopy source contains (%lu); are source and destination swapped?"
-msgstr ""
+msgstr "Das Ziel der Kopie im laufenden Betrieb enthält bereits mehr Revisionen (%lu) als die Quelle (%lu); Wurden Quelle und Ziel vertauscht?"
 
 #: ../libsvn_fs_fs/fs_fs.c:10984
 #, c-format
 msgid "The hotcopy destination already contains more packed revisions (%lu) than the hotcopy source contains (%lu)"
-msgstr ""
+msgstr "Das Ziel der Kopie im laufenden Betrieb enthält bereits mehr gepackte Revisionen (%lu) als die Quelle (%lu)"
 
 #: ../libsvn_fs_fs/fs_fs.c:11097
 #, c-format
 msgid "The assumed HEAD revision (%lu) of the hotcopy source has been packed while the hotcopy was in progress; please restart the hotcopy operation"
-msgstr ""
+msgstr "Die angenommene Revision »HEAD« (%lu) der Quelle der Kopie im laufenden Betrieb wurde während des Vorgangs gepackt; Bitte starten Sie den Vorgang erneut"
 
 #: ../libsvn_fs_fs/fs_fs.c:11112
 #, c-format
 msgid "Revision %lu disappeared from the hotcopy source while hotcopy was in progress"
-msgstr ""
+msgstr "Revision %lu aus der Quelle für Kopie im laufenden Betrieb während des Vorgangs verschwunden"
 
 #: ../libsvn_fs_fs/lock.c:120
 #, c-format
@@ -4023,7 +4023,7 @@ msgstr "Abfrage der Zusammenführungsinformationen wird von »%s« nicht unterst
 #: ../libsvn_ra/util.c:104
 #, c-format
 msgid "Lock was stolen by '%s'; unable to remove it"
-msgstr ""
+msgstr "Sperre durch »%s« gestohlen; Kann nicht entfernt werden"
 
 #: ../libsvn_ra/util.c:145
 #, c-format
@@ -4037,7 +4037,7 @@ msgstr "Konnte Sperre für Zielprojektarchiv nach %d Versuchen nicht erhalten"
 
 #: ../libsvn_ra_local/ra_plugin.c:157
 msgid "memory-cache-size invalid"
-msgstr ""
+msgstr "Ungültige »memory-cache-size«"
 
 #. ----------------------------------------------------------------
 #. ** The RA vtable routines **
@@ -4077,9 +4077,9 @@ msgid "Unable to open repository '%s'"
 msgstr "Projektarchiv »%s« kann nicht geöffnet werden"
 
 #: ../libsvn_ra_serf/commit.c:218
-#, fuzzy, c-format
+#, c-format
 msgid "%s of '%s': %d %s"
-msgstr "%s von »%s«: %d %s (%s://%s)"
+msgstr "%s von »%s«: %d %s"
 
 #: ../libsvn_ra_serf/commit.c:316
 msgid "No Location header received"
@@ -4147,7 +4147,7 @@ msgstr "Datei »%s« existiert bereits"
 #: ../libsvn_ra_serf/commit.c:2171
 #, c-format
 msgid "MERGE request failed: returned %d (during commit)"
-msgstr ""
+msgstr "»MERGE«-Anfrage fehlgeschlagen; gab während der Übertragung %d zurück"
 
 #: ../libsvn_ra_serf/commit.c:2438
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
@@ -4344,12 +4344,12 @@ msgstr "Nicht unterstützte Zugriffsmodul-Laderversion (%d) für ra_serf"
 #: ../libsvn_ra_serf/serf.c:1233
 #, c-format
 msgid "ra_serf was compiled for serf %d.%d.%d but loaded an incompatible %d.%d.%d library"
-msgstr ""
+msgstr "ra_serv wurde für serf %d.%d.%d übersetzt, lud aber die nicht kompatible Version %d.%d.%d der Bibliothek"
 
 #: ../libsvn_ra_serf/update.c:1122
 #, c-format
 msgid "GET request returned unexpected delta base: %s"
-msgstr ""
+msgstr "GET-Anfrage gab eine nicht erwartete Delta-Basis zurück: %s"
 
 #: ../libsvn_ra_serf/update.c:1140
 #, c-format
@@ -4385,7 +4385,7 @@ msgstr "Fehler beim Holen von REPORT"
 
 #: ../libsvn_ra_serf/update.c:3078
 msgid "Missing update-report close tag"
-msgstr ""
+msgstr "Abschließendes Tag »update-report« fehlt"
 
 #: ../libsvn_ra_serf/update.c:3510
 msgid "Can't get text contents of a directory"
@@ -4416,7 +4416,6 @@ msgid "XML parsing failed: (%d %s)"
 msgstr "XML-Parser schlug fehl: (%d %s)"
 
 #: ../libsvn_ra_serf/util.c:1754
-#, fuzzy
 msgid ""
 "No more credentials or we tried too manytimes.\n"
 "Authentication failed"
@@ -4558,9 +4557,8 @@ msgid "Server doesn't support setting arbitrary revision properties during commi
 msgstr "Der Server unterstützt das Setzen beliebiger Revisionseigenschaften während eines Commits nicht"
 
 #: ../libsvn_ra_svn/client.c:1109
-#, fuzzy
 msgid "Inherited proplist element not a list"
-msgstr "Eigenschaftselement ist keine Liste"
+msgstr "Element für geerbte Eigenschaften ist keine Liste"
 
 #: ../libsvn_ra_svn/client.c:1186
 msgid "Non-string as part of file contents"
@@ -4695,19 +4693,19 @@ msgid "Unexpected server response to authentication"
 msgstr "Unerwartete Serverantwort bei Anmeldung"
 
 #: ../libsvn_ra_svn/cyrus_auth.c:225
-#, fuzzy, c-format
+#, c-format
 msgid "SASL authentication error: %s%s"
-msgstr "Anmeldefehler von Server: %s"
+msgstr "SASL-Anmeldefehler: %s%s"
 
 #: ../libsvn_ra_svn/cyrus_auth.c:242
-#, fuzzy, c-format
+#, c-format
 msgid "Could not initialized the SASL library: %s%s"
-msgstr "Konnte die SASL-Bibliothek nicht initialisieren"
+msgstr "Konnte die SASL-Bibliothek nicht initialisieren: %s%s"
 
 #: ../libsvn_ra_svn/cyrus_auth.c:415
 #, c-format
 msgid "Could not create SASL context: %s%s"
-msgstr ""
+msgstr "Konnte SASL-Kontext nicht erstellen: %s%s"
 
 #: ../libsvn_ra_svn/cyrus_auth.c:921 ../libsvn_ra_svn/internal_auth.c:63
 #: ../libsvn_ra_svn/internal_auth.c:114
@@ -4768,7 +4766,7 @@ msgstr "Zahl ist größer als Maximum"
 
 #: ../libsvn_ra_svn/marshal.c:1448
 msgid "Word too long"
-msgstr ""
+msgstr "Wort zu lang"
 
 #: ../libsvn_ra_svn/marshal.c:1658
 msgid "Proplist element not a list"
@@ -4832,7 +4830,7 @@ msgstr "(kein Fehler)"
 
 #: ../libsvn_repos/commit.c:712 ../libsvn_repos/commit.c:718
 msgid "post-commit hook failed with no error message."
-msgstr ""
+msgstr "Aktion »post-commit« schlug ohne Fehlermeldung fehl"
 
 #: ../libsvn_repos/commit.c:721
 #, c-format
@@ -4841,6 +4839,9 @@ msgid ""
 "%s\n"
 "%s"
 msgstr ""
+"Aktion »post-commit« meldete einen Fehler:\n"
+"%s\n"
+"%s"
 
 #: ../libsvn_repos/commit.c:722 ../libsvn_repos/commit.c:731
 msgid "(no error message)"
@@ -4852,6 +4853,8 @@ msgid ""
 "post commit FS processing had error:\n"
 "%s"
 msgstr ""
+"Aktion »post-commit« meldete einen Fehler:\n"
+"%s"
 
 #: ../libsvn_repos/commit.c:1247 ../libsvn_repos/fs-wrap.c:91
 #: ../libsvn_repos/load-fs-vtable.c:967
@@ -4943,23 +4946,17 @@ msgstr " Entferne »\\r« aus %s ..."
 #: ../libsvn_repos/dump.c:267
 #, c-format
 msgid "E%06d: While validating fspath '%s': %s"
-msgstr ""
+msgstr "E%06d: Fehler bei Überprüfung von »fspath« »%s«: %s"
 
 #: ../libsvn_repos/dump.c:389
-#, fuzzy, c-format
+#, c-format
 msgid "Referencing data in revision %ld, which is older than the oldest dumped revision (r%ld).  Loading this dump into an empty repository will fail."
-msgstr ""
-"WARNUNG: Verweis auf Daten in Revision %ld, welche älter als die älteste\n"
-"WARNUNG: ausgegebene Revision (%ld) ist. Das Laden diese Datei in ein\n"
-"WARNUNG: leeres Projektarchiv wird fehlschlagen.\n"
+msgstr "Verweis auf Daten in Revision %ld, welche älter als die älteste ausgegebene Revision (r%ld) ist. Das Laden dieser Datei in ein leeres Projektarchiv wird fehlschlagen."
 
 #: ../libsvn_repos/dump.c:495
-#, fuzzy, c-format
+#, c-format
 msgid "Mergeinfo referencing revision(s) prior to the oldest dumped revision (r%ld). Loading this dump may result in invalid mergeinfo."
-msgstr ""
-"WARNUNG: Zusammenführungsinformationen verweisen auf Revision(en) vor der ältesten\n"
-"WARNUNG: ausgegebene Revision (%ld). Das Laden dieser Datei kann ungültige\n"
-"WARNUNG: Zusammenführungsinformationen zur Folge haben.\n"
+msgstr "Zusammenführungsinformationen verweisen auf Revision(en) vor der ältesten ausgegebene Revision (r%ld). Das Laden dieser Datei kann ungültige Zusammenführungsinformationen zur Folge haben."
 
 #: ../libsvn_repos/dump.c:1129 ../libsvn_repos/dump.c:1390
 #, c-format
@@ -4972,18 +4969,12 @@ msgid "End revision %ld is invalid (youngest revision is %ld)"
 msgstr "Endrevision %ld ist ungültig (neueste Revision ist %ld)"
 
 #: ../libsvn_repos/dump.c:1272
-#, fuzzy
 msgid "The range of revisions dumped contained references to copy sources outside that range."
-msgstr ""
-"WARNUNG: Der ausgegebene Revisionsbereich enthält Verweise auf\n"
-"WARNUNG: Quellpfade außerhalb dieses Bereichs.\n"
+msgstr "Der ausgegebene Revisionsbereich enthält Verweise für Kopien auf Quellpfade außerhalb dieses Bereichs."
 
 #: ../libsvn_repos/dump.c:1286
-#, fuzzy
 msgid "The range of revisions dumped contained mergeinfo which reference revisions outside that range."
-msgstr ""
-"WARNUNG: Der ausgegebene Revisionsbereich enthält Zusammenführungsinformationen\n"
-"WARNUNG: die auf Revisionen außerhalb dieses Bereichs verweisen.\n"
+msgstr "Der ausgegebene Revisionsbereich enthielt Zusammenführungsinformationen die auf Revisionen außerhalb dieses Bereichs verweisen."
 
 #: ../libsvn_repos/dump.c:1343
 #, c-format
@@ -5008,12 +4999,12 @@ msgstr "Kann nicht-»LF« (LF = Unix-artige) Zeilenumbrüche in Eigenschaft »%s
 #: ../libsvn_repos/fs-wrap.c:236
 #, c-format
 msgid "Commit rejected because mergeinfo on '%s' contains unexpected string terminator"
-msgstr ""
+msgstr "Übertragung abgewiesen, da die Zusammenführungsinformationen von »%s« nicht erwartete Zeichenkettenendmarken enthalten"
 
 #: ../libsvn_repos/fs-wrap.c:243
 #, c-format
 msgid "Commit rejected because mergeinfo on '%s' is syntactically invalid"
-msgstr ""
+msgstr "Übertragung abgewiesen, da die Zusammenführungsinformationen von »%s« nicht syntaktisch korrekt sind"
 
 #: ../libsvn_repos/fs-wrap.c:365
 #, c-format
@@ -5162,9 +5153,9 @@ msgid "Unexpected EOF writing contents"
 msgstr "Unerwartetes EOF beim Schreiben der Daten"
 
 #: ../libsvn_repos/load.c:389
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed dumpfile header '%s'"
-msgstr "Dateiabzug enthält ungültigen Kopf"
+msgstr "Dateiabzug enthält ungültigen Kopf »%s«"
 
 #: ../libsvn_repos/load.c:396
 #, c-format
@@ -5296,9 +5287,8 @@ msgid "Creating authz file"
 msgstr "Erzeuge Datei »authz«"
 
 #: ../libsvn_repos/repos.c:1154
-#, fuzzy
 msgid "Creating hooks-env file"
-msgstr "Erzeuge Datenbank-Sperrdatei"
+msgstr "Erzeuge Datei »hooks-env«"
 
 #: ../libsvn_repos/repos.c:1284
 msgid "Could not create top-level directory"
@@ -5313,9 +5303,9 @@ msgid "Error opening db lockfile"
 msgstr "Fehler beim Öffnen der Datenbank-Sperrdatei"
 
 #: ../libsvn_repos/repos.c:1402
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is an existing repository"
-msgstr "»%s« ist im Projektarchiv nicht gesperrt"
+msgstr "»%s« ist ein vorhandenes Projektarchiv"
 
 #: ../libsvn_repos/repos.c:1406
 #, c-format
@@ -5358,7 +5348,7 @@ msgstr "»%s« ist in Revision %ld keine Datei"
 #: ../libsvn_subr/auth.c:211
 #, c-format
 msgid "No provider registered for '%s' credentials"
-msgstr ""
+msgstr "Kein Anbieter für Zugangsdaten vom Typ »%s« registriert"
 
 #: ../libsvn_subr/cache-membuffer.c:496
 #, c-format
@@ -5366,9 +5356,9 @@ msgid "Can't lock cache mutex"
 msgstr "Kann Zwischenspeicher-Mutex nicht sperren"
 
 #: ../libsvn_subr/cache-membuffer.c:527 ../libsvn_subr/cache-membuffer.c:543
-#, fuzzy, c-format
+#, c-format
 msgid "Can't write-lock cache mutex"
-msgstr "Kann Zwischenspeicher-Mutex nicht sperren"
+msgstr "Kann Zwischenspeicher-Mutex nicht für das Schreiben sperren"
 
 #: ../libsvn_subr/cache-membuffer.c:562
 #, c-format
@@ -5380,7 +5370,7 @@ msgstr "Kann Zwischenspeicher-Mutex nicht entsperren"
 #: ../libsvn_subr/cache-membuffer.c:1285
 #, c-format
 msgid "OOM"
-msgstr ""
+msgstr "Nicht genügend Speicher"
 
 #: ../libsvn_subr/cache-membuffer.c:1299
 #, c-format
@@ -5388,9 +5378,8 @@ msgid "Can't create cache mutex"
 msgstr "Kann Zwischenspeicher-Mutex nicht anlegen"
 
 #: ../libsvn_subr/cache-membuffer.c:2037
-#, fuzzy
 msgid "Can't iterate a membuffer-based cache"
-msgstr "Kann keinen »memcached«-Zwischenspeicher durchlaufen"
+msgstr "Kann einen »memcached«-Zwischenspeicher nicht durchlaufen"
 
 # memcached is an APR library
 #: ../libsvn_subr/cache-memcache.c:170
@@ -5438,13 +5427,13 @@ msgid "Unknown error creating apr_memcache_t"
 msgstr "Unbekannter Fehler beim Anlegen von apr_memcache_t"
 
 #: ../libsvn_subr/checksum.c:470
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "%s:\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Prüfsummenfehler für Datei »%s«:\n"
+"%s:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
@@ -5548,87 +5537,79 @@ msgstr "Fehler beim Schreiben des Hashwerts nach »%s«"
 #: ../libsvn_subr/crypto.c:93
 #, c-format
 msgid "Failed to initialize cryptography subsystem"
-msgstr ""
+msgstr "Konnte Kryptographie-Subsystem nicht initialisieren"
 
 #: ../libsvn_subr/crypto.c:108
 #, c-format
 msgid "code (%d), reason (\"%s\"), msg (\"%s\")"
-msgstr ""
+msgstr "Code (%d), Ursache (\"%s\"), Meldung (\"%s\")"
 
 #: ../libsvn_subr/crypto.c:134
 #, c-format
 msgid "Fetching error from APR"
-msgstr ""
+msgstr "Hole Fehler von APR"
 
 #: ../libsvn_subr/crypto.c:154
-#, fuzzy, c-format
+#, c-format
 msgid "Error obtaining random data"
-msgstr "Fehler beim Abbrechen des Reports"
+msgstr "Fehler bei der Abfrage von Zufallsdaten"
 
 #: ../libsvn_subr/crypto.c:224
 msgid "OpenSSL crypto driver error"
-msgstr ""
+msgstr "Fehler im OpenSSL Kryptologietreiber"
 
 #: ../libsvn_subr/crypto.c:228
 msgid "Bad return value while loading crypto driver"
-msgstr ""
+msgstr "Fehlerhafter Rückgabewert beim Laden des Kryptologietreibers"
 
 #: ../libsvn_subr/crypto.c:234
-#, fuzzy
 msgid "Error creating OpenSSL crypto context"
-msgstr "Fehler beim Ausführen des Kontextes"
+msgstr "Fehler beim Erzeugen des OpenSSL Kryptologiekontextes"
 
 #: ../libsvn_subr/crypto.c:291 ../libsvn_subr/crypto.c:294
 #: ../libsvn_subr/crypto.c:419 ../libsvn_subr/crypto.c:422
 #: ../libsvn_subr/crypto.c:526 ../libsvn_subr/crypto.c:529
 #: ../libsvn_subr/crypto.c:641 ../libsvn_subr/crypto.c:644
-#, fuzzy
 msgid "Error creating derived key"
-msgstr "Fehler beim Lesen der Änderungen für Schlüssel »%s«"
+msgstr "Fehler beim Erstellen des abgeleiteten Schlüssels"
 
 #: ../libsvn_subr/crypto.c:297 ../libsvn_subr/crypto.c:425
 #: ../libsvn_subr/crypto.c:532 ../libsvn_subr/crypto.c:647
-#, fuzzy
 msgid "Unexpected IV length returned"
-msgstr "Unerwartetes Ende des Eintrags"
+msgstr "Unerwartete Länge des Initialisierungsvektors erhalten"
 
 #: ../libsvn_subr/crypto.c:308 ../libsvn_subr/crypto.c:543
-#, fuzzy
 msgid "Error initializing block encryption"
-msgstr "Fehler beim Initialisieren der Kommandozeilenparameter"
+msgstr "Fehler bei der Initialisierung der Blockverschlüsselung"
 
 #: ../libsvn_subr/crypto.c:347 ../libsvn_subr/crypto.c:444
 #: ../libsvn_subr/crypto.c:565 ../libsvn_subr/crypto.c:666
-#, fuzzy
 msgid "Error fetching result length"
-msgstr "Fehler beim Schließen der leeren Standardausgabe"
+msgstr "Fehler beim Lesen der Länge des Ergebisses"
 
 #: ../libsvn_subr/crypto.c:360 ../libsvn_subr/crypto.c:578
-#, fuzzy
 msgid "Error during block encryption"
-msgstr "Fehler beim Zerlegen der Vergleichsoptionen"
+msgstr "Fehler bei der Verschlüsselung eines Blocks"
 
 #: ../libsvn_subr/crypto.c:372 ../libsvn_subr/crypto.c:590
 msgid "Error finalizing block encryption"
-msgstr ""
+msgstr "Fehler beim Abschließen der Blockverschlüsselung"
 
 #: ../libsvn_subr/crypto.c:428 ../libsvn_subr/crypto.c:650
 msgid "Provided IV has incorrect length"
-msgstr ""
+msgstr "Angegebener Initialisierungsvektor hat eine falsche Länge"
 
 #: ../libsvn_subr/crypto.c:436 ../libsvn_subr/crypto.c:658
-#, fuzzy
 msgid "Error initializing block decryption"
-msgstr "Fehler beim Initialisieren der Kommandozeilenparameter"
+msgstr "Fehler bei der Initialisierung des Blockentschlüsselung"
 
 #: ../libsvn_subr/crypto.c:455 ../libsvn_subr/crypto.c:677
-#, fuzzy
 msgid "Error during block decryption"
-msgstr "Fehler beim Zerlegen der Vergleichsoptionen"
+msgstr "Fehler bei der Entschlüsselung eines Blocks"
 
 #: ../libsvn_subr/crypto.c:464 ../libsvn_subr/crypto.c:686
 msgid "Error finalizing block decryption"
-msgstr ""
+msgstr "Fehler beim Abschließen der Blockentschlüsselung"
 
 #: ../libsvn_subr/date.c:307
 #, c-format
@@ -5695,16 +5676,16 @@ msgstr "Lokale URL »%s« enthält einen nicht unterstützten Rechnernamen"
 
 #: ../libsvn_subr/error.c:260
 msgid "Additional errors:"
-msgstr ""
+msgstr "Zusätzliche Fehler:"
 
 #: ../libsvn_subr/error.c:509
 msgid "Can't recode error string from APR"
 msgstr "Kann Fehlermeldung von APR nicht umkodieren"
 
 #: ../libsvn_subr/error.c:609
-#, fuzzy, c-format
+#, c-format
 msgid "%swarning: W%06d: %s\n"
-msgstr "%swarnung: %s\n"
+msgstr "%sWarnung: W%06d: %s\n"
 
 #: ../libsvn_subr/error.c:669
 #, c-format
@@ -5717,34 +5698,29 @@ msgid "In file '%s' line %d: internal malfunction"
 msgstr "In Datei »%s«, Zeile %d: interne Fehlfunktion"
 
 #: ../libsvn_subr/error.c:726
-#, fuzzy
 msgid "stream error"
-msgstr "Schreibfehler"
+msgstr "Datenstromfehler"
 
 #: ../libsvn_subr/error.c:731
 msgid "out of memory"
-msgstr ""
+msgstr "Nicht genügend Speicher"
 
 #: ../libsvn_subr/error.c:736
-#, fuzzy
 msgid "buffer error"
-msgstr "Schreibfehler"
+msgstr "Pufferfehler"
 
 #: ../libsvn_subr/error.c:741
-#, fuzzy
 msgid "version error"
-msgstr "nicht versioniert"
+msgstr "Versionsfehler"
 
 #: ../libsvn_subr/error.c:746
-#, fuzzy
 msgid "corrupt data"
-msgstr "Fehlerhafte Daten für »%s«"
+msgstr "Fehlerhafte Daten"
 
 # FIXME: Grammar depends on usage!!!!!!! (prepanded by "bei")
 #: ../libsvn_subr/error.c:751
-#, fuzzy
 msgid "unknown error"
-msgstr "Unbekannter Operation"
+msgstr "Unbekannter Fehler"
 
 #: ../libsvn_subr/gpg_agent.c:342 ../libsvn_subr/prompt.c:211
 #, c-format
@@ -5754,18 +5730,18 @@ msgstr "Passwort für »%s«: "
 #: ../libsvn_subr/gpg_agent.c:343
 #, c-format
 msgid "Enter your Subversion password for %s"
-msgstr ""
+msgstr "Geben Sie Ihr Subversion-Passwort für %s ein"
 
 #: ../libsvn_subr/hash.c:117
 msgid "Serialized hash missing terminator"
-msgstr ""
+msgstr "Serialisierte Prüfsumme hat kein Endzeichen"
 
 #: ../libsvn_subr/hash.c:125 ../libsvn_subr/hash.c:137
 #: ../libsvn_subr/hash.c:147 ../libsvn_subr/hash.c:158
 #: ../libsvn_subr/hash.c:166 ../libsvn_subr/hash.c:175
 #: ../libsvn_subr/hash.c:187 ../libsvn_subr/hash.c:195
 msgid "Serialized hash malformed"
-msgstr ""
+msgstr "Fehlerhafte serialisierte Prüfsumme"
 
 #: ../libsvn_subr/io.c:308
 #, c-format
@@ -5863,9 +5839,9 @@ msgid "Can't get shared lock on file '%s'"
 msgstr "Kann keine gemeinsame Sperre für Datei »%s« erhalten"
 
 #: ../libsvn_subr/io.c:2040
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock file '%s'"
-msgstr "Kann Datei »%s« nicht schließen"
+msgstr "Kann Datei »%s« nicht entsprerren"
 
 #: ../libsvn_subr/io.c:2095 ../libsvn_subr/io.c:3422
 #, c-format
@@ -5936,9 +5912,9 @@ msgid "Can't set process '%s' child errfile"
 msgstr "Kann Fehlerausgabe des Kindprozesses »%s« nicht setzen"
 
 #: ../libsvn_subr/io.c:2651
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' stdio pipes"
-msgstr "Kann Kommandotyp von Prozess »%s« nicht setzen "
+msgstr "Kann Standard-IO-Datenströme des Prozesses »%s« nicht setzen "
 
 #: ../libsvn_subr/io.c:2659
 #, c-format
@@ -6022,12 +5998,12 @@ msgid "Can't read stream"
 msgstr "Kann nicht aus Datenstrom lesen"
 
 #: ../libsvn_subr/io.c:3253
-#, fuzzy, c-format
+#, c-format
 msgid "Can't write file '%s'"
-msgstr "Kann nicht in Datei »%s« schreiben"
+msgstr "Kann Datei »%s« nicht schreiben"
 
 #: ../libsvn_subr/io.c:3254
-#, fuzzy, c-format
+#, c-format
 msgid "Can't write stream"
 msgstr "Kann nicht in Datenstrom schreiben"
 
@@ -6111,9 +6087,9 @@ msgid "Can't read directory"
 msgstr "Kann Verzeichnis nicht lesen"
 
 #: ../libsvn_subr/io.c:3796
-#, fuzzy, c-format
+#, c-format
 msgid "Error closing directory"
-msgstr "Fehler beim Schließen von Verzeichnis »%s«"
+msgstr "Fehler beim Schließen eines Verzeichnisses"
 
 #: ../libsvn_subr/io.c:3865
 #, c-format
@@ -6216,28 +6192,28 @@ msgid "empty mergeinfo catalog\n"
 msgstr "Zusammenführungsinformationskatalog ist leer\n"
 
 #: ../libsvn_subr/mutex.c:45
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create mutex"
-msgstr "Kann DSO-Mutex nicht erzeugen"
+msgstr "Kann Mutex nicht erzeugen"
 
 #: ../libsvn_subr/mutex.c:62
-#, fuzzy, c-format
+#, c-format
 msgid "Can't lock mutex"
-msgstr "Kann Zwischenspeicher-Mutex nicht sperren"
+msgstr "Kann Mutex nicht sperren"
 
 #: ../libsvn_subr/mutex.c:78
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock mutex"
-msgstr "Kann Zwischenspeicher-Mutex nicht entsperren"
+msgstr "Kann Mutex nicht entsperren"
 
 #: ../libsvn_subr/named_atomic.c:331
 msgid "Not a valid atomic"
 msgstr ""
 
 #: ../libsvn_subr/named_atomic.c:465
-#, fuzzy, c-format
+#, c-format
 msgid "MMAP failed for file '%s'"
-msgstr "Ungültiger Wert für Feld »%s«"
+msgstr "MMAP für Datei »%s« schlug fehl"
 
 #: ../libsvn_subr/named_atomic.c:477
 msgid "Number of atomics in namespace is too large."
@@ -6248,9 +6224,8 @@ msgid "Atomic's name is too long."
 msgstr ""
 
 #: ../libsvn_subr/named_atomic.c:533
-#, fuzzy
 msgid "Namespace has not been initialized."
-msgstr "Zielprojektarchiv wurde noch nicht initialisiert"
+msgstr "Namensraum wurde noch nicht initialisiert"
 
 #: ../libsvn_subr/named_atomic.c:581
 msgid "Out of slots for named atomic."
@@ -6283,14 +6258,14 @@ msgstr ""
 "Globale Optionen:\n"
 
 #: ../libsvn_subr/opt.c:815
-#, fuzzy, c-format
+#, c-format
 msgid "Syntax error parsing peg revision '%s'; did you mean '%s@'?"
-msgstr "Syntaxfehler bei der Analyse der Revision »%s«"
+msgstr "Syntaxfehler bei der Analyse der Fix-Revision »%s«; Meinten Sie '%s@'?"
 
 #: ../libsvn_subr/opt.c:821
-#, fuzzy, c-format
+#, c-format
 msgid "Syntax error parsing peg revision '%s'"
-msgstr "Syntaxfehler bei der Analyse der Revision »%s«"
+msgstr "Syntaxfehler bei der Analyse der Fix-Revision »%s«"
 
 #: ../libsvn_subr/opt.c:958
 msgid "Revision property pair is empty"
@@ -6317,44 +6292,42 @@ msgstr "URL »%s« enthält ein »..« Element"
 msgid "Error resolving case of '%s'"
 msgstr "Fehler beim Ermitteln der Groß-/Kleinschreibung von »%s«"
 
-# FIXME: Datum ist nicht übersetzbar (Aug  3 2006 statt 3. August 2006)
 #: ../libsvn_subr/opt.c:1116
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "%s, version %s\n"
 "   compiled %s, %s on %s\n"
 "\n"
 msgstr ""
 "%s, Version %s\n"
-"   übersetzt %s, %s\n"
+"   übersetzt am %s, um %s auf %s\n"
 "\n"
 
 #: ../libsvn_subr/opt.c:1133
-#, fuzzy
 msgid ""
 "System information:\n"
 "\n"
-msgstr "Aktualisierungsinformation ausgeben"
+msgstr ""
+"Systeminformationen:\n"
+"\n"
 
 #: ../libsvn_subr/opt.c:1134
-#, fuzzy, c-format
+#, c-format
 msgid "* running on %s\n"
-msgstr ""
-"\n"
-"Warnung: %s\n"
+msgstr "* ausgeführt auf %s\n"
 
 #: ../libsvn_subr/opt.c:1138
 #, c-format
 msgid "  - %s\n"
-msgstr ""
+msgstr "  - %s\n"
 
 #: ../libsvn_subr/opt.c:1148
 msgid "* linked dependencies:\n"
-msgstr ""
+msgstr "* eingebundene Abhändigleiten:\n"
 
 #: ../libsvn_subr/opt.c:1173
 msgid "* loaded shared libraries:\n"
-msgstr ""
+msgstr "* geladene dynamische Bibliotheken:\n"
 
 #: ../libsvn_subr/path.c:1114
 #, c-format
@@ -6452,16 +6425,15 @@ msgstr "ja"
 
 #: ../libsvn_subr/prompt.c:422
 msgid "y"
-msgstr ""
+msgstr "j"
 
 #: ../libsvn_subr/prompt.c:427
 msgid "no"
 msgstr "nein"
 
 #: ../libsvn_subr/prompt.c:428
-#, fuzzy
 msgid "n"
-msgstr "nein"
+msgstr "n"
 
 #: ../libsvn_subr/prompt.c:434
 msgid "Please type 'yes' or 'no': "
@@ -6559,17 +6531,15 @@ msgstr "Konfigurationsfehler: Ungültiger Wert »%s« für Option »%s«"
 #: ../libsvn_subr/sqlite.c:174
 #, c-format
 msgid "sqlite: %s, executing statement '%s'"
-msgstr ""
+msgstr "sqlite: %s, Ausgeführte Anweisung '%s'"
 
 #: ../libsvn_subr/sqlite.c:262
-#, fuzzy
 msgid "sqlite: Expected database row missing"
-msgstr "Erwartete Zeile der Datenbank fehlt"
+msgstr "sqlite: Erwartete Zeile in der Datenbank fehlt"
 
 #: ../libsvn_subr/sqlite.c:263
-#, fuzzy
 msgid "sqlite: Extra database row found"
-msgstr "Zusätzliche Zeile der Datenbank wurde gefunden"
+msgstr "sqlite: Zusätzliche Zeile der Datenbank wurde gefunden"
 
 #: ../libsvn_subr/sqlite.c:722
 #, c-format
@@ -6605,19 +6575,19 @@ msgstr "Datei »%s« hat inkonsistente Zeilenenden"
 
 #: ../libsvn_subr/sysinfo.c:1078
 msgid "Intel"
-msgstr ""
+msgstr "Intel"
 
 #: ../libsvn_subr/sysinfo.c:1079
 msgid "Intel 64-bit"
-msgstr ""
+msgstr "Intel 64 Bit"
 
 #: ../libsvn_subr/sysinfo.c:1080
 msgid "PowerPC"
-msgstr ""
+msgstr "PowerPC"
 
 #: ../libsvn_subr/sysinfo.c:1081
 msgid "PowerPC 64-bit"
-msgstr ""
+msgstr "PowerPC 64 Bit"
 
 #. Human explanatory part, generated by apr_strftime as "Sat, 01 Jan 2000"
 #: ../libsvn_subr/time.c:85
@@ -6703,14 +6673,14 @@ msgid "MIME type '%s' does not contain '/'"
 msgstr "MIME-Typ »%s« enthält keinen »/«"
 
 #: ../libsvn_subr/validate.c:73
-#, fuzzy, c-format
+#, c-format
 msgid "MIME type '%s' contains invalid character '%c' in media type"
-msgstr "MIME-Typ »%s« enthält ein ungültiges Zeichen »%c«"
+msgstr "MIME-Typ »%s« enthält ein ungültiges Zeichen »%c« im Medientyp"
 
 #: ../libsvn_subr/validate.c:84
-#, fuzzy, c-format
+#, c-format
 msgid "MIME type '%s' contains invalid character '0x%02x' in postfix"
-msgstr "MIME-Typ »%s« enthält ein ungültiges Zeichen »%c«"
+msgstr "MIME-Typ »%s« enthält ein ungültiges Zeichen »0x%02x« im Postfix"
 
 #: ../libsvn_subr/version.c:89
 #, c-format
@@ -6718,18 +6688,16 @@ msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "Version von »%s« ist unerwartet: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
 
 #: ../libsvn_subr/version.c:132
-#, fuzzy
 msgid ""
 "Copyright (C) 2013 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
 "Subversion is open source software, see http://subversion.apache.org/\n"
 msgstr ""
-"Copyright (C) 2010 The Apache Software Foundation.\n"
+"Copyright (C) 2013 The Apache Software Foundation.\n"
 "Diese Software besteht aus Beiträgen vieler Personen;\n"
-"siehe Datei NOTICE für mehr Informationen.\n"
+"siehe Datei NOTICE für weitere Informationen.\n"
 "Subversion ist Open Source Software, siehe http://subversion.apache.org/\n"
-"\n"
 
 #: ../libsvn_subr/xml.c:415
 #, c-format
@@ -6751,14 +6719,14 @@ msgid "Error aborting report"
 msgstr "Fehler beim Abbrechen des Reports"
 
 #: ../libsvn_wc/adm_crawler.c:973
-#, fuzzy, c-format
+#, c-format
 msgid "Pristine checksum for file '%s' is missing"
-msgstr "Administrativer Bereich von »%s« fehlt"
+msgstr "Prüfsumme für ursprünglichen Inhalt der Datei »%s« fehlt"
 
 #: ../libsvn_wc/adm_crawler.c:1138
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch for text base of '%s'"
-msgstr "Prüfsummenfehler für »%s«"
+msgstr "Prüfsummenfehler für Textbasis von »%s«"
 
 #: ../libsvn_wc/adm_crawler.c:1149
 #, c-format
@@ -6796,9 +6764,9 @@ msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "Revision %ld passt nicht zur existierenden Revision %ld in »%s«"
 
 #: ../libsvn_wc/adm_files.c:489
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' (uuid: '%s') doesn't match existing URL '%s' (uuid: '%s') in '%s'"
-msgstr "URL »%s« stimmt nicht mit der existierenden URL »%s« in »%s« überein"
+msgstr "URL »%s« (UUID: »%s«) stimmt nicht mit der existierenden URL »%s« (UUID: »%s«) in »%s« überein"
 
 #: ../libsvn_wc/adm_ops.c:717 ../libsvn_wc/adm_ops.c:831
 #, c-format
@@ -6806,9 +6774,9 @@ msgid "'%s' cannot be deleted"
 msgstr "»%s« kann nicht gelöscht werden"
 
 #: ../libsvn_wc/adm_ops.c:735 ../libsvn_wc/adm_ops.c:847
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is the root of a working copy and cannot be deleted"
-msgstr "Das Basisverzeichnis kann nicht gelöscht werden"
+msgstr "»%s« ist das Basisverzeichnis einer Arbeitskopie und kann nicht gelöscht werden"
 
 #: ../libsvn_wc/adm_ops.c:977 ../libsvn_wc/update_editor.c:5024
 #, c-format
@@ -6875,23 +6843,22 @@ msgstr "Fehler beim Einlesen der Baumkonfliktvorlage"
 
 #: ../libsvn_wc/conflicts.c:767 ../libsvn_wc/conflicts.c:840
 #: ../libsvn_wc/conflicts.c:929
-#, fuzzy
 msgid "Conflict not set"
-msgstr "Konflikt bei »%s«"
+msgstr "Konflikt nicht gesetzt"
 
 # FIXME: duplicated message (differs only in ".")
 #: ../libsvn_wc/conflicts.c:1388
 msgid "Conflict callback violated API: returned no results."
-msgstr "Konflikt-Aktion verletzte die API: keine Ergebnisse wurden zurückgeliefert."
+msgstr "Konflikt-Rückruffunktion verletzte die API: keine Ergebnisse wurden zurückgeliefert."
 
 #: ../libsvn_wc/conflicts.c:1430
 msgid "Conflict callback violated API: returned no merged file."
-msgstr "Konflikt-Aktion verletzte die API: keine zusammengeführte Datei wurde zurückgeliefert."
+msgstr "Konflikt-Rückruffunktion verletzte die API: keine zusammengeführte Datei wurde zurückgeliefert."
 
 # CHECKME: s/callback/hook/ ??
 #: ../libsvn_wc/conflicts.c:1720
 msgid "Conflict callback violated API: returned no results"
-msgstr "Konflikt-Aktion verletzte die API: keine Ergebnisse wurden zurückgeliefert"
+msgstr "Konflikt-Aktion Rückruffunktion die API: keine Ergebnisse wurden zurückgeliefert"
 
 #: ../libsvn_wc/conflicts.c:2359 ../libsvn_wc/conflicts.c:2476
 msgid "Invalid 'conflict_result' argument"
@@ -6899,12 +6866,12 @@ msgstr "Ungültiger Parameter »conflict_result«"
 
 #: ../libsvn_wc/conflicts.c:2621
 msgid "No conflict-callback and no pre-defined conflict-choice provided"
-msgstr ""
+msgstr "Keine Konflikt-Rückruffunktion oder Standard-Konfliktlösungsauswahl angegeben"
 
-#: ../libsvn_wc/conflicts.c:2666
-#, fuzzy, c-format
+#: ../libsvn_wc/conflicts.c:2620
+#, c-format
 msgid "Tree conflict can only be resolved to 'working' state; '%s' not resolved"
-msgstr "Baumkonflikte können nur zum Zustand »working« aufgelöst werden; Konflikt in »%s« nicht aufgelöst"
+msgstr "Baumkonflikt kann nur zum Zustand »working« aufgelöst werden; Konflikt in »%s« nicht aufgelöst"
 
 #: ../libsvn_wc/copy.c:85
 #, c-format
@@ -6928,9 +6895,9 @@ msgid "Cannot copy '%s' excluded by server"
 msgstr "Kann vom Server ausgeschlossenes »%s« nicht kopieren"
 
 #: ../libsvn_wc/copy.c:575
-#, fuzzy, c-format
+#, c-format
 msgid "Deleted node '%s' can't be copied."
-msgstr "Erwartete, dass Knoten »%s« hinzugefügt wird."
+msgstr "Gelöschter Knoten »%s« kann nicht kopiert werden."
 
 #: ../libsvn_wc/copy.c:653
 #, c-format
@@ -6960,9 +6927,9 @@ msgid "'%s' already exists and is in the way"
 msgstr "»%s« existiert bereits und ist im Weg"
 
 #: ../libsvn_wc/copy.c:768
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot move mixed-revision subtree '%s' [%ld:%ld]; try updating it first"
-msgstr "Kann nicht in eine Arbeitskopie mit verschiedenen Revisionen zusammenführen [%lu:%lu], versuchen Sie erst zu aktualisieren"
+msgstr "Kann Unterbaum »%s« mit verschiedenen Revisionen nicht verschieben [%ld:%ld], versuchen Sie erst zu aktualisieren"
 
 #: ../libsvn_wc/crop.c:205
 #, c-format
@@ -7024,19 +6991,19 @@ msgid "'%s' is not of the right kind"
 msgstr "»%s« hat einen falschen Typ"
 
 #: ../libsvn_wc/entries.c:1505
-#, fuzzy, c-format
+#, c-format
 msgid "The file '%s' has no checksum"
-msgstr "Der Knoten »%s« hat einen fehlerhaften Prüfsummenwert."
+msgstr "Datei »%s« hat keine Prüfsumme"
 
 #: ../libsvn_wc/entries.c:1794
 #, c-format
 msgid "No copyfrom URL for '%s'"
-msgstr ""
+msgstr "Keine »copyfrom« URL für »%s« "
 
 #: ../libsvn_wc/entries.c:2010
-#, fuzzy, c-format
+#, c-format
 msgid "Bad base MD5 checksum for '%s'; expected: '%s'; found '%s'; "
-msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, tatsächlich: »%s«"
+msgstr "MD5-Prüfsummenfehler für Basis »%s«; erwartet: »%s«, tatsächlich: »%s«"
 
 #: ../libsvn_wc/entries.c:2352
 #, c-format
@@ -7081,14 +7048,14 @@ msgstr "Ungültige Eigenschaft %s auf »%s«: Ziel »%s« ist ein absoluter Pfad
 #: ../libsvn_wc/externals.c:488 ../libsvn_wc/externals.c:510
 #, c-format
 msgid "This editor can only update '%s'"
-msgstr ""
+msgstr "Dieser Editor kann nur »%s« aktualisieren"
 
 #: ../libsvn_wc/externals.c:525
-#, fuzzy, c-format
+#, c-format
 msgid "Node '%s' is no existing file external"
-msgstr "Knoten »%s« hat keinen Ursprungstext"
+msgstr "Knoten »%s« ist kein vorhandener externer Dateiverweis"
 
-#: ../libsvn_wc/externals.c:1509
+#: ../libsvn_wc/externals.c:1503
 #, c-format
 msgid "URL '%s' does not begin with a scheme"
 msgstr "Die URL »%s« beginnt nicht mit einem Schema"
@@ -7159,9 +7126,9 @@ msgid "Can't obtain lock on non-directory '%s'."
 msgstr "Kann keine Sperre für nicht-Verzeichnis »%s« erhalten."
 
 #: ../libsvn_wc/merge.c:1274 ../libsvn_wc/props.c:259
-#, fuzzy, c-format
+#, c-format
 msgid "Can't merge into conflicted node '%s'"
-msgstr "Kann nicht in Datei »%s« schreiben"
+msgstr "Kann nicht in Knoten mit Konflikt »%s« zusammenführen"
 
 #: ../libsvn_wc/merge.c:1317 ../libsvn_wc/props.c:275
 #, c-format
@@ -7169,14 +7136,14 @@ msgid "The property '%s' may not be merged into '%s'."
 msgstr "Eigenschaft »%s« darf nicht nach »%s« zusammengeführt werden."
 
 #: ../libsvn_wc/node.c:1100
-#, fuzzy, c-format
+#, c-format
 msgid "Incomplete copy information on path '%s'."
-msgstr "kein Elternteil mit »copyfrom«-Information wurde oberhalb »%s« gefunden"
+msgstr "Unvollständige Informationen für Kopie in Pfad »%s«"
 
 #: ../libsvn_wc/node.c:1264
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not the root of the working copy '%s'"
-msgstr "»%s« ist nicht die Basis des Projektarchivs"
+msgstr "»%s« ist nicht die Basis des Projektarchivs »%s«"
 
 #: ../libsvn_wc/old-and-busted.c:122
 msgid "Invalid escape sequence"
@@ -7377,26 +7344,23 @@ msgstr ""
 
 #: ../libsvn_wc/props.c:602
 msgid "<<<<<<< (local property value)"
-msgstr ""
+msgstr "<<<<<<< (lokaler Eigenschaftswert)"
 
-#: ../libsvn_wc/props.c:603
+#: ../libsvn_wc/props.c:602
 msgid ">>>>>>> (incoming property value)"
-msgstr ""
+msgstr ">>>>>>> (empfangener Eigenschaftswert)"
 
-#: ../libsvn_wc/props.c:624
-#, fuzzy
+#: ../libsvn_wc/props.c:623
 msgid "Local property value:\n"
-msgstr "Fehlerhafter Eigenschaftsname"
+msgstr "Lokaler Eigenschaftswert:\n"
 
-#: ../libsvn_wc/props.c:626 ../libsvn_wc/props.c:637
-#, fuzzy
+#: ../libsvn_wc/props.c:625 ../libsvn_wc/props.c:636
 msgid "Cannot display: property value is binary data\n"
-msgstr "Kann nicht anzeigen: Dateityp ist als binär angegeben.%s"
+msgstr "Kann nicht anzeigen: Eigenschaftswert sind Binärdaten\n"
 
-#: ../libsvn_wc/props.c:635
-#, fuzzy
+#: ../libsvn_wc/props.c:634
 msgid "Incoming property value:\n"
-msgstr "Falscher oder unerwarteter Eigenschaftswert"
+msgstr "Empfangener Eigenschaftswert:\n"
 
 #: ../libsvn_wc/props.c:1453 ../libsvn_wc/props.c:1863
 #: ../libsvn_wc/props.c:1960
@@ -7432,10 +7396,10 @@ msgstr "Konnte aktuelle Eigenschaften nicht laden"
 msgid "Can't set properties on '%s': invalid status for updating properties."
 msgstr "Kann Eigenschaften für »%s« nicht setzen: ungültiger Status beim Aktualisieren von Eigenschaften"
 
-#: ../libsvn_wc/props.c:1965
-#, fuzzy, c-format
+#: ../libsvn_wc/props.c:1964
+#, c-format
 msgid "Property '%s' is a WC property, not a regular property"
-msgstr "Eigenschaft »%s« ist keine reguläre Eigenschaft"
+msgstr "Eigenschaft »%s« ist eine Arbeitskopieeigenschaft, keine reguläre Eigenschaft"
 
 #: ../libsvn_wc/props.c:2061
 #, c-format
@@ -7446,12 +7410,12 @@ msgstr "Stil für Zeilenende »%s« nicht erkannt für »%s«"
 #: ../libsvn_wc/props.c:2112
 #, c-format
 msgid " (%d more duplicate targets found)"
-msgstr ""
+msgstr "(%d mehrmals auftauchende Ziele gefunden)"
 
-#: ../libsvn_wc/props.c:2117
-#, fuzzy, c-format
+#: ../libsvn_wc/props.c:2116
+#, c-format
 msgid "Invalid %s property on '%s': target '%s' appears more than once%s"
-msgstr "Ungültige Eigenschaft %s auf »%s«: Ziel »%s« ist ein absoluter Pfad oder enthält »..«"
+msgstr "Ungültige Eigenschaft %s auf »%s«: Ziel »%s« taucht mehrmals auf%s"
 
 #: ../libsvn_wc/props.c:2148
 #, c-format
@@ -7496,9 +7460,9 @@ msgid "Invalid version info in tree conflict description"
 msgstr "Ungültige Versionsinformation in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:216
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid conflict info '%s' in tree conflict description"
-msgstr "Ungültige Konfliktinformation in Baumkonfliktbeschreibung«"
+msgstr "Ungültige Konfliktinformationen »%s« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:227
 msgid "Empty 'victim' field in tree conflict description"
@@ -7588,6 +7552,7 @@ msgstr "Arbeitskopie »%s« kann nicht in ein neueres Format gebracht werden, da
 
 # FIXME: http://www.urbandictionary.com/define.php?term=Skel
 #: ../libsvn_wc/upgrade.c:693
+#, fuzzy
 msgid "Error parsing tree conflict skel"
 msgstr "Fehler beim Einlesen der Baumkonfliktvorlage"
 
@@ -7946,7 +7911,7 @@ msgstr ""
 msgid "'verbose' option invalid in XML mode"
 msgstr "Option »verbose« ist im XML-Modus ungültig"
 
-#: ../svn/blame-cmd.c:315 ../svn/info-cmd.c:610 ../svn/list-cmd.c:312
+#: ../svn/blame-cmd.c:315 ../svn/info-cmd.c:640 ../svn/list-cmd.c:312
 #: ../svn/status-cmd.c:302
 msgid "'incremental' option only valid in XML mode"
 msgstr "Option »incremental« ist nur im XML-Modus gültig"
@@ -7984,48 +7949,6 @@ msgstr ""
 #, c-format
 msgid "'%s' does not appear to be a URL"
 msgstr "»%s« scheint keine URL zu sein"
-
-#: ../svn/cl-conflicts.c:38 ../svn/cl-conflicts.c:58
-msgid "edit"
-msgstr "editiert"
-
-#: ../svn/cl-conflicts.c:39 ../svn/cl-conflicts.c:59
-msgid "delete"
-msgstr "gelöscht"
-
-#: ../svn/cl-conflicts.c:40 ../svn/cl-conflicts.c:62
-msgid "add"
-msgstr "hinzugefügt"
-
-#: ../svn/cl-conflicts.c:41 ../svn/cl-conflicts.c:63
-msgid "replace"
-msgstr "ersetzt"
-
-#: ../svn/cl-conflicts.c:60
-msgid "missing"
-msgstr "fehlend"
-
-# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
-#: ../svn/cl-conflicts.c:61
-msgid "obstruction"
-msgstr "blockiert"
-
-#: ../svn/cl-conflicts.c:64
-msgid "unversioned"
-msgstr "nicht versioniert"
-
-#: ../svn/cl-conflicts.c:65
-msgid "moved away"
-msgstr ""
-
-#: ../svn/cl-conflicts.c:66
-msgid "moved here"
-msgstr ""
-
-#: ../svn/cl-conflicts.c:141
-#, fuzzy, c-format
-msgid "local %s %s, incoming %s %s upon %s"
-msgstr "lokal %s, eingehend %s bei %s"
 
 #: ../svn/cleanup-cmd.c:92
 #, c-format
@@ -11827,6 +11750,48 @@ msgstr "Pfad »%s« hat keine gemeinsame Versionskontrollgeschichte mit dem ange
 #: ../svn/switch-cmd.c:183
 msgid "'svn switch' does not support switching a working copy to a different repository"
 msgstr "Umstellen einer Arbeitskopie auf ein anderes Projektarchiv wird von »svn switch« nicht unterstützt"
+
+#: ../svn/tree-conflicts.c:38 ../svn/tree-conflicts.c:58
+msgid "edit"
+msgstr "editiert"
+
+#: ../svn/tree-conflicts.c:39 ../svn/tree-conflicts.c:59
+msgid "delete"
+msgstr "gelöscht"
+
+#: ../svn/tree-conflicts.c:40 ../svn/tree-conflicts.c:62
+msgid "add"
+msgstr "hinzugefügt"
+
+#: ../svn/tree-conflicts.c:41 ../svn/tree-conflicts.c:63
+msgid "replace"
+msgstr "ersetzt"
+
+#: ../svn/tree-conflicts.c:60
+msgid "missing"
+msgstr "fehlend"
+
+# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
+#: ../svn/tree-conflicts.c:61
+msgid "obstruction"
+msgstr "blockiert"
+
+#: ../svn/tree-conflicts.c:64
+msgid "unversioned"
+msgstr "nicht versioniert"
+
+#: ../svn/tree-conflicts.c:65
+msgid "moved away"
+msgstr ""
+
+#: ../svn/tree-conflicts.c:66
+msgid "moved here"
+msgstr ""
+
+#: ../svn/tree-conflicts.c:134
+#, fuzzy, c-format
+msgid "local %s %s, incoming %s %s upon %s"
+msgstr "lokal %s, eingehend %s bei %s"
 
 #: ../svn/update-cmd.c:59
 #, c-format
