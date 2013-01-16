@@ -1479,10 +1479,7 @@ dispatch_work_item(svn_wc__db_t *db,
          Contrary to issue #1581, we cannot simply remove work items and
          continue, so bail out with an error.  */
       return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                               _("Unrecognized work item in the queue "
-                                 "associated with '%s'"),
-                               svn_dirent_local_style(wri_abspath,
-                                                      scratch_pool));
+                               _("Unrecognized work item in the queue"));
     }
 
   return SVN_NO_ERROR;
@@ -1514,6 +1511,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
     {
       apr_uint64_t id;
       svn_skel_t *work_item;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -1533,8 +1531,20 @@ svn_wc__wq_run(svn_wc__db_t *db,
          we're done.  */
       if (work_item == NULL)
         break;
-      SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
-                                 cancel_func, cancel_baton, iterpool));
+
+      err = dispatch_work_item(db, wri_abspath, work_item,
+                               cancel_func, cancel_baton, iterpool);
+      if (err)
+        {
+          const char *skel = svn_skel__unparse(work_item, scratch_pool)->data;
+
+          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
+                                   _("Failed to run the WC DB work queue "
+                                     "associated with '%s', work item %d %s"),
+                                   svn_dirent_local_style(wri_abspath,
+                                                          scratch_pool),
+                                   (int)id, skel);
+        }
 
       /* The work item finished without error. Mark it completed
          in the next loop.  */
