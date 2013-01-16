@@ -1988,6 +1988,40 @@ def status_unversioned_dir(sbox):
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", "/")
 
+def status_case_changed(sbox):
+  "status reporting on case changed nodes directly"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  os.rename(sbox.ospath('iota'), sbox.ospath('iOTA'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iOTA'         : Item(status='? '),
+  })
+  expected_status.tweak('iota', status='! ')
+
+  # First run status on the directory
+  svntest.actions.run_and_verify_unquiet_status(wc_dir,
+                                                expected_status)
+
+  # Now on the missing iota directly, which should give the same
+  # result, even on case insenstive filesystems
+  expected_status = svntest.wc.State(wc_dir, {
+    'iota'         : Item(status='! ', wc_rev=1),
+  })
+  svntest.actions.run_and_verify_unquiet_status(sbox.ospath('iota'),
+                                                expected_status)
+
+  # And on the unversioned iOTA
+  expected_status = svntest.wc.State(wc_dir, {
+    'iOTA'         : Item(status='? '),
+  })
+  svntest.actions.run_and_verify_unquiet_status(sbox.ospath('iOTA'),
+                                                expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2033,6 +2067,7 @@ test_list = [ None,
               modified_modulo_translation,
               status_not_present,
               status_unversioned_dir,
+              status_case_changed,
              ]
 
 if __name__ == '__main__':

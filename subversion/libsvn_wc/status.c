@@ -2673,6 +2673,65 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
   return SVN_NO_ERROR;
 }
 
+/* Like svn_io_stat_dirent, but works case sensitive inside working
+   copies. Before 1.8 we handled this with a selection filter inside
+   a directory */
+static svn_error_t *
+stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+#if defined(WIN32) || defined(DARWIN)
+  svn_boolean_t is_wcroot;
+  /* We only need this code on systems with case insensitive filesystem
+     support. Enabling it unconditionally hurts performance */
+
+  /* The wcroot is "" inside the wc; handle it as not in the wc, as
+     the case of the root is indifferent to us. */
+  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, 
+                               scratch_pool));
+
+  if (! is_wcroot)
+    {
+      apr_hash_t *dirents;
+      svn_error_t *err;
+      const char *parent_abspath;
+      const char *name;
+
+      svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
+
+      /* Obtain the name of the node, as stored in the directory.
+         Do this to avoid case insensitivity differences */
+
+      err = svn_io_get_dirents3(&dirents, parent_abspath, FALSE,
+                                scratch_pool, scratch_pool);
+
+      if (err
+          && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+        {
+          svn_error_clear(err);
+          dirents = NULL;
+        }
+      else
+        SVN_ERR(err);
+
+      *dirent = dirents ? apr_hash_get(dirents, name, APR_HASH_KEY_STRING)
+                       : NULL;
+
+      if (!*dirent)
+        *dirent = svn_io_dirent2_create(scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
+#endif
+
+  return svn_error_trace(svn_io_stat_dirent(dirent, local_abspath, TRUE,
+                                            result_pool, scratch_pool));
+}
+
 svn_error_t *
 svn_wc__internal_walk_status(svn_wc__db_t *db,
                              const char *local_abspath,
@@ -2721,13 +2780,19 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
         return svn_error_trace(err);
 
       wb.externals = apr_hash_make(scratch_pool);
+
+      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE, scratch_pool,
+                               scratch_pool));
     }
   else
-    SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+    {
+      SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals,
+                                                 db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
+      SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
+                                            scratch_pool, scratch_pool));
+    }
 
   if (info
       && info->kind == svn_kind_dir
@@ -2868,9 +2933,6 @@ internal_status(svn_wc_status3_t **status,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
-
   err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
@@ -2878,19 +2940,25 @@ internal_status(svn_wc_status3_t **status,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
       svn_error_clear(err);
       node_kind = svn_kind_unknown;
       /* Ensure conflicted is always set, but don't hide tree conflicts
          on 'hidden' nodes. */
       conflicted = FALSE;
+
+      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                                 scratch_pool, scratch_pool));
     }
-  else if (err)
-    {
-        return svn_error_trace(err);
-    }
-  else if (node_status == svn_wc__db_status_not_present
+  else
+    SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
+                                          scratch_pool, scratch_pool));
+
+  if (node_status == svn_wc__db_status_not_present
            || node_status == svn_wc__db_status_server_excluded
            || node_status == svn_wc__db_status_excluded)
     {
