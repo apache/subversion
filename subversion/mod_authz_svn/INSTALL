@@ -129,7 +129,7 @@ II.   Configuration
          restrict access to this authz file and it is in the same repository
          you should include a rule for it.
 
-      F. Example 5: Authz file stored inside the repository being accessed.
+      F. Example 6: Authz file stored inside the repository being accessed.
 
          This configuration allows providing a relative path within the
          repository being accessed.
