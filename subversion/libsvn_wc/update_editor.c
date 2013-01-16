@@ -3672,7 +3672,7 @@ change_file_prop(void *file_baton,
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
 
-   The rest of the arguments are passed to svn_wc__internal_merge.
+   The rest of the arguments are passed to svn_wc__internal_merge().
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
@@ -3683,7 +3683,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            const char *wri_abspath,
                            const svn_checksum_t *new_checksum,
                            const svn_checksum_t *original_checksum,
-                           apr_hash_t *actual_props,
+                           apr_hash_t *old_actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
                            svn_revnum_t target_revision,
@@ -3695,7 +3695,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            apr_pool_t *scratch_pool)
 {
   /* Actual file exists and has local mods:
-     Now we need to let loose svn_wc__merge_internal() to merge
+     Now we need to let loose svn_wc__internal_merge() to merge
      the textual changes into the working file. */
   const char *oldrev_str, *newrev_str, *mine_str;
   const char *merge_left;
@@ -3764,7 +3764,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                                  local_abspath,
                                  wri_abspath,
                                  oldrev_str, newrev_str, mine_str,
-                                 actual_props,
+                                 old_actual_props,
                                  FALSE /* dry_run */,
                                  diff3_cmd, NULL, propchanges,
                                  cancel_func, cancel_baton,

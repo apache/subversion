@@ -45,7 +45,7 @@ typedef struct merge_target_t
   const char *local_abspath;                /* The absolute path to target */
   const char *wri_abspath;                  /* The working copy of target */
 
-  apr_hash_t *actual_props;                 /* The set of actual properties
+  apr_hash_t *old_actual_props;                 /* The set of actual properties
                                                before merging */
   const apr_array_header_t *prop_diff;      /* The property changes */
 
@@ -162,7 +162,7 @@ detranslate_wc_file(const char **detranslated_abspath,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
-  const char *mime_value = svn_prop_get_value(mt->actual_props,
+  const char *mime_value = svn_prop_get_value(mt->old_actual_props,
                                               SVN_PROP_MIME_TYPE);
 
   is_binary = (mime_value && svn_mime_type_is_binary(mime_value));
@@ -191,7 +191,7 @@ detranslate_wc_file(const char **detranslated_abspath,
                                          &keywords,
                                          &special,
                                          mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          scratch_pool, scratch_pool));
     }
   else
@@ -203,7 +203,7 @@ detranslate_wc_file(const char **detranslated_abspath,
                                          &keywords,
                                          &special,
                                          mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          scratch_pool, scratch_pool));
 
       if (special)
@@ -909,7 +909,7 @@ merge_text_file(svn_skel_t **work_items,
          whatever special file types we may invent in the future. */
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
                                          &special, mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          pool, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
@@ -1073,7 +1073,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
-                       apr_hash_t *actual_props,
+                       apr_hash_t *old_actual_props,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
@@ -1099,7 +1099,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   mt.db = db;
   mt.local_abspath = target_abspath;
   mt.wri_abspath = wri_abspath;
-  mt.actual_props = actual_props;
+  mt.old_actual_props = old_actual_props;
   mt.prop_diff = prop_diff;
   mt.diff3_cmd = diff3_cmd;
   mt.merge_options = merge_options;
@@ -1110,7 +1110,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else
     {
-      const char *value = svn_prop_get_value(mt.actual_props,
+      const char *value = svn_prop_get_value(mt.old_actual_props,
                                              SVN_PROP_MIME_TYPE);
 
       is_binary = value && svn_mime_type_is_binary(value);
@@ -1215,7 +1215,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   svn_skel_t *work_items;
   svn_skel_t *conflict_skel = NULL;
   apr_hash_t *pristine_props = NULL;
-  apr_hash_t *actual_props;
+  apr_hash_t *old_actual_props;
   apr_hash_t *new_actual_props = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
@@ -1287,14 +1287,14 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
 
     if (props_mod)
       {
-        SVN_ERR(svn_wc__db_read_props(&actual_props,
+        SVN_ERR(svn_wc__db_read_props(&old_actual_props,
                                       wc_ctx->db, target_abspath,
                                       scratch_pool, scratch_pool));
       }
     else if (pristine_props)
-      actual_props = pristine_props;
+      old_actual_props = pristine_props;
     else
-      actual_props = apr_hash_make(scratch_pool);
+      old_actual_props = apr_hash_make(scratch_pool);
   }
 
   /* Merge the properties, if requested.  We merge the properties first
@@ -1323,7 +1323,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                   merge_props_outcome,
                                   &new_actual_props,
                                   wc_ctx->db, target_abspath,
-                                  original_props, pristine_props, actual_props,
+                                  original_props, pristine_props, old_actual_props,
                                   prop_diff,
                                   scratch_pool, scratch_pool));
     }
@@ -1338,7 +1338,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                  target_abspath,
                                  target_abspath,
                                  left_label, right_label, target_label,
-                                 actual_props,
+                                 old_actual_props,
                                  dry_run,
                                  diff3_cmd,
                                  merge_options,
