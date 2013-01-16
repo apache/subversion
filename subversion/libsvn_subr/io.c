@@ -1143,6 +1143,14 @@ svn_error_t *svn_io_file_create(const char *file,
                                 const char *contents,
                                 apr_pool_t *pool)
 {
+  return svn_error_trace(svn_io_file_create2(file, contents, 0, pool));
+}
+
+svn_error_t *svn_io_file_create2(const char *file,
+                                 const char *contents,
+                                 apr_size_t length,
+                                 apr_pool_t *pool)
+{
   apr_file_t *f;
   apr_size_t written;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1151,10 +1159,13 @@ svn_error_t *svn_io_file_create(const char *file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  if (contents && *contents)
-    err = svn_io_file_write_full(f, contents, strlen(contents),
-                                 &written, pool);
-
+  if (contents)
+    {
+      if (length == 0)
+        length = strlen(contents);
+      if (length)
+        err = svn_io_file_write_full(f, contents, length, &written, pool);
+    }
 
   return svn_error_trace(
                         svn_error_compose_create(err,

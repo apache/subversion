@@ -678,11 +678,27 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
 /** Create file at utf8-encoded @a file with contents @a contents.
  * @a file must not already exist.
  * Use @a pool for memory allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
+
+/** Create file at utf8-encoded @a file with binary contents @a contents
+ * of @a length bytes.  If the latter is 0 and @a contents is not, @a length
+ * will be set to the C string length of @a contents.
+ * @a file must not already exist.
+ * Use @a pool for memory allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_file_create2(const char *file,
+                    const char *contents,
+                    apr_size_t length,
+                    apr_pool_t *pool);
 
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
