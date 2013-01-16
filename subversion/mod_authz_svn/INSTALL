@@ -144,6 +144,43 @@ II.   Configuration
          NOTE: You should include rules in your authz file to restirct access
          to the authz file as desired.  
 
+      G. Example 7: Authenticated access to "Collection of Repositories"
+
+         The "Collection of Repositories" is filtered based on read access to
+         the root of each repository, i.e. consistent with the directory lists
+         within repositories.  If read access is restricted in repository roots,
+         it is typically desirable to require authentication for "Collection of
+         Repositories" in order to display only those repositories which the 
+         user could successfully navigate into.
+
+         This is accomplished by specifying "Satisfy All" (which is the default
+         setting):
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+           # Implicit Satisfy All
+           Require valid-user
+         </Location>
+         
+         If the same server must be able to serve paths with anonymous access,
+         it can be defined using an additional location.
+         
+         <LocationMatch "^/svn/.+">
+           Satisfy Any
+           Require valid-user
+         </LocationMatch>
+
+         The "Require" statement in the previous example is not strictly
+         needed, but has been included for clarity.
+
+
    2. Specifying permissions
 
       The file format of the access file looks like this:
