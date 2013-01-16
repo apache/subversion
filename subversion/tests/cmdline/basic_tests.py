@@ -2937,7 +2937,6 @@ def quiet_commits(sbox):
 # Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
 # on-disk file if it is case-clashing with intended (non-on-disk) target.
 @Issue(4023)
-@XFail(svntest.main.is_fs_case_insensitive)
 def rm_missing_with_case_clashing_ondisk_item(sbox):
   """rm missing item with case-clashing ondisk item"""
 
@@ -2957,8 +2956,10 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+  # Verify that the casing is not updated, because the path is on-disk.
+  expected_output = [ 'D         %s\n' % iota_path ]
   # 'svn rm' iota, should leave IOTA alone.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'rm', iota_path)
 
   # Test status: the unversioned IOTA should still be there.
