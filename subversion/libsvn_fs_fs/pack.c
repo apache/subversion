@@ -136,7 +136,7 @@ copy_indexes(svn_fs_t *fs,
 
           /* skip first entry if that was duplicated due crossing a
              cluster boundary */
-          if (offset == entry->offset)
+          if (offset > entry->offset)
             continue;
 
           /* process entry while inside the rev file */
@@ -144,6 +144,7 @@ copy_indexes(svn_fs_t *fs,
           if (offset < file_size)
             {
               entry->offset += pack_offset;
+              offset += entry->size;
               SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(proto_l2p_index,
                                                            entry->offset,
                                                            entry->item_index,
