@@ -2992,23 +2992,22 @@ def list_include_externals(sbox):
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 
+@XFail()
 @Issue(4293)  
 def move_with_file_externals(sbox):
   "move with file externals"
 
-  sbox.build(read_only = True)
+  sbox.build()
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
 
-  sbox.simple_propset('svn:externals', repo_url + '/iota@1 iota-1\n' +
-                                       repo_url + '/iota   iota-2\n' +
-                                       repo_url + '/iota   iota-3\n',
-                      '', 'A', 'A/D')
+  sbox.simple_propset('svn:externals', '^/A/mu@1 mu-1\n', 'A/D')
+  sbox.simple_commit()
 
-  # Bring in the file externals
-  sbox.simple_update('')
-  
-  sbox.simple_move('A', 'A_moved')
+  sbox.simple_update()
+  sbox.simple_move('A/D', 'A/D_moved')
+  sbox.simple_commit()
+  sbox.simple_update()
 
 @Issue(4815)
 def pinned_externals(sbox):
