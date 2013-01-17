@@ -8044,12 +8044,16 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
           child_item->info.have_more_work = (child_item->nr_layers > 1);
 
           /* Moved-to can only exist at op_depth > 0. */
+          /* ### Should we really do this for every layer where op_depth > 0
+                 in undefined order? */
           moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL);
           if (moved_to_relpath)
             child_item->info.moved_to_abspath =
               svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
 
           /* Moved-here can only exist at op_depth > 0. */
+          /* ### Should we really do this for every layer where op_depth > 0
+                 in undefined order? */
           child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
         }
 
