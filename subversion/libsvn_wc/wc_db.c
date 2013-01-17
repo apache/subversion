@@ -3449,11 +3449,13 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
+  SVN_ERR(svn_sqlite__get_statement(
+                &stmt, wcroot->sdb,
+                immediates_only 
+                    ? STMT_SELECT_COMMITTABLE_EXTERNALS_IMMEDIATELY_BELOW
+                    : STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                            (immediates_only ? 1 : 0)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
