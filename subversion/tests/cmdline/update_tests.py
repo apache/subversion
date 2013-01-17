@@ -6030,7 +6030,6 @@ def update_deleted(sbox):
                                         None, None, 1,
                                         sbox.ospath('A/B'))
 
-@XFail()
 @Issue(3144,3630)
 # Like update_moved_dir_edited_leaf_del, but with --accept=theirs-conflict
 def break_moved_dir_edited_leaf_del(sbox):
