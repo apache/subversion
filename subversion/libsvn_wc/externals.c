@@ -778,7 +778,7 @@ close_file(void *file_baton,
             content_state = svn_wc_notify_state_changed;
           }
         else if (disk_kind != svn_node_file
-                 || eb->added && disk_kind == svn_node_file)
+                 || (eb->added && disk_kind == svn_node_file))
           {
             /* The node is obstructed; we just change the DB */
             obstructed = TRUE;
