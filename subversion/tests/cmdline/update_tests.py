@@ -5526,7 +5526,7 @@ def update_moved_dir_edited_leaf_del(sbox):
                                      'resolve',
                                      '--recursive',
                                      '--accept=mine-conflict', wc_dir)
-  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.tweak('A/B/E', status='  ', treeconflict=None)
   expected_status.tweak('A/B/E2/alpha', treeconflict='C')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -6085,6 +6085,7 @@ def break_moved_dir_edited_leaf_del(sbox):
                                      'resolve', '--recursive',
                                      '--accept=theirs-conflict', wc_dir)
   expected_status.tweak('A/B/E', status='  ', treeconflict=None, moved_to=None)
+  expected_status.tweak('A/B/E/beta', status='  ')
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
