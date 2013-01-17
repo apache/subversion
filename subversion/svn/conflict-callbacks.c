@@ -42,6 +42,8 @@
 
 #include "svn_private_config.h"
 
+#define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
+
 
 
 struct svn_cl__interactive_conflict_baton_t {
@@ -474,7 +476,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 
   while (TRUE)
     {
-      const char *options[12];  /* size of array must be big enough */
+      const char *options[ARRAY_LEN(text_conflict_options)];
       const char **next_option = options;
       const char *prompt;
       const char *answer;
@@ -492,8 +494,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
             *next_option++ = "r";
 
           if (! desc->is_binary)
-            *next_option++ = "mc";
-            *next_option++ = "tc";
+            {
+              *next_option++ = "mc";
+              *next_option++ = "tc";
+            }
         }
       else
         {
