@@ -65,15 +65,11 @@ typedef enum svn_cl__accept_t
   svn_cl__accept_working,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
-     from the pre-conflict working copy file.
-
-     Note: this is a placeholder, not actually implemented in 1.5. */
+     from the pre-conflict working copy file. */
   svn_cl__accept_mine_conflict,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
-     from the post-conflict base copy file.
-
-     Note: this is a placeholder, not actually implemented in 1.5. */
+     from the post-conflict base copy file. */
   svn_cl__accept_theirs_conflict,
 
   /* Resolve the conflict by taking the entire pre-conflict working
