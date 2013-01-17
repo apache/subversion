@@ -3010,6 +3010,78 @@ def move_with_file_externals(sbox):
   
   sbox.simple_move('A', 'A_moved')
 
+@Issue(4815)
+def pinned_externals(sbox):
+  "pinned external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Create X in r2
+  sbox.simple_copy('A', 'X')
+  sbox.simple_mkdir('Z')
+  sbox.simple_commit('')
+
+  repo_X_mu = repo_url + '/X/mu'
+
+  expected_output = verify.RegexOutput([
+    '^      1 jrandom            .* mu$'
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'list', repo_X_mu, '-v')
+
+  # So, we copied A/mu to X/mu in r2, but its last changed revision is
+  # still r1. It existed as A/mu at r1.
+
+  # In the old format the -r is interpreted like an @1 on checkout.
+
+  sbox.simple_propset('svn:externals',
+                          'old-plain           ' + repo_X_mu + '\n' +
+                          'old-rev       -r 1  ' + repo_X_mu + '\n' +
+                                    repo_X_mu + ' new-plain\n' +
+                          '-r1  ' + repo_X_mu + ' new-rev\n' +
+                                    repo_X_mu + '@1 new-peg\n',
+                      'Z')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/exdir_E/beta'  : Item(status='A '),
+    'A/D/exdir_E/alpha' : Item(status='A '),
+  })
+  expected_error = "svn: E205011: Failure.*externals"
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    # The interesting values
+    'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+
+    # And verifying X
+    'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
+    'X/D/H/chi'         : Item(contents="This is the file 'chi'.\n"),
+    'X/D/H/omega'       : Item(contents="This is the file 'omega'.\n"),
+    'X/D/G/tau'         : Item(contents="This is the file 'tau'.\n"),
+    'X/D/G/pi'          : Item(contents="This is the file 'pi'.\n"),
+    'X/D/G/rho'         : Item(contents="This is the file 'rho'.\n"),
+    'X/D/gamma'         : Item(contents="This is the file 'gamma'.\n"),
+    'X/B/E/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+    'X/B/E/beta'        : Item(contents="This is the file 'beta'.\n"),
+    'X/B/lambda'        : Item(contents="This is the file 'lambda'.\n"),
+    'X/B/F'             : Item(),
+    'X/C'               : Item(),
+    'X/mu'              : Item(contents="This is the file 'mu'.\n"),
+  })
+
+
+  # ### Would be nice if verify update would still verify the result
+  # on exiting with an error. Why would you pass it?
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        expected_error)
+
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+
 ########################################################################
 # Run the tests
 
@@ -3060,6 +3132,7 @@ test_list = [ None,
               duplicate_targets,
               list_include_externals,
               move_with_file_externals,
+              pinned_externals,
              ]
 
 if __name__ == '__main__':
