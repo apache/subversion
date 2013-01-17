@@ -757,6 +757,130 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   return SVN_NO_ERROR;
 }
 
+/* Ask the user what to do about the tree conflict described by DESC.
+ * Return the answer in RESULT. B is the conflict baton for this
+ * conflict resolution session.
+ * SCRATCH_POOL is used for temporary allocations. */
+static svn_error_t *
+handle_tree_conflict(svn_wc_conflict_result_t *result,
+                     const svn_wc_conflict_description2_t *desc,
+                     svn_cl__interactive_conflict_baton_t *b,
+                     apr_pool_t *scratch_pool)
+{
+  const char *prompt
+    = prompt_string(tree_conflict_options, NULL, scratch_pool);
+  const char *readable_desc;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+           &readable_desc, desc, scratch_pool));
+  SVN_ERR(svn_cmdline_fprintf(
+               stderr, scratch_pool,
+               _("Tree conflict on '%s'\n   > %s\n"),
+               svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                 desc->local_abspath,
+                                                 scratch_pool),
+               readable_desc));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (1)
+    {
+      const char *answer;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, iterpool));
+
+      if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s",
+                                      help_string(tree_conflict_options,
+                                                  iterpool)));
+        }
+      if (strcmp(answer, "p") == 0 || strcmp(answer, ":-p") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_postpone;
+          break;
+        }
+      else if (strcmp(answer, "r") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_merged;
+          break;
+        }
+      else if (strcmp(answer, "mc") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_mine_conflict;
+          break;
+        }
+      else if (strcmp(answer, "tc") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_theirs_conflict;
+          break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Ask the user what to do about the obstructed add described by DESC.
+ * Return the answer in RESULT. B is the conflict baton for this
+ * conflict resolution session.
+ * SCRATCH_POOL is used for temporary allocations. */
+static svn_error_t *
+handle_obstructed_add(svn_wc_conflict_result_t *result,
+                      const svn_wc_conflict_description2_t *desc,
+                      svn_cl__interactive_conflict_baton_t *b,
+                      apr_pool_t *scratch_pool)
+{
+  const char *prompt
+    = prompt_string(obstructed_add_options, NULL, scratch_pool);
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_cmdline_fprintf(
+               stderr, scratch_pool,
+               _("Conflict discovered when trying to add '%s'.\n"
+                 "An object of the same name already exists.\n"),
+               svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                 desc->local_abspath,
+                                                 scratch_pool)));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (1)
+    {
+      const char *answer;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, iterpool));
+
+      if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                      help_string(obstructed_add_options,
+                                                  iterpool)));
+        }
+      if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_postpone;
+          break;
+        }
+      if (strcmp(answer, "mf") == 0 || strcmp(answer, ":-)") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_mine_full;
+          break;
+        }
+      if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
+        {
+          result->choice = svn_wc_conflict_choose_theirs_full;
+          break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Implement svn_wc_conflict_resolver_func2_t; resolves based on
    --accept option if given, else by prompting. */
 svn_error_t *
@@ -768,7 +892,6 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 {
   svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
-  apr_pool_t *subpool;
 
   /* Start out assuming we're going to postpone the conflict. */
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
@@ -891,7 +1014,6 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 
   /* We're in interactive mode and either the user gave no --accept
      option or the option did not apply; let's prompt. */
-  subpool = svn_pool_create(scratch_pool);
 
   /* Handle the most common cases, which is either:
 
@@ -901,9 +1023,9 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
   if (((desc->node_kind == svn_node_file)
        && (desc->action == svn_wc_conflict_action_edit)
        && (desc->reason == svn_wc_conflict_reason_edited)))
-    SVN_ERR(handle_text_conflict(*result, desc, b, subpool));
+    SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
   else if (desc->kind == svn_wc_conflict_kind_property)
-    SVN_ERR(handle_prop_conflict(*result, desc, b, subpool));
+    SVN_ERR(handle_prop_conflict(*result, desc, b, scratch_pool));
 
   /*
     Dealing with obstruction of additions can be tricky.  The
@@ -925,107 +1047,16 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
    */
   else if ((desc->action == svn_wc_conflict_action_add)
            && (desc->reason == svn_wc_conflict_reason_obstructed))
-    {
-      const char *answer;
-      const char *prompt
-        = prompt_string(obstructed_add_options, NULL, scratch_pool);
-
-      SVN_ERR(svn_cmdline_fprintf(
-                   stderr, subpool,
-                   _("Conflict discovered when trying to add '%s'.\n"
-                     "An object of the same name already exists.\n"),
-                   svn_cl__local_style_skip_ancestor(b->path_prefix,
-                                                     desc->local_abspath,
-                                                     subpool)));
-
-      while (1)
-        {
-          svn_pool_clear(subpool);
-
-          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
-
-          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
-                                          help_string(obstructed_add_options,
-                                                      subpool)));
-            }
-          if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_postpone;
-              break;
-            }
-          if (strcmp(answer, "mf") == 0 || strcmp(answer, ":-)") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_mine_full;
-              break;
-            }
-          if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_theirs_full;
-              break;
-            }
-        }
-    }
+    SVN_ERR(handle_obstructed_add(*result, desc, b, scratch_pool));
 
   else if (desc->kind == svn_wc_conflict_kind_tree)
-    {
-      const char *answer;
-      const char *prompt
-        = prompt_string(tree_conflict_options, NULL, scratch_pool);
-      const char *readable_desc;
-
-      SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-               &readable_desc, desc, scratch_pool));
-      SVN_ERR(svn_cmdline_fprintf(
-                   stderr, subpool,
-                   _("Tree conflict on '%s'\n   > %s\n"),
-                   svn_cl__local_style_skip_ancestor(b->path_prefix,
-                                                     desc->local_abspath,
-                                                     scratch_pool),
-                   readable_desc));
-
-      while (1)
-        {
-          svn_pool_clear(subpool);
-
-          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
-
-          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s",
-                                          help_string(tree_conflict_options,
-                                                      subpool)));
-            }
-          if (strcmp(answer, "p") == 0 || strcmp(answer, ":-p") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_postpone;
-              break;
-            }
-          else if (strcmp(answer, "r") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_merged;
-              break;
-            }
-          else if (strcmp(answer, "mc") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_mine_conflict;
-              break;
-            }
-          else if (strcmp(answer, "tc") == 0)
-            {
-              (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
-              break;
-            }
-        }
-    }
+    SVN_ERR(handle_tree_conflict(*result, desc, b, scratch_pool));
 
   else /* other types of conflicts -- do nothing about them. */
     {
       (*result)->choice = svn_wc_conflict_choose_postpone;
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
