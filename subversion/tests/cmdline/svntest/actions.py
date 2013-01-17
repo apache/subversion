@@ -838,8 +838,6 @@ def run_and_verify_update(wc_dir_name,
   If ERROR_RE_STRING, the update must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
 
-  Else if ERROR_RE_STRING is None, then:
-
   If OUTPUT_TREE is not None, the subcommand output will be verified
   against OUTPUT_TREE.  If DISK_TREE is not None, the working copy
   itself will be verified against DISK_TREE.  If STATUS_TREE is not
@@ -864,11 +862,13 @@ def run_and_verify_update(wc_dir_name,
 
   if error_re_string:
     rm = re.compile(error_re_string)
+    match = None
     for line in errput:
       match = rm.search(line)
       if match:
-        return
-    raise main.SVNUnmatchedError
+        break
+    if not match:
+      raise main.SVNUnmatchedError
 
   actual = wc.State.from_checkout(output)
   verify_update(actual, None, None, wc_dir_name,
@@ -1171,8 +1171,6 @@ def run_and_verify_patch(dir, patch_path,
   If ERROR_RE_STRING, 'svn patch' must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
 
-  Else if ERROR_RE_STRING is None, then:
-
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be compared.
@@ -1341,7 +1339,6 @@ def run_and_verify_switch(wc_dir_name,
       error_re_string = ".*(" + error_re_string + ")"
     expected_err = verify.RegexOutput(error_re_string, match_all=False)
     verify.verify_outputs(None, None, errput, None, expected_err)
-    return
   elif errput:
     raise verify.SVNUnexpectedStderr(err)
 
@@ -1353,7 +1350,7 @@ def run_and_verify_switch(wc_dir_name,
                 singleton_handler_b, b_baton,
                 check_props)
 
-def process_output_for_commit(output):
+def process_output_for_commit(output, error_re_string):
   """Helper for run_and_verify_commit(), also used in the factory."""
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
@@ -1372,7 +1369,7 @@ def process_output_for_commit(output):
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
-    if not match:
+    if not match and not error_re_string:
       logger.warn("ERROR:  commit did not succeed.")
       logger.warn("The final line from 'svn ci' was:")
       logger.warn(lastline)
@@ -1431,22 +1428,22 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
       error_re_string = ".*(" + error_re_string + ")"
     expected_err = verify.RegexOutput(error_re_string, match_all=False)
     verify.verify_outputs(None, None, errput, None, expected_err)
-    return
 
   # Else not expecting error:
 
   # Convert the output into a tree.
-  output = process_output_for_commit(output)
+  output = process_output_for_commit(output, error_re_string)
   actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
-  try:
-    tree.compare_trees("output", actual, output_tree)
-  except tree.SVNTreeError:
-      verify.display_trees("Output of commit is unexpected",
-                           "OUTPUT TREE", output_tree, actual)
-      _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
-      raise
+  if output_tree:
+    try:
+      tree.compare_trees("output", actual, output_tree)
+    except tree.SVNTreeError:
+        verify.display_trees("Output of commit is unexpected",
+                             "OUTPUT TREE", output_tree, actual)
+        _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
+        raise
 
   # Verify via 'status' command too, if possible.
   if status_tree:
