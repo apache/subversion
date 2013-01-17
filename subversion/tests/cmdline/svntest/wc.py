@@ -421,12 +421,6 @@ class State:
       if line.startswith('DBG:'):
         continue
 
-      # Quit when we hit an externals status announcement.
-      ### someday we can fix the externals tests to expect the additional
-      ### flood of externals status data.
-      if line.startswith('Performing'):
-        break
-
       match = _re_parse_status.search(line)
       if not match or match.group(10) == '-':
 
@@ -451,6 +445,14 @@ class State:
         # ignore non-matching lines, or items that only exist on repos
         continue
 
+      prev_status = None
+      prev_treeconflict = None
+
+      path = to_relpath(match.group('path'))
+      if path in desc:
+        prev_status = desc[path].status
+        prev_treeconflict = desc[path].treeconflict
+
       item = StateItem(status=match.group(1),
                        locked=not_space(match.group(2)),
                        copied=not_space(match.group(3)),
@@ -458,8 +460,10 @@ class State:
                        writelocked=not_space(match.group(5)),
                        treeconflict=not_space(match.group(6)),
                        wc_rev=not_space(match.group('wc_rev')),
+                       prev_status=prev_status,
+                       prev_treeconflict =prev_treeconflict
                        )
-      desc[to_relpath(match.group('path'))] = item
+      desc[path] = item
       last = item
 
     return cls('', desc)
