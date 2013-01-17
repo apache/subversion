@@ -516,46 +516,102 @@ switch_file_external(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Wrappers around svn_wc__external_remove, obtaining and releasing a lock for
+   directory externals */
+static svn_error_t *
+remove_external2(svn_boolean_t *removed,
+                svn_wc_context_t *wc_ctx,
+                const char *wri_abspath,
+                const char *local_abspath,
+                svn_node_kind_t external_kind,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__external_remove(wc_ctx, wri_abspath,
+                                  local_abspath,
+                                  (external_kind == svn_node_none),
+                                  cancel_func, cancel_baton,
+                                  scratch_pool));
+
+  *removed = TRUE;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_external(svn_boolean_t *removed,
+                svn_wc_context_t *wc_ctx,
+                const char *wri_abspath,
+                const char *local_abspath,
+                svn_node_kind_t external_kind,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  *removed = FALSE;
+  switch (external_kind)
+    {
+      case svn_node_dir:
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+            remove_external2(removed,
+                             wc_ctx, wri_abspath,
+                             local_abspath, external_kind,
+                             cancel_func, cancel_baton,
+                             scratch_pool),
+            wc_ctx, local_abspath, FALSE, scratch_pool);
+        break;
+      case svn_node_file:
+      default:
+        SVN_ERR(remove_external2(removed,
+                                 wc_ctx, wri_abspath,
+                                 local_abspath, external_kind,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+        break;
+    }
+
+  *removed = TRUE;
+  return SVN_NO_ERROR;
+}
+
+/* Called when an external that is in the EXTERNALS table is no longer
+   referenced from an svn:externals property */
 static svn_error_t *
 handle_external_item_removal(const svn_client_ctx_t *ctx,
                              const char *defining_abspath,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool)
 {
-  /* This branch is only used when an external is deleted from the
-     repository and the working copy is updated or committed. */
-
   svn_error_t *err;
-  svn_boolean_t lock_existed;
+  svn_node_kind_t external_kind;
   svn_node_kind_t kind;
-  const char *lock_root_abspath = NULL;
+  svn_boolean_t removed = FALSE;
 
   /* local_abspath should be a wcroot or a file external */
+  SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
+                                     ctx->wc_ctx, defining_abspath,
+                                     local_abspath, FALSE,
+                                     scratch_pool, scratch_pool));
+
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
 
-  if (kind != svn_node_none)
+  if (external_kind != kind)
+    external_kind = svn_node_none; /* Only remove the registration */
+
+  err = remove_external(&removed,
+                        ctx->wc_ctx, defining_abspath, local_abspath,
+                        external_kind,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED && removed)
     {
-      SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ctx->wc_ctx,
-                             local_abspath, scratch_pool));
-
-      if (! lock_existed)
-        {
-          SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath,
-                                             ctx->wc_ctx, local_abspath,
-                                             FALSE,
-                                             scratch_pool, scratch_pool));
-        }
+      svn_error_clear(err);
+      err = NULL; /* We removed the working copy, so we can't release the
+                     lock that was stored inside */
     }
-
-  /* We don't use relegate_dir_external() here, because we know that
-     nothing else in this externals description (at least) is
-     going to need this directory, and therefore it's better to
-     leave stuff where the user expects it. */
-  err = svn_wc__external_remove(ctx->wc_ctx, defining_abspath,
-                                local_abspath, (kind == svn_node_none),
-                                ctx->cancel_func, ctx->cancel_baton,
-                                scratch_pool);
 
   if (ctx->notify_func2)
     {
@@ -585,23 +641,6 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
     {
       svn_error_clear(err);
       err = NULL;
-    }
-
-
-  /* Unlock if we acquired the lock */
-  if (lock_root_abspath != NULL)
-    {
-      svn_error_t *err2 = svn_wc__release_write_lock(ctx->wc_ctx,
-                                                     lock_root_abspath,
-                                                     scratch_pool);
-
-      if (err2 && err2->apr_err == SVN_ERR_WC_NOT_LOCKED)
-        {
-          /* We removed the lock by removing the node, how nice! */
-          svn_error_clear(err2);
-        }
-      else
-        err = svn_error_compose_create(err, err2);
     }
 
   return svn_error_trace(err);
@@ -891,8 +930,6 @@ svn_client__handle_externals(apr_hash_t *externals_new,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Parse the old externals. This part will be replaced by reading EXTERNALS
-     from the DB. */
   SVN_ERR(svn_wc__externals_defined_below(&old_external_defs,
                                           ctx->wc_ctx, target_abspath,
                                           scratch_pool, iterpool));
