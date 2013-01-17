@@ -162,6 +162,7 @@ Candidate changes:
      incorrect interoperation with other systems.
    Votes:
      +1: breser
+     +1: rhuijben (even though it only fixes one of the many --git issues)
 
  * r1434128, r1434435, r1434476
    Fix issue #4034, 'blame on files with non-native eol-style sees every
