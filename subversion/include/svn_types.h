@@ -587,7 +587,13 @@ svn_depth_from_word(const char *word);
 
 /** @} */
 
-/** A general subversion directory entry. */
+/** A general subversion directory entry.
+ *
+ * @note To allow for extending the #svn_dirent_t structure in future
+ * releases, always use svn_dirent_create() to allocate the stucture.
+ *
+ * @since New in 1.6.
+ */
 typedef struct svn_dirent_t
 {
   /** node kind */
@@ -619,6 +625,14 @@ svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool);
 
+/**
+ * Create a new svn_dirent_t instance with all values initialized to their
+ * not-available values.
+ *
+ * @since New in 1.8.
+ */
+svn_dirent_t *
+svn_dirent_create(apr_pool_t *result_pool);
 
 
 /** Keyword substitution.

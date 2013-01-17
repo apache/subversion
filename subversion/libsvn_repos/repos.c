@@ -2122,7 +2122,7 @@ svn_repos_stat(svn_dirent_t **dirent,
       return SVN_NO_ERROR;
     }
 
-  ent = apr_pcalloc(pool, sizeof(*ent));
+  ent = svn_dirent_create(pool);
   ent->kind = kind;
 
   if (kind == svn_node_file)
