@@ -432,7 +432,9 @@ def basic_update_corruption(sbox):
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  svntest.actions.run_and_verify_svn("Checkout to wc2", None, [],
+                                     'co', sbox.repo_url, other_wc)
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
