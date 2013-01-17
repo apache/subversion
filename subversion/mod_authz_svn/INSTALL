@@ -156,8 +156,8 @@ II.   Configuration
          the root of each repository, i.e. consistent with the directory lists
          within repositories.  If read access is restricted in repository roots,
          it is typically desirable to require authentication for "Collection of
-         Repositories" in order to display only those repositories which the 
-         user could successfully navigate into.
+         Repositories" in order to ensure that repositories where the user has
+         access are displayed.
 
          This is accomplished by specifying "Satisfy All" (which is the default
          setting):
