@@ -571,7 +571,6 @@ remove_external(svn_boolean_t *removed,
         break;
     }
 
-  *removed = TRUE;
   return SVN_NO_ERROR;
 }
 
