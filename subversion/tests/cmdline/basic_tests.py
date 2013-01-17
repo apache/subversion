@@ -459,10 +459,6 @@ def basic_update_corruption(sbox):
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
-
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
 
@@ -481,11 +477,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
-  # Do the update and check the results in three ways.
+  # Do the update and check the results in four ways.
+  fail_output = wc.State(other_wc, {
+  })
+  fail_status = svntest.actions.get_virginal_state(other_wc, 1)
+  fail_status.tweak('A', '', status='! ', wc_rev=2)
   svntest.actions.run_and_verify_update(other_wc,
-                                        None, # expected_output,
-                                        None, # expected_disk,
-                                        None, # expected_status,
+                                        fail_output,
+                                        expected_disk,
+                                        fail_status,
                                         "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
@@ -496,8 +496,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+
   # This update should succeed.  (Actually, I'm kind of astonished
   # that this works without even an intervening "svn cleanup".)
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
                                         expected_disk,
