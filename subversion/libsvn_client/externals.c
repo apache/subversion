@@ -1125,17 +1125,19 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(pool, external_map);
+  for (hi = apr_hash_first(scratch_pool, external_map);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -1144,6 +1146,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
       const char *defining_abspath = svn__apr_hash_index_val(hi);
       svn_node_kind_t kind;
       svn_opt_revision_t opt_rev;
+      const char *status_path;
 
       svn_pool_clear(iterpool);
 
@@ -1174,8 +1177,17 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                     svn_wc_notify_status_external,
                                     iterpool), iterpool);
 
+      status_path = local_abspath;
+      if (anchor_abspath)
+        {
+          status_path = svn_dirent_join(anchor_relpath,
+                           svn_dirent_skip_ancestor(anchor_abspath,
+                                                    status_path),
+                           iterpool);
+        }
+
       /* And then do the status. */
-      SVN_ERR(svn_client_status5(NULL, ctx, local_abspath, &opt_rev, depth,
+      SVN_ERR(svn_client_status5(NULL, ctx, status_path, &opt_rev, depth,
                                  get_all, update, no_ignore, FALSE, FALSE,
                                  NULL, status_func, status_baton,
                                  iterpool));
