@@ -268,10 +268,10 @@ pack_rev_shard(svn_fs_t *fs,
       SVN_ERR(svn_io_file_close(proto_p2l_index, iterpool));
       
       /* Create the actual index files*/
-      SVN_ERR(svn_fs_fs__l2p_index_create(l2p_index_path,
+      SVN_ERR(svn_fs_fs__l2p_index_create(fs, l2p_index_path,
                                           proto_l2p_index_path,
                                           start_rev, iterpool));
-      SVN_ERR(svn_fs_fs__p2l_index_create(p2l_index_path,
+      SVN_ERR(svn_fs_fs__p2l_index_create(fs, p2l_index_path,
                                           proto_p2l_index_path,
                                           start_rev, iterpool));
 

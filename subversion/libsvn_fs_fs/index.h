@@ -100,7 +100,8 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
  * and so forth.  Use POOL for allocations.
  */
 svn_error_t *
-svn_fs_fs__l2p_index_create(const char *file_name,
+svn_fs_fs__l2p_index_create(svn_fs_t *fs,
+                            const char *file_name,
                             const char *proto_file_name,
                             svn_revnum_t revision,
                             apr_pool_t *pool);
@@ -130,7 +131,8 @@ svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
  * Use POOL for allocations.
  */
 svn_error_t *
-svn_fs_fs__p2l_index_create(const char *file_name,
+svn_fs_fs__p2l_index_create(svn_fs_t *fs,
+                            const char *file_name,
                             const char *proto_file_name,
                             svn_revnum_t revision,
                             apr_pool_t *pool);

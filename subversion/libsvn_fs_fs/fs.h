@@ -105,6 +105,10 @@ extern "C" {
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
+#define CONFIG_SECTION_IO                "io"
+#define CONFIG_OPTION_BLOCK_SIZE         "block-size"
+#define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
+#define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -250,6 +254,15 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
+  /* Rev / pack file read granularity. */
+  apr_int64_t block_size;
+
+  /* Capacity in entries of log-to-phys index pages */
+  apr_int64_t l2p_page_size;
+
+  /* Rev / pack file granularity covered by phys-to-log index pages */
+  apr_int64_t p2l_page_size;
+  
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
