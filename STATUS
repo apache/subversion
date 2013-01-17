@@ -180,16 +180,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.7.x-issue4263
-   Fix svnrdump inability to load dump files with non-LF line endings in
-   'svn:*' properties.
-   Justification:
-     Other tools have had this issue resolved, svnrdump should as well.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4263
-   Votes:
-     +1: breser, danielsh, rhuijben
-
   * r1352031
     Change get-deps.sh to use zlib 1.2.7.
     Justification:
