@@ -3009,7 +3009,7 @@ def move_with_file_externals(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-@Issue(4815)
+@Issue(4185)
 def pinned_externals(sbox):
   "pinned external"
 
