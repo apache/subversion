@@ -351,8 +351,6 @@ switch_file_external(const char *local_abspath,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  const char *dir_abspath;
-  const char *target;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -383,8 +381,6 @@ switch_file_external(const char *local_abspath,
   preserved_exts = *preserved_exts_str
     ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, scratch_pool)
     : NULL;
-
-  svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
 
   {
     const char *wcroot_abspath;
@@ -451,6 +447,10 @@ switch_file_external(const char *local_abspath,
     svn_client__pathrev_t *switch_loc;
     svn_revnum_t revnum;
     apr_array_header_t *inherited_props;
+    const char *dir_abspath;
+    const char *target;
+
+    svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
 
     /* Open an RA session to 'source' URL */
     SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
