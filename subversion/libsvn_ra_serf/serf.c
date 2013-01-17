@@ -803,7 +803,7 @@ path_dirent_walker(void *baton,
     {
       const char *base_name;
 
-      entry = apr_pcalloc(pool, sizeof(*entry));
+      entry = svn_dirent_create(pool);
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
@@ -921,7 +921,7 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
         return svn_error_trace(err);
     }
 
-  dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
+  dwb.entry = svn_dirent_create(pool);
   dwb.supports_deadprop_count = &deadprop_count;
   dwb.result_pool = pool;
   SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));

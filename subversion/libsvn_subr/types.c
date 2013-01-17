@@ -282,6 +282,20 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
 }
 
 svn_dirent_t *
+svn_dirent_create(apr_pool_t *result_pool)
+{
+  svn_dirent_t *new_dirent = apr_pcalloc(result_pool, sizeof(*new_dirent));
+
+  new_dirent->kind = svn_node_unknown;
+  new_dirent->size = SVN_INVALID_FILESIZE;
+  new_dirent->created_rev = SVN_INVALID_REVNUM;
+  new_dirent->time = 0;
+  new_dirent->last_author = NULL;
+
+  return new_dirent;
+}
+
+svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool)
 {

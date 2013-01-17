@@ -1274,7 +1274,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
       name = svn_relpath_canonicalize(name, pool);
-      dirent = apr_palloc(pool, sizeof(*dirent));
+      dirent = svn_dirent_create(pool);
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
       dirent->has_props = has_props;
@@ -1748,7 +1748,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
                                      &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
 
-      the_dirent = apr_palloc(pool, sizeof(*the_dirent));
+      the_dirent = svn_dirent_create(pool);
       the_dirent->kind = svn_node_kind_from_word(kind);
       the_dirent->size = size;/* FIXME: svn_filesize_t */
       the_dirent->has_props = has_props;
