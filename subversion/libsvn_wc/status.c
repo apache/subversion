@@ -1350,7 +1350,7 @@ get_dir_status(const struct walk_status_baton *wb,
   apr_array_header_t *sorted_children;
   apr_array_header_t *collected_ignore_patterns = NULL;
   apr_array_header_t *collected_inherited_ignore_patterns = NULL;
-  apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
   svn_error_t *err;
   int i;
 
@@ -1360,40 +1360,41 @@ get_dir_status(const struct walk_status_baton *wb,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  iterpool = svn_pool_create(subpool);
+  iterpool = svn_pool_create(scratch_pool);
 
-  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, iterpool);
+  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, scratch_pool,
+                            iterpool);
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
-      dirents = apr_hash_make(subpool);
+      dirents = apr_hash_make(scratch_pool);
     }
   else
     SVN_ERR(err);
 
   if (!dir_info)
     SVN_ERR(read_info(&dir_info, local_abspath, wb->db,
-                      subpool, iterpool));
+                      scratch_pool, iterpool));
 
   SVN_ERR(get_repos_root_url_relpath(&dir_repos_relpath, &dir_repos_root_url,
                                      &dir_repos_uuid, dir_info,
                                      parent_repos_relpath,
                                      parent_repos_root_url, parent_repos_uuid,
                                      wb->db, local_abspath,
-                                     subpool, iterpool));
+                                     scratch_pool, iterpool));
 
   /* Create a hash containing all children.  The source hashes
      don't all map the same types, but only the keys of the result
      hash are subsequently used. */
   SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
                                         wb->db, local_abspath,
-                                        subpool, iterpool));
+                                        scratch_pool, iterpool));
 
-  all_children = apr_hash_overlay(subpool, nodes, dirents);
+  all_children = apr_hash_overlay(scratch_pool, nodes, dirents);
   if (apr_hash_count(conflicts) > 0)
-    all_children = apr_hash_overlay(subpool, conflicts, all_children);
+    all_children = apr_hash_overlay(scratch_pool, conflicts, all_children);
 
   /* Handle "this-dir" first. */
   if (! skip_this_dir)
@@ -1449,7 +1450,7 @@ get_dir_status(const struct walk_status_baton *wb,
   /* Walk all the children of this directory. */
   sorted_children = svn_sort__hash(all_children,
                                    svn_sort_compare_items_lexically,
-                                   subpool);
+                                   scratch_pool);
   for (i = 0; i < sorted_children->nelts; i++)
     {
       const void *key;
@@ -1489,12 +1490,12 @@ get_dir_status(const struct walk_status_baton *wb,
                                status_baton,
                                cancel_func,
                                cancel_baton,
-                               subpool,
+                               scratch_pool,
                                iterpool));
     }
 
   /* Destroy our subpools. */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1803,32 +1804,40 @@ make_dir_baton(void **dir_baton,
                const char *path,
                struct edit_baton *edit_baton,
                struct dir_baton *parent_baton,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
+  struct dir_baton *d;
   const char *local_abspath;
   const svn_wc_status3_t *status_in_parent;
+  apr_pool_t *dir_pool;
+
+  if (parent_baton)
+    dir_pool = svn_pool_create(parent_baton->pool);
+  else
+    dir_pool = svn_pool_create(result_pool);
+
+  d = apr_pcalloc(dir_pool, sizeof(*d));
 
   SVN_ERR_ASSERT(path || (! pb));
 
   /* Construct the absolute path of this directory. */
   if (pb)
-    local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
+    local_abspath = svn_dirent_join(eb->anchor_abspath, path, dir_pool);
   else
     local_abspath = eb->anchor_abspath;
 
   /* Finish populating the baton members. */
+  d->pool = dir_pool;
   d->local_abspath = local_abspath;
-  d->name = path ? svn_dirent_basename(path, pool) : NULL;
+  d->name = path ? svn_dirent_basename(path, dir_pool) : NULL;
   d->edit_baton = edit_baton;
   d->parent_baton = parent_baton;
-  d->pool = pool;
-  d->statii = apr_hash_make(pool);
+  d->statii = apr_hash_make(dir_pool);
   d->ood_changed_rev = SVN_INVALID_REVNUM;
   d->ood_changed_date = 0;
-  d->repos_relpath = apr_pstrdup(pool, find_dir_repos_relpath(d, pool));
+  d->repos_relpath = find_dir_repos_relpath(d, dir_pool);
   d->ood_kind = svn_node_dir;
   d->ood_changed_author = NULL;
 
@@ -1885,7 +1894,7 @@ make_dir_baton(void **dir_baton,
                              TRUE, TRUE,
                              hash_stash, d->statii,
                              eb->cancel_func, eb->cancel_baton,
-                             pool));
+                             dir_pool));
 
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->local_abspath,
@@ -2221,6 +2230,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct dir_baton *pb = db->parent_baton;
   struct edit_baton *eb = db->edit_baton;
+  apr_pool_t *scratch_pool = db->pool;
 
   /* If nothing has changed and directory has no out of
      date descendants, return. */
@@ -2235,7 +2245,7 @@ close_directory(void *dir_baton,
       if (db->added)
         {
           repos_node_status = svn_wc_status_added;
-          repos_text_status = svn_wc_status_added;
+          repos_text_status = svn_wc_status_none;
           repos_prop_status = db->prop_changed ? svn_wc_status_added
                               : svn_wc_status_none;
         }
@@ -2260,7 +2270,7 @@ close_directory(void *dir_baton,
           SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath,
                                    repos_node_status, repos_text_status,
                                    repos_prop_status, SVN_INVALID_REVNUM, NULL,
-                                   pool));
+                                   scratch_pool));
         }
       else
         {
@@ -2303,11 +2313,11 @@ close_directory(void *dir_baton,
                             dir_status ? dir_status->repos_root_url : NULL,
                             dir_status ? dir_status->repos_relpath : NULL,
                             dir_status ? dir_status->repos_uuid : NULL,
-                            db->statii, was_deleted, db->depth, pool));
+                            db->statii, was_deleted, db->depth, scratch_pool));
       if (dir_status && is_sendable_status(dir_status, eb->no_ignore,
                                            eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
-                                  dir_status, pool));
+                                  dir_status, scratch_pool));
       apr_hash_set(pb->statii, db->local_abspath, APR_HASH_KEY_STRING, NULL);
     }
   else if (! pb)
@@ -2334,11 +2344,11 @@ close_directory(void *dir_baton,
                                          eb->get_all, eb->no_ignore,
                                          eb->status_func, eb->status_baton,
                                          eb->cancel_func, eb->cancel_baton,
-                                         pool));
+                                         scratch_pool));
                 }
               if (is_sendable_status(tgt_status, eb->no_ignore, eb->get_all))
                 SVN_ERR((eb->status_func)(eb->status_baton, eb->target_abspath,
-                                          tgt_status, pool));
+                                          tgt_status, scratch_pool));
             }
         }
       else
@@ -2350,14 +2360,18 @@ close_directory(void *dir_baton,
                                 eb->anchor_status->repos_root_url,
                                 eb->anchor_status->repos_relpath,
                                 eb->anchor_status->repos_uuid,
-                                db->statii, FALSE, eb->default_depth, pool));
+                                db->statii, FALSE, eb->default_depth,
+                                scratch_pool));
           if (is_sendable_status(eb->anchor_status, eb->no_ignore,
                                  eb->get_all))
             SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
-                                      eb->anchor_status, pool));
+                                      eb->anchor_status, scratch_pool));
           eb->anchor_status = NULL;
         }
     }
+
+  svn_pool_clear(scratch_pool); /* Clear baton and its pool */
+
   return SVN_NO_ERROR;
 }
 
@@ -2475,8 +2489,10 @@ close_file(void *file_baton,
   if (fb->added)
     {
       repos_node_status = svn_wc_status_added;
-      repos_text_status = svn_wc_status_added;
-      repos_prop_status = fb->prop_changed ? svn_wc_status_added : 0;
+      repos_text_status = fb->text_changed ? svn_wc_status_modified
+                                           : 0 /* don't tweak */;
+      repos_prop_status = fb->prop_changed ? svn_wc_status_modified
+                                           : 0 /* don't tweak */;
 
       if (fb->edit_baton->wb.repos_locks)
         {
@@ -2497,9 +2513,12 @@ close_file(void *file_baton,
   else
     {
       repos_node_status = (fb->text_changed || fb->prop_changed)
-                                 ? svn_wc_status_modified : 0;
-      repos_text_status = fb->text_changed ? svn_wc_status_modified : 0;
-      repos_prop_status = fb->prop_changed ? svn_wc_status_modified : 0;
+                                 ? svn_wc_status_modified
+                                 : 0 /* don't tweak */;
+      repos_text_status = fb->text_changed ? svn_wc_status_modified
+                                           : 0 /* don't tweak */;
+      repos_prop_status = fb->prop_changed ? svn_wc_status_modified
+                                           : 0 /* don't tweak */;
     }
 
   return tweak_statushash(fb, NULL, FALSE, fb->edit_baton->db,
