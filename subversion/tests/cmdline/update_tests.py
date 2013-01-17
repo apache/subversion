@@ -5474,6 +5474,7 @@ def update_moved_dir_leaf_del(sbox):
 
 @XFail()
 @Issue(3144,3630)
+# Like break_moved_dir_edited_leaf_del, but with --accept=mine-conflict
 def update_moved_dir_edited_leaf_del(sbox):
   "update locally moved dir with edited leaf del"
   sbox.build()
@@ -6029,6 +6030,63 @@ def update_deleted(sbox):
                                         None, None, 1,
                                         sbox.ospath('A/B'))
 
+@XFail()
+@Issue(3144,3630)
+# Like update_moved_dir_edited_leaf_del, but with --accept=theirs-conflict
+def break_moved_dir_edited_leaf_del(sbox):
+  "break local move of dir with edited leaf del"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(False, 'rm', '-m', 'remove /A/B/E/alpha',
+                       sbox.repo_url + "/A/B/E/alpha")
+  sbox.simple_move("A/B/E", "A/B/E2")
+  svntest.main.file_write(sbox.ospath('A/B/E2/alpha'),
+                          "This is a changed 'alpha'.\n")
+
+  # Produce a tree conflict by updating the working copy to the
+  # revision which removed A/B/E/alpha. The deletion collides with
+  # the local move of A/B/E to A/B/E2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='D'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is a changed 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A/B/E'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='M ', copied='+', wc_rev='-'),
+  })
+  expected_status.remove('A/B/E/alpha')
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C',
+                        moved_to='A/B/E2')
+  expected_status.tweak('A/B/E/beta', status='D ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+  # Now resolve the conflict, using --accept=theirs-conflict.
+  # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
+  # as a copy. The deletion of A/B/E is reverted (unless it has been
+  # replaced by a new A/B/E, which is a different test case).
+  # XFAIL: Currently the move is still recorded after 'svn resolve'.
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve', '--recursive',
+                                     '--accept=theirs-conflict', wc_dir)
+  expected_status.tweak('A/B/E', status='  ', treeconflict=None, moved_to=None)
+  expected_status.tweak('A/B/E2', moved_from=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #######################################################################
 # Run the tests
@@ -6106,6 +6164,7 @@ test_list = [ None,
               update_with_parents_and_exclude,
               update_edit_delete_obstruction,
               update_deleted,
+              break_moved_dir_edited_leaf_del,
              ]
 
 if __name__ == '__main__':
