@@ -2661,7 +2661,6 @@ def commit_include_externals(sbox):
 
 
 @Issue(4252)
-@XFail()
 def include_immediate_dir_externals(sbox):
   "commit --include-externals --depth=immediates"
   # See also comment in append_externals_as_explicit_targets() in
@@ -2752,22 +2751,22 @@ def include_immediate_dir_externals(sbox):
 
   expected_status.tweak(wc_rev='3')
   expected_status.add({
-    'X/XE'              : Item(status='X '),
+    'X/XE'              : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'X/XE/beta'         : Item(status='  ', wc_rev='3'),
+    'X/XE/alpha'        : Item(status='  ', wc_rev='3'),
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, False, wc_dir)
 
-  # svn ps some change X/XE
-  expected_stdout = ["property 'some' set on '" + X_XE + "'\n"]
-
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps', 'some',
-    'change', X_XE)
+  sbox.simple_propset('some', 'change', 'X/XE')
 
   # echo mod >> X/XE/alpha
   main.file_append(X_XE_alpha, 'mod\n')
 
   # svn st X/XE
+  expected_status.tweak('X/XE', status=' M')
+  expected_status.tweak('X/XE/alpha', status='M ')
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
   # Expect only the propset on X/XE to be committed.
@@ -2776,6 +2775,7 @@ def include_immediate_dir_externals(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'X/XE'              : Item(verb='Sending'),
   })
+  expected_status.tweak('X/XE', status='  ', wc_rev=4)
 
   # Currently this fails because nothing is committed.
   #

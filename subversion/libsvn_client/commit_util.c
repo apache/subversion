@@ -1082,6 +1082,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -1153,6 +1154,10 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                                ctx->notify_func2,
                                                ctx->notify_baton2,
                                                iterpool));
+
+      /* Are the remaining items externals with depth empty? */
+      if (i == depth_empty_start)
+        depth = svn_depth_empty;
 
       SVN_ERR(harvest_committables(target_abspath,
                                    *committables, *lock_tokens,

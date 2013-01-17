@@ -906,6 +906,9 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
    as specified by DEPTH; the behavior is the same as that described
    for svn_client_commit4().
 
+   If DEPTH_EMPTY_START is >= 0, all targets after index DEPTH_EMPTY_START
+   in TARGETS are handled as having svn_depth_empty.
+
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
@@ -922,6 +925,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
