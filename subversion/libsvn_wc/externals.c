@@ -414,6 +414,9 @@ struct edit_baton
   svn_revnum_t recorded_peg_revision;
   svn_revnum_t recorded_revision;
 
+  /* Introducing a new file external */
+  svn_boolean_t added;
+
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
   svn_cancel_func_t cancel_func;
@@ -491,6 +494,7 @@ add_file(const char *path,
 
   *file_baton = eb;
   eb->original_revision = SVN_INVALID_REVNUM;
+  eb->added = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -773,7 +777,8 @@ close_file(void *file_baton,
             install_pristine = TRUE;
             content_state = svn_wc_notify_state_changed;
           }
-        else if (disk_kind != svn_node_file)
+        else if (disk_kind != svn_node_file
+                 || eb->added && disk_kind == svn_node_file)
           {
             /* The node is obstructed; we just change the DB */
             obstructed = TRUE;
@@ -911,7 +916,7 @@ close_file(void *file_baton,
       svn_wc_notify_action_t action;
       svn_wc_notify_t *notify;
 
-      if (SVN_IS_VALID_REVNUM(eb->original_revision))
+      if (!eb->added)
         action = obstructed ? svn_wc_notify_update_shadowed_update
                             : svn_wc_notify_update_update;
       else

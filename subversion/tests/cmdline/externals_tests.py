@@ -2992,8 +2992,7 @@ def list_include_externals(sbox):
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 
-@XFail()
-@Issue(4293)  
+@Issue(4293)
 def move_with_file_externals(sbox):
   "move with file externals"
 
