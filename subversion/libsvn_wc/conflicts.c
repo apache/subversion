@@ -1386,7 +1386,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
       *conflict_remains = TRUE;
       return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                               NULL, _("Conflict callback violated API:"
-                                      " returned no results."));
+                                      " returned no results"));
     }
 
 
@@ -1428,7 +1428,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
             return svn_error_create
                 (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                  NULL, _("Conflict callback violated API:"
-                         " returned no merged file."));
+                         " returned no merged file"));
           else
             {
               svn_stringbuf_t *merged_stringbuf;
@@ -1713,8 +1713,8 @@ resolve_text_conflicts(svn_skel_t **work_items,
                         scratch_pool));
   if (result == NULL)
     return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                            _("Conflict callback violated API: "
-                              "returned no results"));
+                            _("Conflict callback violated API:"
+                              " returned no results"));
 
   if (result->save_merged)
     {
