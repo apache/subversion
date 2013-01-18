@@ -2023,9 +2023,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                       compatible_version->patch))
             {
               err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                      _("Cannot guaranteed compatibility "
+                                      _("Cannot guarantee compatibility "
                                         "beyond the current running version "
-                                        "(" SVN_VER_NUM ")"));
+                                        "(%s)"),
+                                      SVN_VER_NUM );
               return EXIT_ERROR(err);
             }
 
