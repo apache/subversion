@@ -183,6 +183,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1435361
+   JavaHL status API does not respect the ignoreExternals boolean.
+   Justification:
+     The API does not work properly and the fix was obvious.
+   Votes:
+     +1: markphip
+
 Veto-blocked changes:
 =====================
 
