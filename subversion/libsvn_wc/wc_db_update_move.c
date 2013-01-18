@@ -138,11 +138,14 @@ mark_tree_conflict(struct tc_editor_baton *b,
                    svn_node_kind_t new_kind,
                    svn_wc_conflict_reason_t reason,
                    svn_wc_conflict_action_t action,
+                   svn_skel_t *conflict,
                    apr_pool_t *scratch_pool)
 {
   const char *repos_relpath;
-  svn_skel_t *conflict = svn_wc__conflict_skel_create(scratch_pool);
   svn_wc_conflict_version_t *old_version, *new_version;
+
+  if (!conflict)
+    conflict = svn_wc__conflict_skel_create(scratch_pool);
 
   b->conflict_root_relpath = apr_pstrdup(b->result_pool, local_relpath);
 
@@ -269,8 +272,22 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                                             scratch_pool, scratch_pool));
 
   if (conflict)
-    /* ### TODO: check this is the right sort of tree-conflict? */
-    return SVN_NO_ERROR;
+    {
+      svn_error_t *err
+        = svn_wc__conflict_read_tree_conflict(NULL, NULL, 
+                                              b->db, b->wcroot->abspath,
+                                              conflict,
+                                              scratch_pool, scratch_pool);
+      if (err && err->apr_err != SVN_ERR_WC_MISSING)
+        return err;
+
+      if (!err)
+        /* Already a tree-conflict. */
+        return SVN_NO_ERROR;
+
+      /* Not a tree-conflict. */
+      svn_error_clear(err);
+    }
 
   SVN_ERR(svn_wc__db_scan_deletion_internal(NULL, &moved_to_relpath,
                                             NULL, NULL,
@@ -281,7 +298,7 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                              (moved_to_relpath
                               ? svn_wc_conflict_reason_moved_away
                               : svn_wc_conflict_reason_deleted),
-                             action,
+                             action, conflict,
                              scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -323,7 +340,7 @@ tc_editor_add_directory(void *baton,
     default:
       SVN_ERR(mark_tree_conflict(b, relpath, kind, svn_node_dir,
                                  svn_wc_conflict_reason_unversioned,
-                                 svn_wc_conflict_action_add,
+                                 svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
       break;
 
@@ -377,7 +394,7 @@ tc_editor_add_file(void *baton,
     {
       SVN_ERR(mark_tree_conflict(b, relpath, kind, svn_node_file,
                                  svn_wc_conflict_reason_unversioned,
-                                 svn_wc_conflict_action_add,
+                                 svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
       return SVN_NO_ERROR;
     }
