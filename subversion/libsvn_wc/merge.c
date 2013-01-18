@@ -99,39 +99,48 @@ get_prop(const apr_array_header_t *prop_diff,
 
    Effect for svn:mime-type:
 
-     The value for svn:mime-type affects the translation wrt keywords
-     and eol-style settings.
+     If svn:mime-type is considered 'binary', we ignore svn:eol-style (but
+     still translate keywords).
 
      I) both old and new mime-types are texty
         -> just do the translation dance (as lined out below)
+           ### actually we do a shortcut with just one translation:
+           detranslate with the old keywords and ... eol-style
+           (the new re+detranslation is a no-op w.r.t. keywords [1])
 
      II) the old one is texty, the new one is binary
         -> detranslate with the old eol-style and keywords
-           (the new re+detranslation is a no-op)
+           (the new re+detranslation is a no-op [1])
 
      III) the old one is binary, the new one texty
-        -> detranslate with the new eol-style
-           (the old detranslation is a no-op)
+        -> detranslate with the old keywords and new eol-style
+           (the old detranslation is a no-op w.r.t. eol, and
+            the new re+detranslation is a no-op w.r.t. keywords [1])
 
      IV) the old and new ones are binary
-        -> don't detranslate, just make a straight copy
-
+        -> detranslate with the old keywords
+           (the new re+detranslation is a no-op [1])
 
    Effect for svn:eol-style
 
-     I) On add or change use the new value
+     I) On add or change of svn:eol-style, use the new value
 
      II) otherwise: use the old value (absent means 'no translation')
 
-
    Effect for svn:keywords
 
-     Always use old settings (re+detranslation are no-op)
+     Always use the old settings (re+detranslation are no-op [1]).
 
+     [1] Translation of keywords from repository normal form to WC form and
+         back is normally a no-op, but is not a no-op if text contains a kw
+         that is only enabled by the new props and is present in non-
+         contracted form (such as "$Rev: 1234 $").  If we want to catch this
+         case we should detranslate with both the old & the new keywords
+         together.
 
    Effect for svn:special
 
-     Always use the old settings (same reasons as for svn:keywords)
+     Always use the old settings (re+detranslation are no-op).
 
   Sets *DETRANSLATED_ABSPATH to the path to the detranslated file,
   this may be the same as SOURCE_ABSPATH if FORCE_COPY is FALSE and no
@@ -173,18 +182,22 @@ detranslate_wc_file(const char **detranslated_abspath,
     new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
   }
 
-  /* See if we need to do a straight copy: old and new mime-types are binary */
+  /* See what translations we want to do */
   if (old_is_binary && new_is_binary)
     {
-      /* this is case IV above */
-      keywords = NULL;
+      /* Case IV. Old and new props 'binary': detranslate keywords only */
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, &keywords, NULL,
+                                         mt->db, mt->local_abspath,
+                                         mt->old_actual_props, TRUE,
+                                         scratch_pool, scratch_pool));
+      /* ### Why override 'special'? Elsewhere it has precedence. */
       special = FALSE;
       eol = NULL;
       style = svn_subst_eol_style_none;
     }
   else if (!old_is_binary && new_is_binary)
     {
-      /* Old props indicate texty, new props indicate binary:
+      /* Case II. Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
       SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                          &keywords,
@@ -195,7 +208,7 @@ detranslate_wc_file(const char **detranslated_abspath,
     }
   else
     {
-      /* New props indicate texty, regardless of old props */
+      /* Case I & III. New props indicate texty, regardless of old props */
 
       /* In case the file used to be special, detranslate specially */
       SVN_ERR(svn_wc__get_translate_info(&style, &eol,
@@ -230,11 +243,6 @@ detranslate_wc_file(const char **detranslated_abspath,
               eol = NULL;
               style = svn_subst_eol_style_none;
             }
-
-          /* In case there were keywords, detranslate with keywords
-             (iff we were texty) */
-          if (old_is_binary)
-            keywords = NULL;
         }
     }
 

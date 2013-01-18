@@ -17872,11 +17872,11 @@ def merge_with_externals_with_mergeinfo(sbox):
     A_path)
 
 #----------------------------------------------------------------------
-# Test for issue #4221 'Trivial merge of a binary file with svn:keywords
-# raises a conflict'.
+# Test merging 'binary' files with keyword expansion enabled.
+# Tests issue #4221 'Trivial merge of a binary file with svn:keywords
+# raises a conflict', among other cases.
 @SkipUnless(server_has_mergeinfo)
 @Issue(4221)
-@XFail()
 def merge_binary_file_with_keywords(sbox):
   "merge binary file with keywords"
 
@@ -17884,32 +17884,66 @@ def merge_binary_file_with_keywords(sbox):
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  # make a 'binary' file with keyword expansion enabled
-  svntest.main.file_write('foo', "Line 1 with $Revision: $ keyword.\n")
-  sbox.simple_add('foo')
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'foo')
-  sbox.simple_propset('svn:keywords', 'Revision', 'foo')
+  # Some binary files, and some binary files that will become text files.
+  # 'mod_src' means a content change on the branch (the merge source);
+  # 'mod_tgt' means a content change on the original (the merge target);
+  # 'to_txt' means svn:mime-type removed on the branch (the merge source).
+  file_mod_both           = 'A/B/E/alpha'
+  file_mod_src            = 'A/D/G/pi'
+  file_mod_tgt            = 'A/D/G/rho'
+  file_mod_none           = 'A/D/G/tau'
+  file_mod_both_to_txt    = 'A/B/E/beta'
+  file_mod_src_to_txt     = 'A/D/H/chi'
+  file_mod_tgt_to_txt     = 'A/D/H/psi'
+  file_mod_none_to_txt    = 'A/D/H/omega'
+  files_bin = [ file_mod_both, file_mod_src, file_mod_tgt, file_mod_none ]
+  files_txt = [ file_mod_both_to_txt, file_mod_src_to_txt,
+                file_mod_tgt_to_txt, file_mod_none_to_txt ]
+  files = files_bin + files_txt
+
+  # make some 'binary' files with keyword expansion enabled
+  for f in files:
+    svntest.main.file_append(sbox.ospath(f), "With $Revision: $ keyword.\n")
+    sbox.simple_propset('svn:mime-type', 'application/octet-stream', f)
+    sbox.simple_propset('svn:keywords', 'Revision', f)
   sbox.simple_commit()
 
-  # branch the file
-  sbox.simple_copy('foo', 'bar')
-  sbox.simple_commit()
+  # branch the files
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_update()
 
-  # modify the branched version (although the bug shows even if we modify
-  # just the original version -- or neither, which is a completely
-  # degenerate 'merge' case)
-  # ### Perhaps a dir merge would behave differently from a single-file merge?
-  svntest.main.file_append('bar', "Line 2.\n")
+  # Modify the branched (source) and/or original (target) versions. Remove
+  # the svn:mime-type from the 'to_txt' files on the branch.
+  # The original bug in issue #4221 gave a conflict if we modified either
+  # version or neither (using a single-file merge test case).
+  for f in [ file_mod_both, file_mod_both_to_txt,
+             file_mod_src, file_mod_src_to_txt ]:
+    f_branch = 'A2' + f[1:]
+    svntest.main.file_append(sbox.ospath(f_branch), "Incoming mod.\n")
+  for f in [ file_mod_both, file_mod_both_to_txt,
+             file_mod_tgt, file_mod_tgt_to_txt ]:
+    svntest.main.file_append(sbox.ospath(f), "Mod on merge target.\n")
+  for f in files_txt:
+    f_branch = 'A2' + f[1:]
+    sbox.simple_propdel('svn:mime-type', f_branch)
   sbox.simple_commit()
+  sbox.simple_update()
 
   # merge back
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[3,4]],
-                          ['U    foo\n',
-                           ' U   foo\n'],
-                          target='foo'),
-    [], 'merge', '^/bar', 'foo')
+                          ['C    ' + sbox.ospath(file_mod_both) + '\n',
+                           'U    ' + sbox.ospath(file_mod_src) + '\n',
+                          #'     ' + sbox.ospath(file_mod_tgt) + '\n',
+                          #'     ' + sbox.ospath(file_mod_none) + '\n',
+                           'CU   ' + sbox.ospath(file_mod_both_to_txt) + '\n',
+                           'UU   ' + sbox.ospath(file_mod_src_to_txt) + '\n',
+                           ' U   ' + sbox.ospath(file_mod_tgt_to_txt) + '\n',
+                           ' U   ' + sbox.ospath(file_mod_none_to_txt) + '\n',
+                           ' U   A\n'],
+                          text_conflicts=2),
+    [], 'merge', '^/A2', 'A')
 
 #----------------------------------------------------------------------
 # Test for issue #4155 'Merge conflict text of expanded keyword incorrect
