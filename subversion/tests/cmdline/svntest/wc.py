@@ -96,6 +96,7 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
 
 _re_parse_status_ex = re.compile('^      ('
                '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+              '|(  \> swapped place with (?P<swapped_with>.+).*)'
               '|(\>   (?P<tc>.+))'
   ')$')
 
@@ -439,6 +440,13 @@ class State:
               path = path[len(wc_dir_name) + 1:]
             
             last.tweak(moved_to = to_relpath(path))
+          elif ex_match.group('swapped_with'):
+            path = ex_match.group('swapped_with')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_to = to_relpath(path))
+            last.tweak(moved_from = to_relpath(path))
 
           # Parse TC description?
 

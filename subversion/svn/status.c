@@ -288,7 +288,21 @@ print_status(const char *cwd_abspath, const char *path,
   /* Note that moved-from and moved-to information is only available in STATUS
    * for (op-)roots of a move. Those are exactly the nodes we want to show
    * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
-  if (status->moved_from_abspath || status->moved_to_abspath)
+  if (status->moved_from_abspath && status->moved_to_abspath &&
+      strcmp(status->moved_from_abspath, status->moved_to_abspath) == 0)
+    {
+      const char *relpath;
+
+      relpath = make_relpath(cwd_abspath, status->moved_from_abspath,
+                             pool, pool);
+      relpath = svn_dirent_local_style(relpath, pool);
+      moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                    apr_psprintf(pool,
+                                                 _("swapped place with %s"),
+                                                 relpath),
+                                    (char *)NULL);
+    }
+  else if (status->moved_from_abspath || status->moved_to_abspath)
     {
       const char *relpath;
 
