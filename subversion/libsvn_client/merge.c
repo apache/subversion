@@ -275,13 +275,6 @@ typedef struct merge_cmd_baton_t {
 
   svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
-  /* Whether invocation of the merge_file_added() callback required
-     delegation to the merge_file_changed() function for the file
-     currently being merged.  This info is used to detect whether a
-     file on the left side of a 3-way merge actually exists (important
-     because it's created as an empty temp file on disk regardless).*/
-  svn_boolean_t add_necessitated_merge;
-
   /* The list of paths for entries we've deleted, used only when in
      dry_run mode. */
   apr_hash_t *dry_run_deletions;
@@ -9153,7 +9146,6 @@ do_merge(apr_hash_t **modified_subtrees,
          be reset for each merge source iteration. */
       merge_cmd_baton.merge_source = *source;
       merge_cmd_baton.implicit_src_gap = NULL;
-      merge_cmd_baton.add_necessitated_merge = FALSE;
       merge_cmd_baton.dry_run_deletions =
         dry_run ? apr_hash_make(iterpool) : NULL;
       merge_cmd_baton.dry_run_added =
