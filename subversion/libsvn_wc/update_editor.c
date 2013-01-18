@@ -1322,14 +1322,14 @@ modcheck_callback(void *baton,
  * is set to true and all the local modifications were deletes then set
  * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
  * may be a file or a directory. */
-static svn_error_t *
-node_has_local_mods(svn_boolean_t *modified,
-                    svn_boolean_t *all_edits_are_deletes,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
 {
   modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
   svn_error_t *err;
@@ -1496,10 +1496,10 @@ check_tree_conflict(svn_skel_t **pconflict,
          * not visit the subdirectories of a directory that it wants to delete.
          * Therefore, we need to start a separate crawl here. */
 
-        SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes,
-                                    eb->db, local_abspath,
-                                    eb->cancel_func, eb->cancel_baton,
-                                    scratch_pool));
+        SVN_ERR(svn_wc__node_has_local_mods(&modified, &all_mods_are_deletes,
+                                            eb->db, local_abspath,
+                                            eb->cancel_func, eb->cancel_baton,
+                                            scratch_pool));
 
         if (modified)
           {

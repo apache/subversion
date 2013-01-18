@@ -843,6 +843,52 @@ tc_editor_delete(void *baton,
                               svn_wc_conflict_action_delete,
                               scratch_pool));
 
+  if (!is_conflicted)
+    {
+      svn_boolean_t is_modified, is_all_deletes;
+
+      SVN_ERR(svn_wc__node_has_local_mods(&is_modified, &is_all_deletes, b->db,
+                                          svn_dirent_join(b->wcroot->abspath,
+                                                          relpath,
+                                                          scratch_pool),
+                                          NULL, NULL, scratch_pool));
+      if (is_modified)
+        {
+          /* No conflict means no NODES rows at the relpath op-depth
+             so it's easy to convert the modified tree into a copy. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                            STMT_UPDATE_OP_DEPTH_RECURSIVE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
+                                    op_depth, relpath_depth(relpath)));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
+          SVN_ERR(mark_tree_conflict(b, relpath,
+                                     /* ### kinds? */
+                                     svn_node_dir, svn_node_dir,
+                                     svn_wc_conflict_reason_edited,
+                                     svn_wc_conflict_action_delete, NULL,
+                                     scratch_pool));
+          is_conflicted = TRUE;
+        }
+      else if (is_all_deletes)
+        {
+          SVN_ERR(mark_tree_conflict(b, relpath,
+                                     /* ### kinds? */
+                                     svn_node_dir, svn_node_dir,
+                                     svn_wc_conflict_reason_deleted,
+                                     svn_wc_conflict_action_delete, NULL,
+                                     scratch_pool));
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                          STMT_DELETE_WORKING_OP_DEPTH_ABOVE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+                                    op_depth));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
+          is_conflicted = TRUE;
+        }
+    }
+
   /* Deleting the ROWS is valid so long as we update the parent before
      committing the transaction. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
@@ -1047,7 +1093,7 @@ get_info(apr_hash_t **props,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      *kind = svn_node_none;
+      *kind = svn_kind_none;
     }
   else
     SVN_ERR(err);
