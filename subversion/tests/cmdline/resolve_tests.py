@@ -579,6 +579,34 @@ def theirs_conflict_in_subdir(sbox):
                                          '--accept=theirs-conflict',
                                          alpha_path2)
 
+#----------------------------------------------------------------------
+
+# Regression test for issue #4238 "merge -cA,B with --accept option aborts
+# if rA conflicts".
+@Issue(4238)
+@XFail()
+def multi_range_merge_with_accept(sbox):
+  "multi range merge with --accept keeps going"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Commit some changes
+  for c in [2, 3, 4]:
+    svntest.main.file_append('iota', 'Change ' + str(c) + '\n')
+    sbox.simple_commit()
+
+  sbox.simple_update(revision=1)
+
+  # The bug: with a request to merge -c4 then -c3, it merges -c4 which
+  # conflicts then auto-resolves the conflict, then errors out with
+  # 'svn: E155035: Can't merge into conflicted node 'iota'.
+  # ### We need more checking of the result to make this test robust, since
+  #     it may not always just error out.
+  svntest.main.run_svn(None, 'merge', '-c4,3', '^/iota', 'iota',
+                       '--accept=theirs-conflict')
+
 
 ########################################################################
 # Run the tests
@@ -591,6 +619,7 @@ test_list = [ None,
               resolved_on_wc_root,
               resolved_on_deleted_item,
               theirs_conflict_in_subdir,
+              multi_range_merge_with_accept,
              ]
 
 if __name__ == '__main__':
