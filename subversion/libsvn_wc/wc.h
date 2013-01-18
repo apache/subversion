@@ -783,6 +783,15 @@ svn_wc__revert_internal(svn_wc__db_t *db,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

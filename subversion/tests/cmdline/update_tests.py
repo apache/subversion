@@ -5462,14 +5462,15 @@ def update_moved_dir_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-  # Now resolve the conflict, using --accept=mine-conflict.
-  # This should apply the update to A/B/E2, deleting A/B/E2/alpha.
+  # Now resolve the conflict, using --accept=mine-conflict applying
+  # the update to A/B/E2 causing a delete-delete conflict
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
-                                     '--recursive',
-                                     '--accept=mine-conflict', wc_dir)
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', treeconflict=None)
-  expected_status.remove('A/B/E2/alpha')
+  expected_status.tweak('A/B/E2/alpha', status='? ', treeconflict='C',
+                        copied=None, wc_rev=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
@@ -5581,8 +5582,8 @@ def update_moved_dir_file_add(sbox):
   # This should apply the update to A/B/E2, adding A/B/E2/foo.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
-                                     '--recursive',
-                                     '--accept=mine-conflict', wc_dir)
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
   # the incoming file should auto-merge
   expected_status.tweak('A/B/E', treeconflict=None)
   expected_status.add({
@@ -5697,15 +5698,15 @@ def update_moved_dir_file_move(sbox):
 
   # The incoming change is a delete as we don't yet track server-side
   # moves.  Resolving the tree-conflict as "mine-conflict" applies the
-  # delete to the move destination.  This is effectively accepting the
-  # move from the server.
+  # delete to the move destination creating a delete-delete conflict.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
-                                     '--recursive',
-                                     '--accept=mine-conflict', wc_dir)
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
 
   expected_status.tweak('A/B/E', treeconflict=None)
-  expected_status.remove('A/B/E2/alpha')
+  expected_status.tweak('A/B/E2/alpha', status='? ', treeconflict='C',
+                        copied=None, wc_rev=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
