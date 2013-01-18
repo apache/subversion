@@ -1450,8 +1450,8 @@ WHERE wc_id = ?1 AND op_depth > 0
   AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 /* This statement returns pairs of paths that define a move where the
-   destination of the move is within the subtree rooted at path ?2 in
-   WC_ID ?1. */
+   destination of the move is within the subtree rooted at path ?2 or
+   the source of the move is within the subtree rooted at path ?2 */
 -- STMT_SELECT_MOVED_PAIR
 SELECT local_relpath, moved_to, op_depth FROM nodes_current
 WHERE wc_id = ?1
