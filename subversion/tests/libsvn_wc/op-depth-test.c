@@ -5734,7 +5734,7 @@ nested_moves2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "D",           "normal",       1, "A/A/A/A", MOVED_HERE},
       {1, "D/A",         "normal",       1, "A/A/A/A/A", MOVED_HERE},
       {1, "D/A/A",       "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
-      {3, "D/A/A",       "base-deleted", NO_COPY_FROM, "E"},  /* XFAIL */
+      {3, "D/A/A",       "base-deleted", NO_COPY_FROM, "C"},  /* XFAIL */
       {1, "C",           "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
       {0}
     };
