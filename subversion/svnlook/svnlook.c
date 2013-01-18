@@ -2658,10 +2658,10 @@ main(int argc, const char *argv[])
                                             pool);
               if (err)
                 return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
-              svn_error_clear
-                (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
-                                     first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
