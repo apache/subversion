@@ -5728,13 +5728,13 @@ nested_moves2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "E/A/A",       "normal",       1, "A/A/A/A", MOVED_HERE},
       {1, "E/A/A/A",     "normal",       1, "A/A/A/A/A", MOVED_HERE},
       {1, "E/A/A/A/A",   "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
-      {3, "E/A/A",       "base-deleted", NO_COPY_FROM, "D"},  /* XFAIL */
+      {3, "E/A/A",       "base-deleted", NO_COPY_FROM, "D"},
       {3, "E/A/A/A",     "base-deleted", NO_COPY_FROM},
       {3, "E/A/A/A/A",   "base-deleted", NO_COPY_FROM},
       {1, "D",           "normal",       1, "A/A/A/A", MOVED_HERE},
       {1, "D/A",         "normal",       1, "A/A/A/A/A", MOVED_HERE},
       {1, "D/A/A",       "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
-      {3, "D/A/A",       "base-deleted", NO_COPY_FROM, "C"},  /* XFAIL */
+      {3, "D/A/A",       "base-deleted", NO_COPY_FROM, "C"},
       {1, "C",           "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
       {0}
     };
@@ -5852,7 +5852,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_conflicts"),
     SVN_TEST_OPTS_PASS(move_update_delete_mods,
                        "move_update_delete_mods"),
-    SVN_TEST_OPTS_XFAIL(nested_moves2,
+    SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
     SVN_TEST_NULL
   };
