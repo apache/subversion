@@ -173,9 +173,7 @@ detranslate_wc_file(const char **detranslated_abspath,
     new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
   }
 
-  /* See if we need to do a straight copy:
-     - old and new mime-types are binary, or
-     - old mime-type is binary and no new mime-type specified */
+  /* See if we need to do a straight copy: old and new mime-types are binary */
   if (old_is_binary && new_is_binary)
     {
       /* this is case IV above */
