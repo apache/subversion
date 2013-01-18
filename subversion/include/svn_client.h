@@ -3510,7 +3510,7 @@ svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               const char *target_wcpath,
                               svn_depth_t depth,
-                              svn_boolean_t force,
+                              svn_boolean_t force_delete,
                               svn_boolean_t record_only,
                               svn_boolean_t dry_run,
                               const apr_array_header_t *merge_options,
@@ -3594,10 +3594,10 @@ svn_client_automatic_merge_get_locations(
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
- * If @a force is false and the merge involves deleting a file whose
+ * If @a force_delete is false and the merge involves deleting a file whose
  * content differs from the source-left version, or a locally modified
  * directory, or an unversioned item, then the operation will fail.  If
- * @a force is true then all such items will be deleted.
+ * @a force_delete is true then all such items will be deleted.
  *
  * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge
@@ -3633,7 +3633,7 @@ svn_client_merge4(const char *source1,
                   const char *target_wcpath,
                   svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
-                  svn_boolean_t force,
+                  svn_boolean_t force_delete,
                   svn_boolean_t record_only,
                   svn_boolean_t dry_run,
                   svn_boolean_t allow_mixed_rev,
@@ -3643,7 +3643,8 @@ svn_client_merge4(const char *source1,
 
 /**
  * Similar to svn_client_merge4(), but with @a allow_mixed_rev set to
- * @c TRUE.
+ * @c TRUE.  The @a force parameter maps to the @c force_delete parameter
+ * of svn_client_merge4().
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
@@ -3792,7 +3793,7 @@ svn_client_merge_peg4(const char *source_path_or_url,
                       const char *target_wcpath,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,
-                      svn_boolean_t force,
+                      svn_boolean_t force_delete,
                       svn_boolean_t record_only,
                       svn_boolean_t dry_run,
                       svn_boolean_t allow_mixed_rev,
@@ -3802,7 +3803,8 @@ svn_client_merge_peg4(const char *source_path_or_url,
 
 /**
  * Similar to svn_client_merge_peg4(), but with @a allow_mixed_rev set to
- * @c TRUE.
+ * @c TRUE.  The @a force parameter maps to the @c force_delete parameter
+ * of svn_client_merge_peg4().
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
