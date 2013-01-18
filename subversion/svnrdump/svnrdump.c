@@ -1039,9 +1039,10 @@ main(int argc, const char **argv)
               err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
               if (err)
                 return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               exit(EXIT_FAILURE);

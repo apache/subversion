@@ -492,9 +492,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               os->ind++;
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  ("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    ("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }

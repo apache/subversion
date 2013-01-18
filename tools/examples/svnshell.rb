@@ -125,7 +125,7 @@ class SvnShell
         puts("Invalid argument for #{cmd}: #{args.join(' ')}")
       end
     else
-      puts("Unknown command: #{cmd}")
+      puts("Unknown subcommand: #{cmd}")
       puts("Try one of these commands: ", WORDS.sort.join(" "))
     end
   end

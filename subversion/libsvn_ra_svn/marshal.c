@@ -1799,7 +1799,7 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                  _("Unknown command '%s'"), cmdname);
+                                  _("Unknown editor command '%s'"), cmdname);
           err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
         }
 

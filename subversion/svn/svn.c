@@ -2292,7 +2292,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                                   first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
+                                     _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
               svn_cl__help(NULL, NULL, pool);
               return EXIT_FAILURE;

@@ -1306,4 +1306,4 @@ if __name__ == '__main__':
       usage()
 
   else:
-    usage('Unknown command argument: %s' % cmd)
+    usage('Unknown subcommand argument: %s' % cmd)
