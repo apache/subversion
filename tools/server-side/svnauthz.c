@@ -141,6 +141,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    3   when --is argument doesn't match\n"
     ),
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is} },
+  { NULL, NULL, {0}, NULL, {0} }
 };
 
 static svn_error_t *
