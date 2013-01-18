@@ -5690,6 +5690,59 @@ move_update_delete_mods(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+nested_moves2(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "nested_moves2", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_move(&b, "A/A/A/A/A/A", "C"));
+  SVN_ERR(sbox_wc_move(&b, "A/A/A/A", "D"));
+  SVN_ERR(sbox_wc_move(&b, "A/A", "E"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",            "normal",       0, ""},
+      {0, "A",           "normal",       1, "A"},
+      {0, "A/A",         "normal",       1, "A/A"},
+      {0, "A/A/A",       "normal",       1, "A/A/A"},
+      {0, "A/A/A/A",     "normal",       1, "A/A/A/A"},
+      {0, "A/A/A/A/A",   "normal",       1, "A/A/A/A/A"},
+      {0, "A/A/A/A/A/A", "normal",       1, "A/A/A/A/A/A"},
+      {2, "A/A",         "base-deleted", NO_COPY_FROM, "E"},
+      {2, "A/A/A",       "base-deleted", NO_COPY_FROM},
+      {2, "A/A/A/A",     "base-deleted", NO_COPY_FROM},
+      {2, "A/A/A/A/A",   "base-deleted", NO_COPY_FROM},
+      {2, "A/A/A/A/A/A", "base-deleted", NO_COPY_FROM},
+      {1, "E",           "normal",       1, "A/A", MOVED_HERE},
+      {1, "E/A",         "normal",       1, "A/A/A", MOVED_HERE},
+      {1, "E/A/A",       "normal",       1, "A/A/A/A", MOVED_HERE},
+      {1, "E/A/A/A",     "normal",       1, "A/A/A/A/A", MOVED_HERE},
+      {1, "E/A/A/A/A",   "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
+      {3, "E/A/A",       "base-deleted", NO_COPY_FROM, "D"},  /* XFAIL */
+      {3, "E/A/A/A",     "base-deleted", NO_COPY_FROM},
+      {3, "E/A/A/A/A",   "base-deleted", NO_COPY_FROM},
+      {1, "D",           "normal",       1, "A/A/A/A", MOVED_HERE},
+      {1, "D/A",         "normal",       1, "A/A/A/A/A", MOVED_HERE},
+      {1, "D/A/A",       "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
+      {3, "D/A/A",       "base-deleted", NO_COPY_FROM, "E"},  /* XFAIL */
+      {1, "C",           "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -5799,5 +5852,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_conflicts"),
     SVN_TEST_OPTS_PASS(move_update_delete_mods,
                        "move_update_delete_mods"),
+    SVN_TEST_OPTS_XFAIL(nested_moves2,
+                       "nested_moves2"),
     SVN_TEST_NULL
   };
