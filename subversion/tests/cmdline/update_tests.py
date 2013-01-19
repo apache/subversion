@@ -6153,7 +6153,6 @@ def break_moved_replaced_dir(sbox):
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def update_removes_switched(sbox):
   "update completely removes switched node"
   sbox.build(create_wc = False)
@@ -6168,19 +6167,38 @@ def update_removes_switched(sbox):
   svntest.main.run_svn(None, 'rm', sbox.repo_url + '/AA/B', '-m', 'Q')
 
   expected_output = svntest.wc.State(wc_dir, {
+    'B'                 : Item(status='D '),
   })
   expected_status = svntest.wc.State(wc_dir, {
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/G'               : Item(status='  ', wc_rev='3'),
+    'D/G/rho'           : Item(status='  ', wc_rev='3'),
+    'D/G/pi'            : Item(status='  ', wc_rev='3'),
+    'D/G/tau'           : Item(status='  ', wc_rev='3'),
+    'D/H'               : Item(status='  ', wc_rev='3'),
+    'D/H/omega'         : Item(status='  ', wc_rev='3'),
+    'D/H/chi'           : Item(status='  ', wc_rev='3'),
+    'D/H/psi'           : Item(status='  ', wc_rev='3'),
+    'D/gamma'           : Item(status='  ', wc_rev='3'),
+    'C'                 : Item(status='  ', wc_rev='3'),
+    'mu'                : Item(status='  ', wc_rev='3'),
   })
 
-  # This update should remove 'A/B', because its in-repository location is removed
-  # ### But somehow this just fails much earlier than in 1.7... Serious regression???
-  # svn: E160005: Target path '/AA/B' does not exist.
-  # (This should have been verified at r2, where it DOES exist. 
-  #  It was only deleted at r3.)
+  # Before r<to-be-filled-in> the inherited properties code would try to fetch
+  # inherited properties for ^/AA/B and fail. (2013-01-19)
+  #
+  # The inherited properties fetch code would then bail and forget to reset
+  # the ra-session URL back to its original value.
+  #
+  # After that the update code (which ignored the specific error code) was
+  # continued the update against /AA/B (url of missing switched path)
+  # instead of against A (the working copy url).
+
+  # This update removes 'A/B', since its in-repository location is removed.
   svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
                                         None,
-                                        None,
-                                        None)
+                                        expected_status)
 
   #expected_output = svntest.wc.State(wc_dir, {
   #})

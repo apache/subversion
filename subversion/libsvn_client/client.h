@@ -673,10 +673,13 @@ svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
    If LOCAL_ABSPATH has no base then do nothing.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
-   or NULL, in which case this function will open its own temporary session.
+   or NULL, in which case this function will use its own temporary session.
 
    Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
    allocations.
+
+   If one or more of the paths are not available in the repository at the
+   specified revision, these paths will not be added to the hashtable.
 */
 svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
