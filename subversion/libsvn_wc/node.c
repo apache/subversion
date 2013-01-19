@@ -1271,7 +1271,6 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
-                               svn_boolean_t *added,
                                svn_boolean_t *deleted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
@@ -1286,8 +1285,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   *obstruction_state = svn_wc_notify_state_inapplicable;
   if (kind)
     *kind = svn_node_none;
-  if (added)
-    *added = FALSE;
   if (deleted)
     *deleted = FALSE;
 
@@ -1380,9 +1377,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
         break;
 
       case svn_wc__db_status_added:
-        if (added)
-          *added = TRUE;
-        /* Fall through to svn_wc__db_status_normal */
       case svn_wc__db_status_normal:
         if (disk_kind == svn_node_none)
           *obstruction_state = svn_wc_notify_state_missing;
