@@ -1652,6 +1652,7 @@ delete_entry(const char *path,
   svn_wc__db_status_t base_status;
   apr_pool_t *scratch_pool;
   svn_boolean_t deleting_target;
+  svn_boolean_t deleting_switched;
   svn_boolean_t keep_as_working = FALSE;
   svn_boolean_t queue_deletes = TRUE;
 
@@ -1707,6 +1708,18 @@ delete_entry(const char *path,
                                      NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath,
                                      scratch_pool, scratch_pool));
+
+  if (pb->old_repos_relpath && repos_relpath)
+    {
+      const char *expected_name;
+
+      expected_name = svn_relpath_skip_ancestor(pb->old_repos_relpath,
+                                                repos_relpath);
+
+      deleting_switched = (!expected_name || strcmp(expected_name, base) != 0);
+    }
+  else
+    deleting_switched = FALSE;
 
   /* Is this path a conflict victim? */
   if (conflicted)
@@ -1830,7 +1843,7 @@ delete_entry(const char *path,
      If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
      accurate reports about itself in the future. */
-  if (! deleting_target)
+  if (! deleting_target && ! deleting_switched)
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
@@ -1847,7 +1860,13 @@ delete_entry(const char *path,
                                      *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
-      eb->target_deleted = TRUE;
+      if (deleting_target)
+        eb->target_deleted = TRUE;
+      else
+        {
+          /* Don't remove the not-present marker at the final bump */
+          SVN_ERR(remember_skipped_tree(eb, local_abspath, pool));
+        }
     }
 
   SVN_ERR(svn_wc__wq_run(eb->db, pb->local_abspath,
