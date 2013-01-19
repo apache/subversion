@@ -15181,7 +15181,6 @@ msgstr ""
 #~ msgid "LOWER cannot be greater than UPPER.\n"
 #~ msgstr "VON kann nicht größer als BIS sein.\n"
 
-# CHECKME
 #~ msgid ""
 #~ "listen port\n"
 #~ "                             [mode: daemon, service, listen-once]"
@@ -15476,7 +15475,6 @@ msgstr ""
 #~ msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 #~ msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, tatsächlich: »%s«"
 
-# FIXME: "can't happen" according to source code!
 #~ msgid "OPTIONS request (for capabilities) got HTTP response code %d"
 #~ msgstr "OPTIONS-Anfrage (für Eigenschaften) führte zu HTTP-Antwort-Code %d"
 
@@ -15519,7 +15517,6 @@ msgstr ""
 #~ msgid "APR_APPEND not supported for adm files"
 #~ msgstr "APR_APPEND wird für administrative Dateien nicht unterstützt"
 
-# FIXME: s/item/items/?
 #~ msgid "Summary of conflicts in external item:\n"
 #~ msgstr "Konfliktübersicht für externen Verweis:\n"
 
@@ -15733,7 +15730,6 @@ msgstr ""
 #~ msgid "Destination directory of add-with-history is missing a URL"
 #~ msgstr "Dem Zielverzeichnis von add-with-history fehlt eine URL"
 
-# CHECKME: demselb... oder dem selb...
 #~ msgid "Failed to add file '%s': a non-file object of the same name already exists"
 #~ msgstr ""
 #~ "Konnte die Datei »%s« nicht hinzufügen: ein nicht-Dateiobjekt mit demselben\n"
@@ -15868,14 +15864,12 @@ msgstr ""
 #~ msgid ".empty"
 #~ msgstr ".leer"
 
-# FIXME: s/on/of/?
 #~ msgid "Error getting file size on '%s'"
 #~ msgstr "Fehler beim Ermitteln der Dateigröße von »%s«"
 
 #~ msgid "Target lists to diff may not contain both working copy paths and URLs"
 #~ msgstr "Ziellisten für Vergleiche dürfen nicht gleichzeitig Arbeitskopien und URLs enthalten"
 
-# CHECKME: I thought no full stop in error messages are used?
 #~ msgid "Parent(s) of '%s' should have repository information."
 #~ msgstr "Eltern von »%s« sollten Informationen über das Projektarchiv haben."
 
