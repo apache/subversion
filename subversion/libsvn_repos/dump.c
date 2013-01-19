@@ -1359,6 +1359,32 @@ verify_close_directory(void *dir_baton,
   return close_directory(dir_baton, pool);
 }
 
+/* Baton type used for forwarding notifications from FS API to REPOS API. */
+struct verify_fs2_notify_func_baton_t
+{
+   /* notification function to call (must not be NULL) */
+   svn_repos_notify_func_t notify_func;
+
+   /* baton to use for it */
+   void *notify_baton;
+
+   /* type of notification to send (we will simply plug in the revision) */
+   svn_repos_notify_t *notify;
+};
+
+/* Forward the notification to BATON. */
+static void
+verify_fs2_notify_func(svn_revnum_t revision,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  struct verify_fs2_notify_func_baton_t *notify_baton = baton;
+
+  notify_baton->notify->revision = revision;
+  notify_baton->notify_func(notify_baton->notify_baton,
+                            notify_baton->notify, pool);
+}
+
 svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -1374,6 +1400,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   svn_revnum_t rev;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_repos_notify_t *notify;
+  svn_fs_progress_notify_func_t verify_notify = NULL;
+  struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1396,14 +1424,25 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
+  /* Create a notify object that we can reuse within the loop and a
+     forwarding structure for notifications from inside svn_fs_verify(). */
+  if (notify_func)
+    {
+      notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
+                                       pool);
+
+      verify_notify = verify_fs2_notify_func;
+      verify_notify_baton = apr_palloc(pool, sizeof(*verify_notify_baton));
+      verify_notify_baton->notify_func = notify_func;
+      verify_notify_baton->notify_baton = notify_baton;
+      verify_notify_baton->notify
+        = svn_repos_notify_create(svn_repos_notify_verify_struc_rev, pool);
+    }
+
   /* Verify global/auxiliary data and backend-specific data first. */
   SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                        verify_notify, verify_notify_baton,
                         start_rev, end_rev, pool));
-
-  /* Create a notify object that we can reuse within the loop. */
-  if (notify_func)
-    notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
-                                     pool);
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
@@ -1431,6 +1470,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                                 &cancel_editor,
                                                 &cancel_edit_baton,
                                                 iterpool));
+
+      SVN_ERR(svn_fs_verify_rev(fs, rev, iterpool));
 
       SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,

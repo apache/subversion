@@ -263,13 +263,31 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
+ * Callback function type for progress notification.
+ *
+ * @a revision is the number of the revision currently begin processed,
+ * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
+ * revision. @a baton is the callback baton.
+ *
+ * @since New in 1.8.
+ */
+typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
+                                              void *baton,
+                                              apr_pool_t *pool);
+
+/**
  * Perform backend-specific data consistency and correctness validations
  * to the Subversion filesystem located in the directory @a path.
- * Use @a pool for necessary allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
  * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
  * verified, global invariants may be verified as well.
+ *
+ * The optional @a notify_func callback is only a general feedback that
+ * the operation is still in process but may be called in random revisions
+ * order and more than once for the same revision, i.e. r2, r1, r2 would
+ * be a valid sequence.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
@@ -281,9 +299,27 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
               svn_revnum_t start,
               svn_revnum_t end,
               apr_pool_t *scratch_pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to revision @a revision of the Subversion filesystem @a fs.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify_rev(svn_fs_t *fs,
+                  svn_revnum_t revision,
+                  apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
