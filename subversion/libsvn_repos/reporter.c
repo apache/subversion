@@ -1356,6 +1356,8 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Collect information about the source and target nodes. */
   s_fullpath = svn_fspath__join(b->fs_base, b->s_operand, pool);
+  SVN_DBG(("Anchor: %s / %s / %d\n", t_anchor, s_fullpath, (int)s_rev));
+
   /* ### Weird: When I have a file external defined as "^/A/a X/xa",
    * ### S_FULLPATH becomes "/A/a/xa" here, which is complete nonsense. */
   SVN_ERR(get_source_root(b, &s_root, s_rev));
