@@ -6153,6 +6153,46 @@ def break_moved_replaced_dir(sbox):
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+def update_removes_switched(sbox):
+  "update completely removes switched node"
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(None, 'cp', sbox.repo_url + '/A',
+                                   sbox.repo_url + '/AA', '-m', 'Q')
+
+  svntest.main.run_svn(None, 'co', sbox.repo_url + '/A', sbox.wc_dir)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/AA/B', sbox.wc_dir + '/B')
+
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/AA/B', '-m', 'Q')
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  expected_status = svntest.wc.State(wc_dir, {
+  })
+
+  # This update should remove 'A/B', because its in-repository location is removed
+  # ### But somehow this just fails much earlier than in 1.7... Serious regression???
+  # svn: E160005: Target path '/AA/B' does not exist.
+  # (This should have been verified at r2, where it DOES exist. 
+  #  It was only deleted at r3.)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        None,
+                                        None)
+
+  #expected_output = svntest.wc.State(wc_dir, {
+  #})
+  #expected_status = svntest.wc.State(wc_dir, {
+  #})
+  #
+  # But I call it XFail that the node is not brought back in by this update
+  #svntest.actions.run_and_verify_update(wc_dir,
+  #                                     expected_output,
+  #                                      None,
+  #                                      expected_status)
+
 #######################################################################
 # Run the tests
 
@@ -6231,6 +6271,7 @@ test_list = [ None,
               update_deleted,
               break_moved_dir_edited_leaf_del,
               break_moved_replaced_dir,
+              update_removes_switched,
              ]
 
 if __name__ == '__main__':
