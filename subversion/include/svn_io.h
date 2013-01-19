@@ -1553,10 +1553,31 @@ svn_io_get_dirents(apr_hash_t **dirents,
 /** Create a svn_io_dirent2_t instance for path. Specialized variant of
  * svn_io_stat() that directly translates node_kind and special.
  *
+ * If @a verify_truename is @c TRUE, an additional check is performed to
+ * verify the truename of the last path component on case insensitive
+ * filesystems. This check is expensive compared to a just a stat,
+ * but certainly cheaper than a full truename calculation using
+ * apr_filepath_merge() which verifies all path components.
+ *
  * If @a ignore_enoent is set to @c TRUE, set *dirent_p->kind to
  * svn_node_none instead of returning an error.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_io_stat_dirent2, but always passes FALSE for
+ * verify_truename.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
