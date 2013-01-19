@@ -2702,11 +2702,7 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  svn_boolean_t verify_truename = FALSE;
-#if defined(WIN32) || defined(DARWIN)
   svn_boolean_t is_wcroot;
-  /* We only need this code on systems with case insensitive filesystem
-     support. Enabling it unconditionally hurts performance */
 
   /* The wcroot is "" inside the wc; handle it as not in the wc, as
      the case of the root is indifferent to us. */
@@ -2716,13 +2712,11 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
   SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, 
                                scratch_pool));
 
-  verify_truename = ! is_wcroot;
-#endif
-
-  return svn_error_trace(svn_io_stat_dirent2(dirent, local_abspath,
-                                             verify_truename,
-                                             TRUE /* ignore_enoent */,
-                                             result_pool, scratch_pool));
+  return svn_error_trace(
+            svn_io_stat_dirent2(dirent, local_abspath,
+                                ! is_wcroot /* verify_truename */,
+                                TRUE        /* ignore_enoent */,
+                                result_pool, scratch_pool));
 }
 
 svn_error_t *
