@@ -188,7 +188,22 @@ Candidate changes:
    Justification:
      The API does not work properly and the fix was obvious.
    Votes:
-     +1: markphip
+     +1: markphip, rhuijben
+
+ * r1435635, r1435714, r1435722, r1435737
+   When svn update removes a switched subtree because it was deleted in the
+   target revision, it would be nice if a future update would bring back
+   the originally node that existed before switching. (Issue #4295)
+   Justification:
+     After this operation the working copy doesn't match the repository
+     without obviouse way to recover.
+   Notes:
+     The real fix is in r1435722. The other revisions tweak the test that
+     also triggered a different revision on trunk.
+   Branch:
+     ^/subversion/branches/1.7.x-issue-4295
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
