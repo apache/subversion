@@ -6240,11 +6240,11 @@ def update_removes_switched(sbox):
     'mu'                : Item(status='  ', wc_rev='3'),
   })
   
-  # But I call it XFail that the node is not brought back in by this update
+  # And this final update brings back the node, as it was before switching.
   svntest.actions.run_and_verify_update(wc_dir,
                                        expected_output,
                                        None,
-                                       None)
+                                       expected_status)
 
 #######################################################################
 # Run the tests
