@@ -6349,12 +6349,8 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
   return SVN_NO_ERROR;
 }
 
-/* Similar to normalize_merge_sources() but:
- * no SOURCE_PATH_OR_URL argument;
- * MERGE_RANGE_TS (array of svn_merge_range_t *) instead of RANGES;
- * SOURCE_PEG_REVNUM instead of SOURCE_PEG_REVISION.
- * RA_SESSION is an RA session open to the repository of SOURCE_LOC; it may
- * be temporarily reparented within this function.
+/* Similar to normalize_merge_sources() except the input MERGE_RANGE_TS is a
+ * rangelist.
  */
 static svn_error_t *
 normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
@@ -6415,15 +6411,15 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
   trim_revision = SVN_INVALID_REVNUM;
   if (segments->nelts)
     {
-      svn_location_segment_t *segment =
+      svn_location_segment_t *first_segment =
         APR_ARRAY_IDX(segments, 0, svn_location_segment_t *);
 
       /* If the first segment doesn't start with the OLDEST_REQUESTED
          revision, we'll need to pass a trim revision to our range
          cruncher. */
-      if (segment->range_start != oldest_requested)
+      if (first_segment->range_start != oldest_requested)
         {
-          trim_revision = segment->range_start;
+          trim_revision = first_segment->range_start;
         }
 
       /* Else, if the first segment has no path (and therefore is a
@@ -6437,21 +6433,21 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
          ### really penalize clients hitting pre-1.5 repositories with
          ### the typical small merge range request (because of the
          ### lack of a node-origins cache in the repository).  */
-      else if (! segment->path)
+      else if (! first_segment->path)
         {
           if (segments->nelts > 1)
             {
-              svn_location_segment_t *segment2 =
+              svn_location_segment_t *second_segment =
                 APR_ARRAY_IDX(segments, 1, svn_location_segment_t *);
               const char *segment_url;
               const char *original_repos_relpath;
               svn_revnum_t original_revision;
               svn_opt_revision_t range_start_rev;
               range_start_rev.kind = svn_opt_revision_number;
-              range_start_rev.value.number = segment2->range_start;
+              range_start_rev.value.number = second_segment->range_start;
 
               segment_url = svn_path_url_add_component2(
-                              source_loc->repos_root_url, segment2->path,
+                              source_loc->repos_root_url, second_segment->path,
                               scratch_pool);
               SVN_ERR(svn_client__get_copy_source(&original_repos_relpath,
                                                   &original_revision,
@@ -6485,14 +6481,11 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
 
       if (SVN_IS_VALID_REVNUM(trim_revision))
         {
-          /* If the youngest of the range revisions predates the trim
-             revision, discard the range. */
+          /* If the range predates the trim revision, discard it. */
           if (MAX(range->start, range->end) < trim_revision)
             continue;
 
-          /* Otherwise, if either of oldest of the range revisions predates
-             the trim revision, update the range revision to be equal
-             to the trim revision. */
+          /* If the range overlaps the trim revision, trim it. */
           if (range->start < trim_revision)
             range->start = trim_revision;
           if (range->end < trim_revision)
@@ -6509,24 +6502,24 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
   return SVN_NO_ERROR;
 }
 
-/* Set *MERGE_SOURCES_P to an array of merge_source_t * objects, each
-   holding the paths and revisions needed to fully describe a range of
-   requested merges; order the objects from oldest to youngest.
+/* Determine the normalized ranges to merge from a given line of history.
 
-   Determine the requested merges by examining SOURCE_PATH_OR_URL (and its
-   associated URL and revision, SOURCE_LOC) (which
-   specifies the line of history from which merges will be pulled) and
-   RANGES_TO_MERGE (a list of svn_opt_revision_range_t's which provide
-   revision ranges).
+   Calculate the result by intersecting the list of location segments at
+   which SOURCE_LOC existed along its line of history with the requested
+   revision ranges in RANGES_TO_MERGE.  RANGES_TO_MERGE is an array of
+   (svn_opt_revision_range_t *) revision ranges.  Use SOURCE_PATH_OR_URL to
+   resolve any WC-relative revision specifiers (such as 'base') in
+   RANGES_TO_MERGE.
+
+   Set *MERGE_SOURCES_P to an array of merge_source_t * objects, each
+   describing a normalized range of revisions to be merged from the line
+   history of SOURCE_LOC.  Order the objects from oldest to youngest.
 
    RA_SESSION is an RA session open to the repository of SOURCE_LOC; it may
-   be temporarily reparented within this function.  Use RA_SESSION to answer
-   historical questions.
+   be temporarily reparented within this function.  Use RA_SESSION to find
+   the location segments along the line of history of SOURCE_LOC.
 
-   CTX is a client context baton.
-
-   SCRATCH_POOL is used for all temporary allocations.  MERGE_SOURCES_P and
-   its contents are allocated in RESULT_POOL.
+   Allocate MERGE_SOURCES_P and its contents in RESULT_POOL.
 
    See `MERGEINFO MERGE SOURCE NORMALIZATION' for more on the
    background of this function.
@@ -6535,7 +6528,7 @@ static svn_error_t *
 normalize_merge_sources(apr_array_header_t **merge_sources_p,
                         const char *source_path_or_url,
                         const svn_client__pathrev_t *source_loc,
-                        const svn_rangelist_t *ranges_to_merge,
+                        const apr_array_header_t *ranges_to_merge,
                         svn_ra_session_t *ra_session,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
