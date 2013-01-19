@@ -1321,13 +1321,15 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                        void *val, apr_pool_t *pool)
 {
   struct dir_baton *db = baton;
+  svn_fs_dirent_t *dirent = (svn_fs_dirent_t *)val;
   char *path = svn_relpath_join(db->path, (const char *)key, pool);
-  svn_node_kind_t kind;
   apr_hash_t *dirents;
   svn_filesize_t len;
 
-  SVN_ERR(svn_fs_check_path(&kind, db->edit_baton->fs_root, path, pool));
-  switch (kind) {
+  /* since we can't access the directory entries directly by their ID,
+     we need to navigate from the FS_ROOT to them (relatively expensive
+     because we may start at a never rev than the last change to node). */
+  switch (dirent->kind) {
   case svn_node_dir:
     /* Getting this directory's contents is enough to ensure that our
        link to it is correct. */
@@ -1340,7 +1342,8 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
     break;
   default:
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                             _("Unexpected node kind %d for '%s'"), kind, path);
+                             _("Unexpected node kind %d for '%s'"),
+                             dirent->kind, path);
   }
 
   return SVN_NO_ERROR;
