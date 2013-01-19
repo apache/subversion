@@ -5407,6 +5407,90 @@ def update_to_HEAD_plus_1(sbox):
                                         None, None, None, wc_dir, '-r', '2')
 
 
+@Issue(4295)
+def update_removes_switched(sbox):
+  "update completely removes switched node"
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(None, 'cp', sbox.repo_url + '/A',
+                                   sbox.repo_url + '/AA', '-m', 'Q')
+
+  svntest.main.run_svn(None, 'co', sbox.repo_url + '/A', sbox.wc_dir)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/AA/B', sbox.wc_dir + '/B')
+
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/AA/B', '-m', 'Q')
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/G'               : Item(status='  ', wc_rev='3'),
+    'D/G/rho'           : Item(status='  ', wc_rev='3'),
+    'D/G/pi'            : Item(status='  ', wc_rev='3'),
+    'D/G/tau'           : Item(status='  ', wc_rev='3'),
+    'D/H'               : Item(status='  ', wc_rev='3'),
+    'D/H/omega'         : Item(status='  ', wc_rev='3'),
+    'D/H/chi'           : Item(status='  ', wc_rev='3'),
+    'D/H/psi'           : Item(status='  ', wc_rev='3'),
+    'D/gamma'           : Item(status='  ', wc_rev='3'),
+    'C'                 : Item(status='  ', wc_rev='3'),
+    'mu'                : Item(status='  ', wc_rev='3'),
+  })
+
+  # Before r1435684 the inherited properties code would try to fetch
+  # inherited properties for ^/AA/B and fail.
+  #
+  # The inherited properties fetch code would then bail and forget to reset
+  # the ra-session URL back to its original value.
+  #
+  # After that the update code (which ignored the specific error code) was
+  # continued the update against /AA/B (url of missing switched path)
+  # instead of against A (the working copy url).
+
+  # This update removes 'A/B', since its in-repository location is removed.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        None,
+                                        None)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'B'          : Item(status='A '),
+    'B/lambda'   : Item(status='A '),
+    'B/E'        : Item(status='A '),
+    'B/E/alpha'  : Item(status='A '),
+    'B/E/beta'   : Item(status='A '),
+    'B/F'        : Item(status='A '),
+  })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/G'               : Item(status='  ', wc_rev='3'),
+    'D/G/rho'           : Item(status='  ', wc_rev='3'),
+    'D/G/pi'            : Item(status='  ', wc_rev='3'),
+    'D/G/tau'           : Item(status='  ', wc_rev='3'),
+    'D/H'               : Item(status='  ', wc_rev='3'),
+    'D/H/omega'         : Item(status='  ', wc_rev='3'),
+    'D/H/chi'           : Item(status='  ', wc_rev='3'),
+    'D/H/psi'           : Item(status='  ', wc_rev='3'),
+    'D/gamma'           : Item(status='  ', wc_rev='3'),
+    'B'                 : Item(status='  ', wc_rev='3'),
+    'B/E'               : Item(status='  ', wc_rev='3'),
+    'B/E/alpha'         : Item(status='  ', wc_rev='3'),
+    'B/E/beta'          : Item(status='  ', wc_rev='3'),
+    'B/F'               : Item(status='  ', wc_rev='3'),
+    'B/lambda'          : Item(status='  ', wc_rev='3'),
+    'C'                 : Item(status='  ', wc_rev='3'),
+    'mu'                : Item(status='  ', wc_rev='3'),
+  })
+  
+  # But I call it XFail that the node is not brought back in by this update
+  svntest.actions.run_and_verify_update(wc_dir,
+                                       expected_output,
+                                       None,
+                                       None)
+
 #######################################################################
 # Run the tests
 
@@ -5473,6 +5557,7 @@ test_list = [ None,
               revive_children_of_copy,
               skip_access_denied,
               update_to_HEAD_plus_1,
+              update_removes_switched,
              ]
 
 if __name__ == '__main__':
