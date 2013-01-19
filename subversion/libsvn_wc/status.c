@@ -2710,6 +2710,9 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
 
   /* The wcroot is "" inside the wc; handle it as not in the wc, as
      the case of the root is indifferent to us. */
+
+  /* Note that for performance this is really just a few hashtable lookups,
+     as we just used local_abspath for a db call in both our callers */
   SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, 
                                scratch_pool));
 
