@@ -296,6 +296,7 @@ def main(args):
     parser.error('CONFIG_FILE is requried')
   config_file = os.path.abspath(extra[0])
 
+  logfile, pidfile = None, None
   if options.daemon:
     if options.logfile:
       logfile = os.path.abspath(options.logfile)
