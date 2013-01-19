@@ -6156,16 +6156,24 @@ def break_moved_replaced_dir(sbox):
 @Issue(4295)
 def update_removes_switched(sbox):
   "update completely removes switched node"
+
   sbox.build(create_wc = False)
+
   wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
 
-  svntest.main.run_svn(None, 'cp', sbox.repo_url + '/A',
-                                   sbox.repo_url + '/AA', '-m', 'Q')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/A',
+                                           repo_url + '/AA', '-m', 'Q')
 
-  svntest.main.run_svn(None, 'co', sbox.repo_url + '/A', sbox.wc_dir)
-  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/AA/B', sbox.wc_dir + '/B')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', repo_url + '/A', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', repo_url + '/AA/B',
+                                               wc_dir + '/B')
 
-  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/AA/B', '-m', 'Q')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', repo_url + '/AA/B', '-m', 'Q')
 
   expected_output = svntest.wc.State(wc_dir, {
     'B'                 : Item(status='D '),
