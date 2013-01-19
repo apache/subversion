@@ -756,6 +756,16 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
+    case  svn_repos_notify_verify_struc_rev:
+      if (notify->revision == SVN_INVALID_REVNUM)
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("* Verifying global structure ...\n")));
+      else
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                        _("* Verifying structure at revision %ld ...\n"),
+                        notify->revision));
+      return;
+
     case svn_repos_notify_pack_shard_start:
       {
         const char *shardstr = apr_psprintf(scratch_pool,

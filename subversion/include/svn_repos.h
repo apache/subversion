@@ -245,7 +245,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_upgrade_start,
 
   /** A revision was skipped during loading. @since New in 1.8. */
-  svn_repos_notify_load_skipped_rev
+  svn_repos_notify_load_skipped_rev,
+
+  /** The structure of a revision is begin verified.  @since New in 1.8. */
+  svn_repos_notify_verify_struc_rev
 
 } svn_repos_notify_action_t;
 

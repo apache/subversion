@@ -10315,6 +10315,8 @@ svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
                   svn_revnum_t start,
                   svn_revnum_t end,
                   apr_pool_t *pool)
@@ -10322,7 +10324,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
-  apr_pool_t *iterpool = svn_pool_create(pool);
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
@@ -10332,8 +10333,8 @@ svn_fs_fs__verify(svn_fs_t *fs,
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     end = youngest;
-  SVN_ERR(ensure_revision_exists(fs, start, iterpool));
-  SVN_ERR(ensure_revision_exists(fs, end, iterpool));
+  SVN_ERR(ensure_revision_exists(fs, start, pool));
+  SVN_ERR(ensure_revision_exists(fs, end, pool));
 
   /* rep-cache verification. */
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
@@ -10343,31 +10344,32 @@ svn_fs_fs__verify(svn_fs_t *fs,
        Don't take any lock. */
     SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
                                           cancel_func, cancel_baton,
+                                          notify_func, notify_baton,
                                           start, end,
                                           pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify_rev(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
-  {
-    svn_revnum_t i;
-    for (i = start; i <= end; i++)
-      {
-        svn_fs_root_t *root;
 
-        svn_pool_clear(iterpool);
+  /* ### TODO: Make sure caches are disabled.
 
-        /* ### TODO: Make sure caches are disabled.
+     When this code is called in the library, we want to ensure we
+     use the on-disk data --- rather than some data that was read
+     in the possibly-distance past and cached since. */
+  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__verify_root(root, pool));
 
-           When this code is called in the library, we want to ensure we
-           use the on-disk data --- rather than some data that was read
-           in the possibly-distance past and cached since. */
-        SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
-        SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
-      }
-  }
-
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

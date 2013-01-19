@@ -472,6 +472,15 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
+base_bdb_verify_rev(svn_fs_t *fs,
+                    svn_revnum_t revision,
+                    apr_pool_t *scratch_pool)
+{
+  /* Verifying is currently a no op for BDB. */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
                 svn_error_t *(*freeze_body)(void *, apr_pool_t *),
                 void *baton,
@@ -500,6 +509,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
+  base_bdb_verify_rev,
   base_bdb_freeze,
   base_bdb_set_errcall,
 };
@@ -894,6 +904,8 @@ static svn_error_t *
 base_verify(svn_fs_t *fs, const char *path,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_fs_progress_notify_func_t notify_func,
+            void *notify_baton,
             svn_revnum_t start,
             svn_revnum_t end,
             apr_pool_t *pool,
