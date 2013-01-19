@@ -6153,6 +6153,7 @@ def break_moved_replaced_dir(sbox):
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(4295)
 def update_removes_switched(sbox):
   "update completely removes switched node"
   sbox.build(create_wc = False)
