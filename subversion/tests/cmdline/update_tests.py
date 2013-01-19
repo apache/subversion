@@ -6170,6 +6170,7 @@ def update_removes_switched(sbox):
     'B'                 : Item(status='D '),
   })
   expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
     'D/G'               : Item(status='  ', wc_rev='3'),
     'D/G/rho'           : Item(status='  ', wc_rev='3'),
@@ -6184,8 +6185,8 @@ def update_removes_switched(sbox):
     'mu'                : Item(status='  ', wc_rev='3'),
   })
 
-  # Before r<to-be-filled-in> the inherited properties code would try to fetch
-  # inherited properties for ^/AA/B and fail. (2013-01-19)
+  # Before r1435684 the inherited properties code would try to fetch
+  # inherited properties for ^/AA/B and fail.
   #
   # The inherited properties fetch code would then bail and forget to reset
   # the ra-session URL back to its original value.
@@ -6201,15 +6202,40 @@ def update_removes_switched(sbox):
                                         expected_status)
 
   #expected_output = svntest.wc.State(wc_dir, {
+  #  'B'          : Item(status='A '),
+  #  'B/lambda'   : Item(status='A '),
+  #  'B/E'        : Item(status='A '),
+  #  'B/E/alpha'  : Item(status='A '),
+  #  'B/E/beta'   : Item(status='A '),
+  #  'B/F'        : Item(status='A '),
   #})
   #expected_status = svntest.wc.State(wc_dir, {
+  #  ''                  : Item(status='  ', wc_rev='3'),
+  #  'D'                 : Item(status='  ', wc_rev='3'),
+  #  'D/G'               : Item(status='  ', wc_rev='3'),
+  #  'D/G/rho'           : Item(status='  ', wc_rev='3'),
+  #  'D/G/pi'            : Item(status='  ', wc_rev='3'),
+  #  'D/G/tau'           : Item(status='  ', wc_rev='3'),
+  #  'D/H'               : Item(status='  ', wc_rev='3'),
+  #  'D/H/omega'         : Item(status='  ', wc_rev='3'),
+  #  'D/H/chi'           : Item(status='  ', wc_rev='3'),
+  #  'D/H/psi'           : Item(status='  ', wc_rev='3'),
+  #  'D/gamma'           : Item(status='  ', wc_rev='3'),
+  #  'B'                 : Item(status='  ', wc_rev='3'),
+  #  'B/E'               : Item(status='  ', wc_rev='3'),
+  #  'B/E/alpha'         : Item(status='  ', wc_rev='3'),
+  #  'B/E/beta'          : Item(status='  ', wc_rev='3'),
+  #  'B/F'               : Item(status='  ', wc_rev='3'),
+  #  'B/lambda'          : Item(status='  ', wc_rev='3'),
+  #  'C'                 : Item(status='  ', wc_rev='3'),
+  #  'mu'                : Item(status='  ', wc_rev='3'),
   #})
   #
-  # But I call it XFail that the node is not brought back in by this update
+  ## But I call it XFail that the node is not brought back in by this update
   #svntest.actions.run_and_verify_update(wc_dir,
   #                                     expected_output,
-  #                                      None,
-  #                                      expected_status)
+  #                                     None,
+  #                                     None)
 
 #######################################################################
 # Run the tests
