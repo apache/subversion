@@ -2493,20 +2493,25 @@ svn_io_get_dirents3(apr_hash_t **dirents,
 }
 
 svn_error_t *
-svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
-                   const char *path,
-                   svn_boolean_t ignore_enoent,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   svn_io_dirent2_t *dirent;
   svn_error_t *err;
+  apr_int32_t wanted = APR_FINFO_TYPE | APR_FINFO_LINK
+                       | APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  err = svn_io_stat(&finfo, path,
-                    APR_FINFO_TYPE | APR_FINFO_LINK
-                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
-                    scratch_pool);
+#if defined(WIN32) || defined(__OS2__) || defined(DARWIN)
+  if (verify_truename)
+    wanted |= APR_FINFO_NAME;
+#endif
+
+  err = svn_io_stat(&finfo, path, wanted, scratch_pool);
 
   if (err && ignore_enoent &&
       (APR_STATUS_IS_ENOENT(err->apr_err)
@@ -2520,6 +2525,76 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
+
+#if defined(WIN32) || defined(__OS2__) || defined(DARWIN)
+  if (verify_truename)
+    {
+      const char *requested_name = svn_dirent_basename(path, NULL);
+
+      if (requested_name[0] == '\0')
+        {
+          /* No parent directory. No need to stat/verify */
+        }
+      else if (finfo.name)
+        {
+          const char *name_on_disk;
+          SVN_ERR(entry_name_to_utf8(&name_on_disk, finfo.name, path,
+                                     scratch_pool));
+
+          if (strcmp(name_on_disk, requested_name) /* != 0 */)
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found, case obstructed by '%s'"),
+                          svn_dirent_local_style(path, scratch_pool),
+                          name_on_disk);
+            }
+        }
+#if defined(DARWIN)
+      /* Currently apr doesn't set finfo.name on DARWIN.
+         ### Can we optimize this in another way? */
+      else
+        {
+          apr_hash_t *dirents;
+
+          err = svn_io_get_dirents3(&dirents,
+                                    svn_dirent_dirname(path, scratch_pool),
+                                    TRUE /* only_check_type */,
+                                    scratch_pool, scratch_pool);
+
+          if (err && ignore_enoent
+              && (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+            {
+              svn_error_clear(err);
+
+              *dirent_p = svn_io_dirent2_create(result_pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
+
+          if (! apr_hash_get(dirents, requested_name, APR_HASH_KEY_STRING))
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found"),
+                          svn_dirent_local_style(path, scratch_pool));
+            }
+        }
+#endif
+    }
+#endif
 
   dirent = svn_io_dirent2_create(result_pool);
   map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);

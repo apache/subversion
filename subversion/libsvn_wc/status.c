@@ -2702,6 +2702,7 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
+  svn_boolean_t verify_truename = FALSE;
 #if defined(WIN32) || defined(DARWIN)
   svn_boolean_t is_wcroot;
   /* We only need this code on systems with case insensitive filesystem
@@ -2712,43 +2713,13 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
   SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, 
                                scratch_pool));
 
-  if (! is_wcroot)
-    {
-      apr_hash_t *dirents;
-      svn_error_t *err;
-      const char *parent_abspath;
-      const char *name;
-
-      svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
-
-      /* Obtain the name of the node, as stored in the directory.
-         Do this to avoid case insensitivity differences */
-
-      err = svn_io_get_dirents3(&dirents, parent_abspath, FALSE,
-                                scratch_pool, scratch_pool);
-
-      if (err
-          && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
-        {
-          svn_error_clear(err);
-          dirents = NULL;
-        }
-      else
-        SVN_ERR(err);
-
-      *dirent = dirents ? apr_hash_get(dirents, name, APR_HASH_KEY_STRING)
-                       : NULL;
-
-      if (!*dirent)
-        *dirent = svn_io_dirent2_create(scratch_pool);
-
-      return SVN_NO_ERROR;
-    }
+  verify_truename = ! is_wcroot;
 #endif
 
-  return svn_error_trace(svn_io_stat_dirent(dirent, local_abspath, TRUE,
-                                            result_pool, scratch_pool));
+  return svn_error_trace(svn_io_stat_dirent2(dirent, local_abspath,
+                                             verify_truename,
+                                             TRUE /* ignore_enoent */,
+                                             result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -2800,8 +2771,8 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
 
       wb.externals = apr_hash_make(scratch_pool);
 
-      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE, scratch_pool,
-                               scratch_pool));
+      SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                                  scratch_pool, scratch_pool));
     }
   else
     {
