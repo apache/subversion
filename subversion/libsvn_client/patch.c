@@ -1027,10 +1027,11 @@ init_patch_target(patch_target_t **patch_target,
           sb->local_abspath = target->local_abspath;
 
           /* Wire up the read callbacks. */
+          content->read_baton = sb;
+
           content->readline = readline_symlink;
           content->seek = seek_symlink;
           content->tell = tell_symlink;
-          content->read_baton = target->file;
         }
       else if (target->kind_on_disk == svn_node_file)
         {
