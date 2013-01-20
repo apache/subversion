@@ -4217,8 +4217,8 @@ def patch_change_symlink_target(sbox):
   svntest.main.file_write(patch_file_path, '\n'.join([
     "Index: link",
     "===================================================================",
-    "--- iota\t(revision 1)",
-    "+++ iota\t(working copy)",
+    "--- link\t(revision 1)",
+    "+++ link\t(working copy)",
     "@@ -1 +1 @@",
     "-link foo",
     "\\ No newline at end of file",
