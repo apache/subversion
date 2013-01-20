@@ -160,6 +160,37 @@ typedef struct window_cache_key_t
   apr_size_t offset;
 } window_cache_key_t;
 
+/* Description of one large representation.  It's content will be reused /
+ * overwritten when it gets replaced by an even larger representation.
+ */
+typedef struct large_change_info_t
+{
+  /* size of the (deltified) representation */
+  apr_size_t size;
+
+  /* revision of the representation */
+  svn_revnum_t revision;
+
+  /* node path. "" for unused instances */
+  svn_stringbuf_t *path;
+} large_change_info_t;
+
+/* Container for the largest representations found so far.  The capacity
+ * is fixed and entries will be inserted by reusing the last one and
+ * reshuffling the entry pointers.
+ */
+typedef struct largest_changes_t
+{
+  /* number of entries allocated in CHANGES */
+  apr_size_t count;
+
+  /* size of the smallest change */
+  apr_size_t min_size;
+
+  /* changes kept in this struct */
+  large_change_info_t **changes;
+} largest_changes_t;
+
 /* Root data structure containing all information about a given repository.
  */
 typedef struct fs_fs_t
@@ -191,6 +222,9 @@ typedef struct fs_fs_t
 
   /* undeltified txdelta window cache */
   svn_cache__t *window_cache;
+
+  /* track the biggest contributors to repo size */
+  largest_changes_t *largest_changes;
 } fs_fs_t;
 
 /* Return the rev pack folder for revision REV in FS.
@@ -325,6 +359,70 @@ set_cached_window(fs_fs_t *fs,
 
   return svn_error_trace(svn_cache__set(fs->window_cache, &key, window,
                                         pool));
+}
+
+/* Initialize the LARGEST_CHANGES member in FS with a capacity of COUNT
+ * entries.  Use POOL for allocations.
+ */
+static void
+initialize_largest_changes(fs_fs_t *fs,
+                           apr_size_t count,
+                           apr_pool_t *pool)
+{
+  apr_size_t i;
+  
+  fs->largest_changes = apr_pcalloc(pool, sizeof(*fs->largest_changes));
+  fs->largest_changes->count = count;
+  fs->largest_changes->min_size = 1;
+  fs->largest_changes->changes
+    = apr_palloc(pool, count * sizeof(*fs->largest_changes->changes));
+
+  /* allocate *all* entries before the path stringbufs.  This increases
+   * cache locality and enhances performance significantly. */
+  for (i = 0; i < count; ++i)
+    fs->largest_changes->changes[i]
+      = apr_palloc(pool, sizeof(**fs->largest_changes->changes));
+
+  /* now initialize them and allocate the stringbufs */
+  for (i = 0; i < count; ++i)
+    {
+      fs->largest_changes->changes[i]->size = 0;
+      fs->largest_changes->changes[i]->revision = SVN_INVALID_REVNUM;
+      fs->largest_changes->changes[i]->path
+        = svn_stringbuf_create_ensure(1024, pool);
+    }
+}
+
+/* Update data aggregators in FS with this representation of on-disk SIZE
+ * for PATH in REVSION.
+ */
+static void
+add_change(fs_fs_t *fs,
+           apr_size_t size,
+           svn_revnum_t revision,
+           const char *path)
+{
+  if (size >= fs->largest_changes->min_size)
+    {
+      apr_size_t i;
+      large_change_info_t *info
+        = fs->largest_changes->changes[fs->largest_changes->count - 1];
+      info->size = size;
+      info->revision = revision;
+      svn_stringbuf_set(info->path, path);
+
+      /* linear insertion but not too bad since count is low and insertions
+       * near the end are more likely than close to front */
+      for (i = fs->largest_changes->count - 1; i > 0; --i)
+        if (fs->largest_changes->changes[i-1]->size >= size)
+          break;
+        else
+          fs->largest_changes->changes[i] = fs->largest_changes->changes[i-1];
+
+      fs->largest_changes->changes[i] = info;
+      fs->largest_changes->min_size
+        = fs->largest_changes->changes[fs->largest_changes->count-1]->size;
+    }
 }
 
 /* Given rev pack PATH in FS, read the manifest file and return the offsets
@@ -1036,6 +1134,7 @@ read_noderev(fs_fs_t *fs,
   representation_t *props = NULL;
   apr_size_t start_offset = offset;
   svn_boolean_t is_dir = FALSE;
+  const char *path = "???";
 
   scratch_pool = svn_pool_create(scratch_pool);
 
@@ -1093,8 +1192,14 @@ read_noderev(fs_fs_t *fs,
           if (++props->ref_count == 1)
             props->kind = is_dir ? dir_property_rep : file_property_rep;
         }
+      else if (key_matches(&key, "cpath"))
+        path = value.data;
     }
 
+  /* record largest changes */
+  if (text && text->ref_count == 1)
+    add_change(fs, text->size, text->revision, path);
+  
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
   if (is_dir && text && text->ref_count == 1)
@@ -1303,6 +1408,7 @@ read_revisions(fs_fs_t **fs,
                                     (*fs)->max_revision + 1 - (*fs)->start_revision,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
+  initialize_largest_changes(*fs, 64, pool);
 
   SVN_ERR(svn_cache__create_membuffer_cache(&(*fs)->window_cache,
                                             svn_cache__get_global_membuffer_cache(),
@@ -1423,6 +1529,20 @@ print_rep_stats(representation_stats_t *stats,
          svn__i64toa_sep(stats->shared.expanded_size, ',', pool),
          svn__i64toa_sep(stats->expanded_size, ',', pool),
          svn__i64toa_sep(stats->references - stats->total.count, ',', pool));
+}
+
+/* Print the (used) contents of CHANGES.  Use POOL for allocations.
+ */
+static void
+print_largest_reps(largest_changes_t *changes,
+                   apr_pool_t *pool)
+{
+  apr_size_t i;
+  for (i = 0; i < changes->count && changes->changes[i]->size; ++i)
+    printf(_("%12s r%-8ld %s\n"),
+           svn__i64toa_sep(changes->changes[i]->size, ',', pool),
+           changes->changes[i]->revision,
+           changes->changes[i]->path->data);
 }
 
 /* Post-process stats for FS and print them to the console.
@@ -1555,6 +1675,8 @@ print_stats(fs_fs_t *fs,
   print_rep_stats(&dir_prop_rep_stats, pool);
   printf("\nFile property representation statistics:\n");
   print_rep_stats(&file_prop_rep_stats, pool);
+  printf("\nLargest representations:\n");
+  print_largest_reps(fs->largest_changes, pool);
 }
 
 /* Write tool usage info text to OSTREAM using PROGNAME as a prefix and
