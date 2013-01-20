@@ -6246,6 +6246,117 @@ def update_removes_switched(sbox):
                                        None,
                                        expected_status)
 
+@Issue(3912)
+def incomplete_overcomplete(sbox):
+  "verify editor v1 incomplete behavior"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+
+  # r2 - Make sure we have some dir properties in a clean wc
+  sbox.simple_rm('A', 'iota')
+  sbox.simple_propset('keep', 'keep-value', '')
+  sbox.simple_propset('del', 'del-value', '')
+  sbox.simple_commit()
+
+  # r3 -  Perform some changes that will be undone later
+  sbox.simple_mkdir('ADDED-dir')
+  sbox.simple_add_text('The added file', 'added-file')
+  sbox.simple_propset('prop-added', 'value', '')
+  sbox.simple_commit('')
+  sbox.simple_update('')
+
+  r3_disk = svntest.wc.State('', {
+    'added-file'        : Item(contents="The added file"),
+    '.'                 : Item(props={'prop-added':'value', 'del':'del-value', 'keep':'keep-value'}),
+    'ADDED-dir'         : Item(),
+  })
+
+  r3_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'ADDED-dir'         : Item(status='  ', wc_rev='3'),
+    'added-file'        : Item(status='  ', wc_rev='3'),
+  })
+
+  # Verify assumptions for later check
+  svntest.actions.run_and_verify_status(wc_dir, r3_status)
+  svntest.actions.verify_disk(wc_dir, r3_disk, check_props = True)
+
+
+  # r4 - And we undo r3
+  sbox.simple_rm('ADDED-dir', 'added-file')
+  sbox.simple_propdel('prop-added', '')
+  sbox.simple_commit('')
+
+  # r5 - Create some alternate changes
+  sbox.simple_mkdir('NOT-ADDED-dir')
+  sbox.simple_add_text('The not added file', 'not-added-file')
+  sbox.simple_propset('prop-not-added', 'value', '')
+  sbox.simple_commit('')
+
+  # Nothing to do to bring the wc to single revision
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  r5_disk = svntest.wc.State('', {
+    ''                  : Item(props={'prop-not-added':'value',
+                                      'del':'del-value',
+                                      'keep':'keep-value'}),
+    'NOT-ADDED-dir'     : Item(),
+    'not-added-file'    : Item(contents="The not added file"),
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='5'),
+    'NOT-ADDED-dir'     : Item(status='  ', wc_rev='5'),
+    'not-added-file'    : Item(status='  ', wc_rev='5'),
+  })
+
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        r5_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # And now we mark the directory incomplete, as if the update had failed
+  # half-way through an update to r3
+  svntest.actions.set_incomplete(wc_dir, 3)
+
+  # Tweak status to verify us breaking the wc
+  expected_status.tweak('', status='! ', wc_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # But the working copy is still 100% at r5
+  svntest.actions.verify_disk(wc_dir, r5_disk, check_props = True)
+
+  # And expect update to do the right thing even though r3 is already encoded
+  # in the parent. This includes fixing the list of children (reported to the
+  # server, which will report adds and deletes) and fixing the property list
+  # (received all; client should delete properties that shouldn't be here)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+    'not-added-file'    : Item(status='D '),
+    'ADDED-dir'         : Item(status='A '),
+    'added-file'        : Item(status='A '),
+    'NOT-ADDED-dir'     : Item(status='D '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        r3_disk,
+                                        r3_status,
+                                        None, None, None, None, None,
+                                        True,
+                                        wc_dir, '-r', 3)
+
+
+
 #######################################################################
 # Run the tests
 
@@ -6325,6 +6436,7 @@ test_list = [ None,
               break_moved_dir_edited_leaf_del,
               break_moved_replaced_dir,
               update_removes_switched,
+              incomplete_overcomplete,
              ]
 
 if __name__ == '__main__':
