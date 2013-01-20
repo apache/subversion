@@ -878,7 +878,7 @@ static svn_error_t *
 write_symlink(void *baton, const char *buf, apr_size_t len,
            apr_pool_t *scratch_pool)
 {
-  struct symlink_baton_t *sb = baton;
+  const char *target_abspath = baton;
   const char *new_name;
   const char *link = apr_pstrndup(scratch_pool, buf, len);
 
@@ -891,10 +891,10 @@ write_symlink(void *baton, const char *buf, apr_size_t len,
   /* We assume the entire symlink is written at once, as the patch
      format is line based */
 
-  SVN_ERR(svn_io_create_unique_link(&new_name, sb->local_abspath, link,
+  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, link,
                                     ".tmp", scratch_pool));
 
-  SVN_ERR(svn_io_file_rename(new_name, sb->local_abspath, scratch_pool));
+  SVN_ERR(svn_io_file_rename(new_name, target_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1074,8 +1074,16 @@ init_patch_target(patch_target_t **patch_target,
       else
         {
           /* Put the write callback in place. */
+          SVN_ERR(svn_io_open_unique_file3(NULL,
+                                           &target->patched_path, NULL,
+                                           remove_tempfiles ?
+                                             svn_io_file_del_on_pool_cleanup :
+                                             svn_io_file_del_none,
+                                           result_pool, scratch_pool));
+
+          content->write_baton = (void*)target->patched_path;
+
           content->write = write_symlink;
-          content->write_baton = content->read_baton;
         }
 
       /* Open a temporary file to write rejected hunks to. */
@@ -2216,7 +2224,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
    * will be closed later in write_out_rejected_hunks(). */
   if (target->kind_on_disk == svn_node_file)
     SVN_ERR(svn_io_file_close(target->file, scratch_pool));
-  SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
+  if (!target->is_symlink)
+    SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
 
   if (! target->skipped)
     {
