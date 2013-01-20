@@ -6246,7 +6246,7 @@ def update_removes_switched(sbox):
                                        None,
                                        expected_status)
 
-@Issue(3912)
+@Issue(3192)
 def incomplete_overcomplete(sbox):
   "verify editor v1 incomplete behavior"
 
