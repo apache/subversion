@@ -4226,20 +4226,35 @@ def patch_change_symlink_target(sbox):
     "\\ No newline at end of file",
     "",
     ]))
-  
-  # r2
-  sbox.simple_add_symlink('target', 'link')
+
+  # r2 - Try as plain text with how we encode the symlink
+  svntest.main.file_write(sbox.ospath('link'), 'link foo')
+  sbox.simple_add('link')
   sbox.simple_commit()
 
   expected_output = [
-    'M         %s\n' % sbox.ospath('link'),
+    'U         %s\n' % sbox.ospath('link'),
   ]
 
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_file_path, wc_dir)
+
+  # r3 - Store result
+  sbox.simple_commit()
+
+  # r4 - Now as symlink
+  sbox.simple_rm('link')
+  sbox.simple_add_symlink('target', 'link')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_file_path, wc_dir)
+
   # This currently fails.
+  # (On Windows it deletes the file that represents the symlink as 'D XX\link')
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
   #       symlink to 'bar' (or "link bar" on non-HAVE_SYMLINK platforms)
-  svntest.actions.run_and_verify_svn(None, "U *link", [],
-                                     'patch', patch_file_path, wc_dir)
+  
 
 ########################################################################
 #Run the tests
