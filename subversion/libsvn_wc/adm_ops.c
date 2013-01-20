@@ -1175,6 +1175,11 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* ### Enable after fixing callers */
+  /*SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(local_abspath, scratch_pool),
+                              scratch_pool));*/
+
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
   db_lock.comment = lock->comment;
@@ -1223,6 +1228,11 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
   const svn_string_t *needs_lock;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* ### Enable after fixing callers */
+  /*SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(local_abspath, scratch_pool),
+                              scratch_pool));*/
 
   err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)
