@@ -4207,7 +4207,7 @@ def patch_git_with_index_line(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-@XFail()
+@XFail(svntest.main.is_posix_os)
 @Issue(4273)
 def patch_change_symlink_target(sbox):
   "patch changes symlink target"
@@ -4245,16 +4245,21 @@ def patch_change_symlink_target(sbox):
 
   # r4 - Now as symlink
   sbox.simple_rm('link')
-  sbox.simple_add_symlink('target', 'link')
+  sbox.simple_add_symlink('foo', 'link')
   sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
-  # This currently fails.
-  # (On Windows it deletes the file that represents the symlink as 'D XX\link')
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
   #       symlink to 'bar' (or "link bar" on non-HAVE_SYMLINK platforms)
+
+  # BH: easy check for node type: a non symlink would show as obstructed
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'link'              : Item(status='M ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def patch_replace_dir_with_file_and_vv(sbox):
   "replace dir with file and file with dir"
@@ -4355,6 +4360,40 @@ def patch_replace_dir_with_file_and_vv(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, sbox.wc_dir)
 
+@XFail()
+def single_line_mismatch(sbox):
+  "single line replacement mismatch"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join([
+    "Index: tests\n",
+    "===================================================================\n",
+    "--- tests\t(revision 1)\n",
+    "+++ test\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-foo\n",
+    "\\ No newline at end of file\n",
+    "+bar\n",
+    "\\ No newline at end of file\n"
+    ]))
+
+  # r2 - Try as plain text with how we encode the symlink
+  svntest.main.file_write(sbox.ospath('test'), 'line')
+  sbox.simple_add('test')
+  sbox.simple_commit()
+
+  # And now this patch should fail, as 'line' doesn't equal 'foo'
+  # But yet it shows up as deleted instead of conflicted
+  expected_output = [
+    'C         %s\n' % sbox.ospath('test'),
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_file_path, wc_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -4402,6 +4441,7 @@ test_list = [ None,
               patch_git_with_index_line,
               patch_change_symlink_target,
               patch_replace_dir_with_file_and_vv,
+              single_line_mismatch,
             ]
 
 if __name__ == '__main__':
