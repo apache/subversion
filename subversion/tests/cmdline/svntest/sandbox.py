@@ -318,6 +318,13 @@ class Sandbox:
       # '*' is evaluated on Windows
       self.simple_propset('svn:special', 'X', target)
 
+  def simple_add_text(self, text, *targets):
+    """Create files containing TEXT as TARGETS"""
+    assert len(targets) > 0
+    for target in targets:
+       svntest.main.file_write(self.ospath(target), text, mode='wb')
+    self.simple_add(*targets)
+
   def simple_copy(self, source, dest):
     """Copy SOURCE to DEST in the WC.
        SOURCE and DEST are relpaths relative to the WC."""
