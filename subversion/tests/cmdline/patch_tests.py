@@ -4361,6 +4361,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
                                      'patch', patch_file_path, sbox.wc_dir)
 
 @XFail()
+@Issue(4297)
 def single_line_mismatch(sbox):
   "single line replacement mismatch"
 
@@ -4368,9 +4369,9 @@ def single_line_mismatch(sbox):
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
   svntest.main.file_write(patch_file_path, ''.join([
-    "Index: tests\n",
+    "Index: test\n",
     "===================================================================\n",
-    "--- tests\t(revision 1)\n",
+    "--- test\t(revision 1)\n",
     "+++ test\t(working copy)\n",
     "@@ -1 +1 @@\n",
     "-foo\n",
