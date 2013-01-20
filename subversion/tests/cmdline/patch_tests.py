@@ -1097,6 +1097,7 @@ def patch_remove_empty_dirs(sbox):
     'D         %s\n' % sbox.ospath('A/B/lambda'),
     'D         %s\n' % sbox.ospath('A/B/E/alpha'),
     'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    'D         %s\n' % sbox.ospath('A/B/E'),
     'D         %s\n' % sbox.ospath('A/B'),
   ]
 
@@ -3965,8 +3966,8 @@ def patch_delete_and_skip(sbox):
   expected_output = [
     'D         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
     'D         %s\n' % os.path.join('A', 'B', 'E', 'beta'),
-    'Skipped missing target: \'%s\'\n' % skipped_path,
     'D         %s\n' % os.path.join('A', 'B', 'E'),
+    'Skipped missing target: \'%s\'\n' % skipped_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n'
   ]
@@ -4254,7 +4255,105 @@ def patch_change_symlink_target(sbox):
   # (On Windows it deletes the file that represents the symlink as 'D XX\link')
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
   #       symlink to 'bar' (or "link bar" on non-HAVE_SYMLINK platforms)
-  
+
+def patch_replace_dir_with_file_and_vv(sbox):
+  "replace dir with file and file with dir"
+  sbox.build(read_only=True)
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join([
+  # Delete all files in D and descendants to delete D itself
+    "Index: A/D/G/pi\n",
+    "===================================================================\n",
+    "--- A/D/G/pi\t(revision 1)\n",
+    "+++ A/D/G/pi\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'pi'.\n",
+    "Index: A/D/G/rho\n",
+    "===================================================================\n",
+    "--- A/D/G/rho\t(revision 1)\n",
+    "+++ A/D/G/rho\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'rho'.\n",
+    "Index: A/D/G/tau\n",
+    "===================================================================\n",
+    "--- A/D/G/tau\t(revision 1)\n",
+    "+++ A/D/G/tau\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'tau'.\n",
+    "Index: A/D/H/chi\n",
+    "===================================================================\n",
+    "--- A/D/H/chi\t(revision 1)\n",
+    "+++ A/D/H/chi\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'chi'.\n",
+    "Index: A/D/H/omega\n",
+    "===================================================================\n",
+    "--- A/D/H/omega\t(revision 1)\n",
+    "+++ A/D/H/omega\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'omega'.\n",
+    "Index: A/D/H/psi\n",
+    "===================================================================\n",
+    "--- A/D/H/psi\t(revision 1)\n",
+    "+++ A/D/H/psi\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'psi'.\n",
+    "Index: A/D/gamma\n",
+    "===================================================================\n",
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'gamma'.\n",
+  # Delete iota
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'iota'.\n",
+
+  # Add A/D as file
+    "Index: A/D\n",
+    "===================================================================\n",
+    "--- A/D\t(revision 0)\n",
+    "+++ A/D\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+New file\n",
+    "\ No newline at end of file\n",
+
+  # Add iota as directory
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: k\n",
+    "## -0,0 +1 ##\n",
+    "+v\n",
+    "\ No newline at end of property\n",
+  ]))
+
+  expected_output = [
+    'D         %s\n' % sbox.ospath('A/D/G/pi'),
+    'D         %s\n' % sbox.ospath('A/D/G/rho'),
+    'D         %s\n' % sbox.ospath('A/D/G/tau'),
+    'D         %s\n' % sbox.ospath('A/D/G'),
+    'D         %s\n' % sbox.ospath('A/D/H/chi'),
+    'D         %s\n' % sbox.ospath('A/D/H/omega'),
+    'D         %s\n' % sbox.ospath('A/D/H/psi'),
+    'D         %s\n' % sbox.ospath('A/D/H'),
+    'D         %s\n' % sbox.ospath('A/D/gamma'),
+    'D         %s\n' % sbox.ospath('A/D'),
+    'D         %s\n' % sbox.ospath('iota'),
+    'A         %s\n' % sbox.ospath('A/D'),
+    'A         %s\n' % sbox.ospath('iota'),
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_file_path, sbox.wc_dir)
 
 ########################################################################
 #Run the tests
@@ -4302,6 +4401,7 @@ test_list = [ None,
               patch_add_and_delete,
               patch_git_with_index_line,
               patch_change_symlink_target,
+              patch_replace_dir_with_file_and_vv,
             ]
 
 if __name__ == '__main__':
