@@ -234,7 +234,7 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
   server->pwdb = NULL;
   if (pwdb_path)
     {
-      pwdb_path = svn_dirent_canonicalize(pwdb_path, pool);
+      pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(server->base, pwdb_path, pool);
 
       err = svn_config_read2(&server->pwdb, pwdb_path, TRUE, FALSE, pool);
@@ -293,7 +293,7 @@ svn_error_t *load_authz_config(server_baton_t *server,
         }
       else if (!svn_path_is_repos_relative_url(authzdb_path))
         {
-          authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
+          authzdb_path = svn_dirent_internal_style(authzdb_path, pool);
           authzdb_path = svn_dirent_join(server->base, authzdb_path, pool);
         }
       err = svn_repos_authz_read2(&server->authzdb, authzdb_path, TRUE,
