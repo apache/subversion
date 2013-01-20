@@ -830,15 +830,13 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
   struct symlink_baton_t *sb = baton;
 
   if (eof)
-    *eof = FALSE;
+    *eof = TRUE;
   if (eol_str)
     *eol_str = NULL;
 
   if (sb->at_eof)
     {
-      *line = NULL;
-      if (eof)
-        *eof = TRUE;
+      *line = svn_stringbuf_create("", result_pool); /* Result required :( */
     }
   else
     {
