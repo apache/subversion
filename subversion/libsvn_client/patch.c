@@ -175,6 +175,9 @@ typedef struct patch_target_t {
    * CONTENT->existed). */
   apr_file_t *file;
 
+  /* The target file is a symlink */
+  svn_boolean_t is_symlink;
+
   /* The patched file.
    * This is equivalent to the target, except that in appropriate
    * places it contains the modified text as it appears in the patch file.
@@ -451,8 +454,9 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_io_check_path(target->local_abspath,
-                            &target->kind_on_disk, scratch_pool));
+  SVN_ERR(svn_io_check_special_path(target->local_abspath,
+                                    &target->kind_on_disk, &target->is_symlink,
+                                    scratch_pool));
   err = svn_wc__node_is_status_deleted(&target->locally_deleted,
                                        wc_ctx, target->local_abspath,
                                        scratch_pool);
@@ -498,8 +502,10 @@ resolve_target_path(patch_target_t *target,
           /* As far as we are concerned this target is not locally deleted. */
           target->locally_deleted = FALSE;
 
-          SVN_ERR(svn_io_check_path(target->local_abspath,
-                                    &target->kind_on_disk, scratch_pool));
+          SVN_ERR(svn_io_check_special_path(target->local_abspath,
+                                            &target->kind_on_disk,
+                                            &target->is_symlink,
+                                            scratch_pool));
         }
       else if (target->kind_on_disk != svn_node_none)
         {
@@ -807,6 +813,107 @@ write_file(void *baton, const char *buf, apr_size_t len,
   return SVN_NO_ERROR;
 }
 
+/* Baton for the (readline|tell|seek|write)_symlink functions. */
+struct symlink_baton_t
+{
+  const char *local_abspath;
+  svn_boolean_t at_eof;
+};
+
+/* Allocate *STRINGBUF in RESULT_POOL, and read into it one line from
+ * the symlink accessed via BATON.
+ *
+ * Copied from file handling:
+ *  Reading stops either after a line-terminator was found,
+ *  or if EOF is reached in which case *EOF is set to TRUE.
+ *  The line-terminator is not stored in *STRINGBUF.
+ *
+ *  The line-terminator is detected automatically and stored in *EOL
+ *  if EOL is not NULL. If EOF is reached and FILE does not end
+ *  with a newline character, and EOL is not NULL, *EOL is set to NULL.
+ *
+ * SCRATCH_POOL is used for temporary allocations.
+ */
+static svn_error_t *
+readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
+                 svn_boolean_t *eof, apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct symlink_baton_t *sb = baton;
+
+  if (eof)
+    *eof = FALSE;
+  if (eol_str)
+    *eol_str = NULL;
+
+  if (sb->at_eof)
+    {
+      *line = NULL;
+      if (eof)
+        *eof = TRUE;
+    }
+  else
+    {
+      svn_string_t *dest;
+      SVN_ERR(svn_io_read_link(&dest, sb->local_abspath, scratch_pool));
+
+      *line = svn_stringbuf_createf(result_pool, "link %s", dest->data);
+
+      sb->at_eof = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Return in *OFFSET whether we are before or after the link. */
+static svn_error_t *
+tell_symlink(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
+{
+  struct symlink_baton_t *sb = baton;
+
+  *offset = sb->at_eof ? 1 : 0;
+  return SVN_NO_ERROR;
+}
+
+/* Seek to the specified by OFFSET in the unpatched file content accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
+{
+  struct symlink_baton_t *sb = baton;
+
+  sb->at_eof = (offset != 0);
+  return SVN_NO_ERROR;
+}
+
+/* Write LEN bytes from BUF into the patched file content accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+write_symlink(void *baton, const char *buf, apr_size_t len,
+           apr_pool_t *scratch_pool)
+{
+  struct symlink_baton_t *sb = baton;
+  const char *new_name;
+  const char *link = apr_pstrndup(scratch_pool, buf, len);
+
+  if (strncmp(link, "link ", 5) != 0)
+    return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
+                            _("Invalid link representation"));
+
+  link += 5; /* Skip "link " */
+
+  /* We assume the entire symlink is written at once, as the patch
+     format is line based */
+
+  SVN_ERR(svn_io_create_unique_link(&new_name, sb->local_abspath, link,
+                                    ".tmp", scratch_pool));
+
+  SVN_ERR(svn_io_file_rename(new_name, sb->local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Return a suitable filename for the target of PATCH.
  * Examine the ``old'' and ``new'' file names, and choose the file name
  * with the fewest path components, the shortest basename, and the shortest
@@ -912,7 +1019,20 @@ init_patch_target(patch_target_t **patch_target,
 
       /* Create a temporary file to write the patched result to.
        * Also grab various bits of information about the file. */
-      if (target->kind_on_disk == svn_node_file)
+      if (target->is_symlink)
+        {
+          struct symlink_baton_t *sb = apr_pcalloc(result_pool, sizeof(*sb));
+          content->existed = TRUE;
+
+          sb->local_abspath = target->local_abspath;
+
+          /* Wire up the read callbacks. */
+          content->readline = readline_symlink;
+          content->seek = seek_symlink;
+          content->tell = tell_symlink;
+          content->read_baton = target->file;
+        }
+      else if (target->kind_on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
                                    APR_READ | APR_BUFFERED,
@@ -950,17 +1070,26 @@ init_patch_target(patch_target_t **patch_target,
       else if (patch->operation == svn_diff_op_deleted)
         target->deleted = TRUE;
 
-      /* Open a temporary file to write the patched result to. */
-      SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                       &target->patched_path, NULL,
-                                       remove_tempfiles ?
-                                         svn_io_file_del_on_pool_cleanup :
-                                         svn_io_file_del_none,
-                                       result_pool, scratch_pool));
+      if (! target->is_symlink)
+        {
+          /* Open a temporary file to write the patched result to. */
+          SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
+                                           &target->patched_path, NULL,
+                                           remove_tempfiles ?
+                                             svn_io_file_del_on_pool_cleanup :
+                                             svn_io_file_del_none,
+                                           result_pool, scratch_pool));
 
-      /* Put the write callback in place. */
-      content->write = write_file;
-      content->write_baton = target->patched_file;
+          /* Put the write callback in place. */
+          content->write = write_file;
+          content->write_baton = target->patched_file;
+        }
+      else
+        {
+          /* Put the write callback in place. */
+          content->write = write_symlink;
+          content->write_baton = content->read_baton;
+        }
 
       /* Open a temporary file to write rejected hunks to. */
       SVN_ERR(svn_io_open_unique_file3(&target->reject_file,
