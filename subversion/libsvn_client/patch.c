@@ -1546,7 +1546,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
     {
       if (target->kind_on_disk == svn_node_file)
         {
-          svn_io_dirent2_t *dirent;
+          const svn_io_dirent2_t *dirent;
           SVN_ERR(svn_io_stat_dirent2(&dirent, target->local_abspath, FALSE,
                                       TRUE, scratch_pool, scratch_pool));
 
