@@ -1133,7 +1133,9 @@ init_patch_target(patch_target_t **patch_target,
 }
 
 /* Read a *LINE from CONTENT. If the line has not been read before
- * mark the line in CONTENT->LINES. Allocate *LINE in RESULT_POOL.
+ * mark the line in CONTENT->LINES.
+ * If a line could be read successfully, increase CONTENT->CURRENT_LINE,
+ * and allocate *LINE in RESULT_POOL.
  * Do temporary allocations in SCRATCH_POOL.
  */
 static svn_error_t *
@@ -1174,9 +1176,6 @@ readline(target_content_t *content,
                                        content->keywords, FALSE,
                                        result_pool));
 
-  /* Increase the line number if a line is read. An easy !eof won't work,
-     because that won't count the last and sometime only line.
-     (And using line number 0 gives all kinds of problems) */
   if (line_raw->len > 0 || eol_str)
     content->current_line++;
 
