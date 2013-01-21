@@ -298,7 +298,7 @@ print_status(const char *cwd_abspath, const char *path,
       relpath = svn_dirent_local_style(relpath, pool);
       moved_from_line = apr_pstrcat(pool, "\n        > ",
                                     apr_psprintf(pool,
-                                                 _("swapped place with %s"),
+                                                 _("swapped places with %s"),
                                                  relpath),
                                     (char *)NULL);
     }
