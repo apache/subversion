@@ -18071,6 +18071,15 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'merge', '^/dir/binary-file', '-c', '4', '.')
 
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the dir (wrong target)
+  expected_error = 'svn: E160017: (.* is not a file|' + \
+                                   'Attempted to get checksum.*|' + \
+                                   '.* of a directory)'
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'merge', '^/dir', '-c', '4', 'binary-file')
+
 
 ########################################################################
 # Run the tests
