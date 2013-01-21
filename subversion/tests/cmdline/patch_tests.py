@@ -4222,7 +4222,7 @@ def patch_change_symlink_target(sbox):
     "@@ -1 +1 @@",
     "-link foo",
     "\\ No newline at end of file",
-    "+link bar",
+    "+link bardame",
     "\\ No newline at end of file",
     "",
     ]))
