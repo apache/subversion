@@ -517,6 +517,8 @@ typedef struct prop_read_baton_t {
  * the property value runs out in which case *EOF is set to TRUE.
  * The line-terminator is not stored in *STRINGBUF.
  *
+ * If the line is empty or could not be read, *line is set to NULL.
+ *
  * The line-terminator is detected automatically and stored in *EOL
  * if EOL is not NULL. If the end of the property value is reached
  * and does not end with a newline character, and EOL is not NULL,
@@ -530,17 +532,15 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
               apr_pool_t *scratch_pool)
 {
   prop_read_baton_t *b = (prop_read_baton_t *)baton;
-  svn_stringbuf_t *str;
+  svn_stringbuf_t *str = NULL;
   const char *c;
   svn_boolean_t found_eof;
-
-  str = svn_stringbuf_create_ensure(80, result_pool);
 
   if ((apr_uint64_t)b->offset >= (apr_uint64_t)b->value->len)
     {
       *eol_str = NULL;
       *eof = TRUE;
-      *line = str;
+      *line = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -572,7 +572,11 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
             }
         }
       else
-        svn_stringbuf_appendbyte(str, *c);
+        {
+          if (str == NULL)
+            str = svn_stringbuf_create_ensure(80, result_pool);
+          svn_stringbuf_appendbyte(str, *c);
+        }
 
       if (*eol_str)
         break;
@@ -690,6 +694,8 @@ init_prop_target(prop_patch_target_t **prop_target,
  * or if EOF is reached in which case *EOF is set to TRUE.
  * The line-terminator is not stored in *STRINGBUF.
  *
+ * If the line is empty or could not be read, *line is set to NULL.
+ *
  * The line-terminator is detected automatically and stored in *EOL
  * if EOL is not NULL. If EOF is reached and FILE does not end
  * with a newline character, and EOL is not NULL, *EOL is set to NULL.
@@ -702,12 +708,10 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
               apr_pool_t *scratch_pool)
 {
   apr_file_t *file = (apr_file_t *)baton;
-  svn_stringbuf_t *str;
+  svn_stringbuf_t *str = NULL;
   apr_size_t numbytes;
   char c;
   svn_boolean_t found_eof;
-
-  str = svn_stringbuf_create_ensure(80, result_pool);
 
   /* Read bytes into STR up to and including, but not storing,
    * the next EOL sequence. */
@@ -755,7 +759,11 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
             }
         }
       else
-        svn_stringbuf_appendbyte(str, c);
+        {
+          if (str == NULL)
+            str = svn_stringbuf_create_ensure(80, result_pool);
+          svn_stringbuf_appendbyte(str, c);
+        }
 
       if (*eol_str)
         break;
@@ -848,7 +856,7 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
 
   if (sb->at_eof)
     {
-      *line = svn_stringbuf_create("", result_pool); /* Result required :( */
+      *line = NULL;
     }
   else
     {
@@ -1182,13 +1190,18 @@ readline(target_content_t *content,
   if (content->eol_style == svn_subst_eol_style_none)
     content->eol_str = eol_str;
 
-  /* Contract keywords. */
-  SVN_ERR(svn_subst_translate_cstring2(line_raw->data, line,
-                                       NULL, FALSE,
-                                       content->keywords, FALSE,
-                                       result_pool));
+  if (line_raw)
+    {
+      /* Contract keywords. */
+      SVN_ERR(svn_subst_translate_cstring2(line_raw->data, line,
+                                           NULL, FALSE,
+                                           content->keywords, FALSE,
+                                           result_pool));
+    }
+  else
+    *line = "";
 
-  if (line_raw->len > 0 || eol_str)
+  if ((line_raw && line_raw->len > 0) || eol_str)
     content->current_line++;
 
   return SVN_NO_ERROR;
