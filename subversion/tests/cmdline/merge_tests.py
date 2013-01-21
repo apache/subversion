@@ -17993,6 +17993,85 @@ def merge_conflict_when_keywords_removed(sbox):
                            ' U   A2\n']),
     [], 'merge', '--accept=postpone', '^/A', 'A2')
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4139, 3274, 3503)
+def merge_target_selection(sbox):
+  "merge target selection handling"
+
+  sbox.build()
+
+  # r2
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('\1\2\3\4\5', 'dir/binary-file')
+  sbox.simple_add_text('abcde', 'dir/text-file')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_copy('dir', 'branch')
+  sbox.simple_commit()
+
+  # r4
+  svntest.main.file_write(sbox.ospath('dir/binary-file'), '\5\4\3\2\1')
+  sbox.simple_commit()
+
+  sbox.simple_update()
+
+  os.chdir(sbox.ospath('branch'))
+
+  # Merge the directory (no target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (no target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the directory (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4', '.')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '^/dir/binary-file', '-c', '4', 'binary-file')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (wrong target)
+  expected_error = 'svn: E160005: Cannot replace a directory from within'
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'merge', '^/dir/binary-file', '-c', '4', '.')
+
+
 ########################################################################
 # Run the tests
 
@@ -18131,6 +18210,7 @@ test_list = [ None,
               merge_with_externals_with_mergeinfo,
               merge_binary_file_with_keywords,
               merge_conflict_when_keywords_removed,
+              merge_target_selection,
              ]
 
 if __name__ == '__main__':
