@@ -9447,7 +9447,7 @@ merge_locked(const char *source1,
 {
   merge_target_t *target;
   svn_client__pathrev_t *source1_loc, *source2_loc;
-  svn_boolean_t related = FALSE;
+  svn_boolean_t sources_related = FALSE;
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
   svn_error_t *err;
@@ -9513,7 +9513,7 @@ merge_locked(const char *source1,
   if (yca)
     {
       /* Note that our merge sources are related. */
-      related = TRUE;
+      sources_related = TRUE;
 
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
@@ -9590,7 +9590,7 @@ merge_locked(const char *source1,
     }
 
   err = do_merge(NULL, NULL, merge_sources, target,
-                 ra_session1, related, same_repos,
+                 ra_session1, sources_related, same_repos,
                  ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
