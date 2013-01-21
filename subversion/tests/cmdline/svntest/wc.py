@@ -702,7 +702,6 @@ class State:
           continue
         item = StateItem.from_entry(entry)
         if name:
-          print('P: %s, N: %s -> %s' % (parent, name, repos_join(parent, name)))
           desc[repos_join(parent, name)] = item
           implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:

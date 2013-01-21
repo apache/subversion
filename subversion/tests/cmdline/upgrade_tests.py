@@ -1206,6 +1206,7 @@ def upgrade_file_externals(sbox):
 
 
 @Issue(4035)
+@XFail()
 def upgrade_missing_replaced(sbox):
   "upgrade with missing replaced dir"
 
