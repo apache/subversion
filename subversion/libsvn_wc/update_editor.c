@@ -4125,11 +4125,18 @@ close_file(void *file_baton,
            and we should likewise remove our cached copy of it.  */
         if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
           {
-            SVN_ERR_ASSERT(prop->value == NULL);
-            SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
-                                           scratch_pool));
+            /* If we lose the lock, but not because we are switching to
+               another url, remove the state lock from the wc */
+            if (! eb->switch_relpath 
+                || strcmp(fb->new_relpath, fb->old_repos_relpath) == 0)
+              {
+                SVN_DBG(("%s:%s\n", fb->new_relpath, fb->old_repos_relpath));
+                SVN_ERR_ASSERT(prop->value == NULL);
+                SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
+                                               scratch_pool));
 
-            lock_state = svn_wc_notify_lock_state_unlocked;
+                lock_state = svn_wc_notify_lock_state_unlocked;
+              }
             break;
           }
       }
