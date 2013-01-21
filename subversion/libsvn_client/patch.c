@@ -646,7 +646,7 @@ init_prop_target(prop_patch_target_t **prop_target,
   content->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   content->keywords = apr_hash_make(result_pool);
 
-  new_prop_target = apr_palloc(result_pool, sizeof(*new_prop_target));
+  new_prop_target = apr_pcalloc(result_pool, sizeof(*new_prop_target));
   new_prop_target->name = apr_pstrdup(result_pool, prop_name);
   new_prop_target->operation = operation;
   new_prop_target->content = content;
@@ -669,7 +669,7 @@ init_prop_target(prop_patch_target_t **prop_target,
 
 
   /* Wire up the read and write callbacks. */
-  prop_read_baton = apr_palloc(result_pool, sizeof(*prop_read_baton));
+  prop_read_baton = apr_pcalloc(result_pool, sizeof(*prop_read_baton));
   prop_read_baton->value = value;
   prop_read_baton->offset = 0;
   content->readline = readline_prop;
@@ -1642,7 +1642,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
       matched_line = 0;
     }
 
-  (*hi) = apr_palloc(result_pool, sizeof(hunk_info_t));
+  (*hi) = apr_pcalloc(result_pool, sizeof(hunk_info_t));
   (*hi)->hunk = hunk;
   (*hi)->matched_line = matched_line;
   (*hi)->rejected = (matched_line == 0);
@@ -2239,10 +2239,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        * We'll need those to figure out whether we should delete the
        * patched file. */
       SVN_ERR(svn_io_stat(&patched_file, target->patched_path,
-                          APR_FINFO_SIZE, scratch_pool));
+                          APR_FINFO_SIZE | APR_FINFO_LINK, scratch_pool));
       if (target->kind_on_disk == svn_node_file)
         SVN_ERR(svn_io_stat(&working_file, target->local_abspath,
-                            APR_FINFO_SIZE, scratch_pool));
+                            APR_FINFO_SIZE | APR_FINFO_LINK, scratch_pool));
       else
         working_file.size = 0;
 
@@ -2889,7 +2889,7 @@ apply_patches(/* The path to the patch file. */
             {
               /* Save info we'll still need when we're done patching. */
               patch_target_info_t *target_info =
-                apr_palloc(scratch_pool, sizeof(patch_target_info_t));
+                apr_pcalloc(scratch_pool, sizeof(patch_target_info_t));
               target_info->local_abspath = apr_pstrdup(scratch_pool,
                                                        target->local_abspath);
               target_info->deleted = target->deleted;
