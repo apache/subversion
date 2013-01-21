@@ -18061,23 +18061,31 @@ def merge_target_selection(sbox):
     '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
     ' U   binary-file\n',
   ]
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir/binary-file', '-c', '4', 'binary-file')
 
   svntest.main.run_svn(None, 'revert', '-R', '.')
 
   # Merge the file (wrong target)
-  expected_error = 'svn: E160005: Cannot replace a directory from within'
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  expected_output = [
+    'Skipped missing target: \'.\'\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir/binary-file', '-c', '4', '.')
 
   svntest.main.run_svn(None, 'revert', '-R', '.')
 
   # Merge the dir (wrong target)
-  expected_error = 'svn: E160017: (.* is not a file|' + \
-                                   'Attempted to get checksum.*|' + \
-                                   '.* of a directory)'
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  expected_output = [
+    'Skipped \'%s\'\n' % os.path.join('binary-file', 'binary-file'),
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
 

@@ -9031,6 +9031,7 @@ do_merge(apr_hash_t **modified_subtrees,
 
   for (i = 0; i < merge_sources->nelts; i++)
     {
+      svn_node_kind_t src1_kind;
       merge_source_t *source =
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
 
@@ -9073,8 +9074,11 @@ do_merge(apr_hash_t **modified_subtrees,
           checked_mergeinfo_capability = TRUE;
         }
 
-      /* Call our merge helpers based on TARGET's kind. */
-      if (target->kind == svn_node_file)
+      SVN_ERR(svn_ra_check_path(ra_session1, "", source->loc1->rev,
+                                &src1_kind, iterpool));
+
+      /* Call our merge helpers based on SRC1's kind. */
+      if (src1_kind != svn_node_dir)
         {
           SVN_ERR(do_file_merge(result_catalog,
                                 source, target->abspath,
@@ -9083,7 +9087,7 @@ do_merge(apr_hash_t **modified_subtrees,
                                 &notify_baton,
                                 &merge_cmd_baton, iterpool));
         }
-      else if (target->kind == svn_node_dir)
+      else /* Directory */
         {
           /* If conflicts occur while merging any but the very last
            * revision range we want an error to be raised that aborts
