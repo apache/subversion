@@ -1177,7 +1177,7 @@ readline(target_content_t *content,
   /* Increase the line number if a line is read. An easy !eof won't work,
      because that won't count the last and sometime only line.
      (And using line number 0 gives all kinds of problems) */
-  if (line_raw->size > 0 || eol_str)
+  if (line_raw->len > 0 || eol_str)
     content->current_line++;
 
   return SVN_NO_ERROR;
