@@ -214,10 +214,11 @@ load_config(svn_ra_serf__session_t *session,
 
   /* If set, read the flag that tells us to do bulk updates or not. Defaults
      to skelta updates. */
-  SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
-                              FALSE));
+  SVN_ERR(svn_config_get_tristate(config, &session->bulk_updates,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
+                                  "auto",
+                                  svn_tristate_unknown));
 
   /* Load the maximum number of parallel session connections. */
   svn_config_get_int64(config, &session->max_connections,
@@ -269,10 +270,11 @@ load_config(svn_ra_serf__session_t *session,
                      session->ssl_authorities);
 
       /* Load the group bulk updates flag. */
-      SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
-                                  server_group,
-                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
-                                  session->bulk_updates));
+      SVN_ERR(svn_config_get_tristate(config, &session->bulk_updates,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
+                                      "auto",
+                                      session->bulk_updates));
 
       /* Load the maximum number of parallel session connections,
          overriding global values. */

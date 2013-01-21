@@ -230,10 +230,12 @@ struct svn_ra_serf__session_t {
 
   svn_ra_serf__blncache_t *blncache;
 
-  /* Flag that indicates if we request the server for bulk updates (TRUE) with
-     all the properties and content in the update-report response. If FALSE,
-     request a skelta update-report with inlined properties. */
-  svn_boolean_t bulk_updates;
+  /* Trisate flag that indicates user preference for using bulk updates
+     (svn_tristate_true) with all the properties and content in the
+     update-report response. If svn_tristate_false, request a skelta
+     update-report with inlined properties. If svn_tristate_unknown then use
+     server preference. */
+  svn_tristate_t bulk_updates;
 
   /* Indicates if the server wants bulk update requests (Prefer) or only
      accepts skelta requests (Off). If this value is On both options are 
