@@ -2506,7 +2506,7 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
   apr_int32_t wanted = APR_FINFO_TYPE | APR_FINFO_LINK
                        | APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-#if defined(WIN32) || defined(__OS2__) || defined(DARWIN)
+#if defined(WIN32) || defined(__OS2__)
   if (verify_truename)
     wanted |= APR_FINFO_NAME;
 #endif
@@ -2535,6 +2535,7 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
         {
           /* No parent directory. No need to stat/verify */
         }
+#if defined(WIN32) || defined(__OS2__)
       else if (finfo.name)
         {
           const char *name_on_disk;
@@ -2555,8 +2556,9 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
                           name_on_disk);
             }
         }
-#if defined(DARWIN)
-      /* Currently apr doesn't set finfo.name on DARWIN.
+#elif defined(DARWIN)
+      /* Currently apr doesn't set finfo.name on DARWIN, returning
+                   APR_INCOMPLETE.
          ### Can we optimize this in another way? */
       else
         {
