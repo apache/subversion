@@ -4405,25 +4405,43 @@ def patch_empty_file(sbox):
 
   patch_file_path = make_patch_path(sbox)
   svntest.main.file_write(patch_file_path, ''.join([
-    "Index: file1.txt\n",
+  # patch a file containing just '\n' to 'replacement\n'
+    "Index: lf.txt\n",
     "===================================================================\n",
-    "--- file1.txt\t(revision 20)\n",
-    "+++ file1.txt\t(working copy)\n",
+    "--- lf.txt\t(revision 2)\n",
+    "+++ lf.txt\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "\n"
+    "+replacement\n",
+
+  # patch a new file 'new.txt\n'
+    "Index: new.txt\n",
+    "===================================================================\n",
+    "--- new.txt\t(revision 0)\n",
+    "+++ new.txt\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
-    "+vhjhgf\n",
-    "\\ No newline at end of file\n",
+    "+new file\n",
+
+  # patch a file containing 0 bytes to 'replacement\n'
+    "Index: empty.txt\n",
+    "===================================================================\n",
+    "--- empty.txt\t(revision 2)\n",
+    "+++ empty.txt\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+replacement\n",
   ]))
 
-  # Add a 0-byte file 'file1.txt'
-  sbox.simple_add_text('', 'file1.txt')
+  sbox.simple_add_text('', 'empty.txt')
+  sbox.simple_add_text('\n', 'lf.txt')
   sbox.simple_commit()
 
-  # And now this patch should fail, as 'line' doesn't equal 'foo'
-  # But yet it shows up as deleted instead of conflicted
   expected_output = [
-    'U         %s\n' % sbox.ospath('file1.txt'),
+    'U         %s\n' % sbox.ospath('lf.txt'),
+    'A         %s\n' % sbox.ospath('new.txt'),
+    'U         %s\n' % sbox.ospath('empty.txt'),
   ]
 
+  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 

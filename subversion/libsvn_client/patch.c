@@ -1205,6 +1205,8 @@ readline(target_content_t *content,
   if ((line_raw && line_raw->len > 0) || eol_str)
     content->current_line++;
 
+  SVN_ERR_ASSERT(content->current_line > 0);
+
   return SVN_NO_ERROR;
 }
 
@@ -1536,26 +1538,45 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
    * the hunk applies at line 1. If the file already exists, the hunk
    * is rejected, unless the file is versioned and its content matches
    * the file the patch wants to create.  */
-  if (original_start == 0 && ! is_prop_hunk)
+  if (original_start == 0 && fuzz > 0)
+    {
+      matched_line = 0; /* reject any fuzz for new files */
+    }
+  else if (original_start == 0 && ! is_prop_hunk)
     {
       if (target->kind_on_disk == svn_node_file)
         {
-          if (target->db_kind == svn_node_file)
-            {
-              svn_boolean_t file_matches;
+          svn_io_dirent2_t *dirent;
+          SVN_ERR(svn_io_stat_dirent2(&dirent, target->local_abspath, FALSE,
+                                      TRUE, scratch_pool, scratch_pool));
 
-              SVN_ERR(match_existing_target(&file_matches, content, hunk,
-                                            scratch_pool));
-              if (file_matches)
+          if (dirent->kind == svn_node_file
+              && !dirent->special
+              && dirent->filesize == 0)
+            {
+              matched_line = 1; /* Matched an on-disk empty file */
+            }
+          else
+            {
+              if (target->db_kind == svn_node_file)
                 {
-                  matched_line = 1;
-                  already_applied = TRUE;
+                  svn_boolean_t file_matches;
+
+                  /* ### I can't reproduce anything but a no-match here.
+                         The content is already at eof, so any hunk fails */
+                  SVN_ERR(match_existing_target(&file_matches, content, hunk,
+                                            scratch_pool));
+                  if (file_matches)
+                    {
+                      matched_line = 1;
+                      already_applied = TRUE;
+                    }
+                  else
+                    matched_line = 0; /* reject */
                 }
               else
                 matched_line = 0; /* reject */
             }
-          else
-            matched_line = 0; /* reject */
         }
       else
         matched_line = 1;
