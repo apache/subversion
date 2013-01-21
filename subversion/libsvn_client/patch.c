@@ -801,6 +801,24 @@ write_file(void *baton, const char *buf, apr_size_t len,
   return SVN_NO_ERROR;
 }
 
+/* Handling symbolic links:
+ *
+ * In Subversion, symlinks can be represened on disk in two distinct ways.
+ * On systems which support symlinks, a symlink is created on disk.
+ * On systems which do not support symlink, a file is created on disk
+ * which contains "link TARGET" where TARGET is the file the symlink
+ * points to.
+ *
+ * When reading symlinks (i.e. the link itself, not the file the symlink
+ * is pointing to) through the svn_subst_create_specialfile() function
+ * into a buffer, the buffer always contains the "normal form" of the symlink,
+ * which looks like: "link TARGET"
+ * Due to this representation symlinks always contain a single line of text.
+ *
+ * The functions below are needed to deal with the case where a patch
+ * wants to change the TARGET that a symlink points to.
+ */
+
 /* Baton for the (readline|tell|seek|write)_symlink functions. */
 struct symlink_baton_t
 {
