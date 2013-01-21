@@ -4130,7 +4130,6 @@ close_file(void *file_baton,
             if (! eb->switch_relpath 
                 || strcmp(fb->new_relpath, fb->old_repos_relpath) == 0)
               {
-                SVN_DBG(("%s:%s\n", fb->new_relpath, fb->old_repos_relpath));
                 SVN_ERR_ASSERT(prop->value == NULL);
                 SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
                                                scratch_pool));
