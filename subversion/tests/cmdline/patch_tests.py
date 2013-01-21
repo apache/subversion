@@ -4230,24 +4230,37 @@ def patch_change_symlink_target(sbox):
   # r2 - Try as plain text with how we encode the symlink
   svntest.main.file_write(sbox.ospath('link'), 'link foo')
   sbox.simple_add('link')
-  sbox.simple_commit()
 
-  expected_output = [
+  expected_output = svntest.wc.State(wc_dir, {
+    'link'       : Item(verb='Adding'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  patch_output = [
     'U         %s\n' % sbox.ospath('link'),
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(None, patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # r3 - Store result
-  sbox.simple_commit()
+  expected_output = svntest.wc.State(wc_dir, {
+    'link'       : Item(verb='Sending'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
 
   # r4 - Now as symlink
   sbox.simple_rm('link')
   sbox.simple_add_symlink('foo', 'link')
-  sbox.simple_commit()
+  expected_output = svntest.wc.State(wc_dir, {
+    'link'       : Item(verb='Replacing'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(None, patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
