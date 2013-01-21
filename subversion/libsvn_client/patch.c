@@ -833,8 +833,6 @@ struct symlink_baton_t
  * of the symlink accessed via BATON.
  *
  * Otherwise behaves like readline_file(), which see.
- *
- * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
 readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
