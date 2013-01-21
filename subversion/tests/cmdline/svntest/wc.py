@@ -96,7 +96,7 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
 
 _re_parse_status_ex = re.compile('^      ('
                '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
-              '|(  \> swapped place with (?P<swapped_with>.+).*)'
+              '|(  \> swapped places with (?P<swapped_with>.+).*)'
               '|(\>   (?P<tc>.+))'
   ')$')
 
