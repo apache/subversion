@@ -803,7 +803,7 @@ write_file(void *baton, const char *buf, apr_size_t len,
 
 /* Handling symbolic links:
  *
- * In Subversion, symlinks can be represened on disk in two distinct ways.
+ * In Subversion, symlinks can be represented on disk in two distinct ways.
  * On systems which support symlinks, a symlink is created on disk.
  * On systems which do not support symlink, a file is created on disk
  * which contains "link TARGET" where TARGET is the file the symlink
