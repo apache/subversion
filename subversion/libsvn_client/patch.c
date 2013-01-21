@@ -822,7 +822,10 @@ write_file(void *baton, const char *buf, apr_size_t len,
 /* Baton for the (readline|tell|seek|write)_symlink functions. */
 struct symlink_baton_t
 {
+  /* The path to the symlink on disk (not the path to the target of the link) */
   const char *local_abspath;
+
+  /* Indicates whether the "normal form" of the symlink has been read. */
   svn_boolean_t at_eof;
 };
 
