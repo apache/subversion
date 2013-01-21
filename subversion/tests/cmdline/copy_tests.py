@@ -2110,7 +2110,7 @@ def move_moved_file_and_dir(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
+    'A/D/G/E_move_moved'       : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/beta'  : Item(status='  ', wc_rev=2),
     'A/B/F/rho_move_moved'     : Item(status='  ', wc_rev=2),

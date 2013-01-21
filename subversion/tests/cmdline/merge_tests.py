@@ -1831,7 +1831,7 @@ def merge_into_missing(sbox):
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
-    'Q'     : Item(status='! ', entry_rev='?', wc_rev='2'),
+    'Q'     : Item(status='! ', wc_rev='2'),
     # Revision is known and we can record mergeinfo
     'Q/R'      : Item(status='! ', wc_rev='3'),
     'Q/R/bar'  : Item(status='! ', wc_rev='3'),
@@ -7420,16 +7420,16 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
 
   # Now merge -c10 from A to A_COPY.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_output = wc.State('.', {
+  expected_output = wc.State('', {
     'nu': Item(status='A '),
     })
-  expected_mergeinfo_output = wc.State('.', {
+  expected_mergeinfo_output = wc.State('', {
     ''   : Item(status=' U'),
     'nu' : Item(status=' U'),
     })
-  expected_elision_output = wc.State('.', {
+  expected_elision_output = wc.State('', {
     })
-  expected_status = wc.State('.', {
+  expected_status = wc.State('', {
     ''          : Item(status=' M'),
     'nu'        : Item(status='A ', copied='+'),
     'B'         : Item(status='  '),
@@ -7479,7 +7479,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   expected_skip = wc.State('.', { })
   saved_cwd = os.getcwd()
   os.chdir(A_COPY_path)
-  svntest.actions.run_and_verify_merge('.', '9', '10',
+  svntest.actions.run_and_verify_merge('', '9', '10',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -7527,7 +7527,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
     })
   expected_elision_output = wc.State('.', {
     })
-  expected_status = wc.State('.', {
+  expected_status = wc.State('', {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
     'mu'        : Item(status='MM'),

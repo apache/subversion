@@ -1463,15 +1463,15 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status.add({
     'A/B/F/gamma'     : Item(status='R ', treeconflict='C', wc_rev='1'),
     'A/B/F/G'         : Item(status='R ', treeconflict='C', wc_rev='1'),
-    'A/B/F/G/pi'      : Item(status='A ', wc_rev='-'),
-    'A/B/F/G/tau'     : Item(status='A ', wc_rev='-'),
-    'A/B/F/G/upsilon' : Item(status='A ', wc_rev='-'),
+    'A/B/F/G/pi'      : Item(status='A ', wc_rev='-', entry_status='R ', entry_rev='1'),
+    'A/B/F/G/tau'     : Item(status='A ', wc_rev='-', entry_status='R ', entry_rev='1'),
+    'A/B/F/G/upsilon' : Item(status='A ', wc_rev='-', entry_rev='0'),
     'A/B/F/G/rho'     : Item(status='D ', wc_rev='1'),
     'A/B/F/H'         : Item(status='  ', wc_rev='1'),
     'A/B/F/H/chi'     : Item(status='  ', wc_rev='1'),
     'A/B/F/H/omega'   : Item(status='  ', wc_rev='1'),
     'A/B/F/H/psi'     : Item(status='  ', wc_rev='1'),
-    'A/B/F/I'         : Item(status='A ', wc_rev='-'),
+    'A/B/F/I'         : Item(status='A ', wc_rev='-', entry_rev='0'),
   })
 
   # "Extra" files that we expect to result from the conflicts.
@@ -2213,7 +2213,7 @@ def switch_to_root(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_status.add_state('A/D/G',
-                            svntest.actions.get_virginal_state(wc_dir, 1))
+                            svntest.actions.get_virginal_state(wc_dir + '/A/D/G', 1))
   expected_status.tweak('A/D/G', switched = 'S')
   svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,
                                         expected_output,

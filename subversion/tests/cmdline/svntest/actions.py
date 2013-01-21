@@ -455,8 +455,6 @@ def run_and_verify_checkout2(do_remove,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(disk_tree, wc.State):
-    disk_tree = disk_tree.old_tree()
 
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
@@ -752,8 +750,6 @@ def verify_update(actual_output,
     mergeinfo_output_tree = mergeinfo_output_tree.old_tree()
   if isinstance(elision_output_tree, wc.State):
     elision_output_tree = elision_output_tree.old_tree()
-  if isinstance(status_tree, wc.State):
-    status_tree = status_tree.old_tree()
 
   # Verify actual output against expected output.
   if output_tree:
@@ -1413,8 +1409,6 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(status_tree, wc.State):
-    status_tree = status_tree.old_tree()
 
   # Commit.
   if '-m' not in args and '-F' not in args:
