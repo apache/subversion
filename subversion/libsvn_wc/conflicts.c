@@ -2216,7 +2216,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                                        db, local_abspath,
                                        operation, left_version, right_version,
                                        local_change, incoming_change,
-                                       scratch_pool, scratch_pool));
+                                       result_pool, scratch_pool));
 
       APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description2_t *) = desc;
     }
