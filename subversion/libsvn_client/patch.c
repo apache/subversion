@@ -871,7 +871,8 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
   return SVN_NO_ERROR;
 }
 
-/* Return in *OFFSET whether we are before or after the link. */
+/* Set *OFFSET to 1 or 0 depending on whether the "normal form" of
+ * the symlink has already been read. */
 static svn_error_t *
 tell_symlink(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 {
@@ -881,8 +882,8 @@ tell_symlink(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* Seek to the specified by OFFSET in the unpatched file content accessed
- * via BATON. Use SCRATCH_POOL for temporary allocations. */
+/* If offset is non-zero, mark the symlink as having been read in its
+ * "normal form". Else, mark the symlink as not having been read yet. */
 static svn_error_t *
 seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
 {
@@ -892,8 +893,9 @@ seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* Write LEN bytes from BUF into the patched file content accessed
- * via BATON. Use SCRATCH_POOL for temporary allocations. */
+
+/* Set the target of the symlink accessed via BATON.
+ * The contents of BUF must be a valid "normal form" of a symlink. */
 static svn_error_t *
 write_symlink(void *baton, const char *buf, apr_size_t len,
            apr_pool_t *scratch_pool)
