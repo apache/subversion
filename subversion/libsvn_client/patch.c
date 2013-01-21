@@ -829,17 +829,10 @@ struct symlink_baton_t
   svn_boolean_t at_eof;
 };
 
-/* Allocate *STRINGBUF in RESULT_POOL, and read into it one line from
- * the symlink accessed via BATON.
+/* Allocate *STRINGBUF in RESULT_POOL, and store into it the "normal form"
+ * of the symlink accessed via BATON.
  *
- * Copied from file handling:
- *  Reading stops either after a line-terminator was found,
- *  or if EOF is reached in which case *EOF is set to TRUE.
- *  The line-terminator is not stored in *STRINGBUF.
- *
- *  The line-terminator is detected automatically and stored in *EOL
- *  if EOL is not NULL. If EOF is reached and FILE does not end
- *  with a newline character, and EOL is not NULL, *EOL is set to NULL.
+ * Otherwise behaves like readline_file(), which see.
  *
  * SCRATCH_POOL is used for temporary allocations.
  */
