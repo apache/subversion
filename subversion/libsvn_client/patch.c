@@ -2218,14 +2218,17 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   svn_pool_destroy(iterpool);
 
-  /* Now close files we don't need any longer to get their contents
-   * flushed to disk.
-   * But we're not closing the reject file -- it still needed and
-   * will be closed later in write_out_rejected_hunks(). */
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(svn_io_file_close(target->file, scratch_pool));
   if (!target->is_symlink)
-    SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
+    {
+      /* Now close files we don't need any longer to get their contents
+       * flushed to disk.
+       * But we're not closing the reject file -- it still needed and
+       * will be closed later in write_out_rejected_hunks(). */
+      if (target->kind_on_disk == svn_node_file)
+        SVN_ERR(svn_io_file_close(target->file, scratch_pool));
+  
+      SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
+    }
 
   if (! target->skipped)
     {
