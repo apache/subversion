@@ -4396,7 +4396,6 @@ def single_line_mismatch(sbox):
                                      'patch', patch_file_path, wc_dir)
 
 @Issue(3644)
-@XFail()
 def patch_empty_file(sbox):
   "apply a patch to an empty file"
 
@@ -4439,11 +4438,23 @@ def patch_empty_file(sbox):
     'U         %s\n' % sbox.ospath('lf.txt'),
     'A         %s\n' % sbox.ospath('new.txt'),
     'U         %s\n' % sbox.ospath('empty.txt'),
+    # Not sure if this line is necessary, but it doesn't hurt
+    '>         applied hunk @@ -0,0 +1,1 @@ with offset 0\n',
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'lf.txt'            : Item(contents="\n"),
+    'new.txt'           : Item(contents="new file\n"),
+    'empty.txt'         : Item(contents="replacement\n"),
+  })
+
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
 
 
 ########################################################################
