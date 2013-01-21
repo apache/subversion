@@ -4395,6 +4395,38 @@ def single_line_mismatch(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
+@Issue(3644)
+@XFail()
+def patch_empty_file(sbox):
+  "apply a patch to an empty file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join([
+    "Index: file1.txt\n",
+    "===================================================================\n",
+    "--- file1.txt\t(revision 20)\n",
+    "+++ file1.txt\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+vhjhgf\n",
+    "\\ No newline at end of file\n",
+  ]))
+
+  # Add a 0-byte file 'file1.txt'
+  sbox.simple_add_text('', 'file1.txt')
+  sbox.simple_commit()
+
+  # And now this patch should fail, as 'line' doesn't equal 'foo'
+  # But yet it shows up as deleted instead of conflicted
+  expected_output = [
+    'U         %s\n' % sbox.ospath('file1.txt'),
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_file_path, wc_dir)
+
 
 ########################################################################
 #Run the tests
@@ -4444,6 +4476,7 @@ test_list = [ None,
               patch_change_symlink_target,
               patch_replace_dir_with_file_and_vv,
               single_line_mismatch,
+              patch_empty_file,
             ]
 
 if __name__ == '__main__':
