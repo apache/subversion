@@ -255,8 +255,9 @@ typedef struct merge_cmd_baton_t {
                                          is TRUE.*/
   svn_boolean_t mergeinfo_capable;    /* Whether the merge source server
                                          is capable of Merge Tracking. */
-  svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
-                                         extension, mergeinfo)?  FALSE if
+  svn_boolean_t ignore_ancestry;      /* Two meanings: don't honor mergeinfo;
+                                         diff unrelated nodes as if related.
+                                         See do_merge() doc string.  FALSE if
                                          MERGE_SOURCE->ancestral is FALSE. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
@@ -6866,11 +6867,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           /* Deduce property diffs. */
           SVN_ERR(svn_prop_diffs(&propchanges, props2, props1, iterpool));
 
-          /* If we aren't ignoring ancestry, then we've already done
-             ancestry relatedness checks.  If we are ignoring ancestry, or
-             our sources are known to be related, then we can do
-             text-n-props merge; otherwise, we have to do a delete-n-add
-             merge.  */
+          /* If the sources are related or we're ignoring ancestry in diffs,
+             do a text-n-props merge; otherwise, do a delete-n-add merge. */
           if (! (merge_b->ignore_ancestry || sources_related))
             {
               /* Delete... */
@@ -8870,8 +8868,22 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    paths and the values are the new mergeinfos for each.  Allocate additions
    to RESULT_CATALOG in pool which RESULT_CATALOG was created in.
 
-   FORCE_DELETE, DRY_RUN, RECORD_ONLY, IGNORE_ANCESTRY, DEPTH, MERGE_OPTIONS,
+   FORCE_DELETE, DRY_RUN, RECORD_ONLY, DEPTH, MERGE_OPTIONS,
    and CTX are as described in the docstring for svn_client_merge_peg3().
+
+   IGNORE_ANCESTRY has both of the following meanings:
+
+     (1) Disable merge tracking, by treating the two sources as unrelated
+     even if they actually have a common ancestor.  See the macro
+     HONOR_MERGEINFO().
+
+     (2) Diff unrelated nodes as if related.  If IGNORE_ANCESTRY is true,
+     the 'left' and 'right' versions of a node (if they are the same kind)
+     will be diffed as if they were related even if they are not related.
+     Otherwise, unrelated items will be diffed as a deletion of one thing
+     and the addition of another.
+
+   ### TODO: Use separate flags for the two meanings.
 
    If not NULL, RECORD_ONLY_PATHS is a hash of (const char *) paths mapped
    to the same.  If RECORD_ONLY is true and RECORD_ONLY_PATHS is not NULL,
@@ -9132,6 +9144,9 @@ do_merge(apr_hash_t **modified_subtrees,
    SAME_REPOS must be true if and only if the source URLs are in the same
    repository as the target working copy.  Other arguments are as in
    all of the public merge APIs.
+
+   IGNORE_ANCESTRY has two meanings: see do_merge().
+   ### TODO: Use separate flags for the two meanings.
 
    *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
    integrity, *USE_SLEEP will be unchanged if no sleep is required.
@@ -9428,7 +9443,15 @@ open_target_wc(merge_target_t **target_p,
 
 /*** Public APIs ***/
 
-/* The body of svn_client_merge4(), which see for details. */
+/* The body of svn_client_merge4(), which see for details.
+ *
+ * If SOURCE1 @ REVISION1 is related to SOURCE2 @ REVISION2 then use merge
+ * tracking (subject to other constraints -- see HONOR_MERGEINFO());
+ * otherwise disable merge tracking.
+ *
+ * IGNORE_ANCESTRY has two meanings: see do_merge().
+ * ### TODO: Use separate flags for the two meanings.
+ */
 static svn_error_t *
 merge_locked(const char *source1,
              const svn_opt_revision_t *revision1,
@@ -10841,6 +10864,11 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
 }
 
 
+/* The body of svn_client_merge_peg4(), which see for details.
+ *
+ * IGNORE_ANCESTRY has two meanings: see do_merge().
+ * ### TODO: Use separate flags for the two meanings.
+ */
 static svn_error_t *
 merge_peg_locked(const char *source_path_or_url,
                  const svn_opt_revision_t *source_peg_revision,
