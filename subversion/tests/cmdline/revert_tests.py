@@ -79,8 +79,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       props={ 'svn:eol-style': 'LF' })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Commit props
   expected_output = svntest.wc.State(wc_dir, {
@@ -124,8 +123,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Now revert
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -144,8 +142,7 @@ def revert_replacement_with_props(sbox, wc_copy):
                       props={ 'phony-prop': '*' })
   expected_disk.tweak('A/D/G/rho',
                       props={ 'svn:eol-style': 'LF' })
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 
@@ -511,9 +508,8 @@ def revert_file_merge_replace_with_history(sbox):
   expected_status.tweak('A/D/G/rho', copied=None, status='  ', wc_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   expected_disk.tweak('A/D/G/rho', contents="new rho\n")
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Make sure the revert removed the copy from information.
   expected_infos = [
@@ -578,8 +574,7 @@ def revert_after_second_replace(sbox):
   # Check disk status
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #----------------------------------------------------------------------
@@ -1594,8 +1589,7 @@ def revert_with_unversioned_targets(sbox):
   expected_disk.add({
     'A/D/H/delta': Item(delta_contents),
   })
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 def revert_nonexistent(sbox):
   'svn revert -R nonexistent'
@@ -1636,8 +1630,10 @@ def revert_obstructing_wc(sbox):
     # A is not versioned but exists
   })
 
+  # Use expected_status.old_tree() to avoid doing an entries comparion
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, expected_status,
+                                        expected_output, None,
+                                        expected_status.old_tree(),
                                         None, None, None,
                                         None, None, None,
                                         wc_dir, '--set-depth', 'infinity')

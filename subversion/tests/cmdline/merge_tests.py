@@ -1831,7 +1831,7 @@ def merge_into_missing(sbox):
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
-    'Q'     : Item(status='! ', entry_rev='?', wc_rev='2'),
+    'Q'     : Item(status='! ', wc_rev='2'),
     # Revision is known and we can record mergeinfo
     'Q/R'      : Item(status='! ', wc_rev='3'),
     'Q/R/bar'  : Item(status='! ', wc_rev='3'),
@@ -7420,16 +7420,16 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
 
   # Now merge -c10 from A to A_COPY.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_output = wc.State('.', {
+  expected_output = wc.State('', {
     'nu': Item(status='A '),
     })
-  expected_mergeinfo_output = wc.State('.', {
+  expected_mergeinfo_output = wc.State('', {
     ''   : Item(status=' U'),
     'nu' : Item(status=' U'),
     })
-  expected_elision_output = wc.State('.', {
+  expected_elision_output = wc.State('', {
     })
-  expected_status = wc.State('.', {
+  expected_status = wc.State('', {
     ''          : Item(status=' M'),
     'nu'        : Item(status='A ', copied='+'),
     'B'         : Item(status='  '),
@@ -7479,7 +7479,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   expected_skip = wc.State('.', { })
   saved_cwd = os.getcwd()
   os.chdir(A_COPY_path)
-  svntest.actions.run_and_verify_merge('.', '9', '10',
+  svntest.actions.run_and_verify_merge('', '9', '10',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -7527,7 +7527,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
     })
   expected_elision_output = wc.State('.', {
     })
-  expected_status = wc.State('.', {
+  expected_status = wc.State('', {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
     'mu'        : Item(status='MM'),
@@ -8100,10 +8100,10 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   # because /A_MOVED has renames in its history between the boundaries
   # of the requested merge range.
   expected_output = wc.State(A_COPY_path, {
-    'mu' : Item(status='G '), # mu gets touched twice
+    'mu' : Item(status='G ', prev_status='U '), # mu gets touched twice
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' G', prev_status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_path, {
     })
@@ -8266,7 +8266,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   expected_skip = wc.State(A_COPY_path, {})
   expected_output = wc.State(A_COPY_path, {
     ''   : Item(status=' U'),
-    'mu' : Item(status='G '),
+    'mu' : Item(status='G ', prev_status='G '), # Updated twice
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''   : Item(status=' U'),
@@ -8399,7 +8399,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   svntest.main.file_write(A_COPY_mu_path, tweaked_17th_line_1)
   expected_output = wc.State(A_COPY_path, {
     ''   : Item(status=' G'),
-    'mu' : Item(status='G '),
+    'mu' : Item(status='G ', prev_status='G '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''   : Item(status=' G'),
@@ -10907,9 +10907,7 @@ def merge_added_subtree(sbox):
   svntest.actions.run_and_verify_svn("", None, [],
                                      "cp", A_COPY_url + '/D2',
                                      os.path.join(A_path, "D2"))
-  actual_tree = svntest.tree.build_tree_from_wc(A_path, 0)
-  svntest.tree.compare_trees("expected disk",
-                             actual_tree, expected_disk.old_tree())
+  svntest.actions.verify_disk(A_path, expected_disk)
   svntest.actions.run_and_verify_status(A_path, expected_status)
 
   # Remove the copy artifacts
@@ -12143,7 +12141,7 @@ def subtree_source_missing_in_requested_range(sbox):
   expected_output = wc.State(A_COPY_path, {
     'D/H/omega' : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
-    'D/H/omega' : Item(status='G '),
+    'D/H/omega' : Item(status='G ', prev_status='G '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''          : Item(status=' U'),
@@ -13797,11 +13795,10 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   # r9: Merge r3,7 from A/D/H to A_COPY/D/H, then reverse merge r7 from
   # A/D/H/psi to A_COPY/D/H/psi.
   expected_output = wc.State(H_COPY_path, {
-    'psi' : Item(status='U '),
-    'psi' : Item(status='G '),
+    'psi' : Item(status='G ', prev_status='U '), # Touched twice
     })
   expected_mergeinfo_output = wc.State(H_COPY_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' G', prev_status=' U'),
     })
   expected_elision_output = wc.State(H_COPY_path, {
     })
@@ -13849,7 +13846,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   expected_output = wc.State(H_COPY_path, {
     'omega' : Item(status='U '),
-    'psi'   : Item(status='D '),
+    'psi'   : Item(status='D ', prev_status='U '),
     })
   expected_mergeinfo_output = wc.State(H_COPY_path, {
     '' : Item(status=' U'),
@@ -13960,7 +13957,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' G'),
+    'C_MOVED' : Item(status=' G', prev_status=' G'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
@@ -17873,11 +17870,11 @@ def merge_with_externals_with_mergeinfo(sbox):
     A_path)
 
 #----------------------------------------------------------------------
-# Test for issue #4221 'Trivial merge of a binary file with svn:keywords
-# raises a conflict'.
+# Test merging 'binary' files with keyword expansion enabled.
+# Tests issue #4221 'Trivial merge of a binary file with svn:keywords
+# raises a conflict', among other cases.
 @SkipUnless(server_has_mergeinfo)
 @Issue(4221)
-@XFail()
 def merge_binary_file_with_keywords(sbox):
   "merge binary file with keywords"
 
@@ -17885,32 +17882,66 @@ def merge_binary_file_with_keywords(sbox):
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  # make a 'binary' file with keyword expansion enabled
-  svntest.main.file_write('foo', "Line 1 with $Revision: $ keyword.\n")
-  sbox.simple_add('foo')
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'foo')
-  sbox.simple_propset('svn:keywords', 'Revision', 'foo')
+  # Some binary files, and some binary files that will become text files.
+  # 'mod_src' means a content change on the branch (the merge source);
+  # 'mod_tgt' means a content change on the original (the merge target);
+  # 'to_txt' means svn:mime-type removed on the branch (the merge source).
+  file_mod_both           = 'A/B/E/alpha'
+  file_mod_src            = 'A/D/G/pi'
+  file_mod_tgt            = 'A/D/G/rho'
+  file_mod_none           = 'A/D/G/tau'
+  file_mod_both_to_txt    = 'A/B/E/beta'
+  file_mod_src_to_txt     = 'A/D/H/chi'
+  file_mod_tgt_to_txt     = 'A/D/H/psi'
+  file_mod_none_to_txt    = 'A/D/H/omega'
+  files_bin = [ file_mod_both, file_mod_src, file_mod_tgt, file_mod_none ]
+  files_txt = [ file_mod_both_to_txt, file_mod_src_to_txt,
+                file_mod_tgt_to_txt, file_mod_none_to_txt ]
+  files = files_bin + files_txt
+
+  # make some 'binary' files with keyword expansion enabled
+  for f in files:
+    svntest.main.file_append(sbox.ospath(f), "With $Revision: $ keyword.\n")
+    sbox.simple_propset('svn:mime-type', 'application/octet-stream', f)
+    sbox.simple_propset('svn:keywords', 'Revision', f)
   sbox.simple_commit()
 
-  # branch the file
-  sbox.simple_copy('foo', 'bar')
-  sbox.simple_commit()
+  # branch the files
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_update()
 
-  # modify the branched version (although the bug shows even if we modify
-  # just the original version -- or neither, which is a completely
-  # degenerate 'merge' case)
-  # ### Perhaps a dir merge would behave differently from a single-file merge?
-  svntest.main.file_append('bar', "Line 2.\n")
+  # Modify the branched (source) and/or original (target) versions. Remove
+  # the svn:mime-type from the 'to_txt' files on the branch.
+  # The original bug in issue #4221 gave a conflict if we modified either
+  # version or neither (using a single-file merge test case).
+  for f in [ file_mod_both, file_mod_both_to_txt,
+             file_mod_src, file_mod_src_to_txt ]:
+    f_branch = 'A2' + f[1:]
+    svntest.main.file_append(sbox.ospath(f_branch), "Incoming mod.\n")
+  for f in [ file_mod_both, file_mod_both_to_txt,
+             file_mod_tgt, file_mod_tgt_to_txt ]:
+    svntest.main.file_append(sbox.ospath(f), "Mod on merge target.\n")
+  for f in files_txt:
+    f_branch = 'A2' + f[1:]
+    sbox.simple_propdel('svn:mime-type', f_branch)
   sbox.simple_commit()
+  sbox.simple_update()
 
   # merge back
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[3,4]],
-                          ['U    foo\n',
-                           ' U   foo\n'],
-                          target='foo'),
-    [], 'merge', '^/bar', 'foo')
+                          ['C    ' + sbox.ospath(file_mod_both) + '\n',
+                           'U    ' + sbox.ospath(file_mod_src) + '\n',
+                          #'     ' + sbox.ospath(file_mod_tgt) + '\n',
+                          #'     ' + sbox.ospath(file_mod_none) + '\n',
+                           'CU   ' + sbox.ospath(file_mod_both_to_txt) + '\n',
+                           'UU   ' + sbox.ospath(file_mod_src_to_txt) + '\n',
+                           ' U   ' + sbox.ospath(file_mod_tgt_to_txt) + '\n',
+                           ' U   ' + sbox.ospath(file_mod_none_to_txt) + '\n',
+                           ' U   A\n'],
+                          text_conflicts=2),
+    [], 'merge', '^/A2', 'A')
 
 #----------------------------------------------------------------------
 # Test for issue #4155 'Merge conflict text of expanded keyword incorrect
@@ -17961,6 +17992,102 @@ def merge_conflict_when_keywords_removed(sbox):
                           ['UU   ' + sbox.ospath('A2/keyfile') + '\n',
                            ' U   A2\n']),
     [], 'merge', '--accept=postpone', '^/A', 'A2')
+
+@SkipUnless(server_has_mergeinfo)
+@Issue(4139, 3274, 3503)
+def merge_target_selection(sbox):
+  "merge target selection handling"
+
+  sbox.build()
+
+  # r2
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('\1\2\3\4\5', 'dir/binary-file')
+  sbox.simple_add_text('abcde', 'dir/text-file')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_copy('dir', 'branch')
+  sbox.simple_commit()
+
+  # r4
+  svntest.main.file_write(sbox.ospath('dir/binary-file'), '\5\4\3\2\1')
+  sbox.simple_commit()
+
+  sbox.simple_update()
+
+  os.chdir(sbox.ospath('branch'))
+
+  # Merge the directory (no target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (no target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the directory (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4', '.')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4', 'binary-file')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (wrong target)
+  expected_output = [
+    'Skipped missing target: \'.\'\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4', '.')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the dir (wrong target)
+  expected_output = [
+    'Skipped \'%s\'\n' % os.path.join('binary-file', 'binary-file'),
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4', 'binary-file')
+
 
 ########################################################################
 # Run the tests
@@ -18100,6 +18227,7 @@ test_list = [ None,
               merge_with_externals_with_mergeinfo,
               merge_binary_file_with_keywords,
               merge_conflict_when_keywords_removed,
+              merge_target_selection,
              ]
 
 if __name__ == '__main__':

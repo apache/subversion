@@ -418,12 +418,12 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    WRI_ABSPATH describes in which working copy information should be
    retrieved. (Interesting for merging file externals).
 
-   ACTUAL_PROPS is the set of actual properties before merging; used for
+   OLD_ACTUAL_PROPS is the set of actual properties before merging; used for
    detranslating the file before merging.  This is necessary because, in
    the case of updating, the update can have sent new properties, so we
    cannot simply fetch and use the current actual properties.
 
-     ### Is ACTUAL_PROPS still necessary, now that we first prepare the
+     ### Is OLD_ACTUAL_PROPS still necessary, now that we first prepare the
          content change and property change and then apply them both to
          the WC together?
 
@@ -447,7 +447,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
-                       apr_hash_t *actual_props,
+                       apr_hash_t *old_actual_props,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
@@ -699,18 +699,21 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
 
+   Set *FOUND_TEXT_CONFLICT to TRUE when the merge encountered a conflict,
+   otherwise to FALSE.
+
    The rest of the arguments are passed to svn_wc__internal_merge.
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_skel_t **conflict_skel,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           svn_boolean_t *found_conflict,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,
                            const svn_checksum_t *new_checksum,
                            const svn_checksum_t *original_checksum,
-                           apr_hash_t *actual_props,
+                           apr_hash_t *old_actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
                            svn_revnum_t target_revision,
@@ -779,6 +782,15 @@ svn_wc__revert_internal(svn_wc__db_t *db,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

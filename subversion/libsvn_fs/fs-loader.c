@@ -485,6 +485,8 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
               svn_revnum_t start,
               svn_revnum_t end,
               apr_pool_t *pool)
@@ -497,7 +499,8 @@ svn_fs_verify(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->verify_fs(fs, path, cancel_func, cancel_baton,
-                                         start, end, pool, common_pool));
+                                         notify_func, notify_baton, start,
+                                         end, pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -622,6 +625,16 @@ svn_fs_recover(const char *path,
                                                     common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
+}
+
+svn_error_t *
+svn_fs_verify_rev(svn_fs_t *fs,
+                  svn_revnum_t revision,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(fs->vtable->verify_rev(fs, revision, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

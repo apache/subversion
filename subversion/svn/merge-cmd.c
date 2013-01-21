@@ -93,7 +93,7 @@ merge_reintegrate(const char *source_path_or_url,
       SVN_ERR(svn_client_merge4(url1, &revision1, url2, &revision2,
                                 target_wcpath, svn_depth_infinity,
                                 FALSE /* ignore_ancestry */,
-                                FALSE /* force */,
+                                FALSE /* force_delete */,
                                 FALSE /* record_only */,
                                 dry_run, TRUE /* allow_mixed_rev */,
                                 merge_options, ctx, scratch_pool));
@@ -127,7 +127,7 @@ automatic_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
-                svn_boolean_t force,
+                svn_boolean_t force_delete,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
                 svn_boolean_t allow_mixed_rev,
@@ -171,7 +171,7 @@ automatic_merge(const char *source_path_or_url,
                                   "and the --depth option "
                                   "cannot be used with this kind of merge"));
 
-      if (force)
+      if (force_delete)
         return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                 _("The required merge is reintegrate-like, "
                                   "and the --force option "
@@ -189,7 +189,7 @@ automatic_merge(const char *source_path_or_url,
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
-                                        force, record_only,
+                                        force_delete, record_only,
                                         dry_run, merge_options,
                                         ctx, scratch_pool));
 
@@ -212,6 +212,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
+  svn_boolean_t has_explicit_target = FALSE;
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -343,6 +344,7 @@ svn_cl__merge(apr_getopt_t *os,
       if (targets->nelts == 2)
         {
           targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+          has_explicit_target = TRUE;
           if (svn_path_is_url(targetpath))
             return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                     _("Cannot specify a revision range "
@@ -378,12 +380,17 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* Decide where to apply the delta (defaulting to "."). */
       if (targets->nelts == 3)
-        targetpath = APR_ARRAY_IDX(targets, 2, const char *);
+        {
+          targetpath = APR_ARRAY_IDX(targets, 2, const char *);
+          has_explicit_target = TRUE;
+        }
     }
 
   /* If no targetpath was specified, see if we can infer it from the
      sourcepaths. */
-  if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
+  if (! has_explicit_target
+      && sourcepath1 && sourcepath2 
+      && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in
          the current working directory or which is the current working
@@ -484,7 +491,7 @@ svn_cl__merge(apr_getopt_t *os,
     {
       merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
-                                  opt_state->force,
+                                  opt_state->force, /* force_delete */
                                   opt_state->record_only,
                                   opt_state->dry_run,
                                   opt_state->allow_mixed_rev,
@@ -531,7 +538,7 @@ svn_cl__merge(apr_getopt_t *os,
                                         targetpath,
                                         opt_state->depth,
                                         opt_state->ignore_ancestry,
-                                        opt_state->force,
+                                        opt_state->force, /* force_delete */
                                         opt_state->record_only,
                                         opt_state->dry_run,
                                         opt_state->allow_mixed_rev,
@@ -555,7 +562,7 @@ svn_cl__merge(apr_getopt_t *os,
                                     targetpath,
                                     opt_state->depth,
                                     opt_state->ignore_ancestry,
-                                    opt_state->force,
+                                    opt_state->force, /* force_delete */
                                     opt_state->record_only,
                                     opt_state->dry_run,
                                     opt_state->allow_mixed_rev,

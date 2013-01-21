@@ -1175,6 +1175,8 @@ open_root(void *edit_baton,
   svn_boolean_t already_conflicted;
   svn_error_t *err;
   svn_wc__db_status_t status;
+  svn_kind_t kind;
+  svn_boolean_t have_work;
 
   /* Note that something interesting is actually happening in this
      edit run. */
@@ -1207,19 +1209,48 @@ open_root(void *edit_baton,
       return SVN_NO_ERROR;
     }
 
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &db->old_revision,
+                               &db->old_repos_relpath, NULL, NULL,
+                               &db->changed_rev, &db->changed_date,
+                               &db->changed_author, &db->ambient_depth,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &have_work,
+                               eb->db, db->local_abspath,
+                               db->pool, pool));
+
+  if (have_work)
+    db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
+                            make sure it doesn't use the ACTUAL tree */
+
   if (*eb->target_basename == '\0')
     {
+      svn_wc__db_status_t base_status;
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
-      /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &db->old_revision,
-                                       &db->old_repos_relpath, NULL, NULL,
-                                       &db->changed_rev, &db->changed_date,
-                                       &db->changed_author, &db->ambient_depth,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       eb->db, db->local_abspath,
-                                       db->pool, pool));
-      db->was_incomplete = (status == svn_wc__db_status_incomplete);
+      if (! have_work)
+        base_status = status;
+      else
+        {
+          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
+                                           &db->old_repos_relpath, NULL, NULL,
+                                           &db->changed_rev, &db->changed_date,
+                                           &db->changed_author, &db->ambient_depth,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           eb->db, db->local_abspath,
+                                           db->pool, pool));
+        }
+      db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
+
+      /* ### TODO: Add some tree conflict and obstruction detection, etc. like
+                   open_directory() does.
+                   (or find a way to reuse that code here)
+
+         ### BH 2013: I don't think we need all of the detection here, as the
+                      user explicitly asked to update this node. So we don't
+                      have to tell that it is a local replacement/delete.
+       */
 
       SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db,
                                                         db->local_abspath,
@@ -1291,14 +1322,14 @@ modcheck_callback(void *baton,
  * is set to true and all the local modifications were deletes then set
  * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
  * may be a file or a directory. */
-static svn_error_t *
-node_has_local_mods(svn_boolean_t *modified,
-                    svn_boolean_t *all_edits_are_deletes,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
 {
   modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
   svn_error_t *err;
@@ -1465,10 +1496,10 @@ check_tree_conflict(svn_skel_t **pconflict,
          * not visit the subdirectories of a directory that it wants to delete.
          * Therefore, we need to start a separate crawl here. */
 
-        SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes,
-                                    eb->db, local_abspath,
-                                    eb->cancel_func, eb->cancel_baton,
-                                    scratch_pool));
+        SVN_ERR(svn_wc__node_has_local_mods(&modified, &all_mods_are_deletes,
+                                            eb->db, local_abspath,
+                                            eb->cancel_func, eb->cancel_baton,
+                                            scratch_pool));
 
         if (modified)
           {
@@ -1621,7 +1652,9 @@ delete_entry(const char *path,
   svn_wc__db_status_t base_status;
   apr_pool_t *scratch_pool;
   svn_boolean_t deleting_target;
+  svn_boolean_t deleting_switched;
   svn_boolean_t keep_as_working = FALSE;
+  svn_boolean_t queue_deletes = TRUE;
 
   if (pb->skip_this)
     return SVN_NO_ERROR;
@@ -1676,6 +1709,18 @@ delete_entry(const char *path,
                                      eb->db, local_abspath,
                                      scratch_pool, scratch_pool));
 
+  if (pb->old_repos_relpath && repos_relpath)
+    {
+      const char *expected_name;
+
+      expected_name = svn_relpath_skip_ancestor(pb->old_repos_relpath,
+                                                repos_relpath);
+
+      deleting_switched = (!expected_name || strcmp(expected_name, base) != 0);
+    }
+  else
+    deleting_switched = FALSE;
+
   /* Is this path a conflict victim? */
   if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db, local_abspath,
@@ -1702,7 +1747,9 @@ delete_entry(const char *path,
       || base_status == svn_wc__db_status_server_excluded)
     {
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     FALSE, SVN_INVALID_REVNUM,
+                                     FALSE /* keep_as_working */,
+                                     FALSE /* queue_deletes */,
+                                     SVN_INVALID_REVNUM /* not_present_rev */,
                                      NULL, NULL,
                                      scratch_pool));
 
@@ -1731,6 +1778,8 @@ delete_entry(const char *path,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
+  else
+    queue_deletes = FALSE; /* There is no in-wc representation */
 
   if (tree_conflict != NULL)
     {
@@ -1794,11 +1843,12 @@ delete_entry(const char *path,
      If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
      accurate reports about itself in the future. */
-  if (! deleting_target)
+  if (! deleting_target && ! deleting_switched)
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, SVN_INVALID_REVNUM,
+                                     keep_as_working, queue_deletes,
+                                     SVN_INVALID_REVNUM /* not_present_rev */,
                                      tree_conflict, NULL,
                                      scratch_pool));
     }
@@ -1806,10 +1856,17 @@ delete_entry(const char *path,
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, *eb->target_revision,
+                                     keep_as_working, queue_deletes,
+                                     *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
-      eb->target_deleted = TRUE;
+      if (deleting_target)
+        eb->target_deleted = TRUE;
+      else
+        {
+          /* Don't remove the not-present marker at the final bump */
+          SVN_ERR(remember_skipped_tree(eb, local_abspath, pool));
+        }
     }
 
   SVN_ERR(svn_wc__wq_run(eb->db, pb->local_abspath,
@@ -2139,7 +2196,8 @@ add_directory(const char *path,
     SVN_ERR(complete_conflict(tree_conflict, pb, db->local_abspath,
                               db->old_repos_relpath, db->old_revision,
                               db->new_relpath,
-                              wc_kind, svn_node_dir,
+                              svn__node_kind_from_kind(wc_kind),
+                              svn_node_dir,
                               db->pool, pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
@@ -3234,7 +3292,8 @@ add_file(const char *path,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
                                 fb->new_relpath,
-                                wc_kind, svn_node_file,
+                                svn__node_kind_from_kind(wc_kind),
+                                svn_node_file,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
@@ -3632,18 +3691,18 @@ change_file_prop(void *file_baton,
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
 
-   The rest of the arguments are passed to svn_wc__internal_merge.
+   The rest of the arguments are passed to svn_wc__internal_merge().
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_skel_t **conflict_skel,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           svn_boolean_t *found_conflict,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,
                            const svn_checksum_t *new_checksum,
                            const svn_checksum_t *original_checksum,
-                           apr_hash_t *actual_props,
+                           apr_hash_t *old_actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
                            svn_revnum_t target_revision,
@@ -3655,13 +3714,14 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            apr_pool_t *scratch_pool)
 {
   /* Actual file exists and has local mods:
-     Now we need to let loose svn_wc__merge_internal() to merge
+     Now we need to let loose svn_wc__internal_merge() to merge
      the textual changes into the working file. */
   const char *oldrev_str, *newrev_str, *mine_str;
   const char *merge_left;
   svn_boolean_t delete_left = FALSE;
   const char *path_ext = "";
   const char *new_text_base_tmp_abspath;
+  enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
 
   *work_items = NULL;
@@ -3716,20 +3776,21 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      Remember that this function wants full paths! */
   SVN_ERR(svn_wc__internal_merge(&work_item,
                                  conflict_skel,
-                                 merge_outcome,
+                                 &merge_outcome,
                                  db,
                                  merge_left,
                                  new_text_base_tmp_abspath,
                                  local_abspath,
                                  wri_abspath,
                                  oldrev_str, newrev_str, mine_str,
-                                 actual_props,
+                                 old_actual_props,
                                  FALSE /* dry_run */,
                                  diff3_cmd, NULL, propchanges,
                                  cancel_func, cancel_baton,
                                  result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+  *found_conflict = (merge_outcome == svn_wc_merge_conflict);
 
   /* If we created a temporary left merge file, get rid of it. */
   if (delete_left)
@@ -3781,7 +3842,7 @@ merge_file(svn_skel_t **work_items,
   struct edit_baton *eb = fb->edit_baton;
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
-  enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
+  svn_boolean_t found_text_conflict = FALSE;
 
   SVN_ERR_ASSERT(! fb->shadowed
                  && ! fb->obstruction_found
@@ -3871,7 +3932,7 @@ merge_file(svn_skel_t **work_items,
          the textual changes into the working file. */
       SVN_ERR(svn_wc__perform_file_merge(work_items,
                                          conflict_skel,
-                                         &merge_outcome,
+                                         &found_text_conflict,
                                          eb->db,
                                          fb->local_abspath,
                                          pb->local_abspath,
@@ -3954,14 +4015,7 @@ merge_file(svn_skel_t **work_items,
 
   /* Set the returned content state. */
 
-  /* This is kind of interesting.  Even if no new text was
-     installed (i.e., NEW_TEXT_BASE_ABSPATH was null), we could still
-     report a pre-existing conflict state.  Say a file, already
-     in a state of textual conflict, receives prop mods during an
-     update.  Then we'll notify that it has text conflicts.  This
-     seems okay to me.  I guess.  I dunno.  You? */
-
-  if (merge_outcome == svn_wc_merge_conflict)
+  if (found_text_conflict)
     *content_state = svn_wc_notify_state_conflicted;
   else if (fb->new_text_base_sha1_checksum)
     {
@@ -4520,7 +4574,9 @@ close_edit(void *edit_baton,
                  If so, we should get rid of this excluded node now. */
 
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
-                                             FALSE, SVN_INVALID_REVNUM,
+                                             FALSE /* keep_as_working */,
+                                             FALSE /* queue_deletes */,
+                                             SVN_INVALID_REVNUM,
                                              NULL, NULL, scratch_pool));
             }
         }

@@ -414,6 +414,9 @@ struct edit_baton
   svn_revnum_t recorded_peg_revision;
   svn_revnum_t recorded_revision;
 
+  /* Introducing a new file external */
+  svn_boolean_t added;
+
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
   svn_cancel_func_t cancel_func;
@@ -491,6 +494,7 @@ add_file(const char *path,
 
   *file_baton = eb;
   eb->original_revision = SVN_INVALID_REVNUM;
+  eb->added = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -773,7 +777,8 @@ close_file(void *file_baton,
             install_pristine = TRUE;
             content_state = svn_wc_notify_state_changed;
           }
-        else if (disk_kind != svn_node_file)
+        else if (disk_kind != svn_node_file
+                 || (eb->added && disk_kind == svn_node_file))
           {
             /* The node is obstructed; we just change the DB */
             obstructed = TRUE;
@@ -793,11 +798,12 @@ close_file(void *file_baton,
               }
             else
               {
-                enum svn_wc_merge_outcome_t merge_outcome;
+                svn_boolean_t found_text_conflict;
+
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
                                                    &conflict_skel,
-                                                   &merge_outcome,
+                                                   &found_text_conflict,
                                                    eb->db,
                                                    eb->local_abspath,
                                                    eb->wri_abspath,
@@ -816,7 +822,7 @@ close_file(void *file_baton,
                 all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                                   pool);
 
-                if (merge_outcome == svn_wc_merge_conflict)
+                if (found_text_conflict)
                   content_state = svn_wc_notify_state_conflicted;
                 else
                   content_state = svn_wc_notify_state_merged;
@@ -910,7 +916,7 @@ close_file(void *file_baton,
       svn_wc_notify_action_t action;
       svn_wc_notify_t *notify;
 
-      if (SVN_IS_VALID_REVNUM(eb->original_revision))
+      if (!eb->added)
         action = obstructed ? svn_wc_notify_update_shadowed_update
                             : svn_wc_notify_update_update;
       else
@@ -1404,7 +1410,9 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   else
     {
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
-                                     FALSE, SVN_INVALID_REVNUM,
+                                     FALSE /* keep_as_working */,
+                                     TRUE /* queue_deletes */,
+                                     SVN_INVALID_REVNUM,
                                      NULL, NULL, scratch_pool));
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,

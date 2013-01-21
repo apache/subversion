@@ -1220,7 +1220,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           apr_hash_t *prophash;
           const char *datestring, *entryname, *fullpath;
           svn_fs_dirent_t *fs_entry;
-          svn_dirent_t *entry = apr_pcalloc(pool, sizeof(*entry));
+          svn_dirent_t *entry = svn_dirent_create(pool);
 
           svn_pool_clear(subpool);
 

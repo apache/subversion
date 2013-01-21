@@ -756,6 +756,16 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
+    case  svn_repos_notify_verify_struc_rev:
+      if (notify->revision == SVN_INVALID_REVNUM)
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("* Verifying global structure ...\n")));
+      else
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                        _("* Verifying structure at revision %ld ...\n"),
+                        notify->revision));
+      return;
+
     case svn_repos_notify_pack_shard_start:
       {
         const char *shardstr = apr_psprintf(scratch_pool,
@@ -2023,9 +2033,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                       compatible_version->patch))
             {
               err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                      _("Cannot guaranteed compatibility "
+                                      _("Cannot guarantee compatibility "
                                         "beyond the current running version "
-                                        "(" SVN_VER_NUM ")"));
+                                        "(%s)"),
+                                      SVN_VER_NUM );
               return EXIT_ERROR(err);
             }
 
@@ -2125,9 +2136,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               const char *first_arg_utf8;
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }

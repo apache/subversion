@@ -400,7 +400,7 @@ def basic_commit_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
+                                        None, # expected_status,
                                         "svn: E200014: Checksum",
                                         wc_dir)
 
@@ -438,7 +438,9 @@ def basic_update_corruption(sbox):
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  svntest.actions.run_and_verify_svn("Checkout to wc2", None, [],
+                                     'co', sbox.repo_url, other_wc)
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -465,10 +467,6 @@ def basic_update_corruption(sbox):
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
-
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
 
@@ -487,11 +485,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
-  # Do the update and check the results in three ways.
+  # Do the update and check the results in four ways.
+  fail_output = wc.State(other_wc, {
+  })
+  fail_status = svntest.actions.get_virginal_state(other_wc, 1)
+  fail_status.tweak('A', '', status='! ', wc_rev=2)
   svntest.actions.run_and_verify_update(other_wc,
-                                        expected_output,
+                                        fail_output,
                                         expected_disk,
-                                        expected_status,
+                                        fail_status,
                                         "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
@@ -502,8 +504,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+
   # This update should succeed.  (Actually, I'm kind of astonished
   # that this works without even an intervening "svn cleanup".)
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
                                         expected_disk,
@@ -2943,7 +2952,6 @@ def quiet_commits(sbox):
 # Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
 # on-disk file if it is case-clashing with intended (non-on-disk) target.
 @Issue(4023)
-@XFail(svntest.main.is_fs_case_insensitive)
 def rm_missing_with_case_clashing_ondisk_item(sbox):
   """rm missing item with case-clashing ondisk item"""
 
@@ -2963,8 +2971,10 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+  # Verify that the casing is not updated, because the path is on-disk.
+  expected_output = [ 'D         %s\n' % iota_path ]
   # 'svn rm' iota, should leave IOTA alone.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'rm', iota_path)
 
   # Test status: the unversioned IOTA should still be there.

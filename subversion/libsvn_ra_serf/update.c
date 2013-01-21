@@ -1644,7 +1644,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       val = svn_xml_get_attr_value("send-all", attrs);
       if (val && (strcmp(val, "true") == 0))
-        ctx->send_all_mode = TRUE;
+        {
+          ctx->send_all_mode = TRUE;
+
+          /* All properties are included in send-all mode. */
+          ctx->add_props_included = TRUE;
+        }
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
@@ -3131,6 +3136,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   svn_boolean_t server_supports_depth;
   svn_ra_serf__session_t *sess = ra_session->priv;
   svn_stringbuf_t *buf = NULL;
+  svn_boolean_t use_bulk_updates;
 
   SVN_ERR(svn_ra_serf__has_capability(ra_session, &server_supports_depth,
                                       SVN_RA_CAPABILITY_DEPTH, scratch_pool));
@@ -3177,42 +3183,58 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    svn_io_file_del_on_pool_cleanup,
                                    report->pool, scratch_pool));
 
-  if (sess->server_allows_bulk)
+  if (sess->bulk_updates == svn_tristate_true)
     {
-      if (apr_strnatcasecmp(sess->server_allows_bulk, "off") == 0)
-        {
-          /* Server doesn't want bulk updates */
-          sess->bulk_updates = FALSE;
-        }
-      else if (apr_strnatcasecmp(sess->server_allows_bulk, "prefer") == 0)
-        {
-          /* Server prefers bulk updates, and we respect that */
-          sess->bulk_updates = TRUE;
-        }
-      else
-        {
-          /* Server allows bulk updates, but doesn't dictate its use. Do
-             whatever is the default or what the user defined in the config. */
-        }
+      /* User would like to use bulk updates. */
+      use_bulk_updates = TRUE;
+    }
+  else if (sess->bulk_updates == svn_tristate_false)
+    {
+      /* User doesn't want bulk updates. */
+      use_bulk_updates = FALSE;
     }
   else
     {
-      /* Pre-1.8 server didn't send the bulk_updates header. Check if server
-         supports inlining properties in update editor report. */
-      if (sess->supports_inline_props)
+      /* User doesn't have any preferences on bulk updates. Decide on server
+         preferences and capabilities. */
+      if (sess->server_allows_bulk)
         {
-          /* Inline props supported: do not use bulk updates. */
-          sess->bulk_updates = FALSE;
+          if (apr_strnatcasecmp(sess->server_allows_bulk, "off") == 0)
+            {
+              /* Server doesn't want bulk updates */
+              use_bulk_updates = FALSE;
+            }
+          else if (apr_strnatcasecmp(sess->server_allows_bulk, "prefer") == 0)
+            {
+              /* Server prefers bulk updates, and we respect that */
+              use_bulk_updates = TRUE;
+            }
+          else
+            {
+              /* Server allows bulk updates, but doesn't dictate its use. Do
+                 whatever is the default. */
+              use_bulk_updates = FALSE;
+            }
         }
       else
         {
-          /* Inline props are noot supported: use bulk updates to avoid
-           * PROPFINDs for every added node. */
-          sess->bulk_updates = TRUE;
+          /* Pre-1.8 server didn't send the bulk_updates header. Check if server
+             supports inlining properties in update editor report. */
+          if (sess->supports_inline_props)
+            {
+              /* Inline props supported: do not use bulk updates. */
+              use_bulk_updates = FALSE;
+            }
+          else
+            {
+              /* Inline props are not supported: use bulk updates to avoid
+               * PROPFINDs for every added node. */
+              use_bulk_updates = TRUE;
+            }
         }
     }
 
-  if (sess->bulk_updates)
+  if (use_bulk_updates)
     {
       svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                             "S:update-report",

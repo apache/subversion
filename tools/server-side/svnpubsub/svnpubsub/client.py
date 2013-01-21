@@ -38,7 +38,11 @@ import asynchat
 import socket
 import functools
 import time
-import xml.sax
+import json
+try:
+  import urlparse
+except ImportError:
+  import urllib.parse as urlparse
 
 # How long the polling loop should wait for activity before returning.
 TIMEOUT = 30.0
@@ -53,24 +57,35 @@ RECONNECT_DELAY = 25.0
 STALE_DELAY = 60.0
 
 
+class SvnpubsubClientException(Exception):
+  pass
+
 class Client(asynchat.async_chat):
 
-  def __init__(self, host, port, commit_callback, event_callback):
+  def __init__(self, url, commit_callback, event_callback):
     asynchat.async_chat.__init__(self)
 
     self.last_activity = time.time()
+    self.ibuffer = []
 
-    self.host = host
-    self.port = port
+    self.url = url
+    parsed_url = urlparse.urlsplit(url)
+    if parsed_url.scheme != 'http':
+      raise ValueError("URL scheme must be http: '%s'" % url)
+    host = parsed_url.hostname
+    port = parsed_url.port
+    resource = parsed_url.path
+    if parsed_url.query:
+      resource += "?%s" % parsed_url.query
+    if parsed_url.fragment:
+      resource += "#%s" % parsed_url.fragment
+
     self.event_callback = event_callback
 
-    handler = XMLStreamHandler(commit_callback, event_callback)
+    self.parser = JSONRecordHandler(commit_callback, event_callback)
 
-    self.parser = xml.sax.make_parser(['xml.sax.expatreader'])
-    self.parser.setContentHandler(handler)
-
-    # Wait for the end of headers. Then we start parsing XML.
-    self.set_terminator('\r\n\r\n')
+    # Wait for the end of headers. Then we start parsing JSON.
+    self.set_terminator(b'\r\n\r\n')
     self.skipping_headers = True
 
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,101 +94,66 @@ class Client(asynchat.async_chat):
     except:
       self.handle_error()
       return
-        
-    ### should we allow for repository restrictions?
-    self.push('GET /commits/xml HTTP/1.0\r\n\r\n')
+       
+    self.push(('GET %s HTTP/1.0\r\n\r\n' % resource).encode('ascii'))
 
   def handle_connect(self):
-    self.event_callback('connected')
+    self.event_callback('connected', None)
 
   def handle_close(self):
-    self.event_callback('closed')
+    self.event_callback('closed', None)
     self.close()
 
   def handle_error(self):
-    self.event_callback('error')
+    self.event_callback('error', None)
     self.close()
 
   def found_terminator(self):
-    self.skipping_headers = False
-
-    # From here on, collect everything. Never look for a terminator.
-    self.set_terminator(None)
+    if self.skipping_headers:
+      self.skipping_headers = False
+      # Each JSON record is terminated by a null character
+      self.set_terminator(b'\0')
+    else:
+      record = b"".join(self.ibuffer)
+      self.ibuffer = []
+      self.parser.feed(record.decode())
 
   def collect_incoming_data(self, data):
     # Remember the last time we saw activity
     self.last_activity = time.time()
 
     if not self.skipping_headers:
-      # Just shove this into the XML parser. As the elements are processed,
-      # we'll collect them into an appropriate structure, and then invoke
-      # the callback when we have fully received a commit.
-      self.parser.feed(data)
+      self.ibuffer.append(data) 
 
 
-class XMLStreamHandler(xml.sax.handler.ContentHandler):
-
+class JSONRecordHandler:
   def __init__(self, commit_callback, event_callback):
     self.commit_callback = commit_callback
     self.event_callback = event_callback
 
-    self.rev = None
-    self.chars = ''
-    self.parent = None
-    self.attrs = [ ] 
-
-  def startElement(self, name, attrs):
-    self.attrs = attrs
-    if name == 'commit':
-      self.rev = Revision(attrs['repository'], int(attrs['revision']))
-    elif name == "dirs_changed" or name == "changed":
-      self.parent = name
-    # No other elements to worry about.
-
-  def characters(self, data):
-    self.chars += data
-
-  def endElement(self, name):
-    if name == 'commit':
-      self.commit_callback(self.rev)
-      self.rev = None
-    elif name == 'stillalive':
-      self.event_callback('ping')
-    elif name == self.parent:
-      self.parent = None
-    elif self.chars and self.rev:
-      value = self.chars.strip()
-      if self.parent == 'dirs_changed' and name == 'path':
-        self.rev.dirs_changed.append(value.decode('unicode_escape'))
-      elif self.parent == 'changed' and name == 'path':
-        path = value.decode('unicode_escape')
-        self.rev.changed[path] = dict(p for p in self.attrs.items())
-      elif name == 'author':
-        self.rev.author = value.decode('unicode_escape')
-      elif name == 'date':
-        self.rev.date = value.decode('unicode_escape')
-      elif name == 'log':
-        self.rev.log = value.decode('unicode_escape')
-
-    # Toss out any accumulated characters for this element.
-    self.chars = ''
-    # Toss out the saved attributes for this element.
-    self.attrs = [ ]
+  def feed(self, record):
+    obj = json.loads(record)
+    if 'svnpubsub' in obj:
+      actual_version = obj['svnpubsub'].get('version')
+      EXPECTED_VERSION = 1
+      if actual_version != EXPECTED_VERSION:
+        raise SvnpubsubClientException("Unknown svnpubsub format: %r != %d"
+                                       % (actual_format, expected_format))
+      self.event_callback('version', obj['svnpubsub']['version'])
+    elif 'commit' in obj:
+      commit = Commit(obj['commit'])
+      self.commit_callback(commit)
+    elif 'stillalive' in obj:
+      self.event_callback('ping', obj['stillalive'])
 
 
-class Revision(object):
-  def __init__(self, uuid, rev):
-    self.uuid = uuid
-    self.rev = rev
-    self.dirs_changed = [ ]
-    self.changed = { } 
-    self.author = None
-    self.date = None
-    self.log = None
+class Commit(object):
+  def __init__(self, commit):
+    self.__dict__.update(commit)
 
 
 class MultiClient(object):
-  def __init__(self, hostports, commit_callback, event_callback):
+  def __init__(self, urls, commit_callback, event_callback):
     self.commit_callback = commit_callback
     self.event_callback = event_callback
 
@@ -181,33 +161,33 @@ class MultiClient(object):
     self.target_time = 0
     self.work_items = [ ]
 
-    for host, port in hostports:
-      self._add_channel(host, port)
+    for url in urls:
+      self._add_channel(url)
 
-  def _reconnect(self, host, port, event_name):
+  def _reconnect(self, url, event_name, event_arg):
     if event_name == 'closed' or event_name == 'error':
       # Stupid connection closed for some reason. Set up a reconnect. Note
       # that it should have been removed from asyncore.socket_map already.
-      self._reconnect_later(host, port)
+      self._reconnect_later(url)
 
     # Call the user's callback now.
-    self.event_callback(host, port, event_name)
+    self.event_callback(url, event_name, event_arg)
 
-  def _reconnect_later(self, host, port):
+  def _reconnect_later(self, url):
     # Set up a work item to reconnect in a little while.
-    self.work_items.append((host, port))
+    self.work_items.append(url)
 
     # Only set a target if one has not been set yet. Otherwise, we could
     # create a race condition of continually moving out towards the future
     if not self.target_time:
       self.target_time = time.time() + RECONNECT_DELAY
 
-  def _add_channel(self, host, port):
+  def _add_channel(self, url):
     # Simply instantiating the client will install it into the global map
     # for processing in the main event loop.
-    Client(host, port,
-           functools.partial(self.commit_callback, host, port),
-           functools.partial(self._reconnect, host, port))
+    Client(url,
+           functools.partial(self.commit_callback, url),
+           functools.partial(self._reconnect, url))
 
   def _check_stale(self):
     now = time.time()
@@ -215,12 +195,12 @@ class MultiClient(object):
       if client.last_activity + STALE_DELAY < now:
         # Whoops. No activity in a while. Signal this fact, Close the
         # Client, then have it reconnected later on.
-        self.event_callback(client.host, client.port, 'stale')
+        self.event_callback(client.url, 'stale', client.last_activity)
 
         # This should remove it from .socket_map.
         client.close()
 
-        self._reconnect_later(client.host, client.port)
+        self._reconnect_later(client.url)
 
   def _maybe_work(self):
     # If we haven't reach the targetted time, or have no work to do,
@@ -236,8 +216,8 @@ class MultiClient(object):
     work = self.work_items
     self.work_items = [ ]
 
-    for host, port in work:
-      self._add_channel(host, port)
+    for url in work:
+      self._add_channel(url)
 
   def run_forever(self):
     while True:

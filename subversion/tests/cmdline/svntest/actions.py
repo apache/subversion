@@ -455,8 +455,6 @@ def run_and_verify_checkout2(do_remove,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(disk_tree, wc.State):
-    disk_tree = disk_tree.old_tree()
 
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
@@ -478,17 +476,10 @@ def run_and_verify_checkout2(do_remove,
     _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
     raise
 
-  # Create a tree by scanning the working copy
-  actual = tree.build_tree_from_wc(wc_dir_name)
-
-  # Verify expected disk against actual disk.
-  try:
-    tree.compare_trees("disk", actual, disk_tree,
-                       singleton_handler_a, a_baton,
-                       singleton_handler_b, b_baton)
-  except tree.SVNTreeUnequal:
-    _log_tree_state("ACTUAL DISK TREE:", actual, wc_dir_name)
-    raise
+  if disk_tree:
+    verify_disk(wc_dir_name, disk_tree, False,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton)
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             singleton_handler_a = None,
@@ -759,10 +750,6 @@ def verify_update(actual_output,
     mergeinfo_output_tree = mergeinfo_output_tree.old_tree()
   if isinstance(elision_output_tree, wc.State):
     elision_output_tree = elision_output_tree.old_tree()
-  if isinstance(disk_tree, wc.State):
-    disk_tree = disk_tree.old_tree()
-  if isinstance(status_tree, wc.State):
-    status_tree = status_tree.old_tree()
 
   # Verify actual output against expected output.
   if output_tree:
@@ -794,27 +781,35 @@ def verify_update(actual_output,
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
-    actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
-    try:
-      tree.compare_trees("disk", actual_disk, disk_tree,
-                         singleton_handler_a, a_baton,
-                         singleton_handler_b, b_baton)
-    except tree.SVNTreeUnequal:
-      _log_tree_state("EXPECTED DISK TREE:", disk_tree)
-      _log_tree_state("ACTUAL DISK TREE:", actual_disk)
-      raise
+    verify_disk(wc_dir_name, disk_tree, check_props,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
     run_and_verify_status(wc_dir_name, status_tree)
 
 
-def verify_disk(wc_dir_name, disk_tree, check_props=False):
+def verify_disk(wc_dir_name, disk_tree, check_props=False,
+                singleton_handler_a = None, a_baton = None,
+                singleton_handler_b = None, b_baton = None):
   """Verify WC_DIR_NAME against DISK_TREE.  If CHECK_PROPS is set,
   the comparison will examin props.  Returns if successful, raises on
   failure."""
-  verify_update(None, None, None, wc_dir_name, None, None, None, disk_tree,
-                None, check_props=check_props)
+
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+
+  actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
+  try:
+    tree.compare_trees("disk", actual_disk, disk_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    _log_tree_state("EXPECTED DISK TREE:", disk_tree)
+    _log_tree_state("ACTUAL DISK TREE:", actual_disk)
+    raise
+
 
 
 
@@ -837,8 +832,6 @@ def run_and_verify_update(wc_dir_name,
 
   If ERROR_RE_STRING, the update must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
-
-  Else if ERROR_RE_STRING is None, then:
 
   If OUTPUT_TREE is not None, the subcommand output will be verified
   against OUTPUT_TREE.  If DISK_TREE is not None, the working copy
@@ -864,11 +857,13 @@ def run_and_verify_update(wc_dir_name,
 
   if error_re_string:
     rm = re.compile(error_re_string)
+    match = None
     for line in errput:
       match = rm.search(line)
       if match:
-        return
-    raise main.SVNUnmatchedError
+        break
+    if not match:
+      raise main.SVNUnmatchedError
 
   actual = wc.State.from_checkout(output)
   verify_update(actual, None, None, wc_dir_name,
@@ -1171,8 +1166,6 @@ def run_and_verify_patch(dir, patch_path,
   If ERROR_RE_STRING, 'svn patch' must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
 
-  Else if ERROR_RE_STRING is None, then:
-
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be compared.
@@ -1341,7 +1334,6 @@ def run_and_verify_switch(wc_dir_name,
       error_re_string = ".*(" + error_re_string + ")"
     expected_err = verify.RegexOutput(error_re_string, match_all=False)
     verify.verify_outputs(None, None, errput, None, expected_err)
-    return
   elif errput:
     raise verify.SVNUnexpectedStderr(err)
 
@@ -1353,7 +1345,7 @@ def run_and_verify_switch(wc_dir_name,
                 singleton_handler_b, b_baton,
                 check_props)
 
-def process_output_for_commit(output):
+def process_output_for_commit(output, error_re_string):
   """Helper for run_and_verify_commit(), also used in the factory."""
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
@@ -1372,7 +1364,7 @@ def process_output_for_commit(output):
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
-    if not match:
+    if not match and not error_re_string:
       logger.warn("ERROR:  commit did not succeed.")
       logger.warn("The final line from 'svn ci' was:")
       logger.warn(lastline)
@@ -1417,8 +1409,6 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(status_tree, wc.State):
-    status_tree = status_tree.old_tree()
 
   # Commit.
   if '-m' not in args and '-F' not in args:
@@ -1431,22 +1421,22 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
       error_re_string = ".*(" + error_re_string + ")"
     expected_err = verify.RegexOutput(error_re_string, match_all=False)
     verify.verify_outputs(None, None, errput, None, expected_err)
-    return
 
   # Else not expecting error:
 
   # Convert the output into a tree.
-  output = process_output_for_commit(output)
+  output = process_output_for_commit(output, error_re_string)
   actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
-  try:
-    tree.compare_trees("output", actual, output_tree)
-  except tree.SVNTreeError:
-      verify.display_trees("Output of commit is unexpected",
-                           "OUTPUT TREE", output_tree, actual)
-      _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
-      raise
+  if output_tree:
+    try:
+      tree.compare_trees("output", actual, output_tree)
+    except tree.SVNTreeError:
+        verify.display_trees("Output of commit is unexpected",
+                             "OUTPUT TREE", output_tree, actual)
+        _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
+        raise
 
   # Verify via 'status' command too, if possible.
   if status_tree:

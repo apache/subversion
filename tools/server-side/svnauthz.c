@@ -141,6 +141,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    3   when --is argument doesn't match\n"
     ),
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is} },
+  { NULL, NULL, {0}, NULL, {0} }
 };
 
 static svn_error_t *
@@ -492,9 +493,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               os->ind++;
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  ("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    ("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }

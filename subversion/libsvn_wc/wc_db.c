@@ -989,7 +989,9 @@ insert_working_node(void *baton,
 {
   const insert_working_baton_t *piwb = baton;
   const char *parent_relpath;
+  const char *moved_to_relpath = NULL;
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(piwb->op_depth > 0);
 
@@ -997,10 +999,21 @@ insert_working_node(void *baton,
   SVN_ERR_ASSERT(*local_relpath != '\0');
   parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
+  /* Preserve existing moved-to information for this relpath,
+   * which might exist in case we're replacing an existing base-deleted
+   * node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_MOVED_TO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            piwb->op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    moved_to_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt)); 
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
-                "snnd", /* symlink_target, file_external, moved_to, moved_here */
+                "snsd", /* symlink_target, file_external, moved_to, moved_here */
                 wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
@@ -1014,6 +1027,7 @@ insert_working_node(void *baton,
                 /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_kind_symlink)
                             ? piwb->target : NULL,
+                moved_to_relpath,
                 piwb->moved_here));
 
   if (piwb->kind == svn_kind_file)
@@ -2087,6 +2101,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                const char *local_relpath,
                svn_wc__db_t *db, /* For checking conflicts */
                svn_boolean_t keep_as_working,
+               svn_boolean_t queue_deletes,
                svn_revnum_t not_present_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
@@ -2131,6 +2146,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   /* Step 1: Create workqueue operations to remove files and dirs in the
      local-wc */
   if (!keep_working
+      && queue_deletes
       && (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete))
     {
@@ -2290,6 +2306,7 @@ svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
+                       svn_boolean_t queue_deletes,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
@@ -2305,7 +2322,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(db_base_remove(wcroot, local_relpath,
-                                     db, keep_as_working, not_present_revision,
+                                     db, keep_as_working, queue_deletes,
+                                     not_present_revision,
                                      conflict, work_items, scratch_pool),
                       wcroot);
 
@@ -3445,11 +3463,13 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
+  SVN_ERR(svn_sqlite__get_statement(
+                &stmt, wcroot->sdb,
+                immediates_only 
+                    ? STMT_SELECT_COMMITTABLE_EXTERNALS_IMMEDIATELY_BELOW
+                    : STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                            (immediates_only ? 1 : 0)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -6500,7 +6520,7 @@ remove_node_txn(svn_boolean_t *left_changes,
   /* Remove all nodes below local_relpath */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODE_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath, 0));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Delete the root NODE when this is not the working copy root */
@@ -6508,7 +6528,7 @@ remove_node_txn(svn_boolean_t *left_changes,
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath, 0));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -6919,8 +6939,8 @@ delete_node(void *baton,
       APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
 
       /* If a subtree is being moved-away, we need to update moved-to
-       * information for all children that were moved into, or within,
-       * this subtree. */
+       * information for all children that were moved into, within or
+       * from this subtree. */
       if (kind == svn_kind_dir)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -6930,10 +6950,12 @@ delete_node(void *baton,
 
           while (have_row)
             {
+              /* Source of move */
               const char *move_relpath
                 = svn_sqlite__column_text(stmt, 0, NULL);
               const char *move_subtree_relpath
                 = svn_relpath_skip_ancestor(local_relpath, move_relpath);
+              /* Destination of move */
               const char *child_moved_to
                 = svn_sqlite__column_text(stmt, 1, NULL);
               const char *child_moved_to_subtree_relpath
@@ -6964,7 +6986,7 @@ delete_node(void *baton,
                                                moved_node->local_relpath))
                 moved_node->op_depth = b->delete_depth;
               else
-                moved_node->op_depth = child_op_depth;
+                moved_node->op_depth = relpath_depth(moved_node->local_relpath);
 
               APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *)
                 = moved_node;
@@ -7299,8 +7321,6 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                                     scratch_pool));
       VERIFY_USABLE_WCROOT(moved_to_wcroot);
 
-/* ### This breaks some tests. Needs more work here or on a higher
-       level
       if (strcmp(wcroot->abspath, moved_to_wcroot->abspath) != 0)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot move '%s' to '%s' because they "
@@ -7308,7 +7328,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool),
                                  svn_dirent_local_style(moved_to_abspath,
-                                                        scratch_pool)); */
+                                                        scratch_pool));
     }
   else
     moved_to_relpath = NULL;
@@ -8040,12 +8060,16 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
           child_item->info.have_more_work = (child_item->nr_layers > 1);
 
           /* Moved-to can only exist at op_depth > 0. */
+          /* ### Should we really do this for every layer where op_depth > 0
+                 in undefined order? */
           moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL);
           if (moved_to_relpath)
             child_item->info.moved_to_abspath =
               svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
 
           /* Moved-here can only exist at op_depth > 0. */
+          /* ### Should we really do this for every layer where op_depth > 0
+                 in undefined order? */
           child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
         }
 
@@ -10259,7 +10283,8 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
               revision != new_rev)))
     {
       return svn_error_trace(db_base_remove(wcroot, local_relpath,
-                                            db, FALSE, SVN_INVALID_REVNUM,
+                                            db, FALSE, FALSE,
+                                            SVN_INVALID_REVNUM,
                                             NULL, NULL, scratch_pool));
     }
 

@@ -421,17 +421,18 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
-svn_error_t * svn_client__wc_delete(const char *path,
-                                    svn_boolean_t force,
-                                    svn_boolean_t dry_run,
-                                    svn_boolean_t keep_local,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_client__wc_delete(const char *local_abspath,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t keep_local,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
 
 
-/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+/* Like svn_client__wc_delete(), but deletes multiple TARGETS efficiently. */
 svn_error_t *
 svn_client__wc_delete_many(const apr_array_header_t *targets,
                            svn_boolean_t force,
@@ -673,10 +674,13 @@ svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
    If LOCAL_ABSPATH has no base then do nothing.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
-   or NULL, in which case this function will open its own temporary session.
+   or NULL, in which case this function will use its own temporary session.
 
    Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
    allocations.
+
+   If one or more of the paths are not available in the repository at the
+   specified revision, these paths will not be added to the hashtable.
 */
 svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
@@ -906,6 +910,9 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
    as specified by DEPTH; the behavior is the same as that described
    for svn_client_commit4().
 
+   If DEPTH_EMPTY_START is >= 0, all targets after index DEPTH_EMPTY_START
+   in TARGETS are handled as having svn_depth_empty.
+
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
@@ -922,6 +929,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -1089,7 +1097,11 @@ svn_client__export_externals(apr_hash_t *externals,
 
 /* Perform status operations on each external in EXTERNAL_MAP, a const char *
    local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status(). */
+   All other options are the same as those passed to svn_client_status().
+
+   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
+   properly formatted relative paths
+ */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
                                apr_hash_t *external_map,
@@ -1097,9 +1109,11 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 
 /* List external items defined on each external in EXTERNALS, a const char *

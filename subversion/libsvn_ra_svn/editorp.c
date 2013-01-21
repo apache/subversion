@@ -976,7 +976,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
           else
             {
               err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                      _("Unknown command '%s'"), cmd);
+                                      _("Unknown editor command '%s'"), cmd);
               err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
             }
         }

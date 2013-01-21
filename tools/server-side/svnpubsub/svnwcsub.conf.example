@@ -1,9 +1,7 @@
-### turn this into an example
-
 [DEFAULT]
 svnbin: /usr/local/bin/svn
-streams: http://svn.example.org:2069/commits/xml
-hook: /usr/bin/true
+streams: http://svn.example.org:2069/commits/svn
+# hook: /usr/bin/true
 
 ## The values below are used by ConfigParser's interpolation syntax.
 ## See http://docs.python.org/library/configparser
@@ -14,5 +12,5 @@ HOME: /home/svn
 LANG: en_US.UTF-8
 
 [track]
-/usr/local/foo/prod: %(SOME_REPOS)/foo/production
-/usr/local/foo/dev:  %(SOME_REPOS)/foo/trunk
+/usr/local/foo/prod: %(SOME_REPOS)s/foo/production
+/usr/local/foo/dev:  %(SOME_REPOS)s/foo/trunk

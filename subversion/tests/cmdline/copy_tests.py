@@ -127,8 +127,7 @@ def copy_replace_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       props={ 'svn:eol-style': 'LF' })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Commit props
   expected_output = svntest.wc.State(wc_dir, {
@@ -172,8 +171,7 @@ def copy_replace_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Now commit and verify
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -1376,8 +1374,7 @@ def revision_kinds_local_source(sbox):
       raise svntest.Failure
 
   # Check that the new files have the right contents
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #-------------------------------------------------------------
@@ -2113,7 +2110,7 @@ def move_moved_file_and_dir(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
+    'A/D/G/E_move_moved'       : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/beta'  : Item(status='  ', wc_rev=2),
     'A/B/F/rho_move_moved'     : Item(status='  ', wc_rev=2),
@@ -2653,12 +2650,7 @@ def copy_added_paths_with_props(sbox):
     'A/D/I'       : Item(props={'foo' : 'bar'}),
     })
 
-  # Read disk state with props
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Copy added dir I to dir A/C
   I_copy_path = sbox.ospath('A/C/I')
@@ -2699,12 +2691,7 @@ def copy_added_paths_with_props(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  # Read disk state with props
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 def copy_added_paths_to_URL(sbox):
   "copy added path to URL"
@@ -3323,8 +3310,7 @@ def copy_peg_rev_local_files(sbox):
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #----------------------------------------------------------------------
@@ -3406,8 +3392,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 5)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #----------------------------------------------------------------------

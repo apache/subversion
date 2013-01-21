@@ -128,13 +128,14 @@ display_diff(const svn_log_entry_t *log_entry,
                                &start_revision, &end_revision,
                                NULL,
                                depth,
-                               FALSE, /* ignore ancestry */
-                               TRUE, /* no diff deleted */
-                               FALSE, /* show copies as adds */
-                               FALSE, /* ignore content type */
-                               FALSE, /* ignore prop diff */
-                               FALSE, /* properties only */
-                               FALSE, /* use git diff format */
+                               FALSE /* ignore ancestry */,
+                               FALSE /* no diff added */,
+                               TRUE  /* no diff deleted */,
+                               FALSE /* show copies as adds */,
+                               FALSE /* ignore content type */,
+                               FALSE /* ignore prop diff */,
+                               FALSE /* properties only */,
+                               FALSE /* use git diff format */,
                                svn_cmdline_output_encoding(pool),
                                outstream,
                                errstream,

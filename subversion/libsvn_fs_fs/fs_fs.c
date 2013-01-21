@@ -10289,6 +10289,28 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /** Verifying. **/
 
+/* Baton type expected by verify_walker().  The purpose is to reuse open
+ * rev / pack file handles between calls.  Its contents need to be cleaned
+ * periodically to limit resource usage.
+ */
+typedef struct verify_walker_baton_t
+{
+  /* number of calls to verify_walker() since the last clean */
+  int iteration_count;
+  
+  /* number of files opened since the last clean */
+  int file_count;
+
+  /* current file handle (or NULL) */
+  apr_file_t *file_hint;
+
+  /* corresponding revision (or SVN_INVALID_REVNUM) */
+  svn_revnum_t rev_hint;
+
+  /* pool to use for the file handles etc. */
+  apr_pool_t *pool;
+} verify_walker_baton_t;
+
 /* Used by svn_fs_fs__verify().
    Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
@@ -10300,13 +10322,40 @@ verify_walker(representation_t *rep,
   struct rep_state *rs;
   struct rep_args *rep_args;
 
-#ifdef SVN_DEBUG
-  /* verify_walker() is called directly by get_shared_rep() with baton=NULL. */
-  SVN_ERR_ASSERT(!baton);
-#endif
+  if (baton)
+    {
+      verify_walker_baton_t *walker_baton = baton;
+      apr_file_t * previous_file;
 
-  /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs, scratch_pool));
+      /* free resources periodically */
+      if (   walker_baton->iteration_count > 1000
+          || walker_baton->file_count > 16)
+        {
+          svn_pool_clear(walker_baton->pool);
+          
+          walker_baton->iteration_count = 0;
+          walker_baton->file_count = 0;
+          walker_baton->file_hint = NULL;
+          walker_baton->rev_hint = SVN_INVALID_REVNUM;
+        }
+
+      /* access the repo data */
+      previous_file = walker_baton->file_hint;
+      SVN_ERR(create_rep_state(&rs, &rep_args, &walker_baton->file_hint,
+                               &walker_baton->rev_hint, rep, fs,
+                               walker_baton->pool));
+
+      /* update resource usage counters */
+      walker_baton->iteration_count++;
+      if (previous_file != walker_baton->file_hint)
+        walker_baton->file_count++;
+    }
+  else
+    {
+      /* ### Should this be using read_rep_line() directly? */
+      SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs,
+                               scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -10315,6 +10364,8 @@ svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
                   svn_revnum_t start,
                   svn_revnum_t end,
                   apr_pool_t *pool)
@@ -10322,7 +10373,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
-  apr_pool_t *iterpool = svn_pool_create(pool);
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
@@ -10332,42 +10382,54 @@ svn_fs_fs__verify(svn_fs_t *fs,
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     end = youngest;
-  SVN_ERR(ensure_revision_exists(fs, start, iterpool));
-  SVN_ERR(ensure_revision_exists(fs, end, iterpool));
+  SVN_ERR(ensure_revision_exists(fs, start, pool));
+  SVN_ERR(ensure_revision_exists(fs, end, pool));
 
   /* rep-cache verification. */
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
   if (exists)
-    /* Do not attempt to walk the rep-cache database if its file does not exist,
-       since doing so would create it --- which may confuse the administrator.
-       Don't take any lock. */
-    SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
-                                          cancel_func, cancel_baton,
-                                          start, end,
-                                          pool));
+    {
+      /* provide a baton to allow the reuse of open file handles between
+         iterations (saves 2/3 of OS level file operations). */
+      verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
+      baton->rev_hint = SVN_INVALID_REVNUM;
+      baton->pool = svn_pool_create(pool);
+      
+      /* Do not attempt to walk the rep-cache database if its file does
+         not exist,  since doing so would create it --- which may confuse
+         the administrator.   Don't take any lock. */
+      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, baton,
+                                            cancel_func, cancel_baton,
+                                            notify_func, notify_baton,
+                                            start, end,
+                                            pool));
+
+      /* walker resource cleanup */
+      svn_pool_destroy(baton->pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify_rev(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
-  {
-    svn_revnum_t i;
-    for (i = start; i <= end; i++)
-      {
-        svn_fs_root_t *root;
 
-        svn_pool_clear(iterpool);
+  /* ### TODO: Make sure caches are disabled.
 
-        /* ### TODO: Make sure caches are disabled.
+     When this code is called in the library, we want to ensure we
+     use the on-disk data --- rather than some data that was read
+     in the possibly-distance past and cached since. */
+  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__verify_root(root, pool));
 
-           When this code is called in the library, we want to ensure we
-           use the on-disk data --- rather than some data that was read
-           in the possibly-distance past and cached since. */
-        SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
-        SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
-      }
-  }
-
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

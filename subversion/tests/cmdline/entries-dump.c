@@ -148,7 +148,7 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       /* skip: keep_local */
       int_value("depth", entry->depth);
       /* skip: tree_conflict_data */
-      /* skip: file_external_path */
+      bool_value("file_external", entry->file_external_path != NULL);
       /* skip: file_external_peg_rev */
       /* skip: file_external_rev */
       bool_value("locked", locked && *entry->name == '\0');

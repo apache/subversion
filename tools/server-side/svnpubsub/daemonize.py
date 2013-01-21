@@ -50,11 +50,11 @@ class Daemon(object):
   def daemonize_exit(self):
     try:
       result = self.daemonize()
-    except (ChildFailed, DaemonFailed), e:
+    except (ChildFailed, DaemonFailed) as e:
       # duplicate the exit code
       sys.exit(e.code)
     except (ChildTerminatedAbnormally, ChildForkFailed,
-            DaemonTerminatedAbnormally, DaemonForkFailed), e:
+            DaemonTerminatedAbnormally, DaemonForkFailed) as e:
       sys.stderr.write('ERROR: %s\n' % e)
       sys.exit(1)
     except ChildResumedIncorrectly:
@@ -74,7 +74,7 @@ class Daemon(object):
     # fork off a child that can detach itself from this process.
     try:
       pid = os.fork()
-    except OSError, e:
+    except OSError as e:
       raise ChildForkFailed(e.errno, e.strerror)
 
     if pid > 0:
@@ -113,7 +113,7 @@ class Daemon(object):
     # perform the second fork
     try:
       pid = os.fork()
-    except OSError, e:
+    except OSError as e:
       raise DaemonForkFailed(e.errno, e.strerror)
 
     if pid > 0:

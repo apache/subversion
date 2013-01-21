@@ -1589,28 +1589,28 @@ def commit_nonrecursive(sbox):
   # These paths are relative to the top of the test's working copy.
   file1_path = 'file1'
   dir1_path  = 'dir1'
-  file2_path = os.path.join('dir1', 'file2')
-  file3_path = os.path.join('dir1', 'file3')
-  dir2_path  = os.path.join('dir1', 'dir2')
-  file4_path = os.path.join('dir1', 'dir2', 'file4')
+  file2_path = 'dir1/file2'
+  file3_path = 'dir1/file3'
+  dir2_path  = 'dir1/dir2'
+  file4_path = 'dir1/dir2/file4'
 
   # Create the new files and directories.
-  svntest.main.file_append(os.path.join(wc_dir, file1_path), 'this is file1')
-  os.mkdir(os.path.join(wc_dir, dir1_path))
-  svntest.main.file_append(os.path.join(wc_dir, file2_path), 'this is file2')
-  svntest.main.file_append(os.path.join(wc_dir, file3_path), 'this is file3')
-  os.mkdir(os.path.join(wc_dir, dir2_path))
-  svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
+  svntest.main.file_append(sbox.ospath(file1_path), 'this is file1')
+  os.mkdir(sbox.ospath(dir1_path))
+  svntest.main.file_append(sbox.ospath(file2_path), 'this is file2')
+  svntest.main.file_append(sbox.ospath(file3_path), 'this is file3')
+  os.mkdir(sbox.ospath(dir2_path))
+  svntest.main.file_append(sbox.ospath(file4_path), 'this is file4')
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'add', '--depth=empty',
-                                     os.path.join(wc_dir, file1_path),
-                                     os.path.join(wc_dir, dir1_path),
-                                     os.path.join(wc_dir, file2_path),
-                                     os.path.join(wc_dir, file3_path),
-                                     os.path.join(wc_dir, dir2_path),
-                                     os.path.join(wc_dir, file4_path))
+                                     sbox.ospath(file1_path),
+                                     sbox.ospath(dir1_path),
+                                     sbox.ospath(file2_path),
+                                     sbox.ospath(file3_path),
+                                     sbox.ospath(dir2_path),
+                                     sbox.ospath(file4_path))
 
   # Commit.  We should see all 6 items (2 dirs, 4 files) get sent.
   expected_output = svntest.wc.State(
@@ -1639,12 +1639,12 @@ def commit_nonrecursive(sbox):
                                         expected_status,
                                         None,
                                         '-N',
-                                        os.path.join(wc_dir, file1_path),
-                                        os.path.join(wc_dir, dir1_path),
-                                        os.path.join(wc_dir, file2_path),
-                                        os.path.join(wc_dir, file3_path),
-                                        os.path.join(wc_dir, dir2_path),
-                                        os.path.join(wc_dir, file4_path))
+                                        sbox.ospath(file1_path),
+                                        sbox.ospath(dir1_path),
+                                        sbox.ospath(file2_path),
+                                        sbox.ospath(file3_path),
+                                        sbox.ospath(dir2_path),
+                                        sbox.ospath(file4_path))
 
   #######################################################################
   ###
@@ -1707,28 +1707,28 @@ def commit_nonrecursive(sbox):
 
   # Now add these directories and files, except the last:
   dirA_path  = 'dirA'
-  fileA_path = os.path.join('dirA', 'fileA')
-  fileB_path = os.path.join('dirA', 'fileB')
-  dirB_path  = os.path.join('dirA', 'dirB')
-  nope_1_path = os.path.join(dirB_path, 'nope_1')
-  nope_2_path = os.path.join(dirB_path, 'nope_2')
+  fileA_path = 'dirA/fileA'
+  fileB_path = 'dirA/fileB'
+  dirB_path  = 'dirA/dirB'
+  nope_1_path = 'dirA/dirB/nope_1'
+  nope_2_path = 'dirA/dirB/nope_2'
 
   # Create the new files and directories.
-  os.mkdir(os.path.join(wc_dir, dirA_path))
-  svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA')
-  svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB')
-  os.mkdir(os.path.join(wc_dir, dirB_path))
-  svntest.main.file_append(os.path.join(wc_dir, nope_1_path), 'nope_1')
-  svntest.main.file_append(os.path.join(wc_dir, nope_2_path), 'nope_2')
+  os.mkdir(sbox.ospath(dirA_path))
+  svntest.main.file_append(sbox.ospath(fileA_path), 'fileA')
+  svntest.main.file_append(sbox.ospath(fileB_path), 'fileB')
+  os.mkdir(sbox.ospath(dirB_path))
+  svntest.main.file_append(sbox.ospath(nope_1_path), 'nope_1')
+  svntest.main.file_append(sbox.ospath(nope_2_path), 'nope_2')
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'add', '-N',
-                                     os.path.join(wc_dir, dirA_path),
-                                     os.path.join(wc_dir, fileA_path),
+                                     sbox.ospath(dirA_path),
+                                     sbox.ospath(fileA_path),
                                      # don't add fileB
-                                     os.path.join(wc_dir, dirB_path),
-                                     os.path.join(wc_dir, nope_1_path),
+                                     sbox.ospath(dirB_path),
+                                     sbox.ospath(nope_1_path),
                                      # don't add nope_2
                                      )
 
@@ -1765,7 +1765,7 @@ def commit_nonrecursive(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        '-N', os.path.join(wc_dir, dirA_path))
+                                        '-N', sbox.ospath(dirA_path))
 
 #----------------------------------------------------------------------
 # Regression for #1017: ra_neon was allowing the deletion of out-of-date

@@ -633,9 +633,8 @@ def propmods_with_changelists(sbox):
                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
                       'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma',
                       'A/mu', 'iota', props={ 'name' : 'value' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Proplist the 'i' changelist
   exit_code, output, errput = svntest.main.run_svn(None, "proplist", "--depth",
@@ -653,9 +652,7 @@ def propmods_with_changelists(sbox):
                        wc_dir)
   expected_disk.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/H/chi', 'A/D/H/psi',
                       props={})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Add 'foo'='bar' property on all files under A/B to depth files and
   # in changelist 'a'.
@@ -664,9 +661,7 @@ def propmods_with_changelists(sbox):
                        os.path.join(wc_dir, 'A', 'B'))
   expected_disk.tweak('A/B/lambda', props={ 'name' : 'value',
                                             'foo'  : 'bar' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Add 'bloo'='blarg' property to all files in changelist 'a'.
   svntest.main.run_svn(None, "pset", "--depth", "infinity",
@@ -678,9 +673,7 @@ def propmods_with_changelists(sbox):
   expected_disk.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/D/H/omega', 'A/D/gamma',
                       'iota', props={ 'name' : 'value',
                                       'bloo' : 'blarg' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Propget 'name' in files in changelists 'a' and 'i' to depth files.
   exit_code, output, errput = svntest.main.run_svn(None, "pget",

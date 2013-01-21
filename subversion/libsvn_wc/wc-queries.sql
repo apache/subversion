@@ -226,6 +226,12 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
 
+-- STMT_DELETE_WORKING_OP_DEPTH_ABOVE
+DELETE FROM nodes
+WHERE wc_id = ?1 
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth > ?3
+
 -- STMT_SELECT_LOCAL_RELPATH_OP_DEPTH
 SELECT local_relpath
 FROM nodes
@@ -885,6 +891,12 @@ WHERE wc_id = ?1
  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
  AND op_depth = ?3
 
+-- STMT_UPDATE_OP_DEPTH_RECURSIVE
+UPDATE nodes SET op_depth = ?4, moved_here = NULL
+WHERE wc_id = ?1
+ AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+ AND op_depth = ?3
+
 -- STMT_DOES_NODE_EXIST
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
@@ -992,29 +1004,44 @@ WHERE wc_id = ?1
  * Arguments:
  *  ?1: wc_id.
  *  ?2: the target path, local relpath inside ?1.
- *  ?3: boolean, if 1 return immediate children of ?2 only.
  *
  * ### NOTE: This statement deliberately removes file externals that live
  * inside an unversioned dir, because commit still breaks on those.
  * Once that's been fixed, the conditions below "--->8---" become obsolete. */
 -- STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW
 SELECT local_relpath, kind, def_repos_relpath,
-       (SELECT root FROM repository AS r
-         WHERE r.id = e.repos_id)
-FROM externals AS e
-WHERE e.wc_id = ?1
+  (SELECT root FROM repository AS r WHERE r.id = e.repos_id)
+FROM externals e
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND def_revision IS NULL
+  AND repos_id = (SELECT repos_id
+                  FROM nodes AS n
+                  WHERE n.wc_id = ?1
+                    AND n.local_relpath = ''
+                    AND n.op_depth = 0)
+  AND ((kind='dir')
+       OR EXISTS (SELECT 1 FROM nodes
+                  WHERE nodes.wc_id = e.wc_id
+                  AND nodes.local_relpath = e.parent_relpath))
+
+-- STMT_SELECT_COMMITTABLE_EXTERNALS_IMMEDIATELY_BELOW
+SELECT local_relpath, kind, def_repos_relpath,
+  (SELECT root FROM repository AS r WHERE r.id = e.repos_id)
+FROM externals e
+WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(e.local_relpath, ?2)
-  AND e.def_revision IS NULL
-  AND e.repos_id = (SELECT repos_id
+  AND parent_relpath = ?2
+  AND def_revision IS NULL
+  AND repos_id = (SELECT repos_id
                     FROM nodes AS n
                     WHERE n.wc_id = ?1
                       AND n.local_relpath = ''
                       AND n.op_depth = 0)
-  AND ( (NOT ?3) OR (parent_relpath = ?2) )
-  /* ------>8----- */
-  AND (EXISTS (SELECT 1 FROM nodes
-               WHERE nodes.wc_id = e.wc_id
-               AND nodes.local_relpath = e.parent_relpath))
+  AND ((kind='dir')
+       OR EXISTS (SELECT 1 FROM nodes
+                  WHERE nodes.wc_id = e.wc_id
+                  AND nodes.local_relpath = e.parent_relpath))
 
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
@@ -1278,7 +1305,7 @@ SELECT local_relpath FROM delete_list
 ORDER BY local_relpath
 
 -- STMT_FINALIZE_DELETE
-DROP TABLE delete_list
+DROP TABLE IF EXISTS delete_list
 
 
 /* ------------------------------------------------------------------------- */
@@ -1423,8 +1450,8 @@ WHERE wc_id = ?1 AND op_depth > 0
   AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 /* This statement returns pairs of paths that define a move where the
-   destination of the move is within the subtree rooted at path ?2 in
-   WC_ID ?1. */
+   destination of the move is within the subtree rooted at path ?2 or
+   the source of the move is within the subtree rooted at path ?2 */
 -- STMT_SELECT_MOVED_PAIR
 SELECT local_relpath, moved_to, op_depth FROM nodes_current
 WHERE wc_id = ?1

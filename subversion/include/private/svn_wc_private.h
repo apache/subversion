@@ -1132,9 +1132,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If KIND is not NULL, set *KIND to the kind of node registered in the working
  * copy, or SVN_NODE_NONE if the node doesn't
  *
- * If ADDED is not NULL, set *ADDED to TRUE if the node is added. (Addition,
- * copy or moved).
- *
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
@@ -1146,7 +1143,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
-                               svn_boolean_t *added,
                                svn_boolean_t *deleted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,

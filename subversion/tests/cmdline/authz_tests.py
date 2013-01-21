@@ -1223,12 +1223,13 @@ def authz_tree_conflict(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/C', status='A ', wc_rev='0')
+  expected_status.tweak('A', '', status='! ', wc_rev='1')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
                                         expected_status,
-                                        "Failed to mark '.*C' absent:",
+                                        "Failed to mark '.*C' (server|absent):",
                                         None, None, None, None, 0,
                                         '-r', '1', wc_dir)
 

@@ -498,25 +498,6 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
       /* Don't recurse. */
       return SVN_NO_ERROR;
     }
-  else if (depth != svn_depth_infinity)
-    {
-      include_dir_externals = FALSE;
-      /* We slip in dir externals as explicit targets. When we do that,
-       * depth_immediates should become depth_empty for dir externals targets.
-       * But adding the dir external to the list of targets makes it get
-       * handled with depth_immediates itself, and thus will also include the
-       * immediate children of the dir external. So do dir externals only with
-       * depth_infinity or not at all.
-       * ### TODO: Maybe rework this (and svn_client_commit6()) into separate
-       * ### target lists, "duplicating" REL_TARGETS: one for the user's
-       * ### targets and one for the overlayed externals targets, and pass an
-       * ### appropriate depth for the externals targets in a separate call to
-       * ### svn_client__harvest_committables(). The only gain is correct
-       * ### handling of this very specific case: during 'svn commit
-       * ### --depth=immediates --include-externals', commit dir externals
-       * ### (only immediate children of a target) with depth_empty instead of
-       * ### not at all. No other effect. So not doing that for now. */
-    }
 
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;
@@ -608,6 +589,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *current_abspath;
   const char *notify_prefix;
+  int depth_empty_after = -1;
   int i;
 
   SVN_ERR_ASSERT(depth != svn_depth_unknown && depth != svn_depth_exclude);
@@ -638,11 +620,20 @@ svn_client_commit6(const apr_array_header_t *targets,
   if (rel_targets->nelts == 0)
     APR_ARRAY_PUSH(rel_targets, const char *) = "";
 
-  SVN_ERR(append_externals_as_explicit_targets(rel_targets, base_abspath,
-                                               include_file_externals,
-                                               include_dir_externals,
-                                               depth, ctx,
-                                               pool, pool));
+  if (include_file_externals || include_dir_externals)
+    {
+      if (depth != svn_depth_unknown && depth != svn_depth_infinity)
+        {
+          /* All targets after this will be handled as depth empty */
+          depth_empty_after = rel_targets->nelts;
+        }
+
+      SVN_ERR(append_externals_as_explicit_targets(rel_targets, base_abspath,
+                                                   include_file_externals,
+                                                   include_dir_externals,
+                                                   depth, ctx,
+                                                   pool, pool));
+    }
 
   SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
                                  rel_targets, pool, iterpool));
@@ -708,6 +699,7 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                     &lock_tokens,
                                                     base_abspath,
                                                     rel_targets,
+                                                    depth_empty_after,
                                                     depth,
                                                     ! keep_locks,
                                                     changelists,
