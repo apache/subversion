@@ -1644,7 +1644,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       val = svn_xml_get_attr_value("send-all", attrs);
       if (val && (strcmp(val, "true") == 0))
-        ctx->send_all_mode = TRUE;
+        {
+          ctx->send_all_mode = TRUE;
+
+          /* All properties are included in send-all mode. */
+          ctx->add_props_included = TRUE;
+        }
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
