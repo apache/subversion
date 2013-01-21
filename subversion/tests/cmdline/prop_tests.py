@@ -92,11 +92,7 @@ def make_local_props(sbox):
   # Read the real disk tree.  Notice we are passing the (normally
   # disabled) "load props" flag to this routine.  This will run 'svn
   # proplist' on every item in the working copy!
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Edit without actually changing the property
   svntest.main.use_editor('identity')
@@ -1319,9 +1315,7 @@ def props_on_replaced_file(sbox):
   # check that the replaced file has no properties
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="some mod")
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # now add a new property to iota
   sbox.simple_propset('red', 'mojo', 'iota')
@@ -1329,9 +1323,7 @@ def props_on_replaced_file(sbox):
 
   # What we expect the disk tree to look like:
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 #----------------------------------------------------------------------
 
@@ -1781,9 +1773,7 @@ def rm_of_replaced_file(sbox):
   expected_disk.tweak('iota', props={'red': 'rojo', 'blue': 'lagoon'})
   expected_disk.tweak('A/mu', props={'red': 'rojo', 'blue': 'lagoon'},
                       contents="This is the file 'iota'.\n")
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Remove the copy. This should leave the original locally-deleted mu,
   # which should have no properties.
@@ -2012,17 +2002,13 @@ def obstructed_subdirs(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/C', props={'red': 'blue'})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Remove the subdir from disk, and validate the status
   svntest.main.safe_rmtree(C_path)
 
   expected_disk.remove('A/C')
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/C', status='!M', wc_rev='1')
@@ -2035,9 +2021,7 @@ def obstructed_subdirs(sbox):
   expected_disk.add({'A/C': Item(contents='', props={'red': 'blue'})})
   expected_status.tweak('A/C', status='~M', wc_rev='1')
 
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

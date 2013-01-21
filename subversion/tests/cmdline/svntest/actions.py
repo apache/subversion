@@ -478,17 +478,10 @@ def run_and_verify_checkout2(do_remove,
     _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
     raise
 
-  # Create a tree by scanning the working copy
-  actual = tree.build_tree_from_wc(wc_dir_name)
-
-  # Verify expected disk against actual disk.
-  try:
-    tree.compare_trees("disk", actual, disk_tree,
-                       singleton_handler_a, a_baton,
-                       singleton_handler_b, b_baton)
-  except tree.SVNTreeUnequal:
-    _log_tree_state("ACTUAL DISK TREE:", actual, wc_dir_name)
-    raise
+  if disk_tree:
+    verify_disk(wc_dir_name, disk_tree, False,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton)
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             singleton_handler_a = None,
@@ -759,8 +752,6 @@ def verify_update(actual_output,
     mergeinfo_output_tree = mergeinfo_output_tree.old_tree()
   if isinstance(elision_output_tree, wc.State):
     elision_output_tree = elision_output_tree.old_tree()
-  if isinstance(disk_tree, wc.State):
-    disk_tree = disk_tree.old_tree()
   if isinstance(status_tree, wc.State):
     status_tree = status_tree.old_tree()
 
@@ -794,27 +785,35 @@ def verify_update(actual_output,
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
-    actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
-    try:
-      tree.compare_trees("disk", actual_disk, disk_tree,
-                         singleton_handler_a, a_baton,
-                         singleton_handler_b, b_baton)
-    except tree.SVNTreeUnequal:
-      _log_tree_state("EXPECTED DISK TREE:", disk_tree)
-      _log_tree_state("ACTUAL DISK TREE:", actual_disk)
-      raise
+    verify_disk(wc_dir_name, disk_tree, check_props,
+                singleton_handler_a, a_baton,
+                singleton_handler_b, b_baton)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
     run_and_verify_status(wc_dir_name, status_tree)
 
 
-def verify_disk(wc_dir_name, disk_tree, check_props=False):
+def verify_disk(wc_dir_name, disk_tree, check_props=False,
+                singleton_handler_a = None, a_baton = None,
+                singleton_handler_b = None, b_baton = None):
   """Verify WC_DIR_NAME against DISK_TREE.  If CHECK_PROPS is set,
   the comparison will examin props.  Returns if successful, raises on
   failure."""
-  verify_update(None, None, None, wc_dir_name, None, None, None, disk_tree,
-                None, check_props=check_props)
+
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+
+  actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
+  try:
+    tree.compare_trees("disk", actual_disk, disk_tree,
+                       singleton_handler_a, a_baton,
+                       singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    _log_tree_state("EXPECTED DISK TREE:", disk_tree)
+    _log_tree_state("ACTUAL DISK TREE:", actual_disk)
+    raise
+
 
 
 

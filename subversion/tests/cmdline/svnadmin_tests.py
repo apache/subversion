@@ -230,14 +230,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                          "update", "-r%s" % (rev+1),
                                          sbox.wc_dir)
 
-      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir, check_props)
-      rev_tree = revs[rev].old_tree()
-
-      try:
-        svntest.tree.compare_trees("rev/disk", rev_tree, wc_tree)
-      except svntest.tree.SVNTreeError:
-        svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
-        raise
+      rev_tree = revs[rev]
+      svntest.actions.verify_disk(sbox.wc_dir, rev_tree, check_props)
 
 def load_dumpstream(sbox, dump, *varargs):
   "Load dump text without verification."
