@@ -4359,7 +4359,6 @@ def patch_replace_dir_with_file_and_vv(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, sbox.wc_dir)
 
-@XFail()
 @Issue(4297)
 def single_line_mismatch(sbox):
   "single line replacement mismatch"
@@ -4388,6 +4387,9 @@ def single_line_mismatch(sbox):
   # But yet it shows up as deleted instead of conflicted
   expected_output = [
     'C         %s\n' % sbox.ospath('test'),
+    '>         rejected hunk @@ -1,1 +1,1 @@\n',
+    'Summary of conflicts:\n',
+    '  Text conflicts: 1\n',
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
