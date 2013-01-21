@@ -212,6 +212,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
+  svn_boolean_t has_explicit_target = FALSE;
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -343,6 +344,7 @@ svn_cl__merge(apr_getopt_t *os,
       if (targets->nelts == 2)
         {
           targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+          has_explicit_target = TRUE;
           if (svn_path_is_url(targetpath))
             return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                     _("Cannot specify a revision range "
@@ -378,12 +380,17 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* Decide where to apply the delta (defaulting to "."). */
       if (targets->nelts == 3)
-        targetpath = APR_ARRAY_IDX(targets, 2, const char *);
+        {
+          targetpath = APR_ARRAY_IDX(targets, 2, const char *);
+          has_explicit_target = TRUE;
+        }
     }
 
   /* If no targetpath was specified, see if we can infer it from the
      sourcepaths. */
-  if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
+  if (! has_explicit_target
+      && sourcepath1 && sourcepath2 
+      && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in
          the current working directory or which is the current working
