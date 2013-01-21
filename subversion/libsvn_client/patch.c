@@ -806,13 +806,13 @@ write_file(void *baton, const char *buf, apr_size_t len,
  * In Subversion, symlinks can be represented on disk in two distinct ways.
  * On systems which support symlinks, a symlink is created on disk.
  * On systems which do not support symlink, a file is created on disk
- * which contains "link TARGET" where TARGET is the file the symlink
- * points to.
+ * which contains the "normal form" of the symlink, which looks like:
+ *   link TARGET
+ * where TARGET is the file the symlink points to.
  *
  * When reading symlinks (i.e. the link itself, not the file the symlink
  * is pointing to) through the svn_subst_create_specialfile() function
- * into a buffer, the buffer always contains the "normal form" of the symlink,
- * which looks like: "link TARGET"
+ * into a buffer, the buffer always contains the "normal form" of the symlink.
  * Due to this representation symlinks always contain a single line of text.
  *
  * The functions below are needed to deal with the case where a patch
