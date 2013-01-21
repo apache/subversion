@@ -380,6 +380,20 @@ svn_config_get_yes_no_ask(svn_config_t *cfg,
                           const char *option,
                           const char* default_value);
 
+/** Like svn_config_set(), but for tristate values.
+ *
+ * Sets the option to 'TRUE'/'FALSE'/'UNKNOWN', depending on @a value.
+ *
+ * @a unknown_value specifies options value value allowed for third state.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_get_tristate(svn_config_t *cfg, svn_tristate_t *valuep,
+                        const char *section, const char *option,
+                        const char *unknown_value,
+                        svn_tristate_t default_value);
+
 /** Similar to @c svn_config_section_enumerator2_t, but is not
  * provided with a memory pool argument.
  *

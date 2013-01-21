@@ -796,6 +796,36 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_config_get_tristate(svn_config_t *cfg, svn_tristate_t *valuep,
+                        const char *section, const char *option,
+                        const char *unknown_value,
+                        svn_tristate_t default_value)
+{
+  const char *tmp_value;
+
+  svn_config_get(cfg, &tmp_value, section, option, NULL);
+
+  if (! tmp_value)
+    {
+      *valuep = default_value;
+    }
+  else if (0 == svn_cstring_casecmp(tmp_value, unknown_value))
+    {
+      *valuep = svn_tristate_unknown;
+    }
+  else
+    {
+      svn_boolean_t bool_val;
+      /* We already incorporated default_value into tmp_value if
+         necessary, so the FALSE below will be ignored unless the
+         caller is doing something it shouldn't be doing. */
+      SVN_ERR(get_bool(&bool_val, tmp_value, FALSE, section, option));
+      *valuep = bool_val ? svn_tristate_true : svn_tristate_false;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 int
 svn_config_enumerate_sections(svn_config_t *cfg,
