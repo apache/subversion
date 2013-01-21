@@ -548,12 +548,22 @@ def verify_windows_paths_in_repos(sbox):
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
-  svntest.verify.compare_and_display_lines(
-    "Error while running 'svnadmin verify'.",
-    'STDERR', ["* Verifying global structure ...\n",
-               "* Verified revision 0.\n",
-               "* Verified revision 1.\n",
-               "* Verified revision 2.\n"], errput)
+
+  # unfortunately, FSFS needs to do more checks than BDB resulting in
+  # different progress output
+  if svntest.main.is_fs_type_fsfs:
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verifying global structure ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], errput)
+  else:
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], errput)
 
 #----------------------------------------------------------------------
 
