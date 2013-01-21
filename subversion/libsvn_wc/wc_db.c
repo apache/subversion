@@ -989,7 +989,9 @@ insert_working_node(void *baton,
 {
   const insert_working_baton_t *piwb = baton;
   const char *parent_relpath;
+  const char *moved_to_relpath = NULL;
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(piwb->op_depth > 0);
 
@@ -997,10 +999,21 @@ insert_working_node(void *baton,
   SVN_ERR_ASSERT(*local_relpath != '\0');
   parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
+  /* Preserve existing moved-to information for this relpath,
+   * which might exist in case we're replacing an existing base-deleted
+   * node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_MOVED_TO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            piwb->op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    moved_to_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt)); 
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
-                "snnd", /* symlink_target, file_external, moved_to, moved_here */
+                "snsd", /* symlink_target, file_external, moved_to, moved_here */
                 wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
@@ -1014,6 +1027,7 @@ insert_working_node(void *baton,
                 /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_kind_symlink)
                             ? piwb->target : NULL,
+                moved_to_relpath,
                 piwb->moved_here));
 
   if (piwb->kind == svn_kind_file)
