@@ -274,14 +274,14 @@ def patch_absolute_paths(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/E/alpha', contents=alpha_contents)
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state('', 1)
   expected_status.tweak('A/B/E/alpha', status='M ')
 
   expected_skip = wc.State('', {
     lambda_path:  Item(verb='Skipped missing target'),
   })
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -488,13 +488,13 @@ def patch_offset(sbox):
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
   expected_disk.tweak('iota', contents=''.join(iota_contents))
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state('', 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_status.tweak('iota', status='M ', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2836,12 +2836,12 @@ def patch_prop_offset(sbox):
   expected_disk.tweak('iota', props = {'prop1' : prop1_content,
                                        'prop2' : prop2_content})
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state('', 1)
   expected_status.tweak('iota', status=' M', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3977,7 +3977,7 @@ def patch_delete_and_skip(sbox):
   expected_disk.remove('A/B/E/beta')
   expected_disk.remove('A/B/E')
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state('', 1)
   expected_status.tweak('A/B/E', status='D ')
   expected_status.tweak('A/B/E/alpha', status='D ')
   expected_status.tweak('A/B/E/beta', status='D ')
@@ -3986,7 +3986,7 @@ def patch_delete_and_skip(sbox):
     '',
     {skipped_path: Item(verb='Skipped missing target')})
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -4182,9 +4182,9 @@ def patch_git_with_index_line(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-      'src/'                            : Item(status='A ', wc_rev=0),
+      'src'                             : Item(status='A ', wc_rev=0),
       'src/tools'                       : Item(status='A ', wc_rev=0),
-      'src/tools/ConsoleRunner/'        : Item(status='A ', wc_rev=0),
+      'src/tools/ConsoleRunner'         : Item(status='A ', wc_rev=0),
       'src/tools/ConsoleRunner/hi.txt'  : Item(status='A ', wc_rev=0),
   })
 

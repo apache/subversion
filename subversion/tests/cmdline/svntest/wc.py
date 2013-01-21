@@ -145,10 +145,11 @@ class State:
     "Import state items from a State object, reparent the items to PARENT."
     assert isinstance(state, State)
 
-    if parent and parent[-1] != '/':
-      parent += '/'
     for path, item in state.desc.items():
-      path = parent + path
+      if path == '':
+        path = parent
+      else:
+        path = parent + '/' + path
       self.desc[path] = item
 
   def remove(self, *paths):
@@ -338,6 +339,13 @@ class State:
         # These are only in their parents' THIS_DIR, they don't have entries.
         if item.status[0] in '!?' and item.treeconflict == 'C':
           del self.desc[path]
+        # Normal externals are not stored in the parent wc, drop the root
+        # and everything in these working copies
+        elif item.status == 'X ' or item.prev_status == 'X ':
+          del self.desc[path]
+          for p, i in self.desc.copy().items():
+            if p.startswith(path + '/'):
+              del self.desc[p]
         else:
           # when reading the entry structures, we don't examine for text or
           # property mods, so clear those flags. we also do not examine the
@@ -356,6 +364,9 @@ class State:
           if item.entry_status is not None:
             item.status = item.entry_status
             item.entry_status = None
+          if item.entry_copied is not None:
+            item.copied = item.entry_copied
+            item.entry_copied = None
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
@@ -373,6 +384,9 @@ class State:
           item.writelocked = None
       item.moved_from = None
       item.moved_to = None
+      if path == '':
+        item.switched = None
+      item.treeconflict = None
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -676,6 +690,9 @@ class State:
         # entries that are ABSENT don't show up in status
         if entry.absent:
           continue
+        # entries that are User Excluded don't show up in status
+        if entry.depth == -1:
+          continue
         if name and entry.kind == 2:
           # stub subdirectory. leave a "missing" StateItem in here. note
           # that we can't put the status as "! " because that gets tweaked
@@ -685,6 +702,7 @@ class State:
           continue
         item = StateItem.from_entry(entry)
         if name:
+          print('P: %s, N: %s -> %s' % (parent, name, repos_join(parent, name)))
           desc[repos_join(parent, name)] = item
           implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:
@@ -701,6 +719,9 @@ class State:
         if implied_url and implied_url != entry.url:
           item.switched = 'S'
 
+        if entry.file_external:
+          item.switched = 'X'
+
     return cls('', desc)
 
 
@@ -714,7 +735,7 @@ class StateItem:
 
   def __init__(self, contents=None, props=None,
                status=None, verb=None, wc_rev=None,
-               entry_rev=None, entry_status=None,
+               entry_rev=None, entry_status=None, entry_copied=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None, moved_from=None, moved_to=None,
                prev_status=None, prev_verb=None, prev_treeconflict=None):
@@ -744,6 +765,7 @@ class StateItem:
     # found in the entries code.
     self.entry_rev = entry_rev
     self.entry_status = entry_status
+    self.entry_copied = entry_copied
     # For the following attributes, the value is the status character of that
     # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked
@@ -914,9 +936,12 @@ def repos_join(base, path):
   """Join two repos paths. This generally works for URLs too."""
   if base == '':
     return path
-  if path == '':
+  elif path == '':
     return base
-  return base + '/' + path
+  elif base[len(base)-1:] == '/':
+    return base + path
+  else:
+    return base + '/' + path
 
 
 def svn_uri_quote(url):

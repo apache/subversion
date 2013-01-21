@@ -2351,9 +2351,9 @@ def update_wc_on_windows_drive(sbox):
                                        sbox.repo_url, wc_dir)
 
     # Make some local modifications
-    mu_path = os.path.join(wc_dir, 'A', 'mu')
+    mu_path = os.path.join(wc_dir, 'A', 'mu').replace(os.sep, '/')
     svntest.main.file_append(mu_path, '\nAppended text for mu')
-    zeta_path = os.path.join(wc_dir, 'zeta')
+    zeta_path = os.path.join(wc_dir, 'zeta').replace(os.sep, '/')
     svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
     svntest.main.run_svn(None, 'add', zeta_path)
 
@@ -2374,7 +2374,7 @@ def update_wc_on_windows_drive(sbox):
                                           wc_dir, zeta_path)
 
     # Non recursive commit
-    dir1_path = os.path.join(wc_dir, 'dir1')
+    dir1_path = os.path.join(wc_dir, 'dir1').replace(os.sep, '/')
     os.mkdir(dir1_path)
     svntest.main.run_svn(None, 'add', '-N', dir1_path)
     file1_path = os.path.join(dir1_path, 'file1')
@@ -2443,10 +2443,11 @@ def update_wc_on_windows_drive(sbox):
     expected_disk.tweak('A/mu', contents = expected_disk.desc['A/mu'].contents
                         + '\nAppended text for mu')
 
+    # Use .old_tree() for status to avoid the entries validation
     svntest.actions.run_and_verify_update(wc_dir,
                                           expected_output,
                                           expected_disk,
-                                          expected_status)
+                                          expected_status.old_tree())
 
   finally:
     os.chdir(was_cwd)
@@ -3509,12 +3510,12 @@ def update_copied_from_replaced_and_changed(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  fn1_relpath = os.path.join('A', 'B', 'E', 'aardvark')
-  fn2_relpath = os.path.join('A', 'B', 'E', 'alpha')
-  fn3_relpath = os.path.join('A', 'B', 'E', 'beta')
-  fn1_path = os.path.join(wc_dir, fn1_relpath)
-  fn2_path = os.path.join(wc_dir, fn2_relpath)
-  fn3_path = os.path.join(wc_dir, fn3_relpath)
+  fn1_relpath = 'A/B/E/aardvark'
+  fn2_relpath = 'A/B/E/alpha'
+  fn3_relpath = 'A/B/E/beta'
+  fn1_path = sbox.ospath(fn1_relpath)
+  fn2_path = sbox.ospath(fn2_relpath)
+  fn3_path = sbox.ospath(fn3_relpath)
 
   # Move fn2 to fn1
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -5911,13 +5912,15 @@ def update_edit_delete_obstruction(sbox):
     'A/D/H/psi'         : Item(status='! ', wc_rev='2'),
     'A/D/gamma'         : Item(status='! ', wc_rev='2'),
     'A/C'               : Item(status='  ', wc_rev='2'),
-    'A/B'               : Item(status='~ ', treeconflict='C', wc_rev='-'),
-    'A/B/F'             : Item(status='! ', wc_rev='-'),
-    'A/B/E'             : Item(status='! ', wc_rev='-'),
-    'A/B/E/beta'        : Item(status='! ', wc_rev='-'),
-    'A/B/E/alpha'       : Item(status='! ', wc_rev='-'),
-    'A/B/lambda'        : Item(status='! ', wc_rev='-'),
-    'iota'              : Item(status='~ ', treeconflict='C', wc_rev='-'),
+    'A/B'               : Item(status='~ ', treeconflict='C', wc_rev='-',
+                               entry_status='A ', entry_copied='+'),
+    'A/B/F'             : Item(status='! ', wc_rev='-', entry_copied='+'),
+    'A/B/E'             : Item(status='! ', wc_rev='-', entry_copied='+'),
+    'A/B/E/beta'        : Item(status='! ', wc_rev='-', entry_copied='+'),
+    'A/B/E/alpha'       : Item(status='! ', wc_rev='-', entry_copied='+'),
+    'A/B/lambda'        : Item(status='! ', wc_rev='-', entry_copied='+'),
+    'iota'              : Item(status='~ ', treeconflict='C', wc_rev='-',
+                               entry_status='A ', entry_copied='+'),
   })
   expected_disk = svntest.wc.State('', {
     'A/D'               : Item(contents="Obstruction", props={'key':'value'}),
