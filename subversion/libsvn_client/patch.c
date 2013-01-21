@@ -861,10 +861,9 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
   else
     {
       svn_string_t *dest;
+
       SVN_ERR(svn_io_read_link(&dest, sb->local_abspath, scratch_pool));
-
       *line = svn_stringbuf_createf(result_pool, "link %s", dest->data);
-
       sb->at_eof = TRUE;
     }
 
@@ -898,7 +897,7 @@ seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
  * The contents of BUF must be a valid "normal form" of a symlink. */
 static svn_error_t *
 write_symlink(void *baton, const char *buf, apr_size_t len,
-           apr_pool_t *scratch_pool)
+              apr_pool_t *scratch_pool)
 {
   const char *target_abspath = baton;
   const char *new_name;
