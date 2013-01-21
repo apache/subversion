@@ -257,7 +257,7 @@ typedef struct merge_cmd_baton_t {
                                          is capable of Merge Tracking. */
   svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
                                          extension, mergeinfo)?  FALSE if
-                                         SOURCES_ANCESTRAL is FALSE. */
+                                         MERGE_SOURCE->ancestral is FALSE. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
   const merge_target_t *target;       /* Description of merge target node */
@@ -306,11 +306,11 @@ typedef struct merge_cmd_baton_t {
 
   /* The list of absolute skipped paths, which should be examined and
      cleared after each invocation of the callback.  The paths
-     are absolute.  Is NULL if MERGE_B->SOURCES_ANCESTRAL and
+     are absolute.  Is NULL if MERGE_B->MERGE_SOURCE->ancestral and
      MERGE_B->REINTEGRATE_MERGE are both false. */
   apr_hash_t *skipped_abspaths;
 
-  /* The list of absolute merged paths.  Unused if MERGE_B->SOURCES_ANCESTRAL
+  /* The list of absolute merged paths.  Unused if MERGE_B->MERGE_SOURCE->ancestral
      and MERGE_B->REINTEGRATE_MERGE are both false. */
   apr_hash_t *merged_abspaths;
 
@@ -8836,8 +8836,8 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    and possibly record mergeinfo describing the merge -- see
    RECORD_MERGEINFO().
 
-   If MODIFIED_SUBTREES is not NULL and SOURCES_ANCESTRAL or
-   REINTEGRATE_MERGE is true, then replace *MODIFIED_SUBTREES with a new
+   If MODIFIED_SUBTREES is not NULL and all the MERGE_SOURCES are 'ancestral'
+   or REINTEGRATE_MERGE is true, then replace *MODIFIED_SUBTREES with a new
    hash containing all the paths that *MODIFIED_SUBTREES contained before,
    and also every path modified, skipped, added, or tree-conflicted
    by the merge.  Keys and values of the hash are both (const char *)
