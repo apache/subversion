@@ -18011,7 +18011,8 @@ def merge_target_selection(sbox):
   sbox.simple_commit()
 
   # r4
-  svntest.main.file_write(sbox.ospath('dir/binary-file'), '\5\4\3\2\1')
+  svntest.main.file_write(sbox.ospath('dir/binary-file'),
+                          '\9\8\7\6\5\4\3\2\1')
   sbox.simple_commit()
 
   sbox.simple_update()
