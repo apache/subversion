@@ -1,9 +1,0 @@
-This branch is for development of changes to the Windows project file
-generator so that the generated projects can use pre-built
-dependencies provided here:
-
-    http://github.com/brainy/subversion-windeps
-
-The intent is to eventually include those dependency builder scripts
-into the Subversion project, and making the project file generator
-flexible enough to support different dependency layouts.

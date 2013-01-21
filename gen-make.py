@@ -51,18 +51,13 @@ gen_modules = {
   }
 
 def main(fname, gentype, verfname=None,
-         skip_depends=0, other_options=None,
-         windepspackage=None):
+         skip_depends=0, other_options=None):
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
-  gen_module_name = gen_modules[gentype][0]
-  if windepspackage is not None:
-    gen_module_name += '_packaged_deps'
-  gen_module = __import__(gen_module_name)
+  gen_module = __import__(gen_modules[gentype][0])
 
-  generator = gen_module.Generator(fname, verfname, other_options,
-                                   windepspackage=windepspackage)
+  generator = gen_module.Generator(fname, verfname, other_options)
 
   if not skip_depends:
     generator.compute_hdr_deps()
@@ -133,9 +128,6 @@ def _usage_exit(err=None):
   print("           useful for packagers)")
   print("")
   print("  Windows-specific options:")
-  print("")
-  print("  --with-deps-package=DIR")
-  print("           use binary dependences packaged in DIR")
   print("")
   print("  --with-apr=DIR")
   print("           the APR sources are in DIR")
@@ -236,14 +228,6 @@ class Options:
       self.dict[opt] = len(self.list)
       self.list.append((opt, val))
 
-  def has(self, opt):
-    return (opt in self.dict)
-
-  def get(self, opt, default=None):
-    if not self.has(opt):
-      return default
-    return self.list[self.dict[opt]][1]
-
 if __name__ == '__main__':
   try:
     opts, args = my_getopt(sys.argv[1:], 'st:',
@@ -251,7 +235,6 @@ if __name__ == '__main__':
                             'release',
                             'reload',
                             'assume-shared-libs',
-                            'with-deps-package=',
                             'with-apr=',
                             'with-apr-util=',
                             'with-apr-iconv=',
@@ -299,25 +282,6 @@ if __name__ == '__main__':
   if args:
     conf = args[0]
 
-  # --with-deps-package overrides/conflicts with the following options:
-  deps_package_overrides = frozenset([
-    '--with-apr',
-    '--with-apr-util',
-    '--with-berkeley-db',
-    '--with-serf',
-    '--with-httpd',
-    '--with-libintl',
-    '--with-openssl',
-    '--with-zlib',
-    '--with-sqlite',
-    ])
-
-  deps_package_ignores = frozenset([
-    '--with-apr-iconv',
-    '--enable-bdb-in-apr-util',
-    '--enable-ml',
-    ])
-
   # First merge options with previously saved to gen-make.opts if --reload
   # options used
   for opt, val in opts:
@@ -332,45 +296,19 @@ if __name__ == '__main__':
       # Provide a warning that we ignored these arguments
       print("Ignoring no longer supported argument '%s'" % opt)
     else:
-      if opt in deps_package_overrides and rest.has('--with-deps-package'):
-        print("Warning: '--with-deps-package' overrides %s=%s" % (opt, val))
-      elif opt in deps_package_ignores and rest.has('--with-deps-package'):
-        print("Warning: '--with-deps-package' ignores %s=%s" % (opt, val))
-      elif opt == '--with-deps-package':
-        for otheropt in deps_package_overrides:
-          if rest.has(otheropt):
-            print("Warning: Overriding '%s' with %s=%s" % (otheropt, opt, val))
-        for otheropt in deps_package_ignores:
-          if rest.has(otheropt):
-            print("Warning: Ignoring '%s' with %s=%s" % (otheropt, opt, val))
       rest.add(opt, val)
 
   # Parse options list
-  windepspackage = None
   for opt, val in rest.list:
     if opt == '-s':
       skip = 1
     elif opt == '-t':
       gentype = val
-    elif opt == '--with-deps-package':
-      windepspackage = val
     else:
       if opt == '--with-httpd':
-        if not windepspackage:
-          for otheropt in ('apr', 'apr-util', 'apr-iconv'):
-            if rest.has('--with-'+otheropt):
-              print("Warning: Overriding '--with-%s' with %s=%s"
-                    % (otheropt, opt, val))
         rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
         rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
         rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
-      elif opt == '--with-static-apr':
-        if windepspackage and not rest.has('--with-static-openssl'):
-          print("Warning: '--with-static-apr' implies '--with-static-openssl'")
-      elif opt == '--with-static-openssl':
-        if windepspackage and not rest.has('--with-static-apr'):
-          print("Warning: '--with-static-openssl' implies '--with-static-apr'")
-
 
   # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')
@@ -382,16 +320,7 @@ if __name__ == '__main__':
   if gentype not in gen_modules.keys():
     _usage_exit("Unknown module type '%s'" % (gentype))
 
-  if windepspackage:
-    if gentype != 'vcproj':
-      print("ERROR: --with-deps-package requires '-t vcproj'")
-      sys.exit(1)
-    if rest.get('--vsnet-version') not in ('2010', '2012', '11'):
-      print("ERROR: --with-deps-package requires --vsnet-version=2010 or 2012")
-      sys.exit(1)
-
-  main(conf, gentype, skip_depends=skip, other_options=rest.list,
-       windepspackage=windepspackage)
+  main(conf, gentype, skip_depends=skip, other_options=rest.list)
 
 
 ### End of file.
