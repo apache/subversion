@@ -3588,11 +3588,16 @@ svn_client_automatic_merge_get_locations(
  *
  * If @a depth is #svn_depth_unknown, use the depth of @a target_wcpath.
  *
- * Use @a ignore_ancestry to control whether or not items being
- * diffed will be checked for relatedness first.  Unrelated items
- * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is TRUE, unrelated
- * items will be diffed as if they were related.
+ * @a ignore_ancestry has both of the following meanings:
+ *
+ *   (1) Disable merge tracking, by treating the two sources as unrelated
+ *   even if they actually have a common ancestor.
+ *
+ *   (2) Diff unrelated nodes as if related.  If @a ignore_ancestry is true,
+ *   the 'left' and 'right' versions of a node (if they are the same kind)
+ *   will be diffed as if they were related even if they are not related.
+ *   Otherwise, unrelated items will be diffed as a deletion of one thing
+ *   and the addition of another.
  *
  * If @a force_delete is false and the merge involves deleting a file whose
  * content differs from the source-left version, or a locally modified
