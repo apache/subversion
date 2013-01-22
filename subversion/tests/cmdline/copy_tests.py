@@ -998,8 +998,12 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'copy', E_url, wc_dir)
 
-  # But file case should work fine.
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'copy', pi_url, wc_dir)
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
