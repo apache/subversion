@@ -346,13 +346,14 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
           if (n->hunk_matched_line > n->hunk_original_start)
             {
-              off = n->hunk_matched_line - n->hunk_original_start;
-              minus = "";
-
               /* If we are patching from the start of an empty file,
                  it is nicer to show offset 0 */
               if (n->hunk_original_start == 0 && n->hunk_matched_line == 1)
                 off = 0; /* No offset, just adding */
+              else
+                off = n->hunk_matched_line - n->hunk_original_start;
+
+              minus = "";
             }
           else
             {

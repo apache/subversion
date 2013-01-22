@@ -169,11 +169,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
+     N_("listen port. The default port is 3690.\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
+     N_("listen port. The default port is 3690.\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
