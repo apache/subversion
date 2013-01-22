@@ -90,9 +90,10 @@ merge_reintegrate(const char *source_path_or_url,
       /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
        * to allow a mixed-rev WC but simply to bypass the check, as it was
        * already checked in svn_client_find_reintegrate_merge(). */
-      SVN_ERR(svn_client_merge4(url1, &revision1, url2, &revision2,
+      SVN_ERR(svn_client_merge5(url1, &revision1, url2, &revision2,
                                 target_wcpath, svn_depth_infinity,
-                                FALSE /* ignore_ancestry */,
+                                FALSE /* ignore_mergeinfo */,
+                                FALSE /* diff_ignore_ancestry */,
                                 FALSE /* force_delete */,
                                 FALSE /* record_only */,
                                 dry_run, TRUE /* allow_mixed_rev */,
@@ -532,11 +533,12 @@ svn_cl__merge(apr_getopt_t *os,
 
       if (opt_state->verbose)
         SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
-      merge_err = svn_client_merge_peg4(sourcepath1,
+      merge_err = svn_client_merge_peg5(sourcepath1,
                                         ranges_to_merge,
                                         &peg_revision1,
                                         targetpath,
                                         opt_state->depth,
+                                        opt_state->ignore_ancestry,
                                         opt_state->ignore_ancestry,
                                         opt_state->force, /* force_delete */
                                         opt_state->record_only,
@@ -555,12 +557,13 @@ svn_cl__merge(apr_getopt_t *os,
 
       if (opt_state->verbose)
         SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
-      merge_err = svn_client_merge4(sourcepath1,
+      merge_err = svn_client_merge5(sourcepath1,
                                     &first_range_start,
                                     sourcepath2,
                                     &first_range_end,
                                     targetpath,
                                     opt_state->depth,
+                                    opt_state->ignore_ancestry,
                                     opt_state->ignore_ancestry,
                                     opt_state->force, /* force_delete */
                                     opt_state->record_only,
