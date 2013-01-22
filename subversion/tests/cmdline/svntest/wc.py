@@ -663,21 +663,14 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+    dump_data = svntest.main.run_entriesdump_tree(base)
 
-      if base == '.' and dirpath != '.':
-        dirpath = '.' + os.path.sep + dirpath
+    if not dump_data:
+      # Probably 'svn status' run on an actual only node
+      # ### Improve!
+      return cls('', desc)
 
-      entries = svntest.main.run_entriesdump(dirpath)
-      if entries is None:
-        continue
-
-      if dirpath == '.':
-        parent = ''
-      elif dirpath.startswith('.' + os.sep):
-        parent = to_relpath(dirpath[2:])
-      else:
-        parent = to_relpath(dirpath)
+    for parent, entries in sorted(dump_data.items()):
 
       parent_url = entries[''].url
 

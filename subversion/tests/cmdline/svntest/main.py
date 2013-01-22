@@ -727,6 +727,23 @@ def run_entriesdump_subdirs(path):
                                                         0, False, None, '--subdirs', path)
   return map(lambda line: line.strip(), filter_dbg(stdout_lines))
 
+def run_entriesdump_tree(path):
+  """Run the entries-dump helper, returning a dict of a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, False, None,
+                                                        '--tree-dump', path)
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  dirs = { }
+  exec(''.join(filter_dbg(stdout_lines)))
+  return dirs
+
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
   and stderr.  For HTTP, default HTTP library is used."""

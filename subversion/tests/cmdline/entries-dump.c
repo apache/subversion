@@ -280,7 +280,7 @@ tree_dump_dir(const char *local_abspath,
     path = local_abspath;
 
   printf("entries = {}\n");
-  SVN_ERR(entries_dump(local_abspath, bt->adm_access, scratch_pool));
+  SVN_ERR(entries_dump(path, bt->adm_access, scratch_pool));
 
   printf("dirs['%s'] = entries\n", path);
   return SVN_NO_ERROR;
