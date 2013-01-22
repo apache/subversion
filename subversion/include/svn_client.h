@@ -3510,6 +3510,7 @@ svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               const char *target_wcpath,
                               svn_depth_t depth,
+                              svn_boolean_t diff_ignore_ancestry,
                               svn_boolean_t force_delete,
                               svn_boolean_t record_only,
                               svn_boolean_t dry_run,

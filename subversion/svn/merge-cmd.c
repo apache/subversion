@@ -69,6 +69,7 @@ automatic_merge(const char *source_path_or_url,
                 const svn_opt_revision_t *source_revision,
                 const char *target_wcpath,
                 svn_depth_t depth,
+                svn_boolean_t diff_ignore_ancestry,
                 svn_boolean_t force_delete,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
@@ -131,6 +132,7 @@ automatic_merge(const char *source_path_or_url,
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
+                                        diff_ignore_ancestry,
                                         force_delete, record_only,
                                         dry_run, merge_options,
                                         ctx, scratch_pool));
@@ -433,6 +435,7 @@ svn_cl__merge(apr_getopt_t *os,
     {
       merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
                                   opt_state->depth,
+                                  FALSE /*diff_ignore_ancestry*/,
                                   opt_state->force, /* force_delete */
                                   opt_state->record_only,
                                   opt_state->dry_run,

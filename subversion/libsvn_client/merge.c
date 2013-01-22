@@ -11618,6 +11618,7 @@ svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               const char *target_wcpath,
                               svn_depth_t depth,
+                              svn_boolean_t diff_ignore_ancestry,
                               svn_boolean_t force_delete,
                               svn_boolean_t record_only,
                               svn_boolean_t dry_run,
@@ -11634,14 +11635,14 @@ svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_automatic_merge_locked(merge,
                                 target_abspath, depth,
-                                FALSE /*diff_ignore_ancestry*/,
+                                diff_ignore_ancestry,
                                 force_delete, record_only, dry_run,
                                 merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(do_automatic_merge_locked(merge,
                                 target_abspath, depth,
-                                FALSE /*diff_ignore_ancestry*/,
+                                diff_ignore_ancestry,
                                 force_delete, record_only, dry_run,
                                 merge_options, ctx, pool));
 
