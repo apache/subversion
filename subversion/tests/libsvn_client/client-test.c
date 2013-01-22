@@ -721,6 +721,53 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_foreign_repos_copy(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_opt_revision_t rev;
+  svn_opt_revision_t peg_rev;
+  const char *repos_url;
+  const char *repos2_url;
+  const char *wc_path;
+  svn_client_ctx_t *ctx;
+/* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
+  SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+
+  wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+  /* Checkout greek tree as wc_path */
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
+                               svn_depth_infinity, FALSE, FALSE, ctx, pool));
+
+  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "A",
+                                                               pool),
+                                   svn_dirent_join(wc_path, "A-copied", pool),
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE,
+                                   ctx, pool));
+
+
+  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url,
+                                                               "iota",
+                                                               pool),
+                                   svn_dirent_join(wc_path, "iota-copied", pool),
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE,
+                                   ctx, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -738,5 +785,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
+    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
     SVN_TEST_NULL
   };
