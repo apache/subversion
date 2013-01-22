@@ -255,6 +255,7 @@ svn_client__copy_foreign(const char *url,
                          svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
+                         svn_boolean_t already_locked,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 

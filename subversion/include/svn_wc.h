@@ -1245,7 +1245,11 @@ typedef enum svn_wc_notify_action_t
   /** The current operation left local changes of something that was deleted
    * The changes are available on (and below) the notified path
    * @since New in 1.8. */
-  svn_wc_notify_left_local_modifications
+  svn_wc_notify_left_local_modifications,
+
+  /** A copy from a foreign repository has started 
+   * @since New in 1.8. */
+  svn_wc_notify_foreign_copy_begin
 
 } svn_wc_notify_action_t;
 
