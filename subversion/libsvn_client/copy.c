@@ -1546,6 +1546,21 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
+  if (!same_repositories && ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(
+                            pair->src_abspath_or_url,
+                            svn_wc_notify_foreign_copy_begin,
+                            pool);
+      notify->kind = pair->src_kind;
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+
+      /* Allow a theoretical cancel to get through. */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+    }
+
   if (pair->src_kind == svn_node_dir)
     {
       if (same_repositories)
@@ -1616,17 +1631,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
       else
         {
-          if (ctx->notify_func2)
-            {
-              svn_wc_notify_t *notify;
-              notify = svn_wc_create_notify_url(
-                                    pair->src_abspath_or_url,
-                                    svn_wc_notify_foreign_copy_begin,
-                                    pool);
-
-              ctx->notify_func2(ctx->notify_baton2, notify, pool);
-            }
-
           SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
                                            dst_abspath,
                                            &pair->src_peg_revision,
