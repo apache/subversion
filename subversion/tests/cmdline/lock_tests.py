@@ -1750,8 +1750,8 @@ def locks_stick_over_switch(sbox):
 
   expected_output = svntest.verify.UnorderedOutput([
     '\'iota\' locked by user \'jrandom\'.\n',
-    '\'A\D\H\chi\' locked by user \'jrandom\'.\n',
-    '\'A\mu\' locked by user \'jrandom\'.\n',
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'D', 'H', 'chi'),
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'mu'),
   ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'lock', sbox.ospath('A/D/H/chi'),
