@@ -6358,6 +6358,71 @@ def incomplete_overcomplete(sbox):
                                         True,
                                         wc_dir, '-r', 3)
 
+@XFail()
+@Issue(4300)
+def update_swapped_depth_dirs(sbox):
+  "text mod to file in swapped depth dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), "modified\n")
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  sbox.simple_move("A/B/E", "A/E")
+  sbox.simple_move("A/B", "A/E/B")
+  # This is almost certainly not the right status but it's what
+  # is currently being output so we're using it here so we
+  # can get to the deeper problem.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak("A/B", "A/B/lambda", "A/B/F", "A/B/E",
+                        "A/B/E/alpha", "A/B/E/beta", status="D ")
+  expected_status.tweak("A/B", moved_to="A/E/B")
+  expected_status.add({
+      'A/E'          : Item(status='A ', copied='+', wc_rev='-',
+                            moved_from='A/E/B/E'),
+      'A/E/B'        : Item(status='A ', copied='+', wc_rev='-',
+                            moved_from='A/B'),
+      'A/E/B/E'      : Item(status='D ', copied='+', wc_rev='-',
+                            moved_to='A/E'),
+      'A/E/B/F'      : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E/B/lambda' : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E/alpha'    : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E/beta'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E/B/E/alpha': Item(status='D ', copied='+', wc_rev='-'),
+      'A/E/B/E/beta' : Item(status='D ', copied='+', wc_rev='-'),
+      })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Hopefully this is the right output/disk/status for what
+  # we should get, but right now the update segfaults.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'         : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B', 'A/B/lambda', 'A/B/F', 'A/B/E',
+                       'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.add({
+    'A/E'          : Item(),
+    'A/E/alpha'    : Item(contents="This is the file 'alpha'.\n"),
+    'A/E/beta'     : Item(contents="This is the file 'beta'.\n"),
+    'A/E/B'        : Item(),
+    'A/E/B/lambda' : Item(contents="This is the file 'lambda'.\n"),
+    'A/E/B/F'      : Item(),
+  })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/E', 'A/E/alpha', 'A/E/beta', 'A/E/B',
+                        'A/E/B/lambda', 'A/E/B/F', wc_rev='-')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
 
 
 #######################################################################
@@ -6440,6 +6505,7 @@ test_list = [ None,
               break_moved_replaced_dir,
               update_removes_switched,
               incomplete_overcomplete,
+              update_swapped_depth_dirs,
              ]
 
 if __name__ == '__main__':
