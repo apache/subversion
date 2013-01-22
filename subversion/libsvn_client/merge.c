@@ -255,9 +255,11 @@ typedef struct merge_cmd_baton_t {
                                          is TRUE.*/
   svn_boolean_t mergeinfo_capable;    /* Whether the merge source server
                                          is capable of Merge Tracking. */
-  svn_boolean_t ignore_ancestry;      /* Two meanings: don't honor mergeinfo;
-                                         diff unrelated nodes as if related.
-                                         See do_merge() doc string.  FALSE if
+  svn_boolean_t ignore_mergeinfo;     /* Don't honor mergeinfo; see
+                                         doc string of do_merge().  FALSE if
+                                         MERGE_SOURCE->ancestral is FALSE. */
+  svn_boolean_t diff_ignore_ancestry; /* Diff unrelated nodes as if related; see
+                                         doc string of do_merge().  FALSE if
                                          MERGE_SOURCE->ancestral is FALSE. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
@@ -354,12 +356,12 @@ typedef struct merge_cmd_baton_t {
    changes to merge, for the merge described by MERGE_B.  Specifically, that
    is if the merge source server is capable of merge tracking, the left-side
    merge source is an ancestor of the right-side (or vice-versa), the merge
-   source is in the same repository as the merge target, and ancestry is
-   being considered. */
+   source is in the same repository as the merge target, and we are not
+   ignoring mergeinfo. */
 #define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
                                   && (merge_b)->merge_source.ancestral  \
                                   && (merge_b)->same_repos          \
-                                  && (! (merge_b)->ignore_ancestry))
+                                  && (! (merge_b)->ignore_mergeinfo))
 
 
 /* Return TRUE iff we should be recording mergeinfo for the merge described
@@ -4972,7 +4974,7 @@ drive_merge_report_editor(const char *target_abspath,
                                       scratch_pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, source->loc2->rev,
-                          "", depth, merge_b->ignore_ancestry,
+                          "", depth, merge_b->diff_ignore_ancestry,
                           TRUE,  /* text_deltas */
                           source->loc2->url, diff_editor, diff_edit_baton,
                           scratch_pool));
@@ -6869,7 +6871,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
           /* If the sources are related or we're ignoring ancestry in diffs,
              do a text-n-props merge; otherwise, do a delete-n-add merge. */
-          if (! (merge_b->ignore_ancestry || sources_related))
+          if (! (merge_b->diff_ignore_ancestry || sources_related))
             {
               /* Delete... */
               SVN_ERR(merge_file_deleted(&text_state,
@@ -8871,19 +8873,14 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    FORCE_DELETE, DRY_RUN, RECORD_ONLY, DEPTH, MERGE_OPTIONS,
    and CTX are as described in the docstring for svn_client_merge_peg3().
 
-   IGNORE_ANCESTRY has both of the following meanings:
+   If IGNORE_MERGEINFO is true, disable merge tracking, by treating the two
+   sources as unrelated even if they actually have a common ancestor.  See
+   the macro HONOR_MERGEINFO().
 
-     (1) Disable merge tracking, by treating the two sources as unrelated
-     even if they actually have a common ancestor.  See the macro
-     HONOR_MERGEINFO().
-
-     (2) Diff unrelated nodes as if related.  If IGNORE_ANCESTRY is true,
-     the 'left' and 'right' versions of a node (if they are the same kind)
-     will be diffed as if they were related even if they are not related.
-     Otherwise, unrelated items will be diffed as a deletion of one thing
-     and the addition of another.
-
-   ### TODO: Use separate flags for the two meanings.
+   If DIFF_IGNORE_ANCESTRY is true, diff the 'left' and 'right' versions
+   of a node (if they are the same kind) as if they were related, even if
+   they are not related.  Otherwise, diff unrelated items as a deletion
+   of one thing and the addition of another.
 
    If not NULL, RECORD_ONLY_PATHS is a hash of (const char *) paths mapped
    to the same.  If RECORD_ONLY is true and RECORD_ONLY_PATHS is not NULL,
@@ -8907,7 +8904,8 @@ do_merge(apr_hash_t **modified_subtrees,
          svn_ra_session_t *src_session,
          svn_boolean_t sources_related,
          svn_boolean_t same_repos,
-         svn_boolean_t ignore_ancestry,
+         svn_boolean_t ignore_mergeinfo,
+         svn_boolean_t diff_ignore_ancestry,
          svn_boolean_t force_delete,
          svn_boolean_t dry_run,
          svn_boolean_t record_only,
@@ -8990,7 +8988,8 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.force_delete = force_delete;
   merge_cmd_baton.dry_run = dry_run;
   merge_cmd_baton.record_only = record_only;
-  merge_cmd_baton.ignore_ancestry = ignore_ancestry;
+  merge_cmd_baton.ignore_mergeinfo = ignore_mergeinfo;
+  merge_cmd_baton.diff_ignore_ancestry = diff_ignore_ancestry;
   merge_cmd_baton.same_repos = same_repos;
   merge_cmd_baton.mergeinfo_capable = FALSE;
   merge_cmd_baton.ctx = ctx;
@@ -9145,12 +9144,13 @@ do_merge(apr_hash_t **modified_subtrees,
    The diff to be merged is between SOURCE->loc1 (in URL1_RA_SESSION1)
    and SOURCE->loc2 (in URL2_RA_SESSION2); YCA is their youngest
    common ancestor.
-   SAME_REPOS must be true if and only if the source URLs are in the same
-   repository as the target working copy.  Other arguments are as in
-   all of the public merge APIs.
 
-   IGNORE_ANCESTRY has two meanings: see do_merge().
-   ### TODO: Use separate flags for the two meanings.
+   SAME_REPOS must be true if and only if the source URLs are in the same
+   repository as the target working copy.
+
+   DIFF_IGNORE_ANCESTRY is as in do_merge().
+
+   Other arguments are as in all of the public merge APIs.
 
    *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
    integrity, *USE_SLEEP will be unchanged if no sleep is required.
@@ -9165,7 +9165,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
                                        const svn_client__pathrev_t *yca,
                                        svn_boolean_t same_repos,
                                        svn_depth_t depth,
-                                       svn_boolean_t ignore_ancestry,
+                                       svn_boolean_t diff_ignore_ancestry,
                                        svn_boolean_t force_delete,
                                        svn_boolean_t record_only,
                                        svn_boolean_t dry_run,
@@ -9211,7 +9211,8 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       APR_ARRAY_PUSH(faux_sources, const merge_source_t *) = source;
       SVN_ERR(do_merge(&modified_subtrees, NULL, faux_sources, target,
                        URL1_ra_session, TRUE, same_repos,
-                       ignore_ancestry, force_delete, dry_run, FALSE, NULL, TRUE,
+                       FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
+                       force_delete, dry_run, FALSE, NULL, TRUE,
                        FALSE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
     }
@@ -9243,14 +9244,16 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, add_result_catalog, add_sources, target,
                        URL1_ra_session, TRUE, same_repos,
-                       ignore_ancestry, force_delete, dry_run, TRUE,
+                       FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
+                       force_delete, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, remove_result_catalog, remove_sources, target,
                        URL1_ra_session, TRUE, same_repos,
-                       ignore_ancestry, force_delete, dry_run, TRUE,
+                       FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
+                       force_delete, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
@@ -9453,8 +9456,7 @@ open_target_wc(merge_target_t **target_p,
  * tracking (subject to other constraints -- see HONOR_MERGEINFO());
  * otherwise disable merge tracking.
  *
- * IGNORE_ANCESTRY has two meanings: see do_merge().
- * ### TODO: Use separate flags for the two meanings.
+ * IGNORE_MERGEINFO and DIFF_IGNORE_ANCESTRY are as in do_merge().
  */
 static svn_error_t *
 merge_locked(const char *source1,
@@ -9463,7 +9465,8 @@ merge_locked(const char *source1,
              const svn_opt_revision_t *revision2,
              const char *target_abspath,
              svn_depth_t depth,
-             svn_boolean_t ignore_ancestry,
+             svn_boolean_t ignore_mergeinfo,
+             svn_boolean_t diff_ignore_ancestry,
              svn_boolean_t force_delete,
              svn_boolean_t record_only,
              svn_boolean_t dry_run,
@@ -9515,7 +9518,7 @@ merge_locked(const char *source1,
   same_repos = is_same_repos(&target->loc, source1_loc, TRUE /* strict_urls */);
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
-  if (! ignore_ancestry)
+  if (! ignore_mergeinfo)
     SVN_ERR(svn_client__get_youngest_common_ancestor(
                     &yca, source1_loc, source2_loc, ra_session1, ctx,
                     scratch_pool, scratch_pool));
@@ -9581,7 +9584,7 @@ merge_locked(const char *source1,
                                                        yca,
                                                        same_repos,
                                                        depth,
-                                                       ignore_ancestry,
+                                                       diff_ignore_ancestry,
                                                        force_delete,
                                                        record_only, dry_run,
                                                        merge_options,
@@ -9618,7 +9621,7 @@ merge_locked(const char *source1,
 
   err = do_merge(NULL, NULL, merge_sources, target,
                  ra_session1, sources_related, same_repos,
-                 ignore_ancestry, force_delete, dry_run,
+                 ignore_mergeinfo, diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
 
@@ -9696,13 +9699,13 @@ svn_client_merge4(const char *source1,
   if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_locked(source1, revision1, source2, revision2,
-                   target_abspath, depth, ignore_ancestry,
+                   target_abspath, depth, ignore_ancestry, ignore_ancestry,
                    force_delete, record_only, dry_run,
                    allow_mixed_rev, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(merge_locked(source1, revision1, source2, revision2,
-                   target_abspath, depth, ignore_ancestry,
+                   target_abspath, depth, ignore_ancestry, ignore_ancestry,
                    force_delete, record_only, dry_run,
                    allow_mixed_rev, merge_options, ctx, pool));
 
@@ -10782,6 +10785,7 @@ static svn_error_t *
 merge_reintegrate_locked(const char *source_path_or_url,
                          const svn_opt_revision_t *source_peg_revision,
                          const char *target_abspath,
+                         svn_boolean_t diff_ignore_ancestry,
                          svn_boolean_t dry_run,
                          const apr_array_header_t *merge_options,
                          svn_client_ctx_t *ctx,
@@ -10823,7 +10827,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
                                                source, yc_ancestor,
                                                TRUE /* same_repos */,
                                                svn_depth_infinity,
-                                               FALSE /* ignore_ancestry */,
+                                               diff_ignore_ancestry,
                                                FALSE /* force_delete */,
                                                FALSE /* record_only */,
                                                dry_run,
@@ -10857,11 +10861,13 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_reintegrate_locked(source_path_or_url, source_peg_revision,
                                target_abspath,
+                               FALSE /*diff_ignore_ancestry*/,
                                dry_run, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(merge_reintegrate_locked(source_path_or_url, source_peg_revision,
                                      target_abspath,
+                                     FALSE /*diff_ignore_ancestry*/,
                                      dry_run, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
@@ -10870,8 +10876,7 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
 
 /* The body of svn_client_merge_peg4(), which see for details.
  *
- * IGNORE_ANCESTRY has two meanings: see do_merge().
- * ### TODO: Use separate flags for the two meanings.
+ * IGNORE_MERGEINFO and DIFF_IGNORE_ANCESTRY are as in do_merge().
  */
 static svn_error_t *
 merge_peg_locked(const char *source_path_or_url,
@@ -10879,7 +10884,8 @@ merge_peg_locked(const char *source_path_or_url,
                  const svn_rangelist_t *ranges_to_merge,
                  const char *target_abspath,
                  svn_depth_t depth,
-                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t ignore_mergeinfo,
+                 svn_boolean_t diff_ignore_ancestry,
                  svn_boolean_t force_delete,
                  svn_boolean_t record_only,
                  svn_boolean_t dry_run,
@@ -10924,7 +10930,8 @@ merge_peg_locked(const char *source_path_or_url,
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
   err = do_merge(NULL, NULL, merge_sources, target, ra_session,
-                 TRUE, same_repos, ignore_ancestry, force_delete, dry_run,
+                 TRUE /*sources_related*/, same_repos, ignore_mergeinfo,
+                 diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, sesspool, sesspool);
 
@@ -10965,14 +10972,14 @@ svn_client_merge_peg4(const char *source_path_or_url,
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_peg_locked(source_path_or_url, source_peg_revision,
                        ranges_to_merge,
-                       target_abspath, depth, ignore_ancestry,
+                       target_abspath, depth, ignore_ancestry, ignore_ancestry,
                        force_delete, record_only, dry_run,
                        allow_mixed_rev, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(merge_peg_locked(source_path_or_url, source_peg_revision,
                        ranges_to_merge,
-                       target_abspath, depth, ignore_ancestry,
+                       target_abspath, depth, ignore_ancestry, ignore_ancestry,
                        force_delete, record_only, dry_run,
                        allow_mixed_rev, merge_options, ctx, pool));
 
@@ -11537,6 +11544,7 @@ static svn_error_t *
 do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                           const char *target_abspath,
                           svn_depth_t depth,
+                          svn_boolean_t diff_ignore_ancestry,
                           svn_boolean_t force_delete,
                           svn_boolean_t record_only,
                           svn_boolean_t dry_run,
@@ -11609,7 +11617,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                                                    &source, merge->yca,
                                                    TRUE /* same_repos */,
                                                    depth,
-                                                   FALSE /*ignore_ancestry*/,
+                                                   FALSE /*diff_ignore_ancestry*/,
                                                    force_delete, record_only,
                                                    dry_run,
                                                    merge_options, &use_sleep,
@@ -11639,7 +11647,8 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
 
       err = do_merge(NULL, NULL, merge_sources, target, NULL,
                      TRUE /*related*/, TRUE /*same_repos*/,
-                     FALSE /*ignore_ancestry*/, force_delete, dry_run,
+                     FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
+                     force_delete, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
                      &use_sleep, ctx, scratch_pool, scratch_pool);
     }
@@ -11672,12 +11681,14 @@ svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_automatic_merge_locked(merge,
                                 target_abspath, depth,
+                                FALSE /*diff_ignore_ancestry*/,
                                 force_delete, record_only, dry_run,
                                 merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(do_automatic_merge_locked(merge,
                                 target_abspath, depth,
+                                FALSE /*diff_ignore_ancestry*/,
                                 force_delete, record_only, dry_run,
                                 merge_options, ctx, pool));
 
