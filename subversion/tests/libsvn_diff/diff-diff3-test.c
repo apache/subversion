@@ -2594,6 +2594,130 @@ test_token_compare(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_issue_3362(apr_pool_t *pool)
+{
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  SVN_ERR(two_way_diff("issue-3362-1",
+                       "issue-3362-2",
+                        /* File 1 */
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* File 2 */
+                                "line_1a\n"
+                                "line_2a\n"
+                                "line_3a\n"
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5a\n"
+                                "line_6b\n"
+                                "line_7c\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11a\n"
+                                "line_11b\n"
+                                "line_11c\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19a\n"
+                                "line_19b\n"
+                                "line_19c\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_27a\n",
+                        /* Expected */
+                        "--- issue-3362-1" APR_EOL_STR
+                        "+++ issue-3362-2" APR_EOL_STR
+                        "@@ -1,12 +1,17 @@" APR_EOL_STR
+                        "+line_1a\n"
+                        "+line_2a\n"
+                        "+line_3a\n"
+                        " line_2\n"
+                        " line_3\n"
+                        " line_4\n"
+                        "-line_5\n"
+                        "-line_6\n"
+                        "-line_7\n"
+                        "+line_5a\n"
+                        "+line_6b\n"
+                        "+line_7c\n"
+                        " line_8\n"
+                        " line_9\n"
+                        " line_10\n"
+                        "-line_11\n"
+                        "+line_11a\n"
+                        "+line_11b\n"
+                        "+line_11c\n"
+                        " line_12\n"
+                        " line_13\n"
+                        "@@ -16,7 +21,9 @@" APR_EOL_STR
+                        " line_16\n"
+                        " line_17\n"
+                        " line_18\n"
+                        "-line_19\n"
+                        "+line_19a\n"
+                        "+line_19b\n"
+                        "+line_19c\n"
+                        " line_20\n"
+                        " line_21\n"
+                        " line_22\n"
+                        "@@ -25,6 +32,4 @@" APR_EOL_STR
+                        " line_25\n"
+                        " line_26\n"
+                        " line_27\n"
+                        "-line_28\n"
+                        "-line_29\n"
+                        "-line_30\n"
+                        "+line_27a\n",
+                        diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2629,5 +2753,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_PASS2(test_token_compare,
                    "compare tokes at the chunk boundary"),
+    SVN_TEST_XFAIL2(test_issue_3362,
+                   "issue #3362 test"),
     SVN_TEST_NULL
   };
