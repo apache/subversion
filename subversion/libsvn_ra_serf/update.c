@@ -2738,6 +2738,28 @@ create_update_report_body(serf_bucket_t **body_bkt,
   return SVN_NO_ERROR;
 }
 
+/* Serf callback to setup update request headers. */
+static svn_error_t *
+setup_update_report_headers(serf_bucket_t *headers,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  report_context_t *report = baton;
+
+  if (report->sess->using_compression)
+    {
+      serf_bucket_headers_setn(headers, "Accept-Encoding",
+                               "gzip;svndiff1;q=0.9,svndiff;q=0.8");
+    }
+  else
+    {
+      serf_bucket_headers_setn(headers, "Accept-Encoding",
+                               "svndiff1;q=0.9,svndiff;q=0.8");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
@@ -2783,6 +2805,9 @@ finish_report(void *report_baton,
   handler->body_delegate = create_update_report_body;
   handler->body_delegate_baton = report;
   handler->body_type = "text/xml";
+  handler->custom_accept_encoding = TRUE;
+  handler->header_delegate = setup_update_report_headers;
+  handler->header_delegate_baton = report;
   handler->conn = sess->conns[0];
   handler->session = sess;
 
