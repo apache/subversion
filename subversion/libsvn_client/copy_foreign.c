@@ -85,6 +85,8 @@ edit_open(void *edit_baton,
   db->users = 1;
   db->local_abspath = eb->anchor_abspath;
 
+  SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, dir_pool));
+
   *root_baton = db;
 
   return SVN_NO_ERROR;
@@ -445,6 +447,7 @@ svn_client__copy_foreign(const char *url,
                          svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
+                         svn_boolean_t already_locked,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
@@ -534,23 +537,35 @@ svn_client__copy_foreign(const char *url,
               }
           }
 
-      SVN_WC__CALL_WITH_WRITE_LOCK(
-            svn_wc_add_from_disk2(ctx->wc_ctx, dst_abspath, props,
-                                  ctx->notify_func2, ctx->notify_baton2,
-                                  scratch_pool),
-            ctx->wc_ctx, dir_abspath, FALSE, scratch_pool);
-
+      if (!already_locked)
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+              svn_wc_add_from_disk2(ctx->wc_ctx, dst_abspath, props,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    scratch_pool),
+              ctx->wc_ctx, dir_abspath, FALSE, scratch_pool);
+      else
+        SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, dst_abspath, props,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      scratch_pool));
     }
   else
     {
-      SVN_WC__CALL_WITH_WRITE_LOCK(
-            copy_foreign_dir(ra_session, loc,
-                             ctx->wc_ctx, dst_abspath,
-                             depth,
-                             ctx->notify_func2, ctx->notify_baton2,
-                             ctx->cancel_func, ctx->cancel_baton,
-                             scratch_pool),
-            ctx->wc_ctx, dir_abspath, FALSE, scratch_pool);
+      if (!already_locked)
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+              copy_foreign_dir(ra_session, loc,
+                               ctx->wc_ctx, dst_abspath,
+                               depth,
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               scratch_pool),
+              ctx->wc_ctx, dir_abspath, FALSE, scratch_pool);
+      else
+        SVN_ERR(copy_foreign_dir(ra_session, loc,
+                                 ctx->wc_ctx, dst_abspath,
+                                 depth,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 scratch_pool));
     }
 
   return SVN_NO_ERROR;

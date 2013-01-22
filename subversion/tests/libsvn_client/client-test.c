@@ -755,7 +755,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "A",
                                                                pool),
                                    svn_dirent_join(wc_path, "A-copied", pool),
-                                   &peg_rev, &rev, svn_depth_infinity, FALSE,
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
                                    ctx, pool));
 
 
@@ -763,7 +763,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
                                                                "iota",
                                                                pool),
                                    svn_dirent_join(wc_path, "iota-copied", pool),
-                                   &peg_rev, &rev, svn_depth_infinity, FALSE,
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
                                    ctx, pool));
 
   return SVN_NO_ERROR;
