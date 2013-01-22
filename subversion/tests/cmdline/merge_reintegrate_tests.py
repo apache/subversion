@@ -656,8 +656,15 @@ def reintegrate_fail_on_modified_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
+
+  # Do a 'sync' merge first so that the following merge really needs to be a
+  # reintegrate, so that an equivalent automatic merge would behave the same.
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
   sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
@@ -695,9 +702,28 @@ def reintegrate_fail_on_switched_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
   G_path = os.path.join(A_path, "D", "G")
   switch_url = sbox.repo_url + "/A/D/H"
   expected_disk, expected_status = set_up_branch(sbox)
+
+  # Do a 'sync' merge first so that the following merge really needs to be a
+  # reintegrate, so that an equivalent automatic merge would behave the same.
+  expected_disk.tweak(
+    'A_COPY/D/H/psi',
+    'A_COPY/D/G/rho',
+    'A_COPY/B/E/beta',
+    'A_COPY/D/H/omega',
+    contents="New content")
+  expected_status.tweak(
+    'A_COPY/D/H/psi',
+    'A_COPY/D/G/rho',
+    'A_COPY/B/E/beta',
+    'A_COPY/D/H/omega',
+    'A_COPY',
+    wc_rev=7)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
 
   # Switch a subdir of the target.
   expected_output = svntest.wc.State(wc_dir, {
@@ -716,10 +742,10 @@ def reintegrate_fail_on_switched_wc(sbox):
     })
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_status.add({
-    'A/D/G'       : Item(status='  ', wc_rev=6, switched='S'),
-    'A/D/G/chi'   : Item(status='  ', wc_rev=6),
-    'A/D/G/psi'   : Item(status='  ', wc_rev=6),
-    'A/D/G/omega' : Item(status='  ', wc_rev=6),
+    'A/D/G'       : Item(status='  ', wc_rev=7, switched='S'),
+    'A/D/G/chi'   : Item(status='  ', wc_rev=7),
+    'A/D/G/psi'   : Item(status='  ', wc_rev=7),
+    'A/D/G/omega' : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_switch(wc_dir,
                                         G_path,
