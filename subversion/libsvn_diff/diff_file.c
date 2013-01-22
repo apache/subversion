@@ -762,7 +762,9 @@ datasources_open(void *baton,
   struct file_info files[4];
   apr_finfo_t finfo[4];
   apr_off_t length[4];
+#ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
   svn_boolean_t reached_one_eof;
+#endif
   apr_size_t i;
 
   /* Make sure prefix_lines and suffix_lines are set correctly, even if we
@@ -1767,7 +1769,6 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
   if (svn_diff_contains_diffs(diff))
     {
       svn_diff__file_output_baton_t baton;
-      const char **c;
       int i;
 
       memset(&baton, 0, sizeof(baton));
@@ -1779,14 +1780,15 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create_empty(pool);
-      baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
 
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "public:*";
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "private:*";
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "protected:*";
+      if (show_c_function)
+        {
+          baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
+
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "public:*";
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "private:*";
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "protected:*";
+        }
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.context_str, " ",
                                             header_encoding, pool));
@@ -1810,7 +1812,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
               else
                 return svn_error_createf(
                                    SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                   _("Path '%s' must be an immediate child of "
+                                   _("Path '%s' must be inside "
                                      "the directory '%s'"),
                                    svn_dirent_local_style(original_path, pool),
                                    svn_dirent_local_style(relative_to_dir,
@@ -1826,7 +1828,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
               else
                 return svn_error_createf(
                                    SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                   _("Path '%s' must be an immediate child of "
+                                   _("Path '%s' must be inside "
                                      "the directory '%s'"),
                                    svn_dirent_local_style(modified_path, pool),
                                    svn_dirent_local_style(relative_to_dir,
@@ -1842,19 +1844,19 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
       if (original_header == NULL)
         {
-          SVN_ERR(output_unified_default_hdr
-                  (&original_header, original_path, pool));
+          SVN_ERR(output_unified_default_hdr(&original_header, original_path,
+                                             pool));
         }
 
       if (modified_header == NULL)
         {
-          SVN_ERR(output_unified_default_hdr
-                  (&modified_header, modified_path, pool));
+          SVN_ERR(output_unified_default_hdr(&modified_header, modified_path,
+                                             pool));
         }
 
-      SVN_ERR(svn_diff__unidiff_write_header(
-                output_stream, header_encoding,
-                original_header, modified_header, pool));
+      SVN_ERR(svn_diff__unidiff_write_header(output_stream, header_encoding,
+                                             original_header, modified_header,
+                                             pool));
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &svn_diff__file_output_unified_vtable));
