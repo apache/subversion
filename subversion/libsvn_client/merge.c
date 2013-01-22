@@ -10735,54 +10735,6 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_find_reintegrate_merge(const char **url1_p,
-                                  svn_revnum_t *rev1_p,
-                                  const char **url2_p,
-                                  svn_revnum_t *rev2_p,
-                                  const char *source_path_or_url,
-                                  const svn_opt_revision_t *source_peg_revision,
-                                  const char *target_wcpath,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  const char *target_abspath;
-  svn_ra_session_t *source_ra_session;
-  svn_client__pathrev_t *source_loc;
-  svn_ra_session_t *target_ra_session;
-  merge_target_t *target;
-  merge_source_t *source;
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath,
-                                  scratch_pool));
-
-  SVN_ERR(open_reintegrate_source_and_target(
-            &source_ra_session, &source_loc, &target_ra_session, &target,
-            source_path_or_url, source_peg_revision, target_abspath,
-            ctx, scratch_pool, scratch_pool));
-
-  SVN_ERR(find_reintegrate_merge(&source, NULL,
-                                 source_ra_session, source_loc,
-                                 target_ra_session, target,
-                                 ctx, result_pool, scratch_pool));
-  if (source)
-    {
-      *url1_p = source->loc1->url;
-      *rev1_p = source->loc1->rev;
-      *url2_p = source->loc2->url;
-      *rev2_p = source->loc2->rev;
-    }
-  else
-    {
-      *url1_p = NULL;
-      *rev1_p = SVN_INVALID_REVNUM;
-      *url2_p = NULL;
-      *rev2_p = SVN_INVALID_REVNUM;
-    }
-  return SVN_NO_ERROR;
-}
-
 /* The body of svn_client_merge_reintegrate(), which see for details. */
 static svn_error_t *
 merge_reintegrate_locked(const char *source_path_or_url,

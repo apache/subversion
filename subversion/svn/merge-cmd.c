@@ -44,65 +44,6 @@ static const svn_opt_revision_t unspecified_revision
 
 /*** Code. ***/
 
-/* Do a reintegrate merge from SOURCE_PATH_OR_URL@SOURCE_PEG_REVISION into
- * TARGET_WCPATH.  Do it with a WC write lock unless DRY_RUN is true. */
-static svn_error_t *
-merge_reintegrate(const char *source_path_or_url,
-                  const svn_opt_revision_t *source_peg_revision,
-                  const char *target_wcpath,
-                  svn_boolean_t dry_run,
-                  svn_boolean_t verbose,
-                  const apr_array_header_t *merge_options,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *scratch_pool)
-{
-  const char *url1, *url2;
-  svn_revnum_t rev1, rev2;
-
-  if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("checking branch relationship...\n")));
-  SVN_ERR_W(svn_cl__check_related_source_and_target(
-              source_path_or_url, source_peg_revision,
-              target_wcpath, &unspecified_revision, ctx, scratch_pool),
-            _("Source and target must be different but related branches"));
-
-  if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("calculating reintegrate merge...\n")));
-  SVN_ERR(svn_client_find_reintegrate_merge(
-            &url1, &rev1, &url2, &rev2,
-            source_path_or_url, source_peg_revision, target_wcpath,
-            ctx, scratch_pool, scratch_pool));
-
-  if (url1)
-    {
-      svn_opt_revision_t revision1;
-      svn_opt_revision_t revision2;
-
-      revision1.kind = svn_opt_revision_number;
-      revision1.value.number = rev1;
-
-      revision2.kind = svn_opt_revision_number;
-      revision2.value.number = rev2;
-
-      if (verbose)
-        SVN_ERR(svn_cmdline_printf(scratch_pool, _("merging...\n")));
-
-      /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
-       * to allow a mixed-rev WC but simply to bypass the check, as it was
-       * already checked in svn_client_find_reintegrate_merge(). */
-      SVN_ERR(svn_client_merge5(url1, &revision1, url2, &revision2,
-                                target_wcpath, svn_depth_infinity,
-                                FALSE /* ignore_mergeinfo */,
-                                FALSE /* diff_ignore_ancestry */,
-                                FALSE /* force_delete */,
-                                FALSE /* record_only */,
-                                dry_run, TRUE /* allow_mixed_rev */,
-                                merge_options, ctx, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Throw an error if PATH_OR_URL is a path and REVISION isn't a repository
  * revision. */
 static svn_error_t *
@@ -503,9 +444,9 @@ svn_cl__merge(apr_getopt_t *os,
     }
   else if (opt_state->reintegrate)
     {
-      merge_err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
-                                    opt_state->dry_run, opt_state->verbose,
-                                    options, ctx, pool);
+      merge_err = svn_client_merge_reintegrate(
+                    sourcepath1, &peg_revision1, targetpath,
+                    opt_state->dry_run, options, ctx, pool);
     }
   else if (! two_sources_specified)
     {

@@ -3741,39 +3741,6 @@ svn_client_merge(const char *source1,
 
 
 /**
- * Determine the URLs and revisions needed to perform a reintegrate merge
- * from @a source_path_or_url at @a source_peg_revision into the working
- * copy at @a target_wcpath.
- *
- * Set @a *url1_p and @a *rev1_p to the left side, and @a *url2_p and
- * @a *rev2_p to the right side, URLs and revisions of the source of the
- * required two-URL merge.
- *
- * If no merge should be performed, set @a *url1_p to NULL and @a *rev1_p
- * to #SVN_INVALID_REVNUM.
- *
- * The authentication baton cached in @a ctx is used to communicate with the
- * repository.
- *
- * Allocate all the results in @a result_pool.  Use @a scratch_pool for
- * temporary allocations.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_find_reintegrate_merge(const char **url1_p,
-                                  svn_revnum_t *rev1_p,
-                                  const char **url2_p,
-                                  svn_revnum_t *rev2_p,
-                                  /* inputs */
-                                  const char *source_path_or_url,
-                                  const svn_opt_revision_t *source_peg_revision,
-                                  const char *target_wcpath,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/**
  * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
