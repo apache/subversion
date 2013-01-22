@@ -8448,7 +8448,7 @@ remove_noop_subtree_ranges(const merge_source_t *source,
    paths and the values are the new mergeinfos for each.  Allocate additions
    to RESULT_CATALOG in pool which RESULT_CATALOG was created in.
 
-   Handle DEPTH as documented for svn_client_merge4().
+   Handle DEPTH as documented for svn_client_merge5().
 
    If ABORT_ON_CONFLICTS is TRUE raise an SVN_ERR_WC_FOUND_CONFLICT error
    if any merge conflicts occur.
@@ -9450,7 +9450,7 @@ open_target_wc(merge_target_t **target_p,
 
 /*** Public APIs ***/
 
-/* The body of svn_client_merge4(), which see for details.
+/* The body of svn_client_merge5(), which see for details.
  *
  * If SOURCE1 @ REVISION1 is related to SOURCE2 @ REVISION2 then use merge
  * tracking (subject to other constraints -- see HONOR_MERGEINFO());
@@ -9660,13 +9660,14 @@ get_target_and_lock_abspath(const char **target_abspath,
 }
 
 svn_error_t *
-svn_client_merge4(const char *source1,
+svn_client_merge5(const char *source1,
                   const svn_opt_revision_t *revision1,
                   const char *source2,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_depth_t depth,
-                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t ignore_mergeinfo,
+                  svn_boolean_t diff_ignore_ancestry,
                   svn_boolean_t force_delete,
                   svn_boolean_t record_only,
                   svn_boolean_t dry_run,
@@ -9699,13 +9700,15 @@ svn_client_merge4(const char *source1,
   if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_locked(source1, revision1, source2, revision2,
-                   target_abspath, depth, ignore_ancestry, ignore_ancestry,
+                   target_abspath, depth, ignore_mergeinfo,
+                   diff_ignore_ancestry,
                    force_delete, record_only, dry_run,
                    allow_mixed_rev, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(merge_locked(source1, revision1, source2, revision2,
-                   target_abspath, depth, ignore_ancestry, ignore_ancestry,
+                   target_abspath, depth, ignore_mergeinfo,
+                   diff_ignore_ancestry,
                    force_delete, record_only, dry_run,
                    allow_mixed_rev, merge_options, ctx, pool));
 
@@ -10874,7 +10877,7 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
 }
 
 
-/* The body of svn_client_merge_peg4(), which see for details.
+/* The body of svn_client_merge_peg5(), which see for details.
  *
  * IGNORE_MERGEINFO and DIFF_IGNORE_ANCESTRY are as in do_merge().
  */
@@ -10945,12 +10948,13 @@ merge_peg_locked(const char *source_path_or_url,
 }
 
 svn_error_t *
-svn_client_merge_peg4(const char *source_path_or_url,
+svn_client_merge_peg5(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *source_peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
-                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t ignore_mergeinfo,
+                      svn_boolean_t diff_ignore_ancestry,
                       svn_boolean_t force_delete,
                       svn_boolean_t record_only,
                       svn_boolean_t dry_run,
@@ -10972,14 +10976,16 @@ svn_client_merge_peg4(const char *source_path_or_url,
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_peg_locked(source_path_or_url, source_peg_revision,
                        ranges_to_merge,
-                       target_abspath, depth, ignore_ancestry, ignore_ancestry,
+                       target_abspath, depth, ignore_mergeinfo,
+                       diff_ignore_ancestry,
                        force_delete, record_only, dry_run,
                        allow_mixed_rev, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
     SVN_ERR(merge_peg_locked(source_path_or_url, source_peg_revision,
                        ranges_to_merge,
-                       target_abspath, depth, ignore_ancestry, ignore_ancestry,
+                       target_abspath, depth, ignore_mergeinfo,
+                       diff_ignore_ancestry,
                        force_delete, record_only, dry_run,
                        allow_mixed_rev, merge_options, ctx, pool));
 
