@@ -11247,7 +11247,7 @@ find_base_on_source(svn_client__pathrev_t **base_p,
 /* Find a merge base location on the target branch, like in a reintegrate
  * merge.
  *
- *                     MID      S_T->source
+ *                              S_T->source
  *          o-----------o-------o---
  *         /    prev.  /         \
  *   -----o     merge /           \  this
@@ -11259,16 +11259,11 @@ find_base_on_source(svn_client__pathrev_t **base_p,
  * (at or after the YCA) at which all revisions up to BASE are recorded as
  * merged into S_T->source.
  *
- * Set *MID_P to the first location on the history of S_T->source at which
- * all revisions up to BASE are recorded as merged.
- * ### This is not implemented yet.
- *
  * If no locations on the history of S_T->target are recorded as merged to
- * S_T->source, set both *BASE_P and *MID_P to the YCA.
+ * S_T->source, set *BASE_P to the YCA.
  */
 static svn_error_t *
 find_base_on_target(svn_client__pathrev_t **base_p,
-                    svn_client__pathrev_t **mid_p,
                     source_and_target_t *s_t,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *result_pool,
@@ -11279,7 +11274,6 @@ find_base_on_target(svn_client__pathrev_t **base_p,
                                     &s_t->target_branch,
                                     s_t->source_mergeinfo,
                                     ctx, result_pool, scratch_pool));
-  *mid_p = *base_p;  /* ### Wrong! */
 
   return SVN_NO_ERROR;
 }
@@ -11288,13 +11282,13 @@ find_base_on_target(svn_client__pathrev_t **base_p,
  */
 static svn_error_t *
 find_automatic_merge(svn_client__pathrev_t **base_p,
-                     svn_client__pathrev_t **mid_p,
+                     svn_boolean_t *is_reintegrate_like,
                      source_and_target_t *s_t,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  svn_client__pathrev_t *base_on_source, *base_on_target, *mid;
+  svn_client__pathrev_t *base_on_source, *base_on_target;
 
   /* Fetch mergeinfo of source branch (tip) and target branch (working). */
   SVN_ERR(svn_client__get_repos_mergeinfo(&s_t->source_mergeinfo,
@@ -11346,19 +11340,19 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
    */
   SVN_ERR(find_base_on_source(&base_on_source, s_t,
                               ctx, scratch_pool, scratch_pool));
-  SVN_ERR(find_base_on_target(&base_on_target, &mid, s_t,
+  SVN_ERR(find_base_on_target(&base_on_target, s_t,
                               ctx, scratch_pool, scratch_pool));
 
   /* Choose a base. */
   if (base_on_source->rev >= base_on_target->rev)
     {
       *base_p = base_on_source;
-      *mid_p = NULL;
+      *is_reintegrate_like = FALSE;
     }
   else
     {
       *base_p = base_on_target;
-      *mid_p = mid;
+      *is_reintegrate_like = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -11367,7 +11361,8 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
 /* Details of an automatic merge. */
 struct svn_client_automatic_merge_t
 {
-  svn_client__pathrev_t *yca, *base, *mid, *right, *target;
+  svn_client__pathrev_t *yca, *base, *right, *target;
+  svn_boolean_t is_reintegrate_like;
   svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
 };
 
@@ -11402,7 +11397,7 @@ svn_client_find_automatic_merge_no_wc(
   s_t->target->abspath = NULL;  /* indicate the target is not a WC */
   s_t->target->loc = *target_loc;
 
-  SVN_ERR(find_automatic_merge(&merge->base, &merge->mid, s_t,
+  SVN_ERR(find_automatic_merge(&merge->base, &merge->is_reintegrate_like, s_t,
                                ctx, result_pool, scratch_pool));
 
   merge->right = s_t->source;
@@ -11456,7 +11451,7 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
                            &s_t->target->loc, target_wcpath,
                            TRUE /* strict_urls */, scratch_pool));
 
-  SVN_ERR(find_automatic_merge(&merge->base, &merge->mid, s_t,
+  SVN_ERR(find_automatic_merge(&merge->base, &merge->is_reintegrate_like, s_t,
                                ctx, result_pool, scratch_pool));
   merge->yca = s_t->yca;
   merge->right = s_t->source;
@@ -11473,11 +11468,11 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
 
 /* The body of svn_client_do_automatic_merge(), which see.
  *
- * Five locations are inputs: YCA, BASE, MID, RIGHT, TARGET, as shown
+ * Four locations are inputs: YCA, BASE, RIGHT, TARGET, as shown
  * depending on whether the base is on the source branch or the target
  * branch of this merge.
  *
- *                     MID    RIGHT
+ *                            RIGHT     (is_reintegrate_like)
  *          o-----------o-------o---
  *         /    prev.  /         \
  *   -----o     merge /           \  this
@@ -11487,7 +11482,7 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
  *
  * or
  *
- *                BASE        RIGHT      (and MID=NULL)
+ *                BASE        RIGHT      (! is_reintegrate_like)
  *          o-------o-----------o---
  *         /         \           \
  *   -----o     prev. \           \  this
@@ -11495,7 +11490,7 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
  *          o-----------o-----------o
  *                                TARGET
  *
- * ### TODO: The reintegrate-type (MID!=NULL) code path does not yet
+ * ### TODO: The reintegrate-like code path does not yet
  * eliminate already-cherry-picked revisions from the source.
  */
 static svn_error_t *
@@ -11511,7 +11506,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                           apr_pool_t *scratch_pool)
 {
   merge_target_t *target;
-  svn_boolean_t reintegrate_like = (merge->mid != NULL);
+  svn_boolean_t reintegrate_like = merge->is_reintegrate_like;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
 
@@ -11567,7 +11562,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
 
       source.loc1 = merge->base;
       source.loc2 = merge->right;
-      source.ancestral = (merge->mid == NULL);
+      source.ancestral = ! merge->is_reintegrate_like;
 
       err = merge_cousins_and_supplement_mergeinfo(target,
                                                    base_ra_session,
@@ -11598,7 +11593,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
 
       source.loc1 = merge->yca;
       source.loc2 = merge->right;
-      source.ancestral = (merge->mid == NULL);
+      source.ancestral = ! merge->is_reintegrate_like;
 
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
       APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
@@ -11657,7 +11652,7 @@ svn_boolean_t
 svn_client_automatic_merge_is_reintegrate_like(
         const svn_client_automatic_merge_t *merge)
 {
-  return merge->mid != NULL;
+  return merge->is_reintegrate_like;
 }
 
 svn_error_t *
