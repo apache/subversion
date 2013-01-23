@@ -1643,46 +1643,74 @@ output_unified_diff_modified(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   svn_diff__file_output_baton_t *output_baton = baton;
-  apr_off_t target_orig;
-  apr_off_t target_mod;
-  svn_boolean_t store_extra_context = FALSE;
+  apr_off_t context_prefix_length;
+  apr_off_t prev_context_end;
+  svn_boolean_t init_hunk = FALSE;
 
-  target_orig = original_start >= SVN_DIFF__UNIFIED_CONTEXT_SIZE
-                   ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
-  target_mod = modified_start;
+  if (original_start > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+    context_prefix_length = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  else
+    context_prefix_length = original_start;
 
-  /* If the changed ranges are far enough apart (no overlapping or connecting
-     context), flush the current hunk, initialize the next hunk and skip the
-     lines not in context.  Also do this when this is the first hunk.
-   */
-  if (output_baton->current_line[0] < target_orig
-      && (output_baton->hunk_start[0] + output_baton->hunk_length[0]
-          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_orig
-          || output_baton->hunk_length[0] == 0))
+  /* Calculate where the previous hunk will end if we would write it now
+     (including the necessary context at the end) */
+  if (output_baton->hunk_length[0] > 0 || output_baton->hunk_length[1] > 0)
     {
-      SVN_ERR(output_unified_flush_hunk(output_baton));
-
-      output_baton->hunk_start[0] = target_orig;
-      output_baton->hunk_start[1] = target_mod +(target_orig - original_start);
-
-      store_extra_context = TRUE;
+      prev_context_end = output_baton->hunk_start[0]
+                         + output_baton->hunk_length[0]
+                         + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
     }
+  else
+    {
+      prev_context_end = -1;
+
+      if (output_baton->hunk_start[0] == 0
+          && (original_length > 0 || modified_length > 0))
+        init_hunk = TRUE;
+    }
+
+  /* If the changed range is far enough from the previous range, flush the current
+     hunk. */
+  {
+    apr_off_t new_hunk_start = (original_start - context_prefix_length);
+
+    if (output_baton->current_line[0] < new_hunk_start
+          && prev_context_end <= new_hunk_start)
+      {
+        SVN_ERR(output_unified_flush_hunk(output_baton));
+        init_hunk = TRUE;
+      }
+    else if (output_baton->hunk_length[0] > 0
+             || output_baton->hunk_length[1] > 0)
+      {
+        /* We extend the current hunk */
+
+
+        /* Original: Output the context preceding the changed range */
+        SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                          svn_diff__file_output_unified_context,
+                                          original_start));
+      }
+  }
 
   /* Original: Skip lines until we are at the beginning of the context we want
      to display */
   SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
                                     svn_diff__file_output_unified_skip,
-                                    target_orig));
+                                    original_start - context_prefix_length));
 
-  /* Modified: Skip lines until we are at the start of the changed range */
-  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
-                                    svn_diff__file_output_unified_skip,
-                                    target_mod));
+  /* Note that the above skip stores data for the show_c_function support below */
 
-  /* Note that these two skips might store data needed by the following
-     block, by processing the otherwise ignored lines */
+  if (init_hunk)
+    {
+      SVN_ERR_ASSERT(output_baton->hunk_length[0] == 0
+                     && output_baton->hunk_length[1] == 0);
 
-  if (store_extra_context && output_baton->show_c_function)
+      output_baton->hunk_start[0] = original_start - context_prefix_length;
+      output_baton->hunk_start[1] = modified_start - context_prefix_length;
+    }
+
+  if (init_hunk && output_baton->show_c_function)
     {
       apr_size_t p;
       const char *invalid_character;
@@ -1711,6 +1739,11 @@ output_unified_diff_modified(void *baton,
           output_baton->hunk_extra_context[p] = '\0';
         }
     }
+
+  /* Modified: Skip lines until we are at the start of the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
+                                    svn_diff__file_output_unified_skip,
+                                    modified_start));
 
   /* Original: Output the context preceding the changed range */
   SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
