@@ -427,6 +427,42 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
     }
 }
 
+/* Send outstanding deletes for everything below PATH */
+static svn_error_t *
+send_delete_notify(struct edit_baton *eb,
+                   const char *path,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  if (! eb->notify_func)
+    return SVN_NO_ERROR;
+
+  for (hi = apr_hash_first(scratch_pool, eb->deleted_paths); hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_wc_notify_t *notify;
+      const char *deleted_path = svn__apr_hash_index_key(hi);
+      deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
+
+      /* Ignore paths which are not children of bb->path.  (There
+         should be none due to editor ordering constraints, but
+         ra_serf drops the ball here -- see issue #3802 for
+         details.) */
+      if (! svn_relpath_skip_ancestor(path, deleted_path))
+        continue;
+
+      notify = svn_wc_create_notify(deleted_path, dpn->action, scratch_pool);
+      notify->kind = dpn->kind;
+      notify->content_state = notify->prop_state = dpn->state;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
+      apr_hash_set(eb->deleted_paths, deleted_path,
+                   APR_HASH_KEY_STRING, NULL);
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
@@ -565,13 +601,7 @@ diff_deleted_dir(const char *path,
    * crawl it recursively, diffing each file against the empty file.  This
    * is a workaround for issue 2333 "'svn diff URL1 URL2' not reverse of
    * 'svn diff URL2 URL1'". */
-  if (! eb->walk_deleted_repos_dirs)
-    {
-      svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
-    }
-
-  if (! skip_children)
+  if (! skip_children && eb->walk_deleted_repos_dirs)
     {
       apr_hash_index_t *hi;
       apr_hash_t *dirents;
@@ -610,6 +640,8 @@ diff_deleted_dir(const char *path,
     {
       svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
       svn_wc_notify_action_t action = svn_wc_notify_skip;
+
+      SVN_ERR(send_delete_notify(eb, path, iterpool));
 
       /* ### Sorry, no way to hand over the properties */
       SVN_ERR(eb->diff_callbacks->dir_deleted(&state, &tree_conflicted,
@@ -1177,30 +1209,7 @@ close_directory(void *dir_baton,
    * already been notified. */
   if (!skipped && !db->added && eb->notify_func)
     {
-      apr_hash_index_t *hi;
-
-      for (hi = apr_hash_first(pool, eb->deleted_paths); hi;
-           hi = apr_hash_next(hi))
-        {
-          svn_wc_notify_t *notify;
-          const char *deleted_path = svn__apr_hash_index_key(hi);
-          deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
-
-          /* Ignore paths which are not children of bb->path.  (There
-             should be none due to editor ordering constraints, but
-             ra_serf drops the ball here -- see issue #3802 for
-             details.) */
-          if (! svn_relpath_skip_ancestor(db->path, deleted_path))
-            continue;
-
-          notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-          apr_hash_set(eb->deleted_paths, deleted_path,
-                       APR_HASH_KEY_STRING, NULL);
-        }
+      SVN_ERR(send_delete_notify(eb, db->path, scratch_pool));
     }
 
   /* Notify about this directory itself (unless it was added, in which
