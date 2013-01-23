@@ -34,6 +34,7 @@ import tempfile
 import textwrap
 import zlib
 import posixpath
+import filecmp
 
 # Our testing module
 import svntest
@@ -4468,6 +4469,113 @@ def patch_empty_file(sbox):
 
   svntest.actions.verify_disk(wc_dir, expected_disk)
 
+@Issue(3362)
+def patch_apply_no_fuz(sbox):
+  "svn diff created patch should apply without fuz"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_write(sbox.ospath('test.txt'), '\n'.join([
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4",
+      "line_5",
+      "line_6",
+      "line_7",
+      "line_8",
+      "line_9",
+      "line_10",
+      "line_11",
+      "line_12",
+      "line_13",
+      "line_14",
+      "line_15",
+      "line_16",
+      "line_17",
+      "line_18",
+      "line_19",
+      "line_20",
+      "line_21",
+      "line_22",
+      "line_23",
+      "line_24",
+      "line_25",
+      "line_26",
+      "line_27",
+      "line_28",
+      "line_29",
+      "line_30",
+      ""
+    ]))
+  svntest.main.file_write(sbox.ospath('test_v2.txt'), '\n'.join([
+      "line_1a",
+      "line_1b",
+      "line_1c",
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4",
+      "line_5a",
+      "line_5b",
+      "line_5c",
+      "line_6",
+      "line_7",
+      "line_8",
+      "line_9",
+      "line_10",
+      "line_11a",
+      "line_11b",
+      "line_11c",
+      "line_12",
+      "line_13",
+      "line_14",
+      "line_15",
+      "line_16",
+      "line_17",
+      "line_18",
+      "line_19a",
+      "line_19b",
+      "line_19c",
+      "line_20",
+      "line_21",
+      "line_22",
+      "line_23",
+      "line_24",
+      "line_25",
+      "line_26",
+      "line_27a",
+      "line_27b",
+      "line_27c",
+      "line_28",
+      "line_29",
+      "line_30",
+      ""
+    ]))
+
+  sbox.simple_add('test.txt', 'test_v2.txt')
+
+  result, out_text, err_text = svntest.main.run_svn(None,
+                                                    'diff',
+                                                    '--old',
+                                                    sbox.ospath('test.txt'),
+                                                    '--new',
+                                                    sbox.ospath('test_v2.txt'))
+
+  patch_path = sbox.ospath('patch.diff')
+  svntest.main.file_write(patch_path, ''.join(out_text))
+
+  expected_output = [
+    'G         %s\n' % sbox.ospath('test.txt'),
+  ]
+
+  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_path, wc_dir)
+
+  if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
+    raise svntest.Failure("Patch result not identical")
 
 
 ########################################################################
@@ -4519,6 +4627,7 @@ test_list = [ None,
               patch_replace_dir_with_file_and_vv,
               single_line_mismatch,
               patch_empty_file,
+              patch_apply_no_fuz,
             ]
 
 if __name__ == '__main__':
