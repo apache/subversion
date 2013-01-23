@@ -849,7 +849,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
     return svn_error_createf(err->apr_err, err, 
-                             "Error parsing config file: '%s' in repo '%s':",
+                             "Error while parsing config file: '%s' in repo '%s':",
                              fs_path, repos_root_dirent);
 
   return SVN_NO_ERROR;
