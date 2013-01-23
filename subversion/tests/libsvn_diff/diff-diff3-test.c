@@ -284,10 +284,28 @@ two_way_diff(const char *filename1,
 
   SVN_ERR(svn_stringbuf_from_file2(&actual, diff_name, pool));
   if (strcmp(actual->data, expected))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "failed comparing '%s' and '%s'"
-                             " (memory and file results are different)",
-                             filename1, filename2);
+    {
+      /*svn_stringbuf_t *dump_actual;
+      svn_stream_t *dump_ostream;
+      dump_actual = svn_stringbuf_create_empty(pool);
+      dump_ostream = svn_stream_from_stringbuf(dump_actual, pool);
+
+      SVN_ERR(svn_diff_mem_string_output_unified(dump_ostream, diff,
+                                                 "expected", "actual",
+                                                 SVN_APR_LOCALE_CHARSET,
+                                                 svn_string_create(expected, pool),
+                                                 svn_string_create(actual->data, pool),
+                                                 pool));
+      SVN_ERR(svn_stream_close(ostream));
+
+      SVN_DBG(("%s\n", dump_actual->data));
+
+      SVN_ERR(make_file("memory", expected, pool));*/
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "failed comparing '%s' and '%s'"
+                               " (memory and file results are different)",
+                               filename1, filename2);
+    }
 
   /* May as well do the trivial merges while we are here */
   SVN_ERR(three_way_merge(filename1, filename2, filename1,
@@ -2595,12 +2613,12 @@ test_token_compare(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_issue_3362(apr_pool_t *pool)
+two_way_issue_3362_v1(apr_pool_t *pool)
 {
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
 
-  SVN_ERR(two_way_diff("issue-3362-1",
-                       "issue-3362-2",
+  SVN_ERR(two_way_diff("issue-3362-1-v1",
+                       "issue-3362-2-v2",
                         /* File 1 */
                                 "line_1\n"
                                 "line_2\n"
@@ -2717,6 +2735,137 @@ test_issue_3362(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+two_way_issue_3362_v2(apr_pool_t *pool)
+{
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  SVN_ERR(two_way_diff("issue-3362-1-v2",
+                       "issue-3362-2-v2",
+                        /* File 1 */
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* File 2 */
+                                "line_1a\n"
+                                "line_1b\n"
+                                "line_1c\n"
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5a\n"
+                                "line_5b\n"
+                                "line_5c\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11a\n"
+                                "line_11b\n"
+                                "line_11c\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19a\n"
+                                "line_19b\n"
+                                "line_19c\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27a\n"
+                                "line_27b\n"
+                                "line_27c\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* Expected */
+                        "--- issue-3362-1" APR_EOL_STR
+                        "+++ issue-3362-2" APR_EOL_STR
+                        "@@ -1,12 +1,19 @@" APR_EOL_STR
+                        "+line_1a\n"
+                        "+line_1b\n"
+                        "+line_1c\n"
+                        " line_2\n"
+                        " line_3\n"
+                        " line_4\n"
+                        "-line_5\n"
+                        "+line_5a\n"
+                        "+line_5b\n"
+                        "+line_5c\n"
+                        " line_6\n"
+                        " line_7\n"
+                        " line_8\n"
+                        " line_9\n"
+                        " line_10\n"
+                        "-line_11\n"
+                        "+line_11a\n"
+                        "+line_11b\n"
+                        "+line_11c\n"
+                        " line_12\n"
+                        " line_13\n"
+                        "@@ -16,7 +23,9 @@" APR_EOL_STR
+                        " line_16\n"
+                        " line_17\n"
+                        " line_18\n"
+                        "-line_19\n"
+                        "+line_19a\n"
+                        "+line_19b\n"
+                        "+line_19c\n"
+                        " line_20\n"
+                        " line_21\n"
+                        " line_22\n"
+                        "@@ -24,7 +33,9 @@" APR_EOL_STR
+                        " line_24\n"
+                        " line_25\n"
+                        " line_26\n"
+                        "-line_27\n"
+                        "+line_27a\n"
+                        "+line_27b\n"
+                        "+line_27c\n"
+                        " line_28\n"
+                        " line_29\n"
+                        " line_30\n",
+                        diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -2753,7 +2902,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_PASS2(test_token_compare,
                    "compare tokes at the chunk boundary"),
-    SVN_TEST_XFAIL2(test_issue_3362,
-                   "issue #3362 test"),
+    SVN_TEST_XFAIL2(two_way_issue_3362_v1,
+                   "2-way issue #3362 test v1"),
+    SVN_TEST_XFAIL2(two_way_issue_3362_v2,
+                   "2-way issue #3362 test v2"),
     SVN_TEST_NULL
   };
