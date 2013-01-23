@@ -473,6 +473,30 @@ check_same_repos(const svn_client__pathrev_t *location1,
   return SVN_NO_ERROR;
 }
 
+/* Store LOCAL_ABSPATH in PATH_HASH after duplicating it into the pool
+   containing PATH_HASH. */
+static APR_INLINE void
+store_path(apr_hash_t *path_hash, const char *local_abspath)
+{
+  const char *dup_path = apr_pstrdup(apr_hash_pool_get(path_hash),
+                                     local_abspath);
+
+  apr_hash_set(path_hash, dup_path, APR_HASH_KEY_STRING, dup_path);
+}
+
+/* Store LOCAL_ABSPATH in *PATH_HASH_P after duplicating it into the pool
+   containing *PATH_HASH_P.  If *PATH_HASH_P is NULL, then first set
+   *PATH_HASH_P to a new hash allocated from POOL.  */
+static APR_INLINE void
+alloc_and_store_path(apr_hash_t **path_hash_p,
+                     const char *local_abspath,
+                     apr_pool_t *pool)
+{
+  if (! *path_hash_p)
+    *path_hash_p = apr_hash_make(pool);
+  store_path(*path_hash_p, local_abspath);
+}
+
 /* Return true iff we're in dry-run mode and LOCAL_ABSPATH would have been
    deleted by now if we weren't in dry-run mode.
    Used to avoid spurious notifications (e.g. conflicts) from a merge
@@ -724,12 +748,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
 
-      if (merge_b->conflicted_paths == NULL)
-        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
-      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
-
-      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
-                   APR_HASH_KEY_STRING, victim_abspath);
+      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
+                           merge_b->pool);
     }
 
   return SVN_NO_ERROR;
@@ -768,12 +788,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
 
-      if (merge_b->conflicted_paths == NULL)
-        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
-      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
-
-      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
-                   APR_HASH_KEY_STRING, victim_abspath);
+      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
+                           merge_b->pool);
     }
   else if (existing_conflict->action == svn_wc_conflict_action_delete &&
            conflict->action == svn_wc_conflict_action_add)
@@ -799,12 +815,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
 
-      if (merge_b->conflicted_paths == NULL)
-        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
-      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
-
-      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
-                   APR_HASH_KEY_STRING, victim_abspath);
+      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
+                           merge_b->pool);
     }
 
   /* In any other cases, we don't touch the existing conflict. */
@@ -1318,29 +1330,13 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 
               if (!has_pristine_mergeinfo && prop->value)
                 {
-                  /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
-                     allocated do so in BATON->POOL so it has a
-                     sufficient lifetime. */
-                  if (!merge_b->paths_with_new_mergeinfo)
-                    merge_b->paths_with_new_mergeinfo =
-                      apr_hash_make(merge_b->pool);
-
-                  apr_hash_set(merge_b->paths_with_new_mergeinfo,
-                               apr_pstrdup(merge_b->pool, local_abspath),
-                               APR_HASH_KEY_STRING, local_abspath);
+                  alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
+                                       local_abspath, merge_b->pool);
                 }
               else if (has_pristine_mergeinfo && !prop->value)
                 {
-                  /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
-                     allocated do so in BATON->POOL so it has a
-                     sufficient lifetime. */
-                  if (!merge_b->paths_with_deleted_mergeinfo)
-                    merge_b->paths_with_deleted_mergeinfo =
-                      apr_hash_make(merge_b->pool);
-
-                  apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
-                               apr_pstrdup(merge_b->pool, local_abspath),
-                               APR_HASH_KEY_STRING, local_abspath);
+                  alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
+                                       local_abspath, merge_b->pool);
                 }
             }
         }
@@ -1537,28 +1533,11 @@ conflict_resolver(svn_wc_conflict_result_t **result,
   if ((! conflict_b->wrapped_func)
       || (*result && ((*result)->choice == svn_wc_conflict_choose_postpone)))
     {
-      const char *conflicted_path = apr_pstrdup(conflict_b->pool,
-                                                description->local_abspath);
-
-      if (*conflict_b->conflicted_paths == NULL)
-        *conflict_b->conflicted_paths = apr_hash_make(conflict_b->pool);
-
-      apr_hash_set(*conflict_b->conflicted_paths, conflicted_path,
-                   APR_HASH_KEY_STRING, conflicted_path);
+      alloc_and_store_path(conflict_b->conflicted_paths,
+                           description->local_abspath, conflict_b->pool);
     }
 
   return svn_error_trace(err);
-}
-
-/* Store LOCAL_ABSPATH in PATH_HASH after duplicating it into the pool
-   containing PATH_HASH */
-static APR_INLINE void
-store_path(apr_hash_t *path_hash, const char *local_abspath)
-{
-  const char *dup_path = apr_pstrdup(apr_hash_pool_get(path_hash),
-                                     local_abspath);
-
-  apr_hash_set(path_hash, dup_path, APR_HASH_KEY_STRING, dup_path);
 }
 
 
@@ -2133,11 +2112,9 @@ merge_file_deleted(svn_wc_notify_state_t *state,
 
   if (merge_b->dry_run)
     {
-      const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
       /* Store deletion *after* obstruction check, or the registration will be
          noted as an obstruction */
-      apr_hash_set(merge_b->dry_run_deletions, wcpath,
-                   APR_HASH_KEY_STRING, wcpath);
+      store_path(merge_b->dry_run_deletions, local_abspath);
     }
 
   if (kind != svn_node_file || is_deleted)
@@ -2184,13 +2161,8 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       *state = svn_wc_notify_state_changed;
 
       /* Record that we might have deleted mergeinfo */
-      if (!merge_b->paths_with_deleted_mergeinfo)
-        merge_b->paths_with_deleted_mergeinfo =
-                                          apr_hash_make(merge_b->pool);
-
-      apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
-                   apr_pstrdup(merge_b->pool, local_abspath),
-                   APR_HASH_KEY_STRING, local_abspath);
+      alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
+                           local_abspath, merge_b->pool);
     }
   else
     {
@@ -2451,11 +2423,8 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
     }
 
   /* Record that we might have deleted mergeinfo */
-  if (!merge_b->paths_with_deleted_mergeinfo)
-    merge_b->paths_with_deleted_mergeinfo =
-                                      apr_hash_make(merge_b->pool);
-
-  store_path(merge_b->paths_with_deleted_mergeinfo, local_abspath);
+  alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
+                       local_abspath, merge_b->pool);
 
   return SVN_NO_ERROR;
 }
@@ -5502,24 +5471,20 @@ pre_merge_status_cb(void *baton,
         dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
 
       apr_hash_set(pmsb->switched_subtrees,
-                   apr_pstrdup(pmsb->pool, local_abspath),
-                   APR_HASH_KEY_STRING,
-                   dup_abspath);
+                   dup_abspath, APR_HASH_KEY_STRING, dup_abspath);
     }
 
   if (status->depth == svn_depth_empty
       || status->depth == svn_depth_files)
     {
-      svn_depth_t *depth = apr_pcalloc(pmsb->pool, sizeof *depth);
+      svn_depth_t *depth = apr_pmemdup(pmsb->pool, &status->depth,
+                                       sizeof *depth);
 
       if (!dup_abspath)
         dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
 
-      *depth = status->depth;
       apr_hash_set(pmsb->shallow_subtrees,
-                   dup_abspath,
-                   APR_HASH_KEY_STRING,
-                   depth);
+                   dup_abspath, APR_HASH_KEY_STRING, depth);
     }
 
   if (status->node_status == svn_wc_status_missing)
@@ -5545,8 +5510,8 @@ pre_merge_status_cb(void *baton,
         }
 
       if (new_missing_root)
-        apr_hash_set(pmsb->missing_subtrees, dup_abspath,
-                     APR_HASH_KEY_STRING, dup_abspath);
+        apr_hash_set(pmsb->missing_subtrees,
+                     dup_abspath, APR_HASH_KEY_STRING, dup_abspath);
     }
 
   return SVN_NO_ERROR;
