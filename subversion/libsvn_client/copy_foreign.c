@@ -370,7 +370,7 @@ file_close(void *file_baton,
                     svn_checksum_mismatch_err(expected_checksum,
                                               actual_checksum,
                                               fb->pool,
-                                         _("Checksum doesn't match for '%s'"),
+                                         _("Checksum mismatch for '%s'"),
                                               svn_dirent_local_style(
                                                     fb->local_abspath,
                                                     fb->pool)));
