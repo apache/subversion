@@ -5740,6 +5740,66 @@ nested_moves2(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_in_delete", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D/E"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "X"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B/C", "C2"));
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       1, "A/B/C"},
+      {2, "A/B",     "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",   "base-deleted", NO_COPY_FROM, "C2"},
+      {1, "C2",      "normal",       1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  /* This currently fails because the tree-conflict is recorded on the
+     deleted A/B, not the moved A/B/C. */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       1, "A/B/C"},
+      {0, "A/B/C/D", "normal",       1, "A/B/C/D"},
+      {2, "A/B",     "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",   "base-deleted", NO_COPY_FROM, "C2"},
+      {2, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {1, "C2",      "normal",       1, "A/B/C", MOVED_HERE},
+      {1, "C2/D",    "normal",       1, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -5854,5 +5914,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_delete_mods"),
     SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
+    SVN_TEST_OPTS_XFAIL(move_in_delete,
+                       "move_in_delete"),
     SVN_TEST_NULL
   };
