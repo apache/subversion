@@ -149,9 +149,10 @@ dir_change_prop(void *dir_baton,
 
   prop_kind = svn_property_kind2(name);
 
-  if (prop_kind != svn_prop_regular_kind)
+  if (prop_kind != svn_prop_regular_kind
+      || ! strcmp(name, SVN_PROP_MERGEINFO))
     {
-      /* We can't handle DAV and ENTRY props here */
+      /* We can't handle DAV, ENTRY and merge specific props here */
       return SVN_NO_ERROR;
     }
 
@@ -297,9 +298,10 @@ file_change_prop(void *file_baton,
 
   prop_kind = svn_property_kind2(name);
 
-  if (prop_kind != svn_prop_regular_kind)
+  if (prop_kind != svn_prop_regular_kind
+      || ! strcmp(name, SVN_PROP_MERGEINFO))
     {
-      /* We can't handle DAV and ENTRY props here */
+      /* We can't handle DAV, ENTRY and merge specific props here */
       return SVN_NO_ERROR;
     }
 
@@ -532,9 +534,10 @@ svn_client__copy_foreign(const char *url,
           {
             const char *name = svn__apr_hash_index_key(hi);
 
-            if (svn_property_kind2(name) != svn_prop_regular_kind)
+            if (svn_property_kind2(name) != svn_prop_regular_kind
+                || ! strcmp(name, SVN_PROP_MERGEINFO))
               {
-                /* We can't handle DAV and ENTRY props here */
+                /* We can't handle DAV, ENTRY and merge specific props here */
                 apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
               }
           }
