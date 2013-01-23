@@ -2723,6 +2723,36 @@ issue_4060(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_repos_delete(). */
+static svn_error_t *
+test_delete_repos(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  const char *path;
+  svn_node_kind_t kind;
+
+  /* We have to use a subpool to close the svn_repos_t before calling
+     svn_repos_delete. */
+  {
+    svn_repos_t *repos;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(svn_test__create_repos(&repos, "test-repo-delete-repos", opts,
+                                   subpool));
+    path = svn_repos_path(repos, pool);
+    svn_pool_destroy(subpool);
+  }
+
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind != svn_node_none);
+  SVN_ERR(svn_repos_delete(path, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
+  /* Recreate dir so that test cleanup doesn't fail. */
+  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -2761,5 +2791,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_get_file_revsN"),
     SVN_TEST_OPTS_PASS(issue_4060,
                        "test issue 4060"),
+    SVN_TEST_OPTS_PASS(test_delete_repos,
+                       "test svn_repos_delete"),
     SVN_TEST_NULL
   };
