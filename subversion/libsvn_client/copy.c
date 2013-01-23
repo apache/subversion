@@ -1658,6 +1658,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
                               new_base_contents,
                               &pair->src_revnum, &new_props, pool));
+
+      if (new_props && ! same_repositories)
+        apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING, NULL);
+
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
