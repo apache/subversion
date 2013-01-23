@@ -6358,7 +6358,6 @@ def incomplete_overcomplete(sbox):
                                         True,
                                         wc_dir, '-r', 3)
 
-@XFail()
 @Issue(4300)
 def update_swapped_depth_dirs(sbox):
   "text mod to file in swapped depth dir"
@@ -6397,10 +6396,9 @@ def update_swapped_depth_dirs(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Hopefully this is the right output/disk/status for what
-  # we should get, but right now the update segfaults.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'         : Item(status='  ', treeconflict='C'),
+    'A/B/E'       : Item(status='  ', treeconflict='U'),
     'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
   })
   expected_disk = svntest.main.greek_state.copy()
@@ -6415,7 +6413,9 @@ def update_swapped_depth_dirs(sbox):
     'A/E/B/F'      : Item(),
   })
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B', treeconflict='C')
   expected_status.tweak('A/E', 'A/E/alpha', 'A/E/beta', 'A/E/B',
+                        'A/E/B/E', 'A/E/B/E/alpha', 'A/E/B/E/beta',
                         'A/E/B/lambda', 'A/E/B/F', wc_rev='-')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
