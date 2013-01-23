@@ -1586,7 +1586,8 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
   apr_off_t target_line;
   apr_size_t hunk_len;
-  int i;
+  apr_off_t old_start;
+  apr_off_t new_start;
 
   if (svn_stringbuf_isempty(baton->hunk))
     {
@@ -1602,19 +1603,21 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
                                     svn_diff__file_output_unified_context,
                                     target_line));
 
+  old_start = baton->hunk_start[0];
+  new_start = baton->hunk_start[1];
+
   /* If the file is non-empty, convert the line indexes from
      zero based to one based */
-  for (i = 0; i < 2; i++)
-    {
-      if (baton->hunk_length[i] > 0)
-        baton->hunk_start[i]++;
-    }
+  if (baton->hunk_length[0])
+    old_start++;
+  if (baton->hunk_length[1])
+    new_start++;
 
   /* Write the hunk header */
   SVN_ERR(svn_diff__unified_write_hunk_header(
             baton->output_stream, baton->header_encoding, "@@",
-            baton->hunk_start[0], baton->hunk_length[0],
-            baton->hunk_start[1], baton->hunk_length[1],
+            old_start, baton->hunk_length[0],
+            new_start, baton->hunk_length[1],
             baton->hunk_extra_context,
             baton->pool));
 
@@ -1626,6 +1629,8 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Prepare for the next hunk */
   baton->hunk_length[0] = 0;
   baton->hunk_length[1] = 0;
+  baton->hunk_start[0] = 0;
+  baton->hunk_start[1] = 0;
   svn_stringbuf_setempty(baton->hunk);
 
   return SVN_NO_ERROR;
