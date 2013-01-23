@@ -7119,15 +7119,18 @@ path_is_subtree(const char *local_abspath,
   return FALSE;
 }
 
-/* Return true if any path in NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS,
-   NOTIFY_B->ADDED_PATHS, or NOTIFY_B->CONFLICTED_PATHS is equal to, or is a
-   subtree of LOCAL_ABSPATH.  Return false otherwise. */
+/* Return true if any merged, skipped, added or tree-conflicted path
+   recorded in MERGE_B is equal to, or is a subtree of LOCAL_ABSPATH.  Return
+   false otherwise.
+
+   ### Why not text- or prop-conflicted paths? Are such paths guaranteed
+       to be recorded as 'merged' or 'skipped' or 'added', perhaps?
+*/
 static svn_boolean_t
 subtree_touched_by_merge(const char *local_abspath,
-                         notification_receiver_baton_t *notify_b,
+                         merge_cmd_baton_t *merge_b,
                          apr_pool_t *pool)
 {
-  merge_cmd_baton_t *merge_b = notify_b->merge_b;
   return (path_is_subtree(local_abspath, merge_b->merged_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->skipped_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->added_abspaths, pool)
@@ -7371,7 +7374,7 @@ get_operative_immediate_children(apr_hash_t **operative_children,
    respectively.
 
    If OPERATIVE_MERGE is true, then the merge being described is operative
-   as per subtree_touched_by_merge.  OPERATIVE_MERGE is false otherwise.
+   as per subtree_touched_by_merge().  OPERATIVE_MERGE is false otherwise.
 
    MERGED_RANGE, MERGEINFO_FSPATH, DEPTH, NOTIFY_B, and MERGE_B are all
    cascaded from record_mergeinfo_for_dir_merge's arguments of the same
@@ -7455,7 +7458,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                                                  merge_b->ctx->wc_ctx,
                                                  child->abspath, iterpool));
           if (!child_is_deleted
-              && subtree_touched_by_merge(child->abspath, notify_b,
+              && subtree_touched_by_merge(child->abspath, notify_b->merge_b,
                                           iterpool))
             {
               /* This subtree was affected by the merge. */
@@ -7637,7 +7640,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   /* Regardless of what subtrees in MERGE_B->target->abspath might be missing
      could this merge have been operative? */
   operative_merge = subtree_touched_by_merge(merge_b->target->abspath,
-                                             notify_b, iterpool);
+                                             notify_b->merge_b, iterpool);
 
   /* If this couldn't be an operative merge then don't bother with
      the added complexity (and user confusion) of non-inheritable ranges.
