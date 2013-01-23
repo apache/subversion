@@ -288,10 +288,10 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_text_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_text_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_text_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_text_conflict().
  *
  * Output arguments can be NULL if the value is not necessary.
  *
@@ -308,10 +308,10 @@ svn_wc__conflict_read_text_conflict(const char **mine_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_prop_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_prop_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_prop_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_prop_conflict().
  *
  * Output arguments can be NULL if the value is not necessary
  * Allocate the result in RESULT_POOL. Perform temporary allocations in
@@ -329,10 +329,10 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_tree_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_tree_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_tree_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_tree_conflict().
  *
  * Output arguments can be NULL if the value is not necessary
  * Allocate the result in RESULT_POOL. Perform temporary allocations in
