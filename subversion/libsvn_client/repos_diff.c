@@ -478,15 +478,16 @@ open_root(void *edit_baton,
 /* Compare a file being deleted against an empty file.
  */
 static svn_error_t *
-diff_deleted_file(svn_wc_notify_state_t *state_p,
-                  svn_boolean_t *tree_conflicted_p,
-                  const char *path,
+diff_deleted_file(const char *path,
                   struct edit_baton *eb,
                   apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = make_file_baton(path, FALSE, eb, scratch_pool);
 /*  struct edit_baton *eb = fb->edit_baton;*/
   const char *mimetype1, *mimetype2;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state;
+  svn_wc_notify_action_t action;
 
   if (eb->cancel_func)
     SVN_ERR(eb->cancel_func(eb->cancel_baton));
@@ -498,7 +499,7 @@ diff_deleted_file(svn_wc_notify_state_t *state_p,
   SVN_ERR(get_empty_file(eb, &fb->path_end_revision));
   get_file_mime_types(&mimetype1, &mimetype2, fb);
 
-  SVN_ERR(eb->diff_callbacks->file_deleted(state_p, tree_conflicted_p,
+  SVN_ERR(eb->diff_callbacks->file_deleted(&state, &tree_conflicted,
                                            fb->path,
                                            fb->path_start_revision,
                                            fb->path_end_revision,
@@ -506,6 +507,26 @@ diff_deleted_file(svn_wc_notify_state_t *state_p,
                                            fb->pristine_props,
                                            eb->diff_cmd_baton,
                                            scratch_pool));
+
+  if ((state != svn_wc_notify_state_missing)
+      && (state != svn_wc_notify_state_obstructed)
+      && !tree_conflicted)
+    {
+      action = svn_wc_notify_update_delete;
+    }
+
+  if (eb->notify_func)
+    {
+      const char *deleted_path = apr_pstrdup(eb->pool, path);
+      deleted_path_notify_t *dpn = apr_pcalloc(eb->pool, sizeof(*dpn));
+
+      dpn->kind = svn_node_dir;
+      dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
+      dpn->state = state;
+      dpn->tree_conflicted = tree_conflicted;
+      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -519,24 +540,47 @@ diff_deleted_file(svn_wc_notify_state_t *state_p,
  */
 /* ### TODO: Handle depth. */
 static svn_error_t *
-diff_deleted_dir(svn_wc_notify_state_t *state_p,
-                 svn_boolean_t *tree_conflicted_p,
-                 const char *dir,
+diff_deleted_dir(const char *path,
                  struct edit_baton *eb,
                  apr_pool_t *pool)
 {
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_action_t action;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(eb->revision));
 
   if (eb->cancel_func)
     SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->diff_callbacks->dir_deleted(
-                        state_p, tree_conflicted_p, dir,
-                        eb->diff_cmd_baton, pool));
+  SVN_ERR(eb->diff_callbacks->dir_deleted(&state, &tree_conflicted,
+                                          path,
+                                          eb->diff_cmd_baton, iterpool));
+
+  if ((state != svn_wc_notify_state_missing)
+      && (state != svn_wc_notify_state_obstructed)
+      && !tree_conflicted)
+    {
+      action = svn_wc_notify_update_delete;
+    }
+
+  if (eb->notify_func)
+    {
+      const char *deleted_path = apr_pstrdup(eb->pool, path);
+      deleted_path_notify_t *dpn = apr_pcalloc(eb->pool, sizeof(*dpn));
+
+      dpn->kind = svn_node_dir;
+      dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
+      dpn->state = state;
+      dpn->tree_conflicted = tree_conflicted;
+      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
+    }
+
+  if (tree_conflicted)
+    return SVN_NO_ERROR; /* Not walking children */
 
   /* The "old" dir will be skipped by the repository report.  If required,
    * crawl it recursively, diffing each file against the empty file.  This
@@ -551,7 +595,7 @@ diff_deleted_dir(svn_wc_notify_state_t *state_p,
   SVN_ERR(svn_ra_get_dir2(eb->ra_session,
                           &dirents,
                           NULL, NULL,
-                          dir,
+                          path,
                           eb->revision,
                           SVN_DIRENT_KIND,
                           pool));
@@ -559,22 +603,21 @@ diff_deleted_dir(svn_wc_notify_state_t *state_p,
   for (hi = apr_hash_first(pool, dirents); hi;
        hi = apr_hash_next(hi))
     {
-      const char *path;
+      const char *child_path;
       const char *name = svn__apr_hash_index_key(hi);
       svn_dirent_t *dirent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
-      path = svn_relpath_join(dir, name, iterpool);
+      child_path = svn_relpath_join(path, name, iterpool);
 
       if (dirent->kind == svn_node_file)
         {
-          SVN_ERR(diff_deleted_file(NULL, NULL, path, eb, iterpool));
+          SVN_ERR(diff_deleted_file(child_path, eb, iterpool));
         }
-
-      if (dirent->kind == svn_node_dir)
+      else if (dirent->kind == svn_node_dir)
         {
-          SVN_ERR(diff_deleted_dir(NULL, NULL, path, eb, iterpool));
+          SVN_ERR(diff_deleted_dir(child_path, eb, iterpool));
         }
     }
 
@@ -592,9 +635,6 @@ delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
-  svn_wc_notify_action_t action = svn_wc_notify_skip;
-  svn_boolean_t tree_conflicted = FALSE;
   apr_pool_t *scratch_pool;
 
   /* Process skips. */
@@ -611,37 +651,16 @@ delete_entry(const char *path,
     {
     case svn_node_file:
       {
-        SVN_ERR(diff_deleted_file(&state, &tree_conflicted, path, eb,
-                                  scratch_pool));
+        SVN_ERR(diff_deleted_file(path, eb, scratch_pool));
         break;
       }
     case svn_node_dir:
       {
-        SVN_ERR(diff_deleted_dir(&state, &tree_conflicted, path, eb,
-                                 scratch_pool));
+        SVN_ERR(diff_deleted_dir(path, eb, scratch_pool));
         break;
       }
     default:
       break;
-    }
-
-  if ((state != svn_wc_notify_state_missing)
-      && (state != svn_wc_notify_state_obstructed)
-      && !tree_conflicted)
-    {
-      action = svn_wc_notify_update_delete;
-    }
-
-  if (eb->notify_func)
-    {
-      const char *deleted_path = apr_pstrdup(eb->pool, path);
-      deleted_path_notify_t *dpn = apr_pcalloc(eb->pool, sizeof(*dpn));
-
-      dpn->kind = kind;
-      dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
-      dpn->state = state;
-      dpn->tree_conflicted = tree_conflicted;
-      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
     }
 
   svn_pool_destroy(scratch_pool);
