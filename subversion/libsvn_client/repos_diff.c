@@ -486,7 +486,7 @@ diff_deleted_file(const char *path,
 /*  struct edit_baton *eb = fb->edit_baton;*/
   const char *mimetype1, *mimetype2;
   svn_boolean_t tree_conflicted = FALSE;
-  svn_wc_notify_state_t state;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
   svn_wc_notify_action_t action;
 
   if (eb->cancel_func)
