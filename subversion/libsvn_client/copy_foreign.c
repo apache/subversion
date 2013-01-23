@@ -398,8 +398,9 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
 {
   struct edit_baton_t eb;
   svn_delta_editor_t *editor = svn_delta_default_editor(scratch_pool);
-  void *baton = &eb;
-  svn_ra_reporter3_t *reporter;
+  const svn_delta_editor_t *wrapped_editor;
+  void *wrapped_baton;
+  const svn_ra_reporter3_t *reporter;
   void *reporter_baton;
 
   eb.pool = scratch_pool;
@@ -422,13 +423,14 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
   editor->close_file = file_close;
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                            editor, baton,
-                                            &editor, &baton,
+                                            editor, &eb,
+                                            &wrapped_editor, &wrapped_baton,
                                             scratch_pool));
 
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &reporter_baton,
                             location->rev, "", svn_depth_infinity,
-                            FALSE, editor, baton, scratch_pool));
+                            FALSE, wrapped_editor, wrapped_baton,
+                            scratch_pool));
 
   SVN_ERR(reporter->set_path(reporter_baton, "", location->rev, depth,
                              TRUE /* incomplete */,
