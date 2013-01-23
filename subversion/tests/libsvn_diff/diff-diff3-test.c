@@ -2618,7 +2618,7 @@ two_way_issue_3362_v1(apr_pool_t *pool)
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
 
   SVN_ERR(two_way_diff("issue-3362-1-v1",
-                       "issue-3362-2-v2",
+                       "issue-3362-2-v1",
                         /* File 1 */
                                 "line_1\n"
                                 "line_2\n"
@@ -2687,12 +2687,13 @@ two_way_issue_3362_v1(apr_pool_t *pool)
                                 "line_27\n"
                                 "line_27a\n",
                         /* Expected */
-                        "--- issue-3362-1" APR_EOL_STR
-                        "+++ issue-3362-2" APR_EOL_STR
-                        "@@ -1,12 +1,17 @@" APR_EOL_STR
+                        "--- issue-3362-1-v1" APR_EOL_STR
+                        "+++ issue-3362-2-v1" APR_EOL_STR
+                        "@@ -1,14 +1,19 @@" APR_EOL_STR
                         "+line_1a\n"
                         "+line_2a\n"
                         "+line_3a\n"
+                        " line_1\n" /* 1.7 mem diff: line missing */
                         " line_2\n"
                         " line_3\n"
                         " line_4\n"
@@ -2711,6 +2712,7 @@ two_way_issue_3362_v1(apr_pool_t *pool)
                         "+line_11c\n"
                         " line_12\n"
                         " line_13\n"
+                        " line_14\n" /* 1.7 mem diff: line missing */
                         "@@ -16,7 +21,9 @@" APR_EOL_STR
                         " line_16\n"
                         " line_17\n"
@@ -2816,12 +2818,13 @@ two_way_issue_3362_v2(apr_pool_t *pool)
                                 "line_29\n"
                                 "line_30\n",
                         /* Expected */
-                        "--- issue-3362-1" APR_EOL_STR
-                        "+++ issue-3362-2" APR_EOL_STR
-                        "@@ -1,12 +1,19 @@" APR_EOL_STR
+                        "--- issue-3362-1-v2" APR_EOL_STR
+                        "+++ issue-3362-2-v2" APR_EOL_STR
+                        "@@ -1,14 +1,21 @@" APR_EOL_STR
                         "+line_1a\n"
                         "+line_1b\n"
                         "+line_1c\n"
+                        " line_1\n" /* 1.7 mem diff: line missing */
                         " line_2\n"
                         " line_3\n"
                         " line_4\n"
@@ -2840,6 +2843,7 @@ two_way_issue_3362_v2(apr_pool_t *pool)
                         "+line_11c\n"
                         " line_12\n"
                         " line_13\n"
+                        " line_14\n" /* 1.7 mem diff: line missing */
                         "@@ -16,7 +23,9 @@" APR_EOL_STR
                         " line_16\n"
                         " line_17\n"
@@ -2902,9 +2906,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_PASS2(test_token_compare,
                    "compare tokes at the chunk boundary"),
-    SVN_TEST_XFAIL2(two_way_issue_3362_v1,
+    SVN_TEST_PASS2(two_way_issue_3362_v1,
                    "2-way issue #3362 test v1"),
-    SVN_TEST_XFAIL2(two_way_issue_3362_v2,
+    SVN_TEST_PASS2(two_way_issue_3362_v2,
                    "2-way issue #3362 test v2"),
     SVN_TEST_NULL
   };
