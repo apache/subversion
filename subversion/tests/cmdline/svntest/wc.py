@@ -337,7 +337,8 @@ class State:
       if item.status:
         # If this is an unversioned tree-conflict, remove it.
         # These are only in their parents' THIS_DIR, they don't have entries.
-        if item.status[0] in '!?' and item.treeconflict == 'C':
+        if item.status[0] in '!?' and item.treeconflict == 'C' and \
+                                      item.entry_status is None:
           del self.desc[path]
         # Normal externals are not stored in the parent wc, drop the root
         # and everything in these working copies
