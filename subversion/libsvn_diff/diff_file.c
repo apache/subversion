@@ -1568,6 +1568,19 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
   return SVN_NO_ERROR;
 }
 
+static APR_INLINE svn_error_t *
+output_unified_diff_range(svn_diff__file_output_baton_t *output_baton,
+                          int source,
+                          svn_diff__file_output_unified_type_e type,
+                          apr_off_t until)
+{
+  while (output_baton->current_line[source] < until)
+    {
+      SVN_ERR(output_unified_line(output_baton, type, source));
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
@@ -1585,11 +1598,9 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
                 + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
   /* Add trailing context to the hunk */
-  while (baton->current_line[0] < target_line)
-    {
-      SVN_ERR(output_unified_line
-              (baton, svn_diff__file_output_unified_context, 0));
-    }
+  SVN_ERR(output_unified_diff_range(baton, 0 /* original */,
+                                    svn_diff__file_output_unified_context,
+                                    target_line));
 
   /* If the file is non-empty, convert the line indexes from
      zero based to one based */
@@ -1627,95 +1638,87 @@ output_unified_diff_modified(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   svn_diff__file_output_baton_t *output_baton = baton;
-  apr_off_t target_line[2];
-  int i;
+  apr_off_t target_orig;
+  apr_off_t target_mod;
+  svn_boolean_t store_extra_context = FALSE;
 
-  target_line[0] = original_start >= SVN_DIFF__UNIFIED_CONTEXT_SIZE
+  target_orig = original_start >= SVN_DIFF__UNIFIED_CONTEXT_SIZE
                    ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
-  target_line[1] = modified_start;
+  target_mod = modified_start;
 
   /* If the changed ranges are far enough apart (no overlapping or connecting
      context), flush the current hunk, initialize the next hunk and skip the
      lines not in context.  Also do this when this is the first hunk.
    */
-  if (output_baton->current_line[0] < target_line[0]
+  if (output_baton->current_line[0] < target_orig
       && (output_baton->hunk_start[0] + output_baton->hunk_length[0]
-          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0]
+          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_orig
           || output_baton->hunk_length[0] == 0))
     {
       SVN_ERR(output_unified_flush_hunk(output_baton));
 
-      output_baton->hunk_start[0] = target_line[0];
-      output_baton->hunk_start[1] = target_line[1] + target_line[0]
-                                    - original_start;
+      output_baton->hunk_start[0] = target_orig;
+      output_baton->hunk_start[1] = target_mod +(target_orig - original_start);
 
-      /* Skip lines until we are at the beginning of the context we want to
-         display */
-      while (output_baton->current_line[0] < target_line[0])
+      store_extra_context = TRUE;
+    }
+
+  /* Original: Skip lines until we are at the beginning of the context we want
+     to display */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_skip,
+                                    target_orig));
+
+  /* Modified: Skip lines until we are at the start of the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
+                                    svn_diff__file_output_unified_skip,
+                                    target_mod));
+
+  /* Note that these two skips might store data needed by the following
+     block, by processing the otherwise ignored lines */
+
+  if (store_extra_context && output_baton->show_c_function)
+    {
+      apr_size_t p;
+      const char *invalid_character;
+
+      /* Save the extra context for later use.
+       * Note that the last byte of the hunk_extra_context array is never
+       * touched after it is zero-initialized, so the array is always
+       * 0-terminated. */
+      strncpy(output_baton->hunk_extra_context,
+              output_baton->extra_context->data,
+              SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+      /* Trim whitespace at the end, most notably to get rid of any
+       * newline characters. */
+      p = strlen(output_baton->hunk_extra_context);
+      while (p > 0
+             && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
         {
-          SVN_ERR(output_unified_line(output_baton,
-                                      svn_diff__file_output_unified_skip, 0));
+          output_baton->hunk_extra_context[--p] = '\0';
         }
-
-      if (output_baton->show_c_function)
+      invalid_character =
+        svn_utf__last_valid(output_baton->hunk_extra_context,
+                            SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+      for (p = invalid_character - output_baton->hunk_extra_context;
+           p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
         {
-          apr_size_t p;
-          const char *invalid_character;
-
-          /* Save the extra context for later use.
-           * Note that the last byte of the hunk_extra_context array is never
-           * touched after it is zero-initialized, so the array is always
-           * 0-terminated. */
-          strncpy(output_baton->hunk_extra_context,
-                  output_baton->extra_context->data,
-                  SVN_DIFF__EXTRA_CONTEXT_LENGTH);
-          /* Trim whitespace at the end, most notably to get rid of any
-           * newline characters. */
-          p = strlen(output_baton->hunk_extra_context);
-          while (p > 0
-                 && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
-            {
-              output_baton->hunk_extra_context[--p] = '\0';
-            }
-          invalid_character =
-            svn_utf__last_valid(output_baton->hunk_extra_context,
-                                SVN_DIFF__EXTRA_CONTEXT_LENGTH);
-          for (p = invalid_character - output_baton->hunk_extra_context;
-               p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
-            {
-              output_baton->hunk_extra_context[p] = '\0';
-            }
-        }
-    }
-
-  /* Skip lines until we are at the start of the changed range */
-  while (output_baton->current_line[1] < target_line[1])
-    {
-      SVN_ERR(output_unified_line(output_baton,
-                                  svn_diff__file_output_unified_skip, 1));
-    }
-
-  /* Output the context preceding the changed range */
-  while (output_baton->current_line[0] < original_start)
-    {
-      SVN_ERR(output_unified_line(output_baton,
-                                  svn_diff__file_output_unified_context, 0));
-    }
-
-  target_line[0] = original_start + original_length;
-  target_line[1] = modified_start + modified_length;
-
-  /* Output the changed range */
-  for (i = 0; i < 2; i++)
-    {
-      while (output_baton->current_line[i] < target_line[i])
-        {
-          SVN_ERR(output_unified_line
-                          (output_baton,
-                           i == 0 ? svn_diff__file_output_unified_delete
-                                  : svn_diff__file_output_unified_insert, i));
+          output_baton->hunk_extra_context[p] = '\0';
         }
     }
+
+  /* Original: Output the context preceding the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_context,
+                                    original_start));
+
+  /* Both: Output the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_delete,
+                                    original_start + original_length));
+  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
+                                    svn_diff__file_output_unified_insert,
+                                    modified_start + modified_length));
 
   return SVN_NO_ERROR;
 }
