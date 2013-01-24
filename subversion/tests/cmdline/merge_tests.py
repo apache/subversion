@@ -13057,6 +13057,8 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
+# Part of this test is a regression test for issue #3250 "Repeated merging
+# of conflicting properties fails".
 @Issue(3250)
 def merge_two_edits_to_same_prop(sbox):
   "merge two successive edits to the same property"
@@ -13103,12 +13105,21 @@ def merge_two_edits_to_same_prop(sbox):
   # some other target within the same merge requiring only a part of the
   # revision range.
 
-  # We test issue #3250 here
-  # Revert changes to target branch wc
+  # ====================================================================
+
+  # We test issue #3250 here: that is, test that we can make two successive
+  # conflicting changes to the same property on the same node (here a file;
+  # in #3250 it was on a dir).
+  #
+  # ### But we no longer support merging into a node that's already in
+  #     conflict, and the 'rev3' merge here has been tweaked to resolve
+  #     the conflict, so it no longer tests the original #3250 scenario.
+  #
+  # Revert changes to branch wc
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', A_COPY_path)
 
-  # In the target branch, make two successive changes to the same property
+  # In the branch, make two successive changes to the same property
   sbox.simple_propset('p', 'new-val-3', 'A_COPY/mu')
   sbox.simple_commit('A_COPY/mu')
   rev3 = initial_rev + 3
@@ -13116,16 +13127,16 @@ def merge_two_edits_to_same_prop(sbox):
   sbox.simple_commit('A_COPY/mu')
   rev4 = initial_rev + 4
 
-  # Merge the two changes together to source.
+  # Merge the two changes together to trunk.
   svn_merge([rev3, rev4], A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
-  # Revert changes to source wc, to test next scenario of #3250
+  # Revert changes to trunk wc, to test next scenario of #3250
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', A_path)
 
-  # Merge the first change, then the second, to source.
+  # Merge the first change, then the second, to trunk.
   svn_merge(rev3, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
       ], prop_conflicts=1,
