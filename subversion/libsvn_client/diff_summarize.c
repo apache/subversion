@@ -77,6 +77,8 @@ send_summary(struct summarize_baton_t *b,
           case svn_client_diff_summarize_kind_deleted:
             summarize_kind = svn_client_diff_summarize_kind_added;
             break;
+          default:
+            break;
         }
     }
 
