@@ -307,8 +307,7 @@ def copy_changed_file(src, tgt):
 def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
-    ext = os.path.splitext(name)[1]
-    if ext != ".exe":
+    if not name.endswith('.exe'):
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
@@ -667,7 +666,9 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     for dirpath, dirs, files in os.walk('subversion'):
-      copy_execs(baton, dirpath, dirs + files)
+      copy_execs(baton, dirpath, files)
+    for dirpath, dirs, files in os.walk('tools/server-side'):
+      copy_execs(baton, dirpath, files)
   except:
     os.chdir(old_cwd)
     raise
