@@ -15145,8 +15145,6 @@ def record_only_merge(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3514 'svn merge --accept [ base | theirs-full ]
 # doesn't work'
-#
-# This test is marked as XFail until issue #3514 is fixed.
 @Issue(3514)
 def merge_automatic_conflict_resolution(sbox):
   "automatic conflict resolutions work with merge"
