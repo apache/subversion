@@ -223,8 +223,6 @@ svn_diff__tree_processor_create(void *baton,
   return &wrapper->tp;
 }
 
-//////////////
-
 struct reverse_tree_baton_t
 {
   svn_diff_tree_processor_t *processor;
