@@ -1788,6 +1788,31 @@ def locks_stick_over_switch(sbox):
                                         expected_output, None, expected_status)
 
 
+@XFail()
+@Issue(4304)
+def lock_unlock_deleted(sbox):
+  "lock/unlock a deleted file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', sbox.ospath('A/mu'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' unlocked.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'unlock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1839,6 +1864,7 @@ test_list = [ None,
               lock_invalid_token,
               lock_multi_wc,
               locks_stick_over_switch,
+              lock_unlock_deleted,
             ]
 
 if __name__ == '__main__':
