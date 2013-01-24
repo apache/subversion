@@ -424,6 +424,22 @@ def expected_noop_update_output(rev):
                                      % (rev),
                                      "no-op update")
 
+def run_and_verify_svnauthz(message, expected_stdout, expected_stderr,
+                            expected_exit, compat_mode, *varargs):
+  """Run svnauthz command and check its output and exit code.
+     If COMPAT_MODE is True then run the command in pre-1.8
+     compatibility mode"""
+
+  if compat_mode:
+    exit_code, out, err = main.run_svnauthz_validate(*varargs)
+  else:
+    exit_code, out, err = main.run_svnauthz(*varargs)
+
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
 ######################################################################
 # Subversion Actions
 #

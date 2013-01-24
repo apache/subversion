@@ -85,6 +85,8 @@ struct svnauthz_opt_state
 /* The name of this binary in 1.7 and earlier. */
 #define SVNAUTHZ_COMPAT_NAME "svnauthz-validate"
 
+/* Libtool command prefix */
+#define SVNAUTHZ_LT_PREFIX "lt-"
 
 
 /*** Subcommands. */
@@ -361,6 +363,10 @@ use_compat_mode(const char *cmd, apr_pool_t *pool)
 {
   cmd = svn_dirent_internal_style(cmd, pool);
   cmd = svn_dirent_basename(cmd, NULL);
+
+  /* Skip over the Libtool command prefix if it exists on the command. */
+  if (0 == strncmp(SVNAUTHZ_LT_PREFIX, cmd, sizeof(SVNAUTHZ_LT_PREFIX)-1))
+    cmd += sizeof(SVNAUTHZ_LT_PREFIX) - 1;
 
   /* Deliberately look only for the start of the name to deal with
      the executable extension on some platforms. */
