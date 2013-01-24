@@ -157,6 +157,15 @@ atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
 
+######################################################################
+# The location of svnauthz binary, relative to the only scripts that
+# import this file right now (they live in ../).
+# Use --tools to overide these defaults.
+svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
+svnauthz_validate_binary = os.path.abspath(
+    '../../../tools/server-side/svnauthz-validate' + _exe
+)
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -702,6 +711,16 @@ def run_svnmucc(*varargs):
   list of lines (including line terminators).  Use binary mode for output."""
   return run_command(svnmucc_binary, 1, True,
                      *(_with_auth(_with_config_dir(varargs))))
+
+def run_svnauthz(*varargs):
+  """Run svnauthz with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnauthz_binary, 1, False, *varargs)
+
+def run_svnauthz_validate(*varargs):
+  """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
+  stderr as list of lines (including line terminators)."""
+  return run_command(svnauthz_validate_binary, 1, False, *varargs)
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
@@ -1660,6 +1679,8 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--tools-bin', action='store', dest='tools_bin',
+                    help='Use the svn tools installed in this path')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1800,6 +1821,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svndumpfilter_binary
   global svnversion_binary
   global svnmucc_binary
+  global svnauthz_binary
+  global svnauthz_validate_binary
   global options
 
   if test_name:
@@ -1916,6 +1939,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
+
+  if options.tools_bin:
+    svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
+    svnauthz_validate_binary = os.path.join(options.tools_bin,
+                                            'svnauthz-validate' + _exe)
 
   ######################################################################
 
