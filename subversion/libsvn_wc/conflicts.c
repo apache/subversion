@@ -1903,8 +1903,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
       svn_skel_t *work_items;
       svn_boolean_t was_resolved;
 
-      SVN_ERR(svn_wc__conflict_read_text_conflict(&their_original_abspath,
-                                                  &mine_abspath,
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
+                                                  &their_original_abspath,
                                                   &their_abspath,
                                                   db, local_abspath,
                                                   conflict_skel,
