@@ -2557,6 +2557,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                 svn_wc_conflict_action_edit, reason));
           *tree_conflicted = TRUE;
+          *skip = TRUE;
           *skip_children = TRUE;
         }
     }
