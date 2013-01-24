@@ -182,6 +182,9 @@ cb_dir_closed(svn_wc_notify_state_t *contentstate,
   struct summarize_baton_t *b = diff_baton;
   svn_boolean_t prop_change;
 
+  if (! svn_relpath_skip_ancestor(b->target, path))
+    return SVN_NO_ERROR;
+
   prop_change = apr_hash_get(b->prop_changes, path, APR_HASH_KEY_STRING) != NULL;
   if (dir_was_added || prop_change)
     SVN_ERR(send_summary(b, path,
