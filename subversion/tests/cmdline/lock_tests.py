@@ -1787,8 +1787,6 @@ def locks_stick_over_switch(sbox):
                                         repo_url + '/A',
                                         expected_output, None, expected_status)
 
-
-@XFail()
 @Issue(4304)
 def lock_unlock_deleted(sbox):
   "lock/unlock a deleted file"

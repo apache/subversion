@@ -1249,9 +1249,19 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
     }
 
   /* if svn:needs-lock is present, then make the file read-only. */
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
-                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
-                                   scratch_pool));
+  err = svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
+                                 SVN_PROP_NEEDS_LOCK, scratch_pool,
+                                 scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      return SVN_NO_ERROR; /* Node is shadowed and/or deleted,
+                              so we shouldn't apply its lock */
+    }
+
   if (needs_lock)
     SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
 
