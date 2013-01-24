@@ -39,6 +39,7 @@
 
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1671,6 +1672,50 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_handle_t)(svn_boolean_t tree_conflicted,
+                                       svn_wc_notify_state_t *state,
+                                       svn_wc_notify_state_t *prop_state,
+                                       const char *relpath,
+                                       svn_kind_t kind,
+                                       svn_boolean_t before_op,
+                                       svn_boolean_t for_add,
+                                       svn_boolean_t for_delete,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_close_t)(const char *relpath,
+                                      svn_kind_t kind,
+                                      void *state_baton,
+                                      apr_pool_t *scratch_pool);
+
+
+/** Obtains a diff processor that will drive the diff callbacks when it
+ * is invoked. The state arguments will be handled by the state processor
+ * or ignored if STATE_HANDLER is NULL
+ */
+svn_error_t *
+svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
+                            const svn_wc_diff_callbacks4_t *callbacks,
+                            void *callback_baton,
+                            svn_wc__diff_state_handle_t state_handle,
+                            svn_wc__diff_state_close_t state_close,
+                            void *state_baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 
 /**
  * Assuming @a local_abspath itself or any of its children are under version

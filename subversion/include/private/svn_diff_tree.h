@@ -40,8 +40,8 @@ typedef struct svn_diff_source_t
   svn_revnum_t revision;
 
   /* Depending on the driver */
-  /*const char *repos_relpath;
-  const char *local_abspath;*/
+  const char *repos_relpath;
+  const char *local_abspath;
 } svn_diff_source_t;
 
 /**

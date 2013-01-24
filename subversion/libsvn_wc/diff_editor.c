@@ -63,6 +63,7 @@
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_diff_tree.h"
 #include "private/svn_editor.h"
 
 #include "wc.h"
@@ -1956,5 +1957,479 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                                    NULL, NULL, shim_callbacks,
                                    result_pool, scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Wrapping svn_wc_diff_callbacks4_t as svn_diff_tree_processor_t */
+
+/* baton for the svn_diff_tree_processor_t wrapper */
+typedef struct wc_diff_wrap_baton_t
+{
+  const svn_wc_diff_callbacks4_t *callbacks;
+  void *callback_baton;
+  svn_wc__diff_state_handle_t state_handle;
+  svn_wc__diff_state_close_t state_close;
+  void *state_baton;
+
+  apr_pool_t *result_pool;
+  const char *empty_file;
+
+} wc_diff_wrap_baton_t;
+
+static svn_error_t *
+wrap_ensure_empty_file(wc_diff_wrap_baton_t *wb,
+                       apr_pool_t *scratch_pool)
+{
+  if (wb->empty_file)
+    return SVN_NO_ERROR;
+
+  /* Create a unique file in the tempdir */
+  SVN_ERR(svn_io_open_uniquely_named(NULL, &wb->empty_file, NULL, NULL, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     wb->result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_dir_opened(void **new_dir_baton,
+                svn_boolean_t *skip,
+                svn_boolean_t *skip_children,
+                const char *relpath,
+                const svn_diff_source_t *left_source,
+                const svn_diff_source_t *right_source,
+                const svn_diff_source_t *copyfrom_source,
+                void *parent_dir_baton,
+                const svn_diff_tree_processor_t *processor,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+
+  /* Maybe store state and tree_conflicted in baton? */
+  if (left_source != NULL)
+    {
+      /* Open for change or delete */
+      SVN_ERR(wb->callbacks->dir_opened(&tree_conflicted, skip, skip_children,
+                                        relpath,
+                                        right_source
+                                            ? right_source->revision
+                                            : (left_source
+                                                    ? left_source->revision
+                                                    : SVN_INVALID_REVNUM),
+                                        wb->callback_baton,
+                                        scratch_pool));
+
+      if (wb->state_handle)
+        SVN_ERR(wb->state_handle(tree_conflicted, NULL, NULL,
+                                 relpath, svn_kind_dir,
+                                 TRUE /* before operation */,
+                                 FALSE /* for_add */,
+                                 (right_source == NULL) /* for_delete */,
+                                 wb->state_baton,
+                                 scratch_pool));
+    }
+  else /* left_source == NULL -> Add */
+    {
+      svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+      SVN_ERR(wb->callbacks->dir_added(&state, &tree_conflicted,
+                                       skip, skip_children,
+                                       relpath,
+                                       right_source->revision,
+                                       copyfrom_source
+                                            ? copyfrom_source->repos_relpath
+                                            : NULL,
+                                       copyfrom_source
+                                            ? copyfrom_source->revision
+                                            : SVN_INVALID_REVNUM,
+                                       wb->callback_baton,
+                                       scratch_pool));
+
+      if (wb->state_handle)
+        SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
+                                 relpath, svn_kind_dir,
+                                 TRUE, TRUE, FALSE,
+                                 wb->state_baton,
+                                 scratch_pool));
+    }
+
+  *new_dir_baton = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_dir_added(const char *relpath,
+               const svn_diff_source_t *right_source,
+               const svn_diff_source_t *copyfrom_source,
+               /*const*/ apr_hash_t *copyfrom_props,
+               /*const*/ apr_hash_t *right_props,
+               void *dir_baton,
+               const svn_diff_tree_processor_t *processor,
+               apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state = svn_wc_notify_state_unknown;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  apr_hash_t *pristine_props = copyfrom_props;
+  apr_array_header_t *prop_changes = NULL;
+
+  if (right_props && apr_hash_count(right_props))
+    {
+      if (!pristine_props)
+        pristine_props = apr_hash_make(scratch_pool);
+
+      SVN_ERR(svn_prop_diffs(&prop_changes, right_props, pristine_props,
+                             scratch_pool));
+
+      SVN_ERR(wb->callbacks->dir_props_changed(&prop_state,
+                                               &tree_conflicted,
+                                               relpath,
+                                               TRUE /* dir_was_added */,
+                                               prop_changes, pristine_props,
+                                               wb->callback_baton,
+                                               scratch_pool));
+    }
+
+  SVN_ERR(wb->callbacks->dir_closed(&state, &prop_state,
+                                   &tree_conflicted,
+                                   relpath,
+                                   TRUE /* dir_was_added */,
+                                   wb->callback_baton,
+                                   scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
+                             relpath, svn_kind_dir,
+                             FALSE /* before operation */,
+                             TRUE /* for_add */, FALSE /* for_delete */,
+                             wb->state_baton,
+                             scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_dir_deleted(const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 /*const*/ apr_hash_t *left_props,
+                 void *dir_baton,
+                 const svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+
+  if (wb->state_close)
+    SVN_ERR(wb->state_close(relpath, svn_kind_dir,
+                            wb->state_baton,
+                            scratch_pool));
+
+  SVN_ERR(wb->callbacks->dir_deleted(&state, &tree_conflicted,
+                                     relpath,
+                                     wb->callback_baton,
+                                     scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
+                             relpath, svn_kind_dir,
+                             FALSE /* before operation */,
+                             FALSE /* for_add */, TRUE /* for_delete */,
+                             wb->state_baton,
+                             scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_dir_closed(const char *relpath,
+                const svn_diff_source_t *left_source,
+                const svn_diff_source_t *right_source,
+                void *dir_baton,
+                const svn_diff_tree_processor_t *processor,
+                apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+
+  if (wb->state_close)
+    SVN_ERR(wb->state_close(relpath, svn_kind_dir,
+                            wb->state_baton, scratch_pool));
+
+  /* No previous implementations provided these arguments, so we
+     are not doing with them either */
+  SVN_ERR(wb->callbacks->dir_closed(NULL, NULL, NULL,
+                                    relpath,
+                                    (left_source == NULL) /* added */,
+                                    wb->callback_baton,
+                                    scratch_pool));
+
+return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_dir_changed(const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 const svn_diff_source_t *right_source,
+                 /*const*/ apr_hash_t *left_props,
+                 /*const*/ apr_hash_t *right_props,
+                 const apr_array_header_t *prop_changes,
+                 void *dir_baton,
+                 const struct svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
+
+  SVN_ERR(wb->callbacks->dir_props_changed(&prop_state, &tree_conflicted,
+                                           relpath,
+                                           (left_source == NULL) /* added */,
+                                           prop_changes,
+                                           left_props,
+                                           wb->callback_baton,
+                                           scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, NULL, &prop_state,
+                             relpath, svn_kind_dir,
+                             FALSE /* before operation */,
+                             FALSE /* for_add */, FALSE /* for_delete */,
+                             wb->state_baton,
+                             scratch_pool));
+
+
+  /* And call dir_closed, etc */
+  SVN_ERR(wrap_dir_closed(relpath, left_source, right_source,
+                          dir_baton, processor,
+                          scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_file_opened(void **new_file_baton,
+                 svn_boolean_t *skip,
+                 const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 const svn_diff_source_t *right_source,
+                 const svn_diff_source_t *copyfrom_source,
+                 void *dir_baton,
+                 const svn_diff_tree_processor_t *processor,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+
+  if (left_source) /* If ! added */
+    SVN_ERR(wb->callbacks->file_opened(&tree_conflicted, skip, relpath,
+                                       right_source
+                                            ? right_source->revision
+                                            : (left_source
+                                                    ? left_source->revision
+                                                    : SVN_INVALID_REVNUM),
+                                       wb->callback_baton, scratch_pool));
+
+  /* No old implementation used the output arguments for notify */
+
+  *new_file_baton = NULL;
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_file_added(const char *relpath,
+                const svn_diff_source_t *copyfrom_source,
+                const svn_diff_source_t *right_source,
+                const char *copyfrom_file,
+                const char *right_file,
+                /*const*/ apr_hash_t *copyfrom_props,
+                /*const*/ apr_hash_t *right_props,
+                void *file_baton,
+                const svn_diff_tree_processor_t *processor,
+                apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
+  apr_array_header_t *prop_changes;
+
+  if (! copyfrom_props)
+    copyfrom_props = apr_hash_make(scratch_pool);
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, right_props, copyfrom_props,
+                         scratch_pool));
+
+  if (! copyfrom_source)
+    SVN_ERR(wrap_ensure_empty_file(wb, scratch_pool));
+
+  SVN_ERR(wb->callbacks->file_added(&state, &prop_state, &tree_conflicted,
+                                    relpath,
+                                    copyfrom_source
+                                        ? copyfrom_file
+                                        : wb->empty_file,
+                                    right_file,
+                                    copyfrom_source
+                                       ? copyfrom_source->revision
+                                       : 0 /* For legacy reasons */,
+                                    right_source->revision,
+                                    copyfrom_props
+                                     ? svn_prop_get_value(copyfrom_props,
+                                                          SVN_PROP_MIME_TYPE)
+                                     : NULL,
+                                    right_props
+                                     ? svn_prop_get_value(right_props,
+                                                          SVN_PROP_MIME_TYPE)
+                                     : NULL,
+                                    NULL, SVN_INVALID_REVNUM,
+                                    prop_changes, copyfrom_props,
+                                    wb->callback_baton,
+                                    scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
+                             relpath, svn_kind_file,
+                             FALSE /* before operation */,
+                             TRUE, FALSE,
+                             wb->state_baton,
+                             scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_file_deleted(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const char *left_file,
+                  apr_hash_t *left_props,
+                  void *file_baton,
+                  const svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+
+  SVN_ERR(wrap_ensure_empty_file(wb, scratch_pool));
+
+  SVN_ERR(wb->callbacks->file_deleted(&state, &tree_conflicted,
+                                      relpath,
+                                      left_file, wb->empty_file,
+                                      left_props
+                                       ? svn_prop_get_value(left_props,
+                                                            SVN_PROP_MIME_TYPE)
+                                       : NULL,
+                                      NULL,
+                                      left_props,
+                                      wb->callback_baton,
+                                      scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
+                             relpath, svn_kind_file,
+                             FALSE /* before operation */,
+                             FALSE, TRUE,
+                             wb->state_baton,
+                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t function */
+static svn_error_t *
+wrap_file_changed(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const svn_diff_source_t *right_source,
+                  const char *left_file,
+                  const char *right_file,
+                  /*const*/ apr_hash_t *left_props,
+                  /*const*/ apr_hash_t *right_props,
+                  svn_boolean_t file_modified,
+                  const apr_array_header_t *prop_changes,
+                  void *file_baton,
+                  const svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  svn_boolean_t tree_conflicted = FALSE;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
+
+  SVN_ERR(wrap_ensure_empty_file(wb, scratch_pool));
+
+  SVN_ERR(wb->callbacks->file_changed(&state, &prop_state, &tree_conflicted,
+                                      relpath,
+                                      left_file, right_file,
+                                      left_source->revision,
+                                      right_source->revision,
+                                      left_props
+                                       ? svn_prop_get_value(left_props,
+                                                            SVN_PROP_MIME_TYPE)
+                                       : NULL,
+                                      right_props
+                                       ? svn_prop_get_value(right_props,
+                                                            SVN_PROP_MIME_TYPE)
+                                       : NULL,
+                                       prop_changes,
+                                      left_props,
+                                      wb->callback_baton,
+                                      scratch_pool));
+
+  if (wb->state_handle)
+    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
+                             relpath, svn_kind_file,
+                             FALSE /* before operation */,
+                             FALSE, FALSE,
+                             wb->state_baton,
+                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
+                            const svn_wc_diff_callbacks4_t *callbacks,
+                            void *callback_baton,
+                            svn_wc__diff_state_handle_t state_handler,
+                            svn_wc__diff_state_close_t state_close,
+                            void *state_baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wrap_baton;
+  svn_diff_tree_processor_t *processor;
+
+  wrap_baton = apr_pcalloc(result_pool, sizeof(*wrap_baton));
+
+  wrap_baton->result_pool = result_pool;
+  wrap_baton->callbacks = callbacks;
+  wrap_baton->callback_baton = callback_baton;
+  wrap_baton->state_handle = state_handler;
+  wrap_baton->state_close = state_close;
+  wrap_baton->state_baton = state_baton;
+  wrap_baton->empty_file = NULL;
+
+  processor = svn_diff__tree_processor_create(wrap_baton, result_pool);
+
+  processor->dir_opened   = wrap_dir_opened;
+  processor->dir_added    = wrap_dir_added;
+  processor->dir_deleted  = wrap_dir_deleted;
+  processor->dir_changed  = wrap_dir_changed;
+  processor->dir_closed   = wrap_dir_closed;
+
+  processor->file_opened   = wrap_file_opened;
+  processor->file_added    = wrap_file_added;
+  processor->file_deleted  = wrap_file_deleted;
+  processor->file_changed  = wrap_file_changed;
+  /*processor->file_closed   = wrap_file_closed*/; /* Not needed */
+
+  *diff_processor = processor;
   return SVN_NO_ERROR;
 }
