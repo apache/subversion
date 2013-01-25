@@ -215,6 +215,7 @@ class ExpectedOutput:
 
 
 class AnyOutput(ExpectedOutput):
+  """Matches any non-empty output."""
   def __init__(self):
     ExpectedOutput.__init__(self, None, False)
 
