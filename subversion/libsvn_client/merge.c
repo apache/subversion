@@ -1505,8 +1505,13 @@ typedef struct conflict_resolver_baton_t
 } conflict_resolver_baton_t;
 
 /* An implementation of the svn_wc_conflict_resolver_func_t interface.
-   We keep a record of paths which remain in conflict after any
-   resolution attempt from BATON->wrapped_func. */
+
+   This is called by the WC layer when a file merge conflicts.  We call
+   the wrapped conflict callback, BATON->wrapped_func, or, if that is
+   null, we postpone the conflict.
+
+   We keep a record of paths which remain in conflict.
+*/
 static svn_error_t *
 conflict_resolver(svn_wc_conflict_result_t **result,
                   const svn_wc_conflict_description2_t *description,
@@ -1723,7 +1728,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
                                       local_abspath, FALSE, scratch_pool));
 
-      /* Postpone all conflicts. */
+      /* Wrap the resolver so as to keep a note of all postponed conflicts. */
       conflict_baton.wrapped_func = ctx->conflict_func2;
       conflict_baton.wrapped_baton = ctx->conflict_baton2;
 
