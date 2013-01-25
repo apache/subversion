@@ -18176,8 +18176,7 @@ def merge_properties_on_adds(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4306)
-@XFail()
-# Test for issue #4306 'multiple editor drive merges record wrong
+# Test for issue #4306 'multiple editor drive file merges record wrong
 # mergeinfo during conflicts'
 def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   "conflicted split merge can be repeated"
@@ -18218,8 +18217,8 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   svntest.actions.run_and_verify_svn(None, None, '.*', 'merge', '^/iota',
                                      iota_copy_path, '--accept', 'postpone')
 
-  # Currently this test fails because the merge fails after merging
-  # only r2 (as it should) but mergeinfo for r5-6 is recorded, preventing
+  # Previously this test failed because the merge failed after merging
+  # only r2 (as it should) but mergeinfo for r5-6 was recorded, preventing
   # subsequent repeat merges from applying the operative r5.
   svntest.actions.run_and_verify_svn(
     "Incorrect mergeinfo set during conflict aborted merge",

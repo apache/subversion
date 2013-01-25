@@ -6923,7 +6923,10 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         &filtered_rangelist,
         mergeinfo_path,
         merge_target->implicit_mergeinfo,
-        &range, iterpool));
+        /* Only record partial mergeinfo if only a partial merge was
+           performed before a conflict was encountered. */
+        conflicted_range ? conflicted_range : &range,
+        iterpool));
 
       /* Only record mergeinfo if there is something other than
          self-referential mergeinfo, but don't record mergeinfo if
