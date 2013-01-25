@@ -13888,6 +13888,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
+@Wimp("Needs review after issue #3405 fix")
 def no_self_referential_filtering_on_added_path(sbox):
   "no self referential filtering on added path"
 
@@ -17654,6 +17655,7 @@ def merge_adds_then_deletes_subtree(sbox):
 # cause spurious subtree mergeinfo'.
 @SkipUnless(server_has_mergeinfo)
 @Issue(4169)
+@Wimp("Needs review after issue #3405 fix")
 def merge_with_added_subtrees_with_mergeinfo(sbox):
   "merge with added subtrees with mergeinfo"
 
@@ -18098,7 +18100,7 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
-@XFail()
+@Issue(3405)
 def merge_properties_on_adds(sbox):
   "merged directory properties are added"
 

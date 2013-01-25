@@ -1834,6 +1834,26 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               void *notify_baton,
               apr_pool_t *scratch_pool);
 
+
+/* During merge when we encounter added directories, we add them using
+   svn_wc_add4(), recording its original location, etc. But at that time
+   we don't have its original properties. This function allows updating the
+   BASE properties of such a special added node, but only before it receives
+   other changes.
+
+   NEW_ORIGINAL_PROPS is a new set of properties, including entry props that
+   will be applied to LOCAL_ABSPATH as pristine properties.
+
+   The copyfrom_* arguments are used to verify (some of) the assumptions of
+   this function */
+svn_error_t *
+svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_hash_t *new_original_props,
+                               const char *copyfrom_url,
+                               svn_revnum_t copyfrom_rev,
+                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
