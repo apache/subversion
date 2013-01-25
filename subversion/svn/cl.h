@@ -355,13 +355,18 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Create an return a baton for use with svn_cl__conflict_func_postpone(),
- * allocated in RESULT_POOL. */
+/* Create and return a baton for use with svn_cl__conflict_func_postpone()
+ * and svn_cl__resolve_postponed_conflicts(), allocated in RESULT_POOL.
+ */
 void *
 svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool);
 
 /* A conflict-resolution callback which postpones all conflicts and
- * remembers conflicted paths in BATON. */
+ * remembers conflicted paths in BATON.  BATON must have been obtained
+ * from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * Implements svn_wc_conflict_resolver_func2_t.
+ */
 svn_error_t *
 svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                const svn_wc_conflict_description2_t *desc,
@@ -369,9 +374,12 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Run the interactive conflict resolver, obtained internally from
- * svn_cl__get_conflict_func_interactive(), on any conflicted paths
- * stored in the BATON obtained from svn_cl__get_conflict_func_postpone(). */
+/* Perform conflict resolver on any conflicted paths stored in the BATON
+ * which was obtained from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * The conflict resolution will be interactive if ACCEPT_WHICH is
+ * svn_cl__accept_unspecified.
+ */
 svn_error_t *
 svn_cl__resolve_postponed_conflicts(void *baton,
                                     svn_depth_t depth,
