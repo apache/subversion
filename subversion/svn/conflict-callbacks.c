@@ -1060,8 +1060,6 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Implement svn_wc_conflict_resolver_func2_t; postpones all conflicts
- * and remembers conflicted paths in BATON. */
 svn_error_t *
 svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                const svn_wc_conflict_description2_t *desc,
