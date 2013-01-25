@@ -18107,8 +18107,10 @@ def merge_properties_on_adds(sbox):
   sbox.simple_copy('A/D/G', 'G')
 
   sbox.simple_mkdir('A/D/G/M')
-  sbox.simple_add_text('QQ', 'A/D/G/file')
-  sbox.simple_propset('key', 'value', 'A/D/G/M', 'A/D/G/file')
+  sbox.simple_mkdir('A/D/G/M/N')
+  sbox.simple_add_text('QQ', 'A/D/G/file', 'A/D/G/M/file')
+  sbox.simple_propset('key', 'value',
+                      'A/D/G/M', 'A/D/G/file', 'A/D/G/M/N', 'A/D/G/M/file')
   sbox.simple_commit()
   sbox.simple_update()
 
@@ -18122,6 +18124,10 @@ def merge_properties_on_adds(sbox):
      '  key\n',
      'Properties on \'%s\':\n' % sbox.ospath('G/file'),
      '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/N'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/file'),
+     '  key\n',
   ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'proplist', '-R', sbox.ospath('G'))
@@ -18131,10 +18137,15 @@ def merge_properties_on_adds(sbox):
      '  key\n',
      'Properties on \'%s\':\n' % sbox.ospath('G/file'),
      '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/N'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/file'),
+     '  key\n',
   ])
 
-  # I merged M and file with history, but the result is that file has
-  # it's properties in PRISTINE, but G has not. G's properties are in ACTUAL!
+  # I merged the tree, which should include history but only the files have
+  # the properties stored in PRISTINE. All directories have the properties
+  # as local changes in ACTUAL.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'proplist', '-R', sbox.ospath('G'),
                                      '-r', 'BASE')
@@ -18146,6 +18157,23 @@ def merge_properties_on_adds(sbox):
   # ### My guess is that the base merge support on svn_wc_merge_props()
   # ### was originally designed to resolve this problem, but I can't
   # ### find a released version where this was actually implemented.
+
+  # For fun, also check the status: 'svn status' suppresses the M from AM.
+
+  # G = sbox.ospath('G')
+  # 
+  # expected_status = wc.State('G', {
+  #   ''           : Item(status=' M', wc_rev='2'),
+  #   'pi'         : Item(status='  ', wc_rev='2'),
+  #   'tau'        : Item(status='  ', wc_rev='2'),
+  #   'file'       : Item(status='A ', copied='+', wc_rev='-'), # Copied, no changes
+  #   'M'          : Item(status='A ', copied='+', wc_rev='-'), # Copied, changes
+  #   'M/file'     : Item(status='  ', copied='+', wc_rev='-'), # Copied, no changes
+  #   'M/N'        : Item(status=' M', copied='+', wc_rev='-'), # Local changes
+  #   'rho'        : Item(status='  ', wc_rev='2'),
+  # })
+  # svntest.actions.run_and_verify_status(G, expected_status)
+
 
 
 
