@@ -1353,7 +1353,8 @@ svn_wc__node_has_local_mods(svn_boolean_t *modified,
     SVN_ERR(err);
 
   *modified = modcheck_baton.found_mod;
-  *all_edits_are_deletes = !modcheck_baton.found_not_delete;
+  *all_edits_are_deletes = (modcheck_baton.found_mod
+                            && !modcheck_baton.found_not_delete);
 
   return SVN_NO_ERROR;
 }
