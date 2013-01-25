@@ -837,8 +837,12 @@ tc_editor_delete(void *baton,
   svn_sqlite__stmt_t *stmt;
   int op_depth = relpath_depth(b->move_root_dst_relpath);
   svn_boolean_t is_conflicted;
+  const char *local_abspath = svn_dirent_join(b->wcroot->abspath, relpath,
+                                              scratch_pool);
 
-  /* Check before retracting delete to catch delete-delete conflicts. */
+  /* Check before retracting delete to catch delete-delete
+     conflicts. This catches conflicts on the node itself; deleted
+     children are caught as local modifications below.*/
   SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath, svn_node_unknown,
                               svn_wc_conflict_action_delete,
                               scratch_pool));
@@ -848,45 +852,104 @@ tc_editor_delete(void *baton,
       svn_boolean_t is_modified, is_all_deletes;
 
       SVN_ERR(svn_wc__node_has_local_mods(&is_modified, &is_all_deletes, b->db,
-                                          svn_dirent_join(b->wcroot->abspath,
-                                                          relpath,
-                                                          scratch_pool),
+                                          local_abspath,
                                           NULL, NULL, scratch_pool));
       if (is_modified)
         {
-          /* No conflict means no NODES rows at the relpath op-depth
-             so it's easy to convert the modified tree into a copy. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                            STMT_UPDATE_OP_DEPTH_RECURSIVE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
-                                    op_depth, relpath_depth(relpath)));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          svn_wc_conflict_reason_t reason;
 
-          SVN_ERR(mark_tree_conflict(b, relpath,
-                                     /* ### kinds? */
-                                     svn_node_dir, svn_node_dir,
-                                     svn_wc_conflict_reason_edited,
-                                     svn_wc_conflict_action_delete, NULL,
-                                     scratch_pool));
-          is_conflicted = TRUE;
-        }
-      else if (is_all_deletes)
-        {
-          SVN_ERR(mark_tree_conflict(b, relpath,
-                                     /* ### kinds? */
-                                     svn_node_dir, svn_node_dir,
-                                     svn_wc_conflict_reason_deleted,
-                                     svn_wc_conflict_action_delete, NULL,
-                                     scratch_pool));
+          if (!is_all_deletes)
+            {
+              /* No conflict means no NODES rows at the relpath op-depth
+                 so it's easy to convert the modified tree into a copy. */
+              SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                              STMT_UPDATE_OP_DEPTH_RECURSIVE));
+              SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
+                                        op_depth, relpath_depth(relpath)));
+              SVN_ERR(svn_sqlite__step_done(stmt));
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+              reason = svn_wc_conflict_reason_edited;
+              is_conflicted = TRUE;
+            }
+          else
+            {
+
+              SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                           STMT_DELETE_WORKING_OP_DEPTH_ABOVE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
-                                    op_depth));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+              SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+                                        op_depth));
+              SVN_ERR(svn_sqlite__step_done(stmt));
 
-          is_conflicted = TRUE;
+              reason = svn_wc_conflict_reason_deleted;
+              /* Don't set is_conflicted so working files/dirs are deleted. */
+            }
+          SVN_ERR(mark_tree_conflict(b, relpath,
+                                     /* ### kinds? */
+                                     svn_node_dir, svn_node_dir, reason,
+                                     svn_wc_conflict_action_delete, NULL,
+                                     scratch_pool));
         }
+    }
+
+  if (!is_conflicted)
+    {
+      svn_boolean_t have_row;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      svn_skel_t *work_item;
+      svn_kind_t del_kind;
+      const char *del_abspath;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_SELECT_CHILDREN_OP_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+                                op_depth));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      while (have_row)
+        {
+          svn_error_t *err;
+
+          svn_pool_clear(iterpool);
+
+          del_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+          del_abspath = svn_dirent_join(b->wcroot->abspath,
+                                        svn_sqlite__column_text(stmt, 0, NULL),
+                                        iterpool);
+          if (del_kind == svn_kind_dir)
+            err = svn_wc__wq_build_dir_remove(&work_item, b->db,
+                                              b->wcroot->abspath, del_abspath,
+                                              FALSE /* recursive */,
+                                              iterpool, iterpool);
+          else
+            err = svn_wc__wq_build_file_remove(&work_item, b->db,
+                                               b->wcroot->abspath, del_abspath,
+                                               iterpool, iterpool);
+          if (!err)
+            err = svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
+                                    iterpool);
+          if (err)
+            return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_wc__db_depth_get_info(NULL, &del_kind, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL,
+                                        b->wcroot, relpath, op_depth,
+                                        iterpool, iterpool));
+      if (del_kind == svn_kind_dir)
+        SVN_ERR(svn_wc__wq_build_dir_remove(&work_item, b->db,
+                                            b->wcroot->abspath, local_abspath,
+                                            FALSE /* recursive */,
+                                            iterpool, iterpool));
+      else
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, b->db,
+                                             b->wcroot->abspath, local_abspath,
+                                             iterpool, iterpool));
+      SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
+                                iterpool));
+      svn_pool_destroy(iterpool);
     }
 
   /* Deleting the ROWS is valid so long as we update the parent before
@@ -899,11 +962,6 @@ tc_editor_delete(void *baton,
   /* Retract any base-delete. */
   SVN_ERR(svn_wc__db_retract_parent_delete(b->wcroot, relpath, op_depth,
                                            scratch_pool));
-
-  if (is_conflicted)
-    return SVN_NO_ERROR;
-
-  /* ### TODO delete working files/dirs */
 
   return SVN_NO_ERROR;
 }
