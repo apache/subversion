@@ -681,6 +681,7 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
  *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
