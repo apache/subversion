@@ -5963,6 +5963,70 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_replace", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/X"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "X"));
+  SVN_ERR(sbox_wc_move(&b, "B", "A"));
+  SVN_ERR(sbox_wc_move(&b, "X", "B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",  "normal",       1, ""},
+      {0, "A", "normal",       1, "A"},
+      {0, "B", "normal",       1, "B"},
+      {1, "A", "normal",       1, "B", FALSE, "B", TRUE},
+      {1, "B", "normal",       1, "A", FALSE, "A", TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       2, ""},
+      {0, "A",   "normal",       2, "A"},
+      {0, "B",   "normal",       2, "B"},
+      {0, "B/X", "normal",       2, "B/X"},
+      {1, "A",   "normal",       1, "B", FALSE, "B", TRUE},
+      {1, "B",   "normal",       2, "A", FALSE, "A", TRUE},
+      {1, "B/X", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       2, ""},
+      {0, "A",   "normal",       2, "A"},
+      {0, "B",   "normal",       2, "B"},
+      {0, "B/X", "normal",       2, "B/X"},
+      {1, "A",   "normal",       2, "B", FALSE, "B", TRUE},
+      {1, "A/X", "normal",       2, "B/X", MOVED_HERE},
+      {1, "B",   "normal",       2, "A", FALSE, "A", TRUE},
+      {1, "B/X", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -6077,5 +6141,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_in_delete (issue 4303)"),
     SVN_TEST_OPTS_PASS(switch_move,
                        "switch_move"),
+    SVN_TEST_OPTS_XFAIL(move_replace,
+                       "move_replace"),
     SVN_TEST_NULL
   };
