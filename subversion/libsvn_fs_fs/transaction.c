@@ -1587,7 +1587,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 
   apr_hash_set(changes, path, APR_HASH_KEY_STRING, change);
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   fs, changes, pool));
+                                   fs, changes, FALSE, pool));
 
   return svn_io_file_close(file, pool);
 }
@@ -2825,7 +2825,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
 
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   fs, changed_paths, pool));
+                                   fs, changed_paths, TRUE, pool));
 
   *offset_p = offset;
 

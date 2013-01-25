@@ -166,7 +166,7 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                     apr_pool_t *pool)
 {
   return svn_stringbuf_createf(pool,
-                               "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                               "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                                root_offset,
                                changes_offset);
 }
@@ -967,6 +967,7 @@ svn_error_t *
 svn_fs_fs__write_changes(svn_stream_t *stream,
                          svn_fs_t *fs,
                          apr_hash_t *changes,
+                         svn_boolean_t terminate_list,
                          apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -1016,6 +1017,9 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
                                  iterpool));
     }
 
+  if (terminate_list)
+    svn_stream_puts(stream, "\n");
+  
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

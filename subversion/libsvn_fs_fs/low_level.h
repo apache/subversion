@@ -143,5 +143,6 @@ svn_error_t *
 svn_fs_fs__write_changes(svn_stream_t *stream,
                          svn_fs_t *fs,
                          apr_hash_t *changes,
+                         svn_boolean_t terminate_list,
                          apr_pool_t *pool);
 
