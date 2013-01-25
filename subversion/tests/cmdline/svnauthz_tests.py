@@ -81,7 +81,7 @@ def verify_logfile(logfilename, expected_data, delete_log=True):
 # Note we don't test various different validation failures, the
 # validation is actually just done when the file is loaded and
 # the library tests for the config file parser and the authz
-# parser already validate very failures return errors.
+# parser already validate various failures that return errors.
 
 @SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_validate_test(sbox):
@@ -182,7 +182,7 @@ def svnauthz_validate_txn_test(sbox):
                                              match_all=False)
   verify_logfile(logfilepath, expected_data, delete_log=False)
   # Check the logfile that our Exit was 1 too
-  expected_data = svntest.verify.RegexOutput("Exit 1", match_all=False)
+  expected_data = svntest.verify.ExpectedOutput("Exit 1\n", match_all=False)
   verify_logfile(logfilepath, expected_data)
 
   # Validate a file that doesn't exist and make sure we're exiting with 2.
@@ -194,7 +194,7 @@ def svnauthz_validate_txn_test(sbox):
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                            expected_status, None, wc_dir):
     raise svntest.Failure
-  expected_data = svntest.verify.RegexOutput("Exit 2", match_all=False)
+  expected_data = svntest.verify.ExpectedOutput("Exit 2\n", match_all=False)
   verify_logfile(logfilepath, expected_data)
 
 
@@ -525,7 +525,7 @@ def svnauthz_accessof_txn_test(sbox):
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                            expected_status, None, wc_dir):
     raise svntest.Failure
-  expected_data = svntest.verify.RegexOutput('Exit 3\n', match_all=False)
+  expected_data = svntest.verify.ExpectedOutput('Exit 3\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
   # break the authz file with a non-existant group and check for an exit 1.
@@ -534,7 +534,7 @@ def svnauthz_accessof_txn_test(sbox):
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                            expected_status, None, wc_dir):
     raise svntest.Failure
-  expected_data = svntest.verify.RegexOutput('Exit 1\n', match_all=False)
+  expected_data = svntest.verify.ExpectedOutput('Exit 1\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
   # break the authz file with a non-existant gropu and check for an exit 2.
@@ -544,7 +544,7 @@ def svnauthz_accessof_txn_test(sbox):
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                            expected_status, None, wc_dir):
     raise svntest.Failure
-  expected_data = svntest.verify.RegexOutput('Exit 2\n', match_all=False)
+  expected_data = svntest.verify.ExpectedOutput('Exit 2\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
 @SkipUnless(svntest.main.is_ra_type_file)
