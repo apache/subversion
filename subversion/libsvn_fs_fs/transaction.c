@@ -2641,6 +2641,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         {
           /* Write out the contents of this directory as a text rep. */
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
+          noderev->data_rep->revision = rev;
 
           if (ffd->deltify_directories)
             SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
@@ -2651,7 +2652,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    fs, txn_id, NULL, pool));
 
           noderev->data_rep->txn_id = NULL;
-          noderev->data_rep->revision = rev;
         }
     }
   else
