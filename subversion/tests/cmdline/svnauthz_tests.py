@@ -83,6 +83,7 @@ def verify_logfile(logfilename, expected_data, delete_log=True):
 # the library tests for the config file parser and the authz
 # parser already validate very failures return errors.
 
+@SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_validate_test(sbox):
   "test 'svnauthz validate' on files and urls"
   sbox.build()
@@ -197,6 +198,7 @@ def svnauthz_validate_txn_test(sbox):
   verify_logfile(logfilepath, expected_data)
 
 
+@SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_accessof_test(sbox):
   "test 'svnauthz accessof' on files and urls"
 
@@ -271,6 +273,7 @@ def svnauthz_accessof_test(sbox):
                                           "--username", "groucho",
                                           "--repository", "comedy")
 
+@SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_accessof_is_test(sbox):
   "test 'svnauthz accessof --is' on files and urls"
 
@@ -544,6 +547,7 @@ def svnauthz_accessof_txn_test(sbox):
   expected_data = svntest.verify.RegexOutput('Exit 2\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
+@SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_compat_mode_test(sbox):
   "test 'svnauthz-validate' compatability mode"
   sbox.build()
