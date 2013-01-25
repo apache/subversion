@@ -1673,8 +1673,7 @@ allocate_item_index(apr_uint64_t *item_index,
                                APR_READ | APR_WRITE
                                | APR_CREATE | APR_BUFFERED,
                                APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_read_full2(file, buffer,
-                                     sizeof(SVN_INT64_BUFFER_SIZE)-1,
+      SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
                                      &read, &eof, pool));
       if (read)
         SVN_ERR(svn_cstring_atoui64(item_index, buffer));
