@@ -2469,7 +2469,8 @@ write_hash_delta_rep(representation_t *rep,
                                   pool));
 
       entry.offset = offset;
-      entry.size = rep->size;
+      SVN_ERR(get_file_offset(&offset, file, pool));
+      entry.size = offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_REP;
       entry.revision = SVN_INVALID_REVNUM;
       entry.item_index = rep->item_index;
