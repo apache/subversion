@@ -233,8 +233,8 @@ class Sandbox:
       target = self.ospath(target)
     if message is None:
       message = svntest.main.make_log_msg()
-    svntest.main.run_svn(False, 'commit', '-m', message,
-                         target)
+    svntest.actions.run_and_verify_commit(self.wc_dir, None, None, [],
+                                          '-m', message, target)
 
   def simple_rm(self, *targets):
     """Schedule TARGETS for deletion.
