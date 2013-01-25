@@ -18098,6 +18098,56 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
+@XFail()
+def merge_properties_on_adds(sbox):
+  "merged directory properties are added"
+
+  sbox.build()
+
+  sbox.simple_copy('A/D/G', 'G')
+
+  sbox.simple_mkdir('A/D/G/M')
+  sbox.simple_add_text('QQ', 'A/D/G/file')
+  sbox.simple_propset('key', 'value', 'A/D/G/M', 'A/D/G/file')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '^/A/D/G', sbox.ospath('G'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Properties on \'%s\':\n' % sbox.ospath('G'),
+     '  svn:mergeinfo\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/file'),
+     '  key\n',
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', sbox.ospath('G'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+     'Properties on \'%s\':\n' % sbox.ospath('G/M'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/file'),
+     '  key\n',
+  ])
+
+  # I merged M and file with history, but the result is that file has
+  # it's properties in PRISTINE, but G has not. G's properties are in ACTUAL!
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', sbox.ospath('G'),
+                                     '-r', 'BASE')
+
+  # Note that this is not a regression. This has been the case since 1.0.
+  # ### We just made status, update and merge handle this without users
+  # ### knowing about this limitation.
+
+  # ### My guess is that the base merge support on svn_wc_merge_props()
+  # ### was originally designed to resolve this problem, but I can't
+  # ### find a released version where this was actually implemented.
+
+
 
 ########################################################################
 # Run the tests
@@ -18238,6 +18288,7 @@ test_list = [ None,
               merge_binary_file_with_keywords,
               merge_conflict_when_keywords_removed,
               merge_target_selection,
+              merge_properties_on_adds,
              ]
 
 if __name__ == '__main__':
