@@ -1065,6 +1065,19 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
     fp.write("password-db = passwd\n")
   fp.close()
 
+def write_restrictive_svnserve_conf_with_groups(repo_dir,
+                                                anon_access="none"):
+  "Create a restrictive configuration with groups stored in a separate file."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\ngroups-db = groups\n" % anon_access)
+  if options.enable_sasl:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
 # might be run in parallel.
@@ -1098,6 +1111,18 @@ an appropriate list of mappings.
 
   for p, r in rules.items():
     fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  fp.close()
+
+# See the warning about parallel test execution in write_authz_file
+# method description.
+def write_groups_file(sbox, groups):
+  """Write a groups file to SBOX, appropriate for the RA method used,
+with group contents set to GROUPS."""
+  fp = open(sbox.groups_file, 'w')
+  fp.write("[groups]\n")
+  if groups:
+    for p, r in groups.items():
+      fp.write("%s = %s\n" % (p, r))
   fp.close()
 
 def use_editor(func):

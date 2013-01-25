@@ -63,6 +63,7 @@ typedef struct authz_svn_config_rec {
   const char *base_path;
   const char *access_file;
   const char *repo_relative_access_file;
+  const char *groups_file;
   const char *force_username_case;
 } authz_svn_config_rec;
 
@@ -147,6 +148,16 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   return NULL;
 }
 
+static const char *
+AuthzSVNGroupsFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  authz_svn_config_rec *conf = config;
+
+  conf->groups_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+
+  return NULL;
+}
+
 /* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec authz_svn_cmds[] =
 {
@@ -170,6 +181,14 @@ static const command_rec authz_svn_cmds[] =
                 "file containing permissions of repository paths. Path may "
                 "be an repository relative URL (^/) or absolute file:// URL "
                 "to a text file in a Subversion repository."),
+  AP_INIT_TAKE1("AuthzSVNGroupsFile",
+                AuthzSVNGroupsFile_cmd,
+                NULL,
+                OR_AUTHCFG,
+                "Path to text file containing group definitions for all "
+                "repositories.  Path may be an repository relative URL (^/) "
+                "or absolute file:// URL to a text file in a Subversion "
+                "repository."),
   AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
                (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
                OR_AUTHCFG,
@@ -331,6 +350,12 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
                 "Path to authz file is %s", access_file);
 
+  if (conf->groups_file)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
+                    "Path to groups file is %s", conf->groups_file);
+    }
+
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
                           access_file, (char *)NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
@@ -338,7 +363,8 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   if (access_conf == NULL)
     {
       svn_err = svn_repos_authz_read2(&access_conf, access_file,
-                                      TRUE, repos_path, r->connection->pool);
+                                      conf->groups_file, TRUE, repos_path,
+                                      r->connection->pool);
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
