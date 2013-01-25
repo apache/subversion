@@ -137,7 +137,10 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
                         apr_pool_t *pool);
 
 /* Write the changed path info from CHANGES in filesystem FS to the
-   output stream STREAM.  Perform temporary allocations in POOL.
+   output stream STREAM.  You may call this function multiple time on
+   the same stream but the last call should set TERMINATE_LIST to write
+   an extra empty line that marks the end of the changes list.
+   Perform temporary allocations in POOL.
  */
 svn_error_t *
 svn_fs_fs__write_changes(svn_stream_t *stream,
