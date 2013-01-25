@@ -1685,8 +1685,8 @@ save_merge_result(svn_skel_t **work_item,
  * perform that requested resolution and prepare to mark the conflict
  * as resolved.
  *
- * Don't mark the conflict as resolved, but do return *WORK_ITEMS that
- * will do the on-disk work required to mark it as resolved, and set
+ * Return *WORK_ITEMS that will do the on-disk work required to complete
+ * the resolution (but not to mark the conflict as resolved), and set
  * *WAS_RESOLVED to true, if it was resolved.  Set *WORK_ITEMS to NULL
  * and *WAS_RESOLVED to FALSE otherwise.
  *
@@ -1953,6 +1953,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 
       if (was_resolved)
         {
+          /* ### TODO: As part of marking resolved, we need to include
+           *     deleting the three artifact files in WORK_ITEMS... */
           SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath, TRUE, FALSE,
                                               FALSE, work_items, scratch_pool));
           if (work_items)
