@@ -1514,6 +1514,18 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
          ### merges, but in this case the fix added here should also be applied
          ### for added files! */
 
+      /* ### The old code performed (via prepare_merge_props_changed):
+      if (apr_hash_get(new_pristine_props, SVN_PROP_MERGEINFO,
+                       APR_HASH_KEY_STRING))
+        {
+          alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
+                               local_abspath, merge_b->pool);
+        }
+         ### which is something merge_add_file() doesn't do, but
+         ### merge_tests.py 95: no self referential filtering on added path
+         ### fails if this block is not enabled.
+      */
+
       return SVN_NO_ERROR;
     }
 
