@@ -1461,6 +1461,62 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
     }
 
+  if (dir_was_added && merge_b->same_repos)
+    {
+      /* When the directory was added in merge_dir_added() we didn't update its
+         pristine properties. Instead we receive the property changes later and
+         apply them in this function.
+
+         If we would apply them as changes (such as before fixing issue #3405),
+         we would see the unmodified properties as local changes, and the
+         pristine properties would be out of sync with what the repository
+         expects for this directory.
+
+         Instead of doing that we now simply set the properties as the pristine
+         properties via a private libsvn_wc api.
+      */
+
+      const char *copyfrom_url;
+      svn_revnum_t copyfrom_rev;
+      const char *parent_abspath;
+      const char *child;
+
+      /* Creating a hash containing regular and entry props */
+      apr_hash_t *new_pristine_props = svn_prop__patch(original_props, propchanges,
+                                                       scratch_pool);
+
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
+      SVN_ERR_ASSERT(child != NULL);
+
+      copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
+                                                 child, scratch_pool);
+      copyfrom_rev = merge_b->merge_source.loc2->rev;
+
+      SVN_ERR(check_repos_match(merge_b->target, parent_abspath, copyfrom_url,
+                                scratch_pool));
+
+      if (!merge_b->dry_run)
+        {
+          SVN_ERR(svn_wc__complete_directory_add(merge_b->ctx->wc_ctx,
+                                                local_abspath,
+                                                new_pristine_props,
+                                                copyfrom_url, copyfrom_rev,
+                                                scratch_pool));
+        }
+      *state = svn_wc_notify_state_changed; /* same as merge_props did */
+
+      /* Until issue #3405 was fixed the code for changed directories was
+         used for directory deletions, which made use apply svn:mergeinfo as if
+         additional changes were applied by the merge, which really weren't.
+
+         ### I wouldn't be surprised if we somehow relied on these for correct
+         ### merges, but in this case the fix added here should also be applied
+         ### for added files! */
+
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
                                       merge_b, scratch_pool, scratch_pool));
 
