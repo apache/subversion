@@ -270,11 +270,11 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_DELTIFICATION_WALK,
@@ -298,7 +298,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -408,16 +408,16 @@ write_config(svn_fs_t *fs,
 "### Repositories containing large directories will benefit greatly."        NL
 "### In rarely read repositories, the I/O overhead may be significant as"    NL
 "### cache hit rates will most likely be low"                                NL
-"### directory deltification is disabled by default."                        NL
-"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = false"                       NL
+"### directory deltification is enabled by default."                         NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
 "### some disk space if you merge frequently or frequently change node"      NL
 "### properties.  You should not activate this if rep-sharing has been"      NL
 "### disabled because this may result in a net increase in repository size." NL
-"### property deltification is disabled by default."                         NL
-"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
+"### property deltification is enabled by default."                          NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
 "### of a given node to find a suitable deltification base.  This linear"    NL
@@ -472,8 +472,8 @@ write_config(svn_fs_t *fs,
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is disabled by default."                    NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
+"### Compressing packed revprops is enabled by default."                     NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
 "### Parameters in this section control the data access granularity in"      NL
@@ -937,12 +937,14 @@ write_revision_zero(svn_fs_t *fs)
 
       path = path_p2l_index(fs, 0, fs->pool);
       SVN_ERR(svn_io_file_create2(path,
-                                  "\0"
+                                  "\0"          /* start rev */
                                   "\x80\x80\4\1\x13"
-                                  "\0"
-                                  "\x11\1\0\3"
-                                  "\x59\2\0\2"
-                                  "\1\3\0\1"
+                                                /* 64k pages,
+                                                 * 1 page using 19 bytes */
+                                  "\0"          /* offset entry 0 page 1 */
+                                  "\x11\1\0\3"  /* len, type, rev, item */
+                                  "\x59\5\0\2"
+                                  "\1\6\0\1"
                                   "\x95\xff\3\0\0\0",
                                   25,
                                   fs->pool));
