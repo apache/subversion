@@ -167,4 +167,16 @@ svn_fs_fs__item_offset(apr_off_t *offset,
                        apr_uint64_t item_index,
                        apr_pool_t *pool);
 
+/* Use the log-to-phys indexes in FS to determine the maximum item indexes
+ * assigned to revision START_REV to START_REV + COUNT - 1.  That is a
+ * close upper limit to the actual number of items in the respective revs.
+ * Return the results in *MAX_IDS,  allocated in POOL.
+ */
+svn_error_t *
+svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
+                           svn_fs_t *fs,
+                           svn_revnum_t start_rev,
+                           apr_size_t count,
+                           apr_pool_t *pool);
+
 #endif

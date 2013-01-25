@@ -607,6 +607,42 @@ l2p_proto_index_lookup(apr_off_t *offset,
 }
 
 svn_error_t *
+svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
+                           svn_fs_t *fs,
+                           svn_revnum_t start_rev,
+                           apr_size_t count,
+                           apr_pool_t *pool)
+{
+  l2p_index_header_t *header = NULL;
+  svn_revnum_t revision;
+  svn_revnum_t last_rev = (svn_revnum_t)(start_rev + count);
+
+  /* read index master data structure */
+  SVN_ERR(get_l2p_header(&header, fs, start_rev, pool));
+
+  *max_ids = apr_array_make(pool, (int)count, sizeof(apr_uint64_t));
+  for (revision = start_rev; revision < last_rev; ++revision)
+    {
+      apr_uint64_t page_count;
+      l2_index_page_table_entry_t *last_entry;
+      apr_uint64_t item_count;
+
+      if (revision >= header->first_revision + header->revision_count)
+        SVN_ERR(get_l2p_header(&header, fs, revision, pool));
+
+      page_count = header->page_tables[revision - header->first_revision + 1]
+                 - header->page_tables[revision - header->first_revision] - 1;
+      last_entry = header->page_tables[revision - header->first_revision + 1]
+                 - 1;
+      item_count = page_count * header->page_size + last_entry->entry_count;
+
+      APR_ARRAY_PUSH(*max_ids, apr_uint64_t) = item_count;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__p2l_proto_index_open(apr_file_t **proto_index,
                                 const char *file_name,
                                 apr_pool_t *pool)
