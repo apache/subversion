@@ -2097,7 +2097,7 @@ rep_write_contents_close(void *baton)
       entry.offset = b->rep_offset;
       SVN_ERR(get_file_offset(&offset, b->file, b->pool));
       entry.size = offset - b->rep_offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_REP;
+      entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
       entry.revision = SVN_INVALID_REVNUM;
       entry.item_index = rep->item_index;
 
@@ -2296,6 +2296,7 @@ write_hash_rep(representation_t *rep,
                svn_fs_t *fs,
                const char *txn_id,
                apr_hash_t *reps_hash,
+               int item_type,
                apr_pool_t *pool)
 {
   svn_stream_t *stream;
@@ -2348,7 +2349,7 @@ write_hash_rep(representation_t *rep,
       entry.offset = offset;
       SVN_ERR(get_file_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_REP;
+      entry.type = item_type;
       entry.revision = SVN_INVALID_REVNUM;
       entry.item_index = rep->item_index;
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
@@ -2377,7 +2378,7 @@ write_hash_delta_rep(representation_t *rep,
                      const char *txn_id,
                      node_revision_t *noderev,
                      apr_hash_t *reps_hash,
-                     svn_boolean_t props,
+                     int item_type,
                      apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
@@ -2397,9 +2398,11 @@ write_hash_delta_rep(representation_t *rep,
   struct write_hash_baton *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+  svn_boolean_t is_props = (item_type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
+                        || (item_type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, props, pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, pool));
   SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, pool));
 
   SVN_ERR(get_file_offset(&offset, file, pool));
@@ -2471,7 +2474,7 @@ write_hash_delta_rep(representation_t *rep,
       entry.offset = offset;
       SVN_ERR(get_file_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_REP;
+      entry.type = item_type;
       entry.revision = SVN_INVALID_REVNUM;
       entry.item_index = rep->item_index;
 
@@ -2646,10 +2649,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           if (ffd->deltify_directories)
             SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
                                          str_entries, fs, txn_id, noderev,
-                                         NULL, FALSE, pool));
+                                         NULL, SVN_FS_FS__ITEM_TYPE_DIR_REP,
+                                         pool));
           else
             SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                   fs, txn_id, NULL, pool));
+                                   fs, txn_id, NULL,
+                                   SVN_FS_FS__ITEM_TYPE_DIR_REP, pool));
 
           noderev->data_rep->txn_id = NULL;
         }
@@ -2682,6 +2687,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       apr_hash_t *proplist;
+      int item_type = noderev->kind == svn_node_dir
+                    ? SVN_FS_FS__ITEM_TYPE_DIR_PROPS
+                    : SVN_FS_FS__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
 
       noderev->prop_rep->txn_id = NULL;
@@ -2690,10 +2698,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       if (ffd->deltify_properties)
         SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
                                      proplist, fs, txn_id, noderev,
-                                     reps_hash, TRUE, pool));
+                                     reps_hash, item_type, pool));
       else
         SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                               fs, txn_id, reps_hash, pool));
+                               fs, txn_id, reps_hash, item_type, pool));
     }
 
   /* Convert our temporary ID into a permanent revision one. */

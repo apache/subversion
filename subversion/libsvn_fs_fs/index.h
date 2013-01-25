@@ -36,10 +36,13 @@
 
 /* Data / item types as stored in the phys-to-log index.
  */
-#define SVN_FS_FS__ITEM_TYPE_UNUSED  0  /* file section not used */
-#define SVN_FS_FS__ITEM_TYPE_REP     1  /* item is a representation */
-#define SVN_FS_FS__ITEM_TYPE_NODEREV 2  /* item is a noderev */
-#define SVN_FS_FS__ITEM_TYPE_CHANGES 3  /* item is a changed paths list */
+#define SVN_FS_FS__ITEM_TYPE_UNUSED     0  /* file section not used */
+#define SVN_FS_FS__ITEM_TYPE_FILE_REP   1  /* item is a file representation */
+#define SVN_FS_FS__ITEM_TYPE_DIR_REP    2  /* item is a directory rep. */
+#define SVN_FS_FS__ITEM_TYPE_FILE_PROPS 3  /* item is a file property rep. */
+#define SVN_FS_FS__ITEM_TYPE_DIR_PROPS  4  /* item is a directory prop rep */
+#define SVN_FS_FS__ITEM_TYPE_NODEREV    5  /* item is a noderev */
+#define SVN_FS_FS__ITEM_TYPE_CHANGES    6  /* item is a changed paths list */
 
 /* (user visible) entry in the phys-to-log index.  It describes a section
  * of some packed / non-packed rev file as containing a specific item.
