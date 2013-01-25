@@ -5464,14 +5464,13 @@ def update_moved_dir_leaf_del(sbox):
                                         None, None, 1)
 
   # Now resolve the conflict, using --accept=mine-conflict applying
-  # the update to A/B/E2 causing a delete-delete conflict
+  # the update to A/B/E2
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', treeconflict=None)
-  expected_status.tweak('A/B/E2/alpha', status='? ', treeconflict='C',
-                        copied=None, wc_rev=None)
+  expected_status.remove('A/B/E2/alpha')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
@@ -5699,15 +5698,14 @@ def update_moved_dir_file_move(sbox):
 
   # The incoming change is a delete as we don't yet track server-side
   # moves.  Resolving the tree-conflict as "mine-conflict" applies the
-  # delete to the move destination creating a delete-delete conflict.
+  # delete to the move destination.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/B/E'))
 
   expected_status.tweak('A/B/E', treeconflict=None)
-  expected_status.tweak('A/B/E2/alpha', status='? ', treeconflict='C',
-                        copied=None, wc_rev=None)
+  expected_status.remove('A/B/E2/alpha')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
