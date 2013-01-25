@@ -98,7 +98,13 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
    CONFLICT_SKEL itself must not be NULL.)
 
    If STATE is non-null, set *STATE to the state of the local properties
-   after the merge.  */
+   after the merge, one of:
+
+     svn_wc_notify_state_unchanged
+     svn_wc_notify_state_changed
+     svn_wc_notify_state_merged
+     svn_wc_notify_state_conflicted
+ */
 svn_error_t *
 svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,

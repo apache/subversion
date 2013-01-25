@@ -381,7 +381,11 @@ svn_wc__conflict_create_markers(svn_skel_t **work_item,
 /* Call the interactive conflict resolver RESOLVER_FUNC with RESOLVER_BATON to
    allow resolving the conflicts on LOCAL_ABSPATH.
 
+   Call RESOLVER_FUNC once for each property conflict, and again for any
+   text conflict, and again for any tree conflict on the node.
+
    CONFLICT_SKEL contains the details of the conflicts on LOCAL_ABSPATH.
+
    Resolver actions are directly applied to the in-db state of LOCAL_ABSPATH,
    so the conflict and the state in CONFLICT_SKEL must already be installed in
    wc.db. */
