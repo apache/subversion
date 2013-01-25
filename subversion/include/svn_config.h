@@ -149,6 +149,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
+#define SVN_CONFIG_OPTION_GROUPS_DB                 "groups-db"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

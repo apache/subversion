@@ -1157,7 +1157,7 @@ authz_get_handle(svn_authz_t **authz_p, const char *authz_contents,
       SVN_ERR_W(svn_stream_puts(stream, authz_contents),
                 "Writing authz contents to stream");
 
-      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, pool),
+      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, NULL, pool),
                 "Parsing the authz contents");
 
       SVN_ERR_W(svn_stream_close(stream),
@@ -1451,24 +1451,25 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* repos relative URL */
   repos_root = svn_repos_path(repos, pool);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", TRUE, repos_root,
-                                pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", NULL, TRUE,
+                                repos_root, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
   /* absolute file URL, repos_root is NULL to validate the contract that it
    * is not needed except when a repos relative URL is passed. */
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, TRUE, NULL, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE,
+                                NULL, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
   
   /* Non-existant path in the repo with must_exist set to FALSE */ 
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz", FALSE, repos_root,
-                                pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, FALSE,
+                                repos_root, pool));
 
   /* Non-existant path in the repo with must_exist set to TRUE */ 
-  err = svn_repos_authz_read2(&authz_cfg, "^/A/authz", TRUE, repos_root,
-                              pool);
+  err = svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, TRUE,
+                              repos_root, pool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1478,7 +1479,7 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* http:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "http://example.com/repo/authz",
-                              TRUE, repos_root, pool);
+                              NULL, TRUE, repos_root, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1488,6 +1489,160 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* svn:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "svn://example.com/repo/authz",
+                              NULL, TRUE, repos_root, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Test in-repo authz with global groups. */
+static svn_error_t *
+in_repo_groups_authz(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev;
+  svn_authz_t *authz_cfg;
+  const char *groups_contents;
+  const char *authz_contents;
+  const char *repos_root;
+  const char *repos_url;
+  const char *groups_url;
+  const char *authz_url;
+  svn_error_t *err;
+  struct check_access_tests test_set[] = {
+    /* reads */
+    { "/A", NULL, NULL, svn_authz_read, FALSE },
+    { "/A", NULL, "plato", svn_authz_read, TRUE },
+    { "/A", NULL, "socrates", svn_authz_read, TRUE },
+    { "/A", NULL, "solon", svn_authz_read, TRUE },
+    { "/A", NULL, "ephialtes", svn_authz_read, TRUE },
+    /* writes */
+    { "/A", NULL, NULL, svn_authz_write, FALSE },
+    { "/A", NULL, "plato", svn_authz_write, FALSE },
+    { "/A", NULL, "socrates", svn_authz_write, FALSE },
+    { "/A", NULL, "solon", svn_authz_write, TRUE },
+    { "/A", NULL, "ephialtes", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Test plan:
+   * 1. Create an authz file, a global groups file and an empty authz file,
+   *    put all these files in the repository.  The empty authz file is
+   *    required to perform the non-existent path checks (4-7) --
+   *    otherwise we would get the authz validation error due to undefined
+   *    groups.
+   * 2. Verify that the groups file can be read with an relative URL.
+   * 3. Verify that the groups file can be read with an absolute URL.
+   * 4. Verify that non-existent groups file path does not error out when
+   *    must_exist is FALSE.
+   * 5. Same as (4), but when both authz and groups file paths do
+   *    not exist.
+   * 6. Verify that non-existent path for the groups file does error out when
+   *    must_exist is TRUE.
+   * 7. Verify that an http:// URL produces an error.
+   * 8. Verify that an svn:// URL produces an error.
+   */
+
+  /* What we'll put in the authz and groups files, it's simple since
+   * we're not testing the parsing, just that we got what we expected. */
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = plato, socrates"                                         NL
+    "senate = solon, ephialtes"                                              NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[/]"                                                                    NL
+    "@senate = rw"                                                           NL
+    "@philosophers = r"                                                      NL
+    ""                                                                       NL;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-in-repo-global-groups-authz",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Commit the authz, empty authz and groups files to the repo. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "groups", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "authz", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "empty-authz", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "groups",
+                                      groups_contents, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "authz",
+                                      authz_contents, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "empty-authz", "", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* repos relative URLs */
+  repos_root = svn_repos_path(repos, pool);
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", "^/groups",
+                                TRUE, repos_root, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  /* absolute file URLs, repos_root is NULL to validate the contract that it
+   * is not needed except when a repos relative URLs are passed. */
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
+  authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
+  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url,
+                                TRUE, NULL, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  /* Non-existent path for the groups file with must_exist
+   * set to TRUE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+                                "^/A/groups", FALSE,
+                                repos_root, pool));
+
+  /* Non-existent paths for both the authz and the groups files
+   * with must_exist set to TRUE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz",
+                                "^/A/groups", FALSE,
+                                repos_root, pool));
+
+  /* Non-existent path for the groups file with must_exist
+   * set to TRUE */
+  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+                              "^/A/groups", TRUE,
+                              repos_root, pool);
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* http:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+                              "http://example.com/repo/groups",
+                              TRUE, repos_root, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* svn:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+                              "http://example.com/repo/groups",
                               TRUE, repos_root, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
@@ -1500,6 +1655,249 @@ in_repo_authz(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+/* Helper for the groups_authz test.  Set *AUTHZ_P to a representation of
+   AUTHZ_CONTENTS in conjuction with GROUPS_CONTENTS, using POOL for
+   temporary allocation.  If DISK is TRUE then write the contents to
+   temporary files and use svn_repos_authz_read2() to get the data if FALSE
+   write the data to a buffered stream and use svn_repos_authz_parse(). */
+static svn_error_t *
+authz_groups_get_handle(svn_authz_t **authz_p,
+                        const char *authz_contents,
+                        const char *groups_contents,
+                        svn_boolean_t disk,
+                        apr_pool_t *pool)
+{
+  if (disk)
+    {
+      const char *authz_file_path;
+      const char *groups_file_path;
+
+      /* Create temporary files. */
+      SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                    authz_contents,
+                                    strlen(authz_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary authz file");
+      SVN_ERR_W(svn_io_write_unique(&groups_file_path, NULL,
+                                    groups_contents,
+                                    strlen(groups_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary groups file");
+
+      /* Read the authz configuration back and start testing. */
+      SVN_ERR_W(svn_repos_authz_read2(authz_p, authz_file_path,
+                                      groups_file_path, TRUE, NULL, pool),
+                "Opening test authz and groups files");
+
+      /* Done with the files. */
+      SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+                "Removing test authz file");
+      SVN_ERR_W(svn_io_remove_file(groups_file_path, pool),
+                "Removing test groups file");
+    }
+  else
+    {
+      svn_stream_t *stream;
+      svn_stream_t *groups_stream;
+
+      /* Create the streams. */
+      stream = svn_stream_buffered(pool);
+      groups_stream = svn_stream_buffered(pool);
+
+      SVN_ERR_W(svn_stream_puts(stream, authz_contents),
+                "Writing authz contents to stream");
+      SVN_ERR_W(svn_stream_puts(groups_stream, groups_contents),
+                "Writing groups contents to stream");
+
+      /* Read the authz configuration from the streams and start testing. */
+      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, groups_stream, pool),
+                "Parsing the authz and groups contents");
+
+      /* Done with the streams. */
+      SVN_ERR_W(svn_stream_close(stream),
+                "Closing the authz stream");
+      SVN_ERR_W(svn_stream_close(groups_stream),
+                "Closing the groups stream");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Test authz with global groups. */
+static svn_error_t *
+groups_authz(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  const char *authz_contents;
+  const char *groups_contents;
+  svn_error_t *err;
+
+  struct check_access_tests test_set1[] = {
+    /* reads */
+    { "/A", "greek", NULL, svn_authz_read, FALSE },
+    { "/A", "greek", "plato", svn_authz_read, TRUE },
+    { "/A", "greek", "demetrius", svn_authz_read, TRUE },
+    { "/A", "greek", "galenos", svn_authz_read, TRUE },
+    { "/A", "greek", "pamphilos", svn_authz_read, FALSE },
+    /* writes */
+    { "/A", "greek", NULL, svn_authz_write, FALSE },
+    { "/A", "greek", "plato", svn_authz_write, TRUE },
+    { "/A", "greek", "demetrius", svn_authz_write, FALSE },
+    { "/A", "greek", "galenos", svn_authz_write, FALSE },
+    { "/A", "greek", "pamphilos", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  struct check_access_tests test_set2[] = {
+    /* reads */
+    { "/A", "greek", NULL, svn_authz_read, FALSE },
+    { "/A", "greek", "socrates", svn_authz_read, FALSE },
+    { "/B", "greek", NULL, svn_authz_read, FALSE},
+    { "/B", "greek", "socrates", svn_authz_read, TRUE },
+    /* writes */
+    { "/A", "greek", NULL, svn_authz_write, FALSE },
+    { "/A", "greek", "socrates", svn_authz_write, FALSE },
+    { "/B", "greek", NULL, svn_authz_write, FALSE},
+    { "/B", "greek", "socrates", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Test plan:
+   * 1. Ensure that a simple setup with global groups and access rights in
+   *    two separate files works as expected.
+   * 2. Verify that access rights written in the global groups file are
+   *    discarded and affect nothing in authorization terms.
+   * 3. Verify that local groups in the authz file are prohibited in
+   *    conjuction with global groups (and that a configuration error is
+   *    reported in this scenario).
+   * 4. Ensure that group cycles in the global groups file are reported.
+   *
+   * All checks are performed twice -- for the configurations stored on disk
+   * and in memory.  See authz_groups_get_handle.
+   */
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = pamphilos,@gladiators"                                         NL
+    "gladiators = demetrius,galenos"                                         NL
+    "philosophers = plato"                                                   NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = "                                                             NL
+    "@gladiators = r"                                                        NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, TRUE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set1, pool));
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, FALSE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set1, pool));
+
+  /* Access rights in the global groups file are discarded. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = socrates"                                                NL
+    ""                                                                       NL
+    "[greek:/A]"                                                             NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/B]"                                                             NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, TRUE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, FALSE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
+
+  /* Local groups cannot be used in conjuction with global groups. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = maximus"                                                       NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = "                                                             NL
+    "@kings = rw"                                                            NL
+    ""                                                                       NL
+    "[groups]"                                                               NL
+    /* That's an epic story of the slave who tried to become a king. */
+    "kings = maximus"                                                        NL
+    ""                                                                       NL;
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, TRUE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, FALSE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* Ensure that group cycles are reported. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = cooks,scribes,@gladiators"                                     NL
+    "gladiators = equites,thraces,@slaves"                                   NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = r"                                                            NL
+    ""                                                                       NL;
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, TRUE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, FALSE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  return SVN_NO_ERROR;
+}
 
 /* Callback for the commit editor tests that relays requests to
    authz. */
@@ -2775,6 +3173,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test authz access control"),
     SVN_TEST_OPTS_PASS(in_repo_authz,
                        "test authz stored in the repo"),
+    SVN_TEST_OPTS_PASS(in_repo_groups_authz,
+                       "test authz and global groups stored in the repo"),
+    SVN_TEST_OPTS_PASS(groups_authz,
+                       "test authz with global groups"),
     SVN_TEST_OPTS_PASS(commit_editor_authz,
                        "test authz in the commit editor"),
     SVN_TEST_OPTS_PASS(commit_continue_txn,
