@@ -1443,10 +1443,8 @@ diff_state_handle(svn_boolean_t tree_conflicted,
       return SVN_NO_ERROR;
     }
 
-  /* This code is copy & pasted from different functions in this file.
-     It is only used from the merge api, and should really be integrated
-     there.
-   */
+  /* This code is only used from the merge api, and should really be
+     integrated there. */
 
     {
       deleted_path_notify_t *dpn;
@@ -1454,6 +1452,11 @@ diff_state_handle(svn_boolean_t tree_conflicted,
       svn_wc_notify_action_t action;
       svn_node_kind_t notify_kind = (kind == svn_kind_dir) ? svn_node_dir
                                                            : svn_node_file;
+
+      if (for_add)
+        action = svn_wc_notify_update_add;
+      else
+        action = svn_wc_notify_update_update;
 
       /* Find out if a pending delete notification for this path is
       * still around. */
@@ -1463,28 +1466,15 @@ diff_state_handle(svn_boolean_t tree_conflicted,
           /* If any was found, we will handle the pending 'deleted path
           * notification' (DPN) here. Remove it from the list. */
           apr_hash_set(eb->deleted_paths, relpath,
-              APR_HASH_KEY_STRING, NULL);
+                       APR_HASH_KEY_STRING, NULL);
 
           /* the pending delete might be on a different node kind. */
           notify_kind = dpn->kind;
           notify_content_state = notify_prop_state = dpn->state;
-        }
 
-      /* Determine what the notification (ACTION) should be.
-      * In case of a pending 'delete', this might become a 'replace'. */
-      if (dpn)
-        {
-          if (dpn->action == svn_wc_notify_update_delete
-              && for_add)
+          if (for_add && dpn->action == svn_wc_notify_update_delete)
             action = svn_wc_notify_update_replace;
-          else
-            /* Note: dpn->action might be svn_wc_notify_tree_conflict */
-            action = dpn->action;
         }
-      else if (for_add)
-        action = svn_wc_notify_update_add;
-      else
-        action = svn_wc_notify_update_update;
 
       notify = svn_wc_create_notify(relpath, action, scratch_pool);
       notify->kind = notify_kind;
