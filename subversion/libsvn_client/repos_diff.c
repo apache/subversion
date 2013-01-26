@@ -1483,7 +1483,7 @@ diff_state_absent(const char *relpath,
       svn_wc_notify_t *notify
         = svn_wc_create_notify(relpath, svn_wc_notify_skip, scratch_pool);
 
-      notify->kind = svn_node_file;
+      notify->kind = svn_node_unknown;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_missing;
       (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
