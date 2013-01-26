@@ -1969,6 +1969,7 @@ typedef struct wc_diff_wrap_baton_t
   void *callback_baton;
   svn_wc__diff_state_handle_t state_handle;
   svn_wc__diff_state_close_t state_close;
+  svn_wc__diff_state_absent_t state_absent;
   void *state_baton;
 
   apr_pool_t *result_pool;
@@ -2393,12 +2394,28 @@ wrap_file_changed(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+wrap_node_absent(const char *relpath,
+                 void *dir_baton,
+                 const svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool)
+{
+  wc_diff_wrap_baton_t *wb = processor->baton;
+  if (wb->state_absent)
+    SVN_ERR(wb->state_absent(relpath,
+                             wb->state_baton,
+                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
                             const svn_wc_diff_callbacks4_t *callbacks,
                             void *callback_baton,
                             svn_wc__diff_state_handle_t state_handler,
                             svn_wc__diff_state_close_t state_close,
+                            svn_wc__diff_state_absent_t state_absent,
                             void *state_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -2413,6 +2430,7 @@ svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
   wrap_baton->callback_baton = callback_baton;
   wrap_baton->state_handle = state_handler;
   wrap_baton->state_close = state_close;
+  wrap_baton->state_absent = state_absent;
   wrap_baton->state_baton = state_baton;
   wrap_baton->empty_file = NULL;
 
@@ -2429,6 +2447,8 @@ svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
   processor->file_deleted  = wrap_file_deleted;
   processor->file_changed  = wrap_file_changed;
   /*processor->file_closed   = wrap_file_closed*/; /* Not needed */
+
+  processor->node_absent   = wrap_node_absent;
 
   *diff_processor = processor;
   return SVN_NO_ERROR;
