@@ -215,6 +215,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1438879
+   Make 'show-diff' at the interactive conflict prompt show nicer diffs.
+   Justification:
+     'show-diff' produces unreadable diffs in some cases, especially with
+     conflicts recorded during merges.
+   Branch:
+     ^/subversion/branches/1.7.x-r1438879
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
