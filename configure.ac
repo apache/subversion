@@ -883,6 +883,13 @@ AC_CHECK_FUNCS(symlink readlink)
 dnl check for uname
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
 
+dnl check for termios
+AC_CHECK_HEADER(termios.h,[
+  AC_CHECK_FUNCS(tcgetattr tcsetattr,[
+    AC_DEFINE(HAVE_TERMIOS_H,1,[Defined if we have a usable termios library.])
+  ])
+])
+
 dnl Process some configuration options ----------
 
 AC_ARG_WITH(ssl,
