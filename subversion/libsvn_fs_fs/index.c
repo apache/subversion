@@ -119,6 +119,237 @@ typedef struct p2l_index_header_t
   apr_off_t *offsets;
 } p2l_index_header_t;
 
+/* How many numbers we will pre-fetch and buffer in a packed number stream.
+ */
+enum { MAX_NUMBER_PREFETCH = 64 };
+
+/* Prefetched number entry in a packed number stream.
+ */
+typedef struct value_position_pair_t
+{
+  /* prefetched number */
+  apr_uint64_t value;
+
+  /* number of bytes read, *including* this number, since the buffer start */
+  apr_size_t total_len;
+} value_position_pair_t;
+
+/* State of a prefetching packed number stream.  It will read compressed
+ * index data efficiently and present it as a series of non-packed uint64.
+ */
+typedef struct packed_number_stream_t
+{
+  /* underlying data file containing the packed values */
+  apr_file_t *file;
+
+  /* number of used entries in BUFFER (starting at index 0) */
+  apr_size_t used;
+
+  /* index of the next number to read from the BUFFER (0 .. USED).
+   * If CURRENT == USED, we need to read more data upon get() */
+  apr_size_t current;
+
+  /* offset in FILE from which the first entry in BUFFER has been read */
+  apr_off_t start_offset;
+
+  /* offset in FILE from which the next number has to be read */
+  apr_off_t next_offset;
+
+  /* pool to be used for file ops etc. */
+  apr_pool_t *pool;
+
+  /* buffer for prefetched values */
+  value_position_pair_t buffer[MAX_NUMBER_PREFETCH];
+} packed_number_stream_t;
+
+/* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
+ * STREAM->FILE and buffer them.
+ *
+ * We don't want GCC and others to inline this function into get() because
+ * it prevents get() from being inlined itself.
+ */
+SVN__PREVENT_INLINE
+static svn_error_t *
+packed_stream_read(packed_number_stream_t *stream)
+{
+  unsigned char buffer[MAX_NUMBER_PREFETCH];
+  apr_size_t read = 0;
+  svn_boolean_t eof;
+  apr_size_t i;
+  value_position_pair_t *target;
+
+  /* all buffered data will have been read starting here */
+  stream->start_offset = stream->next_offset;
+
+  /* packed numbers are usually not aligned to MAX_NUMBER_PREFETCH blocks,
+   * i.e. the last number has been incomplete (and not buffered in stream)
+   * and need to be re-read.  Therefore, always correct the file pointer.
+   */
+  SVN_ERR(svn_io_file_seek(stream->file, SEEK_SET, &stream->next_offset,
+                           stream->pool));
+  SVN_ERR(svn_io_file_read_full2(stream->file, buffer, sizeof(buffer),
+                                 &read, &eof, stream->pool));
+
+  /* if the last number is incomplete, trim it from the buffer */
+  while (read > 0 && buffer[read-1] >= 0x80)
+    --read;
+
+  /* we call read() only if get() requires more data.  So, there must be
+   * at least *one* further number. */
+  if SVN__PREDICT_FALSE(read == 0)
+    {
+      const char *file_name;
+      SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
+                                   stream->pool));
+      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                               _("Unexpected end of index file %s"),
+                               file_name);
+    }
+
+  /* parse file buffer and expand into stream buffer */
+  target = stream->buffer;
+  for (i = 0; i < read;)
+    {
+      if (buffer[i] < 0x80)
+        {
+          /* numbers < 128 are relatively frequent and particularly easy
+           * to decode.  Give them special treatment. */
+          target->value = buffer[i];
+          ++i;
+          target->total_len = i;
+          ++target;
+        }
+      else
+        {
+          apr_uint64_t value = 0;
+          apr_uint64_t shift = 0;
+          while (buffer[i] >= 0x80)
+            {
+              value += ((apr_uint64_t)buffer[i] & 0x7f) << shift;
+              shift += 7;
+              ++i;
+            }
+
+          target->value = value + ((apr_uint64_t)buffer[i] << shift);
+          ++i;
+          target->total_len = i;
+          ++target;
+
+          /* let's catch corrupted data early.  It would surely cause
+           * havoc further down the line. */
+          if SVN__PREDICT_FALSE(shift > 8 * sizeof(value))
+            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                                     _("Corrupt index: number too large"));
+       }
+    }
+
+  /* update stream state */
+  stream->used = target - stream->buffer;
+  stream->next_offset = stream->start_offset + i;
+  stream->current = 0;
+
+  return SVN_NO_ERROR;
+};
+
+/* Create and open a packed number stream reading from FILE_NAME and
+ * return it in *STREAM.  Use POOL for allocations.
+ */
+static svn_error_t *
+packed_stream_open(packed_number_stream_t **stream,
+                   const char *file_name,
+                   apr_pool_t *pool)
+{
+  packed_number_stream_t *result = apr_palloc(pool, sizeof(*result));
+  result->pool = svn_pool_create(pool);
+
+  SVN_ERR(svn_io_file_open(&result->file, file_name,
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           result->pool));
+  
+  result->used = 0;
+  result->current = 0;
+  result->start_offset = 0;
+  result->next_offset = 0;
+
+  *stream = result;
+  
+  return SVN_NO_ERROR;
+}
+
+/* Close STREAM which may be NULL.
+ */
+static svn_error_t *
+packed_stream_close(packed_number_stream_t *stream)
+{
+  if (stream)
+    {
+      SVN_ERR(svn_io_file_close(stream->file, stream->pool));
+      svn_pool_destroy(stream->pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * The forced inline is required as e.g. GCC would inline read() into here
+ * instead of lining the simple buffer access into callers of get().
+ */
+SVN__FORCE_INLINE
+static svn_error_t*
+packed_stream_get(apr_uint64_t *value,
+                  packed_number_stream_t *stream)
+{
+  if (stream->current == stream->used)
+    SVN_ERR(packed_stream_read(stream));
+
+  *value = stream->buffer[stream->current].value;
+  ++stream->current;
+
+  return SVN_NO_ERROR;
+}
+
+/* Navigate STREAM to packed file offset OFFSET.  There will be no checks
+ * whether the given OFFSET is valid.
+ */
+static void
+packed_stream_seek(packed_number_stream_t *stream,
+                   apr_off_t offset)
+{
+  if (   stream->used == 0
+      || offset < stream->start_offset
+      || offset >= stream->next_offset)
+    {
+      /* outside buffered data.  Next get() will read() from OFFSET. */
+      stream->start_offset = offset;
+      stream->next_offset = offset;
+      stream->current = 0;
+      stream->used = 0;
+    }
+  else
+    {
+      /* Find the suitable location in the stream buffer.
+       * Since our buffer is small, it is efficient enough to simply scan
+       * it for the desired position. */
+      apr_size_t i;
+      for (i = 0; i < stream->used; ++i)
+        if (stream->buffer[i].total_len > offset - stream->start_offset)
+          break;
+
+      stream->current = i;
+    }
+}
+
+/* Return the packed file offset of at which the next number in the stream
+ * can be found.
+ */
+static apr_off_t
+packed_stream_offset(packed_number_stream_t *stream)
+{
+  return stream->current == 0
+       ? stream->start_offset
+       : stream->buffer[stream->current-1].total_len + stream->start_offset;
+}
+
 svn_error_t *
 svn_fs_fs__l2p_proto_index_open(apr_file_t **proto_index,
                                 const char *file_name,
@@ -356,37 +587,13 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Read an 7/8b uint64 from FILE into *VALUE.  Use POOL for allocations.
- */
-static svn_error_t *
-read_number(apr_uint64_t *value,
-            apr_file_t *file,
-            apr_pool_t *pool)
-{
-  unsigned char byte;
-  apr_uint64_t shift = 0;
-  
-  *value = 0;
-  do
-    {
-      if (shift > 8 * sizeof(value))
-        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
-                                 _("Corrupt index: number too large"));
-
-      SVN_ERR(svn_io_file_getc((char*)&byte, file, pool));
-      *value += ((apr_uint64_t)byte & 0x7f) << shift;
-      shift += 7;
-    }
-  while (byte >= 0x80);
-
-  return SVN_NO_ERROR;
-}            
-
 /* Read the header data structure of the log-to-phys index for REVISION
- * in FS and return it in *HEADER.  Use POOL for allocations.
+ * in FS and return it in *HEADER.  To maximize efficiency, use or return
+ * the data stream in *STREAM.  Use POOL for allocations.
  */
 static svn_error_t *
 get_l2p_header(l2p_index_header_t **header,
+               packed_number_stream_t **stream,
                svn_fs_t *fs,
                svn_revnum_t revision,
                apr_pool_t *pool)
@@ -396,19 +603,19 @@ get_l2p_header(l2p_index_header_t **header,
   apr_size_t page, page_count;
   apr_off_t offset;
   l2p_index_header_t *result = apr_pcalloc(pool, sizeof(*result));
-  
-  apr_file_t *file = NULL;
-  SVN_ERR(svn_io_file_open(&file, path_l2p_index(fs, revision, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  if (*stream == NULL)
+    SVN_ERR(packed_stream_open(stream, path_l2p_index(fs, revision, pool),
+                               pool));
 
   /* read the table sizes */
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->first_revision = (svn_revnum_t)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->revision_count = (int)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->page_size = (apr_size_t)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   page_count = (apr_size_t)value;
 
   /* allocate the page tables */
@@ -422,40 +629,40 @@ get_l2p_header(l2p_index_header_t **header,
   result->page_tables[0] = result->page_table;
   for (i = 0; i < result->revision_count; ++i)
     {
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       result->page_tables[i+1] = result->page_tables[i] + (apr_size_t)value;
     }
 
   /* read actual page tables */
   for (page = 0; page < page_count; ++page)
     {
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       result->page_table[page].size = (apr_uint32_t)value;
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       result->page_table[page].entry_count = (apr_uint32_t)value;
     }
 
   /* correct the page description offsets */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &offset, pool));
+  offset = packed_stream_offset(*stream);
   for (page = 0; page < page_count; ++page)
     {
       result->page_table[page].offset = offset;
       offset += result->page_table[page].size;
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
   *header = result;
 
   return SVN_NO_ERROR;
 }
 
 /* From the log-to-phys index file starting at START_REVISION in FS, read
- * the mapping page identified by TABLE_ENTRY and return it in *PAGE.
+ * the mapping page identified by TABLE_ENTRY and return it in *PAGE.  To
+ * maximize efficiency, use or return the data stream in *STREAM.
  * Use POOL for allocations.
  */
 static svn_error_t *
 get_l2p_page(l2p_index_page_t **page,
+             packed_number_stream_t **stream,
              svn_fs_t *fs,
              svn_revnum_t start_revision,
              l2_index_page_table_entry_t *table_entry,
@@ -463,16 +670,15 @@ get_l2p_page(l2p_index_page_t **page,
 {
   apr_uint64_t value;
   apr_uint32_t i;
-  apr_off_t offset;
   l2p_index_page_t *result = apr_pcalloc(pool, sizeof(*result));
 
   /* open index file and select page */
-  apr_file_t *file = NULL;
-  SVN_ERR(svn_io_file_open(&file, path_l2p_index(fs, start_revision, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  if (*stream == NULL)
+    SVN_ERR(packed_stream_open(stream,
+                               path_l2p_index(fs, start_revision, pool),
+                               pool));
 
-  offset = table_entry->offset;
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  packed_stream_seek(*stream, table_entry->offset);
 
   /* initialize the page content */
   result->entry_count = table_entry->entry_count;
@@ -482,12 +688,11 @@ get_l2p_page(l2p_index_page_t **page,
   /* read all page entries (offsets in rev file) */
   for (i = 0; i < result->entry_count; ++i)
     {
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       result->offsets[i] = (apr_off_t)value - 1; /* '-1' is represented as
                                                     '0' in the index file */
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
   *page = result;
 
   return SVN_NO_ERROR;
@@ -509,14 +714,18 @@ l2p_index_lookup(apr_off_t *offset,
   l2_index_page_table_entry_t *entry, *first_entry, *last_entry;
   apr_size_t page_no;
   apr_uint32_t page_offset;
+  packed_number_stream_t *stream = NULL;
 
   /* read index master data structure */
-  SVN_ERR(get_l2p_header(&header, fs, revision, pool));
+  SVN_ERR(get_l2p_header(&header, &stream, fs, revision, pool));
   if (   (header->first_revision > revision)
       || (header->first_revision + header->revision_count <= revision))
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_REVISION , NULL,
-                             _("Revision %ld not covered by item index"),
-                             revision);
+    {
+      SVN_ERR(packed_stream_close(stream));
+      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_REVISION , NULL,
+                               _("Revision %ld not covered by item index"),
+                               revision);
+    }
 
   /* select the relevant page */
   if (item_index < header->page_size)
@@ -551,7 +760,10 @@ l2p_index_lookup(apr_off_t *offset,
     }
 
   /* read the relevant page */
-  SVN_ERR(get_l2p_page(&page, fs, header->first_revision, entry, pool));
+  SVN_ERR(get_l2p_page(&page, &stream, fs, header->first_revision, entry,
+                       pool));
+  SVN_ERR(packed_stream_close(stream));
+   
   if (page->entry_count <= page_offset)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
                              _("Item index %" APR_UINT64_T_FMT
@@ -616,9 +828,10 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
   l2p_index_header_t *header = NULL;
   svn_revnum_t revision;
   svn_revnum_t last_rev = (svn_revnum_t)(start_rev + count);
+  packed_number_stream_t *stream = NULL;
 
   /* read index master data structure */
-  SVN_ERR(get_l2p_header(&header, fs, start_rev, pool));
+  SVN_ERR(get_l2p_header(&header, &stream, fs, start_rev, pool));
 
   *max_ids = apr_array_make(pool, (int)count, sizeof(apr_uint64_t));
   for (revision = start_rev; revision < last_rev; ++revision)
@@ -628,7 +841,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
       apr_uint64_t item_count;
 
       if (revision >= header->first_revision + header->revision_count)
-        SVN_ERR(get_l2p_header(&header, fs, revision, pool));
+        SVN_ERR(get_l2p_header(&header, &stream, fs, revision, pool));
 
       page_count = header->page_tables[revision - header->first_revision + 1]
                  - header->page_tables[revision - header->first_revision] - 1;
@@ -638,6 +851,8 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
 
       APR_ARRAY_PUSH(*max_ids, apr_uint64_t) = item_count;
     }
+
+  SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
@@ -813,10 +1028,12 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
 }
 
 /* Read the header data structure of the phys-to-log index for REVISION
- * in FS and return it in *HEADER.  Use POOL for allocations.
+ * in FS and return it in *HEADER.  To maximize efficiency, use or return
+ * the data stream in *STREAM.  Use POOL for allocations.
  */
 static svn_error_t *
 get_p2l_header(p2l_index_header_t **header,
+               packed_number_stream_t **stream,
                svn_fs_t *fs,
                svn_revnum_t revision,
                apr_pool_t *pool)
@@ -827,16 +1044,16 @@ get_p2l_header(p2l_index_header_t **header,
   p2l_index_header_t *result = apr_pcalloc(pool, sizeof(*result));
 
   /* open index file */
-  apr_file_t *file = NULL;
-  SVN_ERR(svn_io_file_open(&file, path_p2l_index(fs, revision, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  if (*stream == NULL)
+    SVN_ERR(packed_stream_open(stream, path_p2l_index(fs, revision, pool),
+                               pool));
 
   /* read table sizes and allocate page array */
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->first_revision = (svn_revnum_t)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->page_size = value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   result->page_count = (apr_size_t)value;
   result->offsets
     = apr_pcalloc(pool, (result->page_count + 1) * sizeof(*result->offsets));
@@ -845,28 +1062,26 @@ get_p2l_header(p2l_index_header_t **header,
   result->offsets[0] = 0;
   for (i = 0; i < result->page_count; ++i)
     {
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       result->offsets[i+1] = result->offsets[i] + (apr_off_t)value;
     }
 
   /* correct the offset values */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &offset, pool));
+  offset = packed_stream_offset(*stream);
   for (i = 0; i <= result->page_count; ++i)
     result->offsets[i] += offset;
 
-  SVN_ERR(svn_io_file_close(file, pool));
   *header = result;
 
   return SVN_NO_ERROR;
 }
 
-/* Read a mapping entry from the phys-to-log index FILE and append it to
+/* Read a mapping entry from the phys-to-log index STREAM and append it to
  * RESULT.  *ITEM_INDEX contains the phys offset for the entry and will
  * be moved forward by the size of entry.  Use POOL for allocations.
  */
 static svn_error_t *
-read_entry(apr_file_t *file,
+read_entry(packed_number_stream_t *stream,
            apr_off_t *item_offset,
            apr_array_header_t *result,
            apr_pool_t *pool)
@@ -876,13 +1091,13 @@ read_entry(apr_file_t *file,
   svn_fs_fs__p2l_entry_t entry;
 
   entry.offset = *item_offset;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, stream));
   entry.size = (apr_off_t)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, stream));
   entry.type = (int)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, stream));
   entry.revision = (svn_revnum_t)value;
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, stream));
   entry.item_index = value;
 
   APR_ARRAY_PUSH(result, svn_fs_fs__p2l_entry_t) = entry;
@@ -895,10 +1110,12 @@ read_entry(apr_file_t *file,
  * offset PAGE_START from the index for START_REVISION in FS.  The data
  * can be found in the index page beginning at START_OFFSET with the next
  * page beginning at NEXT_OFFSET.  Return the relevant index entries in
- * *ENTRIES.  Use POOL for allocations.
+ * *ENTRIES.  To maximize efficiency, use or return the data stream in
+ * STREAM.  Use POOL for allocations.
  */
 static svn_error_t *
 get_p2l_page(apr_array_header_t **entries,
+             packed_number_stream_t **stream,
              svn_fs_t *fs,
              svn_revnum_t start_revision,
              apr_off_t start_offset,
@@ -914,22 +1131,22 @@ get_p2l_page(apr_array_header_t **entries,
   apr_off_t offset;
 
   /* open index and navigate to page start */
-  apr_file_t *file = NULL;
-  SVN_ERR(svn_io_file_open(&file, path_p2l_index(fs, start_revision, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &start_offset, pool));
+  if (*stream == NULL)
+    SVN_ERR(packed_stream_open(stream,
+                               path_p2l_index(fs, start_revision, pool),
+                               pool));
+  packed_stream_seek(*stream, start_offset);
 
   /* read rev file offset of the first page entry (all page entries will
    * only store their sizes). */
-  SVN_ERR(read_number(&value, file, pool));
+  SVN_ERR(packed_stream_get(&value, *stream));
   item_offset = (apr_off_t)value;
 
   /* read all entries of this page */
   do
     {
-      SVN_ERR(read_entry(file, &item_offset, result, pool));
-      offset = 0;
-      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &offset, pool));
+      SVN_ERR(read_entry(*stream, &item_offset, result, pool));
+      offset = packed_stream_offset(*stream);
     }
   while (offset < next_offset);
 
@@ -937,12 +1154,11 @@ get_p2l_page(apr_array_header_t **entries,
    * entry of the next page */
   if (item_offset < page_start + page_size)
     {
-      SVN_ERR(read_number(&value, file, pool));
+      SVN_ERR(packed_stream_get(&value, *stream));
       item_offset = (apr_off_t)value;
-      SVN_ERR(read_entry(file, &item_offset, result, pool));
+      SVN_ERR(read_entry(*stream, &item_offset, result, pool));
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
   *entries = result;
 
   return SVN_NO_ERROR;
@@ -957,21 +1173,26 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
 {
   p2l_index_header_t *header = NULL;
   apr_size_t page_no;
+  packed_number_stream_t *stream = NULL;
 
-  SVN_ERR(get_p2l_header(&header, fs, revision, pool));
+  SVN_ERR(get_p2l_header(&header, &stream, fs, revision, pool));
   page_no = offset / header->page_size;
 
   if (header->page_count <= page_no)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                             _("Offset %" APR_OFF_T_FMT
-                               " too large in revision %ld"),
-                             offset, revision);
+    {
+      SVN_ERR(packed_stream_close(stream));
+      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+                               _("Offset %" APR_OFF_T_FMT
+                                 " too large in revision %ld"),
+                               offset, revision);
+    }
 
-  SVN_ERR(get_p2l_page(entries, fs, header->first_revision,
+  SVN_ERR(get_p2l_page(entries, &stream, fs, header->first_revision,
                        header->offsets[page_no],
                        header->offsets[page_no + 1],
                        (apr_off_t)(page_no * header->page_size),
                        header->page_size, pool));
+  SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
