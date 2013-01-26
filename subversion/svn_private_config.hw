@@ -101,6 +101,21 @@
 #define dgettext(domain, x) (x)
 #endif
 
+/* compiler hints as supported by MS VC */
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif define(_MSC_VER)
+# define SVN__FORCE_INLINE __forceinline
+# define SVN__PREVENT_INLINE __declspec(noinline)
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#endif
+
+#define SVN__PREDICT_TRUE
+#define SVN__PREDICT_FALSE
+
 #endif /* SVN_PRIVATE_CONFIG_HW */
 
 /* Inclusion of Berkeley DB header */

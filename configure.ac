@@ -708,6 +708,26 @@ AH_BOTTOM([
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
 #endif
+
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x)
+# define SVN__PREDICT_TRUE(x)
+#endif
+
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif defined(__GNUC__)
+# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#endif
 ])
 
 dnl Used to simulate makefile conditionals.
