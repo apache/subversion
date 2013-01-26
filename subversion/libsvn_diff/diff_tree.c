@@ -199,6 +199,15 @@ default_file_closed(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+default_node_absent(const char *relpath,
+                    void *dir_baton,
+                    const svn_diff_tree_processor_t *processor,
+                    apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 svn_diff_tree_processor_t *
 svn_diff__tree_processor_create(void *baton,
                                 apr_pool_t *result_pool)
@@ -219,6 +228,9 @@ svn_diff__tree_processor_create(void *baton,
   wrapper->tp.file_deleted  = default_file_deleted;
   wrapper->tp.file_changed  = default_file_changed;
   wrapper->tp.file_closed   = default_file_closed;
+
+  wrapper->tp.node_absent   = default_node_absent;
+
 
   return &wrapper->tp;
 }
@@ -513,6 +525,25 @@ reverse_file_closed(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+reverse_node_absent(const char *relpath,
+                    void *dir_baton,
+                    const svn_diff_tree_processor_t *processor,
+                    apr_pool_t *scratch_pool)
+{
+  struct reverse_tree_baton_t *rb = processor->baton;
+
+  if (rb->prefix_relpath)
+    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
+
+  SVN_ERR(rb->processor->node_absent(relpath,
+                                    dir_baton,
+                                    processor,
+                                    scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
 const svn_diff_tree_processor_t *
 svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
                                         const char *prefix_relpath,
@@ -533,11 +564,14 @@ svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
   reverse->dir_deleted  = reverse_dir_deleted;
   reverse->dir_changed  = reverse_dir_changed;
   reverse->dir_closed   = reverse_dir_closed;
+
   reverse->file_opened   = reverse_file_opened;
   reverse->file_added    = reverse_file_added;
   reverse->file_deleted  = reverse_file_deleted;
   reverse->file_changed  = reverse_file_changed;
   reverse->file_closed   = reverse_file_closed;
+
+  reverse->node_absent   = reverse_node_absent;
 
   return reverse;
 }
