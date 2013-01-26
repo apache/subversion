@@ -5130,6 +5130,7 @@ drive_merge_report_editor(const char *target_abspath,
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   const char *old_sess1_url, *old_sess2_url;
   svn_boolean_t is_rollback = source->loc1->rev > source->loc2->rev;
+  apr_hash_t *absent_relpaths = apr_hash_make(scratch_pool);
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
@@ -5201,6 +5202,7 @@ drive_merge_report_editor(const char *target_abspath,
                                       merge_b->ra_session2, source->loc1->rev,
                                       FALSE /* walk_deleted_dirs */,
                                       TRUE /* text_deltas */,
+                                      absent_relpaths,
                                       &merge_callbacks, merge_b,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
@@ -5322,6 +5324,24 @@ drive_merge_report_editor(const char *target_abspath,
   /* Caller must call svn_sleep_for_timestamps() */
   *(merge_b->use_sleep) = TRUE;
 
+  if (apr_hash_count(absent_relpaths))
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, absent_relpaths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *absent_abspath;
+
+          absent_abspath = svn_dirent_join(target_abspath,
+                                           svn__apr_hash_index_key(hi),
+                                           merge_b->pool);
+
+          apr_hash_set(merge_b->skipped_abspaths, absent_abspath,
+                       APR_HASH_KEY_STRING, absent_abspath);
+        }
+    }
   return SVN_NO_ERROR;
 }
 

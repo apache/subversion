@@ -1272,6 +1272,9 @@ struct diff_notify_baton_t
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
+  /* If not NULL collects the absent paths */
+  apr_hash_t *absent_relpaths;
+
   apr_pool_t *pool;
 };
 
@@ -1481,8 +1484,16 @@ diff_state_absent(const char *relpath,
         = svn_wc_create_notify(relpath, svn_wc_notify_skip, scratch_pool);
 
       notify->kind = svn_node_file;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_missing;
       (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
     }
+
+  if (dnb->absent_relpaths)
+    apr_hash_set(dnb->absent_relpaths,
+                 apr_pstrdup(apr_hash_pool_get(dnb->absent_relpaths), relpath),
+                 APR_HASH_KEY_STRING,
+                 "");
 
   return SVN_NO_ERROR;
 }
@@ -1496,6 +1507,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
                             svn_boolean_t text_deltas,
+                            apr_hash_t *absent_relpaths,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
@@ -1518,6 +1530,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   dnb->deleted_paths = apr_hash_make(eb->pool);
   dnb->notify_func = notify_func;
   dnb->notify_baton = notify_baton;
+  dnb->absent_relpaths = absent_relpaths;
 
   SVN_ERR(svn_wc__wrap_diff_callbacks(&eb->processor,
                                       diff_callbacks, diff_cmd_baton,
