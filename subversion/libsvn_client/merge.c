@@ -1574,6 +1574,43 @@ record_update_update(const merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Record the delete for future processing and (later) produce the
+   update_delete notification */
+static svn_error_t *
+record_update_delete(const merge_cmd_baton_t *merge_b,
+                     const char *local_abspath,
+                     svn_node_kind_t kind,
+                     apr_pool_t *scratch_pool)
+{
+  /* Update the lists of merged, skipped, tree-conflicted and added paths. */
+  if (merge_b->merge_source.ancestral
+      || merge_b->reintegrate_merge)
+    {
+      /* Issue #4166: If a previous merge added NOTIFY_ABSPATH, but we
+         are now deleting it, then remove it from the list of added
+         paths. */
+      apr_hash_set(merge_b->added_abspaths, local_abspath,
+                   APR_HASH_KEY_STRING, NULL);
+      store_path(merge_b->merged_abspaths, local_abspath);
+    }
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+  if (merge_b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_delete,
+                                    scratch_pool);
+      notify->kind = kind;
+
+      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
+                                    scratch_pool);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 merge_dir_props_changed(svn_wc_notify_state_t *state,
@@ -2464,6 +2501,9 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       /* Record that we might have deleted mergeinfo */
       alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
                            local_abspath, merge_b->pool);
+
+      SVN_ERR(record_update_delete(merge_b, local_abspath, svn_node_file,
+                                   scratch_pool));
     }
   else
     {
@@ -2731,17 +2771,20 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
                             svn_wc_conflict_reason_edited));
       *tree_conflicted = TRUE;
       *state = svn_wc_notify_state_conflicted;
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_file,
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));
     }
   else
     {
       *state = svn_wc_notify_state_changed;
-    }
 
-  /* Record that we might have deleted mergeinfo */
-  alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
-                       local_abspath, merge_b->pool);
+      /* Record that we might have deleted mergeinfo */
+      alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
+                           local_abspath, merge_b->pool);
+
+      SVN_ERR(record_update_delete(merge_b, local_abspath, svn_node_dir,
+                                   scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3142,21 +3185,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         }
       if (moved_to_abspath)
         notify_abspath = moved_to_abspath;
-    }
-
-  /* Update the lists of merged, skipped, tree-conflicted and added paths. */
-  if (merge_b->merge_source.ancestral
-      || merge_b->reintegrate_merge)
-    {
-      if (notify->action == svn_wc_notify_update_delete
-          && merge_b->added_abspaths)
-        {
-          /* Issue #4166: If a previous merge added NOTIFY_ABSPATH, but we
-             are now deleting it, then remove it from the list of added
-             paths. */
-          apr_hash_set(merge_b->added_abspaths, notify_abspath,
-                       APR_HASH_KEY_STRING, NULL);
-        }
     }
 
   /* Notify that a merge is beginning, if we haven't already done so.
@@ -5509,12 +5537,12 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
     }
   else if (action == svn_wc_notify_update_update)
     {
-          if (text_state == svn_wc_notify_state_conflicted
-              || text_state == svn_wc_notify_state_merged
-              || text_state == svn_wc_notify_state_changed
-              || prop_state == svn_wc_notify_state_conflicted
-              || prop_state == svn_wc_notify_state_merged
-              || prop_state == svn_wc_notify_state_changed)
+      if (text_state == svn_wc_notify_state_conflicted
+          || text_state == svn_wc_notify_state_merged
+          || text_state == svn_wc_notify_state_changed
+          || prop_state == svn_wc_notify_state_conflicted
+          || prop_state == svn_wc_notify_state_merged
+          || prop_state == svn_wc_notify_state_changed)
         {
           SVN_ERR(record_update_update(notify_baton->merge_b,
                                        svn_dirent_join(
@@ -5524,6 +5552,14 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                                        text_state, prop_state,
                                        scratch_pool));
         }
+    }
+  else if (action == svn_wc_notify_update_delete)
+    {
+      SVN_ERR(record_update_delete(notify_baton->merge_b,
+                                   svn_dirent_join(
+                                        notify_baton->merge_b->target->abspath,
+                                        target_relpath, scratch_pool),
+                                   svn_node_file, scratch_pool));
     }
 
   if (IS_OPERATIVE_NOTIFICATION(notify) && (! *header_sent))
