@@ -13969,7 +13969,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' G', prev_status=' G'),
+    'C_MOVED' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
