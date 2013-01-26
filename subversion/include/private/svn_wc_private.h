@@ -1701,6 +1701,15 @@ typedef svn_error_t *
                                       void *state_baton,
                                       apr_pool_t *scratch_pool);
 
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  absent nodes.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_absent_t)(const char *relpath,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
 
 /** Obtains a diff processor that will drive the diff callbacks when it
  * is invoked. The state arguments will be handled by the state processor
@@ -1712,6 +1721,7 @@ svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
                             void *callback_baton,
                             svn_wc__diff_state_handle_t state_handle,
                             svn_wc__diff_state_close_t state_close,
+                            svn_wc__diff_state_absent_t state_absent,
                             void *state_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
