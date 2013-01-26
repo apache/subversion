@@ -1472,6 +1472,71 @@ record_tree_conflict(const merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Record the add for future processing and (later) produce the
+   update_add notification
+
+   Originally a helper for notification_receiver: Cache the roots of
+   subtrees added under TARGET_ABSPATH.
+ */
+static svn_error_t *
+record_update_add(merge_cmd_baton_t *merge_b,
+                  const char *local_abspath,
+                  svn_node_kind_t kind,
+                  apr_pool_t *scratch_pool)
+{
+  svn_boolean_t root_of_added_subtree = TRUE;
+
+  if (merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+    {
+      /* Stash the root path of any added subtrees. */
+      if (merge_b->added_abspaths == NULL)
+        {
+          /* The first added path is always a root. */
+          merge_b->added_abspaths = apr_hash_make(merge_b->pool);
+        }
+      else
+        {
+          const char *added_path_dir = svn_dirent_dirname(local_abspath,
+                                                          scratch_pool);
+
+          /* Is NOTIFY->PATH the root of an added subtree? */
+          while (strcmp(merge_b->target->abspath, added_path_dir))
+            {
+              if (contains_path(merge_b->added_abspaths, added_path_dir))
+                {
+                  root_of_added_subtree = FALSE;
+                  break;
+                }
+
+              if (svn_dirent_is_root(added_path_dir, strlen(added_path_dir)))
+                break;
+              added_path_dir = svn_dirent_dirname(added_path_dir,
+                                                  scratch_pool);
+            }
+        }
+
+      if (root_of_added_subtree)
+        {
+          store_path(merge_b->added_abspaths, local_abspath);
+        }
+    }
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+  if (merge_b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_add,
+                                    scratch_pool);
+      notify->kind = kind;
+
+      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
+                                    scratch_pool);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
@@ -2155,6 +2220,9 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       store_path(merge_b->dry_run_added, local_abspath); */
     }
 
+  SVN_ERR(record_update_add(merge_b, local_abspath, svn_node_file,
+                            scratch_pool));
+
   *content_state = svn_wc_notify_state_changed;
   *prop_state = svn_wc_notify_state_changed;
 
@@ -2499,6 +2567,9 @@ merge_dir_added(svn_wc_notify_state_t *state,
 
     }
   *state = svn_wc_notify_state_changed;
+
+  SVN_ERR(record_update_add(merge_b, local_abspath, svn_node_dir,
+                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2935,64 +3006,6 @@ notify_merge_completed(const char *target_abspath,
     }
 }
 
-/* Helper for notification_receiver: Cache the roots of subtrees added under
-   TARGET_ABSPATH.
-
-   If *ADDED_ABSPATHS is not null, then it is a hash of (const char *)
-   absolute WC paths mapped to the same.  If it is null, then allocate a
-   new hash in RESULT_POOL.
-
-   If ADDED_ABSPATH is a subtree of TARGET_ABSPATH, is not already found in
-   *ADDED_ABSPATHS, nor is a subtree of any path already found within the
-   hash, then add a copy of ADDED_ABSPATH to *ADDED_ABSPATHS.
-
-   All additions to *ADDED_ABSPATHS are allocated in RESULT_POOL.
-   SCRATCH_POOL is used for temporary allocations. */
-static void
-update_the_list_of_added_subtrees(const char *target_abspath,
-                                  const char *added_abspath,
-                                  apr_hash_t **added_abspaths,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_boolean_t root_of_added_subtree = TRUE;
-
-  /* Stash the root path of any added subtrees. */
-  if (*added_abspaths == NULL)
-    {
-      /* The first added path is always a root. */
-      *added_abspaths = apr_hash_make(result_pool);
-    }
-  else
-    {
-      apr_pool_t *subpool = svn_pool_create(scratch_pool);
-      const char *added_path_parent =
-        svn_dirent_dirname(added_abspath, subpool);
-
-      /* Is NOTIFY->PATH the root of an added subtree? */
-      while (strcmp(target_abspath, added_path_parent))
-        {
-          if (apr_hash_get(*added_abspaths,
-                           added_path_parent,
-                           APR_HASH_KEY_STRING))
-            {
-              root_of_added_subtree = FALSE;
-              break;
-            }
-
-          added_path_parent = svn_dirent_dirname(
-            added_path_parent, subpool);
-        }
-
-      svn_pool_destroy(subpool);
-    }
-
-  if (root_of_added_subtree)
-    {
-      store_path(*added_abspaths, added_abspath);
-    }
-}
-
 /* Is the notification the result of a real operative merge? */
 #define IS_OPERATIVE_NOTIFICATION(notify)  \
                     (notify->content_state == svn_wc_notify_state_conflicted \
@@ -3085,14 +3098,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           || notify->action == svn_wc_notify_update_add)
         {
           store_path(merge_b->merged_abspaths, notify_abspath);
-        }
-
-      if (notify->action == svn_wc_notify_update_add)
-        {
-          update_the_list_of_added_subtrees(merge_b->target->abspath,
-                                            notify_abspath,
-                                            &(merge_b->added_abspaths),
-                                            notify_b->pool, pool);
         }
 
       if (notify->action == svn_wc_notify_update_delete
@@ -5428,21 +5433,31 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                          svn_wc_notify_state_t prop_state,
                          const svn_merge_range_t *r,
                          svn_boolean_t *header_sent,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  svn_wc_notify_t *notify = svn_wc_create_notify(target_relpath, action, pool);
+  svn_wc_notify_t *notify = svn_wc_create_notify(target_relpath, action,
+                                                 scratch_pool);
   notify->kind = svn_node_file;
   notify->content_state = text_state;
   notify->prop_state = prop_state;
   if (notify->content_state == svn_wc_notify_state_missing)
     {
       notify->action = svn_wc_notify_skip;
-      SVN_ERR(record_skip(notify_baton->merge_b, 
+      SVN_ERR(record_skip(notify_baton->merge_b,
                           svn_dirent_join(
                                 notify_baton->merge_b->target->abspath,
-                                target_relpath, pool),
+                                target_relpath, scratch_pool),
                           svn_node_file, text_state,
-                          pool));
+                          scratch_pool));
+    }
+
+  if (action == svn_wc_notify_update_add)
+    {
+      SVN_ERR(record_update_add(notify_baton->merge_b,
+                                svn_dirent_join(
+                                        notify_baton->merge_b->target->abspath,
+                                        target_relpath, scratch_pool),
+                                svn_node_file, scratch_pool));
     }
 
   if (IS_OPERATIVE_NOTIFICATION(notify) && (! *header_sent))
@@ -5450,10 +5465,10 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
       notify_merge_begin(notify_baton->merge_b->target->abspath,
                          (notify_baton->merge_b->merge_source.ancestral ? r : NULL),
                          notify_baton->merge_b->same_repos,
-                         notify_baton->merge_b->ctx, pool);
+                         notify_baton->merge_b->ctx, scratch_pool);
       *header_sent = TRUE;
     }
-  notification_receiver(notify_baton, notify, pool);
+  notification_receiver(notify_baton, notify, scratch_pool);
 
   return SVN_NO_ERROR;
 }
