@@ -115,8 +115,8 @@ svn_cl__accept_from_word(const char *word)
 }
 
 
-/* Print on stdout a diff between the 'base' and 'merged' files, if both of
- * those are available, else between 'their' and 'my' files, of DESC. */
+/* Print on stdout a diff that shows incoming conflicting changes
+ * corresponding to the conflict described in DESC. */
 static svn_error_t *
 show_diff(const svn_wc_conflict_description2_t *desc,
           apr_pool_t *pool)
@@ -126,15 +126,29 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   svn_stream_t *output;
   svn_diff_file_options_t *options;
 
-  if (desc->merged_file && desc->base_abspath)
+  if (desc->merged_file)
     {
-      /* Show the conflict markers to the user */
-      path1 = desc->base_abspath;
+      /* For conflicts recorded by the 'merge' operation, show a diff between
+       * 'mine' (the working version of the file as it appeared before the
+       * 'merge' operation was run) and 'merged' (the version of the file
+       * as it appears after the merge operation).
+       *
+       * For conflicts recorded by the 'update' and 'switch' operations,
+       * show a diff beween 'theirs' (the new pristine version of the
+       * file) and 'merged' (the version of the file as it appears with
+       * local changes merged with the new pristine version).
+       *
+       * This way, the diff is always minimal and clearly identifies changes
+       * brought into the working copy by the update/switch/merge operation. */
+      if (desc->operation == svn_wc_operation_merge)
+        path1 = desc->my_abspath;
+      else
+        path1 = desc->their_abspath;
       path2 = desc->merged_file;
     }
   else
     {
-      /* There's no base file, but we can show the
+      /* There's no merged file, but we can show the
          difference between mine and theirs. */
       path1 = desc->their_abspath;
       path2 = desc->my_abspath;
