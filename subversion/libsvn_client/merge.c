@@ -3160,32 +3160,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    * retrieve that info here, instead of querying the WC again here. */
   notify_abspath = svn_dirent_join(merge_b->target->abspath,
                                    notify->path, pool);
-  if (notify->action == svn_wc_notify_update_update
-      && notify->kind == svn_node_file)
-    {
-      svn_error_t *err;
-      const char *moved_to_abspath;
-
-      err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
-                                        merge_b->ctx->wc_ctx,
-                                        notify_abspath, pool, pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              svn_error_clear(err);
-              moved_to_abspath = NULL;
-            }
-          else
-            {
-              /* ### return svn_error_trace(err); */
-              svn_error_clear(err);
-              return;
-            }
-        }
-      if (moved_to_abspath)
-        notify_abspath = moved_to_abspath;
-    }
 
   /* Notify that a merge is beginning, if we haven't already done so.
    * (A single-file merge is notified separately: see single_file_merge_notify().) */
@@ -5336,10 +5310,10 @@ drive_merge_report_editor(const char *target_abspath,
 
           absent_abspath = svn_dirent_join(target_abspath,
                                            svn__apr_hash_index_key(hi),
-                                           merge_b->pool);
+                                           scratch_pool);
 
-          apr_hash_set(merge_b->skipped_abspaths, absent_abspath,
-                       APR_HASH_KEY_STRING, absent_abspath);
+          record_skip(merge_b, absent_abspath, svn_node_unknown,
+                      svn_wc_notify_state_missing, scratch_pool);
         }
     }
   return SVN_NO_ERROR;
