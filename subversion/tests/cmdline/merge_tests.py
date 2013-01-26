@@ -17492,6 +17492,56 @@ def merge_with_externals_with_mergeinfo(sbox):
     [], 'merge', '--reintegrate', sbox.repo_url + '/A_COPY',
     A_path)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4306)
+# Test for issue #4306 'multiple editor drive file merges record wrong
+# mergeinfo during conflicts'
+def conflict_aborted_mergeinfo_described_partial_merge(sbox):
+  "conflicted split merge can be repeated"
+
+  sbox.build()
+
+  iota_copy_path = sbox.ospath('iota-copy')
+
+  # r2
+  sbox.simple_copy('iota', 'iota-copy')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_append('iota', 'new line in r3')
+  sbox.simple_commit()
+
+  # r4
+  sbox.simple_append('iota', 'new line in r4')
+  sbox.simple_commit()
+
+  # r5
+  sbox.simple_append('iota', 'new line in r5')
+  sbox.simple_commit()
+
+  # r6 Merge r4 from iota to iota-moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/iota',
+                                     '-c', '4', iota_copy_path, '--accept',
+                                     'theirs-conflict')
+  sbox.simple_commit()
+
+  # Merge everything (i.e. r2 and r5) from iota to iota-moved.
+  # This is split into to merges, first of r2 and then of r5.
+  # But since we are postponing conflict resolution, the merge
+  # should stop after r2 is merged, allowing us to resolve and
+  # repeat the merge at which point r5 can be merged.  The mergeinfo
+  # on iota-copy then should only reflect that r2 and r3 have been
+  # merged from ^/iota; r5 should not be present.
+  svntest.actions.run_and_verify_svn(None, None, '.*', 'merge', '^/iota',
+                                     iota_copy_path, '--accept', 'postpone')
+
+  # Previously this test failed because the merge failed after merging
+  # only r2 (as it should) but mergeinfo for r5-6 was recorded, preventing
+  # subsequent repeat merges from applying the operative r5.
+  svntest.actions.run_and_verify_svn(
+    "Incorrect mergeinfo set during conflict aborted merge",
+    ['/iota:2-4\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
+
 ########################################################################
 # Run the tests
 
@@ -17624,6 +17674,7 @@ test_list = [ None,
               merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
               merge_with_externals_with_mergeinfo,
+              conflict_aborted_mergeinfo_described_partial_merge,
              ]
 
 if __name__ == '__main__':
