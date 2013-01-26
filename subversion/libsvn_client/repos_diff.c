@@ -1347,22 +1347,21 @@ diff_state_handle(svn_boolean_t tree_conflicted,
 {
   struct edit_baton *eb = state_baton;
   svn_wc_notify_action_t action = svn_wc_notify_skip;
+  svn_wc_notify_state_t notify_content_state = svn_wc_notify_state_inapplicable;
+  svn_wc_notify_state_t notify_prop_state = svn_wc_notify_state_inapplicable;
+  svn_node_kind_t notify_kind;
 
   if (! eb->notify_func)
     return SVN_NO_ERROR;
 
-  /* This code is copy & pasted from different functions in this file.
-     It is only used from the merge api, and should really be integrated
-     there.
-   */
+  if ((for_delete && before_operation && !tree_conflicted)
+      || (for_add && kind == svn_kind_dir && !before_operation))
+    return SVN_NO_ERROR;
 
   if (for_delete)
     {
       const char *deleted_path;
       deleted_path_notify_t *dpn;
-
-      if (before_operation && !tree_conflicted)
-        return SVN_NO_ERROR;
 
       deleted_path = apr_pstrdup(eb->pool, relpath);
       dpn = apr_pcalloc(eb->pool, sizeof(*dpn));
@@ -1383,7 +1382,71 @@ diff_state_handle(svn_boolean_t tree_conflicted,
 
       return SVN_NO_ERROR;
     }
-  else if (kind == svn_kind_file)
+
+  if (tree_conflicted)
+    {
+      svn_wc_notify_t *notify;
+      deleted_path_notify_t *dpn;
+
+      apr_hash_set(eb->deleted_paths, relpath,
+                   APR_HASH_KEY_STRING, NULL);
+
+      notify = svn_wc_create_notify(relpath, svn_wc_notify_tree_conflict,
+                                    scratch_pool);
+
+      dpn = apr_hash_get(eb->deleted_paths, relpath, APR_HASH_KEY_STRING);
+      if (dpn)
+        {
+          /* If any was found, we will handle the pending 'deleted path
+          * notification' (DPN) here. Remove it from the list. */
+          apr_hash_set(eb->deleted_paths, relpath,
+              APR_HASH_KEY_STRING, NULL);
+
+          /* the pending delete might be on a different node kind. */
+          notify_kind = dpn->kind;
+        }
+
+      notify->kind = (kind == svn_kind_dir) ? svn_node_dir : svn_node_file;
+      (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
+      return SVN_NO_ERROR;
+    }
+
+  if (state)
+    notify_content_state = *state;
+  if (prop_state)
+    notify_prop_state = *prop_state;
+
+  /* These states apply to properties (dirs) and content (files) at the same
+     time, so handle them as the same whatever way we got them. */
+  if (notify_prop_state == svn_wc_notify_state_obstructed
+      || notify_prop_state == svn_wc_notify_state_missing)
+    {
+      notify_content_state = notify_prop_state;
+    }
+
+  if (notify_prop_state == svn_wc_notify_state_obstructed
+      || notify_prop_state == svn_wc_notify_state_missing)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(relpath, svn_wc_notify_skip,
+                                    scratch_pool);
+
+      notify->kind = (kind == svn_kind_dir) ? svn_node_dir : svn_node_file;
+      notify->content_state = notify_content_state;
+      notify->prop_state = notify_prop_state;
+      (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
+      return SVN_NO_ERROR;
+    }
+
+
+
+  /* This code is copy & pasted from different functions in this file.
+     It is only used from the merge api, and should really be integrated
+     there.
+   */
+
+  if (kind == svn_kind_file)
     {
       deleted_path_notify_t *dpn;
       svn_wc_notify_t *notify;
