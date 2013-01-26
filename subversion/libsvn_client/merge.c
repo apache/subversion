@@ -1519,6 +1519,8 @@ record_update_add(merge_cmd_baton_t *merge_b,
         {
           store_path(merge_b->added_abspaths, local_abspath);
         }
+
+      store_path(merge_b->merged_abspaths, local_abspath);
     }
 
 #ifdef HANDLE_NOTIFY_FROM_MERGE
@@ -1529,6 +1531,40 @@ record_update_add(merge_cmd_baton_t *merge_b,
       notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_add,
                                     scratch_pool);
       notify->kind = kind;
+
+      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
+                                    scratch_pool);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+/* Record the update for future processing and (later) produce the
+   update_add notification */
+static svn_error_t *
+record_update_update(const merge_cmd_baton_t *merge_b,
+                     const char *local_abspath,
+                     svn_node_kind_t kind,
+                     svn_wc_notify_state_t content_state,
+                     svn_wc_notify_state_t prop_state,
+                     apr_pool_t *scratch_pool)
+{
+  if (merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+    {
+      store_path(merge_b->merged_abspaths, local_abspath);
+    }
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+  if (merge_b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_update,
+                                    scratch_pool);
+      notify->kind = kind;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
 
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                     scratch_pool);
@@ -1694,6 +1730,15 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                                   ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
+
+      if (*state == svn_wc_notify_state_conflicted
+          || *state == svn_wc_notify_state_merged
+          || *state == svn_wc_notify_state_changed)
+        {
+          SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
+                                       svn_wc_notify_state_inapplicable,
+                                       *state, scratch_pool));
+        }
     }
   else
     *state = svn_wc_notify_state_unchanged;
@@ -1979,6 +2024,18 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         *content_state = svn_wc_notify_state_missing;
       else /* merge_outcome == svn_wc_merge_unchanged */
         *content_state = svn_wc_notify_state_unchanged;
+    }
+
+  if (*content_state == svn_wc_notify_state_conflicted
+      || *content_state == svn_wc_notify_state_merged
+      || *content_state == svn_wc_notify_state_changed
+      || *prop_state == svn_wc_notify_state_conflicted
+      || *prop_state == svn_wc_notify_state_merged
+      || *prop_state == svn_wc_notify_state_changed)
+    {
+      SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
+                                   *content_state, *prop_state,
+                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -3091,15 +3148,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   if (merge_b->merge_source.ancestral
       || merge_b->reintegrate_merge)
     {
-      if (notify->content_state == svn_wc_notify_state_merged
-          || notify->content_state == svn_wc_notify_state_changed
-          || notify->prop_state == svn_wc_notify_state_merged
-          || notify->prop_state == svn_wc_notify_state_changed
-          || notify->action == svn_wc_notify_update_add)
-        {
-          store_path(merge_b->merged_abspaths, notify_abspath);
-        }
-
       if (notify->action == svn_wc_notify_update_delete
           && merge_b->added_abspaths)
         {
@@ -5458,6 +5506,24 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                                         notify_baton->merge_b->target->abspath,
                                         target_relpath, scratch_pool),
                                 svn_node_file, scratch_pool));
+    }
+  else if (action == svn_wc_notify_update_update)
+    {
+          if (text_state == svn_wc_notify_state_conflicted
+              || text_state == svn_wc_notify_state_merged
+              || text_state == svn_wc_notify_state_changed
+              || prop_state == svn_wc_notify_state_conflicted
+              || prop_state == svn_wc_notify_state_merged
+              || prop_state == svn_wc_notify_state_changed)
+        {
+          SVN_ERR(record_update_update(notify_baton->merge_b,
+                                       svn_dirent_join(
+                                        notify_baton->merge_b->target->abspath,
+                                        target_relpath, scratch_pool),
+                                       svn_node_file,
+                                       text_state, prop_state,
+                                       scratch_pool));
+        }
     }
 
   if (IS_OPERATIVE_NOTIFICATION(notify) && (! *header_sent))
