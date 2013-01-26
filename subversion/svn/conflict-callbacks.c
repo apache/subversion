@@ -24,7 +24,6 @@
 
 #include <apr_xlate.h>  /* for APR_LOCALE_CHARSET */
 
-#define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
