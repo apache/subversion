@@ -722,6 +722,9 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
+   If ABSENT_RELPATHS is non-null, collect const char * keys in it with
+   the relative paths marked as absent by the diff driver.
+
    EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const svn_delta_editor_t **editor,
@@ -731,6 +734,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
                             svn_boolean_t text_deltas,
+                            apr_hash_t *absent_relpaths,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
