@@ -155,6 +155,7 @@ typedef struct svn_diff_tree_processor_t
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
 
+  /* Called after file_opened() for newly added and copied files */
   svn_error_t *
   (*file_added)(const char *relpath,
                 const svn_diff_source_t *copyfrom_source,
@@ -167,6 +168,7 @@ typedef struct svn_diff_tree_processor_t
                 const struct svn_diff_tree_processor_t *processor,
                 apr_pool_t *scratch_pool);
 
+  /* Called after file_opened() for deleted or moved away files */
   svn_error_t *
   (*file_deleted)(const char *relpath,
                   const svn_diff_source_t *left_source,
@@ -176,6 +178,7 @@ typedef struct svn_diff_tree_processor_t
                   const struct svn_diff_tree_processor_t *processor,
                   apr_pool_t *scratch_pool);
 
+  /* Called after file_opened() for changed files */
   svn_error_t *
   (*file_changed)(const char *relpath,
                   const svn_diff_source_t *left_source,
@@ -190,11 +193,19 @@ typedef struct svn_diff_tree_processor_t
                   const struct svn_diff_tree_processor_t *processor,
                   apr_pool_t *scratch_pool);
 
+  /* Called after file_opened() for unmodified files */
   svn_error_t *
   (*file_closed)(const char *relpath,
                  const svn_diff_source_t *left_source,
                  const svn_diff_source_t *right_source,
                  void *file_baton,
+                 const struct svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool);
+
+  /* Called when encountering a marker for an absent file or directory */
+  svn_error_t *
+  (*node_absent)(const char *relpath,
+                 void *dir_baton,
                  const struct svn_diff_tree_processor_t *processor,
                  apr_pool_t *scratch_pool);
 } svn_diff_tree_processor_t;
