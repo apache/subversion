@@ -3943,6 +3943,11 @@ def update_accept_conflicts(sbox):
 # WC update editor flush and run incomplete logs and lead to WC
 # corruption, detectable by another update command.
 
+# FIXME: With issue #4280 fixed and this test using --force-interactive,
+#        the test driver can no longer redirect terminal input to cause
+#        an EOF. Consequently, skip this test so that it does not hang
+#        the test suite.
+@Skip()
 def eof_in_interactive_conflict_resolver(sbox):
   "eof in interactive resolution can't break wc"
 
@@ -3995,11 +4000,11 @@ interactive-conflicts = true
   # Modify iota differently and try to update *with the interactive
   # resolver*.  ### The parser won't go so well with the output
   svntest.main.file_append(iota_path, "Local mods to r1 text.\n")
-  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
-                                        "Can't read stdin: End of file found",
-                                        None, None, None, None, 1,
-                                        wc_dir, '--force-interactive',
-                                        '--config-dir', config_dir)
+  svntest.actions.run_and_verify_update(
+    wc_dir, None, None, None,
+    "End of file while reading from terminal",
+    None, None, None, None, 1,
+    wc_dir, '--force-interactive', '--config-dir', config_dir)
 
   # Now update -r1 again.  Hopefully we don't get a checksum error!
   expected_output = svntest.wc.State(wc_dir, {
