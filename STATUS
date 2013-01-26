@@ -205,6 +205,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1438602, r1438683
+   Fix issue #4306, "multiple editor drive file merges record wrong mergeinfo
+   during conflicts"
+   Justification:
+     Bogus mergeinfo is created during conflicting merges with file targets.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4306
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
