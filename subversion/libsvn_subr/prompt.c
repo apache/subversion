@@ -59,56 +59,79 @@ struct terminal_handle_t
   apr_pool_t *pool;              /* pool associated with the file handles */
 
 #ifdef HAVE_TERMIOS_H
+  svn_boolean_t restore_state;   /* terminal state was changed */
   apr_os_file_t osinfd;          /* OS-specific handle for infd */
   struct termios attr;           /* saved terminal attributes */
 #endif
 };
 
+/* Initialize safe state of terminal_handle_t. */
+static void
+terminal_handle_init(terminal_handle_t *terminal,
+                     apr_file_t *infd, apr_file_t *outfd,
+                     svn_boolean_t noecho, svn_boolean_t close_handles,
+                     apr_pool_t *pool)
+{
+  memset(terminal, 0, sizeof(*terminal));
+  terminal->infd = infd;
+  terminal->outfd = outfd;
+  terminal->noecho = noecho;
+  terminal->close_handles = close_handles;
+  terminal->pool = pool;
+}
 
-/* Common pool cleanup handler for terminal_handle_t.
-   Closes TERMINAL. If RESTORE_ECHO_STATE is TRUE,
-   restores the echo flags of the terminal. */
+/*
+ * Common pool cleanup handler for terminal_handle_t. Closes TERMINAL.
+ * If CLOSE_HANDLES is TRUE, close the terminal file handles.
+ * If RESTORE_STATE is TRUE, restores the TERMIOS flags of the terminal.
+ */
 static apr_status_t
 terminal_cleanup_handler(terminal_handle_t *terminal,
-                         svn_boolean_t restore_echo_state)
+                         svn_boolean_t close_handles,
+                         svn_boolean_t restore_state)
 {
   apr_status_t status = APR_SUCCESS;
 
 #ifdef HAVE_TERMIOS_H
-  if (restore_echo_state)
-    {
-      /* Restore terminal echo settings. */
-      if (terminal->noecho)
-        tcsetattr(terminal->osinfd, TCSANOW, &terminal->attr);
-    }
+  /* Restore terminal state flags. */
+  if (restore_state && terminal->restore_state)
+    tcsetattr(terminal->osinfd, TCSANOW, &terminal->attr);
 #endif
 
-  if (terminal->close_handles)
+  /* Close terminal handles. */
+  if (close_handles && terminal->close_handles)
     {
-      if (terminal->infd)
-        status = apr_file_close(terminal->infd);
+      apr_file_t *const infd = terminal->infd;
+      apr_file_t *const outfd = terminal->outfd;
 
-      if (!status && terminal->outfd && terminal->outfd != terminal->infd)
-        status = apr_file_close(terminal->outfd);
+      if (infd)
+        {
+          terminal->infd = NULL;
+          status = apr_file_close(infd);
+        }
+
+      if (!status && outfd && outfd != infd)
+        {
+          terminal->outfd = NULL;
+          status = apr_file_close(terminal->outfd);
+        }
     }
-
   return status;
 }
 
 /* Normal pool cleanup for a terminal. */
 static apr_status_t terminal_plain_cleanup(void *baton)
 {
-  return terminal_cleanup_handler(baton, TRUE);
+  return terminal_cleanup_handler(baton, FALSE, TRUE);
 }
 
 /* Child pool cleanup for a terminal -- does not restore echo state. */
 static apr_status_t terminal_child_cleanup(void *baton)
 {
-  return terminal_cleanup_handler(baton, FALSE);
+  return terminal_cleanup_handler(baton, FALSE, FALSE);
 }
 
-/* Explicitly close the terminal by running its registered
-   cleanup handlers. */
+/* Explicitly close the terminal, removing its cleanup handlers. */
 static svn_error_t *
 terminal_close(terminal_handle_t *terminal)
 {
@@ -119,9 +142,9 @@ terminal_close(terminal_handle_t *terminal)
   apr_pool_child_cleanup_set(terminal->pool, terminal,
                              terminal_plain_cleanup,
                              apr_pool_cleanup_null);
+  apr_pool_cleanup_kill(terminal->pool, terminal, terminal_plain_cleanup);
 
-  status = apr_pool_cleanup_run(terminal->pool, terminal,
-                                terminal_plain_cleanup);
+  status = terminal_cleanup_handler(terminal, TRUE, TRUE);
   if (status)
     return svn_error_create(status, NULL, _("Can't close terminal"));
   return SVN_NO_ERROR;
@@ -146,56 +169,62 @@ terminal_open(terminal_handle_t *terminal, svn_boolean_t noecho,
     {
       /* The process has a console. */
       CloseHandle(conin);
-      terminal->infd = terminal->outfd = NULL;
-      terminal->noecho = noecho;
-      terminal->close_handles = FALSE;
-      terminal->pool = NULL;
+      terminal_handle_init(terminal, NULL, NULL, noecho, FALSE, NULL);
       return SVN_NO_ERROR;
     }
 #else  /* !WIN32 */
   /* Without evidence to the contrary, we'll assume this is *nix and
      try to open /dev/tty. If that fails, we'll use stdin for input
      and stderr for prompting. */
-  apr_file_t *tmpf;
-  status = apr_file_open(&tmpf, "/dev/tty",
+  apr_file_t *tmpfd;
+  status = apr_file_open(&tmpfd, "/dev/tty",
                          APR_FOPEN_READ | APR_FOPEN_WRITE,
                          APR_OS_DEFAULT, pool);
   if (!status)
     {
       /* We have a terminal handle that we can use for input and output. */
-      terminal->infd = terminal->outfd = tmpf;
-      terminal->close_handles = TRUE;
+      terminal_handle_init(terminal, tmpfd, tmpfd, FALSE, TRUE, pool);
     }
 #endif /* !WIN32 */
   else
     {
       /* There is no terminal. Sigh. */
-      status = apr_file_open_stdin(&terminal->infd, pool);
+      apr_file_t *infd;
+      apr_file_t *outfd;
+
+      status = apr_file_open_stdin(&infd, pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't open stdin"));
-      status = apr_file_open_stderr(&terminal->outfd, pool);
+      status = apr_file_open_stderr(&outfd, pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't open stderr"));
-      terminal->close_handles = FALSE;
+      terminal_handle_init(terminal, infd, outfd, FALSE, FALSE, pool);
     }
 
-  /* Try to turn off terminal echo */
-  terminal->noecho = FALSE;
 #ifdef HAVE_TERMIOS_H
-  if (noecho && 0 == apr_os_file_get(&terminal->osinfd, terminal->infd))
+  /* Set terminal state */
+  if (0 == apr_os_file_get(&terminal->osinfd, terminal->infd))
     {
       if (0 == tcgetattr(terminal->osinfd, &terminal->attr))
         {
           struct termios attr = terminal->attr;
-          attr.c_lflag &= ~(ECHO);
+          /* Turn off signal handling and canonical input mode */
+          attr.c_lflag &= ~(ISIG | ICANON);
+          attr.c_cc[VMIN] = 1;          /* Read one byte at a time */
+          attr.c_cc[VTIME] = 0;         /* No timeout, wait indefinitely */
+          if (noecho)
+            attr.c_lflag &= ~(ECHO);    /* Turn off echo */
           if (0 == tcsetattr(terminal->osinfd, TCSAFLUSH, &attr))
-            terminal->noecho = TRUE;
+            {
+              terminal->noecho = noecho;
+              terminal->restore_state = TRUE;
+            }
         }
     }
 #endif /* HAVE_TERMIOS_H */
 
-  terminal->pool = pool;
-  apr_pool_cleanup_register(pool, terminal,
+  /* Register pool cleanup to close handles and restore echo state. */
+  apr_pool_cleanup_register(terminal->pool, terminal,
                             terminal_plain_cleanup,
                             terminal_child_cleanup);
   return SVN_NO_ERROR;
@@ -250,7 +279,7 @@ static svn_error_t *
 terminal_getc(int *code, terminal_handle_t *terminal,
               svn_boolean_t can_erase, apr_pool_t *pool)
 {
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   char ch;
 
 #ifdef WIN32
@@ -321,7 +350,38 @@ terminal_getc(int *code, terminal_handle_t *terminal,
         }
       return SVN_NO_ERROR;
     }
-#else  /* !WIN32 */
+#elif defined(HAVE_TERMIOS_H)
+  if (terminal->restore_state)
+    {
+      /* We're using a bytewise-immediate termios input */
+      const struct termios *const attr = &terminal->attr;
+
+      status = apr_file_getc(&ch, terminal->infd);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't read from terminal"));
+
+      if (ch == attr->c_cc[VINTR] || ch == attr->c_cc[VQUIT])
+        return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+      else if (ch == '\r' || ch == '\n' || ch == attr->c_cc[VEOL])
+        *code = TERMINAL_EOL;
+      else if (ch == '\b'
+               || ch == attr->c_cc[VERASE] || ch == attr->c_cc[VKILL])
+        *code = TERMINAL_DEL;
+      else if (ch == attr->c_cc[VEOF])
+        *code = TERMINAL_EOF;
+      else if (!apr_iscntrl(ch))
+        *code = (int)(unsigned char)ch;
+      else
+        {
+          *code = TERMINAL_NONE;
+          apr_file_putc('\a', terminal->outfd);
+        }
+      return SVN_NO_ERROR;
+    }
+#endif /* HAVE_TERMIOS_H */
+
+  /* Fall back to plain stream-based I/O. */
+#ifndef WIN32
   /* Wait for input on termin. This code is based on
      apr_wait_for_io_or_timeout().
      Note that this will return an EINTR on a signal. */
@@ -341,7 +401,6 @@ terminal_getc(int *code, terminal_handle_t *terminal,
   }
 #endif /* !WIN32 */
 
-  /* Fall back to plain stream-based I/O. */
   if (!status)
     status = apr_file_getc(&ch, terminal->infd);
   if (APR_STATUS_IS_EINTR(status))
@@ -357,10 +416,7 @@ terminal_getc(int *code, terminal_handle_t *terminal,
   else if (status)
     return svn_error_wrap_apr(status, _("Can't read from terminal"));
 
-  if (ch == '\b' || ch == 127 /* DEL */)
-    *code = TERMINAL_DEL;
-  else
-    *code = (int)(unsigned char)ch;
+  *code = (int)(unsigned char)ch;
   return SVN_NO_ERROR;
 }
 
@@ -394,12 +450,15 @@ prompt(const char **result,
 
   while (1)
     {
-      /* Hack to allow us to not block for io on the prompt, so
-       * we can cancel. */
+      SVN_ERR(terminal_getc(&code, &terminal, (strbuf->len > 0), pool));
+
+      /* Check for cancellation after a character has been read, some
+         input processing modes may eat ^C and we'll only notice a
+         cancellation signal after characters have been read --
+         sometimes even after a newline. */
       if (pb)
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(terminal_getc(&code, &terminal, (strbuf->len > 0), pool));
       switch (code)
         {
         case TERMINAL_NONE:
