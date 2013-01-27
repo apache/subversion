@@ -10362,12 +10362,12 @@ verify_walker(representation_t *rep,
 
 svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  svn_fs_progress_notify_func_t notify_func,
-                  void *notify_baton,
                   svn_revnum_t start,
                   svn_revnum_t end,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;

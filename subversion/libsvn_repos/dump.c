@@ -1442,10 +1442,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
         = svn_repos_notify_create(svn_repos_notify_verify_struc_rev, pool);
     }
 
-  /* Verify global/auxiliary data and backend-specific data first. */
-  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+  /* Verify global metadata and backend-specific data first. */
+  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), start_rev, end_rev,
                         verify_notify, verify_notify_baton,
-                        start_rev, end_rev, pool));
+                        cancel_func, cancel_baton, pool));
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
