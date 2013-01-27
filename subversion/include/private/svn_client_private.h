@@ -239,6 +239,26 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 
+/* Copy the file or directory on URL in some repository to DST_ABSPATH,
+ * copying node information and properties. Resolve URL using PEG_REV and
+ * REVISION.
+ *
+ * If URL specifies a directory, create the copy using depth DEPTH.
+ *
+ * If MAKE_PARENTS is TRUE and DST_ABSPATH doesn't have an added parent
+ * create missing parent directories
+ */
+svn_error_t *
+svn_client__copy_foreign(const char *url,
+                         const char *dst_abspath,
+                         svn_opt_revision_t *peg_revision,
+                         svn_opt_revision_t *revision,
+                         svn_depth_t depth,
+                         svn_boolean_t make_parents,
+                         svn_boolean_t already_locked,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

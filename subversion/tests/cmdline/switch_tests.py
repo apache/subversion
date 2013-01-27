@@ -2906,6 +2906,33 @@ def different_node_kind(sbox):
   switch_to_file(sbox, 'iota', 'A/C')
   switch_to_file(sbox, 'A/D/gamma', 'A/D/G')
 
+@Issue(3332, 3333)
+def switch_to_spaces(sbox):
+  "switch to a directory with spaces in its name"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Paths are normalized in the command processing, so %20 is equivalent to ' '
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/A',
+                                           repo_url + '/A%20with space',
+                                     '-m', '')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', repo_url + '/A%20with space',
+                                           repo_url + '/A with%20more spaces',
+                                     '-m', '')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('A', switched='S')
+  expected_status.tweak('', 'iota', wc_rev=1)
+
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A'),
+                                        repo_url + '/A%20with more%20spaces',
+                                        None, None, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2946,6 +2973,7 @@ test_list = [ None,
               copy_with_switched_subdir,
               up_to_old_rev_with_subtree_switched_to_root,
               different_node_kind,
+              switch_to_spaces,
               ]
 
 if __name__ == '__main__':

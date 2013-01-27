@@ -239,6 +239,14 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
 
+-- STMT_SELECT_CHILDREN_OP_DEPTH
+SELECT local_relpath, kind
+FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = ?3
+ORDER BY local_relpath DESC
+
 -- STMT_COPY_NODE_MOVE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,

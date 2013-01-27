@@ -39,6 +39,7 @@
 
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1672,6 +1673,60 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_handle_t)(svn_boolean_t tree_conflicted,
+                                       svn_wc_notify_state_t *state,
+                                       svn_wc_notify_state_t *prop_state,
+                                       const char *relpath,
+                                       svn_kind_t kind,
+                                       svn_boolean_t before_op,
+                                       svn_boolean_t for_add,
+                                       svn_boolean_t for_delete,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_close_t)(const char *relpath,
+                                      svn_kind_t kind,
+                                      void *state_baton,
+                                      apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  absent nodes.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_absent_t)(const char *relpath,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Obtains a diff processor that will drive the diff callbacks when it
+ * is invoked. The state arguments will be handled by the state processor
+ * or ignored if STATE_HANDLER is NULL
+ */
+svn_error_t *
+svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
+                            const svn_wc_diff_callbacks4_t *callbacks,
+                            void *callback_baton,
+                            svn_wc__diff_state_handle_t state_handle,
+                            svn_wc__diff_state_close_t state_close,
+                            svn_wc__diff_state_absent_t state_absent,
+                            void *state_baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /**
  * Assuming @a local_abspath itself or any of its children are under version
  * control or a tree conflict victim and in a state of conflict, take these
@@ -1788,6 +1843,26 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
               apr_pool_t *scratch_pool);
+
+
+/* During merge when we encounter added directories, we add them using
+   svn_wc_add4(), recording its original location, etc. But at that time
+   we don't have its original properties. This function allows updating the
+   BASE properties of such a special added node, but only before it receives
+   other changes.
+
+   NEW_ORIGINAL_PROPS is a new set of properties, including entry props that
+   will be applied to LOCAL_ABSPATH as pristine properties.
+
+   The copyfrom_* arguments are used to verify (some of) the assumptions of
+   this function */
+svn_error_t *
+svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_hash_t *new_original_props,
+                               const char *copyfrom_url,
+                               svn_revnum_t copyfrom_rev,
+                               apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

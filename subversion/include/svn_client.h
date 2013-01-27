@@ -3502,7 +3502,7 @@ svn_client_find_automatic_merge_no_wc(
  * the WC at @a target_wcpath.  The @a merge structure would typically come
  * from calling svn_client_find_automatic_merge().
  *
- * The other parameters are as in svn_client_merge4().
+ * The other parameters are as in svn_client_merge5().
  *
  * @since New in 1.8.
  */
@@ -3510,6 +3510,7 @@ svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               const char *target_wcpath,
                               svn_depth_t depth,
+                              svn_boolean_t diff_ignore_ancestry,
                               svn_boolean_t force_delete,
                               svn_boolean_t record_only,
                               svn_boolean_t dry_run,
@@ -3588,11 +3589,14 @@ svn_client_automatic_merge_get_locations(
  *
  * If @a depth is #svn_depth_unknown, use the depth of @a target_wcpath.
  *
- * Use @a ignore_ancestry to control whether or not items being
- * diffed will be checked for relatedness first.  Unrelated items
- * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is TRUE, unrelated
- * items will be diffed as if they were related.
+ * If @a ignore_mergeinfo is true, disable merge tracking, by treating the
+ * two sources as unrelated even if they actually have a common ancestor.
+ *
+ * If @a diff_ignore_ancestry is true, diff unrelated nodes as if related:
+ * that is, diff the 'left' and 'right' versions of a node as if they were
+ * related (if they are the same kind) even if they are not related.
+ * Otherwise, diff unrelated items as a deletion of one thing and the
+ * addition of another.
  *
  * If @a force_delete is false and the merge involves deleting a file whose
  * content differs from the source-left version, or a locally modified
@@ -3623,8 +3627,33 @@ svn_client_automatic_merge_get_locations(
  * The authentication baton cached in @a ctx is used to communicate with the
  * repository.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_merge5(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_mergeinfo,
+                  svn_boolean_t diff_ignore_ancestry,
+                  svn_boolean_t force_delete,
+                  svn_boolean_t record_only,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge5(), but the single @a ignore_ancestry
+ * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge4(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -3713,49 +3742,16 @@ svn_client_merge(const char *source1,
 
 
 /**
- * Determine the URLs and revisions needed to perform a reintegrate merge
- * from @a source_path_or_url at @a source_peg_revision into the working
- * copy at @a target_wcpath.
- *
- * Set @a *url1_p and @a *rev1_p to the left side, and @a *url2_p and
- * @a *rev2_p to the right side, URLs and revisions of the source of the
- * required two-URL merge.
- *
- * If no merge should be performed, set @a *url1_p to NULL and @a *rev1_p
- * to #SVN_INVALID_REVNUM.
- *
- * The authentication baton cached in @a ctx is used to communicate with the
- * repository.
- *
- * Allocate all the results in @a result_pool.  Use @a scratch_pool for
- * temporary allocations.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_find_reintegrate_merge(const char **url1_p,
-                                  svn_revnum_t *rev1_p,
-                                  const char **url2_p,
-                                  svn_revnum_t *rev2_p,
-                                  /* inputs */
-                                  const char *source_path_or_url,
-                                  const svn_opt_revision_t *source_peg_revision,
-                                  const char *target_wcpath,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/**
  * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source_path_or_url must reflect that all of the target has been merged into it.
- * Then this behaves like a merge with svn_client_merge4() from the
+ * Then this behaves like a merge with svn_client_merge5() from the
  * target's URL to the source.
  *
- * All other options are handled identically to svn_client_merge4().
+ * All other options are handled identically to svn_client_merge5().
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
@@ -3782,10 +3778,34 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * All other options are handled identically to svn_client_merge4().
+ * All other options are handled identically to svn_client_merge5().
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_merge_peg5(const char *source_path_or_url,
+                      const apr_array_header_t *ranges_to_merge,
+                      const svn_opt_revision_t *source_peg_revision,
+                      const char *target_wcpath,
+                      svn_depth_t depth,
+                      svn_boolean_t ignore_mergeinfo,
+                      svn_boolean_t diff_ignore_ancestry,
+                      svn_boolean_t force_delete,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge_peg5(), but the single @a ignore_ancestry
+ * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg4(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,

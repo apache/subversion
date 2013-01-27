@@ -1708,6 +1708,109 @@ def lock_invalid_token(sbox):
                                       ".*scheme.*'opaquelocktoken'", 0,
                                       'lock', '-m', '', file_path)
 
+@Issue(3105)
+def lock_multi_wc(sbox):
+  "obtain locks in multiple working copies in one go"
+
+  sbox.build()
+
+  sbox2 = sbox.clone_dependent(copy_wc=True)
+
+  wc_name = os.path.basename(sbox.wc_dir)
+  wc2_name = os.path.basename(sbox2.wc_dir)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc_name, 'iota'),
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc2_name, 'A', 'mu'),
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('iota'),
+                                             sbox2.ospath('A/mu'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'%s\' unlocked.\n' % os.path.join(wc_name, 'iota'),
+    '\'%s\' unlocked.\n' % os.path.join(wc2_name, 'A', 'mu'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'unlock', sbox.ospath('iota'),
+                                               sbox2.ospath('A/mu'))
+
+@Issue(3378)
+def locks_stick_over_switch(sbox):
+  "locks are kept alive over switching"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.ospath('A'), repo_url + '/AA',
+                                     '-m', '')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'iota\' locked by user \'jrandom\'.\n',
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'D', 'H', 'chi'),
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'mu'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('A/D/H/chi'),
+                                             sbox.ospath('A/mu'),
+                                             sbox.ospath('iota'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/H/chi', 'A/mu', 'iota', writelocked='K')
+
+  # Make sure the file is still locked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('', wc_rev=1)
+  expected_status.tweak('iota', writelocked='K', wc_rev=1)
+
+  switched_status = expected_status.copy()
+  switched_status.tweak(writelocked=None)
+  switched_status.tweak('iota', writelocked='K')
+  switched_status.tweak('A', switched='S')
+
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'), 
+                                        repo_url + '/AA',
+                                        expected_output, None, switched_status)
+
+  # And now switch back to verify that the locks reappear
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'), 
+                                        repo_url + '/A',
+                                        expected_output, None, expected_status)
+
+@Issue(4304)
+def lock_unlock_deleted(sbox):
+  "lock/unlock a deleted file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', sbox.ospath('A/mu'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' unlocked.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'unlock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1757,6 +1860,9 @@ test_list = [ None,
               update_locked_deleted,
               block_unlock_if_pre_unlock_hook_fails,
               lock_invalid_token,
+              lock_multi_wc,
+              locks_stick_over_switch,
+              lock_unlock_deleted,
             ]
 
 if __name__ == '__main__':

@@ -2945,9 +2945,10 @@ internal_status(svn_wc_status3_t **status,
     SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
                                           scratch_pool, scratch_pool));
 
-  if (node_status == svn_wc__db_status_not_present
-           || node_status == svn_wc__db_status_server_excluded
-           || node_status == svn_wc__db_status_excluded)
+  if (node_kind != svn_kind_unknown
+      && (node_status == svn_wc__db_status_not_present
+          || node_status == svn_wc__db_status_server_excluded
+          || node_status == svn_wc__db_status_excluded))
     {
       node_kind = svn_kind_unknown;
     }

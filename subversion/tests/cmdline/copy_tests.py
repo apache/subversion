@@ -907,7 +907,7 @@ def wc_to_repos(sbox):
 #----------------------------------------------------------------------
 # Issue 1090: various use-cases of 'svn cp URL wc' where the
 # repositories might be different, or be the same repository.
-@Issues(1090,1444)
+@Issues(1090, 1444, 3590)
 def repos_to_wc(sbox):
   "repository to working-copy copy"
 
@@ -988,17 +988,30 @@ def repos_to_wc(sbox):
   E_url = other_repo_url + "/A/B/E"
   pi_url = other_repo_url + "/A/D/G/pi"
 
-  # Expect an error in the directory case until we allow this copy to succeed.
-  expected_error = "svn: E200007: Source URL '.*foreign repository"
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  # Finally, for 1.8 we allow this copy to succeed.
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Copying from foreign repository URL \'%s\':\n' % E_url,
+    'A         %s\n' % sbox.ospath('E'),
+    'A         %s\n' % sbox.ospath('E/beta'),
+    'A         %s\n' % sbox.ospath('E/alpha'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'copy', E_url, wc_dir)
 
-  # But file case should work fine.
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'copy', pi_url, wc_dir)
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
     'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
+    # And from the foreign repository
+    'E'             : Item(status='A ', wc_rev='0'),
+    'E/beta'        : Item(status='A ', wc_rev='0'),
+    'E/alpha'       : Item(status='A ', wc_rev='0'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 

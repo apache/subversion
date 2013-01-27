@@ -13057,6 +13057,8 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
+# Part of this test is a regression test for issue #3250 "Repeated merging
+# of conflicting properties fails".
 @Issue(3250)
 def merge_two_edits_to_same_prop(sbox):
   "merge two successive edits to the same property"
@@ -13103,12 +13105,21 @@ def merge_two_edits_to_same_prop(sbox):
   # some other target within the same merge requiring only a part of the
   # revision range.
 
-  # We test issue #3250 here
-  # Revert changes to target branch wc
+  # ====================================================================
+
+  # We test issue #3250 here: that is, test that we can make two successive
+  # conflicting changes to the same property on the same node (here a file;
+  # in #3250 it was on a dir).
+  #
+  # ### But we no longer support merging into a node that's already in
+  #     conflict, and the 'rev3' merge here has been tweaked to resolve
+  #     the conflict, so it no longer tests the original #3250 scenario.
+  #
+  # Revert changes to branch wc
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', A_COPY_path)
 
-  # In the target branch, make two successive changes to the same property
+  # In the branch, make two successive changes to the same property
   sbox.simple_propset('p', 'new-val-3', 'A_COPY/mu')
   sbox.simple_commit('A_COPY/mu')
   rev3 = initial_rev + 3
@@ -13116,16 +13127,16 @@ def merge_two_edits_to_same_prop(sbox):
   sbox.simple_commit('A_COPY/mu')
   rev4 = initial_rev + 4
 
-  # Merge the two changes together to source.
+  # Merge the two changes together to trunk.
   svn_merge([rev3, rev4], A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
-  # Revert changes to source wc, to test next scenario of #3250
+  # Revert changes to trunk wc, to test next scenario of #3250
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', A_path)
 
-  # Merge the first change, then the second, to source.
+  # Merge the first change, then the second, to trunk.
   svn_merge(rev3, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
       ], prop_conflicts=1,
@@ -13877,6 +13888,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
+@Wimp("Needs review after issue #3405 fix")
 def no_self_referential_filtering_on_added_path(sbox):
   "no self referential filtering on added path"
 
@@ -13957,7 +13969,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' G', prev_status=' G'),
+    'C_MOVED' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
@@ -15134,8 +15146,6 @@ def record_only_merge(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3514 'svn merge --accept [ base | theirs-full ]
 # doesn't work'
-#
-# This test is marked as XFail until issue #3514 is fixed.
 @Issue(3514)
 def merge_automatic_conflict_resolution(sbox):
   "automatic conflict resolutions work with merge"
@@ -17645,6 +17655,7 @@ def merge_adds_then_deletes_subtree(sbox):
 # cause spurious subtree mergeinfo'.
 @SkipUnless(server_has_mergeinfo)
 @Issue(4169)
+@Wimp("Needs review after issue #3405 fix")
 def merge_with_added_subtrees_with_mergeinfo(sbox):
   "merge with added subtrees with mergeinfo"
 
@@ -17993,6 +18004,228 @@ def merge_conflict_when_keywords_removed(sbox):
                            ' U   A2\n']),
     [], 'merge', '--accept=postpone', '^/A', 'A2')
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4139, 3274, 3503)
+def merge_target_selection(sbox):
+  "merge target selection handling"
+
+  sbox.build()
+
+  # r2
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('\1\2\3\4\5', 'dir/binary-file')
+  sbox.simple_add_text('abcde', 'dir/text-file')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_copy('dir', 'branch')
+  sbox.simple_commit()
+
+  # r4
+  svntest.main.file_write(sbox.ospath('dir/binary-file'),
+                          '\9\8\7\6\5\4\3\2\1')
+  sbox.simple_commit()
+
+  sbox.simple_update()
+
+  os.chdir(sbox.ospath('branch'))
+
+  # Merge the directory (no target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (no target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the directory (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'.\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4', '.')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (explicit target)
+  expected_output = [
+    '--- Merging r4 into \'binary-file\':\n',
+    'U    binary-file\n',
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4', 'binary-file')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the file (wrong target)
+  expected_output = [
+    'Skipped missing target: \'.\'\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir/binary-file', '-c', '4', '.')
+
+  svntest.main.run_svn(None, 'revert', '-R', '.')
+
+  # Merge the dir (wrong target)
+  expected_output = [
+    'Skipped \'%s\'\n' % os.path.join('binary-file', 'binary-file'),
+    '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
+    ' U   binary-file\n',
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '^/dir', '-c', '4', 'binary-file')
+
+@Issue(3405)
+def merge_properties_on_adds(sbox):
+  "merged directory properties are added"
+
+  sbox.build()
+
+  sbox.simple_copy('A/D/G', 'G')
+
+  sbox.simple_mkdir('A/D/G/M')
+  sbox.simple_mkdir('A/D/G/M/N')
+  sbox.simple_add_text('QQ', 'A/D/G/file', 'A/D/G/M/file')
+  sbox.simple_propset('key', 'value',
+                      'A/D/G/M', 'A/D/G/file', 'A/D/G/M/N', 'A/D/G/M/file')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '^/A/D/G', sbox.ospath('G'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Properties on \'%s\':\n' % sbox.ospath('G'),
+     '  svn:mergeinfo\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/file'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/N'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/file'),
+     '  key\n',
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', sbox.ospath('G'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+     'Properties on \'%s\':\n' % sbox.ospath('G/M'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/file'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/N'),
+     '  key\n',
+     'Properties on \'%s\':\n' % sbox.ospath('G/M/file'),
+     '  key\n',
+  ])
+
+  # I merged the tree, which should include history but only the files have
+  # the properties stored in PRISTINE. All directories have the properties
+  # as local changes in ACTUAL.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', sbox.ospath('G'),
+                                     '-r', 'BASE')
+
+  # Note that this is not a regression. This has been the case since 1.0.
+  # ### We just made status, update and merge handle this without users
+  # ### knowing about this limitation.
+
+  # ### My guess is that the base merge support on svn_wc_merge_props()
+  # ### was originally designed to resolve this problem, but I can't
+  # ### find a released version where this was actually implemented.
+
+  # For fun, also check the status: 'svn status' suppresses the M from AM.
+
+  # G = sbox.ospath('G')
+  # 
+  # expected_status = wc.State('G', {
+  #   ''           : Item(status=' M', wc_rev='2'),
+  #   'pi'         : Item(status='  ', wc_rev='2'),
+  #   'tau'        : Item(status='  ', wc_rev='2'),
+  #   'file'       : Item(status='A ', copied='+', wc_rev='-'), # Copied, no changes
+  #   'M'          : Item(status='A ', copied='+', wc_rev='-'), # Copied, changes
+  #   'M/file'     : Item(status='  ', copied='+', wc_rev='-'), # Copied, no changes
+  #   'M/N'        : Item(status=' M', copied='+', wc_rev='-'), # Local changes
+  #   'rho'        : Item(status='  ', wc_rev='2'),
+  # })
+  # svntest.actions.run_and_verify_status(G, expected_status)
+
+@SkipUnless(server_has_mergeinfo)
+@Issue(4306)
+# Test for issue #4306 'multiple editor drive file merges record wrong
+# mergeinfo during conflicts'
+def conflict_aborted_mergeinfo_described_partial_merge(sbox):
+  "conflicted split merge can be repeated"
+
+  sbox.build()
+
+  iota_copy_path = sbox.ospath('iota-copy')
+
+  # r2
+  sbox.simple_copy('iota', 'iota-copy')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_append('iota', 'new line in r3')
+  sbox.simple_commit()
+
+  # r4
+  sbox.simple_append('iota', 'new line in r4')
+  sbox.simple_commit()
+
+  # r5
+  sbox.simple_append('iota', 'new line in r5')
+  sbox.simple_commit()
+
+  # r6 Merge r4 from iota to iota-moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/iota',
+                                     '-c', '4', iota_copy_path, '--accept',
+                                     'theirs-conflict')
+  sbox.simple_commit()
+
+  # Merge everything (i.e. r2 and r5) from iota to iota-moved.
+  # This is split into to merges, first of r2 and then of r5.
+  # But since we are postponing conflict resolution, the merge
+  # should stop after r2 is merged, allowing us to resolve and
+  # repeat the merge at which point r5 can be merged.  The mergeinfo
+  # on iota-copy then should only reflect that r2 and r3 have been
+  # merged from ^/iota; r5 should not be present.
+  svntest.actions.run_and_verify_svn(None, None, '.*', 'merge', '^/iota',
+                                     iota_copy_path, '--accept', 'postpone')
+
+  # Previously this test failed because the merge failed after merging
+  # only r2 (as it should) but mergeinfo for r5-6 was recorded, preventing
+  # subsequent repeat merges from applying the operative r5.
+  svntest.actions.run_and_verify_svn(
+    "Incorrect mergeinfo set during conflict aborted merge",
+    ['/iota:2-4\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
+
 ########################################################################
 # Run the tests
 
@@ -18131,6 +18364,9 @@ test_list = [ None,
               merge_with_externals_with_mergeinfo,
               merge_binary_file_with_keywords,
               merge_conflict_when_keywords_removed,
+              merge_target_selection,
+              merge_properties_on_adds,
+              conflict_aborted_mergeinfo_described_partial_merge,
              ]
 
 if __name__ == '__main__':

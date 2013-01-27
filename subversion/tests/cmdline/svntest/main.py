@@ -157,6 +157,15 @@ atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
 
+######################################################################
+# The location of svnauthz binary, relative to the only scripts that
+# import this file right now (they live in ../).
+# Use --tools to overide these defaults.
+svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
+svnauthz_validate_binary = os.path.abspath(
+    '../../../tools/server-side/svnauthz-validate' + _exe
+)
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -703,6 +712,16 @@ def run_svnmucc(*varargs):
   return run_command(svnmucc_binary, 1, True,
                      *(_with_auth(_with_config_dir(varargs))))
 
+def run_svnauthz(*varargs):
+  """Run svnauthz with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnauthz_binary, 1, False, *varargs)
+
+def run_svnauthz_validate(*varargs):
+  """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
+  stderr as list of lines (including line terminators)."""
+  return run_command(svnauthz_validate_binary, 1, False, *varargs)
+
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
   # use spawn_process rather than run_command to avoid copying all the data
@@ -726,6 +745,23 @@ def run_entriesdump_subdirs(path):
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, False, None, '--subdirs', path)
   return map(lambda line: line.strip(), filter_dbg(stdout_lines))
+
+def run_entriesdump_tree(path):
+  """Run the entries-dump helper, returning a dict of a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, False, None,
+                                                        '--tree-dump', path)
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  dirs = { }
+  exec(''.join(filter_dbg(stdout_lines)))
+  return dirs
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
@@ -1029,6 +1065,19 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
     fp.write("password-db = passwd\n")
   fp.close()
 
+def write_restrictive_svnserve_conf_with_groups(repo_dir,
+                                                anon_access="none"):
+  "Create a restrictive configuration with groups stored in a separate file."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\ngroups-db = groups\n" % anon_access)
+  if options.enable_sasl:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
 # might be run in parallel.
@@ -1062,6 +1111,18 @@ an appropriate list of mappings.
 
   for p, r in rules.items():
     fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  fp.close()
+
+# See the warning about parallel test execution in write_authz_file
+# method description.
+def write_groups_file(sbox, groups):
+  """Write a groups file to SBOX, appropriate for the RA method used,
+with group contents set to GROUPS."""
+  fp = open(sbox.groups_file, 'w')
+  fp.write("[groups]\n")
+  if groups:
+    for p, r in groups.items():
+      fp.write("%s = %s\n" % (p, r))
   fp.close()
 
 def use_editor(func):
@@ -1643,6 +1704,8 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--tools-bin', action='store', dest='tools_bin',
+                    help='Use the svn tools installed in this path')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1783,6 +1846,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svndumpfilter_binary
   global svnversion_binary
   global svnmucc_binary
+  global svnauthz_binary
+  global svnauthz_validate_binary
   global options
 
   if test_name:
@@ -1899,6 +1964,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
+
+  if options.tools_bin:
+    svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
+    svnauthz_validate_binary = os.path.join(options.tools_bin,
+                                            'svnauthz-validate' + _exe)
 
   ######################################################################
 

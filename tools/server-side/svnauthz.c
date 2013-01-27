@@ -39,7 +39,8 @@ enum svnauthz__cmdline_options_t
   svnauthz__username,
   svnauthz__path,
   svnauthz__repos,
-  svnauthz__is
+  svnauthz__is,
+  svnauthz__groups_file
 };
 
 /* Option codes and descriptions.
@@ -66,6 +67,7 @@ static const apr_getopt_option_t options_table[] =
      "                             "
      "   no    no access\n")
   },
+  {"groups-file", svnauthz__groups_file, 1, ("path to the global groups file")},
   {0, 0, 0, 0}
 };
 
@@ -74,6 +76,7 @@ struct svnauthz_opt_state
   svn_boolean_t help;
   svn_boolean_t version;
   const char *authz_file;
+  const char *groups_file;
   const char *username;
   const char *fspath;
   const char *repos_name;
@@ -85,6 +88,8 @@ struct svnauthz_opt_state
 /* The name of this binary in 1.7 and earlier. */
 #define SVNAUTHZ_COMPAT_NAME "svnauthz-validate"
 
+/* Libtool command prefix */
+#define SVNAUTHZ_LT_PREFIX "lt-"
 
 
 /*** Subcommands. */
@@ -120,8 +125,9 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'t'} },
   {"accessof", subcommand_accessof, {0} /* no aliases */,
    ("Print or test the permissions set by an authz file for a specific circumstance.\n"
-    "usage: 1. svnauthz accessof [--username USER] TARGET\n"
-    "       2. svnauthz accessof [--username USER] -t TXN REPOS_PATH FILE_PATH\n\n" 
+    "usage: 1. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] TARGET\n"
+    "       2. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] \\\n"
+    "                            -t TXN REPOS_PATH FILE_PATH\n\n"
     "  1. Prints the access of USER based on TARGET.\n"
     "     TARGET can be a path to a file or an absolute file:// URL to an authz\n"
     "     file in a repository, but cannot be a repository relative URL (^/).\n\n"
@@ -129,7 +135,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "     transaction TXN in the repository at REPOS_PATH.\n\n"
     "  If the --username argument is omitted then access of an anonymous user\n"
     "  will be printed.  If --path argument is omitted prints if any access\n"
-    "  to the repo is allowed.\n\n"
+    "  to the repo is allowed.  If --groups-file is specified, the groups from\n"
+    "  GROUPS_FILE will be used.\n\n"
     "Outputs one of the following:\n"
     "     rw    write access (which also implies read)\n"
     "      r    read access\n"
@@ -140,7 +147,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    2   operational error\n"
     "    3   when --is argument doesn't match\n"
     ),
-   {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is} },
+   {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is,
+    svnauthz__groups_file} },
   { NULL, NULL, {0}, NULL, {0} }
 };
 
@@ -176,20 +184,40 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Loads the fs FILENAME contents into *CONTENTS ensuring that the
+   corresponding node is a file. Using POOL for allocations. */
+static svn_error_t *
+read_file_contents(svn_stream_t **contents, const char *filename,
+                   svn_fs_root_t *root, apr_pool_t *pool)
+{
+  svn_node_kind_t node_kind;
+
+  /* Make sure the path is a file */
+  SVN_ERR(svn_fs_check_path(&node_kind, root, filename, pool));
+  if (node_kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                             "Path '%s' is not a file", filename);
+
+  SVN_ERR(svn_fs_file_contents(contents, root, filename, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Loads the authz config into *AUTHZ from the file at AUTHZ_FILE
-   in repository at REPOS_PATH from the transaction TXN_NAME.  Using
-   POOL for allocations. */
+   in repository at REPOS_PATH from the transaction TXN_NAME.  If GROUPS_FILE
+   is set, the resulting *AUTHZ will be constructed from AUTHZ_FILE with
+   global groups taken from GROUPS_FILE.  Using POOL for allocations. */
 static svn_error_t *
 get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
-                   const char *authz_file, const char *txn_name,
-                   apr_pool_t *pool)
+                   const char *authz_file, const char *groups_file,
+                   const char *txn_name, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *root;
-  svn_node_kind_t node_kind;
-  svn_stream_t *contents;
+  svn_stream_t *authz_contents;
+  svn_stream_t *groups_contents;
   svn_error_t *err;
 
   /* Open up the repository and find the transaction root */
@@ -198,14 +226,16 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
 
-  /* Make sure the path is a file */
-  SVN_ERR(svn_fs_check_path(&node_kind, root, authz_file, pool));
-  if (node_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                             "Path '%s' is not a file", authz_file);
+  /* Get the authz file contents. */
+  SVN_ERR(read_file_contents(&authz_contents, authz_file, root, pool));
 
-  SVN_ERR(svn_fs_file_contents(&contents, root, authz_file, pool));
-  err = svn_repos_authz_parse(authz, contents, pool);
+  /* Get the groups file contents if needed. */
+  if (groups_file)
+    SVN_ERR(read_file_contents(&groups_contents, groups_file, root, pool));
+  else
+    groups_contents = NULL;
+
+  err = svn_repos_authz_parse(authz, authz_contents, groups_contents, pool);
 
   /* Add the filename to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
@@ -216,8 +246,10 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
 }
 
 /* Loads the authz config into *AUTHZ from OPT_STATE->AUTHZ_FILE.  If
-   OPT_STATE->TXN is set then OPT_STATE->AUTHZ_FILE is treated as a fspath
-   in repository at OPT_STATE->REPOS_PATH. */
+   OPT_STATE->GROUPS_FILE is set, loads the global groups from it.
+   If OPT_STATE->TXN is set then OPT_STATE->AUTHZ_FILE and
+   OPT_STATE->GROUPS_FILE are treated as fspaths in repository at
+   OPT_STATE->REPOS_PATH. */
 static svn_error_t *
 get_authz(svn_authz_t **authz, struct svnauthz_opt_state *opt_state,
           apr_pool_t *pool)
@@ -225,10 +257,14 @@ get_authz(svn_authz_t **authz, struct svnauthz_opt_state *opt_state,
   /* Read the access file and validate it. */
   if (opt_state->txn)
     return get_authz_from_txn(authz, opt_state->repos_path,
-                              opt_state->authz_file, opt_state->txn, pool);
+                              opt_state->authz_file,
+                              opt_state->groups_file,
+                              opt_state->txn, pool);
 
   /* Else */
-  return svn_repos_authz_read2(authz, opt_state->authz_file, TRUE, NULL, pool);
+  return svn_repos_authz_read2(authz, opt_state->authz_file,
+                               opt_state->groups_file,
+                               TRUE, NULL, pool);
 }
 
 static svn_error_t *
@@ -362,10 +398,63 @@ use_compat_mode(const char *cmd, apr_pool_t *pool)
   cmd = svn_dirent_internal_style(cmd, pool);
   cmd = svn_dirent_basename(cmd, NULL);
 
+  /* Skip over the Libtool command prefix if it exists on the command. */
+  if (0 == strncmp(SVNAUTHZ_LT_PREFIX, cmd, sizeof(SVNAUTHZ_LT_PREFIX)-1))
+    cmd += sizeof(SVNAUTHZ_LT_PREFIX) - 1;
+
   /* Deliberately look only for the start of the name to deal with
      the executable extension on some platforms. */
   return 0 == strncmp(SVNAUTHZ_COMPAT_NAME, cmd,
                       sizeof(SVNAUTHZ_COMPAT_NAME)-1);
+}
+
+/* Canonicalize ACCESS_FILE into *CANONICALIZED_ACCESS_FILE based on the type
+   of argument.  Error out on unsupported path types.  If WITHIN_TXN is set,
+   ACCESS_FILE has to be a fspath in the repo.  Use POOL for allocations. */
+static svn_error_t *
+canonicalize_access_file(const char **canonicalized_access_file,
+                         const char *access_file,
+                         svn_boolean_t within_txn,
+                         apr_pool_t *pool)
+{
+  if (svn_path_is_repos_relative_url(access_file))
+    {
+      /* Can't accept repos relative urls since we don't have the path to
+       * the repository. */
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               ("'%s' is a repository relative URL when it "
+                               "should be a local path or file:// URL"),
+                               access_file);
+    }
+  else if (svn_path_is_url(access_file))
+    {
+      if (within_txn)
+        {
+          /* Don't allow urls with transaction argument. */
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   ("'%s' is a URL when it should be a "
+                                   "repository-relative path"),
+                                   access_file);
+        }
+
+      *canonicalized_access_file = svn_uri_canonicalize(access_file, pool);
+    }
+  else if (within_txn)
+    {
+      /* Transaction flag means this has to be a fspath to the access file
+       * in the repo. */
+      *canonicalized_access_file =
+          svn_fspath__canonicalize(access_file, pool);
+    }
+  else
+    {
+      /* If it isn't a URL and there's no transaction flag then it's a
+       * dirent to the access file on local disk. */
+      *canonicalized_access_file =
+          svn_dirent_internal_style(access_file, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static int
@@ -386,7 +475,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* Initialize opt_state */
   opt_state.username = opt_state.fspath = opt_state.repos_name = NULL;
-  opt_state.txn = opt_state.repos_path = NULL;
+  opt_state.txn = opt_state.repos_path = opt_state.groups_file = NULL;
 
   /* Parse options. */
   SVN_INT_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
@@ -436,6 +525,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               break;
             case svnauthz__is:
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.is, arg, pool));
+              break;
+            case svnauthz__groups_file:
+              SVN_INT_ERR(
+                  svn_utf_cstring_to_utf8(&opt_state.groups_file,
+                                          arg, pool));
               break;
             default:
                 {
@@ -537,47 +631,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.authz_file, os->argv[os->ind],
                                           pool));
 
-      /* Canonicalize opt_state.authz_file appropriately */
-      if (svn_path_is_repos_relative_url(opt_state.authz_file))
-        {
-          /* Can't accept repos relative urls since we don't have the path to
-           * the repository. */
-          err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  ("'%s' is a repository relative URL when it "
-                                   "should be a local path or file:// URL"),
-                                  opt_state.authz_file);
-          return EXIT_ERROR(err, EXIT_FAILURE);
-        }
-      else if (svn_path_is_url(opt_state.authz_file))
-        {
-          if (opt_state.txn) 
-            {
-              /* don't allow urls with transaction argument */
-              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      ("'%s' is a URL when it should be a "
-                                       "repository-relative path"),
-                                      opt_state.authz_file);
-              return EXIT_ERROR(err, EXIT_FAILURE);
-            }
+      /* Canonicalize opt_state.authz_file appropriately. */
+      SVN_INT_ERR(canonicalize_access_file(&opt_state.authz_file,
+                                           opt_state.authz_file,
+                                           opt_state.txn != NULL, pool));
 
-          opt_state.authz_file = svn_uri_canonicalize(opt_state.authz_file,
-                                                      pool);
-        }
-      else if (opt_state.txn)
+      /* Same for opt_state.groups_file if it is present. */
+      if (opt_state.groups_file)
         {
-          /* Transaction flag means this has to be a fspath to the authz_file
-           * in the repo. */
-          opt_state.authz_file =
-              svn_fspath__canonicalize(opt_state.authz_file, pool);
+          SVN_INT_ERR(canonicalize_access_file(&opt_state.groups_file,
+                                               opt_state.groups_file,
+                                               opt_state.txn != NULL, pool));
         }
-      else
-        {
-          /* If it isn't a URL and there's no transaction flag then it's a
-           * dirent to a authz_file on local disk.  */
-          opt_state.authz_file = svn_dirent_internal_style(opt_state.authz_file,
-                                                           pool);
-        }
-
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */

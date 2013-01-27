@@ -78,12 +78,14 @@ class Sandbox:
       tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
       open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
       shutil.move(tmp_authz_file, self.authz_file)
+      self.groups_file = os.path.join(svntest.main.work_dir, "groups")
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
     # have any default contents.
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
+      self.groups_file = os.path.join(self.repo_dir, "conf", "groups")
 
   def clone_dependent(self, copy_wc=False):
     """A convenience method for creating a near-duplicate of this
@@ -231,8 +233,8 @@ class Sandbox:
       target = self.ospath(target)
     if message is None:
       message = svntest.main.make_log_msg()
-    svntest.main.run_svn(False, 'commit', '-m', message,
-                         target)
+    svntest.actions.run_and_verify_commit(self.wc_dir, None, None, [],
+                                          '-m', message, target)
 
   def simple_rm(self, *targets):
     """Schedule TARGETS for deletion.

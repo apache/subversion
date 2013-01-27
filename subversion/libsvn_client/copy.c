@@ -1546,58 +1546,73 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
+  if (!same_repositories && ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(
+                            pair->src_abspath_or_url,
+                            svn_wc_notify_foreign_copy_begin,
+                            pool);
+      notify->kind = pair->src_kind;
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+
+      /* Allow a theoretical cancel to get through. */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+    }
+
   if (pair->src_kind == svn_node_dir)
     {
-      svn_boolean_t sleep_needed = FALSE;
-      const char *tmpdir_abspath, *tmp_abspath;
+      if (same_repositories)
+        {
+          svn_boolean_t sleep_needed = FALSE;
+          const char *tmpdir_abspath, *tmp_abspath;
 
-      /* Find a temporary location in which to check out the copy source. */
-      SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
-                                 pool, pool));
-                                 
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
-                                       svn_io_file_del_on_close, pool, pool));
+          /* Find a temporary location in which to check out the copy source. */
+          SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                                     pool, pool));
+                                     
+          SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                           svn_io_file_del_on_close, pool, pool));
 
-      /* Make a new checkout of the requested source. While doing so,
-       * resolve pair->src_revnum to an actual revision number in case it
-       * was until now 'invalid' meaning 'head'.  Ask this function not to
-       * sleep for timestamps, by passing a sleep_needed output param.
-       * Send notifications for all nodes except the root node, and adjust
-       * them to refer to the destination rather than this temporary path. */
-      {
-        svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
-        void *old_notify_baton2 = ctx->notify_baton2;
-        struct notification_adjust_baton nb;
-        svn_error_t *err;
+          /* Make a new checkout of the requested source. While doing so,
+           * resolve pair->src_revnum to an actual revision number in case it
+           * was until now 'invalid' meaning 'head'.  Ask this function not to
+           * sleep for timestamps, by passing a sleep_needed output param.
+           * Send notifications for all nodes except the root node, and adjust
+           * them to refer to the destination rather than this temporary path. */
+          {
+            svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
+            void *old_notify_baton2 = ctx->notify_baton2;
+            struct notification_adjust_baton nb;
+            svn_error_t *err;
+          
+            nb.inner_func = ctx->notify_func2;
+            nb.inner_baton = ctx->notify_baton2;
+            nb.checkout_abspath = tmp_abspath;
+            nb.final_abspath = dst_abspath;
+            ctx->notify_func2 = notification_adjust_func;
+            ctx->notify_baton2 = &nb;
+          
+            err = svn_client__checkout_internal(&pair->src_revnum,
+                                                pair->src_original,
+                                                tmp_abspath,
+                                                &pair->src_peg_revision,
+                                                &pair->src_op_revision,
+                                                svn_depth_infinity,
+                                                ignore_externals, FALSE,
+                                                &sleep_needed, ctx, pool);
+          
+            ctx->notify_func2 = old_notify_func2;
+            ctx->notify_baton2 = old_notify_baton2;
 
-        nb.inner_func = ctx->notify_func2;
-        nb.inner_baton = ctx->notify_baton2;
-        nb.checkout_abspath = tmp_abspath;
-        nb.final_abspath = dst_abspath;
-        ctx->notify_func2 = notification_adjust_func;
-        ctx->notify_baton2 = &nb;
-
-        err = svn_client__checkout_internal(&pair->src_revnum,
-                                            pair->src_original,
-                                            tmp_abspath,
-                                            &pair->src_peg_revision,
-                                            &pair->src_op_revision,
-                                            svn_depth_infinity,
-                                            ignore_externals, FALSE,
-                                            &sleep_needed, ctx, pool);
-
-        ctx->notify_func2 = old_notify_func2;
-        ctx->notify_baton2 = old_notify_baton2;
-
-        SVN_ERR(err);
-      }
+            SVN_ERR(err);
+          }
 
       /* Schedule dst_path for addition in parent, with copy history.
          Don't send any notification here.
          Then remove the temporary checkout's .svn dir in preparation for
          moving the rest of it into the final destination. */
-      if (same_repositories)
-        {
           SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
                                TRUE /* metadata_only */,
                                ctx->cancel_func, ctx->cancel_baton,
@@ -1616,21 +1631,16 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
       else
         {
-          /* ### We want to schedule this as a simple add, or even better
-             a copy from a foreign repos, but we don't yet have the
-             WC APIs to do that, so we will just move the whole WC into
-             place as a disjoint, nested WC. */
+          SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
+                                           dst_abspath,
+                                           &pair->src_peg_revision,
+                                           &pair->src_op_revision,
+                                           svn_depth_infinity,
+                                           FALSE /* make_parents */,
+                                           TRUE /* already_locked */,
+                                           ctx, pool));
 
-          /* Move the working copy to where it is expected. */
-          SVN_ERR(svn_wc__rename_wc(ctx->wc_ctx, tmp_abspath, dst_abspath,
-                                    pool));
-
-          svn_io_sleep_for_timestamps(dst_abspath, pool);
-
-          return svn_error_createf(
-             SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             _("Source URL '%s' is from foreign repository; "
-               "leaving it as a disjoint WC"), pair->src_abspath_or_url);
+          return SVN_NO_ERROR;
         }
     } /* end directory case */
 
@@ -1648,6 +1658,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
                               new_base_contents,
                               &pair->src_revnum, &new_props, pool));
+
+      if (new_props && ! same_repositories)
+        apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING, NULL);
+
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,

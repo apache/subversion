@@ -269,35 +269,61 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
   return SVN_NO_ERROR;
 }
 
+/* Canonicalize ACCESS_FILE based on the type of argument.
+ * SERVER baton is used to convert relative paths to absolute paths
+ * rooted at the server root. */
+static const char *
+canonicalize_access_file(const char *access_file,
+                         server_baton_t *server,
+                         apr_pool_t *pool)
+{
+  if (svn_path_is_url(access_file))
+    {
+      access_file = svn_uri_canonicalize(access_file, pool);
+    }
+  else if (!svn_path_is_repos_relative_url(access_file))
+    {
+      access_file = svn_dirent_internal_style(access_file, pool);
+      access_file = svn_dirent_join(server->base, access_file, pool);
+    }
+
+  /* We don't canonicalize repos relative urls since they get
+   * canonicalized inside svn_repos_authz_read2() when they
+   * are resolved. */
+
+  return access_file;
+}
+
 svn_error_t *load_authz_config(server_baton_t *server,
                                svn_ra_svn_conn_t *conn,
                                const char *repos_root,
                                apr_pool_t *pool)
 {
   const char *authzdb_path;
+  const char *groupsdb_path;
   svn_error_t *err;
 
   /* Read authz configuration. */
   svn_config_get(server->cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
+
+  svn_config_get(server->cfg, &groupsdb_path, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_GROUPS_DB, NULL);
+
   if (authzdb_path)
     {
       const char *case_force_val;
 
-      /* Canonicalize and add the base onto the authzdb_path (if needed).
-       * We don't canonicalize repos relative urls since they are
-       * canonicalized when they are resolved in svn_repos_authz_read2(). */
-      if (svn_path_is_url(authzdb_path))
-        {
-          authzdb_path = svn_uri_canonicalize(authzdb_path, pool);
-        }
-      else if (!svn_path_is_repos_relative_url(authzdb_path))
-        {
-          authzdb_path = svn_dirent_internal_style(authzdb_path, pool);
-          authzdb_path = svn_dirent_join(server->base, authzdb_path, pool);
-        }
-      err = svn_repos_authz_read2(&server->authzdb, authzdb_path, TRUE,
-                                  repos_root, pool);
+      /* Canonicalize and add the base onto the authzdb_path (if needed). */
+      authzdb_path = canonicalize_access_file(authzdb_path, server, pool);
+
+      /* Same for the groupsdb_path if it is present. */
+      if (groupsdb_path)
+        groupsdb_path = canonicalize_access_file(groupsdb_path,
+                                                 server, pool);
+
+      err = svn_repos_authz_read2(&server->authzdb, authzdb_path,
+                                  groupsdb_path, TRUE, repos_root, pool);
       if (err)
         {
           log_server_error(err, server, conn, pool);

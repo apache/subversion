@@ -76,16 +76,14 @@ make_random_file(const char *filename,
                  apr_pool_t *pool)
 {
   apr_file_t *file;
-  apr_status_t status;
   int num_lines;
 
   num_lines = range_rand(min_lines, max_lines);
 
-  status = apr_file_open(&file, filename,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
-                         pool);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to open '%s'", filename);
+  SVN_ERR(svn_io_file_open(&file, filename,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT,
+                           pool));
 
   while (num_lines--)
     {
@@ -100,9 +98,7 @@ make_random_file(const char *filename,
         apr_file_printf(file, "line %d line %d line %d", x, x, x);
     }
 
-  status = apr_file_close(file);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to close '%s'", filename);
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -117,19 +113,15 @@ make_file(const char *filename,
   apr_file_t *file;
   apr_status_t status;
 
-  status = apr_file_open(&file, filename,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
-                         pool);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to open '%s'", filename);
+  SVN_ERR(svn_io_file_open(&file, filename,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
 
   status = apr_file_write_full(file, contents, strlen(contents), NULL);
   if (status)
     return svn_error_createf(status, NULL, "failed to write '%s'", filename);
 
-  status = apr_file_close(file);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to close '%s'", filename);
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -159,7 +151,6 @@ three_way_merge(const char *filename1,
   svn_diff_t *diff;
   apr_file_t *output;
   svn_stream_t *ostream;
-  apr_status_t status;
   svn_stringbuf_t *actual;
   char *merge_name = apr_psprintf(pool, "merge-%s-%s-%s",
                                   filename1, filename2, filename3);
@@ -199,34 +190,29 @@ three_way_merge(const char *filename1,
 
   SVN_ERR(svn_diff_file_diff3_2(&diff, filename1, filename2, filename3,
                                 options, pool));
-  status = apr_file_open(&output, merge_name,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
-                         pool);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to open '%s'", merge_name);
+  SVN_ERR(svn_io_file_open(&output, merge_name,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
 
-  ostream = svn_stream_from_aprfile(output, pool);
+  ostream = svn_stream_from_aprfile2(output, FALSE, pool);
   SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
                                       filename1, filename2, filename3,
                                       NULL, NULL, NULL, NULL,
                                       style,
                                       pool));
   SVN_ERR(svn_stream_close(ostream));
-  status = apr_file_close(output);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to close '%s'", merge_name);
-  SVN_ERR(svn_stringbuf_from_file(&actual, merge_name, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&actual, merge_name, pool));
   if (strcmp(actual->data, expected))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "failed merging diff '%s' to '%s' into '%s'",
                              filename1, filename2, filename3);
 
-  SVN_ERR(svn_io_remove_file(filename1, pool));
+  SVN_ERR(svn_io_remove_file2(filename1, TRUE, pool));
   if (strcmp(filename1, filename2))
-    SVN_ERR(svn_io_remove_file(filename2, pool));
+    SVN_ERR(svn_io_remove_file2(filename2, TRUE, pool));
   if (strcmp(filename1, filename3) && strcmp(filename2, filename3))
-    SVN_ERR(svn_io_remove_file(filename3, pool));
-  SVN_ERR(svn_io_remove_file(merge_name, pool));
+    SVN_ERR(svn_io_remove_file2(filename3, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(merge_name, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -252,7 +238,6 @@ two_way_diff(const char *filename1,
   svn_diff_t *diff;
   apr_file_t *output;
   svn_stream_t *ostream;
-  apr_status_t status;
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
 
@@ -285,27 +270,42 @@ two_way_diff(const char *filename1,
   /* Check that two-way diff between contents1 and contents2 produces
      expected output. */
   SVN_ERR(svn_diff_file_diff_2(&diff, filename1, filename2, options, pool));
-  status = apr_file_open(&output, diff_name,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
-                         pool);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to open '%s'", diff_name);
 
-  ostream = svn_stream_from_aprfile(output, pool);
+  SVN_ERR(svn_io_file_open(&output, diff_name,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
+
+  ostream = svn_stream_from_aprfile2(output, FALSE, pool);
   SVN_ERR(svn_diff_file_output_unified2(ostream, diff,
                                         filename1, filename2,
                                         filename1, filename2,
                                         SVN_APR_LOCALE_CHARSET, pool));
   SVN_ERR(svn_stream_close(ostream));
-  status = apr_file_close(output);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to close '%s'", diff_name);
 
-  SVN_ERR(svn_stringbuf_from_file(&actual, diff_name, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&actual, diff_name, pool));
   if (strcmp(actual->data, expected))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "failed comparing '%s' and '%s'",
-                             filename1, filename2);
+    {
+      /*svn_stringbuf_t *dump_actual;
+      svn_stream_t *dump_ostream;
+      dump_actual = svn_stringbuf_create_empty(pool);
+      dump_ostream = svn_stream_from_stringbuf(dump_actual, pool);
+
+      SVN_ERR(svn_diff_mem_string_output_unified(dump_ostream, diff,
+                                                 "expected", "actual",
+                                                 SVN_APR_LOCALE_CHARSET,
+                                                 svn_string_create(expected, pool),
+                                                 svn_string_create(actual->data, pool),
+                                                 pool));
+      SVN_ERR(svn_stream_close(ostream));
+
+      SVN_DBG(("%s\n", dump_actual->data));
+
+      SVN_ERR(make_file("memory", expected, pool));*/
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "failed comparing '%s' and '%s'"
+                               " (memory and file results are different)",
+                               filename1, filename2);
+    }
 
   /* May as well do the trivial merges while we are here */
   SVN_ERR(three_way_merge(filename1, filename2, filename1,
@@ -317,7 +317,7 @@ two_way_diff(const char *filename1,
                           svn_diff_conflict_display_modified_latest,
                           pool));
 
-  SVN_ERR(svn_io_remove_file(diff_name, pool));
+  SVN_ERR(svn_io_remove_file2(diff_name, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -373,14 +373,11 @@ make_random_merge_file(const char *filename,
                        apr_pool_t *pool)
 {
   apr_file_t *file;
-  apr_status_t status;
   int i;
 
-  status = apr_file_open(&file, filename,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
-                         pool);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to open '%s'", filename);
+  SVN_ERR(svn_io_file_open(&file, filename,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
 
   for (i = 0; i < num_lines; ++i)
     {
@@ -413,9 +410,7 @@ make_random_merge_file(const char *filename,
         }
     }
 
-  status = apr_file_close(file);
-  if (status)
-    return svn_error_createf(status, NULL, "failed to close '%s'", filename);
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2193,8 +2188,8 @@ random_trivial_merge(apr_pool_t *pool)
                                min_lines, max_lines, var_lines, block_lines,
                                i % 2, subpool));
 
-      SVN_ERR(svn_stringbuf_from_file(&contents1, filename1, subpool));
-      SVN_ERR(svn_stringbuf_from_file(&contents2, filename2, subpool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents1, filename1, subpool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents2, filename2, subpool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename1,
                               contents1->data, contents2->data,
@@ -2262,10 +2257,10 @@ random_three_way_merge(apr_pool_t *pool)
       SVN_ERR(make_random_merge_file(filename4, num_lines, mrg_lines,
                                      num_src + num_dst, pool));
 
-      SVN_ERR(svn_stringbuf_from_file(&original, filename1, pool));
-      SVN_ERR(svn_stringbuf_from_file(&modified1, filename2, pool));
-      SVN_ERR(svn_stringbuf_from_file(&modified2, filename3, pool));
-      SVN_ERR(svn_stringbuf_from_file(&combined, filename4, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&original, filename1, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&modified1, filename2, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
@@ -2278,7 +2273,7 @@ random_three_way_merge(apr_pool_t *pool)
                               svn_diff_conflict_display_modified_latest,
                               subpool));
 
-      SVN_ERR(svn_io_remove_file(filename4, pool));
+      SVN_ERR(svn_io_remove_file2(filename4, TRUE, pool));
 
       svn_pool_clear(subpool);
     }
@@ -2335,10 +2330,10 @@ merge_with_part_already_present(apr_pool_t *pool)
       SVN_ERR(make_random_merge_file(filename4, num_lines, mrg_lines,
                                      num_src + num_dst / 2, pool));
 
-      SVN_ERR(svn_stringbuf_from_file(&original, filename1, pool));
-      SVN_ERR(svn_stringbuf_from_file(&modified1, filename2, pool));
-      SVN_ERR(svn_stringbuf_from_file(&modified2, filename3, pool));
-      SVN_ERR(svn_stringbuf_from_file(&combined, filename4, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&original, filename1, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&modified1, filename2, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
@@ -2351,7 +2346,7 @@ merge_with_part_already_present(apr_pool_t *pool)
                               svn_diff_conflict_display_modified_latest,
                               subpool));
 
-      SVN_ERR(svn_io_remove_file(filename4, pool));
+      SVN_ERR(svn_io_remove_file2(filename4, TRUE, pool));
 
       svn_pool_clear(subpool);
     }
@@ -2617,6 +2612,265 @@ test_token_compare(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+two_way_issue_3362_v1(apr_pool_t *pool)
+{
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  SVN_ERR(two_way_diff("issue-3362-1-v1",
+                       "issue-3362-2-v1",
+                        /* File 1 */
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* File 2 */
+                                "line_1a\n"
+                                "line_2a\n"
+                                "line_3a\n"
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5a\n"
+                                "line_6b\n"
+                                "line_7c\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11a\n"
+                                "line_11b\n"
+                                "line_11c\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19a\n"
+                                "line_19b\n"
+                                "line_19c\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_27a\n",
+                        /* Expected */
+                        "--- issue-3362-1-v1" APR_EOL_STR
+                        "+++ issue-3362-2-v1" APR_EOL_STR
+                        "@@ -1,14 +1,19 @@" APR_EOL_STR
+                        "+line_1a\n"
+                        "+line_2a\n"
+                        "+line_3a\n"
+                        " line_1\n" /* 1.7 mem diff: line missing */
+                        " line_2\n"
+                        " line_3\n"
+                        " line_4\n"
+                        "-line_5\n"
+                        "-line_6\n"
+                        "-line_7\n"
+                        "+line_5a\n"
+                        "+line_6b\n"
+                        "+line_7c\n"
+                        " line_8\n"
+                        " line_9\n"
+                        " line_10\n"
+                        "-line_11\n"
+                        "+line_11a\n"
+                        "+line_11b\n"
+                        "+line_11c\n"
+                        " line_12\n"
+                        " line_13\n"
+                        " line_14\n" /* 1.7 mem diff: line missing */
+                        "@@ -16,7 +21,9 @@" APR_EOL_STR
+                        " line_16\n"
+                        " line_17\n"
+                        " line_18\n"
+                        "-line_19\n"
+                        "+line_19a\n"
+                        "+line_19b\n"
+                        "+line_19c\n"
+                        " line_20\n"
+                        " line_21\n"
+                        " line_22\n"
+                        "@@ -25,6 +32,4 @@" APR_EOL_STR
+                        " line_25\n"
+                        " line_26\n"
+                        " line_27\n"
+                        "-line_28\n"
+                        "-line_29\n"
+                        "-line_30\n"
+                        "+line_27a\n",
+                        diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+two_way_issue_3362_v2(apr_pool_t *pool)
+{
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  SVN_ERR(two_way_diff("issue-3362-1-v2",
+                       "issue-3362-2-v2",
+                        /* File 1 */
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* File 2 */
+                                "line_1a\n"
+                                "line_1b\n"
+                                "line_1c\n"
+                                "line_1\n"
+                                "line_2\n"
+                                "line_3\n"
+                                "line_4\n"
+                                "line_5a\n"
+                                "line_5b\n"
+                                "line_5c\n"
+                                "line_6\n"
+                                "line_7\n"
+                                "line_8\n"
+                                "line_9\n"
+                                "line_10\n"
+                                "line_11a\n"
+                                "line_11b\n"
+                                "line_11c\n"
+                                "line_12\n"
+                                "line_13\n"
+                                "line_14\n"
+                                "line_15\n"
+                                "line_16\n"
+                                "line_17\n"
+                                "line_18\n"
+                                "line_19a\n"
+                                "line_19b\n"
+                                "line_19c\n"
+                                "line_20\n"
+                                "line_21\n"
+                                "line_22\n"
+                                "line_23\n"
+                                "line_24\n"
+                                "line_25\n"
+                                "line_26\n"
+                                "line_27a\n"
+                                "line_27b\n"
+                                "line_27c\n"
+                                "line_28\n"
+                                "line_29\n"
+                                "line_30\n",
+                        /* Expected */
+                        "--- issue-3362-1-v2" APR_EOL_STR
+                        "+++ issue-3362-2-v2" APR_EOL_STR
+                        "@@ -1,14 +1,21 @@" APR_EOL_STR
+                        "+line_1a\n"
+                        "+line_1b\n"
+                        "+line_1c\n"
+                        " line_1\n" /* 1.7 mem diff: line missing */
+                        " line_2\n"
+                        " line_3\n"
+                        " line_4\n"
+                        "-line_5\n"
+                        "+line_5a\n"
+                        "+line_5b\n"
+                        "+line_5c\n"
+                        " line_6\n"
+                        " line_7\n"
+                        " line_8\n"
+                        " line_9\n"
+                        " line_10\n"
+                        "-line_11\n"
+                        "+line_11a\n"
+                        "+line_11b\n"
+                        "+line_11c\n"
+                        " line_12\n"
+                        " line_13\n"
+                        " line_14\n" /* 1.7 mem diff: line missing */
+                        "@@ -16,7 +23,9 @@" APR_EOL_STR
+                        " line_16\n"
+                        " line_17\n"
+                        " line_18\n"
+                        "-line_19\n"
+                        "+line_19a\n"
+                        "+line_19b\n"
+                        "+line_19c\n"
+                        " line_20\n"
+                        " line_21\n"
+                        " line_22\n"
+                        "@@ -24,7 +33,9 @@" APR_EOL_STR
+                        " line_24\n"
+                        " line_25\n"
+                        " line_26\n"
+                        "-line_27\n"
+                        "+line_27a\n"
+                        "+line_27b\n"
+                        "+line_27c\n"
+                        " line_28\n"
+                        " line_29\n"
+                        " line_30\n",
+                        diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2652,5 +2906,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_PASS2(test_token_compare,
                    "compare tokes at the chunk boundary"),
+    SVN_TEST_PASS2(two_way_issue_3362_v1,
+                   "2-way issue #3362 test v1"),
+    SVN_TEST_PASS2(two_way_issue_3362_v2,
+                   "2-way issue #3362 test v2"),
     SVN_TEST_NULL
   };

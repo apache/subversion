@@ -849,7 +849,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
     return svn_error_createf(err->apr_err, err, 
-                             "Error parsing config file: '%s' in repo '%s':",
+                             "Error while parsing config file: '%s' in repo '%s':",
                              fs_path, repos_root_dirent);
 
   return SVN_NO_ERROR;
@@ -919,19 +919,80 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
   return SVN_NO_ERROR;
 }
 
+
+/* Callback to copy (name, value) group into the "groups" section
+   of another configuration. */
+static svn_boolean_t
+authz_copy_group(const char *name, const char *value,
+                 void *baton, apr_pool_t *pool)
+{
+  svn_config_t *authz_cfg = baton;
+
+  svn_config_set(authz_cfg, SVN_CONFIG_SECTION_GROUPS, name, value);
+
+  return TRUE;
+}
+
+/* Copy group definitions from GROUPS_CFG to the resulting AUTHZ.
+ * If AUTHZ already contains any group definition, report an error.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+authz_copy_groups(svn_authz_t *authz, svn_config_t *groups_cfg,
+                  apr_pool_t *pool)
+{
+  /* Easy out: we prohibit local groups in the authz file when global
+     groups are being used. */
+  if (svn_config_has_section(authz->cfg, SVN_CONFIG_SECTION_GROUPS))
+    {
+      return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                              "Authz file cannot contain any groups "
+                              "when global groups are being used.");
+    }
+
+  svn_config_enumerate2(groups_cfg, SVN_CONFIG_SECTION_GROUPS,
+                        authz_copy_group, authz->cfg, pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
-                      svn_boolean_t must_exist, svn_boolean_t accept_urls,
-                      const char *repos_root, apr_pool_t *pool)
+                      const char *groups_path, svn_boolean_t must_exist,
+                      svn_boolean_t accept_urls, const char *repos_root,
+                      apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
 
-  /* Load the rule file */
+  /* Load the authz file */
   if (accept_urls)
     SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, repos_root,
                                   pool));
   else
     SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
+
+  if (groups_path)
+    {
+      svn_config_t *groups_cfg;
+      svn_error_t *err;
+
+      /* Load the groups file */
+      if (accept_urls)
+        SVN_ERR(authz_retrieve_config(&groups_cfg, groups_path, must_exist,
+                                      repos_root, pool));
+      else
+        SVN_ERR(svn_config_read2(&groups_cfg, groups_path, must_exist,
+                                 TRUE, pool));
+
+      /* Copy the groups from groups_cfg into authz. */
+      err = authz_copy_groups(authz, groups_cfg, pool);
+
+      /* Add the paths to the error stack since the authz_copy_groups
+         routine knows nothing about them. */
+      if (err != SVN_NO_ERROR)
+        return svn_error_createf(err->apr_err, err,
+                                 "Error reading authz file '%s' with "
+                                 "groups file '%s':", path, groups_path);
+    }
 
   /* Make sure there are no errors in the configuration. */
   SVN_ERR(authz_validate(authz, pool));
@@ -946,22 +1007,32 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
 
 svn_error_t *
 svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
-                      svn_boolean_t must_exist, const char *repos_root,
-                      apr_pool_t *pool)
+                      const char *groups_path, svn_boolean_t must_exist,
+                      const char *repos_root, apr_pool_t *pool)
 {
-  return svn_repos__authz_read(authz_p, path, must_exist, TRUE, repos_root,
-                               pool);
+  return svn_repos__authz_read(authz_p, path, groups_path, must_exist,
+                               TRUE, repos_root, pool);
 }
 
 
 svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream, 
-                      apr_pool_t *pool)
+                      svn_stream_t *groups_stream, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
 
-  /* Parse the stream */
+  /* Parse the authz stream */
   SVN_ERR(svn_config_parse(&authz->cfg, stream, TRUE, pool));
+
+  if (groups_stream)
+    {
+      svn_config_t *groups_cfg;
+
+      /* Parse the groups stream */
+      SVN_ERR(svn_config_parse(&groups_cfg, groups_stream, TRUE, pool));
+
+      SVN_ERR(authz_copy_groups(authz, groups_cfg, pool));
+    }
 
   /* Make sure there are no errors in the configuration. */
   SVN_ERR(authz_validate(authz, pool));

@@ -2172,6 +2172,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
               svn_kind_t node_kind = svn_sqlite__column_token(stmt, 1,
                                                               kind_map);
               const char *node_abspath;
+              svn_error_t *err;
 
               svn_pool_clear(iterpool);
 
@@ -2179,18 +2180,21 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                                              iterpool);
 
               if (node_kind == svn_kind_dir)
-                SVN_ERR(svn_wc__wq_build_dir_remove(&work_item,
-                                                    db, wcroot->abspath,
-                                                    node_abspath, FALSE,
-                                                    iterpool, iterpool));
+                err = svn_wc__wq_build_dir_remove(&work_item,
+                                                  db, wcroot->abspath,
+                                                  node_abspath, FALSE,
+                                                  iterpool, iterpool);
               else
-                SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                                     db,
-                                                     wcroot->abspath,
-                                                     node_abspath,
-                                                     iterpool, iterpool));
+                err = svn_wc__wq_build_file_remove(&work_item,
+                                                   db,
+                                                   wcroot->abspath,
+                                                   node_abspath,
+                                                   iterpool, iterpool);
 
-              SVN_ERR(add_work_items(wcroot->sdb, work_item, iterpool));
+              if (!err)
+                err = add_work_items(wcroot->sdb, work_item, iterpool);
+              if (err)
+                return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
               SVN_ERR(svn_sqlite__step(&have_row, stmt));
            }

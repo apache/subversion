@@ -337,7 +337,8 @@ class State:
       if item.status:
         # If this is an unversioned tree-conflict, remove it.
         # These are only in their parents' THIS_DIR, they don't have entries.
-        if item.status[0] in '!?' and item.treeconflict == 'C':
+        if item.status[0] in '!?' and item.treeconflict == 'C' and \
+                                      item.entry_status is None:
           del self.desc[path]
         # Normal externals are not stored in the parent wc, drop the root
         # and everything in these working copies
@@ -663,21 +664,14 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+    dump_data = svntest.main.run_entriesdump_tree(base)
 
-      if base == '.' and dirpath != '.':
-        dirpath = '.' + os.path.sep + dirpath
+    if not dump_data:
+      # Probably 'svn status' run on an actual only node
+      # ### Improve!
+      return cls('', desc)
 
-      entries = svntest.main.run_entriesdump(dirpath)
-      if entries is None:
-        continue
-
-      if dirpath == '.':
-        parent = ''
-      elif dirpath.startswith('.' + os.sep):
-        parent = to_relpath(dirpath[2:])
-      else:
-        parent = to_relpath(dirpath)
+    for parent, entries in sorted(dump_data.items()):
 
       parent_url = entries[''].url
 

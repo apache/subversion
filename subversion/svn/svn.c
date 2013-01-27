@@ -241,7 +241,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
-                    N_("ignore ancestry when calculating merges")},
+                    N_("disable merge tracking; diff nodes as if related")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
@@ -345,7 +345,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
   {"notice-ancestry", opt_notice_ancestry, 0,
-                    N_("notice ancestry when calculating differences")},
+                    N_("diff unrelated nodes as delete and add")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
@@ -1486,7 +1486,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn switch --relocate http://www.example.com/repo/project \\\n"
      "                          svn://svn.example.com/repo/project\n"),
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
-      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept} },
+      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept},
+    {{opt_ignore_ancestry,
+      N_("allow switching to a node with no common ancestor")}}
+  },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
