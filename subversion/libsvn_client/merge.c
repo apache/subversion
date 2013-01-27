@@ -5464,15 +5464,8 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
    temporarily reparented to the URL of the file itself.  LOCATION is the
    repository location of the file.
 
-   The new temporary file will be created as a sibling of WC_TARGET.
-   WC_TARGET should be the local path to the working copy of the file, but
-   it does not matter whether anything exists on disk at this path as long
-   as WC_TARGET's parent directory exists.
-
-   All allocation occurs in POOL.
-
-   ### TODO: Create the temporary file under .svn/tmp/ instead of next to
-   the working file.
+   The resulting file and the return values live as long as RESULT_POOL, all
+   other allocations occur in SCRATCH_POOL.
 */
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
@@ -5480,24 +5473,25 @@ single_file_merge_get_file(const char **filename,
                            svn_ra_session_t *ra_session,
                            const svn_client__pathrev_t *location,
                            const char *wc_target,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
   const char *old_sess_url;
   svn_error_t *err;
 
-  SVN_ERR(svn_stream_open_unique(&stream, filename,
-                                 svn_dirent_dirname(wc_target, pool),
-                                 svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_stream_open_unique(&stream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
 
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, location->url,
-                                            pool));
+                                            scratch_pool));
   err = svn_ra_get_file(ra_session, "", location->rev,
-                        stream, NULL, props, pool);
+                        stream, NULL, props, scratch_pool);
   SVN_ERR(svn_error_compose_create(
-            err, svn_ra_reparent(ra_session, old_sess_url, pool)));
+            err, svn_ra_reparent(ra_session, old_sess_url, scratch_pool)));
 
-  return svn_stream_close(stream);
+  return svn_error_trace(svn_stream_close(stream));
 }
 
 
@@ -7131,11 +7125,13 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
                                              merge_b->ra_session1,
                                              real_source->loc1,
-                                             target_abspath, iterpool));
+                                             target_abspath,
+                                             iterpool, iterpool));
           SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2,
                                              merge_b->ra_session2,
                                              real_source->loc2,
-                                             target_abspath, iterpool));
+                                             target_abspath,
+                                             iterpool, iterpool));
 
           /* Discover any svn:mime-type values in the proplists */
           pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
@@ -7204,11 +7200,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                                text_state, prop_state,
                                                r, &header_sent, iterpool));
             }
-
-          /* Remove the temporary files. Ignore if not found: they may
-           * have been renamed. */
-          SVN_ERR(svn_io_remove_file2(tmpfile1, TRUE /*ignore*/, iterpool));
-          SVN_ERR(svn_io_remove_file2(tmpfile2, TRUE /*ignore*/, iterpool));
 
           if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))
