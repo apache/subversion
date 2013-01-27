@@ -1504,6 +1504,14 @@ record_tree_conflict(const merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Forward declaration */
+static svn_error_t *
+record_operative_merge_action(merge_cmd_baton_t *merge_b,
+                              const char *local_abspath,
+                              svn_boolean_t delete_action,
+                              apr_pool_t *scratch_pool);
+
+
 /* Record the add for future processing and (later) produce the
    update_add notification
 
@@ -1555,6 +1563,9 @@ record_update_add(merge_cmd_baton_t *merge_b,
       store_path(merge_b->merged_abspaths, local_abspath);
     }
 
+  SVN_ERR(record_operative_merge_action(merge_b, local_abspath, FALSE,
+                                        scratch_pool));
+
 #ifdef HANDLE_NOTIFY_FROM_MERGE
   if (merge_b->ctx->notify_func2)
     {
@@ -1575,7 +1586,7 @@ record_update_add(merge_cmd_baton_t *merge_b,
 /* Record the update for future processing and (later) produce the
    update_add notification */
 static svn_error_t *
-record_update_update(const merge_cmd_baton_t *merge_b,
+record_update_update(merge_cmd_baton_t *merge_b,
                      const char *local_abspath,
                      svn_node_kind_t kind,
                      svn_wc_notify_state_t content_state,
@@ -1586,6 +1597,9 @@ record_update_update(const merge_cmd_baton_t *merge_b,
     {
       store_path(merge_b->merged_abspaths, local_abspath);
     }
+
+  SVN_ERR(record_operative_merge_action(merge_b, local_abspath,
+                                        FALSE, scratch_pool));
 
 #ifdef HANDLE_NOTIFY_FROM_MERGE
   if (merge_b->ctx->notify_func2)
@@ -1609,7 +1623,7 @@ record_update_update(const merge_cmd_baton_t *merge_b,
 /* Record the delete for future processing and (later) produce the
    update_delete notification */
 static svn_error_t *
-record_update_delete(const merge_cmd_baton_t *merge_b,
+record_update_delete(merge_cmd_baton_t *merge_b,
                      const char *local_abspath,
                      svn_node_kind_t kind,
                      apr_pool_t *scratch_pool)
@@ -1625,6 +1639,9 @@ record_update_delete(const merge_cmd_baton_t *merge_b,
                    APR_HASH_KEY_STRING, NULL);
       store_path(merge_b->merged_abspaths, local_abspath);
     }
+
+  SVN_ERR(record_operative_merge_action(merge_b, local_abspath,
+                                        TRUE, scratch_pool));
 
 #ifdef HANDLE_NOTIFY_FROM_MERGE
   if (merge_b->ctx->notify_func2)
@@ -3114,56 +3131,21 @@ notify_merge_completed(const char *target_abspath,
                      || notify->action == svn_wc_notify_update_add \
                      || notify->action == svn_wc_notify_tree_conflict)
 
-/* Handle a diff notification by calling the client's notification callback
- * and also by recording which paths changed (in BATON->*_abspaths).
- *
- * In some cases, notify that a merge is beginning, if we haven't already
- * done so.  (### TODO: Harmonize this so it handles all cases.)
- *
- * The paths in NOTIFY are relpaths, relative to the root of the diff (the
- * merge source). We convert these to abspaths in the merge target WC before
- * passing the notification structure on to the client.
- *
- * This function is not used for 'starting a merge', 'starting to record
- * mergeinfo' and 'completing a merge' notifications.
- *
- * Implements svn_wc_notify_func2_t.*/
-static void
-notification_receiver(void *baton, const svn_wc_notify_t *notify,
-                      apr_pool_t *pool)
+
+static svn_error_t *
+record_operative_merge_action(merge_cmd_baton_t *merge_b,
+                              const char *local_abspath,
+                              svn_boolean_t delete_action,
+                              apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
-  svn_boolean_t is_operative_notification = IS_OPERATIVE_NOTIFICATION(notify);
-  const char *notify_abspath;
-
-  /* Skip notifications if this is a --record-only merge that is adding
-     or deleting NOTIFY->PATH, allow only mergeinfo changes and headers.
-     We will already have skipped the actual addition or deletion, but will
-     still get a notification callback for it. */
-  if (merge_b->record_only
-      && notify->action != svn_wc_notify_update_update)
-    return;
-
-  if (is_operative_notification)
-    {
-      merge_b->nrb.nbr_operative_notifications++;
-    }
-
-  /* If the node was moved-away, use its new path in the notification. */
-  /* ### Currently only for files, as following a local move of a dir is
-   * not yet implemented.
-   * ### We should stash the info about which moves have been followed and
-   * retrieve that info here, instead of querying the WC again here. */
-  notify_abspath = svn_dirent_join(merge_b->target->abspath,
-                                   notify->path, pool);
+  merge_b->nrb.nbr_operative_notifications++;
 
   /* Notify that a merge is beginning, if we haven't already done so.
    * (A single-file merge is notified separately: see single_file_merge_notify().) */
   /* If our merge sources are ancestors of one another... */
   if (merge_b->merge_source.ancestral)
     {
-      /* See if this is an operative directory merge. */
-      if (!(merge_b->nrb.is_single_file_merge) && is_operative_notification)
+      if (! merge_b->nrb.is_single_file_merge)
         {
           /* Find NOTIFY->PATH's nearest ancestor in
              NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
@@ -3183,8 +3165,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const svn_client__merge_path_t *child
             = find_nearest_ancestor(
                 merge_b->nrb.children_with_mergeinfo,
-                notify->action != svn_wc_notify_update_delete,
-                notify_abspath);
+                ! delete_action,
+                local_abspath);
 
           if (merge_b->nrb.cur_ancestor_abspath == NULL
               || strcmp(child->abspath, merge_b->nrb.cur_ancestor_abspath) != 0)
@@ -3196,20 +3178,54 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                                      APR_ARRAY_IDX(child->remaining_ranges, 0,
                                                    svn_merge_range_t *),
                                      merge_b->same_repos,
-                                     merge_b->ctx, pool);
+                                     merge_b->ctx, scratch_pool);
                 }
             }
         }
     }
   /* Otherwise, our merge sources aren't ancestors of one another. */
   else if (!(merge_b->nrb.is_single_file_merge)
-           && merge_b->nrb.nbr_operative_notifications == 1
-           && is_operative_notification)
+           && merge_b->nrb.nbr_operative_notifications == 1)
     {
       notify_merge_begin(merge_b->target->abspath, NULL,
                          merge_b->same_repos,
-                         merge_b->ctx, pool);
+                         merge_b->ctx, scratch_pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Handle a diff notification by calling the client's notification callback
+ * and also by recording which paths changed (in BATON->*_abspaths).
+ *
+ * In some cases, notify that a merge is beginning, if we haven't already
+ * done so.  (### TODO: Harmonize this so it handles all cases.)
+ *
+ * The paths in NOTIFY are relpaths, relative to the root of the diff (the
+ * merge source). We convert these to abspaths in the merge target WC before
+ * passing the notification structure on to the client.
+ *
+ * This function is not used for 'starting a merge', 'starting to record
+ * mergeinfo' and 'completing a merge' notifications.
+ *
+ * Implements svn_wc_notify_func2_t.*/
+static void
+notification_receiver(void *baton, const svn_wc_notify_t *notify,
+                      apr_pool_t *pool)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  const char *notify_abspath;
+
+  /* Skip notifications if this is a --record-only merge that is adding
+     or deleting NOTIFY->PATH, allow only mergeinfo changes and headers.
+     We will already have skipped the actual addition or deletion, but will
+     still get a notification callback for it. */
+  if (merge_b->record_only
+      && notify->action != svn_wc_notify_update_update)
+    return;
+
+  notify_abspath = svn_dirent_join(merge_b->target->abspath,
+                                   notify->path, pool);
 
   if (merge_b->nrb.wrapped_func)
     {
