@@ -5783,7 +5783,6 @@ def update_move_text_mod(sbox):
   svntest.actions.verify_disk(wc_dir, expected_disk, check_props = True)
 
 
-@XFail()
 @Issue(3144,3630)
 def update_nested_move_text_mod(sbox):
   "text mod to moved file in moved dir"
@@ -5799,35 +5798,53 @@ def update_nested_move_text_mod(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E', moved_to='A/E2')
   expected_status.add({
-      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
-      'A/E2/alpha'  : Item(status='D ', copied='+', wc_rev='-'),
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-',
+                           moved_from='A/B/E'),
+      'A/E2/alpha'  : Item(status='D ', copied='+', wc_rev='-',
+                           moved_to='A/alpha2'),
       'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
-      'A/alpha2'    : Item(status='A ', copied='+', wc_rev='-'),
+      'A/alpha2'    : Item(status='A ', copied='+', wc_rev='-',
+                           moved_from='A/E2/alpha'),
       })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A/alpha2' : Item(status='U '),
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
   expected_disk.add({
     'A/E2'        : Item(),
     'A/E2/beta'   : Item(contents="This is the file 'beta'.\n"),
-    'A/alpha2'    : Item(contents="This is the file 'alpha'.\nmodified\n"),
+    'A/alpha2'    : Item(contents="This is the file 'alpha'.\n"),
   })
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B/E', treeconflict='C')
   expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/alpha2',
                         wc_rev='-')
-  ### XFAIL update fails 'No such file'
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict',
+                                     wc_dir)
+
+  expected_status.tweak('A/B/E', treeconflict=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk.tweak('A/alpha2',
+                      contents="This is the file 'alpha'.\nmodified\n"),
+  svntest.actions.verify_disk(wc_dir, expected_disk, check_props = True)
 
 def update_with_parents_and_exclude(sbox):
   "bring a subtree in over an excluded path"
