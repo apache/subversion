@@ -10301,6 +10301,15 @@ typedef struct verify_walker_baton_t
   /* number of files opened since the last clean */
   int file_count;
 
+  /* progress notification callback to invoke periodically (may be NULL) */
+  svn_fs_progress_notify_func_t notify_func;
+
+  /* baton to use with NOTIFY_FUNC */
+  void *notify_baton;
+
+  /* remember the last revision for which we called notify_func */
+  svn_revnum_t last_notified_revision;
+
   /* current file handle (or NULL) */
   apr_file_t *file_hint;
 
@@ -10327,10 +10336,19 @@ verify_walker(representation_t *rep,
       verify_walker_baton_t *walker_baton = baton;
       apr_file_t * previous_file;
 
-      /* free resources periodically */
+      /* notify and free resources periodically */
       if (   walker_baton->iteration_count > 1000
           || walker_baton->file_count > 16)
         {
+          if (   walker_baton->notify_func
+              && rep->revision != walker_baton->last_notified_revision)
+            {
+              walker_baton->notify_func(rep->revision,
+                                        walker_baton->notify_baton,
+                                        scratch_pool);
+              walker_baton->last_notified_revision = rep->revision;
+            }
+
           svn_pool_clear(walker_baton->pool);
           
           walker_baton->iteration_count = 0;
@@ -10394,14 +10412,20 @@ svn_fs_fs__verify(svn_fs_t *fs,
       verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
       baton->rev_hint = SVN_INVALID_REVNUM;
       baton->pool = svn_pool_create(pool);
+      baton->last_notified_revision = SVN_INVALID_REVNUM;
+      baton->notify_func = notify_func;
+      baton->notify_baton = notify_baton;
       
+      /* tell the user that we are now read to do *something* */
+      if (notify_func)
+        notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
+
       /* Do not attempt to walk the rep-cache database if its file does
          not exist,  since doing so would create it --- which may confuse
          the administrator.   Don't take any lock. */
-      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, baton,
+      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, start, end,
+                                            verify_walker, baton,
                                             cancel_func, cancel_baton,
-                                            notify_func, notify_baton,
-                                            start, end,
                                             pool));
 
       /* walker resource cleanup */

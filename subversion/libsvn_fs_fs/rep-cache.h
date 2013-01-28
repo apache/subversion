@@ -48,6 +48,8 @@ svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
 /* Iterate all representations currently in FS's cache. */
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
                               svn_error_t *(*walker)(representation_t *rep,
                                                      void *walker_baton,
                                                      svn_fs_t *fs,
@@ -55,10 +57,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
-                              svn_fs_progress_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
                               apr_pool_t *pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
