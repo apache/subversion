@@ -128,6 +128,8 @@ svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
 
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,
                                                      svn_fs_t *,
@@ -135,17 +137,12 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
-                              svn_fs_progress_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int iterations = 0;
-  svn_revnum_t last_notified_revision = SVN_INVALID_REVNUM;
 
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -167,9 +164,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       SVN_ERR(svn_sqlite__reset(stmt));
       if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
         SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
-
-      if (notify_func)
-        notify_func(SVN_INVALID_REVNUM, notify_baton, iterpool);
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
@@ -216,16 +210,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      /* Notify (occasionally, because walking is fast and we can't
-         guarantee a properly ordered notification sequence anyway) */
-      if (   notify_func
-          && (iterations % 1024 == 0)
-          && (rep->revision != last_notified_revision))
-        {
-          notify_func(rep->revision, notify_baton, iterpool);
-          last_notified_revision = rep->revision;
-        }
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
