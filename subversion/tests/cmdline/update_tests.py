@@ -5713,7 +5713,6 @@ def update_moved_dir_file_move(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-@XFail()
 @Issue(3144,3630)
 def update_move_text_mod(sbox):
   "text mod to moved files"
@@ -5731,37 +5730,58 @@ def update_move_text_mod(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/lambda',
                         status='D ')
+  expected_status.tweak('A/B/E',  moved_to='A/E2')
+  expected_status.tweak('A/B/lambda', moved_to='A/lambda2')
   expected_status.add({
-      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-',
+                           moved_from='A/B/E'),
       'A/E2/alpha'  : Item(status='  ', copied='+', wc_rev='-'),
       'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
-      'A/lambda2'   : Item(status='A ', copied='+', wc_rev='-'),
+      'A/lambda2'   : Item(status='A ', copied='+', wc_rev='-',
+                           moved_from='A/B/lambda'),
       })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A/lambda2' : Item(status='U '),
-    'A/E2/beta' : Item(status='U '),
+    'A/B/lambda' : Item(status='  ', treeconflict='C'),
+    'A/B/E'      : Item(status='  ', treeconflict='C'),
+    'A/B/E/beta' : Item(status='  ', treeconflict='U'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E', 'A/B/lambda')
   expected_disk.add({
     'A/E2'        : Item(),
     'A/E2/alpha'  : Item(contents="This is the file 'alpha'.\n"),
-    'A/E2/beta'   : Item(contents="This is the file 'beta'.\nmodified\n"),
-    'A/lambda2'   : Item(contents="This is the file 'lambda'.\nmodified\n"),
+    'A/E2/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A/lambda2'   : Item(contents="This is the file 'lambda'.\n"),
   })
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B/E', 'A/B/lambda', treeconflict='C')
   expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/lambda2',
                         wc_rev='-')
-  ### XFAIL 'A/E2/beta' is status R but should be ' '
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--recursive',
+                                     '--accept=mine-conflict',
+                                     wc_dir)
+
+  expected_status.tweak('A/B/E', 'A/B/lambda', treeconflict=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk.tweak('A/E2/beta',
+                      contents="This is the file 'beta'.\nmodified\n"),
+  expected_disk.tweak('A/lambda2',
+                      contents="This is the file 'lambda'.\nmodified\n"),
+  svntest.actions.verify_disk(wc_dir, expected_disk, check_props = True)
+
 
 @XFail()
 @Issue(3144,3630)
