@@ -554,7 +554,7 @@ def verify_windows_paths_in_repos(sbox):
   if svntest.main.is_fs_type_fsfs():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verifying global structure ...\n",
+      'STDERR', ["* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], errput)
