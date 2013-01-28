@@ -5478,7 +5478,6 @@ def update_moved_dir_leaf_del(sbox):
   expected_status.remove('A/B/E2/alpha')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3144,3630)
 # Like break_moved_dir_edited_leaf_del, but with --accept=mine-conflict
 def update_moved_dir_edited_leaf_del(sbox):
@@ -5527,13 +5526,13 @@ def update_moved_dir_edited_leaf_del(sbox):
   # Now resolve the conflict, using --accept=mine-conflict.
   # This should apply the update to A/B/E2, and flag a tree
   # conflict on A/B/E2/alpha (incoming delete vs. local edit)
-  # XFAIL: Currently the A/B/E2/alpha is deleted during this update.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve',
-                                     '--recursive',
-                                     '--accept=mine-conflict', wc_dir)
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', treeconflict=None)
-  expected_status.tweak('A/B/E2/alpha', treeconflict='C')
+  expected_status.tweak('A/B/E2/alpha', status='A ', copied='+', wc_rev='-',
+                        entry_status='  ', treeconflict='C')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def update_moved_dir_file_add(sbox):
