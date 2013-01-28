@@ -6502,6 +6502,37 @@ def move_update_props(sbox):
                                                       'propertyB':'value3'})
   svntest.actions.verify_disk(wc_dir, expected_disk, check_props = True)
 
+  # Further update and expect a conflict.
+  expected_status.tweak('A/B', status='D ', treeconflict='C', moved_to='A/B2')
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak( 'A/B2', 'A/B2/E', 'A/B2/E/beta', 'A/B2/E/alpha',
+                         'A/B2/F', 'A/B2/lambda', wc_rev='-')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '3', wc_dir)
+
+  # Resolve conflict moving changes and raising property conflicts
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B'))
+
+  expected_status.tweak('A/B', treeconflict=None)
+  expected_status.tweak('A/B2/E', 'A/B2/E/beta', status=' C')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk.tweak('A/B2', 'A/B2/E/alpha', props={'propertyA' : 'value1',
+                                                     'propertyB' : 'value2'})
+  expected_disk.tweak('A/B2/E', 'A/B2/E/beta', props={'propertyA' : 'value1',
+                                                      'propertyB' : 'value3'})
+  extra_files = ['dir_conflicts.prej', 'beta.prej']
+  svntest.actions.verify_disk(wc_dir, expected_disk, True,
+                              svntest.tree.detect_conflict_files, extra_files)
+
 #######################################################################
 # Run the tests
 
