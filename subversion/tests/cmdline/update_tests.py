@@ -6427,7 +6427,6 @@ def update_swapped_depth_dirs(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-@XFail()
 def move_update_props(sbox):
   "move-update with property mods"
 
@@ -6495,8 +6494,8 @@ def move_update_props(sbox):
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/B'))
 
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
   expected_status.tweak('A/B', treeconflict=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_disk.tweak('A/B2', 'A/B2/E/alpha', props={'propertyA' : 'value1'})
   expected_disk.tweak('A/B2/E', 'A/B2/E/beta', props={'propertyA' : 'value1',
