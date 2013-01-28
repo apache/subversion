@@ -1,0 +1,12 @@
+This branch exists to add --keep-going to 'svnadmin verify'.
+The goal of this flag is to continue the repository verification process even
+after detecting a failure/corruption.
+
+USAGE:
+------
+svnadmin verify --keep-going /path/to/repo
+
+TODO:
+-----
+  - Continue after verification failure and return the correct exit code.
+  - Add a few more test cases.
