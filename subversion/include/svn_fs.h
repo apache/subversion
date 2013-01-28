@@ -300,6 +300,13 @@ typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
  *
+ * @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify_rev.
+ * 
+ * @note Implementors, please do tests that can be done efficiently for
+ * a single revision to #svn_fs_verify_rev.  This function is meant for
+ * global checks or tests that require an expensive context setup.
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -320,6 +327,13 @@ svn_fs_verify(const char *path,
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
+ *
+* @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify.
+ *
+ * @note Implementors, please do tests that cannot be done efficiently for
+ * a single revision to #svn_fs_verify.  This function is meant for local
+ * checks that don't require an expensive context setup.
  *
  * @since New in 1.8.
  */
