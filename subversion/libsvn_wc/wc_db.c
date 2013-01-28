@@ -14239,6 +14239,7 @@ svn_wc__db_bump_format(int *result_format,
 {
   svn_sqlite__db_t *sdb;
   svn_error_t *err;
+  svn_error_t *upgrade_err;
   int format;
 
   /* Do not scan upwards for a working copy root here to prevent accidental
@@ -14274,11 +14275,11 @@ svn_wc__db_bump_format(int *result_format,
     }
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
-  SVN_ERR(svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                              sdb, format, scratch_pool));
-  SVN_ERR(svn_sqlite__close(sdb));
+  upgrade_err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
+                                     sdb, format, scratch_pool);
+  err = svn_sqlite__close(sdb);
 
-  return SVN_NO_ERROR;
+  return svn_error_compose_create(upgrade_err, err);
 }
 
 svn_error_t *
