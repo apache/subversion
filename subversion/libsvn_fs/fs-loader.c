@@ -498,9 +498,10 @@ svn_fs_verify(const char *path,
   fs = fs_new(NULL, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->verify_fs(fs, path, cancel_func, cancel_baton,
-                                         notify_func, notify_baton, start,
-                                         end, pool, common_pool));
+                       vtable->verify_fs(fs, path, start, end,
+                                         notify_func, notify_baton,
+                                         cancel_func, cancel_baton,
+                                         pool, common_pool));
   return SVN_NO_ERROR;
 }
 
