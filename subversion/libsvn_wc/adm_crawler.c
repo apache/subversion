@@ -58,8 +58,8 @@
    last-commit-time.  Either way, set entry-timestamp to match that of
    the working file when all is finished.
 
-   If REMOVE_TEXT_CONFLICT is TRUE, remove an existing text conflict
-   from LOCAL_ABSPATH.
+   If MARK_RESOLVED_TEXT_CONFLICT is TRUE, mark as resolved any existing
+   text conflict on LOCAL_ABSPATH.
 
    Not that a valid access baton with a write lock to the directory of
    LOCAL_ABSPATH must be available in DB.*/
@@ -67,7 +67,7 @@ static svn_error_t *
 restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
-             svn_boolean_t remove_text_conflicts,
+             svn_boolean_t mark_resolved_text_conflict,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
@@ -89,8 +89,8 @@ restore_file(svn_wc__db_t *db,
                          scratch_pool));
 
   /* Remove any text conflict */
-  if (remove_text_conflicts)
-    SVN_ERR(svn_wc__resolve_text_conflict(db, local_abspath, scratch_pool));
+  if (mark_resolved_text_conflict)
+    SVN_ERR(svn_wc__mark_resolved_text_conflict(db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -135,7 +135,8 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
     }
 
   if (kind == svn_kind_file || kind == svn_kind_symlink)
-    SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times, FALSE,
+    SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times,
+                         FALSE /*mark_resolved_text_conflict*/,
                          scratch_pool));
   else
     SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
@@ -161,8 +162,9 @@ restore_node(svn_wc__db_t *db,
 {
   if (kind == svn_kind_file || kind == svn_kind_symlink)
     {
-      /* Recreate file from text-base */
-      SVN_ERR(restore_file(db, local_abspath, use_commit_times, TRUE,
+      /* Recreate file from text-base; mark any text conflict as resolved */
+      SVN_ERR(restore_file(db, local_abspath, use_commit_times,
+                           TRUE /*mark_resolved_text_conflict*/,
                            scratch_pool));
     }
   else if (kind == svn_kind_dir)
