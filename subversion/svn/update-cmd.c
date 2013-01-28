@@ -51,12 +51,12 @@ print_update_summary(apr_array_header_t *targets,
   int i;
   const char *path_prefix;
   apr_pool_t *iterpool;
+  svn_boolean_t printed_header = FALSE;
 
   if (targets->nelts < 2)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
-  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -87,6 +87,13 @@ print_update_summary(apr_array_header_t *targets,
       /* Print an update summary for this target, removing the current
          working directory prefix from PATH (if PATH is at or under
          $CWD), and converting the path to local style for display. */
+      if (! printed_header)
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                     _("Summary of updates:\n")));
+          printed_header = TRUE;
+        }
+
       SVN_ERR(svn_cmdline_printf(iterpool, _("  Updated '%s' to r%ld.\n"),
                                  svn_cl__local_style_skip_ancestor(
                                    path_prefix, path, iterpool),
