@@ -1504,15 +1504,11 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_sqlite__stmt_t *stmt;
-  svn_sqlite__stmt_t *stmt_store;
   svn_wc__db_t *db; /* Read only temp db */
   const char *wri_abspath = bb->wcroot_abspath;
 
   SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, FALSE,
                           scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
-                                    STMT_UPGRADE_30_SET_CONFLICT));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE));
@@ -1520,6 +1516,7 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   while (have_row)
     {
+      svn_sqlite__stmt_t *stmt_store;
       svn_stringbuf_t *skel_data;
       svn_skel_t *conflict_data;
       apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
@@ -1549,6 +1546,8 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
       skel_data = svn_skel__unparse(conflict_data, iterpool);
 
+      SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
+                                        STMT_UPGRADE_30_SET_CONFLICT));
       SVN_ERR(svn_sqlite__bindf(stmt_store, "isb", wc_id, local_relpath,
                                 skel_data->data, skel_data->len));
       SVN_ERR(svn_sqlite__step_done(stmt_store));
