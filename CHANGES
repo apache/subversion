@@ -37,6 +37,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn merge' now uses reintegrate mode automatically when needed
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
+    * improve working copy performance on network disks (issue #4176) 
 
   - Client-side bugfixes:
     * 
