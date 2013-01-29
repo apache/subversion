@@ -2566,9 +2566,9 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
 
 
 svn_error_t *
-svn_wc__resolve_text_conflict(svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
+svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *scratch_pool)
 {
   svn_boolean_t ignored_result;
 

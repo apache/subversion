@@ -1264,7 +1264,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
     }
 
   /* Fill in any implied fields. */
-  return resolve_to_defaults(*entries, result_pool);
+  return svn_error_trace(resolve_to_defaults(*entries, result_pool));
 }
 
 

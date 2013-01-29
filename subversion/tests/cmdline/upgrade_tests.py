@@ -1262,6 +1262,18 @@ def upgrade_not_present_replaced(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
 
+@XFail()
+@Issue(4307)
+def upgrade_from_1_7(sbox):
+  "upgrade from 1.7 WC (format 29)"
+
+  sbox.build(create_wc=False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_from_1_7_wc.tar.bz2')
+
+  # The working copy contains a text conflict, and upgrading such
+  # a working copy currently crashes 'svn'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1313,6 +1325,7 @@ test_list = [ None,
               upgrade_file_externals,
               upgrade_missing_replaced,
               upgrade_not_present_replaced,
+              upgrade_from_1_7,
              ]
 
 

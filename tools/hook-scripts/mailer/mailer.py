@@ -98,7 +98,10 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   if cmd == 'commit':
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
-    cfg = Config(config_fname, repos, { 'author' : repos.author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
     revision = int(cmd_args[0])
@@ -108,14 +111,20 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
     # Override the repos revision author with the author of the lock/unlock
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
