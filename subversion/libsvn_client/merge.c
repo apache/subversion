@@ -64,6 +64,8 @@
 
 #include "svn_private_config.h"
 
+/* #define HANDLE_NOTIFY_FROM_MERGE */
+
 /*-----------------------------------------------------------------------*/
 
 /* MERGEINFO MERGE SOURCE NORMALIZATION
@@ -385,6 +387,13 @@ typedef struct merge_cmd_baton_t {
     apr_pool_t *pool;
 
   } nrb;
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+  /* const char * local_abspath to const char *kind mapping, containing
+     deleted nodes that still need a delete notification (which may be a
+     replaced notification if the node is not just deleted) */
+  apr_hash_t *pending_deletes;
+#endif
 
 } merge_cmd_baton_t;
 
@@ -1439,8 +1448,6 @@ check_moved_here(svn_boolean_t *moved_here,
   return SVN_NO_ERROR;
 }
 
-/* #defined HANDLE_NOTIFY_FROM_MERGE */
-
 /* Record the skip for future processing and (later) produce the
    skip notification */
 static svn_error_t *
@@ -1576,9 +1583,16 @@ record_update_add(merge_cmd_baton_t *merge_b,
   if (merge_b->ctx->notify_func2)
     {
       svn_wc_notify_t *notify;
+      svn_wc_notify_action_t action = svn_wc_notify_update_add;
 
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_add,
-                                    scratch_pool);
+      if (contains_path(merge_b->pending_deletes, local_abspath))
+        {
+          action = svn_wc_notify_update_replace;
+          apr_hash_set(merge_b->pending_deletes, local_abspath,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      notify = svn_wc_create_notify(local_abspath, action, scratch_pool);
       notify->kind = kind;
 
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
@@ -1652,14 +1666,10 @@ record_update_delete(merge_cmd_baton_t *merge_b,
 #ifdef HANDLE_NOTIFY_FROM_MERGE
   if (merge_b->ctx->notify_func2)
     {
-      svn_wc_notify_t *notify;
+      const char *dup_abspath = apr_pstrdup(merge_b->pool, local_abspath);
 
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_update_delete,
-                                    scratch_pool);
-      notify->kind = kind;
-
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    scratch_pool);
+      apr_hash_set(merge_b->pending_deletes, dup_abspath, APR_HASH_KEY_STRING,
+                   svn_node_kind_to_word(kind));
     }
 #endif
 
@@ -2995,6 +3005,39 @@ merge_dir_closed(svn_wc_notify_state_t *contentstate,
 
   if (merge_b->dry_run)
     SVN_ERR(svn_hash__clear(merge_b->dry_run_deletions, scratch_pool));
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+  if (merge_b->ctx->notify_func2)
+    {
+      apr_hash_index_t *hi;
+      const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                                  path, scratch_pool);
+
+      for (hi = apr_hash_first(scratch_pool, merge_b->pending_deletes);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *del_abspath = svn__apr_hash_index_key(hi);
+
+          if (svn_dirent_is_child(local_abspath, del_abspath, NULL))
+            {
+              svn_wc_notify_t *notify;
+
+              notify = svn_wc_create_notify(del_abspath,
+                                            svn_wc_notify_update_delete,
+                                            scratch_pool);
+              notify->kind = svn_node_kind_from_word(
+                                    svn__apr_hash_index_val(hi));
+
+              (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
+                                            notify, scratch_pool);
+
+              apr_hash_set(merge_b->pending_deletes, del_abspath,
+                           APR_HASH_KEY_STRING, NULL);
+            }
+        }
+    }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -9321,6 +9364,10 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_cmd_baton.paths_with_deleted_mergeinfo = NULL;
       merge_cmd_baton.ra_session1 = ra_session1;
       merge_cmd_baton.ra_session2 = ra_session2;
+
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+      merge_cmd_baton.pending_deletes = apr_hash_make(iterpool);
+#endif
 
       /* Populate the portions of the merge context baton that require
          an RA session to set, but shouldn't be reset for each iteration. */
