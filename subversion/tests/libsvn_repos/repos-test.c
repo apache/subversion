@@ -1470,10 +1470,10 @@ in_repo_authz(const svn_test_opts_t *opts,
   /* Non-existant path in the repo with must_exist set to TRUE */ 
   err = svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, TRUE,
                               repos_root, pool);
-  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+  if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
-                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             "SVN_ERR_ILLEGAL_TARGET",
                              err ? "unexpected" : "no");
   svn_error_clear(err);
 
@@ -1622,10 +1622,10 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
                               "^/A/groups", TRUE,
                               repos_root, pool);
-  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+  if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
-                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             "SVN_ERR_ILLEGAL_TARGET",
                              err ? "unexpected" : "no");
   svn_error_clear(err);
 
