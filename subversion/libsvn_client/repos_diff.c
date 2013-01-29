@@ -57,7 +57,7 @@ struct edit_baton {
   svn_depth_t depth;
 
   /* The result processor */
-  svn_diff_tree_processor_t *processor;
+  const svn_diff_tree_processor_t *processor;
 
   /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
@@ -76,10 +76,6 @@ struct edit_baton {
 
   /* Empty hash used for adds. */
   apr_hash_t *empty_hash;
-
-  /* TRUE if the operation needs to walk deleted dirs on the "old" side.
-     FALSE otherwise. */
-  svn_boolean_t walk_deleted_repos_dirs;
 
   /* Whether to report text deltas */
   svn_boolean_t text_deltas;
@@ -528,7 +524,7 @@ diff_deleted_dir(const char *path,
    * crawl it recursively, diffing each file against the empty file.  This
    * is a workaround for issue 2333 "'svn diff URL1 URL2' not reverse of
    * 'svn diff URL2 URL1'". */
-  if (! skip_children && eb->walk_deleted_repos_dirs)
+  if (! skip_children)
     {
       apr_hash_index_t *hi;
 
@@ -1263,213 +1259,9 @@ fetch_base_func(const char **filename,
 /* Baton for diff_state_* functions */
 struct diff_notify_baton_t
 {
-  /* Hash used to check replaced paths. Key is path relative CWD,
-   * Value is *deleted_path_notify_t.
-   * All allocations are from edit_baton's pool. */
-  apr_hash_t *deleted_paths;
-
-  /* If the func is non-null, send notifications of actions. */
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-
   /* If not NULL collects the absent paths */
   apr_hash_t *absent_relpaths;
-
-  apr_pool_t *pool;
 };
-
-/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
- *  notifications like how the repos diff in libsvn_client does.
- *
- * Probably only necessary while transitioning to svn_diff_tree_processor_t
- */
-static svn_error_t *
-diff_state_handle(svn_boolean_t tree_conflicted,
-                  svn_wc_notify_state_t *state,
-                  svn_wc_notify_state_t *prop_state,
-                  const char *relpath,
-                  svn_kind_t kind,
-                  svn_boolean_t before_operation,
-                  svn_boolean_t for_add,
-                  svn_boolean_t for_delete,
-                  void *state_baton,
-                  apr_pool_t *scratch_pool)
-{
-  struct diff_notify_baton_t *dnb = state_baton;
-  svn_wc_notify_state_t notify_content_state = svn_wc_notify_state_inapplicable;
-  svn_wc_notify_state_t notify_prop_state = svn_wc_notify_state_inapplicable;
-
-  if (! dnb->notify_func)
-    return SVN_NO_ERROR;
-
-  if ((for_delete && before_operation && !tree_conflicted)
-      || (for_add && kind == svn_kind_dir && !before_operation))
-    return SVN_NO_ERROR;
-
-  if (for_delete)
-    {
-      const char *deleted_path;
-      deleted_path_notify_t *dpn;
-      svn_wc_notify_action_t action;
-
-      deleted_path = apr_pstrdup(dnb->pool, relpath);
-      dpn = apr_pcalloc(dnb->pool, sizeof(*dpn));
-
-      if (!tree_conflicted
-          && state
-             && (*state != svn_wc_notify_state_missing)
-             && (*state != svn_wc_notify_state_obstructed))
-        {
-          action = svn_wc_notify_update_delete;
-        }
-      else
-        action = svn_wc_notify_skip;
-
-      dpn->kind = (kind == svn_kind_dir) ? svn_node_dir : svn_node_file;
-      dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
-      dpn->state = state ? *state : svn_wc_notify_state_inapplicable;
-      dpn->tree_conflicted = tree_conflicted;
-      apr_hash_set(dnb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
-
-      return SVN_NO_ERROR;
-    }
-
-  if (tree_conflicted)
-    {
-      svn_wc_notify_t *notify;
-      deleted_path_notify_t *dpn;
-      svn_node_kind_t notify_kind;
-
-      apr_hash_set(dnb->deleted_paths, relpath,
-                   APR_HASH_KEY_STRING, NULL);
-
-      notify = svn_wc_create_notify(relpath, svn_wc_notify_tree_conflict,
-                                    scratch_pool);
-
-      dpn = apr_hash_get(dnb->deleted_paths, relpath, APR_HASH_KEY_STRING);
-      if (dpn)
-        {
-          /* If any was found, we will handle the pending 'deleted path
-          * notification' (DPN) here. Remove it from the list. */
-          apr_hash_set(dnb->deleted_paths, relpath,
-              APR_HASH_KEY_STRING, NULL);
-
-          /* the pending delete might be on a different node kind. */
-          notify_kind = dpn->kind;
-        }
-
-      notify->kind = notify_kind;
-      (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
-      return SVN_NO_ERROR;
-    }
-
-  if (state)
-    notify_content_state = *state;
-  if (prop_state)
-    notify_prop_state = *prop_state;
-
-  /* These states apply to properties (dirs) and content (files) at the same
-     time, so handle them as the same whatever way we got them. */
-  if (notify_prop_state == svn_wc_notify_state_obstructed
-      || notify_prop_state == svn_wc_notify_state_missing)
-    {
-      notify_content_state = notify_prop_state;
-    }
-
-  if (notify_content_state == svn_wc_notify_state_obstructed
-      || notify_content_state == svn_wc_notify_state_missing)
-    {
-      svn_wc_notify_t *notify;
-
-      notify = svn_wc_create_notify(relpath, svn_wc_notify_skip,
-                                    scratch_pool);
-
-      notify->kind = (kind == svn_kind_dir) ? svn_node_dir : svn_node_file;
-      notify->content_state = notify_content_state;
-      notify->prop_state = notify_prop_state;
-      (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
-      return SVN_NO_ERROR;
-    }
-
-  /* This code is only used from the merge api, and should really be
-     integrated there. */
-
-  {
-    deleted_path_notify_t *dpn;
-    svn_wc_notify_t *notify;
-    svn_wc_notify_action_t action;
-    svn_node_kind_t notify_kind = (kind == svn_kind_dir) ? svn_node_dir
-                                                         : svn_node_file;
-
-    if (for_add)
-      action = svn_wc_notify_update_add;
-    else
-      action = svn_wc_notify_update_update;
-
-    /* Find out if a pending delete notification for this path is
-    * still around. */
-    dpn = apr_hash_get(dnb->deleted_paths, relpath, APR_HASH_KEY_STRING);
-    if (dpn)
-      {
-        /* If any was found, we will handle the pending 'deleted path
-        * notification' (DPN) here. Remove it from the list. */
-        apr_hash_set(dnb->deleted_paths, relpath,
-                     APR_HASH_KEY_STRING, NULL);
-
-        /* the pending delete might be on a different node kind. */
-        notify_kind = dpn->kind;
-        notify_content_state = notify_prop_state = dpn->state;
-
-        if (for_add && dpn->action == svn_wc_notify_update_delete)
-          action = svn_wc_notify_update_replace;
-      }
-
-    notify = svn_wc_create_notify(relpath, action, scratch_pool);
-    notify->kind = notify_kind;
-    notify->content_state = notify_content_state;
-    notify->prop_state = notify_prop_state;
-    (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
-  }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-diff_state_close(const char *relpath,
-                 svn_kind_t kind,
-                 void *state_baton,
-                 apr_pool_t *scratch_pool)
-{
-  struct diff_notify_baton_t *dnb = state_baton;
-  apr_hash_index_t *hi;
-
-  if (! dnb->notify_func)
-    return SVN_NO_ERROR;
-
-  for (hi = apr_hash_first(scratch_pool, dnb->deleted_paths); hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_wc_notify_t *notify;
-      const char *deleted_path = svn__apr_hash_index_key(hi);
-      deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
-
-      /* Ignore paths which are not children of bb->path.  (There
-         should be none due to editor ordering constraints, but
-         ra_serf drops the ball here -- see issue #3802 for
-         details.) */
-      if (! svn_relpath_skip_ancestor(relpath, deleted_path))
-        continue;
-
-      notify = svn_wc_create_notify(deleted_path, dpn->action, scratch_pool);
-      notify->kind = dpn->kind;
-      notify->content_state = notify->prop_state = dpn->state;
-      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
-      apr_hash_set(dnb->deleted_paths, deleted_path,
-                   APR_HASH_KEY_STRING, NULL);
-    }
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 diff_state_absent(const char *relpath,
@@ -1477,17 +1269,6 @@ diff_state_absent(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   struct diff_notify_baton_t *dnb = state_baton;
-
-  if (dnb->notify_func)
-    {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(relpath, svn_wc_notify_skip, scratch_pool);
-
-      notify->kind = svn_node_unknown;
-      notify->content_state = notify->prop_state
-        = svn_wc_notify_state_missing;
-      (*dnb->notify_func)(dnb->notify_baton, notify, scratch_pool);
-    }
 
   if (dnb->absent_relpaths)
     apr_hash_set(dnb->absent_relpaths,
@@ -1500,52 +1281,33 @@ diff_state_absent(const char *relpath,
 
 /* Create a repository diff editor and baton.  */
 svn_error_t *
-svn_client__get_diff_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_depth_t depth,
-                            svn_ra_session_t *ra_session,
-                            svn_revnum_t revision,
-                            svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t text_deltas,
-                            apr_hash_t *absent_relpaths,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *result_pool)
+svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_ra_session_t *ra_session,
+                             svn_depth_t depth,
+                             svn_revnum_t revision,
+                             svn_boolean_t text_deltas,
+                             const svn_diff_tree_processor_t *processor,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool)
 {
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
   struct edit_baton *eb = apr_pcalloc(editor_pool, sizeof(*eb));
-  struct diff_notify_baton_t *dnb = apr_pcalloc(editor_pool, sizeof(*eb));
   svn_delta_shim_callbacks_t *shim_callbacks =
                                 svn_delta_shim_callbacks_default(editor_pool);
 
   eb->pool = editor_pool;
   eb->depth = depth;
 
-  dnb->pool = editor_pool;
-  dnb->deleted_paths = apr_hash_make(eb->pool);
-  dnb->notify_func = notify_func;
-  dnb->notify_baton = notify_baton;
-  dnb->absent_relpaths = absent_relpaths;
-
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&eb->processor,
-                                      diff_callbacks, diff_cmd_baton,
-                                      diff_state_handle,
-                                      diff_state_close,
-                                      diff_state_absent,
-                                      dnb,
-                                      result_pool, result_pool));
+  eb->processor = processor;
 
   eb->ra_session = ra_session;
 
   eb->revision = revision;
   eb->empty_file = NULL;
   eb->empty_hash = apr_hash_make(eb->pool);
-  eb->walk_deleted_repos_dirs = walk_deleted_dirs;
   eb->text_deltas = text_deltas;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
@@ -1579,6 +1341,48 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    NULL, NULL, shim_callbacks,
                                    result_pool, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_diff_editor(const svn_delta_editor_t **editor,
+                            void **edit_baton,
+                            svn_depth_t depth,
+                            svn_ra_session_t *ra_session,
+                            svn_revnum_t revision,
+                            svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t text_deltas,
+                            apr_hash_t *absent_relpaths,
+                            const svn_wc_diff_callbacks4_t *diff_callbacks,
+                            void *diff_cmd_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *result_pool)
+{
+  const svn_diff_tree_processor_t *processor;
+  struct diff_notify_baton_t *dnb = apr_pcalloc(result_pool, sizeof(*dnb));
+
+  dnb->absent_relpaths = absent_relpaths;
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&processor,
+                                      diff_callbacks, diff_cmd_baton,
+                                      walk_deleted_dirs,
+                                      NULL,
+                                      NULL,
+                                      diff_state_absent,
+                                      dnb,
+                                      result_pool, result_pool));
+
+  SVN_ERR(svn_client__get_diff_editor2(editor,
+                                       edit_baton,
+                                       ra_session,
+                                       depth,
+                                       revision,
+                                       text_deltas,
+                                       processor,
+                                       cancel_func, cancel_baton,
+                                       result_pool));
 
   return SVN_NO_ERROR;
 }

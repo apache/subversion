@@ -2018,7 +2018,6 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                 NULL /* absent relpaths */,
                 callbacks, callback_baton,
                 ctx->cancel_func, ctx->cancel_baton,
-                NULL /* no notify_func */, NULL /* no notify_baton */,
                 pool));
 
   /* We want to switch our txn into URL2 */
@@ -2705,7 +2704,7 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
             NULL /* absent relpaths */,
             callbacks, callback_baton,
             ctx->cancel_func, ctx->cancel_baton,
-            NULL /* notify_func */, NULL /* notify_baton */, pool));
+            pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3

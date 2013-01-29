@@ -1967,6 +1967,9 @@ typedef struct wc_diff_wrap_baton_t
 {
   const svn_wc_diff_callbacks4_t *callbacks;
   void *callback_baton;
+
+  svn_boolean_t walk_deleted_dirs;
+
   svn_wc__diff_state_handle_t state_handle;
   svn_wc__diff_state_close_t state_close;
   svn_wc__diff_state_absent_t state_absent;
@@ -2031,6 +2034,9 @@ wrap_dir_opened(void **new_dir_baton,
                                  (right_source == NULL) /* for_delete */,
                                  wb->state_baton,
                                  scratch_pool));
+
+      if (! right_source && !wb->walk_deleted_dirs)
+        *skip_children = TRUE;
     }
   else /* left_source == NULL -> Add */
     {
@@ -2410,9 +2416,10 @@ wrap_node_absent(const char *relpath,
 
 
 svn_error_t *
-svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
+svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
                             const svn_wc_diff_callbacks4_t *callbacks,
                             void *callback_baton,
+                            svn_boolean_t walk_deleted_dirs,
                             svn_wc__diff_state_handle_t state_handler,
                             svn_wc__diff_state_close_t state_close,
                             svn_wc__diff_state_absent_t state_absent,
@@ -2433,6 +2440,7 @@ svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
   wrap_baton->state_absent = state_absent;
   wrap_baton->state_baton = state_baton;
   wrap_baton->empty_file = NULL;
+  wrap_baton->walk_deleted_dirs = walk_deleted_dirs;
 
   processor = svn_diff__tree_processor_create(wrap_baton, result_pool);
 
