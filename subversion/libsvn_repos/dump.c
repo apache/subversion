@@ -1362,6 +1362,71 @@ verify_close_directory(void *dir_baton,
   return close_directory(dir_baton, pool);
 }
 
+static void
+notify_verification_error(svn_revnum_t rev,
+                          svn_error_t *err,
+                          svn_repos_notify_func_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *pool)
+{
+  if (notify_func)
+    {
+      svn_repos_notify_t *notify_failure;
+      notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
+      notify_failure->err = err;
+      notify_failure->revision = rev;
+      notify_func(notify_baton, notify_failure, pool);
+    }
+}
+
+/* Verify revision REV in file system FS. */
+static svn_error_t *
+verify_one_revision(svn_fs_t *fs,
+                    svn_revnum_t rev,
+                    svn_repos_notify_func_t notify_func,
+                    void *notify_baton,
+                    svn_revnum_t start_rev,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratchpool)
+{
+  const svn_delta_editor_t *dump_editor;
+  void *dump_edit_baton;
+
+  svn_fs_root_t *to_root;
+  apr_hash_t *props;
+  const svn_delta_editor_t *cancel_editor;
+  void *cancel_edit_baton;
+
+  /* Get cancellable dump editor, but with our close_directory handler. */
+  SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
+                          fs, rev, "",
+                          svn_stream_empty(scratchpool),
+                          NULL, NULL,
+                          verify_close_directory,
+                          notify_func, notify_baton,
+                          start_rev,
+                          FALSE, TRUE, /* use_deltas, verify */
+                          scratchpool));
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            dump_editor, dump_edit_baton,
+                                            &cancel_editor,
+                                            &cancel_edit_baton,
+                                            scratchpool));
+  SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, scratchpool));
+  SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
+                            cancel_editor, cancel_edit_baton,
+                            NULL, NULL, scratchpool));
+
+  /* While our editor close_edit implementation is a no-op, we still
+     do this for completeness. */
+  SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, scratchpool));
+
+  SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, scratchpool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton type used for forwarding notifications from FS API to REPOS API. */
 struct verify_fs2_notify_func_baton_t
 {
@@ -1389,9 +1454,10 @@ verify_fs2_notify_func(svn_revnum_t revision,
 }
 
 svn_error_t *
-svn_repos_verify_fs2(svn_repos_t *repos,
+svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
+                     svn_boolean_t keep_going,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -1405,6 +1471,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   svn_repos_notify_t *notify;
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
+  svn_error_t *err;
+  svn_boolean_t found_corruption = FALSE;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1443,48 +1511,53 @@ svn_repos_verify_fs2(svn_repos_t *repos,
     }
 
   /* Verify global metadata and backend-specific data first. */
-  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), start_rev, end_rev,
-                        verify_notify, verify_notify_baton,
-                        cancel_func, cancel_baton, pool));
+  err= svn_fs_verify(svn_fs_path(fs, pool), start_rev, end_rev,
+                     verify_notify, verify_notify_baton,
+                     cancel_func, cancel_baton, pool);
+
+  if (err && !keep_going)
+    {
+      found_corruption = TRUE;
+      notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
+                                notify_baton, iterpool);
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+                               _("Repository '%s' failed to verify"),
+                               svn_dirent_local_style(svn_repos_path(repos,
+                                                                     pool),
+                                                      pool));
+    }
+  else
+    {
+      if (err)
+        found_corruption = TRUE;
+      svn_error_clear(err);
+    }
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
-      const svn_delta_editor_t *dump_editor;
-      void *dump_edit_baton;
-      const svn_delta_editor_t *cancel_editor;
-      void *cancel_edit_baton;
-      svn_fs_root_t *to_root;
-      apr_hash_t *props;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
-      /* Get cancellable dump editor, but with our close_directory handler. */
-      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
-                              fs, rev, "",
-                              svn_stream_empty(iterpool),
-                              NULL, NULL,
-                              verify_close_directory,
-                              notify_func, notify_baton,
-                              start_rev,
-                              FALSE, TRUE, /* use_deltas, verify */
-                              iterpool));
-      SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                                dump_editor, dump_edit_baton,
-                                                &cancel_editor,
-                                                &cancel_edit_baton,
-                                                iterpool));
+      /* Wrapper function to catch the possible errors. */
+      err = verify_one_revision(fs, rev, notify_func, notify_baton, start_rev,
+                                cancel_func, cancel_baton, iterpool);
 
       SVN_ERR(svn_fs_verify_rev(fs, rev, iterpool));
 
-      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
-      SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
-                                cancel_editor, cancel_edit_baton,
-                                NULL, NULL, iterpool));
-      /* While our editor close_edit implementation is a no-op, we still
-         do this for completeness. */
-      SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, iterpool));
+      if (err)
+        {
+          found_corruption = TRUE;
+          notify_verification_error(rev, err, notify_func, notify_baton,
+                                    iterpool);
+          svn_error_clear(err);
 
-      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
+          if (keep_going)
+            continue;
+          else
+            break;
+        }
 
       if (notify_func)
         {
@@ -1503,5 +1576,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
+  if (found_corruption)
+    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+                             _("Repository '%s' failed to verify"),
+                             svn_dirent_local_style(svn_repos_path(repos,
+                                                                   pool),
+                                                    pool));
   return SVN_NO_ERROR;
 }

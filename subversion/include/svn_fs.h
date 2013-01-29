@@ -325,10 +325,10 @@ svn_fs_verify(const char *path,
  * Use @a scratch_pool for temporary allocations.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * svn_repos_verify_fs3() instead, which does non-backend-specific
  * verifications as well.
  *
-* @note To ensure a full verification using all tests and covering all
+ * @note To ensure a full verification using all tests and covering all
  * revisions, you must call this function *and* #svn_fs_verify.
  *
  * @note Implementors, please do tests that cannot be done efficiently for

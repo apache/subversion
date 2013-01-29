@@ -248,7 +248,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_load_skipped_rev,
 
   /** The structure of a revision is being verified.  @since New in 1.8. */
-  svn_repos_notify_verify_struc_rev
+  svn_repos_notify_verify_struc_rev,
+
+  /** A revision is found with corruption/errors. @since New in 1.8. */
+  svn_repos_notify_failure
 
 } svn_repos_notify_action_t;
 
@@ -320,6 +323,11 @@ typedef struct svn_repos_notify_t
 
   /** For #svn_repos_notify_load_node_start, the path of the node. */
   const char *path;
+
+  /** For #svn_repos_notify_failure, this error chain indicates what
+      went wrong during verification.
+      @since New in 1.8. */
+  svn_error_t *err;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
@@ -2514,15 +2522,40 @@ svn_repos_node_from_baton(void *edit_baton);
  * through the @c HEAD revision.
  *
  * For every verified revision call @a notify_func with @a rev set to
- * the verified revision and @a warning_text @c NULL. For warnings call @a
- * notify_func with @a warning_text set.
+ * the verified revision and @a warning_text @c NULL.
+ *
+ * For every revision verification failure, if @a notify_func is not @c NULL,
+ * call @a notify_func with @a rev set to the corrupt revision and @err set to
+ * the corresponding error message.
  *
  * If @a cancel_func is not @c NULL, call it periodically with @a
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
  *
- * @since New in 1.7.
+ * If @a keep_going is @c TRUE, the verify process notifies the error message
+ * and continues. If @a notify_func is @c NULL, the verification failure is
+ * not notified. Finally, return an error if there were any failures during
+ * verification, or SVN_NO_ERROR if there were no failures.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_repos_verify_fs3(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_boolean_t keep_going,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
                      svn_revnum_t start_rev,

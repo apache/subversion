@@ -728,6 +728,27 @@ svn_repos_dump_fs2(svn_repos_t *repos,
 }
 
 svn_error_t *
+svn_repos_verify_fs2(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_verify_fs3(repos,
+                                              start_rev,
+                                              end_rev,
+                                              FALSE,
+                                              notify_func,
+                                              notify_baton,
+                                              cancel_func,
+                                              cancel_baton,
+                                              pool));
+}
+
+svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,
                     svn_stream_t *feedback_stream,
                     svn_revnum_t start_rev,
