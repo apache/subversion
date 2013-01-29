@@ -401,11 +401,11 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  apr_pool_t *scratch_pool);
 
 
-/* Resolve text conflicts on the given node.  */
+/* Mark as resolved any text conflict on the node at DB/LOCAL_ABSPATH.  */
 svn_error_t *
-svn_wc__resolve_text_conflict(svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
+svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
