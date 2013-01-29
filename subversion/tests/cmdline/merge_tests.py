@@ -7023,8 +7023,7 @@ def single_file_replace_style_merge_capability(sbox):
   # Merge the file mu alone to rev1
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output(None,
-                                       ['D    ' + mu_path + '\n',
-                                        'A    ' + mu_path + '\n']),
+                                       ['R    ' + mu_path + '\n']),
                                      [],
                                      'merge',
                                      mu_path + '@2',
